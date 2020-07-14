@@ -1,0 +1,21 @@
+=== iCEBreaker Xosera : PMOD_1B2_DVI12 MODE_848x480
+Yosys 0.9+2406 (open-tool-forge build) (git sha1 eef0ec6a, gcc 9.3.0-10ubuntu2 -Os)
+nextpnr-ice40 -- Next Generation Place and Route (Version nightly-20200711)
+Info: Device utilisation:
+Info: 	         ICESTORM_LC:   646/ 5280    12%
+Info: 	        ICESTORM_RAM:    12/   30    40%
+Info: 	               SB_IO:    26/   96    27%
+Info: 	               SB_GB:     5/    8    62%
+Info: 	        ICESTORM_PLL:     1/    1   100%
+Info: 	         SB_WARMBOOT:     0/    1     0%
+Info: 	        ICESTORM_DSP:     0/    8     0%
+Info: 	      ICESTORM_HFOSC:     0/    1     0%
+Info: 	      ICESTORM_LFOSC:     0/    1     0%
+Info: 	              SB_I2C:     0/    2     0%
+Info: 	              SB_SPI:     0/    2     0%
+Info: 	              IO_I3C:     0/    2     0%
+Info: 	         SB_LEDDA_IP:     0/    1     0%
+Info: 	         SB_RGBA_DRV:     0/    1     0%
+Info: 	      ICESTORM_SPRAM:     4/    4   100%
+
+Info: Max frequency for clock 'P1B2$SB_IO_OUT': 45.73 MHz (PASS at 33.75 MHz)

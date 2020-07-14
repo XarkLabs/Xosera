@@ -1,0 +1,30 @@
+# JSON files
+*.json
+
+# ASCII files
+*.asc
+
+# bin files
+*.bin
+
+# rpt files
+*.rpt
+
+# log directories
+**/log*/*
+
+# dot directories
+**/dot/*
+
+# Verilator output
+sim/obj_dir/*
+
+# Verilator debugging files
+sim/xosera_sim.vcd
+sim/xosera_screen*.bmp
+sim/xosera_mem.txt
+host_spi/host_spi
+
+# iVerilog output files
+sim/xosera_tb
+sim/xosera_tb.vcd

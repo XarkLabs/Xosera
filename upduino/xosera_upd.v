@@ -139,6 +139,7 @@ module xosera_upd(
 	wire vga_vs;
 	wire vga_de;
 
+	// Change video output pin mappings here
 	assign	{ gpio_12, gpio_21, gpio_13, gpio_19, gpio_18, gpio_11, gpio_9, gpio_6 } =
 			{ vga_hs,  vga_vs,  r[3],    g[3],    b[3],    r[2],    g[2],   b[2] };
 	assign	{ gpio_44, gpio_4, gpio_3, gpio_48, gpio_45, gpio_47 } =

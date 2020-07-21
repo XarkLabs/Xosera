@@ -12,6 +12,8 @@ Currently the design is supported for the [iCE40UP5K FPGA](https://www.latticese
 
 This is currently a work in progress, but you can follow along at [Hackaday.io](https://hackaday.io/Xark) or in the [rosco_m68k Discord](https://discord.gg/zGUB7R8) (in the #projects channel).
 
+[See this for information on building and configuring Xosera](BUILDING.md)
+
 Planned Xosera features:
 
 * VGA or HDMI (DVI) output at 640x480@60Hz or 848x480@60Hz (16:9 widescreen 480p) and perhaps 800x600@60Hz

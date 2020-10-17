@@ -51,6 +51,6 @@ extern unsigned int chunksize;// set on open to the maximum size that can be sen
 int	host_spi_open();		// open FTDI device for FPGA SPI I/O
 int	host_spi_close();		// close FTDI device
 void host_spi_cs(bool cs);	// cs = false to select FPGA peripheral
-int host_spi_xfer_bytes(int num, uint8_t *buffer); // send and receive num bytes over SPI
+int host_spi_xfer_bytes(size_t num, uint8_t *buffer); // send and receive num bytes over SPI
 
 #endif	// HOST_SPI_H

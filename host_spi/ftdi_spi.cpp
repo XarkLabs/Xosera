@@ -7,9 +7,13 @@
 // See top-level LICENSE file for license information. (Hint: MIT)
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <ctype.h>
 #include <string.h>
 #include <errno.h>
-#include <stdint.h>
+
+#include <unistd.h>
 
 #include "ftdi_spi.h"
 
@@ -17,6 +21,7 @@ unsigned int chunksize;						// set on open to the maximum size that can be sent
 static bool ftdi_device_opened;				// true if device was opened (and should be closed at exit)
 static bool ftdi_set_device_latency;		// true if latency was set (and should be restored at exit)
 static unsigned char ftdi_original_latency; // saved original FTDI latency value
+static bool slow_clock = true;
 
 static struct ftdi_context ftdi_ctx;		// context for libftdi
 
@@ -40,7 +45,7 @@ void host_spi_cs(bool cs)
 	ftdi_put_byte(SPI_OUTPUTS);
 }
 
-static void fatal()
+[[ noreturn ]] static void fatal()
 {
 	host_spi_cs(true);
 	host_spi_cleanup();
@@ -95,7 +100,7 @@ static uint8_t ftdi_get_byte()
 
 
 // SPI transfer, reading and writing num bytes from/into inout
-int host_spi_xfer_bytes(int num, uint8_t *inout)
+int host_spi_xfer_bytes(size_t num, uint8_t *inout)
 {
 	if (num < 1)
 	{
@@ -106,16 +111,16 @@ int host_spi_xfer_bytes(int num, uint8_t *inout)
 
 	// read CIPO, write COPI, LSB first, update data on negative clock edge
 	ftdi_put_byte(MPSSE_DO_READ | MPSSE_DO_WRITE /* | MPSSE_LSB */ | MPSSE_WRITE_NEG);
-	ftdi_put_word(num-1);
+	ftdi_put_word(static_cast<uint16_t>(num-1));
 
-	int rc = ftdi_write_data(&ftdi_ctx, inout, num);
-	if (rc != num)
+	int rc = ftdi_write_data(&ftdi_ctx, inout, static_cast<int>(num));
+	if (rc != static_cast<int>(num))
 	{
-		fprintf(stderr, "host_spi_xfer_bytes: ftdi_write_data failed (c=%d, expected %d).\n", rc, num);
+		fprintf(stderr, "host_spi_xfer_bytes: ftdi_write_data failed (c=%d, expected %zu).\n", rc, num);
 		fatal();
 	}
 
-	for (int i = 0; i < num; i++)
+	for (size_t i = 0; i < num; i++)
 	{
 		inout[i] = ftdi_get_byte();
 	}
@@ -143,7 +148,7 @@ int host_spi_open()
 
 	static int device_ids[] = {FTDI_FT232H, FTDI_FT2232H, FTDI_FT4232H};
 	static const char *device_name[] = {"FT232H", "FT2232H", "FT4232H"};
-	static int device_chunk[] = {1024, 4096, 2048};
+	static unsigned int device_chunk[] = {1024, 4096, 2048};
 
 	int id_num = 0;
 	while (id_num < 3)
@@ -166,7 +171,6 @@ int host_spi_open()
 	printf("Opened FTDI %s...\n", device_name[id_num]);
 
 	chunksize = device_chunk[id_num];
-//	ftdi_write_data_get_chunksize(&ftdi_ctx, &chunksize);
 
 	if (ftdi_usb_reset(&ftdi_ctx))
 	{
@@ -174,11 +178,13 @@ int host_spi_open()
 		return -1;
 	}
 
+#if 0
 	if (ftdi_usb_purge_buffers(&ftdi_ctx))
 	{
 		fprintf(stderr, "host_spi_open: ftdi_usb_purge_buffers failed (%s).\n", ftdi_get_error_string(&ftdi_ctx));
 		return -1;
 	}
+#endif
 
 	if (ftdi_get_latency_timer(&ftdi_ctx, &ftdi_original_latency) < 0)
 	{
@@ -204,7 +210,7 @@ int host_spi_open()
 		fatal();
 	}
 
-	if (1)
+	if (slow_clock)
 	{
 		// 12 Mhz / (119 + 1 * 2) = 50 kHz (debug)
 		ftdi_put_byte(EN_DIV_5);

@@ -34,6 +34,8 @@ module xosera_tb();
 	.spi_cs_i(spi_cs_i)				// SPI target select
 	);
 
+	`include "xosera_defs.vh"		// Xosera global Verilog definitions
+
 	initial begin
 		$dumpfile("xosera_tb.vcd");
 		$dumpvars(0, xosera);

@@ -9,7 +9,8 @@
 
 `default_nettype none		 	// mandatory for Verilog sanity
 
-`include "xosera_defs.vh"		// Xosera global Verilog definitions
+// "hack" to allow quoted filename from define
+`define STRINGIFY(x) `"x`"
 
 module fontram(
 	input wire rd_clk,

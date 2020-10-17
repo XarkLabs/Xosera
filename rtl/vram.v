@@ -7,7 +7,6 @@
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
 
-`include "xosera_defs.vh"		// Xosera global Verilog definitions
 
 module vram(
     input clk,

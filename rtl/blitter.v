@@ -9,7 +9,6 @@
 
 `default_nettype none		 	// mandatory for Verilog sanity
 
-`include "xosera_defs.vh"		// Xosera global Verilog definitions
 
 module blitter(
 	input wire 			clk,
@@ -24,6 +23,8 @@ module blitter(
 );
 
 // this is mostly a test and proof-of-concept currently
+
+`include "xosera_defs.vh"		// Xosera global Verilog definitions
 
 localparam	INIT		=	0;
 localparam	CLEAR		=	1;

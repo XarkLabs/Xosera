@@ -9,7 +9,6 @@
 
 `default_nettype none		 	// mandatory for Verilog sanity
 
-`include "xosera_defs.vh"		// Xosera global Verilog definitions
 
 module spi_target(
 	input	wire		clk,				// input clk (should be ~4x faster than SPI clock)

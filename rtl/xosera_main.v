@@ -32,7 +32,6 @@
 
 `default_nettype none		 	// mandatory for Verilog sanity
 
-`include "xosera_defs.vh"		// Xosera global Verilog definitions
 
 module xosera_main(
 	input wire			clk,					// pixel clock
@@ -52,6 +51,10 @@ module xosera_main(
 	output	wire		dbg_sck_fall			// debug output for logic analyzer (SPI clock falling edge)
 `endif
 );
+
+`include "xosera_defs.vh"		// Xosera global Verilog definitions
+
+
 	wire spi_receive_strobe;
 	wire [7:0] spi_receive_data;
 	wire spi_transmit_strobe;

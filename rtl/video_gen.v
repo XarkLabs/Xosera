@@ -17,7 +17,6 @@
 
 `default_nettype none			// mandatory for Verilog sanity
 
-`include "xosera_defs.vh"		// Xosera global Verilog definitions
 
 module video_gen(
 	input				clk,									// pixel clock
@@ -34,6 +33,7 @@ module video_gen(
 	output reg			vsync_o, hsync_o,						// VGA sync outputs
 	output reg			visible_o								// active signal (for HDMI)
 );
+	`include "xosera_defs.vh"		// Xosera global Verilog definitions
 
 	localparam H_MEM_BEGIN		= OFFSCREEN_WIDTH - 9;			// memory fetch starts 1 character early to prime output shift-reg
 	localparam H_MEM_END		= TOTAL_WIDTH - 9;				// memory fetch ends 1 character early (to empty shift-reg)

@@ -36,7 +36,7 @@ SRCDIR := ../rtl
 VPATH := $(SRCDIR)
 
 # Verilog source files for design
-SRC := $(wildcard $(SRCDIR)/*.v)
+SRC := $(SRCDIR)/xosera_main.v $(filter-out $(SRCDIR)/xosera_main.v,$(wildcard $(SRCDIR)/*.v))
 
 # Verilog include files for design
 INC := $(wildcard $(SRCDIR)/*.vh)
@@ -52,23 +52,26 @@ YOSYS_CONFIG := yosys-config
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # Icarus Verilog
-IVERILOG		:= iverilog
+IVERILOG	:= iverilog
 IVERILOG_ARGS	:= -g2005-sv -I ../rtl/ -l $(TECH_LIB)
 
 # Verilator SDL2 simulation frame rendering (1 enables SDL2 video rendering)
 SDL_RENDER	:= 1
 
+# Simulate SPI commands diring simulation (results in log)
+SPI_INTERFACE	:= 1
+
 # Verilator C++ definitions and options
 ifeq ($(strip $(SDL_RENDER)),1)
-LDFLAGS     := -LDFLAGS "$(shell sdl2-config --libs)"
+LDFLAGS		:= -LDFLAGS "$(shell sdl2-config --libs)"
 SDL_CFLAGS	:= $(shell sdl2-config --cflags)
 endif
 # Note: Using -Os seems to provide the fastest compile+run simulation iteration time
-CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Os -D$(VIDEO_MODE) -DSDL_RENDER=$(SDL_RENDER) $(SDL_CFLAGS)"
+CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -fomit-frame-pointer -Wno-sign-compare -D$(VIDEO_MODE) -DSDL_RENDER=$(SDL_RENDER) -DSPI_INTERFACE=$(SPI_INTERFACE) $(SDL_CFLAGS)"
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
-VERILATOR_ARGS := --relative-includes -Wall -Wno-fatal -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY
+VERILATOR_ARGS := --relative-includes -Wall -Wno-fatal -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY
 
 # Verillator C++ source driver
 CSRC := xosera_sim.cpp
@@ -87,7 +90,8 @@ isim: $(TBTOP) Makefile
 
 # run Verilator to build and run native simulation executable
 vrun: obj_dir/V$(VTOP) Makefile
-	obj_dir/V$(VTOP)
+	@mkdir -p logs
+	obj_dir/V$(VTOP) | tee logs/xosera_vsim.log
 
 # run Verilator to build and run native simulation executable
 irun: $(TBTOP)

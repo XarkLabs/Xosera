@@ -19,10 +19,7 @@
 # Verilator output
 sim/obj_dir/*
 
-# Verilator debugging files
-sim/xosera_sim.vcd
-sim/xosera_screen*.bmp
-sim/xosera_mem.txt
+# host_spi executable
 host_spi/host_spi
 
 # iVerilog output files

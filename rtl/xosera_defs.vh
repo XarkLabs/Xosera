@@ -7,47 +7,8 @@
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
 
-//`ifndef XOSERA_DEFS_VH
-//`define XOSERA_DEFS_VH
-
-`ifdef ICE40UP5K	// iCE40UltraPlus5K specific
-// Lattice/SiliconBlue PLL "magic numbers" to derive pixel clock from 12Mhz oscillator (from "icepll" utility)
-`ifdef	MODE_640x400	// 25.175 MHz (requested), 25.125 MHz (achieved)
-	parameter PLL_DIVR	=	4'b0000;	// DIVR =  0
-	parameter PLL_DIVF	=	7'b1000010;	// DIVF = 66
-	parameter PLL_DIVQ	=	3'b101;		// DIVQ =  5
-`elsif	MODE_640x480	// 25.175 MHz (requested), 25.125 MHz (achieved)
-	parameter PLL_DIVR	=	4'b0000;	// DIVR =  0
-	parameter PLL_DIVF	=	7'b1000010;	// DIVF = 66
-	parameter PLL_DIVQ	=	3'b101;		// DIVQ =  5
-`elsif	MODE_720x400	// 28.322 MHz (requested), 28.500 MHz (achieved)
-	parameter PLL_DIVR	=	4'b0000;	// DIVR =  0
-	parameter PLL_DIVF	=	7'b1001011;	// DIVF = 75
-	parameter PLL_DIVQ	=	3'b101;		// DIVQ =  5
-`elsif	MODE_848x480	// 33.750 MHz (requested), 33.750 MHz (achieved)
-	parameter PLL_DIVR	=	4'b0000;	// DIVR =  0
-	parameter PLL_DIVF	=	7'b0101100;	// DIVF = 44
-	parameter PLL_DIVQ	=	3'b100;		// DIVQ =  4
-`elsif	MODE_800x600	// 40.000 MHz (requested), 39.750 MHz (achieved) [tight timing]
-	parameter PLL_DIVR	=	4'b0000;	// DIVR =  0
-	parameter PLL_DIVF	=	7'b0110100;	// DIVF = 52
-	parameter PLL_DIVQ	=	3'b100;		// DIVQ =  4
-`elsif MODE_1024x768	// 65.000 MHz (requested), 65.250 MHz (achieved) [fails timing]
-	parameter PLL_DIVR	=	4'b0000;	// DIVR =  0
-	parameter PLL_DIVF	=	7'b1010110;	// DIVF = 86
-	parameter PLL_DIVQ	=	3'b100;		// DIVQ =  4
-`elsif MODE_1280x720	// 74.176 MHz (requested), 73.500 MHz (achieved) [fails timing]
-	parameter PLL_DIVR	=	4'b0000;	// DIVR =  0
-	parameter PLL_DIVF	=	7'b0110000;	// DIVF = 48
-	parameter PLL_DIVQ	=	3'b011;		// DIVQ =  3
-`else
-	$error("No video mode set, see Makefile");
-`endif
-`endif
-
 `ifdef	MODE_640x400
 	// VGA mode 640x480 @ 60Hz (pixel clock 25.175Mhz)
-	parameter PIXEL_FREQ		= 25_175_000;					// pixel clock in Hz
 	parameter VISIBLE_WIDTH	= 640;							// horizontal active pixels
 	parameter VISIBLE_HEIGHT	= 400;							// vertical active lines
 	parameter H_FRONT_PORCH	= 16;							// H pre-sync (front porch) pixels
@@ -61,7 +22,6 @@
 
 `elsif	MODE_640x480
 	// VGA mode 640x480 @ 60Hz (pixel clock 25.175Mhz)
-	parameter PIXEL_FREQ		= 25_175_000;					// pixel clock in Hz
 	parameter VISIBLE_WIDTH	= 640;							// horizontal active pixels
 	parameter VISIBLE_HEIGHT	= 480;							// vertical active lines
 	parameter H_FRONT_PORCH	= 16;							// H pre-sync (front porch) pixels
@@ -75,7 +35,6 @@
 
 `elsif	MODE_720x400
 	// VGA mode 720x400 @ 70Hz (pixel clock 28.322Mhz)
-	parameter PIXEL_FREQ		= 28_322_000;					// pixel clock in Hz
 	parameter VISIBLE_WIDTH	= 720;							// horizontal active pixels
 	parameter VISIBLE_HEIGHT	= 400;							// vertical active lines
 	parameter H_FRONT_PORCH	= 18;							// H pre-sync (front porch) pixels
@@ -89,7 +48,6 @@
 
 `elsif	MODE_848x480
 	// VGA mode 848x480 @ 60Hz (pixel clock 33.750Mhz)
-	parameter PIXEL_FREQ		= 33_750_000;					// pixel clock in Hz
 	parameter VISIBLE_WIDTH	= 848;							// horizontal active pixels
 	parameter VISIBLE_HEIGHT	= 480;							// vertical active lines
 	parameter H_FRONT_PORCH	= 16;							// H pre-sync (front porch) pixels
@@ -103,7 +61,6 @@
 
 `elsif	MODE_800x600
 	// VGA mode 800x600 @ 60Hz (pixel clock 40.000Mhz)
-	parameter PIXEL_FREQ		= 40_000_000;					// pixel clock in Hz
 	parameter VISIBLE_WIDTH	= 800;							// horizontal active pixels
 	parameter VISIBLE_HEIGHT	= 600;							// vertical active lines
 	parameter H_FRONT_PORCH	= 40;							// H pre-sync (front porch) pixels
@@ -117,7 +74,6 @@
 
 `elsif	MODE_1024x768
 	// VGA mode 1024x768 @ 60Hz (pixel clock 65.000Mhz)
-	parameter PIXEL_FREQ		= 65_000_000;					// pixel clock in Hz
 	parameter VISIBLE_WIDTH	= 1024;							// horizontal active pixels
 	parameter VISIBLE_HEIGHT	= 768;							// vertical active lines
 	parameter H_FRONT_PORCH	= 24;							// H pre-sync (front porch) pixels
@@ -131,7 +87,6 @@
 
 `elsif	MODE_1280x720
 	// VGA mode 1280x720 @ 60Hz (pixel clock 74.250Mhz)
-	parameter PIXEL_FREQ		= 74_250_000;					// pixel clock in Hz
 	parameter VISIBLE_WIDTH	= 1280;							// horizontal active pixels
 	parameter VISIBLE_HEIGHT	= 720;							// vertical active lines
 	parameter H_FRONT_PORCH	= 110;							// H pre-sync (front porch) pixels

@@ -27,14 +27,11 @@
 #include <SDL.h>
 #endif
 
-#define MAX_TRACE_FRAMES 3	// video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 3 // video frames to dump to VCD file (and then screen-shot and exit)
 
+#if SPI_INTERFACE
 
-#define SPI_TEST	1
-
-#if SPI_TEST
-
-const int SPI_START_TIME = 1680002;	// 640x480 2nd frame
+const int SPI_START_TIME = 1680002; // 640x480 2nd frame
 const int SPI_CLOCK_DIV = 16;
 enum class SPI
 {
@@ -56,28 +53,29 @@ const char *SPI_name[] = {
 	"SCK_LOW2",
 	"BYTE_DONE",
 	"SS_HIGH",
-	"IDLE"
-};
+	"IDLE"};
 
-SPI			spi_test_state;
-SPI			last_spi_test_state;
-int			spi_last_time;
-int			spi_test_bit;
-bool		spi_recv_strobe;
-uint8_t		spi_send_byte;
-uint8_t		spi_recv_byte;
+SPI spi_test_state;
+SPI last_spi_test_state;
+int spi_last_time;
+int spi_test_bit;
+bool spi_recv_strobe;
+uint8_t spi_send_byte;
+uint8_t spi_recv_byte;
 
-uint8_t		spi_pc_data_index = 0;
-uint8_t		spi_pc_data_len = 16;
-uint8_t		spi_pc_data[1024] = { 0xff, 0x81, 0x81, 0x81, 0x81, 0x81, 0x55, 0xaa, 0x55, 0xaa, 0x81, 0x81, 0x81, 0x81, 0x81, 0xff };
+uint8_t spi_pc_data_index = 0;
+uint8_t spi_pc_data_len = 16;
+uint8_t spi_pc_data[1024] = {0xff, 0x81, 0x81, 0x81, 0x81, 0x81, 0x55, 0xaa, 0x55, 0xaa, 0x81, 0x81, 0x81, 0x81, 0x81, 0xff};
 #endif
 
 volatile bool done;
 bool sim_render = SDL_RENDER;
-bool sim_spi = SPI_TEST;
+bool sim_spi = SPI_INTERFACE;
+bool wait_close = false;
 
 void ctrl_c(int s)
 {
+	(void)s;
 	done = true;
 }
 
@@ -91,7 +89,7 @@ double sc_time_stamp()
 	return main_time;
 }
 
-int main(int argc, char **argv, char **env)
+int main(int argc, char **argv)
 {
 	struct sigaction sigIntHandler;
 
@@ -101,28 +99,31 @@ int main(int argc, char **argv, char **env)
 
 	sigaction(SIGINT, &sigIntHandler, NULL);
 
-
 	double Hz = 1000000.0 / ((TOTAL_WIDTH * TOTAL_HEIGHT) * (1.0 / PIXEL_CLOCK_MHZ));
 	printf("\nXosera simulation. Video Mode: %dx%d @%0.02fHz clock %0.03fMhz\n", VISIBLE_WIDTH, VISIBLE_HEIGHT, Hz, PIXEL_CLOCK_MHZ);
 
 	int nextarg = 1;
 
-	while (nextarg < argc && (argv[nextarg][0] == '-' || argv[nextarg][0] == '/' ))
+	while (nextarg < argc && (argv[nextarg][0] == '-' || argv[nextarg][0] == '/'))
 	{
-		if (strcmp(argv[nextarg]+1, "n") == 0)
+		if (strcmp(argv[nextarg] + 1, "n") == 0)
 		{
 			sim_render = false;
 		}
-		else if (strcmp(argv[nextarg]+1, "s") == 0)
+		else if (strcmp(argv[nextarg] + 1, "s") == 0)
 		{
-			sim_spi = false;
+			sim_spi = true;
+		}
+		else if (strcmp(argv[nextarg] + 1, "w") == 0)
+		{
+			wait_close = true;
 		}
 		nextarg += 1;
 	}
 
-#if SPI_TEST
-	int len = 0;
-	for (int i = nextarg; i < argc && len < sizeof (spi_pc_data); i++)
+#if SPI_INTERFACE
+	size_t len = 0;
+	for (int i = nextarg; i < argc && len < sizeof(spi_pc_data); i++)
 	{
 		char *endptr = nullptr;
 		int value = static_cast<int>(strtoul(argv[i], &endptr, 0) & 0xffUL);
@@ -175,40 +176,39 @@ int main(int argc, char **argv, char **env)
 			TOTAL_HEIGHT,
 			SDL_WINDOW_SHOWN);
 
-		renderer = SDL_CreateRenderer(window, -1, 0);
+		renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
 		SDL_RenderSetScale(renderer, 1, 1);
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 	}
 
-	bool shot_all = true;		// screenshot all frames
+	bool shot_all = true; // screenshot all frames
 	bool take_shot = false;
-	bool render_frame = false;
-	
+
 #endif
 
 	int current_x = 0;
 	int current_y = 24;
 	bool vga_hsync_previous = !H_SYNC_POLARITY;
 	bool vga_vsync_previous = !V_SYNC_POLARITY;
-	int frame_num =0;
-	int x_min = 0, x_max = 0, y_min = 0, y_max = 0;
+	int frame_num = 0;
+	int x_max = 0, y_max = 0;
 	int hsync_count = 0, hsync_min = 0, hsync_max = 0;
 	int vsync_count = 0;
 
 #if VM_TRACE
-	const auto trace_path = "xosera_sim.vcd";
+	const auto trace_path = "logs/xosera_vsim.vcd";
 	printf("Started writing VCD waveform file to \"%s\"...\n", trace_path);
 
 	VerilatedVcdC *tfp = new VerilatedVcdC;
 
-	top->trace(tfp, 99);		// trace to heirarchal depth of 99
+	top->trace(tfp, 99); // trace to heirarchal depth of 99
 	tfp->open(trace_path);
 #endif
 
-	top->reset = 1;	// start in reset
+	top->reset = 1; // start in reset
 
-#if SPI_TEST
+#if SPI_INTERFACE
 	top->spi_cs_i = 1;
 	top->spi_sck_i = 0;
 	top->spi_copi_i = 0;
@@ -221,7 +221,7 @@ int main(int argc, char **argv, char **env)
 			top->reset = 0; // tale out of reset after 2 cycles
 		}
 
-#if SPI_TEST
+#if SPI_INTERFACE
 		// SPI test
 		if (sim_spi && main_time >= SPI_START_TIME && last_spi_test_state != SPI::IDLE)
 		{
@@ -232,68 +232,68 @@ int main(int argc, char **argv, char **env)
 				spi_recv_strobe = false;
 				switch (spi_test_state)
 				{
-					case SPI::SS_LOW:
-						top->spi_cs_i = 0;
+				case SPI::SS_LOW:
+					top->spi_cs_i = 0;
+					spi_send_byte = spi_pc_data[spi_pc_data_index];
+					printf(" <= 0x%02x sending to FPGA\n", spi_send_byte);
+					top->spi_copi_i = (spi_send_byte & 0x80) ? 1 : 0;
+					spi_test_bit = 0;
+					spi_test_state = SPI::SCK_HIGH;
+					break;
+				case SPI::SCK_HIGH:
+					top->spi_sck_i = 1;
+					top->spi_copi_i = (spi_send_byte & 0x80) ? 1 : 0;
+					spi_send_byte = spi_send_byte << 1;
+					spi_test_bit = spi_test_bit + 1;
+					spi_recv_byte <<= 1;
+					spi_recv_byte |= (top->spi_cipo_o) ? 1 : 0;
+					spi_test_state = SPI::SCK_HIGH2;
+					break;
+				case SPI::SCK_HIGH2:
+					spi_test_state = SPI::SCK_LOW;
+					break;
+				case SPI::SCK_LOW:
+					top->spi_sck_i = 0;
+					spi_test_state = SPI::SCK_LOW2;
+					break;
+				case SPI::SCK_LOW2:
+					if (spi_test_bit == 0x8)
+					{
+						spi_test_bit = 0;
+						spi_test_state = SPI::BYTE_DONE;
+						spi_recv_strobe = true;
+					}
+					else
+					{
+						spi_test_state = SPI::SCK_HIGH;
+					}
+					break;
+				case SPI::BYTE_DONE:
+					spi_pc_data_index += 1;
+					if (spi_pc_data_index < spi_pc_data_len)
+					{
+						spi_test_bit = 0;
 						spi_send_byte = spi_pc_data[spi_pc_data_index];
 						printf(" <= 0x%02x sending to FPGA\n", spi_send_byte);
 						top->spi_copi_i = (spi_send_byte & 0x80) ? 1 : 0;
-						spi_test_bit = 0;
 						spi_test_state = SPI::SCK_HIGH;
+					}
+					else
+					{
+						spi_test_state = SPI::SS_HIGH;
+					}
 					break;
-					case SPI::SCK_HIGH:
-						top->spi_sck_i = 1;
-						top->spi_copi_i = (spi_send_byte & 0x80) ? 1 : 0;
-						spi_send_byte = spi_send_byte << 1;
-						spi_test_bit = spi_test_bit + 1;
-						spi_recv_byte <<= 1;
-						spi_recv_byte |= (top->spi_cipo_o) ? 1 : 0;
-						spi_test_state = SPI::SCK_HIGH2;
+				case SPI::SS_HIGH:
+					top->spi_cs_i = 1;
+					spi_test_state = SPI::IDLE;
 					break;
-					case SPI::SCK_HIGH2:
-						spi_test_state = SPI::SCK_LOW;
-					break;
-					case SPI::SCK_LOW:
-						top->spi_sck_i = 0;
-						spi_test_state = SPI::SCK_LOW2;
-					break;
-					case SPI::SCK_LOW2:
-						if (spi_test_bit == 0x8)
-						{
-							spi_test_bit = 0;
-							spi_test_state = SPI::BYTE_DONE;
-							spi_recv_strobe = true;
-						}
-						else
-						{
-							spi_test_state = SPI::SCK_HIGH;
-						}
-					break;
-					case SPI::BYTE_DONE:
-						spi_pc_data_index += 1;
-						if (spi_pc_data_index < spi_pc_data_len)
-						{
-							spi_test_bit = 0;
-							spi_send_byte = spi_pc_data[spi_pc_data_index];
-							printf(" <= 0x%02x sending to FPGA\n", spi_send_byte);
-							top->spi_copi_i = (spi_send_byte & 0x80) ? 1 : 0;
-							spi_test_state = SPI::SCK_HIGH;
-						}
-						else
-						{
-							spi_test_state = SPI::SS_HIGH;
-						}
-					break;
-					case SPI::SS_HIGH:
-						top->spi_cs_i = 1;
-						spi_test_state = SPI::IDLE;
-					break;
-					case SPI::IDLE:
+				case SPI::IDLE:
 					break;
 				}
 				if (false && spi_test_state != SPI::SCK_HIGH && spi_test_state != SPI::SCK_LOW)
 				{
 					printf("%10s -> %10s RECV=0x%02x SENDOUT[%d]=%02x BIT:%d SS:%d SCK:%d COPI:%d CIPO:%d\n", SPI_name[static_cast<int>(last_spi_test_state)], SPI_name[static_cast<int>(spi_test_state)], spi_recv_byte, spi_pc_data_index, spi_send_byte, spi_test_bit,
-						top->spi_cs_i, top->spi_sck_i, top->spi_copi_i, top->spi_cipo_o);
+						   top->spi_cs_i, top->spi_sck_i, top->spi_copi_i, top->spi_cipo_o);
 				}
 				last_spi_test_state = spi_test_state;
 
@@ -302,12 +302,11 @@ int main(int argc, char **argv, char **env)
 					printf(" => 0x%02x received from FPGA\n", spi_recv_byte);
 					spi_recv_byte = 0x00;
 				}
-
 			}
 		}
 #endif
 
-		top->clk = 1;		// tick
+		top->clk = 1; // tick
 		top->eval();
 
 #if VM_TRACE
@@ -316,7 +315,7 @@ int main(int argc, char **argv, char **env)
 #endif
 		main_time++;
 
-		top->clk = 0;		// tock
+		top->clk = 0; // tock
 		top->eval();
 
 #if VM_TRACE
@@ -335,9 +334,9 @@ int main(int argc, char **argv, char **env)
 			{
 				// sim_render current VGA output pixel (4 bits per gun)
 				SDL_SetRenderDrawColor(renderer, (top->vga_r << 4) | top->vga_r,
-												 (top->vga_g << 4) | top->vga_g,
-												 (top->vga_b << 4) | top->vga_b,
-												 255);
+									   (top->vga_g << 4) | top->vga_g,
+									   (top->vga_b << 4) | top->vga_b,
+									   255);
 			}
 			else
 			{
@@ -347,23 +346,23 @@ int main(int argc, char **argv, char **env)
 				}
 
 				// sim_render dithered border area
-				if (((current_x ^ current_y) & 1) == 1)	// non-visible
+				if (((current_x ^ current_y) & 1) == 1) // non-visible
 				{
 					SDL_SetRenderDrawColor(renderer, (top->vga_r << 3),
-													 (top->vga_g << 3),
-													 (top->vga_b << 3),
-													 255);
+										   (top->vga_g << 3),
+										   (top->vga_b << 3),
+										   255);
 				}
 				else
 				{
 					SDL_SetRenderDrawColor(renderer, 0x21,
-													 vsync ?  0x41 : 0x21,
-													 hsync ? 0x41 : 0x21,
-													 0xff);
+										   vsync ? 0x41 : 0x21,
+										   hsync ? 0x41 : 0x21,
+										   0xff);
 				}
 			}
 
-			if (frame_num > 0)		
+			if (frame_num > 0)
 			{
 				SDL_RenderDrawPoint(renderer, current_x, current_y);
 			}
@@ -397,29 +396,28 @@ int main(int argc, char **argv, char **env)
 
 		if (!vsync && vga_vsync_previous)
 		{
-			if (current_y-1 > y_max)
-				y_max = current_y-1;
+			if (current_y - 1 > y_max)
+				y_max = current_y - 1;
 
 			if (frame_num > 0)
 			{
 				vluint64_t frame_time = (main_time - frame_start_time) / 2;
 				printf("Frame %3d, %lu pixel-clocks (% 0.03f msec real-time), %dx%d hsync %d, vsync %d\n", frame_num, frame_time, ((1.0 / PIXEL_CLOCK_MHZ) * frame_time) / 1000.0,
-						x_max, y_max + 1, hsync_max, vsync_count);
+					   x_max, y_max + 1, hsync_max, vsync_count);
 #if SDL_RENDER
 
 				if (sim_render)
 				{
 					if (shot_all || take_shot || frame_num == MAX_TRACE_FRAMES)
 					{
-						static int save_count = 0;
-						char save_name[256] = {0};
 						int w = 0, h = 0;
+						char save_name[256] = {0};
 						SDL_GetRendererOutputSize(renderer, &w, &h);
-						SDL_Surface *sshot = SDL_CreateRGBSurface(0, w, h, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
-						SDL_RenderReadPixels(renderer, NULL, SDL_PIXELFORMAT_ARGB8888, sshot->pixels, sshot->pitch);
-						sprintf(save_name, "xosera_screen_f%02d.bmp", frame_num);
-						SDL_SaveBMP(sshot, save_name);
-						SDL_FreeSurface(sshot);
+						SDL_Surface *screen_shot = SDL_CreateRGBSurface(0, w, h, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
+						SDL_RenderReadPixels(renderer, NULL, SDL_PIXELFORMAT_ARGB8888, screen_shot->pixels, screen_shot->pitch);
+						sprintf(save_name, "logs/xosera_vsim_%dx%d_f%02d.bmp", VISIBLE_WIDTH, VISIBLE_HEIGHT, frame_num);
+						SDL_SaveBMP(screen_shot, save_name);
+						SDL_FreeSurface(screen_shot);
 						printf("Frame %3u saved as \"%s\" (%dx%d)\n", frame_num, save_name, w, h);
 						take_shot = false;
 					}
@@ -468,21 +466,40 @@ int main(int argc, char **argv, char **env)
 #endif
 	}
 
-	FILE *mfp = fopen("xosera_mem.txt", "w");
+	FILE *mfp = fopen("logs/xosera_vsim_text.txt", "w");
 	if (mfp != nullptr)
 	{
 		auto *mem = top->xosera_main->vram->memory;
 
-		for (int y = 0; y < VISIBLE_HEIGHT/16; y++)
+		for (int y = 0; y < VISIBLE_HEIGHT / 16; y++)
 		{
-			fprintf(mfp, "%04x: ", y * (VISIBLE_WIDTH/8));
-			for (int x = 0; x < VISIBLE_WIDTH/8; x++)
+			fprintf(mfp, "%04x: ", y * (VISIBLE_WIDTH / 8));
+			for (int x = 0; x < VISIBLE_WIDTH / 8; x++)
 			{
-				fprintf(mfp, "%04x ", mem[y * (VISIBLE_WIDTH/8) + x]);
+				auto m = mem[y * (VISIBLE_WIDTH / 8) + x];
+				char str[4] = {0};
+				if (isprint(m & 0xff))
+				{
+					sprintf(str, "'%c", m & 0xff);
+				}
+				else
+				{
+					sprintf(str, "%02x", m & 0xff);
+				}
+
+				fprintf(mfp, "%02x%s ", m >> 8, str);
 			}
 			fprintf(mfp, "\n");
 		}
 		fclose(mfp);
+	}
+
+	FILE *bfp = fopen("logs/xosera_vsim_vram.bin", "w");
+	if (bfp != nullptr)
+	{
+		auto *mem = top->xosera_main->vram->memory;
+		fwrite(mem, 128 * 1024, 1, bfp);
+		fclose(bfp);
 	}
 
 	top->final();
@@ -494,6 +511,16 @@ int main(int argc, char **argv, char **env)
 #if SDL_RENDER
 	if (sim_render)
 	{
+		if (!wait_close)
+		{
+			SDL_Delay(1000);
+		}
+		else
+		{
+			fprintf(stderr, "Press a RETURN:\n");
+			fgetc(stdin);
+		}
+
 		SDL_DestroyWindow(window);
 		SDL_Quit();
 	}

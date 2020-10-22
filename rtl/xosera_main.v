@@ -52,7 +52,7 @@ module xosera_main(
 `endif
 );
 
-`include "xosera_defs.vh"		// Xosera global Verilog definitions
+//`include "xosera_defs.vh"		// Xosera global Verilog definitions
 
 
 	wire spi_receive_strobe;

@@ -35,26 +35,26 @@ module video_gen(
 );
 	`include "xosera_defs.vh"		// Xosera global Verilog definitions
 
-	localparam H_MEM_BEGIN		= OFFSCREEN_WIDTH - 9;			// memory fetch starts 1 character early to prime output shift-reg
-	localparam H_MEM_END		= TOTAL_WIDTH - 9;				// memory fetch ends 1 character early (to empty shift-reg)
+	parameter H_MEM_BEGIN		= OFFSCREEN_WIDTH - 9;			// memory fetch starts 1 character early to prime output shift-reg
+	parameter H_MEM_END			= TOTAL_WIDTH - 9;				// memory fetch ends 1 character early (to empty shift-reg)
 	
 	// video controller registers (16 16-bit words)
-	localparam C_MODE_1_REG		= 4'h0;							// mode for plane 1
-	localparam C_MODE_2_REG		= 4'h1;							// mode for plane 2
-	localparam C_SIZE_1_REG		= 4'h2;							// sizes for plane 1
-	localparam C_SIZE_2_REG		= 4'h3;							// sizes for plane 2
-	localparam C_SCROLL_1_REG	= 4'h4;							// fine scroll for plane 1
-	localparam C_SCROLL_2_REG	= 4'h5;							// fine scroll for plane 2
-	localparam C_OP_MODE_REG	= 4'h6;							// blit operation mode	
-	localparam C_OP_COUNT_REG	= 4'h7;							// blit operation count (operation starts on write) 
-	localparam C_CTRL_A_REG		= 4'h8;							// control options for port A
-	localparam C_ADDR_A_REG		= 4'h9;							// word address to access at data A
-	localparam C_DATA_A_REG		= 4'hA;							// word value at address A
-	localparam C_INCR_A_REG		= 4'hB;							// increment for address A on data A access
-	localparam C_CTRL_B_REG		= 4'hC;							// port B control options
-	localparam C_ADDR_B_REG		= 4'hD;							// word address B to access data B
-	localparam C_DATA_B_REG		= 4'hE;							// word value B at address B
-	localparam C_INCR_B_REG		= 4'hF;							// increment for address B on data B access
+	parameter C_MODE_1_REG		= 4'h0;							// mode for plane 1
+	parameter C_MODE_2_REG		= 4'h1;							// mode for plane 2
+	parameter C_SIZE_1_REG		= 4'h2;							// sizes for plane 1
+	parameter C_SIZE_2_REG		= 4'h3;							// sizes for plane 2
+	parameter C_SCROLL_1_REG	= 4'h4;							// fine scroll for plane 1
+	parameter C_SCROLL_2_REG	= 4'h5;							// fine scroll for plane 2
+	parameter C_OP_MODE_REG	= 4'h6;							// blit operation mode	
+	parameter C_OP_COUNT_REG	= 4'h7;							// blit operation count (operation starts on write) 
+	parameter C_CTRL_A_REG		= 4'h8;							// control options for port A
+	parameter C_ADDR_A_REG		= 4'h9;							// word address to access at data A
+	parameter C_DATA_A_REG		= 4'hA;							// word value at address A
+	parameter C_INCR_A_REG		= 4'hB;							// increment for address A on data A access
+	parameter C_CTRL_B_REG		= 4'hC;							// port B control options
+	parameter C_ADDR_B_REG		= 4'hD;							// word address B to access data B
+	parameter C_DATA_B_REG		= 4'hE;							// word value B at address B
+	parameter C_INCR_B_REG		= 4'hF;							// increment for address B on data B access
 
 	// bitmap generation signals
 	reg [15:0] bitmap_start_addr;								// bitmap start address
@@ -83,10 +83,10 @@ module video_gen(
 	reg bm_enable;												// bitmap enable
 
 	// video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
-	localparam STATE_PRE_SYNC		=	2'b00;
-	localparam STATE_SYNC			=	2'b01;
-	localparam STATE_POST_SYNC		=	2'b10;
-	localparam STATE_VISIBLE		=	2'b11;
+	parameter STATE_PRE_SYNC		=	2'b00;
+	parameter STATE_SYNC			=	2'b01;
+	parameter STATE_POST_SYNC		=	2'b10;
+	parameter STATE_VISIBLE			=	2'b11;
 
 	// sync generation signals (and combinatorial logic "next" versions) 
 	reg	 [1:0]	h_state;

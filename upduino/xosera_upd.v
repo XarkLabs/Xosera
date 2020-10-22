@@ -20,8 +20,6 @@
 
 `default_nettype none		 // mandatory for Verilog sanity
 
-`include "../rtl/xosera_defs.vh"		// Xosera global Verilog definitions
-
 `ifdef SIMULATE					// no PLL when simulating
 `define	NOPLL
 `endif
@@ -66,6 +64,8 @@ module xosera_upd(
 	output wire gpio_35, gpio_31, gpio_37, gpio_34, gpio_43, gpio_36, gpio_42, gpio_38	// DEBUG
 `endif
 );
+
+	`include "../rtl/xosera_clk_defs.vh"		// Xosera global Verilog definitions
 
 	wire nreset = gpio_28;					// use gpio_28 as active LOW reset button
 	wire pclk;								// clock output from PLL block

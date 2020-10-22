@@ -34,10 +34,11 @@ module xosera_tb();
 	.spi_cs_i(spi_cs_i)				// SPI target select
 	);
 
+	`include "xosera_clk_defs.vh"		// Xosera global Verilog definitions
 	`include "xosera_defs.vh"		// Xosera global Verilog definitions
 
 	initial begin
-		$dumpfile("xosera_tb.vcd");
+		$dumpfile("logs/xosera_isim.vcd");
 		$dumpvars(0, xosera);
 
 		frame	  = 0;
@@ -68,7 +69,7 @@ module xosera_tb();
 			if (frame > 3) begin
 				$finish;
 			end
-			$display("Finished rendering frame %d %d", frame, V_SYNC_POLARITY, H_SYNC_POLARITY);
+			$display("Finished rendering frame #%1d", frame);
 		end
 		last_vs = vga_vs;
 	end

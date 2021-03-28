@@ -29,6 +29,7 @@ In the top directory of Xosera, there is a "driver" Makefile that has the follow
   * cleans icebreaker, upduino, host_spi and sim directories
 
 <a name="icebreaker-target"></a>
+
 ## Icebreaker FPGA Target
 
 ​The iCEBreaker FPGA​ board is a great little open-source FPGA iCE40UP5K board.  It has three 2x6 PMOD connectors as well as FTDI 2232H JTAG and 16MB of flash.  It is very convenient to use with the PMOD connectors, so typically is my main Xosera development target.
@@ -43,6 +44,7 @@ In the "icebreaker" directory is the Makefile to build Xosera for the iCEBreaker
 * **PMOD_XESS_VGA_SINGLE** - ​6-bit using a single PMOD from [StickIt!-​VGA PMOD from Xess](http://www.xess.com/shop/product/stickit-vga/)​ (out of production - but [design is open](https://github.com/xesscorp/StickIt/tree/master/modules/Vga))
 
 <a name="upduino-target"></a>
+
 ## Upduino FPGA Target
 
 ​The [Upduino 3.0​](https://github.com/tinyvision-ai-inc/UPduino-v3.0) is a new low-cost open-source FPGA iCE40UP5K ​board suitable for breadboards or embedding.  It is based on the older [Upduino 2.x​](https://github.com/tinyvision-ai-inc/UPduino-v2.1) design, but has some [significant issues fixed](https://hackaday.io/page/8864-upduino-30-third-time-appears-to-be-the-charm) (as well as some nice improvements).  Upduino boards require a VGA (or HDMI/DVI) breakout board or breadboard hookup. I have been using a modified Xess StickIt!-VGA (without all pins soldered, as shown [here](https://hackaday.io/project/173731/gallery#8e9ad0d7c922e14d922da6ecdfc4d165)​), but any 3.3V VGA breakout-board should work (up to 4-bits red, green and blue for 4096 colors, but less bits also works).  You can also just wire a VGA connector and a few resistors to make an [R2R DAC](https://en.wikipedia.org/wiki/Resistor_ladder#R%E2%80%932R_resistor_ladder_network_(digital_to_analog_conversion))​ as shown [here](https://papilio.cc/index.php?n=Papilio.ArcadeMegaWing)​ (or [here](https://fraserinnovations.com/fpga-tutor/fpga-beginner-tutorial-vga-experiment-fpga-board-for-beginner-experiment-13/)​ or an 8-color version [here](https://www.fpga4fun.com/PongGame.html)).
@@ -52,26 +54,26 @@ It is likely that you will also need to change the pin mappings used in [upduino
 If you are using an Upduino 3.0, then you will need to short the "OSC" jumper so gpio_20 is 12MHz input clock.  If you choose not to do this (or you are using an Upduino 2.x with working PLL), you can also run a wire from 12Mhz output pin to gpio_35.
 
 * Add **-DCLKGPIO35** to DEFINES in [upduino/Makefile](upduino/Makefile) when using gpio_35 as clock input
- 
+
 Note that the PLL on Upduino 2.x boards [tends to be unreliable](https://tinyvision.ai/blogs/processing-at-the-edge/ground-trampolines-and-phase-locked-loops).  I have gotten around this problem by directly using the target VGA pixel clock frequency input (e.g., 25MHz for 640x480) and avoiding use of the PLL (as shown [here](https://hackaday.io/project/173731/gallery#4b2ea717d510a35635f8f468754db238)).
 
 * Add **-DNOPLL** to DEFINES in [upduino/Makefile](upduino/Makefile) when directly inputting the pixel clock frequency
 
 ## All FPGA Targets
 
- * **all** (default target)
-   * builds FPGA bitstream
- * **prog**
-   * build FPGA bitstream and program board via USB
- * **timing**
-   * run icetime for timing report (.rpt)
- * **count**
-   * produce count log showing resources used per module
- * **lint**
-   * run lint only pass with Verilator
- * **show**
-   * produce DOT diagrams showing each module graphically
- * **clean**
-   * deletes all output files that can be rebuilt
+* **all** (default target)
+  * builds FPGA bitstream
+* **prog**
+  * build FPGA bitstream and program board via USB
+* **timing**
+  * run icetime for timing report (.rpt)
+* **count**
+  * produce count log showing resources used per module
+* **lint**
+  * run lint only pass with Verilator
+* **show**
+  * produce DOT diagrams showing each module graphically
+* **clean**
+  * deletes all output files that can be rebuilt
 
 [WIP]

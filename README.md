@@ -1,5 +1,7 @@
 # Xosera - Xark's Open Source Embedded Retro Adapter
 
+## Rosco_m68k PCB board development branch!
+
 ##### _"Not as clumsy or random as a GPU, an embedded retro video adapter for a more civilized age."_
 
 ### Xosera is an FPGA based video adapter designed with the [rosco_m68k](https://github.com/rosco-m68k/rosco_m68k) retro computer in mind (however it is likely adaptable to others)
@@ -11,6 +13,8 @@ Inspired in concept by it's "namesake" the [Commander X16](https://www.commander
 Currently the design is supported for the [iCE40UP5K FPGA](https://www.latticesemi.com/en/Products/FPGAandCPLD/iCE40UltraPlus) which is fully supported by the open [Yosys/NextPNR tools](https://github.com/YosysHQ).  Development is being done on both the [iCEBreaker FPGA](https://github.com/icebreaker-fpga/icebreaker) board as well as the [Upduino 3.0](https://github.com/tinyvision-ai-inc/UPduino-v3.0) board (or Upduino 2.x with external oscillator).
 
 This is currently a work in progress, but you can follow along at [Hackaday.io](https://hackaday.io/Xark) or in the [rosco_m68k Discord](https://discord.gg/zGUB7R8) (in the #projects channel).
+
+*NOTE:* This branch is for development of a rosco_m68k Xosera PCB prototype, see [rosco_m68k Hardware Projects feature/xosera branch](https://github.com/rosco-m68k/hardware-projects/tree/feature/xosera) for any details on the hardware development (thanks Ross 😃 ).  During development take everything here but the Verilog code with a grain of salt (i.e., the documentation is out of date - or mostly not written yet).
 
 [See this for information on building and configuring Xosera](BUILDING.md)
 
@@ -29,7 +33,7 @@ Planned Xosera features:
 * At least one "cursor" sprite (and likely more)
 * Register based interface with auto-increment (as fast as direct mapped)
 * SPI interface to registers for development from PC via FTDI (or direct GPIO use)
-  
+
 Current Xosera features:
 
 * VGA and HDMI (DVI) video generation (at resolution fixed at config time)

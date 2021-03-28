@@ -1,26 +1,18 @@
 # Makefile - Xosera for Upduino v3.x FPGA board
 # vim: set noet ts=8 sw=8
-
-# NOTE: Upduino 2.x should be the same as 3.x except for the clock input.
-#	However, it is known to suffer from significant problems when using the
-#	PLL (without board modifications, e.g., adding a capacitor to PLL VCC).  See:
-#	https://tinyvision.ai/blogs/processing-at-the-edge/ground-trampolines-and-phase-locked-loops
-#       Use -DEXTLK35 option below to enable external clock to gpio_35.  You can try running a wire from J8/12Mhz
-#	to gpio_35, but I was unable to get PLL stable.  However, using a 25Mhz 3.3v oscillator or oscillator circuit
-#	into gpio_35 and -DNOPLL does work (25Mhz for 640x480, others frequencies/modes from table below may also work)
 #
-# NOTE: Upduino 3.x PLL is fine, but needs either the "OSC" jumper shorted (recommended, but dedicates gpio_10 as a clock)
-#	or add the -DCLKGPIO35 option below and run a wire from 12Mhz pin to gpio_35 (same as Upduino 2.x with PLL)
+# NOTE: This assumes Upduino 3.x with PLL and needs either the "OSC" jumper shorted (recommended, but dedicates gpio_20 as a clock).
+# Also, since the RGB LED pins are used as GPIO inputs, jumper R28 should be cut to disconnect the RGB LED (which can interfere with input).
 
 # Using icestorm tools + yosys + nextpnr
 # Modified from examples in icestorm distribution for
 # up5k_vga by E. Brombaugh (emeb) and further extensively
 # hacked by Xark for Xosera purposes
 
-# Tool versions used:
-#	Yosys 74e93e083ff23f3381fe2409e5847f9843840b17 (open-tool-forge build) (git sha1 bb6d04d, gcc 9.3.0-10ubuntu2 -Os)
-#	nextpnr-ice40 -- Next Generation Place and Route (Version nightly-20200609)
-#	Verilator 4.028 2020-02-06 rev v4.026-92-g890cecc1
+# Tools used:
+#	Yosys / nextpnr-ice40 -- Synthesis and Next Generation Place and Route (Version nightly-20200609)
+#	Verilator -  fast C++ based simulator
+#	Icarus Verilog
 #	Built on GNU/Linux using Ubuntu 20.04 distribution
 
 # Xosera video mode selection:
@@ -32,7 +24,7 @@
 #	MODE_800x600	800x600@60Hz	clock 40.000 (39.750) MHz
 #	MODE_1024x768	1024x768@60Hz	clock 65.000 (65.250) MHz [fails timing]
 #	MODE_1280x720	1280x720@60Hz	clock 74.176 (73.500) MHz [fails timing]
-VIDEO_MODE := MODE_640x480
+VIDEO_MODE := MODE_848x480
 
 # Xosera project setup for Upduino v3.0
 TOP := xosera_upd
@@ -64,26 +56,17 @@ YOSYS := yosys
 YOSYS_CONFIG := yosys-config
 ICEPACK := icepack
 ICETIME := icetime
-ICEPROG := iceprog		# WSL Users: I read Windows "iceprog.exe" works from WSL (otherwise no USB)
+ICEPROG := iceprog
 
 # Yosys synthesis arguments
-YOSYS_SYNTH_ARGS := -dsp -top $(TOP)
+YOSYS_SYNTH_ARGS := -dsp -abc9 -abc2 -relut -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
-#       
-# NOTE:	CLKGPIO35 - use gpio_35 for external clock source (12Mhz with PLL or pixel clock)
-#       Add -DCLKGPIO35 for Upduino V2.x (or V3.x without OSC jumper shorted)
-#       (Also route J8/12Mhz signal or external clock to gpio_35 pin for clock input)
-# NOTE: NOPLL    - assume external clock is proper pixel clock frequency (don't use PLL)
-#	Add -DNOPLL to -DCLKGPIO35 if external clock needs no PLL (e.g. 25Mhz)
-# NOTE: SPI_DEBUG - outputs FTDI SPI signals and some SPI module signals to GPIO
-#	pins to allow use of logic analyzer (only Upduino 3.x)
-#       
-DEFINES := -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -DICE40UP5K -DUPDUINO #-DNOPLL -DCLKGPIO35 #-DSPI_DEBUG
+DEFINES := -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -DICE40UP5K -DUPDUINO
 
 # Verilator tool (used for "lint")
 VERILATOR := verilator
-VERILATOR_ARGS := --relative-includes -Wall -Wno-fatal -Wno-DECLFILENAME
+VERILATOR_ARGS := --relative-includes -Wall -Wno-fatal -Wno-DECLFILENAME -Wno-UNUSED
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
@@ -92,12 +75,12 @@ NEXTPNR_ARGS := --pre-pack $(SDC) --placer heap
 
 # defult target is make bitstream
 all: $(TOP).bin Makefile
-	@echo === Upduino Xosera configured for: $(VIDEO_MODE) $(findstring CLKGPIO35,$(DEFINES)) $(findstring NOPLL,$(DEFINES)) ===
+	@echo === Upduino Xosera configured for: $(VIDEO_MODE) ===
 	@echo     Type \"make prog\" to program the Upduino via USB
 
 # program Upduino FPGA via USB (may need udev rules or sudo on Linux)
 prog: $(TOP).bin Makefile
-	@echo === Upduino Xosera configured for: $(VIDEO_MODE) $(findstring CLKGPIO35,$(DEFINES)) $(findstring NOPLL,$(DEFINES)) ===
+	@echo === Upduino Xosera configured for: $(VIDEO_MODE) ===
 	$(ICEPROG) -d i:0x0403:0x6014 $<
 
 # run icetime to generate a timing report
@@ -111,14 +94,14 @@ count: $(SRC) $(INC) $(FONTMEM) Makefile
 
 # run Verilator to check for Verilog issues
 lint: $(SRC) $(INC) $(FONTMEM) Makefile
-	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC)
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) -DSIMULATE --top-module $(TOP) $(TECH_LIB) $(SRC)
 
 # run Yosys to generate a "dot" graphical representation of each design file
 show: $(DOT)
 
 $(DOT): %.dot: %.v
 	mkdir -p dot
-	$(YOSYS) -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog $< ; show -enum -stretch -signed -width -prefix dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
+	$(YOSYS) -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -sv $< ; show -enum -stretch -signed -width -prefix dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # delete all targets that will be re-generated
 clean:
@@ -136,7 +119,7 @@ clean:
 	@rm -f $@
 	@mkdir -p logs
 	$(NEXTPNR) $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@ 2>&1 | tee logs/$(TOP)_nextpnr.log
-	@echo === Upduino Xosera : $(VIDEO_MODE) $(findstring CLKGPIO35,$(DEFINES)) $(findstring NOPLL,$(DEFINES)) | tee $(TOP)_stats.txt	
+	@echo === Upduino Xosera : $(VIDEO_MODE) | tee $(TOP)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@$(NEXTPNR) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@sed -n '/Device utilisation/,/Info: Placed/p' logs/$(TOP)_nextpnr.log | sed '$$d' | tee -a $(TOP)_stats.txt
@@ -156,4 +139,4 @@ clean:
 .SECONDARY:
 
 # inform make about "phony" convenience targets
-.PHONY: all prog timing lint show clean
+.PHONY: all prog timing count lint show clean

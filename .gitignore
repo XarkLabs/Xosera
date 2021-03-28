@@ -25,3 +25,4 @@ host_spi/host_spi
 # iVerilog output files
 sim/xosera_tb
 sim/xosera_tb.vcd
+.DS_Store

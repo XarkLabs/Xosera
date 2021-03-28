@@ -62,17 +62,18 @@ YOSYS := yosys
 YOSYS_CONFIG := yosys-config
 ICEPACK := icepack
 ICETIME := icetime
-ICEPROG := iceprog		# WSL Users: I read Windows "iceprog.exe" works from WSL (otherwise no USB)
+ICEPROG := iceprog
 
 # Yosys synthesis arguments
-YOSYS_SYNTH_ARGS := -dsp -top $(TOP)
+YOSYS_SYNTH_ARGS := -dsp -abc9 -abc2 -relut -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DICEBREAKER
+#  -DSPI_INTERFACE
 
 # Verilator tool (used for "lint")
 VERILATOR := verilator
-VERILATOR_ARGS := --relative-includes -Wall -Wno-fatal -Wno-DECLFILENAME
+VERILATOR_ARGS := --relative-includes -Wall -Wno-fatal -Wno-DECLFILENAME -Wno-UNUSED
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
@@ -100,14 +101,14 @@ count: $(SRC) $(INC) $(FONTMEM) Makefile
 
 # run Verilator to check for Verilog issues
 lint: $(SRC) $(INC) $(FONTMEM) Makefile
-	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC)
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) -DSIMULATE --top-module $(TOP) $(TECH_LIB) $(SRC)
 
 # run Yosys to generate a "dot" graphical representation of each design file
 show: $(DOT)
 
 $(DOT): %.dot: %.v
 	mkdir -p dot
-	$(YOSYS) -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog $< ; show -enum -stretch -signed -width -prefix dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
+	$(YOSYS) -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -sv $< ; show -enum -stretch -signed -width -prefix dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # delete all targets that will be re-generated
 clean:
@@ -125,7 +126,7 @@ clean:
 	@rm -f $@
 	@mkdir -p logs
 	$(NEXTPNR) $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@ 2>&1 | tee logs/$(TOP)_nextpnr.log
-	@echo === iCEBreaker Xosera : $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(TOP)_stats.txt	
+	@echo === iCEBreaker Xosera : $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(TOP)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@$(NEXTPNR) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@sed -n '/Device utilisation/,/Info: Placed/p' logs/$(TOP)_nextpnr.log | sed '$$d' | tee -a $(TOP)_stats.txt
@@ -145,4 +146,4 @@ clean:
 .SECONDARY:
 
 # inform make about "phony" convenience targets
-.PHONY: all prog timing lint show clean
+.PHONY: all prog timing count lint show clean

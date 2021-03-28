@@ -16,7 +16,7 @@
 # Supported modes:
 #	MODE_640x400	640x400@70Hz 	clock 25.175 MHz
 #	MODE_640x480	640x480@60Hz	clock 25.175 MHz
-#	MODE_720x400	720x400@70Hz 	clock 28.322 MHz 
+#	MODE_720x400	720x400@70Hz 	clock 28.322 MHz
 #	MODE_848x480	848x480@60Hz	clock 33.750 MHz (16:9 480p)
 #	MODE_800x600	800x600@60Hz	clock 40.000 MHz
 #	MODE_1024x768	1024x768@60Hz	clock 65.000 MHz
@@ -41,11 +41,20 @@ SRC := $(SRCDIR)/xosera_main.v $(filter-out $(SRCDIR)/xosera_main.v,$(wildcard $
 # Verilog include files for design
 INC := $(wildcard $(SRCDIR)/*.vh)
 
+# Simulate BUS commands diring simulation (results in log)
+BUS_INTERFACE	:= 1
+
 # memory initialization file for default 8x16 font
 FONTMEM := ../fonts/font_8x16.mem
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -DICE40UP5K
+
+ifeq ($(strip $(BUS_INTERFACE)),1)
+DEFINES += -DBUS_INTERFACE
+endif
+
+current_dir = $(shell pwd)
 
 # icestorm tools
 YOSYS_CONFIG := yosys-config
@@ -53,13 +62,10 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # Icarus Verilog
 IVERILOG	:= iverilog
-IVERILOG_ARGS	:= -g2005-sv -I ../rtl/ -l $(TECH_LIB)
+IVERILOG_ARGS	:= -g2005-sv -Wall -I../rtl/ -l $(TECH_LIB)
 
 # Verilator SDL2 simulation frame rendering (1 enables SDL2 video rendering)
 SDL_RENDER	:= 1
-
-# Simulate SPI commands diring simulation (results in log)
-SPI_INTERFACE	:= 1
 
 # Verilator C++ definitions and options
 ifeq ($(strip $(SDL_RENDER)),1)
@@ -67,11 +73,11 @@ LDFLAGS		:= -LDFLAGS "$(shell sdl2-config --libs)"
 SDL_CFLAGS	:= $(shell sdl2-config --cflags)
 endif
 # Note: Using -Os seems to provide the fastest compile+run simulation iteration time
-CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -fomit-frame-pointer -Wno-sign-compare -D$(VIDEO_MODE) -DSDL_RENDER=$(SDL_RENDER) -DSPI_INTERFACE=$(SPI_INTERFACE) $(SDL_CFLAGS)"
+CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-sign-compare -Wno-unused-parameter -D$(VIDEO_MODE) -DSDL_RENDER=$(SDL_RENDER) -DBUS_INTERFACE=$(BUS_INTERFACE) $(SDL_CFLAGS)"
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
-VERILATOR_ARGS := --relative-includes -Wall -Wno-fatal -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY
+VERILATOR_ARGS := --relative-includes -I../rtl --timescale-override 1ns/1ns -Wall -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
 
 # Verillator C++ source driver
 CSRC := xosera_sim.cpp
@@ -100,12 +106,15 @@ irun: $(TBTOP)
 # use Verilator to build native simulation executable
 obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) Makefile
 	rm -rf obj_dir
-	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace -DSIMULATE $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(TECH_LIB) $(SRC) xosera_sim.cpp
-	cd obj_dir && make -f V$(VTOP).mk -j$(shell nproc)
+	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace -DSIMULATE $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(TECH_LIB) $(SRC) $(current_dir)/$(CSRC)
+	cd obj_dir && make -f V$(VTOP).mk
+
+# -j$(shell nproc)
 
 # use Icarus Verilog to build vvp simulation executable
 $(TBTOP): $(INC) $(TBTOP).v $(SRC) Makefile
-	$(IVERILOG) $(IVERILOG_ARGS) -DSIMULATE -D$(VIDEO_MODE) -o $(TBTOP) $(TBTOP).v $(SRC)
+	-$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) -DSIMULATE --top-module $(TBTOP) $(TBTOP).v $(SRC)
+	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -DSIMULATE -D$(VIDEO_MODE) -o $(TBTOP) $(current_dir)/$(TBTOP).v $(SRC)
 
 # delete all targets that will be re-generated
 clean:

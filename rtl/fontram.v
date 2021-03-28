@@ -1,43 +1,45 @@
 // fontram.v
 //
-// vim: set noet ts=4 sw=4
+// vim: set et ts=4 sw=4
 //
 // Copyright (c) 2020 Xark - https://hackaday.io/Xark
 //
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
 
-`default_nettype none		 	// mandatory for Verilog sanity
+`default_nettype none             // mandatory for Verilog sanity
+`timescale 1ns/1ns
 
 // "hack" to allow quoted filename from define
 `define STRINGIFY(x) `"x`"
 
 module fontram(
-	input wire rd_clk,
-	input wire [12:0] rd_address,
-	output reg [7:0] data_out,
-	input wire wr_clk,
-	input wire wr_en,
-	input wire [12:0] wr_address,
-	input wire [7:0] data_in
-);
-	// infer 8x8KB font BRAM
-	reg [7:0] bram[8191:0];
-`ifndef SHOW		// yosys show command doesn't like "too long" init string
-	initial
+           input logic clk,
+           input logic rd_en_i,
+           input logic [12: 0] rd_address_i,
+           output logic [7: 0] rd_data_o,
+           input logic wr_en_i,
+           input logic [12: 0] wr_address_i,
+           input logic [7: 0] wr_data_i
+       );
+// infer 8x8KB font BRAM
+logic [7: 0] bram[8191: 0];
+`ifndef SHOW        // yosys show command doesn't like "too long" init string
+initial
 `ifndef FONT_MEM
-		$readmemb("../fonts/font_8x16.mem", bram, 0, 4095);
+    $readmemb("../fonts/font_8x16.mem", bram, 0, 4095);
 `else
-		$readmemb(`STRINGIFY(`FONT_MEM), bram, 0, 4095);
+    $readmemb(`STRINGIFY(`FONT_MEM), bram, 0, 4095);
 `endif
 `endif
 
-	always @(posedge wr_clk) begin
-		if (wr_en)
-			bram[wr_address] <= data_in;
-	end
-
-	always @(posedge rd_clk) begin
-		data_out <= bram[rd_address];
-	end
+always_ff @(posedge clk) begin
+    // NOTE: TODO iCE40 BRAM needs to be 16-bits wide to read/write
+    // if (wr_en_i) begin
+    //     bram[wr_address_i] <= wr_data_i;
+    // end
+    if (rd_en_i) begin
+        rd_data_o <= bram[rd_address_i];
+    end
+end
 endmodule

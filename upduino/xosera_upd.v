@@ -1,6 +1,6 @@
-// xosera_upd.v - Top module for Upduino Xosera
+// xosera_upd.v - Top module for Upduino v3.0 Xosera
 //
-// vim: set noet ts=4 sw=4
+// vim: set et ts=4 sw=4
 //
 // Copyright (c) 2020 Xark - https://hackaday.io/Xark
 //
@@ -9,162 +9,193 @@
 // For info about Updino v3.0: https://github.com/tinyvision-ai-inc/UPduino-v3.0
 // It should be here on Tindie soon: https://www.tindie.com/stores/tinyvision_ai/
 //
-// NOTE: Upduino 2.x should be the same as 3.x except for the clock input.
-//		 However, it is known to suffer from significant problems when using the
-//		 PLL (without board modifications, e.g., adding a capacitor to PLL VCC).  See:
-//		 https://tinyvision.ai/blogs/processing-at-the-edge/ground-trampolines-and-phase-locked-loops
-//       See -DEXTLK35 option below to enable external clock with a wire from J8/12Mhz to gpio_35
-//
-// NOTE: Upduino 3.x needs either the "OSC" jumper shorted (recommended, but dedicates gpio_10 as a clock)
-//		 or add the -DCLKGPIO35 option below and a wire from 12Mhz pin to gpio_35
+// NOTE: Upduino 3.x needs the "OSC" jumper shorted to provide 12MHz clock to drive PLL
 
-`default_nettype none		 // mandatory for Verilog sanity
+`default_nettype none   // mandatory for Verilog sanity
+`timescale 1ns/1ns
 
-`ifdef SIMULATE					// no PLL when simulating
-`define	NOPLL
-`endif
-
-// depending on the external clock input pin, slightly different
-// PLL primitives versions are needed for "reasons" (internal FPGA architecture)
-`ifdef CLKGPIO35
-`define	CLK_PIN		gpio_35		// external clock (NOTE: wire clock to gpio_35, from J8/12Mhz or other clock)
-`define	PLL_PRIM	SB_PLL40_PAD
-`define PLL_CLKIN	PACKAGEPIN
-`else
-`define	CLK_PIN		gpio_20		// 12Mhz clock (NOTE: "OSC" jumper on Upduino V3.x must be shorted)
-`define	PLL_PRIM	SB_PLL40_CORE
-`define PLL_CLKIN	REFERENCECLK
-`endif
 
 module xosera_upd(
-	input wire `CLK_PIN,						// input clock
-	input wire gpio_28,						// reset button (active LOW) 
-	output wire gpio_12,					// hsync
-	output wire gpio_21,					// vsync
-	output wire gpio_13,					// R[3]
-	output wire gpio_19,					// G[3]
-	output wire gpio_18,					// B[3]
-	output wire gpio_11,					// R[2]
-	output wire gpio_9,						// G[2]
-	output wire gpio_6,						// B[2]
-	output wire gpio_44,					// R[1]
-	output wire gpio_4,						// G[1]
-	output wire gpio_3,						// B[1]
-	output wire gpio_48,					// R[0]
-	output wire gpio_45,					// G[0]
-	output wire gpio_47,					// B[0]
-	input wire 	spi_sck,					// SPI sck (also serial_rxd)
-	input wire	spi_copi,					// SPI copi
-	output wire spi_cipo,					// SPI cipo (also serial_txd)
-	output wire spi_cs,						// SPI flash CS (drive high unless using SPI flash)
-	input wire  led_red,					// R input from FTDI CTS/SPI SS (TP11 <-330 Ohm-> R)
-	output wire led_green, led_blue			// Upduino GB LED
-`ifdef SPI_DEBUG
-	,
-	output wire gpio_35, gpio_31, gpio_37, gpio_34, gpio_43, gpio_36, gpio_42, gpio_38	// DEBUG
+            // left side (USB at top)
+            input  logic    led_red,        // m68k bus select (RGB red, Upduino 3.0 needs jumper R28 cut)
+            input  logic    led_green,      // m68k bus read/not write (RGB green when output)
+            input  logic    led_blue,       // m68k bus byte select (RGB blue when output)
+            input  logic    gpio_23,        // m68k bus regnum 0
+            input  logic    gpio_25,        // m68k bus regnum 1
+            input  logic    gpio_26,        // m68k bus regnum 2
+            input  logic    gpio_27,        // m68k bus regnum 3
+            output logic    gpio_32,        // audio left output
+            output logic    gpio_35,        // audio right output (NOTE: this gpio can't be input)
+            inout  logic    gpio_31,        // m68k bus data 0
+            inout  logic    gpio_37,        // m68k bus data 1
+            inout  logic    gpio_34,        // m68k bus data 2
+            inout  logic    gpio_43,        // m68k bus data 3
+            inout  logic    gpio_36,        // m68k bus data 4
+            inout  logic    gpio_42,        // m68k bus data 5
+            inout  logic    gpio_38,        // m68k bus data 6
+            inout  logic    gpio_28,        // m68k bus data 7
+            // right side (USB at top)
+            output logic    gpio_12,        // video hsync
+            output logic    gpio_21,        // video vsync
+            output logic    gpio_13,        // video R[3]
+            output logic    gpio_19,        // video G[3]
+            output logic    gpio_18,        // video B[3]
+            output logic    gpio_11,        // video R[2]
+            output logic    gpio_9,         // video G[2]
+            output logic    gpio_6,         // video B[2]
+            output logic    gpio_44,        // video R[1]
+            output logic    gpio_4,         // video G[1]
+            output logic    gpio_3,         // video B[1]
+            output logic    gpio_48,        // video R[0]
+            output logic    gpio_45,        // video G[0]
+            output logic    gpio_47,        // video B[0]
+            output logic    gpio_46,        // video enable for HDMI
+            output logic    gpio_2,         // video clock for HDMI
+            output logic    spi_cs,         // FPGA SPI flash CS (keep high unless using SPI flash)
+            input  logic    gpio_20         // input 12MHz clock (Upduino 3.0 needs OSC jumper shorted)
+       );
+
+`include "../rtl/xosera_clk_defs.vh"    // Xosera global Verilog definitions
+
+assign spi_cs = 1'b1;                   // prevent SPI flash interfering with other SPI/FTDI pins
+
+// gpio pin aliases
+logic       bus_sel_n;                  // bus select (active LOW)
+logic       bus_rd_nwr;                 // bus read not write (write LOW, read HIGH)
+logic       bus_bytesel;                // bus even/odd byte select (even LOW, odd HIGH)
+logic [3:0] bus_reg_num;                // bus 4-bit register index number (16-bit registers)
+logic [7:0] bus_data;                   // bus 8-bit bidirectional data I/O
+logic       audio_l;                    // left audio PWM
+logic       audio_r;                    // right audio PWM
+logic [3:0] vga_r;                      // vga red (4-bit)
+logic [3:0] vga_g;                      // vga green (4-bits)
+logic [3:0] vga_b;                      // vga blue (4-bits)
+logic       vga_hs;                     // vga hsync
+logic       vga_vs;                     // vga vsync
+logic       vga_de;                     // HDMI display enable
+
+// assign input signals to pins
+assign bus_sel_n    = led_red;          // RGB red as select input (UP_nCS)
+assign bus_rd_nwr   = led_green;        // RGB blue as read/not write
+assign bus_bytesel  = led_blue;         // gpio for word byte select
+assign bus_reg_num  = { gpio_27, gpio_26, gpio_25, gpio_23 };   // gpio for register number
+assign bus_data     = { gpio_28, gpio_38, gpio_42, gpio_36, gpio_43, gpio_34, gpio_37, gpio_31 };   // gpio for data bus
+
+// split tri-state data lines into in/out signals for inside FPGA
+logic [7:0] bus_data_out;
+logic [7:0] bus_data_in;
+assign bus_data = (!bus_sel_n && !bus_rd_nwr) ? bus_data_out : 8'bZ;     // tri-state data bus unless select and write active
+assign bus_data_in = bus_data;
+
+// assign audio output signals to pins
+assign gpio_32 = audio_l;           // gpio for PWM left audio channel
+assign gpio_35 = audio_r;           // gpio for PWM right audio channel
+
+// video output signals
+`ifndef SIMULATE
+// DV PMOD mode (but still works great for VGA)
+// NOTE: Use SB_IO DDR to help assure clock arrives a bit before signal
+//       Also register the other signals.
+SB_IO #(
+          .PIN_TYPE(6'b010000)   // PIN_OUTPUT_DDR
+      ) dvi_clk_sbio (
+          .PACKAGE_PIN(gpio_2),
+          //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
+          .OUTPUT_CLK(pclk),
+          .D_OUT_0(1'b0),                   // output on rising edge
+          .D_OUT_1(1'b1)                    // output on falling edge
+      );
+
+SB_IO #(
+          .PIN_TYPE(6'b010100)   // PIN_OUTPUT_REGISTERED
+      ) dvi_signals_sbio [14: 0] (
+          .PACKAGE_PIN({gpio_46, gpio_21, gpio_12, gpio_13, gpio_11, gpio_44, gpio_48, gpio_19, gpio_9, gpio_4, gpio_45, gpio_18, gpio_6, gpio_3, gpio_47}),
+          //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
+          .OUTPUT_CLK(pclk),
+          .D_OUT_0({vga_de, vga_vs, vga_hs, vga_r, vga_g, vga_b}),
+          /* verilator lint_off PINCONNECTEMPTY */
+          .D_OUT_1()
+          /* verilator lint_on PINCONNECTEMPTY */
+      );
+
+`else
+// Generic VGA mode (for simulation)
+assign { gpio_46,  gpio_12,  gpio_21,  gpio_13,  gpio_19,  gpio_18,  gpio_11,  gpio_9,   gpio_6   } =
+       { vga_de,   vga_hs,   vga_vs,   vga_r[3], vga_g[3], vga_b[3], vga_r[2], vga_g[2], vga_b[2] };
+assign { gpio_44,  gpio_4,   gpio_3,   gpio_48,  gpio_45,  gpio_47  } =
+       { vga_r[1], vga_g[1], vga_b[1], vga_r[0], vga_g[0], vga_b[0] };
+
+assign gpio_2   = pclk;    // output HDMI clk
 `endif
-);
 
-	`include "../rtl/xosera_clk_defs.vh"		// Xosera global Verilog definitions
+// PLL to derive proper video frequency from 12MHz oscillator (gpio_20 with OSC jumper shorted)
+logic pclk;                  // video pixel clock output from PLL block
+logic pll_lock;              // indicates when PLL frequency has locked-on
 
-	wire nreset = gpio_28;					// use gpio_28 as active LOW reset button
-	wire pclk;								// clock output from PLL block
-	wire pll_lock;							// indicates when PLL frequency has locked-on
+`ifndef SIMULATE
+/* verilator lint_off PINMISSING */
+SB_PLL40_CORE
+    #(
+        .DIVR(PLL_DIVR),        // DIVR from video mode
+        .DIVF(PLL_DIVF),        // DIVF from video mode
+        .DIVQ(PLL_DIVQ),        // DIVQ from video mode
+        .FEEDBACK_PATH("SIMPLE"),
+        .FILTER_RANGE(3'b001),
+        .PLLOUT_SELECT("GENCLK")
+    )
+    pll_inst (
+        .LOCK(pll_lock),        // signal indicates PLL lock
+        .RESETB(1'b1),
+        .BYPASS(1'b0),
+        .REFERENCECLK(gpio_20), // input reference clock
+        .PLLOUTGLOBAL(pclk)     // PLL output clock (via global buffer)
+    );
+/* verilator lint_on PINMISSING */
 
-// NOTE: For "reasons" (not sure) different PLL primitives are needed for gpio_20 vs gpio_35
-
-`ifndef NOPLL
-	`PLL_PRIM
-	#(
-		.DIVR(PLL_DIVR),		// DIVR from video mode
-		.DIVF(PLL_DIVF),		// DIVF from video mode
-		.DIVQ(PLL_DIVQ),		// DIVQ from video mode
-		.FEEDBACK_PATH("SIMPLE"),
-		.FILTER_RANGE(3'b001),
-		.PLLOUT_SELECT("GENCLK"),
-	)
-	pll_inst (
-		.LOCK(pll_lock),		// signal indicates PLL lock
-		.RESETB(1'b1),
-		.BYPASS(1'b0),
-		.`PLL_CLKIN(`CLK_PIN),	// input reference clock
-		.PLLOUTGLOBAL(pclk)		// PLL output clock (via global buffer)
-	);
-`else	// for simulation just use 1:1 clock
-	assign pll_lock = 1'b1;
-	assign pclk = `CLK_PIN;
+`else
+// for simulation use 1:1 input clock (and testbench can simulate proper frequency)
+assign pll_lock = 1'b1;
+assign pclk = gpio_20;
 `endif
 
-	assign spi_cs = 1'b1;	// prevent SPI flash interfering with other SPI/FTDI pins
-	wire spi_sel = 1'b0;//led_red;		// Upduino 3.x needs 330 ohm resistor placed between R and TP11 (closest to R)
+// reset logic waits for PLL lock & reset button released (with small delay)
+logic [7:0] reset_cnt;      // counter for reset delay (assures memories ready)
+logic reset = 1'b1;         // default in reset state
 
-`ifdef SPI_DEBUG
-	// DEBUG
-	assign gpio_43 = spi_cipo;
-	assign gpio_36 = spi_copi;
-	assign gpio_42 = spi_sck;
-	assign gpio_38 = spi_sel;
-`endif
+always_ff @(posedge pclk) begin
+    // reset count and stay in reset if pll_lock lost or bus_nreset
+    if (!pll_lock) begin
+        reset_cnt   <= 0;
+        reset       <= 1'b1;
+    end
+    else begin
+        if (!&reset_cnt) begin
+            reset_cnt   <= reset_cnt + 1;
+            reset       <= 1'b1;
+        end
+        else begin
+            reset       <= 1'b0;
+        end
+    end
+end
 
-	// reset generator waits for PLL lock & reset button released for > ~0.8ms
-	reg [7:0] reset_cnt;
-	reg reset = 1'b1;
-	always @(posedge pclk)
-	begin
-		if (!pll_lock || !nreset) begin
-			reset_cnt <= 0;
-			reset <= 1'b1;
-		end
-		else
-		begin
-			if (!&reset_cnt) begin
-				reset_cnt <= reset_cnt + 1;
-				reset <= 1'b1;
-			end
-			else begin
-				reset <= 1'b0;
-			end
-		end
-	end
-
-//	assign led_red = ~reset;		// red LED used used as FTDI SPI CS input
-	assign led_green = reset;		// green LED when not in reset
-	assign led_blue = 1'b1;			// blue LED off
-
-	// xosera main module
-	wire [3:0] r;
-	wire [3:0] g;
-	wire [3:0] b;
-	wire vga_hs;
-	wire vga_vs;
-	wire vga_de;
-
-	// Change video output pin mappings here
-	assign	{ gpio_12, gpio_21, gpio_13, gpio_19, gpio_18, gpio_11, gpio_9, gpio_6 } =
-			{ vga_hs,  vga_vs,  r[3],    g[3],    b[3],    r[2],    g[2],   b[2] };
-	assign	{ gpio_44, gpio_4, gpio_3, gpio_48, gpio_45, gpio_47 } =
-			{ r[1],    g[1],   b[1],   r[0],    g[0],    b[0] };
-
-	xosera_main xosera_main(
-		.clk(pclk),
-		.reset(reset),
-		.vga_r(r),
-		.vga_g(g),
-		.vga_b(b),
-		.vga_vs(vga_vs),
-		.vga_hs(vga_hs),
-		.visible(vga_de),
-		.spi_sck_i(spi_sck),	
-		.spi_copi_i(spi_copi),	
-		.spi_cipo_o(spi_cipo),	
-		.spi_cs_i(spi_sel)
-`ifdef SPI_DEBUG
-		,
-		.dbg_receive(gpio_34),
-		.dbg_transmit(gpio_37),
-		.dbg_sck_rise(gpio_31),
-		.dbg_sck_fall(gpio_35)
-`endif
-	);
-
+// xosera main module
+xosera_main xosera_main(
+                .clk(pclk),
+                .red_o(vga_r),
+                .green_o(vga_g),
+                .blue_o(vga_b),
+                .vsync_o(vga_vs),
+                .hsync_o(vga_hs),
+                .visible_o(vga_de),
+                .bus_sel_n_i(bus_sel_n),
+                .bus_rd_nwr_i(bus_rd_nwr),
+                .bus_reg_num_i(bus_reg_num),
+                .bus_bytesel_i(bus_bytesel),
+                .bus_data_i(bus_data_in),
+                .bus_data_o(bus_data_out),
+                .audio_l_o(audio_l),
+                .audio_r_o(audio_r),
+                .reset_i(reset)
+            );
 endmodule

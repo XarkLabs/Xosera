@@ -12,7 +12,7 @@
 
 module bus_interface(
            input  logic         clk,                    // input clk (should be > 2x faster than bus signals)
-           input  logic         bus_sel_n_i,            // register select strobe
+           input  logic         bus_cs_n_i,            // register select strobe
            input  logic         bus_rd_nwr_i,           // 0 = write, 1 = read
            input  logic  [3:0]  bus_reg_num_i,          // register number
            input  logic         bus_bytesel_i,          // 0=even byte, 1=odd byte
@@ -39,7 +39,7 @@ logic       bytesel     = bytesel_r[0];
 logic [7:0] data        = data_r[0];
 
 logic       sel_rise;
-assign      sel_rise    = (sel_r[1:0] == 2'b10);    // true on rising edge cycle of bus_sel_n_i
+assign      sel_rise    = (sel_r[1:0] == 2'b10);    // true on rising edge cycle of bus_cs_n_i
 
 logic [3:0] even_byte_reg   = 4'h0;     // register flag for buffered even address write data
 logic [7:0] even_byte_data  = 8'h00;    // buffer for even address write data (output on odd)
@@ -65,7 +65,7 @@ always_ff @(posedge clk) begin
     end
     else begin
         // synchronize new input on leftmost bit, shifting remaining bits right
-        sel_r           <= { ~bus_sel_n_i, sel_r[2: 1] };
+        sel_r           <= { ~bus_cs_n_i, sel_r[2: 1] };
         read_r          <= { bus_rd_nwr_i, read_r[1] };
         reg_num_r[0]    <= reg_num_r[1];
         reg_num_r[1]    <= bus_reg_num_i;

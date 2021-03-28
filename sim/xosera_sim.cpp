@@ -122,7 +122,7 @@ public:
 		enable           = _enable;
 		index            = 0;
 		state            = BUS_PREP;
-		top->bus_sel_n_i = 1;
+		top->bus_cs_n_i = 1;
 	}
 
 	void process(Vxosera_main * top)
@@ -145,7 +145,7 @@ public:
 					case BUS_PREP:
 						printf("[@t=%lu] ", main_time);
 
-						top->bus_sel_n_i   = 0;
+						top->bus_cs_n_i   = 0;
 						top->bus_bytesel_i = bytesel;
 						top->bus_rd_nwr_i  = 0;
 						top->bus_reg_num_i = reg_num;
@@ -154,14 +154,14 @@ public:
 						printf("  %-20.20s <= 0x%02x\n", tempstr, data);
 						break;
 					case BUS_STROBE:
-						top->bus_sel_n_i = 1;
+						top->bus_cs_n_i = 1;
 						last_time        = bus_time + 2;
 						break;
 					case BUS_STROBEOFF:
-						top->bus_sel_n_i = 0;
+						top->bus_cs_n_i = 0;
 						break;
 					case BUS_END:
-						top->bus_sel_n_i   = 0;
+						top->bus_cs_n_i   = 0;
 						top->bus_bytesel_i = 0;
 						top->bus_rd_nwr_i  = 0;
 						top->bus_reg_num_i = 0;

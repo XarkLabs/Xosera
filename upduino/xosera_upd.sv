@@ -60,7 +60,7 @@ module xosera_upd(
 assign spi_cs = 1'b1;                   // prevent SPI flash interfering with other SPI/FTDI pins
 
 // gpio pin aliases
-logic       bus_sel_n;                  // bus select (active LOW)
+logic       bus_cs_n;                  // bus select (active LOW)
 logic       bus_rd_nwr;                 // bus read not write (write LOW, read HIGH)
 logic       bus_bytesel;                // bus even/odd byte select (even LOW, odd HIGH)
 logic [3:0] bus_reg_num;                // bus 4-bit register index number (16-bit registers)
@@ -75,7 +75,7 @@ logic       vga_vs;                     // vga vsync
 logic       dvi_de;                     // HDMI display enable
 
 // assign input signals to pins
-assign bus_sel_n    = led_red;          // RGB red as select input (UP_nCS)
+assign bus_cs_n    = led_red;          // RGB red as select input (UP_nCS)
 assign bus_rd_nwr   = led_green;        // RGB blue as read/not write
 assign bus_bytesel  = led_blue;         // gpio for word byte select
 assign bus_reg_num  = { gpio_27, gpio_26, gpio_25, gpio_23 };   // gpio for register number
@@ -84,7 +84,7 @@ assign bus_data     = { gpio_28, gpio_38, gpio_42, gpio_36, gpio_43, gpio_34, gp
 // split tri-state data lines into in/out signals for inside FPGA
 logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
-assign bus_data = (!bus_sel_n && !bus_rd_nwr) ? bus_data_out : 8'bZ;     // tri-state data bus unless select and write active
+assign bus_data = (!bus_cs_n && !bus_rd_nwr) ? bus_data_out : 8'bZ;     // tri-state data bus unless select and write active
 assign bus_data_in = bus_data;
 
 // assign audio output signals to pins
@@ -188,7 +188,7 @@ xosera_main xosera_main(
                 .vsync_o(vga_vs),
                 .hsync_o(vga_hs),
                 .visible_o(dvi_de),
-                .bus_sel_n_i(bus_sel_n),
+                .bus_cs_n_i(bus_cs_n),
                 .bus_rd_nwr_i(bus_rd_nwr),
                 .bus_reg_num_i(bus_reg_num),
                 .bus_bytesel_i(bus_bytesel),

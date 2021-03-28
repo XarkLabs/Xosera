@@ -44,7 +44,7 @@ assign TX = RX;                 // loopback serial
 
 // gpio pin aliases
 logic       nreset;                     // user button as reset
-logic       bus_sel_n;                  // bus select (active LOW)
+logic       bus_cs_n;                  // bus select (active LOW)
 logic       bus_rd_nwr;                 // bus read not write (write LOW, read HIGH)
 logic       bus_bytesel;                // bus even/odd byte select (even LOW, odd HIGH)
 logic [3:0] bus_reg_num;                // bus 4-bit register index number (16-bit registers)
@@ -60,7 +60,7 @@ logic       dvi_de;                     // HDMI display enable
 
 // assign input signals to pins
 assign nreset       = BTN_N;        // active LOW reset
-assign bus_sel_n    = LED_GRN_N;         // RGB red as select input (UP_nCS)
+assign bus_cs_n    = LED_GRN_N;         // RGB red as select input (UP_nCS)
 assign bus_rd_nwr   = 1'b0;              // RGB blue as read/not write (always write on iCEBreaker)
 assign bus_bytesel  = LED_BLU_N;         // gpio for word byte select
 assign bus_reg_num  = { FLASH_IO0, FLASH_IO1, FLASH_IO2, FLASH_IO3 };   // gpio for register number
@@ -69,7 +69,7 @@ assign bus_data     = { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 };   // 
 // split tri-state data lines into in/out signals for inside FPGA
 logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
-assign bus_data = (!bus_sel_n && !bus_rd_nwr) ? bus_data_out : 8'bZ;     // tri-state data bus unless select and write active
+assign bus_data = (!bus_cs_n && !bus_rd_nwr) ? bus_data_out : 8'bZ;     // tri-state data bus unless select and write active
 assign bus_data_in = bus_data;
 
 
@@ -185,7 +185,7 @@ xosera_main xosera_main(
                 .vsync_o(vga_vs),
                 .hsync_o(vga_hs),
                 .visible_o(dvi_de),
-                .bus_sel_n_i(bus_sel_n),
+                .bus_cs_n_i(bus_cs_n),
                 .bus_rd_nwr_i(bus_rd_nwr),
                 .bus_reg_num_i(bus_reg_num),
                 .bus_bytesel_i(bus_bytesel),

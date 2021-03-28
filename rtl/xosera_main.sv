@@ -36,7 +36,7 @@
 
 module xosera_main(
            input  logic         clk,                    // pixel clock
-           input  logic         bus_sel_n_i,            // register select strobe (active low)
+           input  logic         bus_cs_n_i,            // register select strobe (active low)
            input  logic         bus_rd_nwr_i,           // 0 = write, 1 = read
            input  logic [3:0]   bus_reg_num_i,          // register number
            input  logic         bus_bytesel_i,          // 0 = even byte, 1 = odd byte
@@ -55,7 +55,7 @@ logic [15:0] bus_data_write;
 
 bus_interface bus(
                   .clk(clk),                            // input clk (should be > 2x faster than bus signals)
-                  .bus_sel_n_i(bus_sel_n_i),            // register select strobe
+                  .bus_cs_n_i(bus_cs_n_i),            // register select strobe
                   .bus_rd_nwr_i(bus_rd_nwr_i),          // 0 = write, 1 = read
                   .bus_reg_num_i(bus_reg_num_i),        // register number
                   .bus_bytesel_i(bus_bytesel_i),        // 0=even byte, 1=odd byte

@@ -24,7 +24,7 @@ logic audio_l;
 logic audio_r;
 
 // bus interface
-logic bus_sel_n;
+logic bus_cs_n;
 logic bus_rd_nwr;
 logic bus_bytesel;
 logic [3: 0] bus_reg_num;
@@ -45,7 +45,7 @@ xosera_main xosera(
                 .vsync_o(vsync),                // vertical sync
                 .hsync_o(hsync),                // horizontal sync
                 .visible_o(visible),            // visible (aka display enable)
-                .bus_sel_n_i(bus_sel_n),        // register select strobe
+                .bus_cs_n_i(bus_cs_n),        // register select strobe
                 .bus_rd_nwr_i(bus_rd_nwr),      // 0 = write, 1 = read
                 .bus_reg_num_i(bus_reg_num),    // register number (0-15)
                 .bus_bytesel_i(bus_bytesel),    // 0 = high-byte, 1 = low-byte
@@ -72,7 +72,7 @@ initial begin
     addrval = 'hBEEF;
     clk = 1'b0;
 
-    bus_sel_n = 1'b1;
+    bus_cs_n = 1'b1;
     bus_rd_nwr = 1'bX;
     bus_bytesel = 1'bX;
     bus_reg_num = 4'hX;
@@ -85,27 +85,27 @@ end
 
 always begin
 
-    #(16ms) bus_sel_n = 1'b1;
+    #(16ms) bus_cs_n = 1'b1;
     bus_rd_nwr = 1'b0;
     bus_bytesel = 1'b0;
     bus_reg_num = xosera.blitter.R_XVID_WR_ADDR;
     bus_data_in = addrval[15:8];
 
-    #(M68K_PERIOD * 2) bus_sel_n = 1'b0;    // strobe
-    #(M68K_PERIOD * 4) bus_sel_n = 1'b1;
+    #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
+    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
     bus_rd_nwr = 1'bX;
     bus_bytesel = 1'bX;
     bus_reg_num = 4'hX;
     bus_data_in = 8'hXX;
 
-    #(M68K_PERIOD * 4) bus_sel_n = 1'b1;
+    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
     bus_rd_nwr = 1'b0;
     bus_bytesel = 1'b1;
     bus_reg_num = xosera.blitter.R_XVID_WR_ADDR;
     bus_data_in = addrval[7:0];
 
-    #(M68K_PERIOD * 2) bus_sel_n = 1'b0;    // strobe
-    #(M68K_PERIOD * 4) bus_sel_n = 1'b1;
+    #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
+    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
     bus_rd_nwr = 1'bX;
     bus_bytesel = 1'bX;
     bus_reg_num = 4'hX;
@@ -118,21 +118,21 @@ always begin
     bus_reg_num = xosera.blitter.R_XVID_DATA;
     bus_data_in = dataval[15:8];
 
-    #(M68K_PERIOD * 2) bus_sel_n = 1'b0;    // strobe
-    #(M68K_PERIOD * 4) bus_sel_n = 1'b1;
+    #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
+    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
     bus_rd_nwr = 1'bX;
     bus_bytesel = 1'bX;
     bus_reg_num = 4'hX;
     bus_data_in = 8'hXX;
 
-    #(M68K_PERIOD * 4) bus_sel_n = 1'b1;
+    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
     bus_rd_nwr = 1'b0;
     bus_bytesel = 1'b1;
     bus_reg_num = xosera.blitter.R_XVID_DATA;
     bus_data_in = dataval[7:0];
 
-    #(M68K_PERIOD * 2) bus_sel_n = 1'b0;    // strobe
-    #(M68K_PERIOD * 4) bus_sel_n = 1'b0;
+    #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
+    #(M68K_PERIOD * 4) bus_cs_n = 1'b0;
     bus_rd_nwr = 1'bX;
     bus_bytesel = 1'bX;
     bus_reg_num = 4'hX;

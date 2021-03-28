@@ -1,4 +1,4 @@
-// spi_target.v
+// spi_target.sv
 //
 // vim: set et ts=4 sw=4
 //

@@ -1,4 +1,4 @@
-// xosera_main.v
+// xosera_main.sv
 //
 // vim: set et ts=4 sw=4
 //

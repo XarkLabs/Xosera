@@ -1,4 +1,4 @@
-// video_gen.v
+// video_gen.sv
 //
 // vim: set et ts=4 sw=4
 //
@@ -34,7 +34,7 @@ module video_gen(
            output logic visible_o                         // VGA video active signal (needed for HDMI)
        );
 
-`include "xosera_defs.vh"        // Xosera global Verilog definitions
+`include "xosera_defs.svh"        // Xosera global Verilog definitions
 
 localparam H_MEM_BEGIN = OFFSCREEN_WIDTH - 9;            // memory fetch starts 1 character early to prime output shift-logic
 localparam H_MEM_END = TOTAL_WIDTH - 9;                  // memory fetch ends 1 character early (to empty shift-logic)

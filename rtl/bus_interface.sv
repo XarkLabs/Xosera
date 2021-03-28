@@ -1,4 +1,4 @@
-// bus_interface.v
+// bus_interface.sv
 //
 // vim: set et ts=4 sw=4
 //

@@ -40,16 +40,16 @@ SRCDIR := ../rtl
 VPATH := $(SRCDIR)
 
 # Verilog source files for design
-SRC := $(TOP).v $(wildcard $(SRCDIR)/*.v)
+SRC := $(TOP).sv $(wildcard $(SRCDIR)/*.sv)
 
 # Verilog include files for design
-INC := $(wildcard $(SRCDIR)/*.vh)
+INC := $(wildcard $(SRCDIR)/*.svh)
 
 # memory initialization file for default 8x16 font
 FONTMEM := ../fonts/font_8x16.mem
 
 # dot graphic diagram files
-DOT := $(SRC:.v=.dot)
+DOT := $(SRC:.sv=.dot)
 
 # icestorm tools
 YOSYS := yosys
@@ -99,7 +99,7 @@ lint: $(SRC) $(INC) $(FONTMEM) Makefile
 # run Yosys to generate a "dot" graphical representation of each design file
 show: $(DOT)
 
-$(DOT): %.dot: %.v
+$(DOT): %.dot: %.sv
 	mkdir -p dot
 	$(YOSYS) -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -sv $< ; show -enum -stretch -signed -width -prefix dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 

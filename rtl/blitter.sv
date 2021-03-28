@@ -1,4 +1,4 @@
-// blitter.v
+// blitter.sv
 //
 // vim: set et ts=4 sw=4
 //
@@ -25,7 +25,7 @@ module blitter(
     input  logic            reset_i
     );
 
-`include "xosera_defs.vh"           // Xosera global Verilog definitions
+`include "xosera_defs.svh"           // Xosera global Verilog definitions
 
 localparam CLEARDATA = 16'h1F20;    // value VRAM cleared to on init (blue+white space) TODO: zero for final?
 

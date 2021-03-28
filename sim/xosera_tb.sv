@@ -1,4 +1,4 @@
-// xosera_tb.v
+// xosera_tb.sv
 //
 // vim: set et ts=4 sw=4
 //
@@ -11,7 +11,7 @@
 
 module xosera_tb();
 
-//`include "xosera_defs.vh"  // Xosera global Verilog definitions
+//`include "xosera_defs.svh"  // Xosera global Verilog definitions
 
 logic clk;
 logic reset;
@@ -56,8 +56,8 @@ xosera_main xosera(
                 .reset_i(reset)                 // reset signal
             );
 
-`include "xosera_clk_defs.vh"       // Xosera global Verilog definitions
-`include "xosera_defs.vh"          // Xosera global Verilog definitions
+`include "xosera_clk_defs.svh"       // Xosera global Verilog definitions
+`include "xosera_defs.svh"          // Xosera global Verilog definitions
 
 parameter CLK_PERIOD    = (1000000000.0 / PIXEL_FREQ);
 parameter M68K_PERIOD   = 83.333;

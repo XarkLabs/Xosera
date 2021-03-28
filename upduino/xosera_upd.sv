@@ -1,4 +1,4 @@
-// xosera_upd.v - Top module for Upduino v3.0 Xosera
+// xosera_upd.sv - Top module for Upduino v3.0 Xosera
 //
 // vim: set et ts=4 sw=4
 //
@@ -55,7 +55,7 @@ module xosera_upd(
             input  logic    gpio_20         // input 12MHz clock (Upduino 3.0 needs OSC jumper shorted)
        );
 
-`include "../rtl/xosera_clk_defs.vh"    // Xosera global Verilog definitions
+`include "../rtl/xosera_clk_defs.svh"    // Xosera global Verilog definitions
 
 assign spi_cs = 1'b1;                   // prevent SPI flash interfering with other SPI/FTDI pins
 

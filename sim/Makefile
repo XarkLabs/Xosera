@@ -36,10 +36,10 @@ SRCDIR := ../rtl
 VPATH := $(SRCDIR)
 
 # Verilog source files for design
-SRC := $(SRCDIR)/xosera_main.v $(filter-out $(SRCDIR)/xosera_main.v,$(wildcard $(SRCDIR)/*.v))
+SRC := $(SRCDIR)/xosera_main.sv $(filter-out $(SRCDIR)/xosera_main.sv,$(wildcard $(SRCDIR)/*.sv))
 
 # Verilog include files for design
-INC := $(wildcard $(SRCDIR)/*.vh)
+INC := $(wildcard $(SRCDIR)/*.svh)
 
 # Simulate BUS commands diring simulation (results in log)
 BUS_INTERFACE	:= 1
@@ -112,9 +112,9 @@ obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) Makefile
 # -j$(shell nproc)
 
 # use Icarus Verilog to build vvp simulation executable
-$(TBTOP): $(INC) $(TBTOP).v $(SRC) Makefile
-	-$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) -DSIMULATE --top-module $(TBTOP) $(TBTOP).v $(SRC)
-	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -DSIMULATE -D$(VIDEO_MODE) -o $(TBTOP) $(current_dir)/$(TBTOP).v $(SRC)
+$(TBTOP): $(INC) $(TBTOP).sv $(SRC) Makefile
+	-$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) -DSIMULATE --top-module $(TBTOP) $(TBTOP).sv $(SRC)
+	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -DSIMULATE -D$(VIDEO_MODE) -o $(TBTOP) $(current_dir)/$(TBTOP).sv $(SRC)
 
 # delete all targets that will be re-generated
 clean:

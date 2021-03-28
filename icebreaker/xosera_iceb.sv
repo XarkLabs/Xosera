@@ -1,4 +1,4 @@
-// xosera_iceb.v - Top module for iCEBreaker Xosera
+// xosera_iceb.sv - Top module for iCEBreaker Xosera
 //
 // vim: set et ts=4 sw=4
 //
@@ -36,7 +36,7 @@ module xosera_iceb(
            input  logic FLASH_IO0, FLASH_IO1, FLASH_IO2, FLASH_IO3
        );
 
-`include "../rtl/xosera_clk_defs.vh"    // Xosera global Verilog definitions
+`include "../rtl/xosera_clk_defs.svh"    // Xosera global Verilog definitions
 
 assign FLASH_SSB    = 1'b1;     // prevent SPI flash interfering with other SPI/FTDI pins
 assign LEDG_N       = ~reset;   // green LED when not in reset

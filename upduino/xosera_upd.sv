@@ -72,7 +72,7 @@ logic [3:0] vga_g;                      // vga green (4-bits)
 logic [3:0] vga_b;                      // vga blue (4-bits)
 logic       vga_hs;                     // vga hsync
 logic       vga_vs;                     // vga vsync
-logic       vga_de;                     // HDMI display enable
+logic       dvi_de;                     // HDMI display enable
 
 // assign input signals to pins
 assign bus_sel_n    = led_red;          // RGB red as select input (UP_nCS)
@@ -112,7 +112,7 @@ SB_IO #(
           .PACKAGE_PIN({gpio_46, gpio_21, gpio_12, gpio_13, gpio_11, gpio_44, gpio_48, gpio_19, gpio_9, gpio_4, gpio_45, gpio_18, gpio_6, gpio_3, gpio_47}),
           //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
           .OUTPUT_CLK(pclk),
-          .D_OUT_0({vga_de, vga_vs, vga_hs, vga_r, vga_g, vga_b}),
+          .D_OUT_0({dvi_de, vga_vs, vga_hs, vga_r, vga_g, vga_b}),
           /* verilator lint_off PINCONNECTEMPTY */
           .D_OUT_1()
           /* verilator lint_on PINCONNECTEMPTY */
@@ -121,7 +121,7 @@ SB_IO #(
 `else
 // Generic VGA mode (for simulation)
 assign { gpio_46,  gpio_12,  gpio_21,  gpio_13,  gpio_19,  gpio_18,  gpio_11,  gpio_9,   gpio_6   } =
-       { vga_de,   vga_hs,   vga_vs,   vga_r[3], vga_g[3], vga_b[3], vga_r[2], vga_g[2], vga_b[2] };
+       { dvi_de,   vga_hs,   vga_vs,   vga_r[3], vga_g[3], vga_b[3], vga_r[2], vga_g[2], vga_b[2] };
 assign { gpio_44,  gpio_4,   gpio_3,   gpio_48,  gpio_45,  gpio_47  } =
        { vga_r[1], vga_g[1], vga_b[1], vga_r[0], vga_g[0], vga_b[0] };
 
@@ -187,7 +187,7 @@ xosera_main xosera_main(
                 .blue_o(vga_b),
                 .vsync_o(vga_vs),
                 .hsync_o(vga_hs),
-                .visible_o(vga_de),
+                .visible_o(dvi_de),
                 .bus_sel_n_i(bus_sel_n),
                 .bus_rd_nwr_i(bus_rd_nwr),
                 .bus_reg_num_i(bus_reg_num),

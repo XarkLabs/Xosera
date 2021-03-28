@@ -150,8 +150,8 @@ public:
 						top->bus_rd_nwr_i  = 0;
 						top->bus_reg_num_i = reg_num;
 						top->bus_data_i    = data;
-						sprintf(tempstr, "%s.%3s", reg_name[reg_num], bytesel ? "msb" : "lsb");
-						printf("  %-20.20s = 0x%02x\n", tempstr, data);
+						sprintf(tempstr, "r[0x%x] %s.%3s", reg_num, reg_name[reg_num], bytesel ? "lsb*" : "msb");
+						printf("  %-20.20s <= 0x%02x\n", tempstr, data);
 						break;
 					case BUS_STROBE:
 						top->bus_sel_n_i = 1;

@@ -67,9 +67,12 @@ assign bus_reg_num  = { FLASH_IO0, FLASH_IO1, FLASH_IO2, FLASH_IO3 };   // gpio 
 assign bus_data     = { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 };   // gpio for data bus
 
 // split tri-state data lines into in/out signals for inside FPGA
+typedef enum { RnW_WRITE, RnW_READ } RnW_t;
+typedef enum { cs_ENABLED, cs_DISABLED } cs_n_t;
 logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
-assign bus_data = (!bus_cs_n && !bus_rd_nwr) ? bus_data_out : 8'bZ;     // tri-state data bus unless select and write active
+// tri-state data bus unless Xosera is both selected and bus is reading
+assign bus_data = (bus_cs_n == cs_ENABLED && bus_rd_nwr == RnW_READ) ? bus_data_out : 8'bZ;
 assign bus_data_in = bus_data;
 
 

@@ -82,9 +82,12 @@ assign bus_reg_num  = { gpio_27, gpio_26, gpio_25, gpio_23 };   // gpio for regi
 assign bus_data     = { gpio_28, gpio_38, gpio_42, gpio_36, gpio_43, gpio_34, gpio_37, gpio_31 };   // gpio for data bus
 
 // split tri-state data lines into in/out signals for inside FPGA
+typedef enum { RnW_WRITE, RnW_READ } RnW_t;
+typedef enum { cs_ENABLED, cs_DISABLED } cs_n_t;
 logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
-assign bus_data = (!bus_cs_n && !bus_rd_nwr) ? bus_data_out : 8'bZ;     // tri-state data bus unless select and write active
+// tri-state data bus unless Xosera is both selected and bus is reading
+assign bus_data = (bus_cs_n == cs_ENABLED && bus_rd_nwr == RnW_READ) ? bus_data_out : 8'bZ;
 assign bus_data_in = bus_data;
 
 // assign audio output signals to pins

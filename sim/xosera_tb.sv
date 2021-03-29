@@ -35,6 +35,7 @@ integer i, f;
 integer frame;
 integer addrval;
 integer dataval;
+integer readbyte;
 logic last_vs;
 
 xosera_main xosera(
@@ -83,71 +84,71 @@ initial begin
     #(CLK_PERIOD * 5) reset = 1'b0;
 end
 
+// function to continuously select read value to put on bus
+task write_reg(
+    input  logic         b_sel,
+    input  logic [3:0]   r_num,
+    input  logic [7:0]   data
+    );
+
+    bus_cs_n = 1'b1;
+    bus_rd_nwr = 1'b0;
+    bus_bytesel = b_sel;
+    bus_reg_num = r_num;
+    bus_data_in = data;
+
+    #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
+    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
+    // verilator lint_off WIDTH
+    bus_rd_nwr = $urandom();
+    bus_bytesel = $urandom();
+    bus_reg_num = $urandom();
+    bus_data_in = $urandom();
+    // verilator lint_on WIDTH
+endtask
+
+task read_reg(
+    input  logic         b_sel,
+    input  logic [3:0]   r_num,
+    output logic [7:0]   data
+    );
+
+    bus_cs_n = 1'b1;
+    bus_rd_nwr = 1'b1;
+    bus_bytesel = b_sel;
+    bus_reg_num = r_num;
+
+    #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
+    #40 data = xosera.bus_data_o;
+    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
+    // verilator lint_off WIDTH
+    bus_rd_nwr = $urandom();
+    bus_bytesel = $urandom();
+    bus_reg_num = $urandom();
+    bus_data_in = $urandom();
+    // verilator lint_on WIDTH
+endtask
+
+
 always begin
 
-    #(16ms) bus_cs_n = 1'b1;
-    bus_rd_nwr = 1'b0;
-    bus_bytesel = 1'b0;
-    bus_reg_num = xosera.blitter.R_XVID_WR_ADDR;
-    bus_data_in = addrval[15:8];
-
-    #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
-    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
-    // verilator lint_off WIDTH
-    bus_rd_nwr = $urandom();
-    bus_bytesel = $urandom();
-    bus_reg_num = $urandom();
-    bus_data_in = $urandom();
-    // verilator lint_on WIDTH
-
-    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
-    bus_rd_nwr = 1'b0;
-    bus_bytesel = 1'b1;
-    bus_reg_num = xosera.blitter.R_XVID_WR_ADDR;
-    bus_data_in = addrval[7:0];
-
-    #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
-    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
-    // verilator lint_off WIDTH
-    bus_rd_nwr = $urandom();
-    bus_bytesel = $urandom();
-    bus_reg_num = $urandom();
-    bus_data_in = $urandom();
-    // verilator lint_on WIDTH
+    #(15ms)              write_reg(1'b0, xosera.blitter.R_XVID_WR_ADDR, addrval[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_WR_ADDR, addrval[7:0]);
 
     addrval = addrval + 1;
 
-    bus_rd_nwr = 1'b1;
-    bus_bytesel = 1'b0;
-    bus_reg_num = xosera.blitter.R_XVID_AUX_CTRL;
-    bus_data_in = dataval[15:8];
-
-    #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
-    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
-    // verilator lint_off WIDTH
-    bus_rd_nwr = $urandom();
-    bus_bytesel = $urandom();
-    bus_reg_num = $urandom();
-    bus_data_in = $urandom();
-    // verilator lint_on WIDTH
-
-    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
-    bus_rd_nwr = 1'b1;
-    bus_bytesel = 1'b1;
-    bus_reg_num = xosera.blitter.R_XVID_AUX_CTRL;
-    bus_data_in = dataval[7:0];
-
-    #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
-    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
-    // verilator lint_off WIDTH
-    bus_rd_nwr = $urandom();
-    bus_bytesel = $urandom();
-    bus_reg_num = $urandom();
-    bus_data_in = $urandom();
-    // verilator lint_on WIDTH
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.R_XVID_DATA, dataval[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_DATA, dataval[7:0]);
 
     dataval = dataval + 1;
 
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.R_XVID_RD_ADDR, addrval[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_RD_ADDR, addrval[7:0]);
+
+    addrval = addrval + 1;
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.R_XVID_DATA, readbyte[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.R_XVID_DATA, readbyte[7:0]);
 end
 
 // toggle clock source at pixel clock frequency
@@ -178,7 +179,12 @@ always @(posedge clk) begin
         #1 $display("%0t BUS WRITE: R[%1x] <= %04x", $realtime, xosera.bus_reg_num, xosera.bus_data_write);
     end
     if (xosera.bus_read_strobe) begin
-        #1 $display("%0t BUS READ:  R[%1x] => %04x", $realtime, xosera.bus_reg_num, xosera.blit_to_bus);
+        if (xosera.bus_bytesel_i) begin
+            $display("%0t BUS READ:  R[%1x] => __%02x", $realtime, xosera.bus_reg_num, xosera.bus_data_o);
+        end
+        else begin
+            $display("%0t BUS READ:  R[%1x] => %02x__", $realtime, xosera.bus_reg_num, xosera.bus_data_o);
+        end
     end
 end
 

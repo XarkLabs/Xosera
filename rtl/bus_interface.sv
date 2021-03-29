@@ -72,7 +72,7 @@ function [7:0] reg_read(
 case (r_sel)
     2'b00:  reg_read = (~b_sel) ? reg_data_i[15:8] : reg_data_i[7:0];   // VRAM read data reg 0-3
     2'b01:  reg_read = (~b_sel) ? 8'hA1 : 8'hB1;                        // test read data reg 4-7
-    2'b10:  reg_read = (~b_sel) ? 8'hA2 : 8'hB3;                        // test read data reg 8-B
+    2'b10:  reg_read = (~b_sel) ? 8'hA2 : 8'hB2;                        // test read data reg 8-B
     2'b11:  reg_read = (~b_sel) ? 8'hA3 : 8'hB3;                        // test read data reg C-F
     default: ;
 endcase

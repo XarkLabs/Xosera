@@ -59,7 +59,8 @@ ICETIME := icetime
 ICEPROG := iceprog
 
 # Yosys synthesis arguments
-YOSYS_SYNTH_ARGS := -dsp -abc9 -abc2 -relut -top $(TOP)
+# TODO: too slow, maybe buggy: YOSYS_SYNTH_ARGS := -dsp -abc9 -abc2 -relut -top $(TOP)
+YOSYS_SYNTH_ARGS := -dsp -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -DICE40UP5K -DUPDUINO

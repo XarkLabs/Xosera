@@ -121,5 +121,6 @@
 		"cSpell.allowCompoundWords": true,
 		"cSpell.diagnosticLevel": "Hint",
 		"terminal.integrated.fontSize": 10,
+		"systemverilog.launchConfiguration": "verilator --sv --lint-only --language 1800-2012 --Wall -Wno-TIMESCALEMOD --relative-includes -I ../rtl --timescale-override 1ns/1ns",
 	}
 }

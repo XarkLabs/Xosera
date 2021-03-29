@@ -65,7 +65,8 @@ ICETIME := icetime
 ICEPROG := iceprog
 
 # Yosys synthesis arguments
-YOSYS_SYNTH_ARGS := -dsp -abc9 -abc2 -relut -top $(TOP)
+# TODO: too slow, maybe buggy: YOSYS_SYNTH_ARGS := -dsp -abc9 -abc2 -relut -top $(TOP)
+YOSYS_SYNTH_ARGS := -dsp -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DICEBREAKER
@@ -74,7 +75,7 @@ DEFINES := -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -
 # Verilator tool (used for "lint")
 VERILATOR := verilator
 VERILATOR_ARGS := --relative-includes -Wall -Wno-fatal -Wno-DECLFILENAME -Wno-UNUSED
-TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.sv)
+TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40

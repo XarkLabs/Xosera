@@ -21,7 +21,8 @@ module blitter(
     output logic    [15:0]  blit_vram_data_o,       // VRAM write data
     input  logic            reg_write_strobe_i,     // strobe for register write
     input  logic     [3:0]  reg_num_i,              // register number read/written
-    input  logic    [15:0]  reg_data_i,             // word to read from register
+    input  logic    [15:0]  reg_data_i,             // word to read into register
+    output logic    [15:0]  reg_data_o,             // word to write from register
     input  logic            reset_i
     );
 
@@ -59,9 +60,11 @@ logic         blit_read;
 logic [15:0]  vram_rd_data;
 logic [15:0]  blit_rd_addr;
 logic [15:0]  blit_wr_addr;
-logic [15:0]  blit_rd_incr = 16'h0001;
+logic [15:0]  blit_rd_incr;
 logic [15:0]  blit_wr_incr;
 logic [15:0]  blit_count;
+
+assign reg_data_o = vram_rd_data;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -70,9 +73,14 @@ always_ff @(posedge clk) begin
         blit_vram_wr_o      <= 1'b0;
         blit_vram_addr_o    <= 16'h0000;
         blit_vram_data_o    <= 16'h0000;
-        blit_count          <= 16'h0000;
         blit_read           <= 1'b0;
         blit_state          <= INIT;
+        vram_rd_data        <= 16'he3e3;
+        blit_rd_addr        <= 16'h0000;
+        blit_wr_addr        <= 16'h0000;
+        blit_rd_incr        <= 16'h0001;
+        blit_wr_incr        <= 16'h0001;
+        blit_count          <= 16'h0000;
     end
     else begin
         // if a read was pending, save value from vram

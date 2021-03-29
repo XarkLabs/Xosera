@@ -36,15 +36,16 @@ module xosera_iceb(
            input  logic FLASH_IO0, FLASH_IO1, FLASH_IO2, FLASH_IO3
        );
 
-`include "../rtl/xosera_clk_defs.svh"    // Xosera global Verilog definitions
+`include "../rtl/xosera_clk_defs.svh"       // Xosera global clock definitions
+`include "../rtl/xosera_defs.svh"           // Xosera global definitions
 
-assign FLASH_SSB    = 1'b1;     // prevent SPI flash interfering with other SPI/FTDI pins
-assign LEDG_N       = ~reset;   // green LED when not in reset
-assign TX = RX;                 // loopback serial
+assign FLASH_SSB    = 1'b1;             // prevent SPI flash interfering with other SPI/FTDI pins
+assign LEDG_N       = reset;            // green LED on when not in reset (active LOW LED)
+assign TX = RX;                         // loopback serial
 
 // gpio pin aliases
-logic       nreset;                     // user button as reset
-logic       bus_cs_n;                  // bus select (active LOW)
+logic       nreset;                     // user button as reset (active LOW button)
+logic       bus_cs_n;                   // bus select (active LOW)
 logic       bus_rd_nwr;                 // bus read not write (write LOW, read HIGH)
 logic       bus_bytesel;                // bus even/odd byte select (even LOW, odd HIGH)
 logic [3:0] bus_reg_num;                // bus 4-bit register index number (16-bit registers)
@@ -59,22 +60,20 @@ logic       vga_vs;                     // vga vsync
 logic       dvi_de;                     // HDMI display enable
 
 // assign input signals to pins
-assign nreset       = BTN_N;        // active LOW reset
-assign bus_cs_n    = LED_GRN_N;         // RGB red as select input (UP_nCS)
-assign bus_rd_nwr   = 1'b0;              // RGB blue as read/not write (always write on iCEBreaker)
-assign bus_bytesel  = LED_BLU_N;         // gpio for word byte select
-assign bus_reg_num  = { FLASH_IO0, FLASH_IO1, FLASH_IO2, FLASH_IO3 };   // gpio for register number
-assign bus_data     = { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 };   // gpio for data bus
+assign nreset       = BTN_N;            // active LOW reset button
+assign bus_cs_n     = LED_RED_N;        // RGB LED red as Xosera select=cs_ENABLED (UP_nCS)
+assign bus_rd_nwr   = LED_GRN_N;        // RGB LED green as RnW_WRITE=0, RnW_READ=1, read= (UP_RnW)
+assign bus_bytesel  = LED_BLU_N;        // RGB LED blue for word byte select (UP_bytesel)
+assign bus_reg_num  = { FLASH_IO3, FLASH_IO2, FLASH_IO1, FLASH_IO0 };       // gpio for register number (UP_R0-UP_R3)
+assign bus_data     = { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 };  // gpio for data bus
 
 // split tri-state data lines into in/out signals for inside FPGA
-typedef enum { RnW_WRITE, RnW_READ } RnW_t;
-typedef enum { cs_ENABLED, cs_DISABLED } cs_n_t;
 logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
+
 // tri-state data bus unless Xosera is both selected and bus is reading
 assign bus_data = (bus_cs_n == cs_ENABLED && bus_rd_nwr == RnW_READ) ? bus_data_out : 8'bZ;
 assign bus_data_in = bus_data;
-
 
 // video output signals
 `ifdef PMOD_1B2_DVI12
@@ -160,21 +159,21 @@ assign pclk = CLK;
 
 // reset logic waits for PLL lock & reset button released (with small delay)
 logic [7:0] reset_cnt;      // counter for reset delay (assures memories ready)
-logic reset = 1'b1;
+logic reset = 1'b1;         // default in reset state
 
 always_ff @(posedge pclk) begin
     // reset count and stay in reset if pll_lock lost or bus_nreset
     if (!pll_lock || !nreset) begin
         reset_cnt   <= 0;
-        reset      <= 1'b1;
+        reset       <= 1'b1;
     end
     else begin
         if (!&reset_cnt) begin
             reset_cnt   <= reset_cnt + 1;
-            reset      <= 1'b1;
+            reset       <= 1'b1;
         end
         else begin
-            reset      <= 1'b0;
+            reset       <= 1'b0;
         end
     end
 end

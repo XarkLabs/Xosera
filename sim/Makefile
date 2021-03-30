@@ -113,7 +113,7 @@ obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) Makefile
 
 # use Icarus Verilog to build vvp simulation executable
 $(TBTOP): $(INC) $(TBTOP).sv $(SRC) Makefile
-	-$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) -DSIMULATE --top-module $(TBTOP) $(TBTOP).sv $(SRC)
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) -DSIMULATE --top-module $(TBTOP) $(TBTOP).sv $(SRC)
 	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -DSIMULATE -D$(VIDEO_MODE) -o $(TBTOP) $(current_dir)/$(TBTOP).sv $(SRC)
 
 # delete all targets that will be re-generated

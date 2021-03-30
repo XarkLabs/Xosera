@@ -31,10 +31,10 @@ logic [3: 0] bus_reg_num;
 logic [7: 0] bus_data_in;
 logic [7: 0] bus_data_out;
 
-integer i, f;
+integer i, j, f;
 integer frame;
-integer addrval;
-integer dataval;
+integer test_addr;
+integer test_data;
 logic [15:0] readword;
 logic last_vs;
 
@@ -69,8 +69,8 @@ initial begin
     $dumpvars(0, xosera);
 
     frame = 0;
-    dataval = 'hABCD;
-    addrval = 'hBEEF;
+    test_addr = 'hABCD;
+    test_data = 'hDA7A;
     clk = 1'b0;
 
     bus_cs_n = 1'b1;
@@ -133,20 +133,14 @@ endtask
 always begin
 
     #(15ms) ;
-    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.R_XVID_WR_ADDR, addrval[15:8]);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_WR_ADDR, addrval[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.R_XVID_WR_ADDR, test_addr[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_WR_ADDR, test_addr[7:0]);
 
-    addrval = addrval + 1;
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.R_XVID_DATA, test_data[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_DATA, test_data[7:0]);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.R_XVID_DATA, dataval[15:8]);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_DATA, dataval[7:0]);
-
-    dataval = dataval + 1;
-
-    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.R_XVID_RD_ADDR, addrval[15:8]);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_RD_ADDR, addrval[7:0]);
-
-    addrval = addrval + 1;
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.R_XVID_RD_ADDR, test_addr[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_RD_ADDR, test_addr[7:0]);
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.R_XVID_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.R_XVID_DATA, readword[7:0]);
@@ -165,8 +159,21 @@ always @(posedge clk) begin
 
         if (frame == 3) begin
             f = $fopen("logs/xosera_isim_vram.txt", "w");
-            for (i = 0; i < 4096; i++) begin
-                $fwrite(f, "%04x: %04x\n", i, xosera.vram.memory[i][15:0]);
+            for (i = 0; i < 65536; i += 16) begin
+                $fwrite(f, "%04x: ", i);
+                for (j = 0; j < 16; j++) begin
+                    $fwrite(f, "%04x ", xosera.vram.memory[i+j][15:0]);
+                end
+                $fwrite(f, "  ");
+                for (j = 0; j < 16; j++) begin
+                    if (xosera.vram.memory[i+j][7:0] >= 32 && xosera.vram.memory[i+j][7:0] < 127) begin
+                        $fwrite(f, "%c", xosera.vram.memory[i+j][7:0]);
+                    end else
+                    begin
+                        $fwrite(f, ".");
+                    end
+                end
+                $fwrite(f, "\n");
             end
             $fclose(f);
             $finish;

@@ -36,7 +36,7 @@
 
 module xosera_main(
            input  logic         clk,                    // pixel clock
-           input  logic         bus_cs_n_i,            // register select strobe (active low)
+           input  logic         bus_cs_n_i,             // register select strobe (active low)
            input  logic         bus_rd_nwr_i,           // 0 = write, 1 = read
            input  logic [3:0]   bus_reg_num_i,          // register number
            input  logic         bus_bytesel_i,          // 0 = even byte, 1 = odd byte
@@ -49,8 +49,11 @@ module xosera_main(
            input  logic         reset_i                 // reset signal
        );
 
+`include "xosera_defs.svh"        // Xosera global Verilog definitions
+
 logic        bus_write_strobe;      // strobe when a word of data written
-logic        bus_read_strobe;      // strobe when a word of data written
+logic        bus_read_strobe;       // strobe when a word of data written
+logic        bus_cs_strobe;       // strobe when a bus selected
 logic  [3:0] bus_reg_num;           // bus register on bus
 logic [15:0] bus_data_write;        // word written to bus
 
@@ -63,7 +66,8 @@ bus_interface bus(
                   .bus_data_i(bus_data_i),              // 8-bit data bus input
                   .bus_data_o(bus_data_o),              // 8-bit data bus output
                   .write_strobe_o(bus_write_strobe),    // strobe for vram access
-                  .read_strobe_o(bus_read_strobe),    // strobe for vram access
+                  .read_strobe_o(bus_read_strobe),      // strobe for vram access
+                  .cs_strobe_o(bus_cs_strobe),          // strobe for bus selected
                   .reg_num_o(bus_reg_num),              // register number read/written
                   .reg_data_o(bus_data_write),          // word written to register
                   .reg_data_i(blit_to_bus),             // word to read from register
@@ -118,25 +122,30 @@ video_gen video_gen(
           );
 
 // audio generation (TODO)
-assign audio_l_o = bus_write_strobe;                    // TODO: audio
-assign audio_r_o = bus_read_strobe;                     // TODO: audio
+assign audio_l_o = bus_cs_strobe;                    // TODO: audio
+assign audio_r_o = x_bus_output;                     // TODO: audio
+
+logic x_bus_output;
+assign x_bus_output = (bus_cs_n_i == cs_ENABLED && bus_rd_nwr_i == RnW_READ);
 
 //  16x64K (128KB) video memory
 logic        vram_sel        /* verilator public */;
 logic        vram_wr         /* verilator public */;
 logic [15:0] vram_addr       /* verilator public */; // 16-bit word address
 logic [15:0] vram_data_out   /* verilator public */;
+logic [15:0] vram_data_in    /* verilator public */;
 
-always_comb vram_sel     = blit_vram_cycle ? blit_vram_sel     : vgen_sel;
-always_comb vram_wr      = blit_vram_cycle ? blit_vram_wr      : 1'b0;
-always_comb vram_addr    = blit_vram_cycle ? blit_vram_addr    : vgen_addr;
+always_comb vram_sel        = blit_vram_cycle ? blit_vram_sel     : vgen_sel;
+always_comb vram_wr         = blit_vram_cycle ? blit_vram_wr      : 1'b0;
+always_comb vram_addr       = blit_vram_cycle ? blit_vram_addr    : vgen_addr;
+always_comb vram_data_in    = blit_to_vram;
 
     vram vram(
         .clk(clk),
         .sel(vram_sel),
         .wr_en(vram_wr),
         .address_in(vram_addr),
-        .data_in(blit_to_vram),
+        .data_in(vram_data_in),
         .data_out(vram_data_out)
     );
 

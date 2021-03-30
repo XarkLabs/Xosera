@@ -87,7 +87,7 @@ logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
 
 // tri-state data bus unless Xosera is both selected and bus is reading
-assign bus_data = (bus_cs_n == cs_ENABLED && bus_rd_nwr == RnW_READ) ? bus_data_out : 8'bZ;
+assign bus_data = 8'bZ; // TODO HACK bus_cs_n == cs_ENABLED && bus_rd_nwr == RnW_READ) ? bus_data_out : 8'bZ;
 assign bus_data_in = bus_data;
 
 // assign audio output signals to pins

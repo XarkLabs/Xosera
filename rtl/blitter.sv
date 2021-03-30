@@ -51,18 +51,20 @@ typedef enum logic [3:0] {
 } register_t;
 
 typedef enum logic [3:0] {
-    IDLE, INIT, CLEAR, LOGO_X, LOGO_o, LOGO_s, LOGO_e, LOGO_r, LOGO_a, LOGO__, LOGO_v, LOGO_1, LOGO_2, LOGO_3, LOGO_4
+    INIT, CLEAR, LOGO_X, LOGO_o, LOGO_s, LOGO_e, LOGO_r, LOGO_a, LOGO__, LOGO_v, LOGO_1, LOGO_2, LOGO_3, LOGO_4, IDLE
 } blit_state_t;
 
 blit_state_t blit_state;
-
-logic         blit_read;
-logic [15:0]  vram_rd_data;
-logic [15:0]  blit_rd_addr;
-logic [15:0]  blit_wr_addr;
-logic [15:0]  blit_rd_incr;
-logic [15:0]  blit_wr_incr;
-logic [15:0]  blit_count;
+logic [12*8:1]  logostring = "Xosera v0.01";
+logic           blit_busy;
+logic           blit_read;
+logic           blit_read_ack;
+logic [15:0]    vram_rd_data;
+logic [15:0]    blit_rd_addr;
+logic [15:0]    blit_wr_addr;
+logic [15:0]    blit_rd_incr;
+logic [15:0]    blit_wr_incr;
+logic [15:0]    blit_count;
 
 assign reg_data_o = vram_rd_data;
 
@@ -73,7 +75,9 @@ always_ff @(posedge clk) begin
         blit_vram_wr_o      <= 1'b0;
         blit_vram_addr_o    <= 16'h0000;
         blit_vram_data_o    <= 16'h0000;
+        blit_busy           <= 1'b0;
         blit_read           <= 1'b0;
+        blit_read_ack       <= 1'b0;
         blit_state          <= INIT;
         vram_rd_data        <= 16'he3e3;
         blit_rd_addr        <= 16'h0000;
@@ -84,26 +88,38 @@ always_ff @(posedge clk) begin
     end
     else begin
         // if a read was pending, save value from vram
-        if (blit_read) begin
-            vram_rd_data    <= blit_vram_data_i;
+        if (blit_read_ack) begin
+            vram_rd_data     <= blit_vram_data_i;
         end
-        blit_read <= 1'b0;
-
         // if this is a blit cycle (vs video gen), or there is no pending blit vram access
         if (blit_cycle_i || !blit_vram_sel_o) begin
-            blit_vram_sel_o  <= 1'b0;        // clear vram select
-            blit_vram_wr_o   <= 1'b0;        // clear vram write
 
-            blit_vram_addr_o    <= blit_wr_addr;    // assume writing
+            blit_read_ack   <= blit_read;   // ack is one cycle after read with blitter access
+            blit_read       <= 1'b0;
 
-            // process count register
-            if (blit_count != 0) begin
-                blit_count          <= blit_count - 1;
-                blit_rd_addr        <= blit_rd_addr + blit_rd_incr;
-                blit_wr_addr        <= blit_wr_addr + blit_rd_incr;
+            // if we did a read, increment write addr
+            if (blit_read) begin
+                blit_rd_addr     <= blit_rd_addr + blit_rd_incr;
             end
 
-            blit_state <= IDLE; // default next state
+            // if we did a write, increment write addr
+            if (blit_vram_wr_o) begin
+                blit_wr_addr    <= blit_wr_addr + blit_wr_incr;
+
+                // decrement process count register if blitter busy
+                if (blit_busy) begin
+                    blit_count  <= blit_count - 1;
+                end
+            end
+
+            if (blit_count == 16'h0000) begin
+                blit_busy   <= 1'b0;
+            end
+
+            blit_vram_sel_o     <= 1'b0;            // clear vram select
+            blit_vram_wr_o      <= 1'b0;            // clear vram write
+            blit_vram_addr_o    <= blit_wr_addr;    // assume write, output address
+            blit_state <= IDLE;                     // default next state
 
             case (blit_state)
                 IDLE: begin
@@ -124,10 +140,10 @@ always_ff @(posedge clk) begin
                                 blit_vram_addr_o    <= blit_wr_addr;    // output write address
                                 blit_vram_wr_o      <= 1'b1;            // VRAM write
                                 blit_vram_sel_o     <= 1'b1;            // select VRAM
-                                blit_wr_addr        <= blit_wr_addr + blit_wr_incr;    // increment write address
+                                blit_wr_addr        <= blit_wr_addr + blit_wr_incr;     // increment write address
                             end
                             R_XVID_VID_MODE: begin
-                                video_ena_o         <= video_ena_o ^ reg_data_i[0]; // TODO toggle video enable bit 0
+                                video_ena_o         <= video_ena_o ^ reg_data_i[0];     // TODO toggle video enable bit 0
                             end
                             default:
                             ;
@@ -139,15 +155,18 @@ always_ff @(posedge clk) begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
                     blit_vram_addr_o    <= 16'h0000;
-                    blit_vram_data_o    <= CLEARDATA;
-                    blit_count          <= 16'hffff;
+//                    blit_vram_data_o    <= CLEARDATA;
+                    blit_vram_data_o    <= 16'h0000;    // TODO HACK
+                    blit_count          <= 16'hFFFF;
                     blit_wr_incr        <= 16'h0001;
+                    blit_busy           <= 1'b1;
                     blit_state          <= CLEAR;
                 end
                 CLEAR: begin
-                    if (blit_count != 0) begin
+                    if (blit_busy) begin
                         blit_vram_sel_o <= 1'b1;
                         blit_vram_wr_o  <= 1'b1;
+                        blit_vram_data_o    <= blit_vram_addr_o+1;    // TODO HACK
                         blit_state      <= CLEAR;
                     end
                     else begin
@@ -159,80 +178,79 @@ always_ff @(posedge clk) begin
                     blit_vram_wr_o      <= 1'b1;
                     blit_vram_addr_o    <= (1 * CHARS_WIDE + 2 + 2);
                     blit_wr_addr        <= (1 * CHARS_WIDE + 2 + 3);
-                    blit_vram_data_o    <= { 8'h1F, "X" };
+                    blit_vram_data_o    <= { 8'h1F, logostring[12*8-:8] };
                     blit_state          <= LOGO_o;
-                    blit_count          <= 10;  // auto-increment 10 times
                 end
                 LOGO_o: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
-                    blit_vram_data_o    <= { 8'h1e, "o" };
+                    blit_vram_data_o    <= { 8'h1e, logostring[11*8-:8] };
                     blit_state          <= LOGO_s;
                 end
                 LOGO_s: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
-                    blit_vram_data_o    <= { 8'h1c, "s" };
+                    blit_vram_data_o    <= { 8'h1c, logostring[10*8-:8] };
                     blit_state          <= LOGO_e;
                 end
                 LOGO_e: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
-                    blit_vram_data_o    <= { 8'h1b, "e"};
+                    blit_vram_data_o    <= { 8'h1b, logostring[9*8-:8] };
                     blit_state          <= LOGO_r;
                 end
                 LOGO_r: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
-                    blit_vram_data_o    <= { 8'h12, "r" };
+                    blit_vram_data_o    <= { 8'h12, logostring[8*8-:8] };
                     blit_state          <= LOGO_a;
                 end
                 LOGO_a: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
-                    blit_vram_data_o    <= { 8'h15, "a" };
+                    blit_vram_data_o    <= { 8'h15, logostring[7*8-:8] };
                     video_ena_o         <= 1'b1;
                     blit_state          <= LOGO__;
                 end
                 LOGO__: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
-                    blit_vram_data_o    <= { 8'h17, " " };
+                    blit_vram_data_o    <= { 8'h17, logostring[6*8-:8] };
                     video_ena_o         <= 1'b1;
                     blit_state          <= LOGO_v;
                 end
                 LOGO_v: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
-                    blit_vram_data_o    <= { 8'h17, "v" };
+                    blit_vram_data_o    <= { 8'h17, logostring[5*8-:8] };
                     video_ena_o         <= 1'b1;
                     blit_state          <= LOGO_1;
                 end
                 LOGO_1: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
-                    blit_vram_data_o    <= { 8'h17, "0" };
+                    blit_vram_data_o    <= { 8'h17, logostring[4*8-:8] };
                     video_ena_o         <= 1'b1;
                     blit_state          <= LOGO_2;
                 end
                 LOGO_2: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
-                    blit_vram_data_o    <= { 8'h17, "." };
+                    blit_vram_data_o    <= { 8'h17, logostring[3*8-:8] };
                     video_ena_o         <= 1'b1;
                     blit_state          <= LOGO_3;
                 end
                 LOGO_3: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
-                    blit_vram_data_o    <= { 8'h17, "0" };
+                    blit_vram_data_o    <= { 8'h17, logostring[2*8-:8] };
                     video_ena_o         <= 1'b1;
                     blit_state          <= LOGO_4;
                 end
                 LOGO_4: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
-                    blit_vram_data_o    <= { 8'h17, "1" };
+                    blit_vram_data_o    <= { 8'h17, logostring[1*8-:8] };
                     video_ena_o         <= 1'b1;
                 end
                 default: ;

@@ -20,6 +20,7 @@ module bus_interface(
            output logic  [7:0]  bus_data_o,             // 8-bit data bus output
            output logic         write_strobe_o,         // strobe for register write
            output logic         read_strobe_o,          // strobe for register read
+           output logic         cs_strobe_o,          // strobe for register read
            output logic  [3:0]  reg_num_o,              // register number read/written
            output logic [15:0]  reg_data_o,             // word written to register
            input  logic [15:0]  reg_data_i,             // word to read from register
@@ -47,6 +48,8 @@ assign      bytesel     = bytesel_r[0];
 logic [7:0] data;
 assign      data        = data_r[0];
 
+assign cs_strobe_o      = sel_rise;
+
 logic [3:0] even_byte_reg   = 4'h0;     // register flag for buffered even address write data
 logic [7:0] even_byte_data  = 8'h00;    // buffer for even address write data (output on odd)
 
@@ -59,7 +62,6 @@ initial begin
     data_r[0]       = 8'h00;
     data_r[1]       = 8'h00;
 end
-
 
 // select read data based on upper bits of reg select and byte select
 assign bus_data_o = reg_read(bytesel, reg_num[3:2]);
@@ -104,12 +106,12 @@ always_ff @(posedge clk) begin
 
         if (sel_rise) begin                                     // if select rising edge
             if (write) begin
-                if (bytesel) begin                                  // if bytesel (2nd half of word)
+                if (bytesel) begin                                  // if bytesel (odd byte of word)
                     write_strobe_o  <= 1'b1;                        // broadcast register write strobe
                 end
                 else begin
-                    even_byte_reg   <= reg_num;                     // save reg num for even byte
-                    even_byte_data  <= data;                        // save even byte
+                    even_byte_reg   <= reg_num;                     // save reg num for even byte of word
+                    even_byte_data  <= data;                        // save even byte data
                 end
             end
             else begin

@@ -58,23 +58,7 @@ class BusInterface
 		R_XVID_AUX_CTRL        // reg F 1111: TODO audio and other control? (read/write)
 	};
 
-	static constexpr const char * reg_name[] = {"RD_ADDR",
-												"WR_ADDR",
-												"DATA",
-												"DATA_2",
-												"VID_MODE",
-												"BLIT_CTRL",
-												"COUNT",
-												"WIDTH",
-												"RD_INC",
-												"WR_INC",
-												"RD_MOD",
-												"WR_MOD",
-												"AUX_RD_ADDR",
-												"AUX_WR_ADDR",
-												"AUX_DATA",
-												"AUX_CTR"};
-
+	static const char * reg_name[];
 	enum
 	{
 		BUS_PREP,
@@ -184,6 +168,24 @@ public:
 		}
 	}
 };
+
+const char * BusInterface::reg_name[] = {"RD_ADDR",
+												"WR_ADDR",
+												"DATA",
+												"DATA_2",
+												"VID_MODE",
+												"BLIT_CTRL",
+												"COUNT",
+												"WIDTH",
+												"RD_INC",
+												"WR_INC",
+												"RD_MOD",
+												"WR_MOD",
+												"AUX_RD_ADDR",
+												"AUX_WR_ADDR",
+												"AUX_DATA",
+												"AUX_CTR"};
+
 
 #define REG_B(r, v) (((BusInterface::R_XVID_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_W(r, v)                                                                                                    \
@@ -497,7 +499,8 @@ int main(int argc, char ** argv)
 	FILE * mfp = fopen("logs/xosera_vsim_text.txt", "w");
 	if (mfp != nullptr)
 	{
-		auto * mem = top->xosera_main->vram->memory;
+		auto  vmem = top->xosera_main->vram->memory;
+		uint16_t *mem = &vmem[0];
 
 		for (int y = 0; y < VISIBLE_HEIGHT / 16; y++)
 		{
@@ -525,7 +528,8 @@ int main(int argc, char ** argv)
 	FILE * bfp = fopen("logs/xosera_vsim_vram.bin", "w");
 	if (bfp != nullptr)
 	{
-		auto * mem = top->xosera_main->vram->memory;
+		auto  vmem = top->xosera_main->vram->memory;
+		uint16_t *mem = &vmem[0];
 		fwrite(mem, 128 * 1024, 1, bfp);
 		fclose(bfp);
 	}

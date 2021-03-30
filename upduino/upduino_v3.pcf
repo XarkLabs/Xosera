@@ -2,14 +2,14 @@
 
 # The LED pins are on dedicated pins and cannot be modified!
 # Note that they are negative logic (write a 0 to turn on).
-# These are also brought out to the left side of the board. 
+# These are also brought out to the left side of the board.
 # Cut the board trace on jumper R28 to disable the onboard 3 color LED.
-#set_io -nowarn led_red 41 
-#set_io -nowarn led_green 39
-#set_io -nowarn led_blue	40
-set_io -nowarn led_red 39 # NOTE: Order for 3.x prototype Upduino (to be fixed)
-set_io -nowarn led_green 40
-set_io -nowarn led_blue 41
+#set_io -nowarn led_red 39 # NOTE: RGB order for 3.x prototype Upduino (now fixed)
+#set_io -nowarn led_green 40
+#set_io -nowarn led_blue 41
+set_io -nowarn led_red 41
+set_io -nowarn led_green 39
+set_io -nowarn led_blue	40
 
 # FTDI chip interface
 set_io -nowarn serial_txd 14 # FPGA transmit to USB
@@ -19,10 +19,8 @@ set_io -nowarn spi_cs 16 # Connected to SPI flash, drive high unless using SPI f
 # If using the FTDI MPSSE engine, the following signals apply
 set_io -nowarn spi_sck 15  # Shared with the flash
 set_io -nowarn spi_ssn 16  # Connected to SPI flash, drive high unless using SPI flash!
-#set_io -nowarn spi_copi 17 # Shared with the flash	# NOTE: Seemed backwards on 3.x prototype Upduino (but not clear)
-#set_io -nowarn spi_cipo 14 # Shared with the flash
-set_io -nowarn spi_copi 14 # Shared with the flash
-set_io -nowarn spi_cipo 17 # Shared with the flash
+set_io -nowarn spi_copi 17 # Shared with the flash	# NOTE: These will seem backwards for FTDI SPI slave...
+set_io -nowarn spi_cipo 14 # Shared with the flash
 
 # Normal GPIO pins, left side
 set_io -nowarn gpio_23 23

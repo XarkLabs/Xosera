@@ -140,7 +140,6 @@ always_ff @(posedge clk) begin
                                 blit_vram_addr_o    <= blit_wr_addr;    // output write address
                                 blit_vram_wr_o      <= 1'b1;            // VRAM write
                                 blit_vram_sel_o     <= 1'b1;            // select VRAM
-                                blit_wr_addr        <= blit_wr_addr + blit_wr_incr;     // increment write address
                             end
                             R_XVID_VID_MODE: begin
                                 video_ena_o         <= video_ena_o ^ reg_data_i[0];     // TODO toggle video enable bit 0
@@ -155,8 +154,8 @@ always_ff @(posedge clk) begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
                     blit_vram_addr_o    <= 16'h0000;
-//                    blit_vram_data_o    <= CLEARDATA;
-                    blit_vram_data_o    <= 16'h0000;    // TODO HACK
+                    blit_vram_data_o    <= CLEARDATA;
+//                  blit_vram_data_o    <= 16'h0000;    // TODO HACK
                     blit_count          <= 16'hFFFF;
                     blit_wr_incr        <= 16'h0001;
                     blit_busy           <= 1'b1;
@@ -166,7 +165,7 @@ always_ff @(posedge clk) begin
                     if (blit_busy) begin
                         blit_vram_sel_o <= 1'b1;
                         blit_vram_wr_o  <= 1'b1;
-                        blit_vram_data_o    <= blit_vram_addr_o+1;    // TODO HACK
+//                      blit_vram_data_o    <= blit_vram_addr_o+1;    // TODO HACK
                         blit_state      <= CLEAR;
                     end
                     else begin

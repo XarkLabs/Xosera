@@ -35,7 +35,7 @@ integer i, f;
 integer frame;
 integer addrval;
 integer dataval;
-integer readbyte;
+logic [15:0] readword;
 logic last_vs;
 
 xosera_main xosera(
@@ -132,7 +132,8 @@ endtask
 
 always begin
 
-    #(15ms)              write_reg(1'b0, xosera.blitter.R_XVID_WR_ADDR, addrval[15:8]);
+    #(15ms) ;
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.R_XVID_WR_ADDR, addrval[15:8]);
     #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_WR_ADDR, addrval[7:0]);
 
     addrval = addrval + 1;
@@ -147,11 +148,12 @@ always begin
 
     addrval = addrval + 1;
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.R_XVID_DATA, readbyte[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.R_XVID_DATA, readbyte[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.R_XVID_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.R_XVID_DATA, readword[7:0]);
+    $display("%0t READ R[%x] => %04x", $realtime, xosera.bus.reg_num_o, readword);
 end
 
-// toggle clock source at pixel clock frequency
+// toggle clock source at pixel clock frequency+
 always begin
     #(CLK_PERIOD/2) clk = ~clk;
 end

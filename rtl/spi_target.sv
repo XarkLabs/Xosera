@@ -34,6 +34,10 @@ logic sck_rise;
 assign sck_rise = (sck_r[1: 0] == 2'b10);
 logic sck_fall;
 assign sck_fall = (sck_r[1: 0] == 2'b01);
+logic copi;
+assign copi = copi_r[0];
+logic cs;
+assign cs = cs_r[0];
 
 logic [7: 0] data_byte;
 logic [2: 0] bit_count;
@@ -61,19 +65,19 @@ always @(posedge clk) begin
         receive_strobe_o    <= 1'b0;
         transmit_strobe_o   <= 1'b0;
 
-        if (cs_r[0]) begin        // SS not selected
+        if (cs) begin           // SS not selected (active LOW)
             transmit_strobe_o   <= 1'b1;
             data_byte           <= transmit_byte_i;
             bit_count           <= 3'b000;
             sck_state           <= 1'b0;
         end
-        else begin                    // SS selected
+        else begin              // SS selected (active HIGH)
             if (~sck_state && sck_rise) begin
                 sck_state   <= 1'b1;
-                data_byte   <= { data_byte[6: 0], copi_r[0] };
+                data_byte   <= { data_byte[6: 0], copi };
                 if (bit_count == 3'b111) begin
                     receive_strobe_o    <= 1'b1;
-                    receive_byte_o      <= { data_byte[6: 0], copi_r[0] };
+                    receive_byte_o      <= { data_byte[6: 0], copi };
                 end
             end
             else begin

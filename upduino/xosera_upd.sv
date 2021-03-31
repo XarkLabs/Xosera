@@ -80,28 +80,44 @@ assign bus_cs_n    = led_red;          // RGB red as select input (UP_nCS)
 assign bus_rd_nwr   = led_green;        // RGB blue as read/not write
 assign bus_bytesel  = led_blue;         // gpio for word byte select
 assign bus_reg_num  = { gpio_27, gpio_26, gpio_25, gpio_23 };   // gpio for register number
-assign bus_data     = { gpio_28, gpio_38, gpio_42, gpio_36, gpio_43, gpio_34, gpio_37, gpio_31 };   // gpio for data bus
 
 // split tri-state data lines into in/out signals for inside FPGA
 logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
 
 // tri-state data bus unless Xosera is both selected and bus is reading
-assign bus_data = 8'bZ; // TODO HACK bus_cs_n == cs_ENABLED && bus_rd_nwr == RnW_READ) ? bus_data_out : 8'bZ;
-assign bus_data_in = bus_data;
+logic bus_out_ena;
+assign  bus_out_ena = (bus_cs_n == cs_ENABLED && bus_rd_nwr == RnW_READ);
+
+// NOTE: Need to use iCE40 SB_IO primitive to control tri-state properly here
+`ifdef SYNTHESIS
+SB_IO #(
+    .PIN_TYPE(6'b101001)
+) bus_tristate [7:0] (
+    .PACKAGE_PIN({ gpio_28, gpio_38, gpio_42, gpio_36, gpio_43, gpio_34, gpio_37, gpio_31 }),
+    //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
+    .OUTPUT_ENABLE(bus_out_ena),
+    .D_OUT_0(bus_data_out),
+    .D_IN_0(bus_data_in)
+);
+`else
+assign bus_data     = { gpio_28, gpio_38, gpio_42, gpio_36, gpio_43, gpio_34, gpio_37, gpio_31 };   // gpio for data bus
+assign bus_data     = bus_out_ena ? bus_data_out : 8'bZ;
+assign bus_data_in  = bus_data;
+`endif
 
 // assign audio output signals to pins
-assign gpio_32 = audio_l;           // gpio for PWM left audio channel
-assign gpio_35 = audio_r;           // gpio for PWM right audio channel
+assign gpio_32      = audio_l;           // gpio for PWM left audio channel
+assign gpio_35      = audio_r;           // gpio for PWM right audio channel
 
 // video output signals
-`ifndef SIMULATE
+`ifdef SYNTHESIS
 // DV PMOD mode (but still works great for VGA)
 // NOTE: Use SB_IO DDR to help assure clock arrives a bit before signal
 //       Also register the other signals.
 SB_IO #(
           .PIN_TYPE(6'b010000)   // PIN_OUTPUT_DDR
-      ) dvi_clk_sbio (
+      ) dv_clk_sbio (
           .PACKAGE_PIN(gpio_2),
           //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
           .OUTPUT_CLK(pclk),
@@ -111,7 +127,7 @@ SB_IO #(
 
 SB_IO #(
           .PIN_TYPE(6'b010100)   // PIN_OUTPUT_REGISTERED
-      ) dvi_signals_sbio [14: 0] (
+      ) dv_signals_sbio [14: 0] (
           .PACKAGE_PIN({gpio_46, gpio_21, gpio_12, gpio_13, gpio_11, gpio_44, gpio_48, gpio_19, gpio_9, gpio_4, gpio_45, gpio_18, gpio_6, gpio_3, gpio_47}),
           //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
           .OUTPUT_CLK(pclk),
@@ -120,7 +136,6 @@ SB_IO #(
           .D_OUT_1()
           /* verilator lint_on PINCONNECTEMPTY */
       );
-
 `else
 // Generic VGA mode (for simulation)
 assign { gpio_46,  gpio_12,  gpio_21,  gpio_13,  gpio_19,  gpio_18,  gpio_11,  gpio_9,   gpio_6   } =
@@ -135,7 +150,7 @@ assign gpio_2   = pclk;    // output HDMI clk
 logic pclk;                  // video pixel clock output from PLL block
 logic pll_lock;              // indicates when PLL frequency has locked-on
 
-`ifndef SIMULATE
+`ifdef SYNTHESIS
 /* verilator lint_off PINMISSING */
 SB_PLL40_CORE
     #(

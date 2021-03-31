@@ -102,7 +102,7 @@ count: $(SRC) $(INC) $(FONTMEM) Makefile
 
 # run Verilator to check for Verilog issues
 lint: $(SRC) $(INC) $(FONTMEM) Makefile
-	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) -DSIMULATE --top-module $(TOP) $(TECH_LIB) $(SRC)
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC)
 
 # run Yosys to generate a "dot" graphical representation of each design file
 show: $(DOT)
@@ -119,7 +119,7 @@ clean:
 %.json: $(SRC) $(INC) $(MEM) Makefile
 	@rm -f $@
 	@mkdir -p logs
-	-$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) -DSIMULATE --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee logs/$(TOP)_verilator.log
+	-$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee logs/$(TOP)_verilator.log
 	$(YOSYS) -p 'verilog_defines $(DEFINES) ; read_verilog -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@' 2>&1 | tee logs/$(TOP)_yosys.log
 
 # make ASCII bitstream from JSON description and device parameters

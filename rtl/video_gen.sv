@@ -164,7 +164,7 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         // TODO: Use BRAM for palette?
         // default IRGB palette colors (x"RGB")
-`ifdef SIMULATE
+`ifndef SYNTHESIS
         palette_r[0] <= 12'h001;                // black (with a bit of blue for debugging)
 `else
         palette_r[0] <= 12'h000;                // black

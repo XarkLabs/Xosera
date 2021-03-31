@@ -78,7 +78,7 @@ assign bus_data_in = bus_data;
 // video output signals
 `ifdef PMOD_1B2_DVI12
 // 12-bit DVI using dual-PMOD https://1bitsquared.com/products/pmod-digital-video-interface
-`ifndef SIMULATE
+`ifdef SYNTHESIS
 // NOTE: Use SB_IO DDR to help assure clock arrives a bit before signal
 //       Also register the other signals.
 SB_IO #(
@@ -132,7 +132,7 @@ assign {P1B1, P1B2, P1B3, P1B4, P1B7, P1B8, P1B9, P1B10} =
 logic pclk;                  // video pixel clock output from PLL block
 logic pll_lock;              // indicates when PLL frequency has locked-on
 
-`ifndef SIMULATE
+`ifdef SYNTHESIS
 /* verilator lint_off PINMISSING */
 SB_PLL40_PAD
     #(

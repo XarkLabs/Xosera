@@ -19,7 +19,7 @@ module vram(
            output logic [15: 0] data_out
        );
 
-`ifdef SIMULATE
+`ifndef SYNTHESIS
 integer i;
 logic [15: 0] memory[0: 65535] /* verilator public */;
 

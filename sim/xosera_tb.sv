@@ -17,8 +17,9 @@ logic clk;
 logic reset;
 // video
 logic [3: 0] red, green, blue;
-logic vsync, hsync;
-logic visible;
+logic vsync;
+logic hsync;
+logic dv_en;
 // audio
 logic audio_l;
 logic audio_r;
@@ -45,8 +46,8 @@ xosera_main xosera(
                 .blue_o(blue),                  // pixel clock
                 .vsync_o(vsync),                // vertical sync
                 .hsync_o(hsync),                // horizontal sync
-                .visible_o(visible),            // visible (aka display enable)
-                .bus_cs_n_i(bus_cs_n),        // register select strobe
+                .dv_en_o(dv_en),                // dv display enable
+                .bus_cs_n_i(bus_cs_n),          // chip select strobe
                 .bus_rd_nwr_i(bus_rd_nwr),      // 0 = write, 1 = read
                 .bus_reg_num_i(bus_reg_num),    // register number (0-15)
                 .bus_bytesel_i(bus_bytesel),    // 0 = high-byte, 1 = low-byte

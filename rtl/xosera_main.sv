@@ -44,7 +44,7 @@ module xosera_main(
            output logic [7:0]   bus_data_o,             // 8-bit data bus output
            output logic [3:0]   red_o, green_o, blue_o, // RGB 4-bit color outputs
            output logic         hsync_o, vsync_o,       // horizontal and vertical sync
-           output logic         visible_o,              // pixel visible (aka display enable)
+           output logic         dv_en_o,                // pixel visible (aka display enable)
            output logic         audio_l_o, audio_r_o,   // left and right audio PWM output
            input  logic         reset_i                 // reset signal
        );
@@ -118,7 +118,7 @@ video_gen video_gen(
               .blue_o(blue_o),
               .hsync_o(hsync_o),
               .vsync_o(vsync_o),
-              .visible_o(visible_o)
+              .dv_en_o(dv_en_o)
           );
 
 // audio generation (TODO)

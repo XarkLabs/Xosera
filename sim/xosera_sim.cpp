@@ -356,7 +356,7 @@ int main(int argc, char ** argv)
 #if SDL_RENDER
 		if (sim_render)
 		{
-			if (top->xosera_main->visible_o)
+			if (top->xosera_main->dv_en_o)
 			{
 				// sim_render current VGA output pixel (4 bits per gun)
 				SDL_SetRenderDrawColor(renderer,

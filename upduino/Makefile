@@ -46,6 +46,7 @@ SRC := $(TOP).sv $(wildcard $(SRCDIR)/*.sv)
 INC := $(wildcard $(SRCDIR)/*.svh)
 
 # memory initialization file for default 8x16 font
+#FONTMEM := ../fonts/hexfont_8x16.mem
 FONTMEM := ../fonts/font_8x16.mem
 
 # dot graphic diagram files

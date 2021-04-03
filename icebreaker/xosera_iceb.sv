@@ -11,7 +11,7 @@
 //
 
 `default_nettype none   // mandatory for Verilog sanity
-`timescale 1ns/1ns
+`timescale 1ns/1ps
 
 `ifdef PMOD_1B2_DVI12
 `elsif PMOD_DIGILENT_VGA
@@ -57,7 +57,7 @@ logic [3:0] vga_g;                      // vga green (4-bits)
 logic [3:0] vga_b;                      // vga blue (4-bits)
 logic       vga_hs;                     // vga hsync
 logic       vga_vs;                     // vga vsync
-logic       dv_en;                     // HDMI display enable
+logic       dv_de;                      // DV display enable
 
 // assign input signals to pins
 assign nreset       = BTN_N;            // active LOW reset button
@@ -97,7 +97,7 @@ SB_IO #(
           .PACKAGE_PIN({P1B9, P1B10, P1B4, P1A1, P1A7, P1A2, P1A8, P1A3, P1A9, P1A4, P1A10, P1B1, P1B7, P1B8, P1B3}),
           //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
           .OUTPUT_CLK(pclk),
-          .D_OUT_0({dv_en, vga_vs, vga_hs, vga_r, vga_g, vga_b}),
+          .D_OUT_0({dv_de, vga_vs, vga_hs, vga_r, vga_g, vga_b}),
           /* verilator lint_off PINCONNECTEMPTY */
           .D_OUT_1()
           /* verilator lint_on PINCONNECTEMPTY */
@@ -107,7 +107,7 @@ SB_IO #(
 assign {P1A1, P1A2, P1A3, P1A4, P1A7, P1A8, P1A9, P1A10} =
        {vga_r[3], vga_r[1], vga_g[3], vga_g[1], vga_r[2], vga_r[0], vga_g[2], vga_g[0]};
 assign {P1B1, P1B2, P1B3, P1B4, P1B7, P1B8, P1B9, P1B10} =
-       {vga_b[3], pclk, vga_b[0], vga_hs, vga_b[2], vga_b[1], dv_en, vga_vs};
+       {vga_b[3], pclk, vga_b[0], vga_hs, vga_b[2], vga_b[1], dv_de, vga_vs};
 
 `endif
 `elsif PMOD_DIGILENT_VGA
@@ -186,7 +186,7 @@ xosera_main xosera_main(
                 .blue_o(vga_b),
                 .vsync_o(vga_vs),
                 .hsync_o(vga_hs),
-                .dv_en_o(dv_en),
+                .dv_de_o(dv_de),
                 .bus_cs_n_i(bus_cs_n),
                 .bus_rd_nwr_i(bus_rd_nwr),
                 .bus_reg_num_i(bus_reg_num),

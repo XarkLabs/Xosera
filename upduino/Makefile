@@ -61,7 +61,7 @@ ICEPROG := iceprog
 
 # Yosys synthesis arguments
 # TODO: too slow, maybe buggy: YOSYS_SYNTH_ARGS := -dsp -abc9 -abc2 -relut -top $(TOP)
-YOSYS_SYNTH_ARGS := -dsp -top $(TOP)
+YOSYS_SYNTH_ARGS := -dsp -relut -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -DICE40UP5K -DUPDUINO
@@ -92,7 +92,7 @@ timing: $(TOP).rpt Makefile
 # run Yosys with "noflatten", which will produce a resource count per module
 count: $(SRC) $(INC) $(FONTMEM) Makefile
 	@mkdir -p logs
-	$(YOSYS) -p 'verilog_defines $(DEFINES) ; read_verilog -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten' 2>&1 | tee logs/$(TOP)_yosys_count.log
+	$(YOSYS) -l logs/$(TOP)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 
 # run Verilator to check for Verilog issues
 lint: $(SRC) $(INC) $(FONTMEM) Makefile
@@ -103,7 +103,7 @@ show: $(DOT)
 
 $(DOT): %.dot: %.sv
 	mkdir -p dot
-	$(YOSYS) -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -sv $< ; show -enum -stretch -signed -width -prefix dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
+	$(YOSYS) -l logs/$(TOP)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -sv $< ; show -enum -stretch -signed -width -prefix dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # delete all targets that will be re-generated
 clean:
@@ -114,17 +114,17 @@ clean:
 	@rm -f $@
 	@mkdir -p logs
 	-$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee logs/$(TOP)_verilator.log
-	$(YOSYS) -p 'verilog_defines $(DEFINES) ; read_verilog -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@' 2>&1 | tee logs/$(TOP)_yosys.log
+	$(YOSYS) -l logs/$(TOP)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
 
 # make ASCII bitstream from JSON description and device parameters
 %.asc: %.json $(PIN_DEF) $(SDC) $(MEM) Makefile
 	@rm -f $@
 	@mkdir -p logs
-	$(NEXTPNR) $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@ 2>&1 | tee logs/$(TOP)_nextpnr.log
+	$(NEXTPNR) -l logs/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 	@echo === Upduino Xosera : $(VIDEO_MODE) | tee $(TOP)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@$(NEXTPNR) -V 2>&1 | tee -a $(TOP)_stats.txt
-	@sed -n '/Device utilisation/,/Info: Placed/p' logs/$(TOP)_nextpnr.log | sed '$$d' | tee -a $(TOP)_stats.txt
+	@sed -n '/Device utilisation/,/Info: Placed/p' logs/$(TOP)_nextpnr.log | sed '$$d' | grep -v ":     0/" | tee -a $(TOP)_stats.txt
 	@grep "Max frequency" logs/$(TOP)_nextpnr.log | tail -1 | tee -a $(TOP)_stats.txt
 
 # make binary bitstream from ASCII bitstream

@@ -1,21 +1,12 @@
 === Upduino Xosera : MODE_848x480
-Yosys 0.9+3905 (open-tool-forge build) (git sha1 4e741add, clang 11.0.3 )
-nextpnr-ice40 -- Next Generation Place and Route (Version nightly-20210118)
+Yosys 0.9+4052 (open-tool-forge build) (git sha1 0ccc7229, clang 11.0.3 )
+nextpnr-ice40 -- Next Generation Place and Route (Version nightly-20210310)
 Info: Device utilisation:
-Info: 	         ICESTORM_LC:   573/ 5280    10%
+Info: 	         ICESTORM_LC:   589/ 5280    11%
 Info: 	        ICESTORM_RAM:    12/   30    40%
 Info: 	               SB_IO:    35/   96    36%
 Info: 	               SB_GB:     6/    8    75%
 Info: 	        ICESTORM_PLL:     1/    1   100%
-Info: 	         SB_WARMBOOT:     0/    1     0%
-Info: 	        ICESTORM_DSP:     0/    8     0%
-Info: 	      ICESTORM_HFOSC:     0/    1     0%
-Info: 	      ICESTORM_LFOSC:     0/    1     0%
-Info: 	              SB_I2C:     0/    2     0%
-Info: 	              SB_SPI:     0/    2     0%
-Info: 	              IO_I3C:     0/    2     0%
-Info: 	         SB_LEDDA_IP:     0/    1     0%
-Info: 	         SB_RGBA_DRV:     0/    1     0%
 Info: 	      ICESTORM_SPRAM:     4/    4   100%
 
-Info: Max frequency for clock 'pclk': 43.37 MHz (PASS at 33.75 MHz)
+Info: Max frequency for clock 'pclk': 48.05 MHz (PASS at 33.75 MHz)

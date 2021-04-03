@@ -7,7 +7,9 @@
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
 `default_nettype none    // mandatory for Verilog sanity
-`timescale 1ns/1ns
+`timescale 1ns/1ps
+
+`define MEMDUMP
 
 module xosera_tb();
 
@@ -19,7 +21,7 @@ logic reset;
 logic [3: 0] red, green, blue;
 logic vsync;
 logic hsync;
-logic dv_en;
+logic dv_de;
 // audio
 logic audio_l;
 logic audio_r;
@@ -46,7 +48,7 @@ xosera_main xosera(
                 .blue_o(blue),                  // pixel clock
                 .vsync_o(vsync),                // vertical sync
                 .hsync_o(hsync),                // horizontal sync
-                .dv_en_o(dv_en),                // dv display enable
+                .dv_de_o(dv_de),                // dv display enable
                 .bus_cs_n_i(bus_cs_n),          // chip select strobe
                 .bus_rd_nwr_i(bus_rd_nwr),      // 0 = write, 1 = read
                 .bus_reg_num_i(bus_reg_num),    // register number (0-15)
@@ -66,7 +68,7 @@ parameter M68K_PERIOD   = 83.333;
 
 initial begin
     $timeformat(-9, 0, " ns", 20);
-    $dumpfile("logs/xosera_isim.vcd");
+    $dumpfile("logs/xosera_tb_isim.vcd");
     $dumpvars(0, xosera);
 
     frame = 0;
@@ -134,18 +136,27 @@ endtask
 always begin
 
     #(15ms) ;
-    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.R_XVID_WR_ADDR, test_addr[15:8]);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_WR_ADDR, test_addr[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.XVID_WR_ADDR, test_addr[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.XVID_WR_ADDR, test_addr[7:0]);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.R_XVID_DATA, test_data[15:8]);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_DATA, test_data[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.XVID_DATA, test_data[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.XVID_DATA, test_data[7:0]);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.R_XVID_RD_ADDR, test_addr[15:8]);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.R_XVID_RD_ADDR, test_addr[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.XVID_RD_ADDR, test_addr[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.XVID_RD_ADDR, test_addr[7:0]);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.R_XVID_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.R_XVID_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.XVID_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.XVID_DATA, readword[7:0]);
     $display("%0t READ R[%x] => %04x", $realtime, xosera.bus.reg_num_o, readword);
+end
+
+always @(posedge clk) begin
+    if (xosera.vram.sel && xosera.vram.wr_en) begin
+        $display("%0t Write VRAM[%04x] <= %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
+    end
+    else if (xosera.vram.sel && xosera.blit_vram_cycle) begin
+        $display("%0t Read VRAM[%04x] => %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
+    end
 end
 
 // toggle clock source at pixel clock frequency+
@@ -159,9 +170,10 @@ always @(posedge clk) begin
         $display("Finished rendering frame #%1d", frame);
 
         if (frame == 3) begin
-            f = $fopen("logs/xosera_isim_vram.txt", "w");
+`ifdef MEMDUMP
+            f = $fopen("logs/xosera_tb_isim_vram.txt", "w");
             for (i = 0; i < 65536; i += 16) begin
-                $fwrite(f, "%04x: ", i);
+                $fwrite(f, "%04x: ", i[15:0]);
                 for (j = 0; j < 16; j++) begin
                     $fwrite(f, "%04x ", xosera.vram.memory[i+j][15:0]);
                 end
@@ -177,6 +189,7 @@ always @(posedge clk) begin
                 $fwrite(f, "\n");
             end
             $fclose(f);
+`endif
             $finish;
         end
     end

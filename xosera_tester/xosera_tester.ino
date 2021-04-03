@@ -29,22 +29,22 @@ enum
 
 enum
 {
-  R_XVID_RD_ADDR,        // reg 0 0000: address to read from VRAM (write-only)
-  R_XVID_WR_ADDR,        // reg 1 0001: address to write from VRAM (write-only)
-  R_XVID_DATA,           // reg 2 0010: read/write word from/to VRAM RD/WR
-  R_XVID_DATA_2,         // reg 3 0011: read/write word from/to VRAM RD/WR (for 32-bit)
-  R_XVID_VID_MODE,       // reg 4 0100: TODO video display mode (write-only)
-  R_XVID_BLIT_CTRL,      // reg 5 0101: TODO blitter mode/control/status (read/write)
-  R_XVID_RD_INC,         // reg 6 0110: TODO read addr increment value (write-only)
-  R_XVID_WR_INC,         // reg 7 0111: TODO write addr increment value (write-only)
-  R_XVID_RD_MOD,         // reg 8 1000: TODO read modulo width (write-only)
-  R_XVID_WR_MOD,         // reg A 1001: TODO write modulo width (write-only)
-  R_XVID_WIDTH,          // reg 9 1010: TODO width for 2D blit (write-only)
-  R_XVID_COUNT,          // reg B 1011: TODO blitter "repeat" count (write-only)
-  R_XVID_AUX_RD_ADDR,    // reg C 1100: TODO aux read address (font audio etc.?) (write-only)
-  R_XVID_AUX_WR_ADDR,    // reg D 1101: TODO aux write address (font audio etc.?) (write-only)
-  R_XVID_AUX_DATA,       // reg E 1110: TODO aux memory/register data read/write value
-  R_XVID_AUX_CTRL        // reg F 1111: TODO audio and other control? (read/write)
+  XVID_RD_ADDR,        // reg 0 0000: address to read from VRAM (write-only)
+  XVID_WR_ADDR,        // reg 1 0001: address to write from VRAM (write-only)
+  XVID_DATA,           // reg 2 0010: read/write word from/to VRAM RD/WR
+  XVID_DATA_2,         // reg 3 0011: read/write word from/to VRAM RD/WR (for 32-bit)
+  XVID_VID_CTRL,       // reg 4 0100: TODO video display mode (write-only)
+  XVID_VID_DATA,       // reg 5 0101: TODO blitter mode/control/status (read/write)
+  XVID_RD_INC,         // reg 6 0110: TODO read addr increment value (write-only)
+  XVID_WR_INC,         // reg 7 0111: TODO write addr increment value (write-only)
+  XVID_RD_MOD,         // reg 8 1000: TODO read modulo width (write-only)
+  XVID_WR_MOD,         // reg A 1001: TODO write modulo width (write-only)
+  XVID_WIDTH,          // reg 9 1010: TODO width for 2D blit (write-only)
+  XVID_COUNT,          // reg B 1011: TODO blitter "repeat" count (write-only)
+  XVID_AUX_RD_ADDR,    // reg C 1100: TODO aux read address (font audio etc.?) (write-only)
+  XVID_AUX_WR_ADDR,    // reg D 1101: TODO aux write address (font audio etc.?) (write-only)
+  XVID_AUX_DATA,       // reg E 1110: TODO aux memory/register data read/write value
+  XVID_AUX_CTRL        // reg F 1111: TODO audio and other control? (read/write)
 };
 
 inline void xvid_set_bus_read()
@@ -164,7 +164,7 @@ inline uint8_t xvid_get_regb(uint8_t r, uint16_t value)
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
   Serial.println("Xosera Test Jig");
   digitalWrite(LED_BUILTIN, LOW);
 
@@ -198,44 +198,56 @@ void setup()
   delay(4000);
 
   randomSeed(0x1234);
-  xvid_set_reg(R_XVID_WR_ADDR, 0);
+
+  xvid_set_reg(XVID_WR_INC, 106);
+  xvid_set_reg(XVID_DATA, 0x1f42);
+  xvid_set_regb(XVID_DATA, 0x43);
+  xvid_set_regb(XVID_DATA, 0x44);
+
 }
 
+uint16_t count = 0;
+uint16_t laddr = 0x0000;
 uint16_t addr = 0x0000;
 uint16_t data = 0x0100;
-uint16_t rdata = 0x0000;
-uint16_t count = 0;
-
-uint32_t seed = 0x0001;
-uint32_t feed = 0x80000BBE;
 
 void loop()
 {
-  if (seed & 1)
+  xvid_set_reg(XVID_WR_ADDR, addr);
+  xvid_set_reg(XVID_WR_INC, 1);
+  xvid_set_reg(XVID_DATA, data);
+  for (uint16_t c = 1; c < 106 * 15; c++)
   {
-    seed = (seed >> 1) ^ feed;
+    xvid_set_regb(XVID_DATA, data);
   }
-  else
+  xvid_set_reg(XVID_RD_ADDR, addr);
+  xvid_set_reg(XVID_RD_INC, 1);
+
+  for (uint16_t c = 1; c < 106 * 15; c++)
   {
-    seed = (seed >> 1);
+    uint16_t rdata = xvid_get_reg(XVID_DATA);
+    if (rdata != data)
+    {
+      Serial.print(addr+c, HEX);
+      Serial.print(": WR=");
+      Serial.print(data, HEX);
+      Serial.print(" vs RD=");
+      Serial.print(rdata, HEX);
+      Serial.print("    \n");
+      break;
+    }
   }
 
-  data = (uint16_t)random(0, 0xffff);
-  xvid_set_reg(R_XVID_WR_ADDR, addr);
-  xvid_set_reg(R_XVID_DATA, data);
-  xvid_set_reg(R_XVID_RD_ADDR, addr);
-  rdata = xvid_get_reg(R_XVID_DATA);
-  if (rdata != data)
+  data++;
+  addr += 106 * 50;
+  if (addr < laddr)
   {
-    Serial.print(addr, HEX);
-    Serial.print(": WR=");
-    Serial.print(data, HEX);
-    Serial.print(" vs RD=");
-    Serial.print(rdata, HEX);
-    Serial.print("    \n");
+    Serial.print(".");
+    if ((++count & 0x3f) == 0)
+    {
+      Serial.println("");
+      Serial.print(count);
+    }
   }
-  if (++addr >= (106*30))
-  {
-    addr = 0;
-  }
+  laddr = addr;
 }

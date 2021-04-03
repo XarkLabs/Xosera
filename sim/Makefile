@@ -21,7 +21,7 @@
 #	MODE_800x600	800x600@60Hz	clock 40.000 MHz
 #	MODE_1024x768	1024x768@60Hz	clock 65.000 MHz
 #	MODE_1280x720	1280x720@60Hz	clock 74.176 MHz
-VIDEO_MODE := MODE_640x480
+VIDEO_MODE := MODE_848x480
 
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
@@ -77,7 +77,7 @@ CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-s
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
-VERILATOR_ARGS := --relative-includes -I../rtl --timescale-override 1ns/1ns -Wall -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
+VERILATOR_ARGS := --relative-includes -I../rtl --timescale-override 1ns/1ps -Wall -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
 
 # Verillator C++ source driver
 CSRC := xosera_sim.cpp
@@ -101,7 +101,7 @@ vrun: obj_dir/V$(VTOP) Makefile
 
 # run Verilator to build and run native simulation executable
 irun: $(TBTOP)
-	./$(TBTOP)
+	./$(TBTOP) 2>&1 | tee logs/$(TBTOP)_isim.log
 
 # use Verilator to build native simulation executable
 obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) Makefile

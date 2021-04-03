@@ -8,7 +8,7 @@
 //
 
 `default_nettype none             // mandatory for Verilog sanity
-`timescale 1ns/1ns
+`timescale 1ns/1ps
 
 // "hack" to allow quoted filename from define
 `define STRINGIFY(x) `"x`"

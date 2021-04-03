@@ -1,6 +1,6 @@
 # Xosera - Xark's Open Source Embedded Retro Adapter
 
-## Rosco_m68k PCB board development branch!
+## Rosco_m68k PCB board development branch
 
 ##### _"Not as clumsy or random as a GPU, an embedded retro video adapter for a more civilized age."_
 

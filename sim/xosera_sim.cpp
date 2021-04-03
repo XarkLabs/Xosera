@@ -40,22 +40,22 @@ class BusInterface
 
 	enum
 	{
-		R_XVID_RD_ADDR,        // reg 0 0000: address to read from VRAM (write-only)
-		R_XVID_WR_ADDR,        // reg 1 0001: address to write from VRAM (write-only)
-		R_XVID_DATA,           // reg 2 0010: read/write word from/to VRAM RD/WR
-		R_XVID_DATA_2,         // reg 3 0011: read/write word from/to VRAM RD/WR (for 32-bit)
-		R_XVID_VID_MODE,       // reg 4 0100: TODO video display mode (write-only)
-		R_XVID_BLIT_CTRL,      // reg 5 0101: TODO blitter mode/control/status (read/write)
-		R_XVID_RD_INC,         // reg 6 0110: TODO read addr increment value (write-only)
-		R_XVID_WR_INC,         // reg 7 0111: TODO write addr increment value (write-only)
-		R_XVID_RD_MOD,         // reg 8 1000: TODO read modulo width (write-only)
-		R_XVID_WR_MOD,         // reg A 1001: TODO write modulo width (write-only)
-		R_XVID_WIDTH,          // reg 9 1010: TODO width for 2D blit (write-only)
-		R_XVID_COUNT,          // reg B 1011: TODO blitter "repeat" count (write-only)
-		R_XVID_AUX_RD_ADDR,    // reg C 1100: TODO aux read address (font audio etc.?) (write-only)
-		R_XVID_AUX_WR_ADDR,    // reg D 1101: TODO aux write address (font audio etc.?) (write-only)
-		R_XVID_AUX_DATA,       // reg E 1110: TODO aux memory/register data read/write value
-		R_XVID_AUX_CTRL        // reg F 1111: TODO audio and other control? (read/write)
+		XVID_RD_ADDR,        // reg 0 0000: address to read from VRAM (write-only)
+		XVID_WR_ADDR,        // reg 1 0001: address to write from VRAM (write-only)
+		XVID_DATA,           // reg 2 0010: read/write word from/to VRAM RD/WR
+		XVID_DATA_2,         // reg 3 0011: read/write word from/to VRAM RD/WR (for 32-bit)
+		XVID_VID_MODE,       // reg 4 0100: TODO video display mode (write-only)
+		XVID_BLIT_CTRL,      // reg 5 0101: TODO blitter mode/control/status (read/write)
+		XVID_RD_INC,         // reg 6 0110: TODO read addr increment value (write-only)
+		XVID_WR_INC,         // reg 7 0111: TODO write addr increment value (write-only)
+		XVID_RD_MOD,         // reg 8 1000: TODO read modulo width (write-only)
+		XVID_WR_MOD,         // reg A 1001: TODO write modulo width (write-only)
+		XVID_WIDTH,          // reg 9 1010: TODO width for 2D blit (write-only)
+		XVID_BLIT_COUNT,     // reg B 1011: TODO blitter "repeat" count (write-only)
+		XVID_AUX_RD_ADDR,    // reg C 1100: TODO aux read address (font audio etc.?) (write-only)
+		XVID_AUX_WR_ADDR,    // reg D 1101: TODO aux write address (font audio etc.?) (write-only)
+		XVID_AUX_CTRL,       // reg E 1110: TODO audio and other control? (read/write)
+		XVID_AUX_DATA        // reg F 1111: TODO aux memory/register data read/write value
 	};
 
 	static const char * reg_name[];
@@ -187,9 +187,9 @@ const char * BusInterface::reg_name[] = {"RD_ADDR",
 												"AUX_CTR"};
 
 
-#define REG_B(r, v) (((BusInterface::R_XVID_##r) | 0x10) << 8) | ((v)&0xff)
+#define REG_B(r, v) (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_W(r, v)                                                                                                    \
-	((BusInterface::R_XVID_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::R_XVID_##r) | 0x10) << 8) | ((v)&0xff)
+	((BusInterface::XVID_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
 
 BusInterface bus;
 int          BusInterface::test_data_len   = 12;
@@ -356,7 +356,7 @@ int main(int argc, char ** argv)
 #if SDL_RENDER
 		if (sim_render)
 		{
-			if (top->xosera_main->dv_en_o)
+			if (top->xosera_main->dv_de_o)
 			{
 				// sim_render current VGA output pixel (4 bits per gun)
 				SDL_SetRenderDrawColor(renderer,

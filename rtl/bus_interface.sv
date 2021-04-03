@@ -8,7 +8,7 @@
 //
 
 `default_nettype none             // mandatory for Verilog sanity
-`timescale 1ns/1ns
+`timescale 1ns/1ps
 
 module bus_interface(
            input  logic         clk,                    // input clk (should be > 2x faster than bus signals)

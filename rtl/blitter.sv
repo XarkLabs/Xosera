@@ -8,7 +8,7 @@
 //
 
 `default_nettype none             // mandatory for Verilog sanity
-`timescale 1ns/1ns
+`timescale 1ns/1ps
 
 module blitter(
     input  logic            clk,
@@ -32,59 +32,62 @@ localparam CLEARDATA = 16'h1F20;    // value VRAM cleared to on init (blue+white
 
 // video reg_controller registers (16x16-bit words)
 typedef enum logic [3:0] {
-		R_XVID_RD_ADDR,        // reg 0 0000: address to read from VRAM (write-only)
-		R_XVID_WR_ADDR,        // reg 1 0001: address to write from VRAM (write-only)
-		R_XVID_DATA,           // reg 2 0010: read/write word from/to VRAM RD/WR
-		R_XVID_DATA_2,         // reg 3 0011: read/write word from/to VRAM RD/WR (for 32-bit)
-		R_XVID_VID_MODE,       // reg 4 0100: TODO video display mode (write-only)
-		R_XVID_BLIT_CTRL,      // reg 5 0101: TODO blitter mode/control/status (read/write)
-		R_XVID_RD_INC,         // reg 6 0110: TODO read addr increment value (write-only)
-		R_XVID_WR_INC,         // reg 7 0111: TODO write addr increment value (write-only)
-		R_XVID_RD_MOD,         // reg 8 1000: TODO read modulo width (write-only)
-		R_XVID_WR_MOD,         // reg A 1001: TODO write modulo width (write-only)
-		R_XVID_WIDTH,          // reg 9 1010: TODO width for 2D blit (write-only)
-		R_XVID_COUNT,          // reg B 1011: TODO blitter "repeat" count (write-only)
-		R_XVID_AUX_RD_ADDR,    // reg C 1100: TODO aux read address (font audio etc.?) (write-only)
-		R_XVID_AUX_WR_ADDR,    // reg D 1101: TODO aux write address (font audio etc.?) (write-only)
-		R_XVID_AUX_DATA,       // reg E 1110: TODO aux memory/register data read/write value
-		R_XVID_AUX_CTRL        // reg F 1111: TODO audio and other control? (read/write)
+		XVID_RD_ADDR,           // reg 0 0000: address to read from VRAM (write-only)
+		XVID_WR_ADDR,           // reg 1 0001: address to write from VRAM (write-only)
+		XVID_DATA,              // reg 2 0010: read/write word from/to VRAM RD/WR
+		XVID_DATA_2,            // reg 3 0011: read/write word from/to VRAM RD/WR (for 32-bit)
+		XVID_VID_CTRL,          // reg 4 0100: TODO read status/write control settings (read/write)
+		XVID_VID_DATA,          // reg 5 0101: TODO video data (as set by VID_CTRL) (write-only)
+		XVID_RD_INC,            // reg 6 0110: TODO read addr increment value (write-only)
+		XVID_WR_INC,            // reg 7 0111: TODO write addr increment value (write-only)
+		XVID_RD_MOD,            // reg 8 1000: TODO read modulo width (write-only)
+		XVID_WR_MOD,            // reg A 1001: TODO write modulo width (write-only)
+		XVID_WIDTH,             // reg 9 1010: TODO width for 2D blit (write-only)
+		XVID_COUNT,             // reg B 1011: TODO blitter "repeat" count (write-only)
+		XVID_AUX_RD_ADDR,       // reg C 1100: TODO aux read address (font audio etc.?) (write-only)
+		XVID_AUX_WR_ADDR,       // reg D 1101: TODO aux write address (font audio etc.?) (write-only)
+		XVID_AUX_CTRL,          // reg E 1110: TODO audio and other control? (read/write)
+		XVID_AUX_DATA           // reg F 1111: TODO aux memory/register data read/write value
 } register_t;
 
 typedef enum logic [3:0] {
-    INIT, CLEAR, LOGO_X, LOGO_o, LOGO_s, LOGO_e, LOGO_r, LOGO_a, LOGO__, LOGO_v, LOGO_1, LOGO_2, LOGO_3, LOGO_4, IDLE
+    INIT, CLEAR, LOGO_X, LOGO_o, LOGO_s, LOGO_e, LOGO_r, LOGO_a, LOGO__, LOGO_v, LOGO_1, LOGO_2, LOGO_3, LOGO_4, LOGO_END,
+    IDLE
 } blit_state_t;
 
-blit_state_t blit_state;
 logic [12*8:1]  logostring = "Xosera v0.01";
 logic           blit_busy;
 logic           blit_read;
 logic           blit_read_ack;
+blit_state_t    blit_state;
 logic [15:0]    vram_rd_data;
 logic [15:0]    blit_rd_addr;
 logic [15:0]    blit_wr_addr;
 logic [15:0]    blit_rd_incr;
 logic [15:0]    blit_wr_incr;
 logic [15:0]    blit_count;
+logic  [1:0]    vid_ctrl_regsel;
 
 assign reg_data_o = vram_rd_data;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
         video_ena_o         <= 1'b0;
-        blit_vram_sel_o     <= 1'b0;
-        blit_vram_wr_o      <= 1'b0;
-        blit_vram_addr_o    <= 16'h0000;
-        blit_vram_data_o    <= 16'h0000;
         blit_busy           <= 1'b0;
         blit_read           <= 1'b0;
         blit_read_ack       <= 1'b0;
         blit_state          <= INIT;
-        vram_rd_data        <= 16'he3e3;
+        blit_vram_sel_o     <= 1'b0;
+        blit_vram_wr_o      <= 1'b0;
+        blit_vram_addr_o    <= 16'h0000;
+        blit_vram_data_o    <= CLEARDATA;
+        vram_rd_data        <= 16'h0000;
         blit_rd_addr        <= 16'h0000;
         blit_wr_addr        <= 16'h0000;
         blit_rd_incr        <= 16'h0001;
         blit_wr_incr        <= 16'h0001;
         blit_count          <= 16'h0000;
+        vid_ctrl_regsel     <= 2'b00;
     end
     else begin
         // if a read was pending, save value from vram
@@ -125,38 +128,58 @@ always_ff @(posedge clk) begin
                 IDLE: begin
                     if (reg_write_strobe_i) begin
                         case (reg_num_i)
-                            R_XVID_RD_ADDR: begin
+                            XVID_RD_ADDR: begin
                                 blit_rd_addr        <= reg_data_i;      // save read address
                                 blit_vram_addr_o    <= reg_data_i;      // output read address
                                 blit_read           <= 1'b1;            // remember pending read
                                 blit_vram_sel_o     <= 1'b1;            // select VRAM
                             end
-                            R_XVID_WR_ADDR: begin
+                            XVID_WR_ADDR: begin
                                 blit_wr_addr        <= reg_data_i;      // save write address
                             end
-                            R_XVID_DATA,
-                            R_XVID_DATA_2: begin
+                            XVID_DATA,
+                            XVID_DATA_2: begin
                                 blit_vram_data_o    <= reg_data_i;      // output write data
                                 blit_vram_addr_o    <= blit_wr_addr;    // output write address
                                 blit_vram_wr_o      <= 1'b1;            // VRAM write
                                 blit_vram_sel_o     <= 1'b1;            // select VRAM
                             end
-                            R_XVID_VID_MODE: begin
-                                video_ena_o         <= video_ena_o ^ reg_data_i[0];     // TODO toggle video enable bit 0
+                            // XVID_VID_CTRL: begin                   // TODO: commmented out now to avoid "blame" :)
+                            //     vid_ctrl_regsel     <= reg_data_i[1:0]; // [1:0] ctrl reg select
+                            //     video_ena_o         <= reg_data_i[7];   // [7]   video blank/enable
+                            // end
+                            // XVID_VID_DATA: begin
+                            //     case (vid_ctrl_regsel)
+                            //         2'b00:  text_start_addr <= reg_data_i;
+                            //         2'b00:  text_start_addr <= reg_data_i;
+                            //         2'b00:  text_start_addr <= reg_data_i;
+                            //         2'b00:  text_start_addr <= reg_data_i;
+                            //         default:;
+                            //     endcase
+                            // end
+                            XVID_RD_INC: begin
+                                blit_rd_incr        <= reg_data_i;      // set read increment
                             end
-                            default:
-                            ;
+                            XVID_WR_INC: begin
+                                blit_wr_incr        <= reg_data_i;      // set write increment
+                            end
+                            default: begin
+                                blit_state <= IDLE;                     // default next state
+                            end
                         endcase
                     end
                 end
                 INIT: begin
-                    video_ena_o         <= 1'b0;
+                    // NOTE: relies on initial state set by reset
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
                     blit_vram_addr_o    <= 16'h0000;
                     blit_vram_data_o    <= CLEARDATA;
-//                  blit_vram_data_o    <= 16'h0000;    // TODO HACK
+`ifndef SYNTHESIS
+                    blit_count          <= 16'h07FF;        // small clear for simulation
+`else
                     blit_count          <= 16'hFFFF;
+`endif
                     blit_wr_incr        <= 16'h0001;
                     blit_busy           <= 1'b1;
                     blit_state          <= CLEAR;
@@ -165,10 +188,10 @@ always_ff @(posedge clk) begin
                     if (blit_busy) begin
                         blit_vram_sel_o <= 1'b1;
                         blit_vram_wr_o  <= 1'b1;
-//                      blit_vram_data_o    <= blit_vram_addr_o+1;    // TODO HACK
                         blit_state      <= CLEAR;
                     end
                     else begin
+                        video_ena_o     <= 1'b1;            // enable video after clear
                         blit_state      <= LOGO_X;
                     end
                 end
@@ -208,7 +231,6 @@ always_ff @(posedge clk) begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
                     blit_vram_data_o    <= { 8'h15, logostring[7*8-:8] };
-                    video_ena_o         <= 1'b1;
                     blit_state          <= LOGO__;
                 end
                 LOGO__: begin
@@ -222,37 +244,39 @@ always_ff @(posedge clk) begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
                     blit_vram_data_o    <= { 8'h17, logostring[5*8-:8] };
-                    video_ena_o         <= 1'b1;
                     blit_state          <= LOGO_1;
                 end
                 LOGO_1: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
                     blit_vram_data_o    <= { 8'h17, logostring[4*8-:8] };
-                    video_ena_o         <= 1'b1;
                     blit_state          <= LOGO_2;
                 end
                 LOGO_2: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
                     blit_vram_data_o    <= { 8'h17, logostring[3*8-:8] };
-                    video_ena_o         <= 1'b1;
                     blit_state          <= LOGO_3;
                 end
                 LOGO_3: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
                     blit_vram_data_o    <= { 8'h17, logostring[2*8-:8] };
-                    video_ena_o         <= 1'b1;
                     blit_state          <= LOGO_4;
                 end
                 LOGO_4: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
                     blit_vram_data_o    <= { 8'h17, logostring[1*8-:8] };
-                    video_ena_o         <= 1'b1;
+                    blit_state          <= LOGO_END;
                 end
-                default: ;
+                LOGO_END: begin
+                    blit_wr_addr        <= 16'h0000;
+                    blit_state          <= IDLE;
+                end
+                default: begin
+                    blit_state <= INIT;
+                end
             endcase
         end
     end

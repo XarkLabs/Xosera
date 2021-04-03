@@ -16,7 +16,7 @@
 // Learning from both of these projects (and others) helped me significantly improve this design
 
 `default_nettype none             // mandatory for Verilog sanity
-`timescale 1ns/1ns
+`timescale 1ns/1ps
 
 module video_gen(
            input  logic clk,                            // clock (video pixel clock)
@@ -31,7 +31,7 @@ module video_gen(
            input  logic [15: 0] vram_data_i,            // vram word data in
            output logic [3: 0] red_o, green_o, blue_o,  // VGA color outputs (12-bit, 4096 colors)
            output logic vsync_o, hsync_o,               // VGA sync outputs
-           output logic dv_en_o                         // VGA video active signal (needed for HDMI)
+           output logic dv_de_o                         // VGA video active signal (needed for HDMI)
        );
 
 `include "xosera_defs.svh"        // Xosera global Verilog definitions
@@ -86,7 +86,7 @@ logic [10: 0] mem_fetch_toggle;
 // sync condition indicators (combinatorial)
 logic           hsync;
 logic           vsync;
-logic           dv_enable;
+logic           dv_display_ena;
 logic           h_last_line_pixel;
 logic           v_last_frame_pixel;
 logic           [1: 0] h_state_next;
@@ -96,7 +96,7 @@ logic           mem_fetch_sync;
 
 always_comb     hsync = (h_state == STATE_SYNC);
 always_comb     vsync = (v_state == STATE_SYNC);
-always_comb     dv_enable = tg_enable && (h_state == STATE_VISIBLE) && (v_state == STATE_VISIBLE);
+always_comb     dv_display_ena = tg_enable && (h_state == STATE_VISIBLE) && (v_state == STATE_VISIBLE);
 always_comb     h_last_line_pixel = (h_state_next == STATE_PRE_SYNC) && (h_state == STATE_VISIBLE);
 always_comb     v_last_frame_pixel = (v_state_next == STATE_VISIBLE) && (v_state == STATE_POST_SYNC) && h_last_line_pixel;
 always_comb     h_state_next = (h_count == h_count_next_state) ? h_state + 1 : h_state;
@@ -214,7 +214,7 @@ always_ff @(posedge clk) begin
         blue_o          <= 4'b0;
         hsync_o         <= 1'b0;
         vsync_o         <= 1'b0;
-        dv_en_o         <= 1'b0;
+        dv_de_o         <= 1'b0;
     end
 
     else begin
@@ -283,7 +283,7 @@ always_ff @(posedge clk) begin
         end
 
         // color lookup
-        if (dv_enable) begin                                // if this pixel is visible
+        if (dv_display_ena) begin                                // if this pixel is visible
             // text pixel output
             if (tg_enable && font_pix) begin                // if text generation enabled and font pixel set
                 red_o <= palette_r[forecolor][11: 8];       // use foreground color palette entry
@@ -330,7 +330,7 @@ always_ff @(posedge clk) begin
         // set video output signals (color already set)
         hsync_o <= hsync ? H_SYNC_POLARITY : ~H_SYNC_POLARITY;
         vsync_o <= vsync ? V_SYNC_POLARITY : ~V_SYNC_POLARITY;
-        dv_en_o <= dv_enable;
+        dv_de_o <= dv_display_ena;
     end
 end
 

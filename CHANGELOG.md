@@ -15,3 +15,7 @@
 * Fixed 16K bank problem reading VRAM (address lines could change cycle after value read, selecting wrong bank)
 * Improved VRAM Verilog design a bit (faster)
 * Improved Arduino xosera_tester (now seems to never get a mismatchs reading/writing entire VRAM space)
+
+2021-04-03 #2
+
+* Added speculative fix for bus sampling delay for bus settling problem observed on real 68k bus.

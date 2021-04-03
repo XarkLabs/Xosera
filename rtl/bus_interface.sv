@@ -30,7 +30,7 @@ module bus_interface(
 `include "xosera_defs.svh"        // Xosera global Verilog definitions
 
 // input synchronizers (shifts right each cycle with high bit set from inputs and bit 0 is acted on)
-logic [2:0] sel_r;               // has additional "previous bit" for detecting edges 0 -> 1
+logic [3:0] sel_r;               // also "history bits" for detecting rising edge two cycles delayed (to allow bus to settle)
 logic [1:0] read_r;
 logic [1:0] bytesel_r;
 logic [3:0] reg_num_r [1:0];
@@ -38,7 +38,7 @@ logic [7:0] data_r [1:0];
 
 // aliases for synchronized inputs (low bit of synchronizers)
 logic       sel_rise;
-assign      sel_rise    = (sel_r[1:0] == 2'b10);    // true on rising edge cycle of select
+assign      sel_rise    = (sel_r[1:0] == 2'b10);    // true on rising edge select with cycle delay
 logic       write;
 assign      write       = ~read_r[0];
 logic [3:0] reg_num;
@@ -54,7 +54,7 @@ logic [3:0] even_byte_reg   = 4'h0;     // register flag for buffered even addre
 logic [7:0] even_byte_data  = 8'h00;    // buffer for even address write data (output on odd)
 
 initial begin
-    sel_r           = 3'b0;               // has additional "previous bit" for detecting edges 0 -> 1
+    sel_r           = 4'b0;               // with additional "history bits"
     read_r          = 2'b0;
     bytesel_r       = 2'b0;
     reg_num_r[0]    = 4'h0;
@@ -82,7 +82,7 @@ endfunction
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        sel_r           <= 3'h0;
+        sel_r           <= 4'h0;
         write_strobe_o  <= 1'b0;
         read_strobe_o   <= 1'b0;
         reg_num_o       <= 4'h0;
@@ -90,7 +90,7 @@ always_ff @(posedge clk) begin
     else begin
         // synchronize new input on leftmost bit, shifting bits right
         // NOTE: inverting bus_cs_n_i here to make it active high
-        sel_r           <= { (bus_cs_n_i == cs_ENABLED) ? 1'b1 : 1'b0, sel_r[2: 1] };
+        sel_r           <= { (bus_cs_n_i == cs_ENABLED) ? 1'b1 : 1'b0, sel_r[3: 1] };
         read_r          <= { (bus_rd_nwr_i == RnW_READ), read_r[1] };
         reg_num_r[0]    <= reg_num_r[1];
         reg_num_r[1]    <= bus_reg_num_i;

@@ -36,7 +36,7 @@ bool          wait_close = false;
 class BusInterface
 {
 	const int   BUS_START_TIME = 1685002;    // 640x480 2nd frame
-	const float BUS_CLOCK_DIV  = 4.7;
+	const float BUS_CLOCK_DIV  = 7.7;
 
 	enum
 	{
@@ -63,6 +63,7 @@ class BusInterface
 	{
 		BUS_PREP,
 		BUS_STROBE,
+        BUS_HOLD,
 		BUS_STROBEOFF,
 		BUS_END
 	};
@@ -141,6 +142,8 @@ public:
 						top->bus_cs_n_i = 1;
 						last_time        = bus_time + 2;
 						break;
+                    case BUS_HOLD:
+                        break;
 					case BUS_STROBEOFF:
 						top->bus_cs_n_i = 0;
 						break;

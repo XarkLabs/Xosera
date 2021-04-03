@@ -38,7 +38,14 @@ logic [7:0] data_r [1:0];
 
 // aliases for synchronized inputs (low bit of synchronizers)
 logic       sel_rise;
+
+`define GLITCHFILTER            // ignore one cycle "noise edge" on CS
+
+`ifdef GLITCHFILTER
+assign      sel_rise    = (sel_r[2:0] == 3'b110);   // true on rising edge select with cycle delay (and ignore spurious edge)
+`else
 assign      sel_rise    = (sel_r[1:0] == 2'b10);    // true on rising edge select with cycle delay
+`endif
 logic       write;
 assign      write       = ~read_r[0];
 logic [3:0] reg_num;

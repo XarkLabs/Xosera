@@ -80,13 +80,11 @@ assign bus_cs_n     = led_red;          // RGB red as active low select
 assign bus_rd_nwr   = led_green;        // RGB green as read/not write
 assign bus_bytesel  = led_blue;         // RGB blue for even/odd byte select
 assign bus_reg_num  = { gpio_27, gpio_26, gpio_25, gpio_23 };   // gpio for register number
-// TODO: dead-pin hack, gpio_32 below should be gpio_38
-assign bus_data     = { gpio_28, gpio_32, gpio_42, gpio_36, gpio_43, gpio_34, gpio_37, gpio_31 };   // gpio for data bus
+assign bus_data     = { gpio_28, gpio_38, gpio_42, gpio_36, gpio_43, gpio_34, gpio_37, gpio_31 };   // gpio for data bus
 
 // assign audio output signals to gpio
-// TODO: dead-pin HACK assign gpio_32      = audio_l;           // left audio channel gpio
-// TODO: dead-pin HACK assign gpio_35      = audio_r;           // right audio channel gpio
-assign gpio_35      = audio_l;  // TODO: dead-pin HACK
+assign gpio_32      = audio_l;           // left audio channel gpio
+assign gpio_35      = audio_r;           // right audio channel gpio
 
 // split tri-state data lines into in/out signals for inside FPGA
 logic bus_out_ena;

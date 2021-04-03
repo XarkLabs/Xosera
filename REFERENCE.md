@@ -14,7 +14,7 @@ individual byte is not directly accessible).
 --------| ---------------------| ---------------------------------------------------------------- |
 | 0     | XVID_RD_ADDR         | address to read from VRAM
 | 1     | XVID_WR_ADDR         | address to write from VRAM
-| 2     | XVID_DATA            | write data word to address in WR_ADDR, and add WR_INC to WR_ADDR
+| 2     | XVID_DATA            | write data word to address in WR_ADDR, add WR_INC to WR_ADDR
 | 3     | XVID_DATA_2          | (same as XVID_DATA to allow for 32-bit DATA access)
 | 4     | XVID_VID_CTRL        | video control, controls VID_DATA operation
 | 5     | XVID_VID_DATA        | write VID_CTRL data (operation controlled by VID_CTRL)
@@ -27,7 +27,7 @@ individual byte is not directly accessible).
 | C     | XVID_AUX_RD_ADDR     | aux read address (font audio etc.?)
 | D     | XVID_AUX_WR_ADDR     | aux write address (font audio etc.?)
 | E     | XVID_AUX_CTRL        | audio and other control, controls AUX_DATA operation
-| F     | XVID_AUX_DATA        | read/write word from/to AUX
+| F     | XVID_AUX_DATA        | write data word to AUX_WR_ADDR (depending on AUX_CTRL)
 
 Only the upper two bits are used when reading registers, so effectively there are 4 of the 16-bit registers
 that can be read from (each "repeated" four times):
@@ -36,7 +36,7 @@ that can be read from (each "repeated" four times):
 
 | Reg # | Name                 | Description                                                      |
 --------| ---------------------| ---------------------------------------------------------------- |
-| 0 - 3 | XVID_DATA            | address to read from VRAM
+| 0 - 3 | XVID_DATA            | read data word from RD_ADDR, add RD_INC to RD_ADDR
 | 4 - 7 | XVID_VID_DATA        | read video controller status info
-| 8 - B | XVID_BLIT_COUNT      |
-| C - F | XVID_DATA_2          | read/write word from/to VRAM RD/WR (for 32-bit read/write)
+| 8 - B | XVID_BLIT_COUNT      | read blitter status info (blit done, etc.)
+| C - F | XVID_AUX_DATA        | read data word from AUX_RD_ADDR (depending on AUX_CTRL)

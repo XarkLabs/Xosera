@@ -1,5 +1,24 @@
 # Informal list of notable Xosera changes
 
+2021-04-05 - Xark
+
+* Redid Arduino tester with direct port access for ~75x speedup (seriously - 164 vs 12,350 msec for 65535 word write)
+* Added stats "diff" to show any FPGA tool, resource or FMAX change between current and previous build
+
+2021-04-03 #4 - Xark
+
+* Glitch filter seemed to do no harm, so removed ifdef
+* Removed dead-pin hack ifdef (due to fresh Upduino with a working pin 38 setup)
+* Reversed bit order on Arduino tester (easier to make fast)
+
+2021-04-03 #3 - Xark
+
+* Added "free" glitch filter to CS detect (which even made design faster and smaller)
+
+2021-04-03 #2 - Xark
+
+* Added speculative fix for bus sampling delay for bus settling problem observed on real 68k bus [t worked!].
+
 2021-04-03 - Xark
 
 * Added this "primitive" changelog
@@ -15,7 +34,3 @@
 * Fixed 16K bank problem reading VRAM (address lines could change cycle after value read, selecting wrong bank)
 * Improved VRAM Verilog design a bit (faster)
 * Improved Arduino xosera_tester (now seems to never get a mismatchs reading/writing entire VRAM space)
-
-2021-04-03 #2
-
-* Added speculative fix for bus sampling delay for bus settling problem observed on real 68k bus.

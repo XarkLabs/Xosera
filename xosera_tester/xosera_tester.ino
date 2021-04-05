@@ -11,14 +11,14 @@ enum
   BUS_REG_NUM2  = A2,
   BUS_REG_NUM3  = A3,
 
-  BUS_DATA7     = 9,
-  BUS_DATA6     = 8,
-  BUS_DATA5     = 7,
-  BUS_DATA4     = 6,
-  BUS_DATA3     = 5,
-  BUS_DATA2     = 4,
-  BUS_DATA1     = 3,
-  BUS_DATA0     = 2,
+  BUS_DATA7     = 7,
+  BUS_DATA6     = 6,
+  BUS_DATA5     = 5,
+  BUS_DATA4     = 4,
+  BUS_DATA3     = 3,
+  BUS_DATA2     = 2,
+  BUS_DATA1     = 9,
+  BUS_DATA0     = 8,
 
   CS_SELECTED   = LOW,
   CS_DESELECTED = HIGH,
@@ -164,7 +164,7 @@ inline uint8_t xvid_get_regb(uint8_t r, uint16_t value)
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("Xosera Test Jig");
   digitalWrite(LED_BUILTIN, LOW);
 
@@ -183,6 +183,11 @@ void setup()
   pinMode(BUS_REG_NUM3, OUTPUT);
   digitalWrite(BUS_REG_NUM3, LOW);
 
+  pinMode(A4, OUTPUT);
+  digitalWrite(A4, LOW);  // yellow = problem
+  pinMode(A5, OUTPUT);
+  digitalWrite(A5, HIGH); // green = good
+
   pinMode(BUS_DATA0, OUTPUT);
   pinMode(BUS_DATA1, OUTPUT);
   pinMode(BUS_DATA2, OUTPUT);
@@ -199,11 +204,14 @@ void setup()
 
   randomSeed(0x1234);
 
-  xvid_set_reg(XVID_WR_INC, 106);
-  xvid_set_reg(XVID_DATA, 0x1f42);
-  xvid_set_regb(XVID_DATA, 0x43);
-  xvid_set_regb(XVID_DATA, 0x44);
-
+  static const char msg[] = "Begin!";
+  xvid_set_reg(XVID_WR_INC, 1);
+  xvid_set_reg(XVID_DATA, 0x1f00 | msg[0]);
+  for (uint8_t i = 1; i < sizeof(msg); i++)
+  {
+    xvid_set_regb(XVID_DATA, msg[i]);
+  }
+  delay(1000);
 }
 
 uint16_t count = 0;
@@ -216,6 +224,30 @@ void loop()
   xvid_set_reg(XVID_WR_ADDR, addr);
   xvid_set_reg(XVID_WR_INC, 1);
   xvid_set_reg(XVID_DATA, data);
+  digitalWrite(A5, LOW); // green = good (blink)
+#if 1    // timer
+    uint16_t test_time = millis();
+    uint16_t start_time = millis();
+    while (start_time == test_time)
+    {
+      start_time = millis();
+    }
+    {
+        uint8_t i = 0;
+        uint8_t j = 0;
+        do
+        {
+            do
+            {
+                xvid_set_reg(XVID_DATA, data);
+            } while (++i);
+        } while (++j);
+    }
+    uint16_t end_time = millis();
+    Serial.print("T=");
+    Serial.println(end_time-start_time);
+#endif
+
   for (uint16_t c = 1; c < 106 * 15; c++)
   {
     xvid_set_regb(XVID_DATA, data);
@@ -223,11 +255,13 @@ void loop()
   xvid_set_reg(XVID_RD_ADDR, addr);
   xvid_set_reg(XVID_RD_INC, 1);
 
+  digitalWrite(A5, HIGH); // green = good (blink)
   for (uint16_t c = 1; c < 106 * 15; c++)
   {
     uint16_t rdata = xvid_get_reg(XVID_DATA);
     if (rdata != data)
     {
+      digitalWrite(A4, HIGH);  // yellow = problem
       Serial.print(addr+c, HEX);
       Serial.print(": WR=");
       Serial.print(data, HEX);

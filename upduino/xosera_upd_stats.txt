@@ -9,4 +9,4 @@ Info: 	               SB_GB:     6/    8    75%
 Info: 	        ICESTORM_PLL:     1/    1   100%
 Info: 	      ICESTORM_SPRAM:     4/    4   100%
 
-Info: Max frequency for clock 'pclk': 45.60 MHz (PASS at 33.75 MHz)
+Info: Max frequency for clock 'pclk': 45.74 MHz (PASS at 33.75 MHz)

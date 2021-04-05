@@ -225,7 +225,7 @@ void loop()
   xvid_set_reg(XVID_WR_INC, 1);
   xvid_set_reg(XVID_DATA, data);
   digitalWrite(A5, LOW); // green = good (blink)
-#if 1    // timer
+#if 0    // timer
     uint16_t test_time = millis();
     uint16_t start_time = millis();
     while (start_time == test_time)

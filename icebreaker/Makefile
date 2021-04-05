@@ -127,12 +127,17 @@ clean:
 %.asc: %.json $(PIN_DEF) $(SDC) $(MEM) Makefile
 	@rm -f $@
 	@mkdir -p logs
+	@-cp $(TOP)_stats.txt logs/$(TOP)_stats_last.txt
 	$(NEXTPNR) -l logs/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 	@echo === iCEBreaker Xosera : $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(TOP)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@$(NEXTPNR) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@sed -n '/Device utilisation/,/Info: Placed/p' logs/$(TOP)_nextpnr.log | sed '$$d' | grep -v ":     0/" | tee -a $(TOP)_stats.txt
 	@grep "Max frequency" logs/$(TOP)_nextpnr.log | tail -1 | tee -a $(TOP)_stats.txt
+	@-diff -U0 logs/$(TOP)_stats_last.txt $(TOP)_stats.txt | grep -v "\(^@\|^+\|^---\)" | while read line; do echo "PREVIOUS: $$line" ; done >logs/$(TOP)_stats_delta.txt
+	@-diff -U0 logs/$(TOP)_stats_last.txt $(TOP)_stats.txt | grep -v "\(^@\|^+++\|^-\)" | while read line; do echo "CURRENT : $$line" ; done >>logs/$(TOP)_stats_delta.txt
+	@echo
+	@-cat logs/$(TOP)_stats_delta.txt
 
 # make binary bitstream from ASCII bitstream
 %.bin: %.asc Makefile

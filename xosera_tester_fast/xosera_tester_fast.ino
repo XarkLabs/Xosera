@@ -6,6 +6,13 @@
 // A FPGA based video card for rosco_m68k retro computers (and others)
 // See https://github.com/rosco-m68k/hardware-projects/tree/feature/xosera/xosera
 // See
+
+// Times I observed (AVR 328P @ 16MHz):
+// 64KB x 16-bit write time = 115 ms
+// 64KB x  8-bit write time = 70 ms
+// 64KB x 16-bit read  time = 145 ms
+// 64KB x  8-bit read  time = 111 ms
+
 enum
 {
     // AVR hardware pins
@@ -20,7 +27,7 @@ enum
     BUS_REG_NUM3 = 1 << PC3,
 
     BUS_D7 = 1 << PD7,    // 8-bit bi-directional data bus (Xosera outputs when RNW=1 and CS=0)
-    BUS_D6 = 1 << PD6,    // (ordered so bits align with AVR port and no shifting needed)
+    BUS_D6 = 1 << PD6,    // (ordered so bits align with AVR ports and no shifting needed)
     BUS_D5 = 1 << PD5,
     BUS_D4 = 1 << PD4,
     BUS_D3 = 1 << PD3,
@@ -29,20 +36,33 @@ enum
     BUS_D0 = 1 << PB0,
 
     // diagnostic Arduino LEDs (on extra A4 and A5 on Pro Mini)
-    TEST_GREEN = 1 << PC5,    // green=writing, off=reading
-    TEST_RED   = 1 << PC4,    // off=no read errors, on=one or more read errors
+    // NOTE: These are hooked up active LOW (so LOW value lights LED)
+    // (Bbecause GPIO is always 0, but only set to an output to turn on LED)
+    TEST_GREEN = 1 << PC5,    // green=blinks while testing
+    TEST_RED   = 1 << PC4,    // off=no read errors, on=one or more read verify errors
 
-    // "logical" defines for signal meanings
-    BUS_ACTIVE = 0,              // LOW to select Xosera
-    BUS_OFF    = BUS_CS_N,       // HIGH to de-select Xosera
-    BUS_WRITE  = 0,              // LOW write to Xosera
-    BUS_READ   = BUS_RNW,        // HIGH read from Xosera (will outut on data bus when selected)
-    BUS_MSB    = 0,              // LOW even byte (MSB, bits [15:8] for Xosera)
-    BUS_LSB    = BUS_BYTESEL,    // HIGH odd byte (LSB, bits  [7:0] for Xosera)
+    // "logical" defines for signal meanings (makes code easier to read)
+    // NOTE: We always want LED on, unless except to reset FPGA at startup
+    BUS_ON  = LED | 0,              // LOW to select Xosera
+    BUS_OFF = LED | BUS_CS_N,       // HIGH to de-select Xosera
+    BUS_WR  = LED | 0,              // LOW write to Xosera
+    BUS_RD  = LED | BUS_RNW,        // HIGH read from Xosera (will outut on data bus when selected)
+    BUS_MSB = LED | 0,              // LOW even byte (MSB, bits [15:8] for Xosera)
+    BUS_LSB = LED | BUS_BYTESEL,    // HIGH odd byte (LSB, bits  [7:0] for Xosera)
 
+    // defines for GPIO output signals (BUS_Dx are bi-directional)
     PB_OUTPUTS = LED | BUS_CS_N | BUS_RNW | BUS_BYTESEL,
-    PC_OUTPUTS = TEST_GREEN | TEST_RED | BUS_REG_NUM0 | BUS_REG_NUM1 | BUS_REG_NUM2 | BUS_REG_NUM3,
+    PC_OUTPUTS = BUS_REG_NUM0 | BUS_REG_NUM1 | BUS_REG_NUM2 | BUS_REG_NUM3,
+    PB_BUS_WR  = PB_OUTPUTS | BUS_D1 | BUS_D0,
+    PD_BUS_WR  = BUS_D7 | BUS_D6 | BUS_D5 | BUS_D4 | BUS_D3 | BUS_D2,
+    PB_BUS_RD  = PB_OUTPUTS,
+    PD_BUS_RD  = 0
 };
+#define NOP()                                                                                                          \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __asm__ __volatile__("nop");                                                                                   \
+    } while (0)
 
 // Xosera is operated via 16 16-bit registers the basics of which are outlined below.
 //
@@ -87,114 +107,187 @@ enum
     XVID_AUX_DATA        // reg F 1111: TODO read/write data word to AUX_WR_ADDR (depending on AUX_CTRL)
 };
 
-// static uint8_t leds = 0;
-#define leds GPIOR0    // use obscure GPIOR0 "spare" IO register to shave a cycle off current LED status global load
-
 static inline void xvid_set_reg(uint8_t r, uint16_t word)
 {
     uint8_t msb = word >> 8;
-    uint8_t lsb = word & 0xff;
-    PORTC       = leds | r;    // set reg num (and test LEDs)
-    PORTB       = LED | BUS_OFF | BUS_WRITE | BUS_MSB |
-            (msb & 0x03);    // de-select Xosera, set write, MSB select, MSB data d0-d1
-    PORTD = msb;             // set MSB data d7-d2
-    PORTB = LED | BUS_ACTIVE | BUS_WRITE | BUS_MSB |
-            (msb & 0x03);    // select Xosera, set write, MSB select, MSB data d0-d1
-    PORTB =
-        LED | BUS_OFF | BUS_WRITE | BUS_LSB | (lsb & 0x03);    // de-select Xosera, set write LSB select, LSB data d0-d1
-    PORTD = lsb;                                               // set LSB data d7-d2
-    PORTB =
-        LED | BUS_ACTIVE | BUS_WRITE | BUS_LSB | (lsb & 0x03);    // select Xosera set write, LSB select, LSB data d0-d1
-    PORTB = LED | BUS_OFF | BUS_WRITE | BUS_LSB;                  // de-select Xosera, set write, LSB select
+    uint8_t lsb = word;
+    PORTC       = r;                                      // set reg num
+    PORTB = BUS_OFF | BUS_WR | BUS_MSB | (msb & 0x03);    // de-select Xosera, set write, MSB select, MSB data d0-d1
+    PORTD = msb;                                          // set MSB data d7-d2
+    PORTB = BUS_ON | BUS_WR | BUS_MSB | (msb & 0x03);     // select Xosera, set write, MSB select, MSB data d0-d1
+#if (F_CPU == 16000000)
+    NOP();
+#endif
+    PORTB = BUS_OFF | BUS_WR | BUS_LSB | (lsb & 0x03);    // de-select Xosera, set write LSB select, LSB data d0-d1
+    PORTD = lsb;                                          // set LSB data d7-d2
+    PORTB = BUS_ON | BUS_WR | BUS_LSB | (lsb & 0x03);     // select Xosera set write, LSB select, LSB data d0-d1
+#if (F_CPU == 16000000)                                   // if 16MHz add an additional
+    NOP();                                                //  1 cycle delay needed @ 16MHz
+#endif                                                    // end 16MHz
+    PORTB = BUS_OFF | BUS_WR | BUS_LSB;                   // de-select Xosera, set write, LSB select
 }
 
-static inline void xvid_set_regb(uint8_t r, uint8_t lsb)
+static inline void xvid_set_reg_lsb(uint8_t r, uint8_t lsb)
 {
-    PORTC = leds | r;    // set reg num (and test LEDs)
-    PORTB =
-        LED | BUS_OFF | BUS_WRITE | BUS_LSB | (lsb & 0x03);    // de-select Xosera, set write LSB select, LSB data d0-d1
-    PORTD = lsb;                                               // set LSB data d7-d2
-    PORTB =
-        LED | BUS_ACTIVE | BUS_WRITE | BUS_LSB | (lsb & 0x03);    // select Xosera set write, LSB select, LSB data d0-d1
-    PORTB = LED | BUS_OFF | BUS_WRITE | BUS_LSB;                  // de-select Xosera, set write, LSB select
+    PORTC = r;                                            // set reg num
+    PORTB = BUS_OFF | BUS_WR | BUS_LSB | (lsb & 0x03);    // de-select Xosera, set write LSB select, LSB data d0-d1
+    PORTD = lsb;                                          // set LSB data d7-d2
+    PORTB = BUS_ON | BUS_WR | BUS_LSB | (lsb & 0x03);     // select Xosera set write, LSB select, LSB data d0-d1
+#if (F_CPU >= 16000000)                                   // if 16MHz add an additional
+    NOP();                                                //  1 cycle delay needed for AVR >= 16MHz (> ~100ns CS pulse)
+#endif                                                    // end 16MHz
+    PORTB = BUS_OFF | BUS_WR | BUS_LSB;                   // de-select Xosera, set write, LSB select
+}
+
+static inline void xvid_set_reg_msb(uint8_t r, uint8_t msb)
+{
+    PORTC = r;                                            // set reg num
+    PORTB = BUS_OFF | BUS_WR | BUS_MSB | (msb & 0x03);    // de-select Xosera, set write MSB select, MSB data d0-d1
+    PORTD = msb;                                          // set MSB data d7-d2
+    PORTB = BUS_ON | BUS_WR | BUS_MSB | (msb & 0x03);     // select Xosera set write, MSB select, MSB data d0-d1
+#if (F_CPU >= 16000000)                                   // if 16MHz add an additional
+    NOP();                                                //  1 cycle delay needed for AVR >= 16MHz (> ~100ns CS pulse)
+#endif                                                    // end 16MHz
+    PORTB = BUS_OFF | BUS_WR | BUS_MSB;                   // de-select Xosera, set write, MSB select
 }
 
 static inline uint16_t xvid_get_reg(uint8_t r)
 {
-    DDRD        = 0;                                        // set data d7-d2 as input
-    DDRB        = PB_OUTPUTS;                               // set control signals as output and data d1-d0 as input
-    PORTC       = leds | r;                                 // set reg num (and test LEDs)
-    PORTB       = LED | BUS_OFF | BUS_READ | BUS_MSB;       // de-select Xosera, set read, MSB select
-    PORTB       = LED | BUS_ACTIVE | BUS_READ | BUS_MSB;    // select Xosera, set read, MSB select
-    PORTB       = LED | BUS_ACTIVE | BUS_READ | BUS_MSB;    // again (NOTE: delay needed with 8MHz AVR)
-    uint8_t msb = (PIND & 0xFC) | (PINB & 0x03);            // read data bus 8-bit MSB value
-    PORTB       = LED | BUS_OFF | BUS_READ | BUS_LSB;       // de-select Xosera, set read, LSB select
-    PORTB       = LED | BUS_ACTIVE | BUS_READ | BUS_LSB;    // select Xosera, set read, LSB select
-    PORTB       = LED | BUS_ACTIVE | BUS_READ | BUS_LSB;    // again (NOTE: delay needed with 8MHz AVR)
-    uint8_t lsb = (PIND & 0xFC) | (PINB & 0x03);            // grab data bus for msg
-    PORTB       = LED | BUS_OFF | BUS_WRITE | BUS_LSB;      // de-select Xosera, set write, LSB select
-    DDRD        = BUS_D7 | BUS_D6 | BUS_D5 | BUS_D4 | BUS_D3 | BUS_D2;    // set data d7-d2 as outputs
-    DDRB        = PB_OUTPUTS | BUS_D1 | BUS_D0;    // set control signals and data d1-d0 as outputs
+    PORTC = r;                             // set reg num
+    DDRD  = PD_BUS_RD;                     // set data d7-d2 as input
+    DDRB  = PB_BUS_RD;                     // set control signals as output and data d1-d0 as input
+    PORTB = BUS_OFF | BUS_RD | BUS_MSB;    // de-select Xosera, set read, MSB select
+    PORTB = BUS_ON | BUS_RD | BUS_MSB;     // select Xosera, set read, MSB select
+    NOP();                                 // 1 cycle delay needed >= 8MHz (> ~100ns CS pulse)
+#if (F_CPU >= 16000000)                    // if 16MHz add an additional
+    NOP();                                 //  1 cycle delay needed @ 16MHz
+#endif                                     // end 16MHz
+    uint8_t msb =
+        (PIND & 0xFC) | (PINB & 0x03);     // read data bus 8-bit MSB value (NOTE: AVR input has a cycle latency)
+    PORTB = BUS_OFF | BUS_RD | BUS_LSB;    // de-select Xosera, set read, LSB select
+    PORTB = BUS_ON | BUS_RD | BUS_LSB;     // select Xosera, set read, LSB select
+    NOP();                                 // 1 cycle delay needed for AVR >= 8MHz (> ~100ns CS pulse)
+#if (F_CPU >= 16000000)                    // if 16MHz add an additional
+    NOP();                                 //  1 cycle delay needed for AVR @ 16MHz (> ~100ns CS pulse)
+#endif                                     // end 16MHz
+    uint8_t lsb =
+        (PIND & 0xFC) | (PINB & 0x03);     // read data bus 8-bit lsb value (NOTE: AVR input has a cycle latency)
+    PORTB = BUS_OFF | BUS_WR | BUS_LSB;    // de-select Xosera, set write, LSB select
+    DDRD  = PD_BUS_WR;                     // set data d7-d2 as outputs
+    DDRB  = PB_BUS_WR;                     // set control signals and data d1-d0 as outputs
     return (msb << 8) | lsb;
 }
 
-static bool       read_check   = true;
-static bool       silent_check = false;
-static uint32_t   count        = 0;
-static uint16_t   data         = 0x0100;
-static uint16_t   addr         = 106;
-static uint16_t   inc          = 0x0000;
-static uint32_t   err          = 0;
-static const char msg[]        = "Xosera AVR 8MHz register read/write test ready...";
+static inline uint8_t xvid_get_reg_lsb(uint8_t r)
+{
+    PORTC = r;                             // set reg num
+    DDRD  = PD_BUS_RD;                     // set data d7-d2 as input
+    DDRB  = PB_BUS_RD;                     // set control signals as output and data d1-d0 as input
+    PORTB = BUS_OFF | BUS_RD | BUS_LSB;    // de-select Xosera, set read, LSB select
+    PORTB = BUS_ON | BUS_RD | BUS_LSB;     // select Xosera, set read, LSB select
+    NOP();                                 // 1 cycle delay needed for AVR >= 8MHz (> ~100ns CS pulse)
+#if (F_CPU >= 16000000)                    // if 16MHz add an additional
+    NOP();                                 //  1 cycle delay needed for AVR @ 16MHz (> ~100ns CS pulse)
+#endif                                     // end 16MHz
+    uint8_t lsb =
+        (PIND & 0xFC) | (PINB & 0x03);     // read data bus 8-bit lsb value (NOTE: AVR input has a cycle latency)
+    PORTB = BUS_OFF | BUS_WR | BUS_LSB;    // de-select Xosera, set write, LSB select
+    DDRD  = PD_BUS_WR;                     // set data d7-d2 as outputs
+    DDRB  = PB_BUS_WR;                     // set control signals and data d1-d0 as outputs
+    return lsb;
+}
+
+
+#define WIDTH 106
+
+static bool     silent_check = false;    // print messages about verify errors
+static uint8_t  leds;                    // diagnostic LEDs
+static uint8_t  status_color = 0x02;     // color for status line (green or red after error)
+static uint32_t count;                   // test iteration count
+static uint16_t data = 0x0100;           // test "data" value
+static uint16_t addr = WIDTH;            // test starting address (to leave status line)
+static uint16_t inc;                     // increment value for RD/WR on test
+static uint32_t err;                     // read verify error count
+static uint16_t rdata;                   // used to hold data read from VRAM for verification
+
+#if (F_CPU == 16000000)
+#define MHZSTR "16MHz"
+#elif (F_CPU == 8000000)
+#define MHZSTR "8MHz"
+#else
+#define MHZSTR "??MHz"
+#endif
+
+static uint8_t shuf_l[256];
+static uint8_t shuf_h[256];
+
+static void xcolor(uint8_t color)
+{
+    xvid_set_reg_msb(XVID_DATA, color);
+}
+
+static void xprint(const char * s)
+{
+    while (*s != '\0')
+    {
+        xvid_set_reg_lsb(XVID_DATA, *s++);
+    }
+}
+
+static void xprint(uint16_t v)
+{
+    static const char hex[16] = "0123456789ABCDEF";
+    xvid_set_reg_lsb(XVID_DATA, hex[v >> 12]);
+    xvid_set_reg_lsb(XVID_DATA, hex[(v >> 8) & 0xf]);
+    xvid_set_reg_lsb(XVID_DATA, hex[(v >> 4) & 0xf]);
+    xvid_set_reg_lsb(XVID_DATA, hex[v & 0xf]);
+}
 
 void setup()
 {
+    PORTB = BUS_CS_N;      // reset Xosera (LED off) and de-select (for safety)
+    DDRB  = PB_OUTPUTS;    // set control signals as outputs
+    leds  = TEST_GREEN;    // set default test LEDs
+    DDRC  = leds | PC_OUTPUTS;
+    PORTC = 0;    // set register number bits to 0 and set green "blink" LED
     Serial.begin(115200);
-    Serial.println("Xosera Tester");
-
-    leds  = TEST_GREEN;                       // set default test LEDs
-    PORTB = BUS_OFF | BUS_WRITE | BUS_MSB;    // reset Xosera (LED off), deselect Xosera, set write, set MSB
-    DDRB  = PB_OUTPUTS;                       // set control signals as outputs
-    DDRC  = PC_OUTPUTS;
-    DDRD  = 0;
-    PORTC = leds | 0;                               // all register number to 0 and set test LEDs
-    Serial.println(msg);                            // serial msg
-    delay(10);                                      // hold reset a moment
-    PORTD = 0;                                      // clear output data d7-d2
-    PORTB = LED | BUS_OFF | BUS_WRITE | BUS_MSB;    // deselect Xosera, set write, set MSB byte, clear data d1-d0
-    DDRD  = BUS_D7 | BUS_D6 | BUS_D5 | BUS_D4 | BUS_D3 | BUS_D2;    // set data d7-d2 as outputs
-    DDRB  = PB_OUTPUTS | BUS_D1 | BUS_D0;                           // set control signals and data d1-d0 as outputs
+    Serial.println("Xosera Tester (Fast AVR @ " MHZSTR ")");
+    delay(1);                              // hold reset a moment
+    PORTD = 0;                             // clear output data d7-d2
+    PORTB = BUS_OFF | BUS_WR | BUS_MSB;    // deselect Xosera, set write, set MSB byte, clear data d1-d0
+    DDRD  = PD_BUS_WR;                     // set data d7-d2 as outputs
+    DDRB  = PB_BUS_WR;                     // set control signals and data d1-d0 as outputs
 
     delay(100);    // FPGA meeds a bit to configure and initialize VRAM
 
+    // clear screen
+    xvid_set_reg(XVID_WR_ADDR, 0);
     xvid_set_reg(XVID_WR_INC, 1);
-    xvid_set_reg(XVID_WR_ADDR, 0);
     xvid_set_reg(XVID_DATA, 0x0A00 | ' ');
-    for (uint16_t i = 1; i < 106 * 30; i++)
+    for (uint16_t i = 1; i < WIDTH * 30; i++)
     {
-        xvid_set_regb(XVID_DATA, ' ');
+        xvid_set_reg_lsb(XVID_DATA, ' ');
     }
 
-    xvid_set_reg(XVID_WR_ADDR, 0);
-    xvid_set_reg(XVID_DATA, 0x0A00 | msg[0]);
-    for (uint8_t i = 1; msg[i] != 0; i++)
-    {
-        xvid_set_regb(XVID_DATA, msg[i]);
-    }
-    delay(3000);    // allow screen to fully come up
-
+    xvid_set_reg(XVID_WR_ADDR, 0 * WIDTH);
+    xcolor(0x02);    // green-on-black
+    xprint("xosera_tester_fast: Xosera AVR " MHZSTR " test/exerciser.");
+    xvid_set_reg(XVID_WR_ADDR, 2 * WIDTH);
+    xcolor(0x02);    // green-on-black
+    xprint("Begin in...");
+    delay(3000);
     for (uint8_t i = '3'; i > '0'; i--)
     {
-        xvid_set_regb(XVID_DATA, i);
-        xvid_set_regb(XVID_DATA, '.');
-        xvid_set_regb(XVID_DATA, '.');
-        xvid_set_regb(XVID_DATA, '.');
+        xvid_set_reg_lsb(XVID_DATA, i);
+        xprint("...");
         delay(1000);
     }
-    xvid_set_regb(XVID_DATA, 'G');
-    xvid_set_regb(XVID_DATA, 'o');
-    xvid_set_regb(XVID_DATA, '!');
+    xprint("Go!");
+
+    randomSeed(0xc0ffee42);    // deterministic seed TODO
 }
+
+#define TIME_TEST 1    // normal or timer
 
 void loop()
 {
@@ -207,80 +300,150 @@ void loop()
             inc++;
         }
     }
+#if TIME_TEST
     xvid_set_reg(XVID_WR_ADDR, addr);
     xvid_set_reg(XVID_WR_INC, inc);
 
-#if 0    // timer
-    uint16_t test_time = millis();
-    uint16_t start_time = millis();
-    while (start_time == test_time)
+    // write test
     {
-      start_time = millis();
-    }
-#endif
-    {
-        uint8_t i = 0;
-        uint8_t j = 0;
+        uint16_t test_time  = millis();
+        uint16_t start_time = millis();
+        while (start_time == test_time)    // start on "fresh" millisecond to reduce jitter
+        {
+            start_time = millis();
+        }
+        uint16_t i = 0;
         do
         {
-            do
-            {
-                xvid_set_reg(XVID_DATA, data);
-            } while (++i);
-        } while (++j);
+            xvid_set_reg(XVID_DATA, data);
+        } while (++i);
+        uint16_t elapsed_time = millis() - start_time;
+        Serial.print("64KB x 16-bit write time = ");
+        Serial.print(elapsed_time);
+        Serial.println(" ms");
     }
-#if 0
-    uint16_t end_time = millis();
-    Serial.print("T=");
-    Serial.println(end_time-start_time);
-#endif
+
+    // write test
+    {
+        uint16_t test_time  = millis();
+        uint16_t start_time = millis();
+        while (start_time == test_time)    // start on "fresh" millisecond to reduce jitter
+        {
+            start_time = millis();
+        }
+        uint16_t i = 0;
+        do
+        {
+            xvid_set_reg_lsb(XVID_DATA, data);
+        } while (++i);
+        uint16_t elapsed_time = millis() - start_time;
+        Serial.print("64KB x 8-bit write time = ");
+        Serial.print(elapsed_time);
+        Serial.println(" ms");
+    }
+
 
     xvid_set_reg(XVID_RD_ADDR, addr);
     xvid_set_reg(XVID_RD_INC, inc);
 
-    if (read_check)
+    // read test
     {
-        uint8_t i = 0;
-        uint8_t j = 0;
+        uint16_t test_time  = millis();
+        uint16_t start_time = millis();
+        while (start_time == test_time)    // start on "fresh" millisecond to reduce jitter
+        {
+            start_time = millis();
+        }
+        uint16_t i = 0;
         do
         {
-            do
+            rdata = xvid_get_reg(XVID_DATA);
+            if (rdata != data)
             {
-                uint16_t rdata = xvid_get_reg(XVID_DATA);
-                if (rdata != data)
-                {
-                    if (!(leds & TEST_RED))
-                    {
-                        Serial.println(" *** ERR");
-                        leds |= TEST_RED;
-                        PORTC |= leds;
-                    }
-                    if (!silent_check)
-                    {
-                        Serial.print((j << 8) | i, HEX);
-                        Serial.print(": WR=");
-                        Serial.print(data, HEX);
-                        Serial.print(" != RD=");
-                        Serial.print(rdata, HEX);
-                        Serial.print("    \n");
-                    }
-                    if (++err >= 10 && !silent_check)
-                    {
-                        Serial.println("(Silent check disabled, > 10 errors)");
-                        silent_check = true;
-                    }
-                }
-            } while (++i);
-        } while (++j);
+                leds |= TEST_RED;
+                DDRC |= leds;
+                status_color = 0x20;
+                break;
+            }
+        } while (++i);
+        uint16_t elapsed_time = millis() - start_time;
+        Serial.print("64KB x 16-bit read time = ");
+        Serial.print(elapsed_time);
+        Serial.println(" ms");
     }
 
-    data++;
-    addr += 106;
-
-    if (addr >= (106 * 30))
+    // read test
     {
-        addr = 0;
+        uint16_t test_time  = millis();
+        uint16_t start_time = millis();
+        while (start_time == test_time)    // start on "fresh" millisecond to reduce jitter
+        {
+            start_time = millis();
+        }
+        uint16_t i = 0;
+        do
+        {
+            rdata = xvid_get_reg_lsb(XVID_DATA);
+            if (rdata != (data & 0xff))
+            {
+                leds |= TEST_RED;
+                DDRC |= leds;
+                status_color = 0x20;
+                break;
+            }
+        } while (++i);
+        uint16_t elapsed_time = millis() - start_time;
+        Serial.print("64KB x 8-bit read time = ");
+        Serial.print(elapsed_time);
+        Serial.println(" ms");
     }
+
+#else
+
+    xvid_set_reg(XVID_WR_ADDR, addr);
+    xvid_set_reg(XVID_WR_INC, inc);
+
+    uint16_t i = WIDTH;
+    do
+    {
+        xvid_set_reg(XVID_DATA, data);
+    } while (++i);
+
+
+    xvid_set_reg(XVID_RD_ADDR, addr);
+    xvid_set_reg(XVID_RD_INC, inc);
+    uint16_t i = WIDTH;
+    do
+    {
+        uint16_t rdata = xvid_get_reg(XVID_DATA);
+        if (rdata != data)
+        {
+            err++;
+            if (!(leds & TEST_RED))
+            {
+                Serial.println(" *** ERR");
+                // light red error LED
+                status_color = 0x20;
+                leds |= TEST_RED;
+                DDRC |= leds;
+            }
+            if (!silent_check)
+            {
+                Serial.print(addr + (i * inc), HEX);
+                Serial.print(": WR=");
+                Serial.print(data, HEX);
+                Serial.print(" != RD=");
+                Serial.print(rdata, HEX);
+                Serial.print("    \n");
+
+                if (err >= 10)
+                {
+                    Serial.println("(Silent check enabled > 10 errors)");
+                    silent_check = true;
+                }
+            }
+        }
+    } while (++i);
 
     Serial.print(".");
     if ((++count & 0x3f) == 0)
@@ -295,4 +458,24 @@ void loop()
         }
         Serial.println("");
     }
+#endif
+
+    data++;
+#if 0
+    addr += WIDTH;
+
+    if (addr >= (WIDTH * 30))
+    {
+        addr = 0;
+    }
+#endif
+
+    // blink green activity LED
+    leds ^= TEST_GREEN;
+    DDRC = leds | PC_OUTPUTS;
+
+    xvid_set_reg(XVID_WR_INC, 1);
+    xvid_set_reg(XVID_WR_ADDR, 0);
+    xcolor(status_color);
+    xprint(count);
 }

@@ -103,10 +103,10 @@ task write_reg(
     #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
     #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
     // verilator lint_off WIDTH
-    bus_rd_nwr = $urandom();
-    bus_bytesel = $urandom();
-    bus_reg_num = $urandom();
-    bus_data_in = $urandom();
+    bus_rd_nwr = 1'b0;
+    bus_bytesel = 1'b0;
+    bus_reg_num = 4'b0;
+    bus_data_in = 1'b0;
     // verilator lint_on WIDTH
 endtask
 
@@ -125,10 +125,10 @@ task read_reg(
     #40 data = xosera.bus_data_o;
     #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
     // verilator lint_off WIDTH
-    bus_rd_nwr = $urandom();
-    bus_bytesel = $urandom();
-    bus_reg_num = $urandom();
-    bus_data_in = $urandom();
+    bus_rd_nwr = 1'b0;
+    bus_bytesel = 1'b0;
+    bus_reg_num = 4'b0;
+    bus_data_in = 1'b0;
     // verilator lint_on WIDTH
 endtask
 

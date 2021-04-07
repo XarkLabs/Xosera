@@ -22,6 +22,7 @@
 			"CRESET",
 			"Cygwin",
 			"DBUS",
+			"DDRC",
 			"DECLFILENAME",
 			"DSPI",
 			"FMAX",
@@ -36,6 +37,8 @@
 			"LFOSC",
 			"LVCMOS",
 			"MPSSE",
+			"PINB",
+			"PIND",
 			"PMOD",
 			"PULLUP",
 			"REFERENCECLK",
@@ -95,7 +98,8 @@
 			"vluint",
 			"vsim",
 			"vsync",
-			"xosera"
+			"xosera",
+			"xvid"
 		],
 		"workbench.colorCustomizations": {
 			"terminal.foreground": "#20c020",
@@ -103,21 +107,22 @@
 		},
 		"C_Cpp.default.cppStandard": "gnu++11",
 		"C_Cpp.default.cStandard": "gnu99",
-		"C_Cpp.default.defines": [
-		],
+		"C_Cpp.default.defines": [],
 		"C_Cpp.default.includePath": [
 			"${workspaceFolder}/sim/obj_dir",
 			"${workspaceFolder}/host_spi",
 			"/opt/homebrew/Cellar/libftdi/1.5/include/libftdi1/",
 			"/opt/homebrew/Cellar/verilator/4.108/share/verilator/include/",
 			"/opt/homebrew/Cellar/verilator/4.108/share/verilator/include/vltstd",
-			"/opt/homebrew/include/SDL2"
+			"/opt/homebrew/include/SDL2",
+			"/Users/kenj/Library/Arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino",
+			"/Users/kenj/Library/Arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include"
 		],
 		"verilog-formatter.istyle.path": "/Users/kenj/Dev/fpga-toolchain/bin/iStyle",
 		"verilog-formatter.istyle.args": "--style=kr --indent=spaces=4 --convert-tabs --indent-preprocessor --pad=block",
 		"cSpell.allowCompoundWords": true,
 		"cSpell.diagnosticLevel": "Hint",
 		"terminal.integrated.fontSize": 10,
-		"systemverilog.launchConfiguration": "verilator --sv --lint-only --language 1800-2012 --Wall -Wno-TIMESCALEMOD --relative-includes -I ../rtl --timescale-override 1ns/1ns",
+		"systemverilog.launchConfiguration": "verilator --sv --lint-only --language 1800-2012 --Wall -Wno-TIMESCALEMOD --relative-includes -I ../rtl --timescale-override 1ns/1ps"
 	}
 }

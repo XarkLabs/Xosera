@@ -154,9 +154,9 @@ static inline void xvid_sethb(uint8_t r, uint8_t msb)
 static inline uint16_t xvid_getw(uint8_t r)
 {
     PORTC = r;                             // set reg num
-    PORTB = BUS_OFF | BUS_RD | BUS_MSB;    // de-select Xosera, set read, MSB select
     DDRD  = PD_BUS_RD;                     // set data d7-d2 as input
     DDRB  = PB_BUS_RD;                     // set control signals as output and data d1-d0 as input
+    PORTB = BUS_OFF | BUS_RD | BUS_MSB;    // de-select Xosera, set read, MSB select
     PORTB = BUS_ON | BUS_RD | BUS_MSB;     // select Xosera, set read, MSB select
     NOP();                                 // 1 cycle delay needed for AVR >= 8MHz (> ~100ns CS pulse)
 #if (F_CPU >= 16000000)                    // if 16MHz add an additional

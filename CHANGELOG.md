@@ -1,5 +1,17 @@
 # Informal list of notable Xosera changes
 
+2021-04-08 - Xark
+
+* Refactored bus interface to live under blitter module (less cross module traffic, access to blit internals)
+* Reorganized registers so registers 0-6 are fully read/write
+* Seperated blitter state machine from register handling logic (now registers always active/responsive)
+* Now DATA reg stores MSB written to it (so e.g., DATA MSB will not be cleared when other regs written)
+* Regs 8-16 are "virtual" and will not be normal read/write (e.g., status, font RAM)
+* VID_CTRL now hooked up so low two bits select VID_DATA info for 00=width, 01=height, 02=???, 03=??? (TBD)
+* Some infrastructure/ideas to get async copy/fill operations working.
+* Updated AVR tester, faster 16MHz or 8MHz (now ~66 msec for 128KB write).  Added res query and reg r/w test.
+* Rebuilt DV PMOD breadboard prototype on quality breadboard (removed NOPs due to flakiness/capacitance? of previous one). :)
+
 2021-04-05 - Xark
 
 * Redid Arduino tester with direct port access for ~75x speedup (seriously - 164 vs 12,350 msec for 65535 word write)

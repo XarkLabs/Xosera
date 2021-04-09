@@ -70,6 +70,8 @@ initial begin
     $timeformat(-9, 0, " ns", 20);
     $dumpfile("logs/xosera_tb_isim.vcd");
     $dumpvars(0, xosera);
+    for (i = 0; i < 8; i = i + 1)
+    $dumpvars(0,xosera.blitter.blit_reg[i]);
 
     frame = 0;
     test_addr = 'hABCD;
@@ -147,7 +149,7 @@ always begin
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.XVID_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.XVID_DATA, readword[7:0]);
-    $display("%0t READ R[%x] => %04x", $realtime, xosera.bus.reg_num_o, readword);
+    $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 end
 
 always @(posedge clk) begin
@@ -198,15 +200,20 @@ always @(posedge clk) begin
 end
 
 always @(posedge clk) begin
-    if (xosera.bus_write_strobe) begin
-        #1 $display("%0t BUS WRITE: R[%1x] <= %04x", $realtime, xosera.bus_reg_num, xosera.bus_data_write);
-    end
-    if (xosera.bus_read_strobe) begin
-        if (xosera.bus_bytesel_i) begin
-            $display("%0t BUS READ:  R[%1x] => __%02x", $realtime, xosera.bus_reg_num, xosera.bus_data_o);
+    if (xosera.blitter.bus_write_strobe) begin
+        if (xosera.blitter.bus_bytesel) begin
+            $display("%0t BUS WRITE:  R[%1x] <= __%02x", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_bytedata);
         end
         else begin
-            $display("%0t BUS READ:  R[%1x] => %02x__", $realtime, xosera.bus_reg_num, xosera.bus_data_o);
+            $display("%0t BUS WRITE:  R[%1x] <= %02x__", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_bytedata);
+        end
+    end
+    if (xosera.blitter.bus_read_strobe) begin
+        if (xosera.bus_bytesel_i) begin
+            $display("%0t BUS READ:  R[%1x] => __%02x", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_bytedata);
+        end
+        else begin
+            $display("%0t BUS READ:  R[%1x] => %02x__", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_bytedata);
         end
     end
 end

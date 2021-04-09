@@ -12,6 +12,12 @@
 
 module blitter(
     input  logic            clk,
+    input  logic         bus_cs_n_i,             // register select strobe
+    input  logic         bus_rd_nwr_i,           // 0 = write, 1 = read
+    input  logic  [3:0]  bus_reg_num_i,          // register number
+    input  logic         bus_bytesel_i,          // 0=even byte, 1=odd byte
+    input  logic  [7:0]  bus_data_i,             // 8-bit data bus input
+    output logic  [7:0]  bus_data_o,             // 8-bit data bus output
     input  logic            blit_cycle_i,           // 0 = video, 1 = blitter
     output logic            video_ena_o,            // 0 = video blank, 1 = video on
     output logic            blit_vram_sel_o,        // VRAM select
@@ -19,10 +25,11 @@ module blitter(
     output logic    [15:0]  blit_vram_addr_o,       // VRAM address
     input  logic    [15:0]  blit_vram_data_i,       // VRAM read data
     output logic    [15:0]  blit_vram_data_o,       // VRAM write data
-    input  logic            reg_write_strobe_i,     // strobe for register write
-    input  logic     [3:0]  reg_num_i,              // register number read/written
-    input  logic    [15:0]  reg_data_i,             // word to read into register
-    output logic    [15:0]  reg_data_o,             // word to write from register
+    output logic            bus_ack_o,              // ACK strobe for debug
+//    input  logic            reg_write_strobe_i,     // strobe for register write
+//    input  logic     [3:0]  reg_num_i,              // register number read/written
+//    input  logic    [15:0]  reg_data_i,             // word to read into register
+//    output logic    [15:0]  reg_data_o,             // word to write from register
     input  logic            reset_i
     );
 
@@ -32,48 +39,115 @@ localparam CLEARDATA = 16'h1F20;    // value VRAM cleared to on init (blue+white
 
 // video reg_controller registers (16x16-bit words)
 typedef enum logic [3:0] {
-		XVID_RD_ADDR,           // reg 0 0000: address to read from VRAM (write-only)
-		XVID_WR_ADDR,           // reg 1 0001: address to write from VRAM (write-only)
-		XVID_DATA,              // reg 2 0010: read/write word from/to VRAM RD/WR
-		XVID_DATA_2,            // reg 3 0011: read/write word from/to VRAM RD/WR (for 32-bit)
-		XVID_VID_CTRL,          // reg 4 0100: TODO read status/write control settings (read/write)
-		XVID_VID_DATA,          // reg 5 0101: TODO video data (as set by VID_CTRL) (write-only)
-		XVID_RD_INC,            // reg 6 0110: TODO read addr increment value (write-only)
-		XVID_WR_INC,            // reg 7 0111: TODO write addr increment value (write-only)
-		XVID_RD_MOD,            // reg 8 1000: TODO read modulo width (write-only)
-		XVID_WR_MOD,            // reg A 1001: TODO write modulo width (write-only)
-		XVID_WIDTH,             // reg 9 1010: TODO width for 2D blit (write-only)
-		XVID_COUNT,             // reg B 1011: TODO blitter "repeat" count (write-only)
-		XVID_AUX_RD_ADDR,       // reg C 1100: TODO aux read address (font audio etc.?) (write-only)
-		XVID_AUX_WR_ADDR,       // reg D 1101: TODO aux write address (font audio etc.?) (write-only)
-		XVID_AUX_CTRL,          // reg E 1110: TODO audio and other control? (read/write)
-		XVID_AUX_DATA           // reg F 1111: TODO aux memory/register data read/write value
+		XVID_RD_INC,            // reg 0: read addr increment value
+		XVID_WR_INC,            // reg 1: write addr increment value
+		XVID_RD_MOD,            // reg 2: TODO read modulo width
+		XVID_WR_MOD,            // reg 3: TODO write modulo width
+		XVID_WIDTH,             // reg 4: TODO width for 2D blit
+		XVID_RD_ADDR,           // reg 5: address to read from VRAM
+		XVID_WR_ADDR,           // reg 6: address to write from VRAM
+		XVID_DATA,              // reg 7: read/write word from/to VRAM RD/WR
+		XVID_DATA_2,            // reg 8: read/write word from/to VRAM RD/WR (for 32-bit)
+		XVID_COUNT,             // reg 9: TODO blitter "repeat" count
+		XVID_VID_CTRL,          // reg A: TODO read status/write control settings
+		XVID_VID_DATA,          // reg B: TODO video data (as set by VID_CTRL)
+		XVID_AUX_RD_ADDR,       // reg C: TODO aux read address (font audio etc.?)
+		XVID_AUX_WR_ADDR,       // reg D: TODO aux write address (font audio etc.?)
+		XVID_AUX_CTRL,          // reg E: TODO audio and other control?
+		XVID_AUX_DATA           // reg F: TODO aux memory/register data read/write value
 } register_t;
 
 typedef enum logic [3:0] {
     INIT, CLEAR, LOGO_X, LOGO_o, LOGO_s, LOGO_e, LOGO_r, LOGO_a, LOGO__, LOGO_v, LOGO_1, LOGO_2, LOGO_3, LOGO_4, LOGO_END,
-    IDLE
+    READY
 } blit_state_t;
 
-logic [12*8:1]  logostring = "Xosera v0.01";
-logic           blit_busy;
+logic [12*8:1]  logostring = "Xosera v0.11";
 logic           blit_read;
 logic           blit_read_ack;
 blit_state_t    blit_state;
-logic [15:0]    vram_rd_data;
-logic [15:0]    blit_rd_addr;
-logic [15:0]    blit_wr_addr;
-logic [15:0]    blit_rd_incr;
-logic [15:0]    blit_wr_incr;
-logic [15:0]    blit_count;
-logic  [1:0]    vid_ctrl_regsel;
 
-assign reg_data_o = vram_rd_data;
+logic [15:0]    blit_reg[0:7];          // read/write storage for first 8 blitter registers
+logic  [1:0]    vid_ctrl_reg_sel;
+logic [15:0]    vid_ctrl_reg_data;
+
+logic [15:0]    vram_rd_data;           // word read from VRAM (for RD_ADDR)
+
+logic [16:0]    blit_count;           // blit count (extra bit for underflow/done)
+logic           blit_busy;
+assign blit_busy = (blit_count[16] == 1'b0);   // when blit_count underflows, high bit will be set
+
+
+logic           bus_write_strobe;      // strobe when a word of data written
+logic           bus_read_strobe;       // strobe when a word of data written
+logic  [3:0]    bus_reg_num;           // bus register on bus
+logic           bus_bytesel;           // msb/lsb on bus
+logic  [7:0]    bus_bytedata;          // data byte from bus
+
+assign bus_ack_o = (bus_write_strobe | bus_read_strobe);
+
+// bus_interface handles signal synchronization, CS and register writes to Xosera
+bus_interface bus(
+                  .bus_cs_n_i(bus_cs_n_i),              // register select strobe
+                  .bus_rd_nwr_i(bus_rd_nwr_i),          // 0=write, 1=read
+                  .bus_reg_num_i(bus_reg_num_i),        // register number
+                  .bus_bytesel_i(bus_bytesel_i),        // 0=even byte, 1=odd byte
+                  .bus_data_i(bus_data_i),              // 8-bit data bus input
+                  .write_strobe_o(bus_write_strobe),    // strobe for bus byte write
+                  .read_strobe_o(bus_read_strobe),      // strobe for bus byte read
+                  .reg_num_o(bus_reg_num),              // register number from bus
+                  .bytesel_o(bus_bytesel),              // register number from bus
+                  .bytedata_o(bus_bytedata),            // byte data from bus
+                  .clk(clk),                            // input clk (should be > 2x faster than bus signals)
+                  .reset_i(reset_i)                     // reset
+              );
+
+// continuously output byte selected for read from Xosera (to be put on bus when selected for read)
+assign bus_data_o = reg_read(bus_bytesel, bus_reg_num);
+
+// function to continuously select read value to put on bus
+function [7:0] reg_read(
+    input logic         b_sel,
+    input logic [3:0]   r_sel
+    );
+    // first 8 registers are in a directly readable array
+    if (!r_sel[3]) begin
+        reg_read = (~b_sel) ? blit_reg[r_sel[2:0]][15:8] : blit_reg[r_sel[2:0]][7:0];
+    end
+    else begin
+        // the next 8 registers are "synthetic"
+        case (r_sel[2:0])
+            XVID_DATA_2[2:0]:       reg_read = (~b_sel) ? vram_rd_data[15:8] : vram_rd_data[7:0];
+            XVID_COUNT[2:0]:        reg_read = (~b_sel) ? 8'h81 : 8'h01;
+            XVID_VID_CTRL[2:0]:     reg_read = (~b_sel) ? 8'h82 : 8'h02;
+            XVID_VID_DATA[2:0]:     reg_read = (~b_sel) ? vid_ctrl_reg_data[15:8] : vid_ctrl_reg_data[7:0];
+            XVID_AUX_RD_ADDR[2:0]:  reg_read = (~b_sel) ? 8'h84 : 8'h04;
+            XVID_AUX_WR_ADDR[2:0]:  reg_read = (~b_sel) ? 8'h85 : 8'h05;
+            XVID_AUX_CTRL[2:0]:     reg_read = (~b_sel) ? 8'h86 : 8'h06;
+            XVID_AUX_DATA[2:0]:     reg_read = (~b_sel) ? 8'h87 : 8'h07;
+            default: ;
+        endcase
+    end
+endfunction
+
+assign vid_ctrl_reg_data = vid_ctrl_read(vid_ctrl_reg_sel);
+
+// function to continuously select read value to put on bus
+function [15:0] vid_ctrl_read(
+    input logic [1:0]   v_sel
+    );
+    case (v_sel)
+        2'h0:  vid_ctrl_read = VISIBLE_WIDTH[15:0];
+        2'h1:  vid_ctrl_read = VISIBLE_HEIGHT[15:0];
+        2'h2:  vid_ctrl_read = 16'hDEAD;
+        2'h3:  vid_ctrl_read = 16'hBEEF;
+        default: ;
+    endcase
+endfunction
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
         video_ena_o         <= 1'b0;
-        blit_busy           <= 1'b0;
         blit_read           <= 1'b0;
         blit_read_ack       <= 1'b0;
         blit_state          <= INIT;
@@ -81,13 +155,16 @@ always_ff @(posedge clk) begin
         blit_vram_wr_o      <= 1'b0;
         blit_vram_addr_o    <= 16'h0000;
         blit_vram_data_o    <= CLEARDATA;
-        vram_rd_data        <= 16'h0000;
-        blit_rd_addr        <= 16'h0000;
-        blit_wr_addr        <= 16'h0000;
-        blit_rd_incr        <= 16'h0001;
-        blit_wr_incr        <= 16'h0001;
-        blit_count          <= 16'h0000;
-        vid_ctrl_regsel     <= 2'b00;
+        blit_reg[0]         <= 16'h0000;
+        blit_reg[1]         <= 16'h0000;
+        blit_reg[2]         <= 16'h0000;
+        blit_reg[3]         <= 16'h0000;
+        blit_reg[4]         <= 16'h0000;
+        blit_reg[5]         <= 16'h0000;
+        blit_reg[6]         <= 16'h0000;
+        blit_reg[7]         <= 16'h0000;
+        blit_count          <= 17'h10000;
+        vid_ctrl_reg_sel    <= 2'b00;
     end
     else begin
         // if a read was pending, save value from vram
@@ -102,86 +179,76 @@ always_ff @(posedge clk) begin
 
             // if we did a read, increment write addr
             if (blit_read) begin
-                blit_rd_addr     <= blit_rd_addr + blit_rd_incr;
+                blit_reg[XVID_RD_ADDR[2:0]]  <= blit_reg[XVID_RD_ADDR[2:0]] + blit_reg[XVID_RD_INC[2:0]];
             end
 
             // if we did a write, increment write addr
             if (blit_vram_wr_o) begin
-                blit_wr_addr    <= blit_wr_addr + blit_wr_incr;
+                blit_reg[XVID_WR_ADDR[2:0]]  <= blit_reg[XVID_WR_ADDR[2:0]] + blit_reg[XVID_WR_INC[2:0]];
 
                 // decrement process count register if blitter busy
                 if (blit_busy) begin
-                    blit_count  <= blit_count - 1;
+                    blit_count    <= blit_count - 1;
                 end
-            end
-
-            if (blit_count == 16'h0000) begin
-                blit_busy   <= 1'b0;
             end
 
             blit_vram_sel_o     <= 1'b0;            // clear vram select
             blit_vram_wr_o      <= 1'b0;            // clear vram write
-            blit_vram_addr_o    <= blit_wr_addr;    // assume write, output address
-            blit_state <= IDLE;                     // default next state
+            blit_vram_addr_o    <= blit_reg[XVID_WR_ADDR[2:0]];    // assume write, output address
 
-            case (blit_state)
-                IDLE: begin
-                    if (reg_write_strobe_i) begin
-                        case (reg_num_i)
-                            XVID_RD_ADDR: begin
-                                blit_rd_addr        <= reg_data_i;      // save read address
-                                blit_vram_addr_o    <= reg_data_i;      // output read address
-                                blit_read           <= 1'b1;            // remember pending read
-                                blit_vram_sel_o     <= 1'b1;            // select VRAM
-                            end
-                            XVID_WR_ADDR: begin
-                                blit_wr_addr        <= reg_data_i;      // save write address
-                            end
-                            XVID_DATA,
-                            XVID_DATA_2: begin
-                                blit_vram_data_o    <= reg_data_i;      // output write data
-                                blit_vram_addr_o    <= blit_wr_addr;    // output write address
-                                blit_vram_wr_o      <= 1'b1;            // VRAM write
-                                blit_vram_sel_o     <= 1'b1;            // select VRAM
-                            end
-                            // XVID_VID_CTRL: begin                   // TODO: commmented out now to avoid "blame" :)
-                            //     vid_ctrl_regsel     <= reg_data_i[1:0]; // [1:0] ctrl reg select
-                            //     video_ena_o         <= reg_data_i[7];   // [7]   video blank/enable
-                            // end
-                            // XVID_VID_DATA: begin
-                            //     case (vid_ctrl_regsel)
-                            //         2'b00:  text_start_addr <= reg_data_i;
-                            //         2'b00:  text_start_addr <= reg_data_i;
-                            //         2'b00:  text_start_addr <= reg_data_i;
-                            //         2'b00:  text_start_addr <= reg_data_i;
-                            //         default:;
-                            //     endcase
-                            // end
-                            XVID_RD_INC: begin
-                                blit_rd_incr        <= reg_data_i;      // set read increment
-                            end
-                            XVID_WR_INC: begin
-                                blit_wr_incr        <= reg_data_i;      // set write increment
-                            end
-                            default: begin
-                                blit_state <= IDLE;                     // default next state
-                            end
-                        endcase
+            if (bus_write_strobe) begin
+                if (!bus_reg_num[3]) begin  // reg 0-7 array backed
+                    if (bus_bytesel) begin
+                        blit_reg[bus_reg_num[2:0]][7:0] <= bus_bytedata;
                     end
+                    else begin
+                        blit_reg[bus_reg_num[2:0]][15:8] <= bus_bytedata;
+                    end
+                end
+                if (bus_bytesel) begin
+                    case (bus_reg_num)
+                        XVID_RD_ADDR: begin
+                            blit_vram_addr_o    <= { blit_reg[XVID_RD_ADDR[2:0]][15:8], bus_bytedata };      // output read address
+                            blit_read           <= 1'b1;            // remember pending read
+                            blit_vram_sel_o     <= 1'b1;            // select VRAM
+                        end
+                        XVID_DATA: begin
+                            blit_vram_data_o    <= { blit_reg[XVID_DATA[2:0]][15:8], bus_bytedata };      // output write data
+                            blit_vram_addr_o    <= blit_reg[XVID_WR_ADDR[2:0]];    // output write address
+                            blit_vram_wr_o      <= 1'b1;            // VRAM write
+                            blit_vram_sel_o     <= 1'b1;            // select VRAM
+                        end
+                        XVID_DATA_2: begin
+                            blit_vram_data_o    <= { blit_reg[XVID_DATA[2:0]][15:8], bus_bytedata };      // output write data
+                            blit_vram_addr_o    <= blit_reg[XVID_WR_ADDR[2:0]];    // output write address
+                            blit_vram_wr_o      <= 1'b1;            // VRAM write
+                            blit_vram_sel_o     <= 1'b1;            // select VRAM
+                        end
+                        XVID_VID_CTRL: begin
+                            vid_ctrl_reg_sel    <=  bus_bytedata[1:0];
+                        end
+                        default: begin
+                        end
+                    endcase
+                end
+            end
+
+            blit_state <= READY;                     // default next state
+            case (blit_state)
+                READY: begin
                 end
                 INIT: begin
                     // NOTE: relies on initial state set by reset
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
-                    blit_vram_addr_o    <= 16'h0000;
                     blit_vram_data_o    <= CLEARDATA;
-`ifndef SYNTHESIS
-                    blit_count          <= 16'h07FF;        // small clear for simulation
+                    blit_vram_addr_o    <= 16'h0000;
+`ifdef ZZZSYNTHESIS
+                    blit_count    <= 17'h07FF;        // small clear for simulation
 `else
-                    blit_count          <= 16'hFFFF;
+                    blit_count    <= 17'hFFFF;
 `endif
-                    blit_wr_incr        <= 16'h0001;
-                    blit_busy           <= 1'b1;
+                    blit_reg[XVID_WR_INC[2:0]] <= 16'h0001;
                     blit_state          <= CLEAR;
                 end
                 CLEAR: begin
@@ -199,7 +266,7 @@ always_ff @(posedge clk) begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_vram_wr_o      <= 1'b1;
                     blit_vram_addr_o    <= (1 * CHARS_WIDE + 2 + 2);
-                    blit_wr_addr        <= (1 * CHARS_WIDE + 2 + 3);
+                    blit_reg[XVID_WR_ADDR[2:0]]  <= (1 * CHARS_WIDE + 2 + 3);
                     blit_vram_data_o    <= { 8'h1F, logostring[12*8-:8] };
                     blit_state          <= LOGO_o;
                 end
@@ -271,11 +338,11 @@ always_ff @(posedge clk) begin
                     blit_state          <= LOGO_END;
                 end
                 LOGO_END: begin
-                    blit_wr_addr        <= 16'h0000;
-                    blit_state          <= IDLE;
+                    blit_reg[XVID_WR_ADDR[2:0]]  <= 16'h0000;
+                    blit_state          <= READY;
                 end
                 default: begin
-                    blit_state <= INIT;
+                    blit_state <= READY;
                 end
             endcase
         end

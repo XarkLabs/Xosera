@@ -112,8 +112,8 @@
 			"${workspaceFolder}/sim/obj_dir",
 			"${workspaceFolder}/host_spi",
 			"/opt/homebrew/Cellar/libftdi/1.5/include/libftdi1/",
-			"/opt/homebrew/Cellar/verilator/4.108/share/verilator/include/",
-			"/opt/homebrew/Cellar/verilator/4.108/share/verilator/include/vltstd",
+			"/opt/homebrew/Cellar/verilator/4.200/share/verilator/include/",
+			"/opt/homebrew/Cellar/verilator/4.200/share/verilator/include/vltstd",
 			"/opt/homebrew/include/SDL2",
 			"/Users/kenj/Library/Arduino15/packages/arduino/hardware/avr/1.8.3/cores/arduino",
 			"/Users/kenj/Library/Arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include"
@@ -123,6 +123,7 @@
 		"cSpell.allowCompoundWords": true,
 		"cSpell.diagnosticLevel": "Hint",
 		"terminal.integrated.fontSize": 10,
-		"systemverilog.launchConfiguration": "verilator --sv --lint-only --language 1800-2012 --Wall -Wno-TIMESCALEMOD --relative-includes -I ../rtl --timescale-override 1ns/1ps"
+		"systemverilog.launchConfiguration": "verilator --sv --lint-only --language 1800-2012 --Wall -Wno-TIMESCALEMOD --relative-includes -I ../rtl --timescale-override 1ns/1ps",
+		"systemverilog.compileOnSave": true
 	}
 }

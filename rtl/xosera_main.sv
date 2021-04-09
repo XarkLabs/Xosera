@@ -51,29 +51,7 @@ module xosera_main(
 
 `include "xosera_defs.svh"        // Xosera global Verilog definitions
 
-logic        bus_write_strobe;      // strobe when a word of data written
-logic        bus_read_strobe;       // strobe when a word of data written
-logic        bus_cs_strobe;       // strobe when a bus selected
-logic  [3:0] bus_reg_num;           // bus register on bus
-logic [15:0] bus_data_write;        // word written to bus
-
-bus_interface bus(
-                  .clk(clk),                            // input clk (should be > 2x faster than bus signals)
-                  .bus_cs_n_i(bus_cs_n_i),              // register select strobe
-                  .bus_rd_nwr_i(bus_rd_nwr_i),          // 0 = write, 1 = read
-                  .bus_reg_num_i(bus_reg_num_i),        // register number
-                  .bus_bytesel_i(bus_bytesel_i),        // 0=even byte, 1=odd byte
-                  .bus_data_i(bus_data_i),              // 8-bit data bus input
-                  .bus_data_o(bus_data_o),              // 8-bit data bus output
-                  .write_strobe_o(bus_write_strobe),    // strobe for vram access
-                  .read_strobe_o(bus_read_strobe),      // strobe for vram access
-                  .cs_strobe_o(bus_cs_strobe),          // strobe for bus selected
-                  .reg_num_o(bus_reg_num),              // register number read/written
-                  .reg_data_o(bus_data_write),          // word written to register
-                  .reg_data_i(blit_to_bus),             // word to read from register
-                  .reset_i(reset_i)                     // reset
-              );
-
+logic bus_cs_strobe;             // debug ACK signal
 logic blit_vram_cycle;          // cycle is for blitter (vs video)
 logic blit_vram_sel;            // blitter vram select
 logic blit_vram_wr;             // blitter vram write
@@ -83,6 +61,12 @@ logic [15:0] blit_to_bus    /* verilator public */; // blitter bus register read
 
 blitter blitter(
             .clk(clk),
+            .bus_cs_n_i(bus_cs_n_i),              // register select strobe
+            .bus_rd_nwr_i(bus_rd_nwr_i),          // 0 = write, 1 = read
+            .bus_reg_num_i(bus_reg_num_i),        // register number
+            .bus_bytesel_i(bus_bytesel_i),        // 0=even byte, 1=odd byte
+            .bus_data_i(bus_data_i),              // 8-bit data bus input
+            .bus_data_o(bus_data_o),              // 8-bit data bus output
             .blit_cycle_i(blit_vram_cycle),
             .video_ena_o(video_ena),
             .blit_vram_sel_o(blit_vram_sel),
@@ -90,10 +74,7 @@ blitter blitter(
             .blit_vram_addr_o(blit_vram_addr),
             .blit_vram_data_i(vram_data_out),
             .blit_vram_data_o(blit_to_vram),
-            .reg_write_strobe_i(bus_write_strobe),  // strobe for register write
-            .reg_num_i(bus_reg_num),                // register number read/written
-            .reg_data_i(bus_data_write),            // word to write to register
-            .reg_data_o(blit_to_bus),               // word to read from register
+            .bus_ack_o(bus_cs_strobe),
             .reset_i(reset_i)
         );
 

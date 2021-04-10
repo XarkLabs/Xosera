@@ -35,7 +35,7 @@ bool          wait_close = false;
 
 class BusInterface
 {
-    const int   BUS_START_TIME = 1685002;    // 640x480 2nd frame
+    const int   BUS_START_TIME = 3324934;   //1685002;    // 640x480 2nd frame
     const float BUS_CLOCK_DIV  = 7.7;
 
     enum
@@ -136,7 +136,7 @@ public:
                         top->bus_reg_num_i = reg_num;
                         top->bus_data_i    = data;
                         sprintf(tempstr, "r[0x%x] %s.%3s", reg_num, reg_name[reg_num], bytesel ? "lsb*" : "msb");
-                        printf("  %-20.20s <= 0x%02x\n", tempstr, data);
+                        printf("  %-25.25s <= 0x%02x\n", tempstr, data);
                         break;
                     case BUS_STROBE:
                         top->bus_cs_n_i = 1;
@@ -154,7 +154,7 @@ public:
                         top->bus_reg_num_i = 0;
                         top->bus_data_i    = 0;
                         last_time          = bus_time + 9;
-                        if (index++ >= test_data_len)
+                        if (++index > test_data_len)
                         {
                             enable = false;
                         }
@@ -194,7 +194,7 @@ const char * BusInterface::reg_name[] = {"XVID_RD_INC",
     ((BusInterface::XVID_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
 
 BusInterface bus;
-int          BusInterface::test_data_len   = 12;
+int          BusInterface::test_data_len   = 28;
 uint16_t     BusInterface::test_data[1024] = {REG_W(WR_ADDR, 0x2),
                                           REG_W(DATA, 0x1f00 | 'H'),
                                           REG_B(DATA, 'e'),
@@ -203,7 +203,16 @@ uint16_t     BusInterface::test_data[1024] = {REG_W(WR_ADDR, 0x2),
                                           REG_B(DATA, 'o'),
                                           REG_B(DATA, '!'),
                                           REG_W(WR_ADDR, 0x0),
-                                          REG_W(DATA, 0x1e00 | '\x02')};
+                                          REG_W(DATA, 0x1e00 | '\x02'),
+                                          REG_W(WR_ADDR, 110),
+                                          REG_W(DATA, 0x1e00 | '\x02'),
+                                          REG_W(VID_CTRL, 0x0000),
+                                          REG_W(VID_DATA, 0x0000),
+                                          REG_W(VID_CTRL, 0x0001),
+                                          REG_W(VID_DATA, 110),
+                                          REG_W(VID_CTRL, 0x0003),
+                                          REG_W(VID_DATA, 0xfff)
+                                          };
 
 void ctrl_c(int s)
 {
@@ -425,7 +434,8 @@ int main(int argc, char ** argv)
             if (frame_num > 0)
             {
                 vluint64_t frame_time = (main_time - frame_start_time) / 2;
-                printf("Frame %3d, %lu pixel-clocks (% 0.03f msec real-time), %dx%d hsync %d, vsync %d\n",
+                printf("[@t=%lu] Frame %3d, %lu pixel-clocks (% 0.03f msec real-time), %dx%d hsync %d, vsync %d\n",
+                        main_time,
                        frame_num,
                        frame_time,
                        ((1.0 / PIXEL_CLOCK_MHZ) * frame_time) / 1000.0,

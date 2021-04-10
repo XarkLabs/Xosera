@@ -73,7 +73,8 @@ blitter blitter(
             .blit_vram_wr_o(blit_vram_wr),
             .blit_vram_addr_o(blit_vram_addr),
             .blit_vram_data_i(vram_data_out),
-            .blit_vram_data_o(blit_to_vram),
+            .blit_vram_data_o(blit_to_vram),    // TODO rename
+            .config_reg_wr_o(config_reg_wr),
             .bus_ack_o(bus_cs_strobe),
             .reset_i(reset_i)
         );
@@ -82,24 +83,31 @@ logic video_ena;            // enable text/bitmap generation
 logic vgen_sel;             // video vram select
 logic [15:0] vgen_addr;     // video vram addr
 
+logic       config_reg_wr;
+logic [1:0] config_reg_num;
+
 //  video generation
 video_gen video_gen(
-              .clk(clk),
-              .reset_i(reset_i),
-              .enable_i(video_ena),
-              .blit_cycle_o(blit_vram_cycle),
-              .fontram_sel_o(fontram_sel),
-              .fontram_addr_o(fontram_addr),
-              .fontram_data_i(fontram_data_out),
-              .vram_sel_o(vgen_sel),
-              .vram_addr_o(vgen_addr),
-              .vram_data_i(vram_data_out),
-              .red_o(red_o),
-              .green_o(green_o),
-              .blue_o(blue_o),
-              .hsync_o(hsync_o),
-              .vsync_o(vsync_o),
-              .dv_de_o(dv_de_o)
+                .clk(clk),
+                .reset_i(reset_i),
+                .enable_i(video_ena),
+                .blit_cycle_o(blit_vram_cycle),
+                .fontram_sel_o(fontram_sel),
+                .fontram_addr_o(fontram_addr),
+                .fontram_data_i(fontram_data_out),
+                .vram_sel_o(vgen_sel),
+                .vram_addr_o(vgen_addr),
+                .vram_data_i(vram_data_out),
+                .config_reg_wr_i(config_reg_wr),             // strobe to write internal config register number
+                .config_reg_num_i(blit_vram_addr[1:0]),            // internal config register number
+                .config_data_i(blit_to_vram),              // data for internal config register
+
+                .red_o(red_o),
+                .green_o(green_o),
+                .blue_o(blue_o),
+                .hsync_o(hsync_o),
+                .vsync_o(vsync_o),
+                .dv_de_o(dv_de_o)
           );
 
 // audio generation (TODO)
@@ -142,6 +150,7 @@ fontram fontram(
             .rd_en_i(fontram_sel),
             .rd_address_i(fontram_addr),
             .rd_data_o(fontram_data_out),
+            .wr_clk(clk),
             .wr_en_i(1'b0),
             .wr_address_i(13'h0),
             .wr_data_i(8'h00)

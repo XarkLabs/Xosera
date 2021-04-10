@@ -18,6 +18,7 @@ module fontram(
            input logic rd_en_i,
            input logic [12: 0] rd_address_i,
            output logic [7: 0] rd_data_o,
+           input logic wr_clk,
            input logic wr_en_i,
            input logic [12: 0] wr_address_i,
            input logic [7: 0] wr_data_i
@@ -34,12 +35,14 @@ initial
 `endif
 
 always_ff @(posedge clk) begin
-    // NOTE: TODO iCE40 BRAM needs to be 16-bits wide to read/write
-    // if (wr_en_i) begin
-    //     bram[wr_address_i] <= wr_data_i;
-    // end
     if (rd_en_i) begin
         rd_data_o <= bram[rd_address_i];
+    end
+end
+
+always_ff @(posedge wr_clk) begin
+    if (wr_en_i) begin
+        bram[rd_address_i] <= wr_data_i;
     end
 end
 endmodule

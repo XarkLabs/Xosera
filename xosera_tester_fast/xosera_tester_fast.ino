@@ -332,6 +332,14 @@ void setup()
             }
         } while (v++);
     }
+    xvid_setw(XVID_VID_CTRL, 0x0000);   // set text start addr
+    xvid_setw(XVID_VID_DATA, 106);      // to one line down
+
+    xvid_setw(XVID_VID_CTRL, 0x0001);   // set line length
+    xvid_setw(XVID_VID_DATA, 128);      // to 128 chars long
+
+    xvid_setw(XVID_VID_CTRL, 0x0002);   // set palette[0]
+    xvid_setw(XVID_VID_DATA, 0xfff);    // to white
 
     xvid_setw(XVID_WR_INC, 1);
     xvid_setw(XVID_WR_ADDR, 3 * width);

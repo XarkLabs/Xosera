@@ -25,11 +25,8 @@ module blitter(
     output logic    [15:0]  blit_vram_addr_o,       // VRAM address
     input  logic    [15:0]  blit_vram_data_i,       // VRAM read data
     output logic    [15:0]  blit_vram_data_o,       // VRAM write data
+    output logic            config_reg_wr_o,
     output logic            bus_ack_o,              // ACK strobe for debug
-//    input  logic            reg_write_strobe_i,     // strobe for register write
-//    input  logic     [3:0]  reg_num_i,              // register number read/written
-//    input  logic    [15:0]  reg_data_i,             // word to read into register
-//    output logic    [15:0]  reg_data_o,             // word to write from register
     input  logic            reset_i
     );
 
@@ -72,6 +69,7 @@ logic  [1:0]    vid_ctrl_reg_sel;
 logic [15:0]    vid_ctrl_reg_data;
 
 logic [15:0]    vram_rd_data;           // word read from VRAM (for RD_ADDR)
+logic  [7:0]    even_wr_data;           // word written to even byte (for virtual regs)
 
 logic [16:0]    blit_count;           // blit count (extra bit for underflow/done)
 logic           blit_busy;
@@ -155,6 +153,7 @@ always_ff @(posedge clk) begin
         blit_vram_wr_o      <= 1'b0;
         blit_vram_addr_o    <= 16'h0000;
         blit_vram_data_o    <= CLEARDATA;
+        config_reg_wr_o     <= 1'b0;
         blit_reg[0]         <= 16'h0000;
         blit_reg[1]         <= 16'h0000;
         blit_reg[2]         <= 16'h0000;
@@ -194,6 +193,7 @@ always_ff @(posedge clk) begin
 
             blit_vram_sel_o     <= 1'b0;            // clear vram select
             blit_vram_wr_o      <= 1'b0;            // clear vram write
+            config_reg_wr_o     <= 1'b0;            // clear config write
             blit_vram_addr_o    <= blit_reg[XVID_WR_ADDR[2:0]];    // assume write, output address
 
             if (bus_write_strobe) begin
@@ -227,9 +227,17 @@ always_ff @(posedge clk) begin
                         XVID_VID_CTRL: begin
                             vid_ctrl_reg_sel    <=  bus_bytedata[1:0];
                         end
+                        XVID_VID_DATA: begin
+                            config_reg_wr_o     <=  1'b1;
+                            blit_vram_addr_o    <=  { 14'b0, vid_ctrl_reg_sel };
+                            blit_vram_data_o    <= { even_wr_data,bus_bytedata };
+                        end
                         default: begin
                         end
                     endcase
+                end
+                else begin
+                    even_wr_data    <= bus_bytedata;
                 end
             end
 

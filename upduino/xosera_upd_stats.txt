@@ -2,11 +2,11 @@
 Yosys 0.9+4052 (git sha1 0ccc7229, clang 12.0.0 -fPIC -Os)
 nextpnr-ice40 -- Next Generation Place and Route (Version bb607913)
 Info: Device utilisation:
-Info: 	         ICESTORM_LC:   854/ 5280    16%
+Info: 	         ICESTORM_LC:  1013/ 5280    19%
 Info: 	        ICESTORM_RAM:    12/   30    40%
 Info: 	               SB_IO:    35/   96    36%
-Info: 	               SB_GB:     6/    8    75%
+Info: 	               SB_GB:     5/    8    62%
 Info: 	        ICESTORM_PLL:     1/    1   100%
 Info: 	      ICESTORM_SPRAM:     4/    4   100%
 
-Info: Max frequency for clock 'pclk': 45.06 MHz (PASS at 33.75 MHz)
+Info: Max frequency for clock 'pclk': 42.12 MHz (PASS at 33.75 MHz)

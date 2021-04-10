@@ -19,19 +19,26 @@
 `timescale 1ns/1ps
 
 module video_gen(
-           input  logic clk,                            // clock (video pixel clock)
-           input  logic reset_i,                        // system reset in
-           input  logic enable_i,                       // enable video display
-           output logic blit_cycle_o,                   // 0=video memory cycle, 1=Blit memory cycle
-           output logic fontram_sel_o,                  // fontram access select
-           output logic [12: 0] fontram_addr_o,         // font memory byte address out (8x4KB)
-           input  logic [7: 0] fontram_data_i,          // font memory byte data in
-           output logic vram_sel_o,                     // vram access select
-           output logic [15: 0] vram_addr_o,            // vram word address out (16x64KB)
-           input  logic [15: 0] vram_data_i,            // vram word data in
-           output logic [3: 0] red_o, green_o, blue_o,  // VGA color outputs (12-bit, 4096 colors)
-           output logic vsync_o, hsync_o,               // VGA sync outputs
-           output logic dv_de_o                         // VGA video active signal (needed for HDMI)
+            // control outputs
+            output logic blit_cycle_o,                      // 0=video memory cycle, 1=Blit memory cycle
+            output logic fontram_sel_o,                     // fontram access select
+            output logic [12: 0] fontram_addr_o,            // font memory byte address out (8x4KB)
+            output logic vram_sel_o,                        // vram access select
+            output logic [15: 0] vram_addr_o,               // vram word address out (16x64KB)
+            // control inputs
+            input  logic [15: 0] vram_data_i,               // vram word data in
+            input  logic [7: 0] fontram_data_i,             // font memory byte data in
+            input  logic enable_i,                          // enable video (0=black output, 1=normal output)
+            input  logic       config_reg_wr_i,             // strobe to write internal config register number
+            input  logic [1:0] config_reg_num_i,            // internal config register number
+            input  logic [15:0] config_data_i,              // data for internal config register
+            // video signal outputs
+            output logic [3: 0] red_o, green_o, blue_o,  // VGA color outputs (12-bit, 4096 colors)
+            output logic vsync_o, hsync_o,               // VGA sync outputs
+            output logic dv_de_o,                         // VGA video active signal (needed for HDMI)
+            // standard signals
+            input  logic reset_i,                        // system reset in
+            input  logic clk                             // clock (video pixel clock)
        );
 
 `include "xosera_defs.svh"        // Xosera global Verilog definitions
@@ -47,6 +54,7 @@ logic [15: 0] bitmap_data_next;                         // next bitmap word to s
 
 // text generation signals
 logic [15: 0] text_start_addr;                          // text start address (word address)
+logic [15: 0] text_line_width;
 logic [15: 0] text_addr;                                // address to fetch character+color attribute
 logic [15: 0] text_line_addr;                           // address of start of character+color attribute line
 logic  [3: 0] font_height;                              // max height of font cell-1
@@ -66,10 +74,12 @@ logic tg_enable;                                        // text generation
 logic bm_enable;                                        // bitmap enable
 
 // video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
-localparam STATE_PRE_SYNC = 2'b00;
-localparam STATE_SYNC = 2'b01;
-localparam STATE_POST_SYNC = 2'b10;
-localparam STATE_VISIBLE = 2'b11;
+typedef enum logic [1:0] {
+    STATE_PRE_SYNC = 2'b00,
+    STATE_SYNC = 2'b01,
+    STATE_POST_SYNC = 2'b10,
+    STATE_VISIBLE = 2'b11
+} video_signal_st;
 
 // sync generation signals (and combinatorial logic "next" versions)
 logic [1: 0] h_state;
@@ -149,17 +159,6 @@ always_comb begin
     endcase
 end
 
-// logic aliases
-logic font_pix;
-assign font_pix = font_shift_out[7];                    // current pixel from font data shift-logic out
-logic [3: 0] forecolor;
-assign forecolor = text_color[3: 0];                    // current character foreground color palette index (0-15)
-logic [3: 0] backcolor;
-assign backcolor = text_color[7: 4];                    // current character background color palette index (0-15)
-
-// continually form fontram address from text data from vram and char_y (avoids extra cycle for lookup)
-assign fontram_addr_o = {1'b0, vram_data_i[7: 0], char_y};
-
 always_ff @(posedge clk) begin
     if (reset_i) begin
         // TODO: Use BRAM for palette?
@@ -186,6 +185,44 @@ always_ff @(posedge clk) begin
         palette_r[14]   <= 12'hFF5;                     // yellow
         palette_r[15]   <= 12'hFFF;                     // white
 
+        text_start_addr <= 16'h0000;
+        text_line_width <= CHARS_WIDE[15:0];
+    end
+    else begin
+        if (config_reg_wr_i) begin
+            case (config_reg_num_i)
+                2'b00: begin
+                    text_start_addr <= config_data_i;
+                end
+                2'b01: begin
+                    text_line_width <= config_data_i;
+                end
+                2'b10: begin
+                    palette_r[0] <= config_data_i[11:0];
+                end
+                2'b11: begin
+                    palette_r[1] <= config_data_i[11:0];
+                end
+                default: ;
+            endcase
+        end
+    end
+end
+
+
+// logic aliases
+logic font_pix;
+assign font_pix = font_shift_out[7];                    // current pixel from font data shift-logic out
+logic [3: 0] forecolor;
+assign forecolor = text_color[3: 0];                    // current character foreground color palette index (0-15)
+logic [3: 0] backcolor;
+assign backcolor = text_color[7: 4];                    // current character background color palette index (0-15)
+
+// continually form fontram address from text data from vram and char_y (avoids extra cycle for lookup)
+assign fontram_addr_o = {1'b0, vram_data_i[7: 0], char_y};
+
+always_ff @(posedge clk) begin
+    if (reset_i) begin
         tg_enable       <= 1'b0;                        // text generation enable
         bm_enable       <= 1'b0;                        // text generation enable
 
@@ -199,7 +236,6 @@ always_ff @(posedge clk) begin
         font_height     <= 4'b1111;
         font_shift_out  <= 8'h00;
         text_addr       <= 16'h0000;
-        text_start_addr <= 16'h0000;
         text_line_addr  <= 16'h0000;
         text_color      <= 8'h00;
         text_color_temp <= 8'h00;
@@ -302,8 +338,8 @@ always_ff @(posedge clk) begin
         if (h_last_line_pixel) begin                        // if last pixel of scan-line
             if (char_y == font_height) begin                // if last line of char cell
                 char_y <= 4'h0;                             // reset font line
-                text_line_addr <= text_line_addr + CHARS_WIDE; // new line start address
-                text_addr <= text_line_addr + CHARS_WIDE;   // new text start address
+                text_line_addr <= text_line_addr + text_line_width; // new line start address
+                text_addr <= text_line_addr + text_line_width;   // new text start address
             end
 
             else begin                                      // else next line of char cell

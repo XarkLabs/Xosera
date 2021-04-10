@@ -37,6 +37,7 @@
 			"LFOSC",
 			"LVCMOS",
 			"MPSSE",
+			"NOPs",
 			"PINB",
 			"PIND",
 			"PMOD",
@@ -73,6 +74,7 @@
 			"hsync",
 			"icestation",
 			"ifdef",
+			"ifeq",
 			"ifndef",
 			"inout",
 			"isim",
@@ -105,7 +107,7 @@
 			"terminal.foreground": "#20c020",
 			"terminalCursor.foreground": "#E0E0E0",
 		},
-		"C_Cpp.default.cppStandard": "gnu++11",
+		"C_Cpp.default.cppStandard": "gnu++20",
 		"C_Cpp.default.cStandard": "gnu99",
 		"C_Cpp.default.defines": [],
 		"C_Cpp.default.includePath": [
@@ -124,6 +126,7 @@
 		"cSpell.diagnosticLevel": "Hint",
 		"terminal.integrated.fontSize": 10,
 		"systemverilog.launchConfiguration": "verilator --sv --lint-only --language 1800-2012 --Wall -Wno-TIMESCALEMOD --relative-includes -I ../rtl --timescale-override 1ns/1ps",
-		"systemverilog.compileOnSave": true
+		"systemverilog.compileOnSave": true,
+		"workbench.list.multiSelectModifier": "alt"
 	}
 }

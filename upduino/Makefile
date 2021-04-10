@@ -17,15 +17,15 @@
 
 # Version bookkeeping
 GITSHORTHASH := $(shell git rev-parse --short HEAD)
-DIRTYFILES := $(-git status --porcelain --untracked-files=no . | grep -v _stats.txt)
+DIRTYFILES := $(shell git status --porcelain --untracked-files=no . ../rtl | grep -v _stats.txt | cut -d " " -f 3-)
 ifeq ($(strip $(DIRTYFILES)),)
 # prepend 0 for "clean"
 XOSERA_HASH := 0$(GITSHORTHASH)
-$(info === Xosera Upduino [$(XOSERA_HASH)], clean from git)
+$(info === Xosera Upduino [$(XOSERA_HASH)] is CLEAN from git)
 else
 # prepend d for "dirty"
 XOSERA_HASH := d$(GITSHORTHASH)
-$(info === Xosera Upduino [$(XOSERA_HASH)], clean from git: $(DIRTYFILES))
+$(info === Xosera Upduino [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
 # Xosera video mode selection:

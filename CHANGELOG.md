@@ -1,5 +1,11 @@
 # Informal list of notable Xosera changes
 
+2021-04-10 - Xark
+
+* Added git "short hash" to build.  The 7-digit short hash is preceded with "0" for a clean build, or "d" for a "dirty" build (ignoring stat file changes) forming a 32-bit hex number.  This is provided to the Verilog build as a define, so the intent is to display this briefly on screen as part of the boot message (and knowing exact firmware may be important to help diagnose issues).  I don't  think I want to provide the hash as a register, since it would encourage code to only run on specific versions (but I will add something like "a bit per feature", once things get going).
+* NOTE: In testing I found 16MHz AVR is "too fast" for 640x480 Xosera (without some NOPs) due to it having a 25.125MHz bus sampling/pixel clock vs 33.75MHz at 848x480.  8MHz AVR seems fine (as does 8/10MHz 68k+GAL interface).
+* Added some config settings  VID_CTRL selects, 0=text start addr, 1=line length, 3=palette[0], palette[1], and then write to VID_DATA to set.
+
 2021-04-08 - Xark
 
 * Refactored bus interface to live under blitter module (less cross module traffic, access to blit internals)

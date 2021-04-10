@@ -242,35 +242,21 @@ static void xprint(uint16_t v)
     xvid_setlb(XVID_DATA, hex[(v >> 0) & 0xf]);
 }
 
-static void xprint(uint16_t v, bool decimal)
+static void xprint(uint32_t n, bool decimal)
 {
-    if (v > 9999)
+    uint32_t poten = 100000000;
+    uint32_t v = n;
+    if (v > 999999999)
+        v = 999999999;
+    while (poten)
     {
-        v = 9999;
+        uint8_t d = v / poten;
+        if (d || n > poten)
+          xvid_setlb(XVID_DATA, '0' + d);
+        v -= d * poten;
+        poten = poten / 10;
     }
-    uint8_t d;
-
-    d = v / 1000;
-    if (v > 1000)
-    {
-        xvid_setlb(XVID_DATA, '0' + d);
-    }
-    v -= d * 1000;
-    d = v / 100;
-    if (v > 100)
-    {
-        xvid_setlb(XVID_DATA, '0' + d);
-    }
-    v -= d * 100;
-    d = v / 10;
-    if (v > 10)
-    {
-        xvid_setlb(XVID_DATA, '0' + d);
-    }
-    v -= d * 10;
-    xvid_setlb(XVID_DATA, '0' + v);
 }
-
 
 void setup()
 {
@@ -559,8 +545,7 @@ void loop()
     xprint("Xosera VRAM read/write test: d=");
     xprint(data);
     xprint(" c=");
-    xprint(count >> 16);
-    xprint(count);
+    xprint(count, true);
     if (err)
     {
         xprint(" Err: ");

@@ -45,7 +45,7 @@ INC := $(wildcard $(SRCDIR)/*.svh)
 BUS_INTERFACE	:= 1
 
 # memory initialization file for default 8x16 font
-FONTMEM := ../fonts/font_8x16.mem
+FONTMEM := ../fonts/font_ST_8x16.mem
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -DICE40UP5K

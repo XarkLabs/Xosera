@@ -302,9 +302,6 @@ void setup()
         xvid_setlb(XVID_DATA, ' ');
     }
 
-    xvid_setw(XVID_VID_CTRL, 0x0003);   // A_font_ctrl
-    xvid_setw(XVID_VID_DATA, 0x010F);   // 2nd font, 8 high
-
     xvid_setw(XVID_WR_ADDR, 0 * width);
     xcolor(0x02);    // green-on-black
     xprint("Xosera Retro Graphics Adapter: Mode ");
@@ -320,6 +317,7 @@ void setup()
 
     bool fail = false;
 
+#if 0
     for (uint8_t r = 0; r < 7; r++)
     {
         uint16_t v = 1;
@@ -340,14 +338,15 @@ void setup()
             }
         } while (v++);
     }
+#endif
 //    xvid_setw(XVID_VID_CTRL, 0x0000);    // set text start addr
 //    xvid_setw(XVID_VID_DATA, -106);      // to one line down
 
     //    xvid_setw(XVID_VID_CTRL, 0x0001);   // set line length
     //    xvid_setw(XVID_VID_DATA, 106);      // to 128 chars long
 
-    xvid_setw(XVID_VID_CTRL, 0x0002);   // set palette[0]
-    xvid_setw(XVID_VID_DATA, 0xfff);    // to white
+//    xvid_setw(XVID_VID_CTRL, 0x0002);   // set palette[0]
+//    xvid_setw(XVID_VID_DATA, 0xfff);    // to white
 
     xvid_setw(XVID_WR_INC, 1);
     xvid_setw(XVID_WR_ADDR, 3 * width);
@@ -361,6 +360,14 @@ void setup()
         leds |= TEST_RED;
         DDRC |= leds;
     }
+
+    xvid_setw(XVID_VID_CTRL, 0x0003);   // A_font_ctrl
+    xvid_setw(XVID_VID_DATA, 0x0207);   // 2nd font, 8 high
+
+    xvid_setw(XVID_WR_ADDR, 6 * width);
+    xprint("Now is the time for all good fonts to come to the aid of their Xosera Enhanced Retro Adapter... :)");
+
+    delay(10000);
 
     for (uint16_t i = 0; i < (i + width); i += width)
     {

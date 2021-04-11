@@ -58,7 +58,7 @@ logic [15: 0] text_line_width;
 logic [15: 0] text_addr;                                // address to fetch character+color attribute
 logic [15: 0] text_line_addr;                           // address of start of character+color attribute line
 logic  [3: 0] font_height;                              // max height of font cell
-logic         font_bank;                                // font bank 0 or 1
+logic   [1:0] font_bank;                                // font bank 0-3 (0/1 with 8x16)
 logic  [2: 0] char_x;                                   // current column of font cell (also controls memory access timing)
 logic  [3: 0] char_y;                                   // current line of font cell
 logic  [2: 0] fine_scrollx;                             // X fine scroll
@@ -193,7 +193,7 @@ always_ff @(posedge clk) begin
         fine_scrollx    <= 3'b000;
         fine_scrolly    <= 4'b0000;
         font_height     <= 4'b1111;
-        font_bank       <= 1'b0;
+        font_bank       <= 2'b00;
     end
     else begin
         if (config_reg_wr_i) begin
@@ -210,7 +210,7 @@ always_ff @(posedge clk) begin
                 end
                 2'b11: begin
                     font_height     <= config_data_i[3:0];
-                    font_bank       <= config_data_i[8];
+                    font_bank       <= config_data_i[9:8];
                 end
                 default: ;
             endcase
@@ -228,7 +228,7 @@ logic [3: 0] backcolor;
 assign backcolor = text_color[7: 4];                    // current character background color palette index (0-15)
 
 // continually form fontram address from text data from vram and char_y (avoids extra cycle for lookup)
-assign fontram_addr_o = {font_bank, vram_data_i[7: 0], char_y};
+assign fontram_addr_o = font_height[3] ? {font_bank[1], vram_data_i[7: 0], char_y[3:0]} : {font_bank[1:0], vram_data_i[7: 0], char_y[2:0]};
 
 always_ff @(posedge clk) begin
     if (reset_i) begin

@@ -29,10 +29,12 @@ logic [7: 0] bram[8191: 0];
 initial begin
 `ifndef FONT_MEM
     $readmemb("../fonts/font_8x16.mem", bram, 0);
-    $readmemb("../fonts/hexfont_8x16.mem", bram, 4096);
+//    $readmemb("../fonts/hexfont_8x16.mem", bram, 4096);
+    $readmemb("../fonts/font_v9958_8x8.mem", bram, 4096);
 `else
     $readmemb(`STRINGIFY(`FONT_MEM), bram, 0);
-    $readmemb("../fonts/hexfont_8x16.mem", bram, 4096);
+//    $readmemb("../fonts/hexfont_8x16.mem", bram, 4096);
+    $readmemb("../fonts/font_v9958_8x8.mem", bram, 4096);
 `endif
 `endif
 end

@@ -43,7 +43,7 @@ VIDEO_MODE := MODE_848x480
 #   PMOD_XESS_VGA		 9-bit VGA, PMOD 1A&1B	http://www.xess.com/shop/product/stickit-vga/
 #   PMOD_XESS_VGA_SINGLE	 6-bit VGA, PMOD 1B	http://www.xess.com/shop/product/stickit-vga/ (half used)
 #
-VIDEO_OUTPUT := PMOD_1B2_DVI12
+VIDEO_OUTPUT := PMOD_DIGILENT_VGA
 
 # Xosera project setup for iCEBreaker FPGA target
 TOP := xosera_iceb

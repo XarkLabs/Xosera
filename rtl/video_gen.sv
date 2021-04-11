@@ -57,7 +57,8 @@ logic [15: 0] text_start_addr;                          // text start address (w
 logic [15: 0] text_line_width;
 logic [15: 0] text_addr;                                // address to fetch character+color attribute
 logic [15: 0] text_line_addr;                           // address of start of character+color attribute line
-logic  [3: 0] font_height;                              // max height of font cell-1
+logic  [3: 0] font_height;                              // max height of font cell
+logic         font_bank;                                // font bank 0 or 1
 logic  [2: 0] char_x;                                   // current column of font cell (also controls memory access timing)
 logic  [3: 0] char_y;                                   // current line of font cell
 logic  [2: 0] fine_scrollx;                             // X fine scroll
@@ -159,6 +160,8 @@ always_comb begin
     endcase
 end
 
+// video config registers
+
 always_ff @(posedge clk) begin
     if (reset_i) begin
         // TODO: Use BRAM for palette?
@@ -187,6 +190,10 @@ always_ff @(posedge clk) begin
 
         text_start_addr <= 16'h0000;
         text_line_width <= CHARS_WIDE[15:0];
+        fine_scrollx    <= 3'b000;
+        fine_scrolly    <= 4'b0000;
+        font_height     <= 4'b1111;
+        font_bank       <= 1'b0;
     end
     else begin
         if (config_reg_wr_i) begin
@@ -198,10 +205,12 @@ always_ff @(posedge clk) begin
                     text_line_width <= config_data_i;
                 end
                 2'b10: begin
-                    palette_r[0] <= config_data_i[11:0];
+                    fine_scrollx    <= config_data_i[10:8];
+                    fine_scrolly    <= config_data_i[3:0];
                 end
                 2'b11: begin
-                    palette_r[1] <= config_data_i[11:0];
+                    font_height     <= config_data_i[3:0];
+                    font_bank       <= config_data_i[8];
                 end
                 default: ;
             endcase
@@ -219,7 +228,7 @@ logic [3: 0] backcolor;
 assign backcolor = text_color[7: 4];                    // current character background color palette index (0-15)
 
 // continually form fontram address from text data from vram and char_y (avoids extra cycle for lookup)
-assign fontram_addr_o = {1'b0, vram_data_i[7: 0], char_y};
+assign fontram_addr_o = {font_bank, vram_data_i[7: 0], char_y};
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -231,9 +240,6 @@ always_ff @(posedge clk) begin
         mem_fetch       <= 1'b0;
         h_count         <= 11'h000;
         v_count         <= 11'h000;
-        fine_scrollx    <= 3'b000;
-        fine_scrolly    <= 4'b0000;
-        font_height     <= 4'b1111;
         font_shift_out  <= 8'h00;
         text_addr       <= 16'h0000;
         text_line_addr  <= 16'h0000;

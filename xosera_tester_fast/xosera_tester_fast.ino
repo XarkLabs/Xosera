@@ -116,10 +116,12 @@ static inline void xvid_setw(uint8_t r, uint16_t word)
     PORTB       = BUS_OFF | BUS_WR | BUS_MSB;                  // de-select Xosera, set write, MSB select
     PORTD       = msb;                                         // set MSB data d7-d2
     PORTB       = BUS_ON | BUS_WR | BUS_MSB | (msb & 0x03);    // select Xosera, set write, MSB select, MSB data d0-d1
+    NOP();                                //  1 cycle delay needed for AVR @ 16MHz (> ~100ns CS pulse)
     PORTB       = BUS_OFF | BUS_WR | BUS_LSB;                  // de-select Xosera, set write LSB select
     PORTD       = lsb;                                         // set LSB data d7-d2
     PORTB       = BUS_ON | BUS_WR | BUS_LSB | (lsb & 0x03);    // select Xosera set write, LSB select, LSB data d0-d1
-    PORTB       = BUS_OFF | BUS_WR | BUS_MSB;                  // de-select Xosera, set write, LSB select
+    NOP();                                //  1 cycle delay needed for AVR @ 16MHz (> ~100ns CS pulse)
+   PORTB       = BUS_OFF | BUS_WR | BUS_MSB;                  // de-select Xosera, set write, LSB select
 }
 
 static inline void xvid_setlb(uint8_t r, uint8_t lsb)
@@ -128,6 +130,7 @@ static inline void xvid_setlb(uint8_t r, uint8_t lsb)
     PORTB = BUS_OFF | BUS_WR | BUS_LSB;                  // de-select Xosera, set write LSB select
     PORTD = lsb;                                         // set LSB data d7-d2
     PORTB = BUS_ON | BUS_WR | BUS_LSB | (lsb & 0x03);    // select Xosera set write, LSB select, LSB data d0-d1
+    NOP();                                //  1 cycle delay needed for AVR @ 16MHz (> ~100ns CS pulse)
     PORTB = BUS_OFF | BUS_WR | BUS_MSB;                  // de-select Xosera, set write, LSB select
 }
 
@@ -137,6 +140,7 @@ static inline void xvid_sethb(uint8_t r, uint8_t msb)
     PORTB = BUS_OFF | BUS_WR | BUS_MSB;                  // de-select Xosera, set write MSB select
     PORTD = msb;                                         // set MSB data d7-d2
     PORTB = BUS_ON | BUS_WR | BUS_MSB | (msb & 0x03);    // select Xosera set write, MSB select, MSB data d0-d1
+    NOP();                                //  1 cycle delay needed for AVR @ 16MHz (> ~100ns CS pulse)
     PORTB = BUS_OFF | BUS_WR | BUS_MSB;                  // de-select Xosera, set write, MSB select
 }
 
@@ -149,6 +153,7 @@ static inline uint16_t xvid_getw(uint8_t r)
     NOP();                                // 1 cycle delay needed for AVR >= 8MHz (> ~100ns CS pulse)
 #if (F_CPU >= 16000000)                   // if 16MHz add an additional
     NOP();                                //  1 cycle delay needed for AVR @ 16MHz (> ~100ns CS pulse)
+    NOP();                                //  1 cycle delay needed for AVR @ 16MHz (> ~100ns CS pulse)
 #endif                                    // end 16MHz
     uint8_t msb =
         (PIND & 0xFC) | (PINB & 0x03);     // read data bus 8-bit MSB value (NOTE: AVR input has a cycle latency)
@@ -156,6 +161,7 @@ static inline uint16_t xvid_getw(uint8_t r)
     PORTB = BUS_ON | BUS_RD | BUS_LSB;     // select Xosera, set read, LSB select
     NOP();                                 // 1 cycle delay needed for AVR >= 8MHz (> ~100ns CS pulse)
 #if (F_CPU >= 16000000)                    // if 16MHz add an additional
+    NOP();                                //  1 cycle delay needed for AVR @ 16MHz (> ~100ns CS pulse)
     NOP();                                 //  1 cycle delay needed for AVR @ 16MHz (> ~100ns CS pulse)
 #endif                                     // end 16MHz
     uint8_t lsb =
@@ -176,6 +182,7 @@ static inline uint8_t xvid_getb(uint8_t r, uint8_t bytesel = BUS_LSB)
     PORTB = BUS_ON | BUS_RD | bytesel;     // select Xosera, set read, MSB select
     NOP();                                 // 1 cycle delay needed for AVR >= 8MHz (> ~100ns CS pulse)
 #if (F_CPU >= 16000000)                    // if 16MHz add an additional
+    NOP();                                //  1 cycle delay needed for AVR @ 16MHz (> ~100ns CS pulse)
     NOP();                                 //  1 cycle delay needed for AVR @ 16MHz (> ~100ns CS pulse)
 #endif                                     // end 16MHz
     uint8_t data =
@@ -295,6 +302,9 @@ void setup()
         xvid_setlb(XVID_DATA, ' ');
     }
 
+    xvid_setw(XVID_VID_CTRL, 0x0003);   // A_font_ctrl
+    xvid_setw(XVID_VID_DATA, 0x010F);   // 2nd font, 8 high
+
     xvid_setw(XVID_WR_ADDR, 0 * width);
     xcolor(0x02);    // green-on-black
     xprint("Xosera Retro Graphics Adapter: Mode ");
@@ -329,7 +339,7 @@ void setup()
                 break;
             }
         } while (v++);
-    } 
+    }
 //    xvid_setw(XVID_VID_CTRL, 0x0000);    // set text start addr
 //    xvid_setw(XVID_VID_DATA, -106);      // to one line down
 

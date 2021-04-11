@@ -26,18 +26,15 @@ module fontram(
 // infer 8x8KB font BRAM
 logic [7: 0] bram[8191: 0];
 `ifndef SHOW        // yosys show command doesn't like "too long" init string
-initial
+initial begin
 `ifndef FONT_MEM
-    $readmemb("../fonts/font_8x16.mem", bram, 0, 4095);
+    $readmemb("../fonts/font_8x16.mem", bram, 0);
+    $readmemb("../fonts/hexfont_8x16.mem", bram, 4096);
 `else
-    $readmemb(`STRINGIFY(`FONT_MEM), bram, 0, 4095);
+    $readmemb(`STRINGIFY(`FONT_MEM), bram, 0);
+    $readmemb("../fonts/hexfont_8x16.mem", bram, 4096);
 `endif
 `endif
-
-always_ff @(posedge clk) begin
-    if (rd_en_i) begin
-        rd_data_o <= bram[rd_address_i];
-    end
 end
 
 always_ff @(posedge wr_clk) begin
@@ -45,4 +42,11 @@ always_ff @(posedge wr_clk) begin
         bram[rd_address_i] <= wr_data_i;
     end
 end
+
+always_ff @(posedge clk) begin
+    if (rd_en_i) begin
+        rd_data_o <= bram[rd_address_i];
+    end
+end
+
 endmodule

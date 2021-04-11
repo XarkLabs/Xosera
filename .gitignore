@@ -26,3 +26,4 @@ host_spi/host_spi
 sim/xosera_tb
 sim/xosera_tb.vcd
 .DS_Store
+utils/image_to_mem

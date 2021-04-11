@@ -117,6 +117,12 @@ public:
         if (enable && main_time >= BUS_START_TIME)
         {
             int64_t bus_time = (main_time - BUS_START_TIME) / BUS_CLOCK_DIV;
+            if (test_data[index] == 0xffff)
+            {
+                enable = false;
+                last_time = bus_time -1;
+            }
+
             if (bus_time >= last_time)
             {
                 last_time = bus_time + 1;
@@ -194,8 +200,9 @@ const char * BusInterface::reg_name[] = {"XVID_RD_INC",
     ((BusInterface::XVID_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
 
 BusInterface bus;
-int          BusInterface::test_data_len   = 28;
-uint16_t     BusInterface::test_data[1024] = {REG_W(WR_ADDR, 0x2),
+int          BusInterface::test_data_len   = 999;
+uint16_t     BusInterface::test_data[1024] = {REG_W(WR_ADDR, 0x3),
+                                          REG_W(WR_INC, 0x1),
                                           REG_W(DATA, 0x1f00 | 'H'),
                                           REG_B(DATA, 'e'),
                                           REG_B(DATA, 'l'),
@@ -203,15 +210,40 @@ uint16_t     BusInterface::test_data[1024] = {REG_W(WR_ADDR, 0x2),
                                           REG_B(DATA, 'o'),
                                           REG_B(DATA, '!'),
                                           REG_W(WR_ADDR, 0x0),
-                                          REG_W(DATA, 0x1e00 | '\x02'),
-                                          REG_W(WR_ADDR, 110),
-                                          REG_W(DATA, 0x1e00 | '\x02'),
-                                          REG_W(VID_CTRL, 0x0000),
-                                          REG_W(VID_DATA, 0x0000),
-                                          REG_W(VID_CTRL, 0x0001),
-                                          REG_W(VID_DATA, 110),
-                                          REG_W(VID_CTRL, 0x0003),
-                                          REG_W(VID_DATA, 0xfff)
+                                          REG_W(DATA, 0x1e00 | '\x0e'),
+                                          REG_W(DATA, 0x1e00 | '\x0f'),
+                                          REG_W(WR_ADDR, 106 * 5),
+                                          REG_W(DATA, 0x1f00 | 'A'),
+                                          REG_B(DATA, 't'),
+                                          REG_B(DATA, 'a'),
+                                          REG_B(DATA, 'r'),
+                                          REG_B(DATA, 'i'),
+                                          REG_B(DATA, ' '),
+                                          REG_B(DATA, 'S'),
+                                          REG_B(DATA, 'T'),
+                                          REG_B(DATA, ' '),
+                                          REG_B(DATA, '8'),
+                                          REG_B(DATA, 'x'),
+                                          REG_B(DATA, '1'),
+                                          REG_B(DATA, '6'),
+                                          REG_B(DATA, ' '),
+                                          REG_B(DATA, 'F'),
+                                          REG_B(DATA, 'o'),
+                                          REG_B(DATA, 'n'),
+                                          REG_B(DATA, 't'),
+                                          REG_B(DATA, ' '),
+                                          REG_B(DATA, 'T'),
+                                          REG_B(DATA, 'e'),
+                                          REG_B(DATA, 's'),
+                                          REG_B(DATA, 't'),
+                                          REG_B(DATA, ' '),
+                                          REG_B(DATA, '\x1c'),
+                                          REG_B(WR_INC, 105),
+                                          REG_B(DATA, '\x1d'),
+                                          REG_B(WR_INC, 1),
+                                          REG_B(DATA, '\x1e'),
+                                          REG_B(DATA, '\x1f'),
+                                          0xffff
                                           };
 
 void ctrl_c(int s)

@@ -245,14 +245,12 @@ static void xprint(uint16_t v)
 static void xprint(uint32_t n, bool decimal)
 {
     uint32_t poten = 100000000;
-    uint32_t v = n;
-    if (v > 999999999)
-        v = 999999999;
+    uint32_t v     = n;
+    if (v > 999999999) v = 999999999;
     while (poten)
     {
         uint8_t d = v / poten;
-        if (d || n > poten)
-          xvid_setlb(XVID_DATA, '0' + d);
+        if (d || n > poten) xvid_setlb(XVID_DATA, '0' + d);
         v -= d * poten;
         poten = poten / 10;
     }
@@ -331,12 +329,12 @@ void setup()
                 break;
             }
         } while (v++);
-    }
-    xvid_setw(XVID_VID_CTRL, 0x0000);   // set text start addr
-    xvid_setw(XVID_VID_DATA, 106);      // to one line down
+    } 
+//    xvid_setw(XVID_VID_CTRL, 0x0000);    // set text start addr
+//    xvid_setw(XVID_VID_DATA, -106);      // to one line down
 
-    xvid_setw(XVID_VID_CTRL, 0x0001);   // set line length
-    xvid_setw(XVID_VID_DATA, 128);      // to 128 chars long
+    //    xvid_setw(XVID_VID_CTRL, 0x0001);   // set line length
+    //    xvid_setw(XVID_VID_DATA, 106);      // to 128 chars long
 
     xvid_setw(XVID_VID_CTRL, 0x0002);   // set palette[0]
     xvid_setw(XVID_VID_DATA, 0xfff);    // to white
@@ -353,6 +351,15 @@ void setup()
         leds |= TEST_RED;
         DDRC |= leds;
     }
+
+    for (uint16_t i = 0; i < (i + width); i += width)
+    {
+        xvid_setw(XVID_VID_CTRL, 0x0000);    // set text start addr
+        xvid_setw(XVID_VID_DATA, i);      // to one line down
+        delay(17);
+    }
+    xvid_setw(XVID_VID_CTRL, 0x0000);    // set text start addr
+    xvid_setw(XVID_VID_DATA, 0x0000);      // to one line down
 
     xvid_setw(XVID_WR_ADDR, 0 * width);
     xvid_setw(XVID_DATA, 0x0A00 | ' ');

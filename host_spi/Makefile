@@ -1,5 +1,5 @@
 # Makefile - Xosera for iCEBreaker FPGA board
-# vim: set et ts=8 sw=8
+# vim: set noet ts=8 sw=8
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
 ifeq ($(UNAME_S),Darwin)
@@ -17,8 +17,6 @@ else
 CCFLAGS += -std=c++11 -Wall -Wextra -Os -I/usr/include/libftdi1
 LDLIBS += -lftdi1
 endif
- 
-CFLAGS += 
 
 host_spi: host_spi.cpp ftdi_spi.cpp ftdi_spi.h Makefile
 	$(CC) $(CCFLAGS) host_spi.cpp ftdi_spi.cpp -o host_spi $(LDLIBS)

@@ -1,5 +1,11 @@
 # Informal list of notable Xosera changes
 
+2021-04-10 #2 - Xark
+
+* Added 4 font banks (for 8x8, 2 for 8x16)
+* Added font fine scroll (TODO untested)
+* Added V9958 8x8 font in bank 2 (3rd)
+
 2021-04-10 - Xark
 
 * Added git "short hash" to build.  The 7-digit short hash is preceded with "0" for a clean build, or "d" for a "dirty" build (ignoring stat file changes) forming a 32-bit hex number.  This is provided to the Verilog build as a define, so the intent is to display this briefly on screen as part of the boot message (and knowing exact firmware may be important to help diagnose issues).  I don't  think I want to provide the hash as a register, since it would encourage code to only run on specific versions (but I will add something like "a bit per feature", once things get going).

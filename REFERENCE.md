@@ -54,9 +54,9 @@ value into the blitter (e.g. for a VRAM fill).
 To access these registers, write the register number to `XVID_VID_CTRL`, then write the register data to `XVID_VID_DATA` (these registers are write-only).
 (TODO same for plane B)
 
-| Reg # | Name                    | Description                                                                 |
---------| ------------------------| ----------------------------------------------------------------------------|
-| 0x0   | `XVC_A_start_addr`      | [15:0] starting VRAM address for display (wraps at 0xffff)                  |
-| 0x1   | `XVC_A_words_per_line`  | [15:0] words per line (TODO a bit funky...)                                 |
-| 0x2   | `XVC_A_fine_scroll`     | [10:8] horizontal (0-7) pixel scroll, [3:0] vertical (0-15) pixel scroll    |
-| 0x3   | `XVC_A_font_ctrl`       | [8] font bank (0/1), [3:0] font Y height-1 (0-15) (truncated, TODO 8x8 etc.)|
+| Reg # | Name                    | Description                                                                         |
+--------| ------------------------| ------------------------------------------------------------------------------------|
+| 0x0   | `XVC_A_start_addr`      | [15:0] starting VRAM address for display (wraps at 0xffff)                          |
+| 0x1   | `XVC_A_words_per_line`  | [15:0] words per line (TODO a bit funky...)                                         |
+| 0x2   | `XVC_A_fine_scroll`     | [10:8] horizontal (0-7) pixel scroll, [3:0] vertical (0-15) pixel scroll            |
+| 0x3   | `XVC_A_font_ctrl`       | [9:8] font bank (0-3 8x8, 0/2 8x16),  [3:0] font Y height-1 (0-15) (8x8 font if < 8)|

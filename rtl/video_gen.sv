@@ -227,7 +227,7 @@ assign forecolor = text_color[3: 0];                    // current character for
 logic [3: 0] backcolor;
 assign backcolor = text_color[7: 4];                    // current character background color palette index (0-15)
 
-// continually form fontram address from text data from vram and char_y (avoids extra cycle for lookup)
+// continually form fontram address from text data from vram and char_y (avoids extra cycle for lookup) TODO: Interleave fonts?
 assign fontram_addr_o = font_height[3] ? {font_bank[1], vram_data_i[7: 0], char_y[3:0]} : {font_bank[1:0], vram_data_i[7: 0], char_y[2:0]};
 
 always_ff @(posedge clk) begin

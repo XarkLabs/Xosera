@@ -77,6 +77,7 @@ YOSYS_CONFIG := yosys-config
 ICEPACK := icepack
 ICETIME := icetime
 ICEPROG := iceprog
+ICEMULTI := icemulti
 
 # Yosys synthesis arguments
 # TODO: too slow, maybe buggy: YOSYS_SYNTH_ARGS := -dsp -abc9 -abc2 -relut -top $(TOP)
@@ -155,7 +156,9 @@ clean:
 # make binary bitstream from ASCII bitstream
 %.bin: %.asc Makefile
 	@rm -f $@
-	$(ICEPACK) $< $@
+	$(ICEPACK) $< $@.temp
+	$(ICEMULTI) -p0 $@.temp -o $@
+	@rm -f $@.temp
 
 # make timing report from ASCII bitstream
 %.rpt: %.asc Makefile

@@ -1,5 +1,5 @@
 # Makefile - Xosera for iCEBreaker FPGA board
-# vim: set et ts=8 sw=8
+# vim: set noet ts=8 sw=8
 
 all: xosera_tester_fast.ino
 	/Applications/Arduino.app/Contents/MacOS/Arduino --verify ./xosera_tester_fast.ino

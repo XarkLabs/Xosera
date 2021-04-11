@@ -33,7 +33,7 @@ Note 1: Tile size can be 8x16 or 8x8
 | 0x7     | `XVID_DATA`            | read/write VRAM word at `RD`/`WR_ADDR` then add `RD`/`WR_INC`[Note 2]
 | 0x8     | `XVID_DATA_2`          | 2nd`XVID_DATA`(to allow for 32-bit read/write) [Note 2, 3]
 | 0xA     | `XVID_COUNT`           | count of words in async operation
-| 0x9     | `XVID_VID_CTRL`        | various video control settings, see below
+| 0x9     | `XVID_VID_CTRL`        | various video control settings, see below  [Note 4]
 | 0xB     | `XVID_VID_DATA`        | video control data (depending on `VID_CTRL` see below)
 | 0xC     | `XVID_AUX_RD_ADDR`     | TODO aux read address (font audio etc.?)
 | 0xD     | `XVID_AUX_WR_ADDR`     | TODO aux write address (font audio etc.?)
@@ -48,6 +48,7 @@ that can be read from (each "repeated" four times):
 3. When XVID_DATA_2 is written to individually (i.e., the preceding register write was not XVID_DATA), it will store
 the value written internally, but not write data to VRAM nor apply the WR_INC value.  This is useful to load a constant
 value into the blitter (e.g. for a VRAM fill).
+4. The VID_CTRL also has Xosera "re-init" functionality. Write the value 0x808x to `XVID_VID_CTRL` and Xosera FPGA will reconfigure itself (like power on).  The low two bits also select the firmware to reconfigure to (0=normal, but others configs can be setup).  The FPGA takes about 80-100 milliseconds to restart (you can write to register and check if it reads back to wait for reboot).
 
 ### Xosera VID_CTRL regiters
 

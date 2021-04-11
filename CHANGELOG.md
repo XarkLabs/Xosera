@@ -1,5 +1,11 @@
 # Informal list of notable Xosera changes
 
+2021-04-11 Xark
+
+* Wrote `image_to_mem` font convrsion utility.
+* Converted 8x16 and 8x8 Atari ST fonts.  ST 8x16 is default in bank 0 & 1, ST 8x8 in bank 2, and V9958 in bank 3.
+* Added FPGA reconfigure ability (self reboot, got tired of manually resetting it and Arduino).  A write of the "number of the boot" (0x808x) to XVID_VID_CTRL will reboot (low two bits firmware configurations, 0=normal).  This is great to reset fonts & mode and can easily be used to swtich video modes (e.g., 640x480, 848x480 or other options).
+
 2021-04-10 #2 - Xark
 
 * Added 4 font banks (for 8x8, 2 for 8x16)

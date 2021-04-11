@@ -278,7 +278,15 @@ void setup()
     DDRD  = PD_BUS_WR;                     // set data d7-d2 as outputs
     DDRB  = PB_BUS_WR;                     // set control signals and data d1-d0 as outputs
 
-    delay(100);    // FPGA meeds a bit to configure and initialize VRAM
+    Serial.print("Rebooting FPGA");
+    xvid_setw(XVID_VID_CTRL, 0x8080);   // reboot
+    do {
+        delay(10);
+        Serial.print(".");
+        xvid_setw(XVID_RD_ADDR, 0x1234);
+    } while (xvid_getw(XVID_RD_ADDR) != 0x1234);
+    Serial.println("ready.");
+    delay(4000);
 
     xvid_setw(XVID_VID_CTRL, 0);    // select width
     uint16_t x = xvid_getw(XVID_VID_DATA);
@@ -361,13 +369,18 @@ void setup()
         DDRC |= leds;
     }
 
-    xvid_setw(XVID_VID_CTRL, 0x0003);   // A_font_ctrl
-    xvid_setw(XVID_VID_DATA, 0x0207);   // 2nd font, 8 high
+//    xvid_setw(XVID_VID_CTRL, 0x0003);   // A_font_ctrl
+ //   xvid_setw(XVID_VID_DATA, 0x0207);   // 2nd font, 8 high
 
     xvid_setw(XVID_WR_ADDR, 6 * width);
     xprint("Now is the time for all good fonts to come to the aid of their Xosera Enhanced Retro Adapter... :)");
 
-    delay(10000);
+    delay(5000);
+
+    xvid_setw(XVID_VID_CTRL, 0x0003);   // A_font_ctrl
+    xvid_setw(XVID_VID_DATA, 0x0207);   // 2nd font, 8 high
+
+    delay(5000);
 
     for (uint16_t i = 0; i < (i + width); i += width)
     {

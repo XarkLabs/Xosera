@@ -75,7 +75,6 @@ logic [16:0]    blit_count;           // blit count (extra bit for underflow/don
 logic           blit_busy;
 assign blit_busy = (blit_count[16] == 1'b0);   // when blit_count underflows, high bit will be set
 
-
 logic           bus_write_strobe;      // strobe when a word of data written
 logic           bus_read_strobe;       // strobe when a word of data written
 logic  [3:0]    bus_reg_num;           // bus register on bus
@@ -99,6 +98,18 @@ bus_interface bus(
                   .clk(clk),                            // input clk (should be > 2x faster than bus signals)
                   .reset_i(reset_i)                     // reset
               );
+
+logic           reboot;
+logic   [1:0]   boot_select;
+
+`ifdef SYNTHESIS
+SB_WARMBOOT boot(
+                .BOOT(reboot),
+                .S0(boot_select[0]),
+                .S1(boot_select[1])
+            );
+
+`endif
 
 // continuously output byte selected for read from Xosera (to be put on bus when selected for read)
 assign bus_data_o = reg_read(bus_bytesel, bus_reg_num);
@@ -145,6 +156,8 @@ endfunction
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
+        reboot              <= 1'b0;
+        boot_select         <= 2'b00;
         video_ena_o         <= 1'b0;
         blit_read           <= 1'b0;
         blit_read_ack       <= 1'b0;
@@ -194,6 +207,7 @@ always_ff @(posedge clk) begin
             blit_vram_sel_o     <= 1'b0;            // clear vram select
             blit_vram_wr_o      <= 1'b0;            // clear vram write
             config_reg_wr_o     <= 1'b0;            // clear config write
+            boot_select         <= bus_bytedata[1:0];
             blit_vram_addr_o    <= blit_reg[XVID_WR_ADDR[2:0]];    // assume write, output address
 
             if (bus_write_strobe) begin
@@ -226,18 +240,20 @@ always_ff @(posedge clk) begin
                         end
                         XVID_VID_CTRL: begin
                             vid_ctrl_reg_sel    <=  bus_bytedata[1:0];
+                            reboot              <=  even_wr_data[7] & bus_bytedata[7];
                         end
                         XVID_VID_DATA: begin
                             config_reg_wr_o     <=  1'b1;
                             blit_vram_addr_o    <=  { 14'b0, vid_ctrl_reg_sel };
-                            blit_vram_data_o    <= { even_wr_data,bus_bytedata };
+                            blit_vram_data_o    <= { even_wr_data, bus_bytedata };
                         end
                         default: begin
                         end
                     endcase
+                    even_wr_data    <= 8'h00;           // clear even byte data after odd write
                 end
                 else begin
-                    even_wr_data    <= bus_bytedata;
+                    even_wr_data    <= bus_bytedata;    // save even byte
                 end
             end
 

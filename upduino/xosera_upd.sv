@@ -12,8 +12,6 @@
 // NOTE: Upduino 3.x needs the "OSC" jumper shorted to provide 12MHz clock to drive PLL
 
 `default_nettype none   // mandatory for Verilog sanity
-`timescale 1ns/1ps
-
 
 module xosera_upd(
             // left side (USB at top)

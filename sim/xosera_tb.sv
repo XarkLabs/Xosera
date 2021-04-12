@@ -209,18 +209,18 @@ end
 always @(posedge clk) begin
     if (xosera.blitter.bus_write_strobe) begin
         if (xosera.blitter.bus_bytesel) begin
-            $display("%0t BUS WRITE:  R[%1x] <= __%02x", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_bytedata);
+            $display("%0t BUS WRITE:  R[%1x] <= __%02x", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_data_byte);
         end
         else begin
-            $display("%0t BUS WRITE:  R[%1x] <= %02x__", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_bytedata);
+            $display("%0t BUS WRITE:  R[%1x] <= %02x__", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_data_byte);
         end
     end
     if (xosera.blitter.bus_read_strobe) begin
         if (xosera.bus_bytesel_i) begin
-            $display("%0t BUS READ:  R[%1x] => __%02x", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_bytedata);
+            $display("%0t BUS READ:  R[%1x] => __%02x", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_data_byte);
         end
         else begin
-            $display("%0t BUS READ:  R[%1x] => %02x__", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_bytedata);
+            $display("%0t BUS READ:  R[%1x] => %02x__", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_data_byte);
         end
     end
 end

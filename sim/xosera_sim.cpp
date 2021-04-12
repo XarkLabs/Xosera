@@ -35,27 +35,32 @@ bool          wait_close = false;
 
 class BusInterface
 {
-    const int   BUS_START_TIME = 3324934;   //1685002;    // 640x480 2nd frame
+    const int   BUS_START_TIME = 3324934;    // 1685002;    // 640x480 2nd frame
     const float BUS_CLOCK_DIV  = 7.7;
 
     enum
     {
-        XVID_RD_INC,         // reg 0 0000: read addr increment value (write-only)
-        XVID_WR_INC,         // reg 1 0001: write addr increment value (write-only)
-        XVID_RD_MOD,         // reg 2 0010: TODO read modulo width (write-only)
-        XVID_WR_MOD,         // reg 3 0011: TODO write modulo width (write-only)
-        XVID_WIDTH,          // reg 4 0100: TODO width for 2D blit (write-only)
-        XVID_RD_ADDR,        // reg 5 0110: address to read from VRAM (write-only)
-        XVID_WR_ADDR,        // reg 6 0111: address to write from VRAM (write-only)
-        XVID_DATA,           // reg 7 1000: read/write word from/to VRAM RD/WR
-        XVID_DATA_2,         // reg 8 1001: read/write word from/to VRAM RD/WR (for 32-bit)
-        XVID_COUNT,          // reg 9 0101: TODO blitter "repeat" count (write-only)
-        XVID_VID_CTRL,       // reg A 1010: TODO read status/write control settings (read/write)
-        XVID_VID_DATA,       // reg B 1011: TODO video data (as set by VID_CTRL) (write-only)
-        XVID_AUX_RD_ADDR,    // reg C 1100: TODO aux read address (font audio etc.?) (write-only)
-        XVID_AUX_WR_ADDR,    // reg D 1101: TODO aux write address (font audio etc.?) (write-only)
-        XVID_AUX_CTRL,       // reg E 1110: TODO audio and other control? (read/write)
-        XVID_AUX_DATA        // reg F 1111: TODO aux memory/register data read/write value
+        // register 16-bit read/write (no side effects)
+        XVID_AUX_ADDR,    // reg 0: TODO video data (as set by VID_CTRL)
+        XVID_CONST,       // reg 1: TODO CPU data (instead of read from VRAM)
+        XVID_RD_ADDR,     // reg 2: address to read from VRAM
+        XVID_WR_ADDR,     // reg 3: address to write from VRAM
+
+        // special, odd byte write triggers
+        XVID_DATA,        // reg 4: read/write word from/to VRAM RD/WR
+        XVID_DATA_2,      // reg 5: read/write word from/to VRAM RD/WR (for 32-bit)
+        XVID_AUX_DATA,    // reg 6: aux data (font/audio)
+        XVID_COUNT,       // reg 7: TODO blitter "repeat" count/trigger
+
+        // write only, 16-bit
+        XVID_RD_INC,       // reg 9: read addr increment value
+        XVID_WR_INC,       // reg A: write addr increment value
+        XVID_WR_MOD,       // reg C: TODO write modulo width for 2D blit
+        XVID_RD_MOD,       // reg B: TODO read modulo width for 2D blit
+        XVID_WIDTH,        // reg 8: TODO width for 2D blit
+        XVID_BLIT_CTRL,    // reg D: TODO
+        XVID_UNUSED_1,     // reg E: TODO
+        XVID_UNUSED_2      // reg F: TODO
     };
 
     static const char * reg_name[];
@@ -119,8 +124,8 @@ public:
             int64_t bus_time = (main_time - BUS_START_TIME) / BUS_CLOCK_DIV;
             if (test_data[index] == 0xffff)
             {
-                enable = false;
-                last_time = bus_time -1;
+                enable    = false;
+                last_time = bus_time - 1;
             }
 
             if (bus_time >= last_time)
@@ -178,22 +183,29 @@ public:
     }
 };
 
-const char * BusInterface::reg_name[] = {"XVID_RD_INC",
-                                         "XVID_WR_INC",
-                                         "XVID_RD_MOD",
-                                         "XVID_WR_MOD",
-                                         "XVID_WIDTH",
-                                         "XVID_RD_ADDR",
-                                         "XVID_WR_ADDR",
-                                         "XVID_DATA",
-                                         "XVID_DATA_2",
-                                         "XVID_COUNT",
-                                         "XVID_VID_CTRL",
-                                         "XVID_VID_DATA",
-                                         "XVID_AUX_RD_ADDR",
-                                         "XVID_AUX_WR_ADDR",
-                                         "XVID_AUX_CTRL",
-                                         "XVID_AUX_DATA"};
+const char * BusInterface::reg_name[] = {
+    // register 16-bit read/write (no side effects)
+    "XVID_AUX_ADDR",    // reg 0: TODO video data (as set by VID_CTRL)
+    "XVID_CONST",       // reg 1: TODO CPU data (instead of read from VRAM)
+    "XVID_RD_ADDR",     // reg 2: address to read from VRAM
+    "XVID_WR_ADDR",     // reg 3: address to write from VRAM
+
+    // special, odd byte write triggers
+    "XVID_DATA",        // reg 4: read/write word from/to VRAM RD/WR
+    "XVID_DATA_2",      // reg 5: read/write word from/to VRAM RD/WR (for 32-bit)
+    "XVID_AUX_DATA",    // reg 6: aux data (font/audio)
+    "XVID_COUNT",       // reg 7: TODO blitter "repeat" count/trigger
+
+    // write only, 16-bit
+    "XVID_RD_INC",       // reg 9: read addr increment value
+    "XVID_WR_INC",       // reg A: write addr increment value
+    "XVID_WR_MOD",       // reg C: TODO write modulo width for 2D blit
+    "XVID_RD_MOD",       // reg B: TODO read modulo width for 2D blit
+    "XVID_WIDTH",        // reg 8: TODO width for 2D blit
+    "XVID_BLIT_CTRL",    // reg D: TODO
+    "XVID_UNUSED_1",     // reg E: TODO
+    "XVID_UNUSED_2"      // reg F: TODO
+};
 
 #define REG_B(r, v) (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_W(r, v)                                                                                                    \
@@ -203,17 +215,17 @@ BusInterface bus;
 int          BusInterface::test_data_len   = 999;
 uint16_t     BusInterface::test_data[1024] = {REG_W(WR_ADDR, 0x3),
                                           REG_W(WR_INC, 0x1),
-                                          REG_W(DATA, 0x1f00 | 'H'),
+                                          REG_W(DATA, 0x0200 | 'H'),
                                           REG_B(DATA, 'e'),
                                           REG_B(DATA, 'l'),
                                           REG_B(DATA, 'l'),
                                           REG_B(DATA, 'o'),
                                           REG_B(DATA, '!'),
                                           REG_W(WR_ADDR, 0x0),
-                                          REG_W(DATA, 0x1e00 | '\x0e'),
-                                          REG_W(DATA, 0x1e00 | '\x0f'),
+                                          REG_W(DATA, 0x0e00 | '\x0e'),
+                                          REG_W(DATA, 0x0e00 | '\x0f'),
                                           REG_W(WR_ADDR, 106 * 5),
-                                          REG_W(DATA, 0x1f00 | 'A'),
+                                          REG_W(DATA, 0x0200 | 'A'),
                                           REG_B(DATA, 't'),
                                           REG_B(DATA, 'a'),
                                           REG_B(DATA, 'r'),
@@ -243,8 +255,7 @@ uint16_t     BusInterface::test_data[1024] = {REG_W(WR_ADDR, 0x3),
                                           REG_B(WR_INC, 1),
                                           REG_B(DATA, '\x1e'),
                                           REG_B(DATA, '\x1f'),
-                                          0xffff
-                                          };
+                                          0xffff};
 
 void ctrl_c(int s)
 {
@@ -390,7 +401,7 @@ int main(int argc, char ** argv)
 
         if (frame_num > 1 && top->xosera_main->vram_sel && top->xosera_main->vram_wr)
         {
-            printf(" => write VRAM[0x%04x]=0x%04x\n", top->xosera_main->vram_addr, top->xosera_main->blit_to_vram);
+            printf(" => write VRAM[0x%04x]=0x%04x\n", top->xosera_main->vram_addr, top->xosera_main->blit_data_out);
         }
 
         bool hsync = H_SYNC_POLARITY ? top->hsync_o : !top->hsync_o;
@@ -467,7 +478,7 @@ int main(int argc, char ** argv)
             {
                 vluint64_t frame_time = (main_time - frame_start_time) / 2;
                 printf("[@t=%lu] Frame %3d, %lu pixel-clocks (% 0.03f msec real-time), %dx%d hsync %d, vsync %d\n",
-                        main_time,
+                       main_time,
                        frame_num,
                        frame_time,
                        ((1.0 / PIXEL_CLOCK_MHZ) * frame_time) / 1000.0,

@@ -12,6 +12,19 @@
 #	Verilator 4.028 2020-02-06 rev v4.026-92-g890cecc1
 #	Built on GNU/Linux using Ubuntu 20.04 distribution
 
+# Version bookkeeping
+GITSHORTHASH := $(shell git rev-parse --short HEAD)
+DIRTYFILES := $(shell git status --porcelain --untracked-files=no . ../rtl | grep -v _stats.txt | cut -d " " -f 3-)
+ifeq ($(strip $(DIRTYFILES)),)
+# prepend 0 for "clean"
+XOSERA_HASH := 0$(GITSHORTHASH)
+$(info === Xosera Upduino [$(XOSERA_HASH)] is CLEAN from git)
+else
+# prepend d for "dirty"
+XOSERA_HASH := d$(GITSHORTHASH)
+$(info === Xosera Upduino [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
+endif
+
 # Xosera video mode selection:
 # Supported modes:
 #	MODE_640x400	640x400@70Hz 	clock 25.175 MHz
@@ -44,11 +57,8 @@ INC := $(wildcard $(SRCDIR)/*.svh)
 # Simulate BUS commands diring simulation (results in log)
 BUS_INTERFACE	:= 1
 
-# memory initialization file for default 8x16 font
-FONTMEM := ../fonts/font_ST_8x16.mem
-
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -DICE40UP5K
+DEFINES := -DGITHASH=$(XOSERA_HASH) -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -DICE40UP5K
 
 ifeq ($(strip $(BUS_INTERFACE)),1)
 DEFINES += -DBUS_INTERFACE
@@ -64,10 +74,8 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 IVERILOG	:= iverilog
 IVERILOG_ARGS	:= -g2005-sv -Wall -I../rtl/ -l $(TECH_LIB)
 
-# Verilator SDL2 simulation frame rendering (1 enables SDL2 video rendering)
-SDL_RENDER	:= 1
-
 # Verilator C++ definitions and options
+SDL_RENDER	:= 1
 ifeq ($(strip $(SDL_RENDER)),1)
 LDFLAGS		:= -LDFLAGS "$(shell sdl2-config --libs)"
 SDL_CFLAGS	:= $(shell sdl2-config --cflags)

@@ -32,7 +32,6 @@
 // Consider supporting open source FPGA tool development: https://www.patreon.com/fpga_dave
 
 `default_nettype none             // mandatory for Verilog sanity
-`timescale 1ns/1ps
 
 module xosera_main(
            input  logic         clk,                    // pixel clock
@@ -51,12 +50,23 @@ module xosera_main(
 
 `include "xosera_defs.svh"        // Xosera global Verilog definitions
 
-logic bus_cs_strobe;             // debug ACK signal
+// blit_addr bits when AUX is selected with blit_aux_sel
+parameter   vid_aux_bit     = 15;
+parameter   font_aux_bit    = 14;
+parameter   pal_aux_bit     = 13;
+parameter   aud_aux_bit     = 12;
+
 logic blit_vram_cycle;          // cycle is for blitter (vs video)
 logic blit_vram_sel;            // blitter vram select
-logic blit_vram_wr;             // blitter vram write
-logic [15:0] blit_vram_addr;    // blitter vram addr
-logic [15:0] blit_to_vram   /* verilator public */; // blitter bus VRAM data write
+logic blit_aux_sel;
+logic blit_wr;
+
+logic dbug_cs_strobe;             // debug ACK signal
+logic dbug_drive_bus;
+assign dbug_drive_bus = (bus_cs_n_i == cs_ENABLED && bus_rd_nwr_i == RnW_READ);
+
+logic [15:0] blit_addr;    // blitter vram addr
+logic [15:0] blit_data_out   /* verilator public */; // blitter bus VRAM data write
 logic [15:0] blit_to_bus    /* verilator public */; // blitter bus register read
 
 blitter blitter(
@@ -68,91 +78,123 @@ blitter blitter(
             .bus_data_i(bus_data_i),              // 8-bit data bus input
             .bus_data_o(bus_data_o),              // 8-bit data bus output
             .blit_cycle_i(blit_vram_cycle),
-            .video_ena_o(video_ena),
+            .vgen_ena_o(vgen_ena),
             .blit_vram_sel_o(blit_vram_sel),
-            .blit_vram_wr_o(blit_vram_wr),
-            .blit_vram_addr_o(blit_vram_addr),
-            .blit_vram_data_i(vram_data_out),
-            .blit_vram_data_o(blit_to_vram),    // TODO rename
-            .config_reg_wr_o(config_reg_wr),
-            .bus_ack_o(bus_cs_strobe),
+            .blit_aux_sel_o(blit_aux_sel),
+            .blit_wr_o(blit_wr),
+            .blit_addr_o(blit_addr),
+            .blit_data_i(blit_data_in),
+            .blit_data_o(blit_data_out),
+            .bus_ack_o(dbug_cs_strobe),
             .reset_i(reset_i)
         );
 
-logic video_ena;            // enable text/bitmap generation
+logic vgen_ena;            // enable text/bitmap generation
 logic vgen_sel;             // video vram select
 logic [15:0] vgen_addr;     // video vram addr
 
-logic       config_reg_wr;
-logic [1:0] config_reg_num;
+logic vgen_reg_wr;
+assign vgen_reg_wr = blit_aux_sel & blit_wr & blit_addr[vid_aux_bit];
 
 //  video generation
 video_gen video_gen(
-                .clk(clk),
-                .reset_i(reset_i),
-                .enable_i(video_ena),
-                .blit_cycle_o(blit_vram_cycle),
-                .fontram_sel_o(fontram_sel),
-                .fontram_addr_o(fontram_addr),
-                .fontram_data_i(fontram_data_out),
-                .vram_sel_o(vgen_sel),
-                .vram_addr_o(vgen_addr),
-                .vram_data_i(vram_data_out),
-                .config_reg_wr_i(config_reg_wr),             // strobe to write internal config register number
-                .config_reg_num_i(blit_vram_addr[1:0]),            // internal config register number
-                .config_data_i(blit_to_vram),              // data for internal config register
-
-                .red_o(red_o),
-                .green_o(green_o),
-                .blue_o(blue_o),
-                .hsync_o(hsync_o),
-                .vsync_o(vsync_o),
-                .dv_de_o(dv_de_o)
-          );
+    .clk(clk),
+    .reset_i(reset_i),
+    .enable_i(vgen_ena),
+    .blit_cycle_o(blit_vram_cycle),
+    .fontram_sel_o(fontram_rd_en),
+    .fontram_addr_o(fontram_addr),
+    .fontram_data_i(fontram_data_out),
+    .vram_sel_o(vgen_sel),
+    .vram_addr_o(vgen_addr),
+    .vram_data_i(blit_data_in),
+    .reg_wr_i(vgen_reg_wr),
+    .reg_num_i(blit_addr[1:0]),
+    .reg_data_i(blit_data_out),
+    .pal_index_o(pal_index),
+    .hsync_o(hsync_1),
+    .vsync_o(vsync_1),
+    .dv_de_o(dv_de_1)
+);
 
 // audio generation (TODO)
-assign audio_l_o = bus_cs_strobe;                    // TODO: audio
-assign audio_r_o = x_bus_output;                     // TODO: audio
-
-logic x_bus_output;
-assign x_bus_output = (bus_cs_n_i == cs_ENABLED && bus_rd_nwr_i == RnW_READ);
+assign audio_l_o = dbug_cs_strobe;                    // TODO: audio
+assign audio_r_o = dbug_drive_bus;                    // TODO: audio
 
 //  16x64K (128KB) video memory
-logic        vram_sel        /* verilator public */;
-logic        vram_wr         /* verilator public */;
-logic [15:0] vram_addr       /* verilator public */; // 16-bit word address
-logic [15:0] vram_data_out   /* verilator public */;
-logic [15:0] vram_data_in    /* verilator public */;
+logic        vram_sel       /* verilator public */;
+logic        vram_wr        /* verilator public */;
+logic [15:0] vram_addr      /* verilator public */; // 16-bit word address
+logic [15:0] blit_data_in   /* verilator public */;
+logic [15:0] vram_data_in   /* verilator public */;
 
-always_comb vram_sel        = blit_vram_cycle ? blit_vram_sel     : vgen_sel;
-always_comb vram_wr         = blit_vram_cycle ? blit_vram_wr      : 1'b0;
-always_comb vram_addr       = blit_vram_cycle ? blit_vram_addr    : vgen_addr;
-always_comb vram_data_in    = blit_to_vram;
+always_comb vram_sel        = blit_vram_cycle ? blit_vram_sel : vgen_sel;
+always_comb vram_wr         = blit_vram_cycle ? blit_wr       : 1'b0;
+always_comb vram_addr       = blit_vram_cycle ? blit_addr     : vgen_addr;
+always_comb vram_data_in    = blit_data_out;
 
-    vram vram(
-        .clk(clk),
-        .sel(vram_sel),
-        .wr_en(vram_wr),
-        .address_in(vram_addr),
-        .data_in(vram_data_in),
-        .data_out(vram_data_out)
-    );
+vram vram(
+    .clk(clk),
+    .sel(vram_sel),
+    .wr_en(vram_wr),
+    .address_in(vram_addr),
+    .data_in(vram_data_in),
+    .data_out(blit_data_in)
+);
 
 //  8x8KB font memory
-// TODO: Make font memory 16-bits wide
-logic        fontram_sel        /* verilator public */;
-logic        fontram_wr         /* verilator public */;
-logic [12:0] fontram_addr       /* verilator public */; // 13-bit byte address
-logic [7:0]  fontram_data_out   /* verilator public */;
+// TODO: Make font memory 16-bits wide?
+logic           fontram_rd_en       /* verilator public */;
+logic [12:0]    fontram_addr        /* verilator public */; // 13-bit byte address
+logic  [7:0]    fontram_data_out    /* verilator public */;
+logic           fontram_wr_en       /* verilator public */;
+assign          fontram_wr_en = blit_aux_sel & blit_wr & blit_addr[font_aux_bit];;
 
 fontram fontram(
-            .clk(clk),
-            .rd_en_i(fontram_sel),
-            .rd_address_i(fontram_addr),
-            .rd_data_o(fontram_data_out),
-            .wr_clk(clk),
-            .wr_en_i(1'b0),
-            .wr_address_i(13'h0),
-            .wr_data_i(8'h00)
-        );
+    .clk(clk),
+    .rd_en_i(fontram_rd_en),
+    .rd_address_i(fontram_addr),
+    .rd_data_o(fontram_data_out),
+    .wr_clk(clk),
+    .wr_en_i(fontram_wr_en),
+    .wr_address_i(blit_addr[12:0]),
+    .wr_data_i(blit_data_out[7:0])
+);
+
+// video palette RAM
+logic  [3:0]    pal_index       /* verilator public */;
+logic [15:0]    pal_lookup      /* verilator public */;
+logic           palette_wr_en   /* verilator public */;
+assign          palette_wr_en = blit_aux_sel & blit_wr & blit_addr[pal_aux_bit];;
+
+paletteram paletteram(
+    .clk(clk),
+    .rd_en_i(dv_de_1),
+    .rd_address_i({ 4'h0, pal_index}),
+    .rd_data_o(pal_lookup),
+    .wr_clk(clk),
+    .wr_en_i(palette_wr_en),
+    .wr_address_i(blit_addr[7:0]),
+    .wr_data_i(blit_data_out)
+);
+
+// palette RAM lookup (delays video 1 cycle for BRAM)
+logic           vsync_1;
+logic           hsync_1;
+logic           dv_de_1;
+
+always_ff @(posedge clk) begin
+    vsync_o     <= vsync_1;
+    hsync_o     <= hsync_1;
+    dv_de_o     <= dv_de_1;
+    red_o       <= 4'h0;
+    green_o     <= 4'h0;
+    blue_o      <= 4'h0;
+    if (dv_de_1) begin
+        red_o       <= pal_lookup[11:8];
+        green_o     <= pal_lookup[7:4];
+        blue_o      <= pal_lookup[3:0];
+    end
+end
+
 endmodule

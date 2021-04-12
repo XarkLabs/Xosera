@@ -29,11 +29,11 @@ module video_gen(
             input  logic [15: 0] vram_data_i,               // vram word data in
             input  logic [7: 0] fontram_data_i,             // font memory byte data in
             input  logic enable_i,                          // enable video (0=black output, 1=normal output)
-            input  logic       config_reg_wr_i,             // strobe to write internal config register number
-            input  logic [1:0] config_reg_num_i,            // internal config register number
-            input  logic [15:0] config_data_i,              // data for internal config register
+            input  logic       reg_wr_i,                    // strobe to write internal config register number
+            input  logic [1:0] reg_num_i,                   // internal config register number
+            input  logic [15:0] reg_data_i,                 // data for internal config register
             // video signal outputs
-            output logic [3: 0] red_o, green_o, blue_o,  // VGA color outputs (12-bit, 4096 colors)
+            output logic [3: 0] pal_index_o,              // palette index outputs
             output logic vsync_o, hsync_o,               // VGA sync outputs
             output logic dv_de_o,                         // VGA video active signal (needed for HDMI)
             // standard signals
@@ -66,9 +66,6 @@ logic  [3: 0] fine_scrolly;                             // Y fine scroll
 logic  [7: 0] font_shift_out;                           // bit pattern shifting out for current font character line
 logic  [7: 0] text_color;                               // background/foreground color attribute for current character
 logic  [7: 0] text_color_temp;                          // background/foreground color for next character
-
-// color palette array
-logic [11: 0] palette_r [0: 15];
 
 // feature enable signals
 logic tg_enable;                                        // text generation
@@ -161,33 +158,8 @@ always_comb begin
 end
 
 // video config registers
-
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        // TODO: Use BRAM for palette?
-        // default IRGB palette colors (x"RGB")
-`ifndef SYNTHESIS
-        palette_r[0]    <= 12'h001;                     // black (with a bit of blue for debugging)
-`else
-        palette_r[0]    <= 12'h000;                     // black
-`endif
-
-        palette_r[1]    <= 12'h00A;                     // blue
-        palette_r[2]    <= 12'h0A0;                     // green
-        palette_r[3]    <= 12'h0AA;                     // cyan
-        palette_r[4]    <= 12'hA00;                     // red
-        palette_r[5]    <= 12'hA0A;                     // magenta
-        palette_r[6]    <= 12'hAA0;                     // brown
-        palette_r[7]    <= 12'hAAA;                     // light gray
-        palette_r[8]    <= 12'h555;                     // dark gray
-        palette_r[9]    <= 12'h55F;                     // light blue
-        palette_r[10]   <= 12'h5F5;                     // light green
-        palette_r[11]   <= 12'h5FF;                     // light cyan
-        palette_r[12]   <= 12'hF55;                     // light red
-        palette_r[13]   <= 12'hF5F;                     // light magenta
-        palette_r[14]   <= 12'hFF5;                     // yellow
-        palette_r[15]   <= 12'hFFF;                     // white
-
         text_start_addr <= 16'h0000;
         text_line_width <= CHARS_WIDE[15:0];
         fine_scrollx    <= 3'b000;
@@ -196,28 +168,27 @@ always_ff @(posedge clk) begin
         font_bank       <= 2'b00;
     end
     else begin
-        if (config_reg_wr_i) begin
-            case (config_reg_num_i)
-                2'b00: begin
-                    text_start_addr <= config_data_i;
+        if (reg_wr_i) begin
+            case (reg_num_i)
+                2'h0: begin
+                    text_start_addr <= reg_data_i;
                 end
-                2'b01: begin
-                    text_line_width <= config_data_i;
+                2'h1: begin
+                    text_line_width <= reg_data_i;
                 end
-                2'b10: begin
-                    fine_scrollx    <= config_data_i[10:8];
-                    fine_scrolly    <= config_data_i[3:0];
+                2'h2: begin
+                    fine_scrollx    <= reg_data_i[10:8];
+                    fine_scrolly    <= reg_data_i[3:0];
                 end
-                2'b11: begin
-                    font_height     <= config_data_i[3:0];
-                    font_bank       <= config_data_i[9:8];
+                2'h3: begin
+                    font_height     <= reg_data_i[3:0];
+                    font_bank       <= reg_data_i[9:8];
                 end
                 default: ;
             endcase
         end
     end
 end
-
 
 // logic aliases
 logic font_pix;
@@ -251,9 +222,7 @@ always_ff @(posedge clk) begin
         fontram_sel_o   <= 1'b0;
         vram_sel_o      <= 1'b0;
         vram_addr_o     <= 16'h0000;
-        red_o           <= 4'b0;
-        green_o         <= 4'b0;
-        blue_o          <= 4'b0;
+        pal_index_o      <= 4'b0;
         hsync_o         <= 1'b0;
         vsync_o         <= 1'b0;
         dv_de_o         <= 1'b0;
@@ -265,10 +234,6 @@ always_ff @(posedge clk) begin
         blit_cycle_o <= 1'b1;                               // default to let bltter have any not needed (outside of data fetch area)
         vram_sel_o <= 1'b0;                                 // default to no VRAM access
         fontram_sel_o <= 1'b0;                              // default to no font access
-
-        red_o <= 4'h0;                                      // default black color (VGA especially needs black outside of display area)
-        green_o <= 4'h0;
-        blue_o <= 4'h0;
 
         // shift font pixel data left (7 is new pixel)
         font_shift_out <= {font_shift_out[6: 0], 1'b0};
@@ -325,20 +290,8 @@ always_ff @(posedge clk) begin
         end
 
         // color lookup
-        if (dv_display_ena) begin                                // if this pixel is visible
-            // text pixel output
-            if (tg_enable && font_pix) begin                // if text generation enabled and font pixel set
-                red_o <= palette_r[forecolor][11: 8];       // use foreground color palette entry
-                green_o <= palette_r[forecolor][7: 4];
-                blue_o <= palette_r[forecolor][3: 0];
-            end
-
-            else begin                                      // otherwise
-                red_o <= palette_r[backcolor][11: 8];       // use background color palette entry
-                green_o <= palette_r[backcolor][7: 4];
-                blue_o <= palette_r[backcolor][3: 0];
-            end
-        end
+        // text pixel output
+        pal_index_o <= font_pix ? forecolor : backcolor;
 
         // end of line
         if (h_last_line_pixel) begin                        // if last pixel of scan-line

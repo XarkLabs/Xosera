@@ -10,12 +10,12 @@
 `default_nettype none             // mandatory for Verilog sanity
 `timescale 1ns/1ps
 
-// Default "mem" files and size in banks for font data (up to 4 2KB banks, 8x16 fonts uses 2 banks)
+// Default "mem" files and bank address for font data (1 2KB banks per 8x8 font, 2 banks for 8x16 font)
 `define FONT_FILE_0 "../fonts/font_ST_8x16.mem"
 `define FONT_ADDR_0 0*2048
 `define FONT_FILE_1 "../fonts/font_ST_8x8.mem"
 `define FONT_ADDR_1 2*2048
-`define FONT_FILE_2 "../fonts/font_v9958_8x8.mem"
+`define FONT_FILE_2 "../fonts/hexfont_8x8.mem"
 `define FONT_ADDR_2 3*2048
 // `define FONT_FILE_3
 // `define FONT_ADDR_3

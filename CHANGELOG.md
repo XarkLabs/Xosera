@@ -1,5 +1,16 @@
 # Informal list of notable Xosera changes
 
+2021-04-12 Xark
+
+* Recfactored registers (again).  Now more flexible with less "LUTs" using multi purpose "AUX" memory space.
+* Added WIDTH HEIGHT and SCANLINE vgen registers
+* Font height, 8x8 or 8x16 font, font memory writing (8KB, 2KB per bank, 1 bank for 8x8, 2 for 8x16)
+* Vertical smooth scroll
+* Palette updates via palette BRAM TODO: One pixel "delayed color" to fix on left edge of display (leaking from right edge)
+* Improved even byte/MSB.  Now reg 0-3 you can read/write arbitrary bytes.  DATA/DATA_2 have dedicated MSB and the rest share one that is zeroed after LSB written.
+* Added 8x8 hexfont
+* Vsim uses PNG (few things touch BMP on Mac)
+
 2021-04-11 Xark
 
 * Wrote `image_to_mem` font convrsion utility.

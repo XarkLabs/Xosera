@@ -20,11 +20,12 @@ module blitter(
     input  logic            blit_cycle_i,       // 0 = video, 1 = blitter
     output logic            vgen_ena_o,         // 0 = video blank, 1 = video on
     output logic            blit_vram_sel_o,    // VRAM select
-    output logic            blit_aux_sel_o,     // AUX address space
-    output logic            blit_wr_o,          // VRAM read/write
-    output logic    [15:0]  blit_addr_o,        // VRAM address
+    output logic            blit_aux_sel_o,     // AUX select
+    output logic            blit_wr_o,          // VRAM/AUX read/write
+    output logic    [15:0]  blit_addr_o,        // VRAM/AUX address
     input  logic    [15:0]  blit_data_i,        // VRAM read data
-    output logic    [15:0]  blit_data_o,        // VRAM write data
+    output logic    [15:0]  blit_data_o,        // VRAM/AUX write data
+    input  logic    [15:0]  aux_data_i,         // AUX read data
     output logic            bus_ack_o,          // TODO ACK strobe for debug
     input  logic            reset_i,
     input  logic            clk
@@ -48,7 +49,7 @@ typedef enum logic [3:0] {
 		XVID_RD_ADDR,           // reg 2: address to read from VRAM
 		XVID_WR_ADDR,           // reg 3: address to write from VRAM
 
-        // special, odd byte write triggers
+        // special registers (with side effects), odd byte write triggers effect
 		XVID_DATA,              // reg 4: read/write word from/to VRAM RD/WR
 		XVID_DATA_2,            // reg 5: read/write word from/to VRAM RD/WR (for 32-bit)
 		XVID_AUX_DATA,          // reg 6: aux data (font/audio)
@@ -95,22 +96,22 @@ logic blit_2d;
 logic blit_const;
 
 logic           blit_busy;
-assign          blit_busy = ~reg_count[16];         // when reg_count underflows, high bit will be set
+assign          blit_busy = ~reg_count[16]; // when reg_count underflows, high bit will be set
 logic           blit_line_end;
 assign          blit_line_end = width_counter[16];  // when reg_count underflows, high bit will be set
-logic [16:0]    width_counter;         // blit count (extra bit for underflow/done)
-logic [15:0]    blit_rd_addr;            // TODO VRAM read address
-logic [15:0]    blit_wr_addr;            // TODO VRAM write address
+logic [16:0]    width_counter;          // blit count (extra bit for underflow/done)
+logic [15:0]    blit_rd_addr;           // TODO VRAM read address
+logic [15:0]    blit_wr_addr;           // TODO VRAM write address
 
 logic [15:0]    aux_rd_data;
 logic [15:0]    vram_rd_data;           // word read from VRAM (for RD_ADDR)
 logic  [7:0]    even_wr_data;           // word written to even byte of XVID_DATA/XVID_DATA_2
 logic  [7:0]    even_wr_reg;            // other even byte (zeroed each write)
 
-logic           bus_write_strobe;      // strobe when a word of data written
-logic           bus_read_strobe;       // strobe when a word of data read
-logic  [3:0]    bus_reg_num;           // bus register on bus
-logic           bus_bytesel;           // msb/lsb on bus
+logic           bus_write_strobe;       // strobe when a word of data written
+logic           bus_read_strobe;        // strobe when a word of data read
+logic  [3:0]    bus_reg_num;            // bus register on bus
+logic           bus_bytesel;            // msb/lsb on bus
 logic  [7:0]    bus_data_byte;          // data byte from bus
 
 // bus_interface handles signal synchronization, CS and register writes to Xosera
@@ -124,7 +125,7 @@ bus_interface bus(
                   .read_strobe_o(bus_read_strobe),      // strobe for bus byte read
                   .reg_num_o(bus_reg_num),              // register number from bus
                   .bytesel_o(bus_bytesel),              // register number from bus
-                  .bytedata_o(bus_data_byte),            // byte data from bus
+                  .bytedata_o(bus_data_byte),           // byte data from bus
                   .clk(clk),                            // input clk (should be > 2x faster than bus signals)
                   .reset_i(reset_i)                     // reset
               );
@@ -163,7 +164,6 @@ function [7:0] reg_read(
             XVID_CONST[1:0]:    reg_read = (~b_sel) ? reg_const[15:8]    : reg_const[7:0];
             XVID_RD_ADDR[1:0]:  reg_read = (~b_sel) ? reg_rd_addr[15:8]  : reg_rd_addr[7:0];
             XVID_WR_ADDR[1:0]:  reg_read = (~b_sel) ? reg_wr_addr[15:8]  : reg_wr_addr[7:0];
-            default:            reg_read = 8'hXX;
         endcase
     end
     else begin
@@ -171,27 +171,10 @@ function [7:0] reg_read(
         case (r_sel[1:0])
             XVID_DATA[1:0],
             XVID_DATA_2[1:0]:   reg_read = (~b_sel) ? vram_rd_data[15:8] : vram_rd_data[7:0];
-            XVID_AUX_DATA[1:0]: reg_read = (~b_sel) ? aux_rd_data[15:8]  : aux_rd_data[7:0];
+            XVID_AUX_DATA[1:0]: reg_read = (~b_sel) ? aux_data_i[15:8] : aux_data_i[7:0];
             XVID_COUNT[1:0]:    reg_read = { blit_busy, 7'b0 };
-            default:            reg_read = 8'hXX;
         endcase
     end
-endfunction
-
-// TODO: only can read video AUX data
-assign aux_rd_data = aux_data_read(reg_aux_addr[1:0]);
-
-// function to continuously select XVID_AUX_DATA read value to put on bus
-function [15:0] aux_data_read(
-    input logic [1:0]   v_sel
-    );
-    case (v_sel)
-        2'h0:  aux_data_read = VISIBLE_WIDTH[15:0];
-        2'h1:  aux_data_read = VISIBLE_HEIGHT[15:0];
-        2'h2:  aux_data_read = 16'hDEAD;
-        2'h3:  aux_data_read = 16'hBEEF;
-        default: ;
-    endcase
 endfunction
 
 function [7:0] hex_digit(
@@ -247,8 +230,8 @@ always_ff @(posedge clk) begin
             vram_rd_data     <= blit_data_i;
         end
 
-        // if this is a blit cycle (vs video gen), or there is no pending blit vram access
-        if (blit_cycle_i || !blit_vram_sel_o) begin
+        // if this is a blit cycle (vs video gen), or there is no pending blit vram/aux access
+        if (blit_cycle_i || (!blit_vram_sel_o && !blit_aux_sel_o)) begin
 
             blit_read_ack   <= blit_cpu_read;   // ack is one cycle after read with blitter access
             blit_cpu_read   <= 1'b0;
@@ -366,7 +349,9 @@ always_ff @(posedge clk) begin
                             blit_const          <= bus_data_byte[1];
                             reconfig            <= even_wr_reg[7:6] == 2'b10 && bus_data_byte[7:6] == 2'b10;
                         end
-                        default: begin
+                        XVID_UNUSED_1: begin
+                        end
+                        XVID_UNUSED_2: begin
                         end
                     endcase
                     even_wr_reg <= 8'h00;
@@ -386,7 +371,7 @@ always_ff @(posedge clk) begin
 `ifdef SYNTHESIS
                     reg_count       <= 17'h0FFFF;
 `else
-                    reg_count       <= 17'h007FF;        // smaller clear for simulation
+                    reg_count       <= 17'h00FFF;        // smaller clear for simulation
 `endif
                     reg_wr_inc      <= 16'h0001;
                     blit_state      <= CLEAR;

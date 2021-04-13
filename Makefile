@@ -3,7 +3,7 @@
 #
 
 # Build all project targets
-all: sim icebreaker upduino host_spi
+all: sim icebreaker upduino utils host_spi
 
 # Build Xosera Verilator native simulation target
 sim:
@@ -17,6 +17,10 @@ icebreaker:
 upduino:
 	cd upduino && make
 
+# Build image/font mem utility
+utils:
+	cd utils && make
+
 # Build host SPI command utility
 host_spi:
 	cd host_spi && make
@@ -26,6 +30,7 @@ clean:
 	cd sim && make clean
 	cd icebreaker && make clean
 	cd upduino && make clean
+	cd utils && make clean
 	cd host_spi && make clean
 
-.PHONY: all sim icebreaker upduino host_spi
+.PHONY: all sim icebreaker upduino utils host_spi

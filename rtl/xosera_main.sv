@@ -50,11 +50,11 @@ module xosera_main(
 
 `include "xosera_defs.svh"        // Xosera global Verilog definitions
 
-// blit_addr bits when AUX is selected with blit_aux_sel
-parameter   vid_aux_bit     = 15;
-parameter   font_aux_bit    = 14;
-parameter   pal_aux_bit     = 13;
-parameter   aud_aux_bit     = 12;
+// blit_addr[15:14] address space when AUX is selected with blit_aux_sel
+parameter   AUX_VID         = 2'b00;
+parameter   AUX_FONT        = 2'b01;
+parameter   AUX_COLORTBL    = 2'b10;
+parameter   AUX_AUD         = 2'b11;
 
 logic blit_vram_cycle;          // cycle is for blitter (vs video)
 logic blit_vram_sel;            // blitter vram select
@@ -66,7 +66,8 @@ logic dbug_drive_bus;
 assign dbug_drive_bus = (bus_cs_n_i == cs_ENABLED && bus_rd_nwr_i == RnW_READ);
 
 logic [15:0] blit_addr;    // blitter vram addr
-logic [15:0] blit_data_out   /* verilator public */; // blitter bus VRAM data write
+logic [15:0] blit_data_in   /* verilator public */; // blitter VRAM/AUX data read
+logic [15:0] blit_data_out   /* verilator public */; // blitter bus VRAM/AUX data write
 logic [15:0] blit_to_bus    /* verilator public */; // blitter bus register read
 
 blitter blitter(
@@ -85,6 +86,7 @@ blitter blitter(
             .blit_addr_o(blit_addr),
             .blit_data_i(blit_data_in),
             .blit_data_o(blit_data_out),
+            .aux_data_i(vgen_data_out),
             .bus_ack_o(dbug_cs_strobe),
             .reset_i(reset_i)
         );
@@ -92,9 +94,10 @@ blitter blitter(
 logic vgen_ena;            // enable text/bitmap generation
 logic vgen_sel;             // video vram select
 logic [15:0] vgen_addr;     // video vram addr
+logic [15:0] vgen_data_out; // video reg reads
 
 logic vgen_reg_wr;
-assign vgen_reg_wr = blit_aux_sel & blit_wr & blit_addr[vid_aux_bit];
+assign vgen_reg_wr = (blit_addr[15:14] == AUX_VID) && blit_aux_sel && blit_wr;
 
 //  video generation
 video_gen video_gen(
@@ -104,6 +107,7 @@ video_gen video_gen(
     .blit_cycle_o(blit_vram_cycle),
     .fontram_sel_o(fontram_rd_en),
     .fontram_addr_o(fontram_addr),
+    .blit_data_o(vgen_data_out),
     .fontram_data_i(fontram_data_out),
     .vram_sel_o(vgen_sel),
     .vram_addr_o(vgen_addr),
@@ -125,13 +129,14 @@ assign audio_r_o = dbug_drive_bus;                    // TODO: audio
 logic        vram_sel       /* verilator public */;
 logic        vram_wr        /* verilator public */;
 logic [15:0] vram_addr      /* verilator public */; // 16-bit word address
-logic [15:0] blit_data_in   /* verilator public */;
 logic [15:0] vram_data_in   /* verilator public */;
+logic [15:0] vram_data_out  /* verilator public */;
 
-always_comb vram_sel        = blit_vram_cycle ? blit_vram_sel : vgen_sel;
-always_comb vram_wr         = blit_vram_cycle ? blit_wr       : 1'b0;
-always_comb vram_addr       = blit_vram_cycle ? blit_addr     : vgen_addr;
+always_comb vram_sel        = blit_vram_cycle ? blit_vram_sel             : vgen_sel    ;
+always_comb vram_wr         = blit_vram_cycle ? (blit_wr & blit_vram_sel) : 1'b0;
+always_comb vram_addr       = blit_vram_cycle ? blit_addr                 : vgen_addr;
 always_comb vram_data_in    = blit_data_out;
+always_comb blit_data_in    = vram_data_out;
 
 vram vram(
     .clk(clk),
@@ -139,7 +144,7 @@ vram vram(
     .wr_en(vram_wr),
     .address_in(vram_addr),
     .data_in(vram_data_in),
-    .data_out(blit_data_in)
+    .data_out(vram_data_out)
 );
 
 //  8x8KB font memory
@@ -148,7 +153,7 @@ logic           fontram_rd_en       /* verilator public */;
 logic [12:0]    fontram_addr        /* verilator public */; // 13-bit byte address
 logic  [7:0]    fontram_data_out    /* verilator public */;
 logic           fontram_wr_en       /* verilator public */;
-assign          fontram_wr_en = blit_aux_sel & blit_wr & blit_addr[font_aux_bit];;
+assign          fontram_wr_en = (blit_addr[15:14] == AUX_FONT) && blit_aux_sel && blit_wr;
 
 fontram fontram(
     .clk(clk),
@@ -165,7 +170,7 @@ fontram fontram(
 logic  [3:0]    pal_index       /* verilator public */;
 logic [15:0]    pal_lookup      /* verilator public */;
 logic           palette_wr_en   /* verilator public */;
-assign          palette_wr_en = blit_aux_sel & blit_wr & blit_addr[pal_aux_bit];;
+assign          palette_wr_en = (blit_addr[15:14] == AUX_COLORTBL) && blit_aux_sel && blit_wr;
 
 paletteram paletteram(
     .clk(clk),

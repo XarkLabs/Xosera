@@ -70,8 +70,6 @@ initial begin
     $timeformat(-9, 0, " ns", 20);
     $dumpfile("logs/xosera_tb_isim.vcd");
     $dumpvars(0, xosera);
-    for (i = 0; i < 8; i = i + 1)
-    $dumpvars(0,xosera.blitter.blit_reg[i]);
 
     frame = 0;
     test_addr = 'hABCD;
@@ -150,12 +148,6 @@ always begin
     #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.XVID_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.XVID_DATA, readword[7:0]);
     $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
-
-    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.XVID_VID_CTRL, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.XVID_VID_CTRL, 8'h01);
-
-    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.XVID_VID_DATA, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.XVID_VID_DATA, 8'h01);
 
 end
 

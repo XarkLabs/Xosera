@@ -20,25 +20,26 @@
 
 module video_gen(
             // control outputs
-            output logic blit_cycle_o,                      // 0=video memory cycle, 1=Blit memory cycle
-            output logic fontram_sel_o,                     // fontram access select
-            output logic [12: 0] fontram_addr_o,            // font memory byte address out (8x4KB)
-            output logic vram_sel_o,                        // vram access select
-            output logic [15: 0] vram_addr_o,               // vram word address out (16x64KB)
+            output logic            blit_cycle_o,       // 0=video memory cycle, 1=Blit memory cycle
+            output logic            fontram_sel_o,      // fontram access select
+            output logic [12:0]     fontram_addr_o,     // font memory byte address out (8x4KB)
+            output logic            vram_sel_o,         // vram access select
+            output logic [15:0]     vram_addr_o,        // vram word address out (16x64KB)
+            output logic [15:0]     blit_data_o,        // register/status data reads
             // control inputs
-            input  logic [15: 0] vram_data_i,               // vram word data in
-            input  logic [7: 0] fontram_data_i,             // font memory byte data in
-            input  logic enable_i,                          // enable video (0=black output, 1=normal output)
-            input  logic       reg_wr_i,                    // strobe to write internal config register number
-            input  logic [1:0] reg_num_i,                   // internal config register number
-            input  logic [15:0] reg_data_i,                 // data for internal config register
+            input  logic [15:0]     vram_data_i,        // vram word data in
+            input  logic  [7:0]     fontram_data_i,     // font memory byte data in
+            input  logic            enable_i,           // enable video (0=black output, 1=normal output)
+            input  logic            reg_wr_i,           // strobe to write internal config register number
+            input  logic  [1:0]     reg_num_i,          // internal config register number
+            input  logic [15:0]     reg_data_i,         // data for internal config register
             // video signal outputs
-            output logic [3: 0] pal_index_o,              // palette index outputs
-            output logic vsync_o, hsync_o,               // VGA sync outputs
-            output logic dv_de_o,                         // VGA video active signal (needed for HDMI)
+            output logic  [3:0]     pal_index_o,        // palette index outputs
+            output logic            vsync_o, hsync_o,   // VGA sync outputs
+            output logic            dv_de_o,            // VGA video active signal (needed for HDMI)
             // standard signals
-            input  logic reset_i,                        // system reset in
-            input  logic clk                             // clock (video pixel clock)
+            input  logic            reset_i,            // system reset in
+            input  logic            clk                 // clock (video pixel clock)
        );
 
 `include "xosera_defs.svh"        // Xosera global Verilog definitions
@@ -170,25 +171,39 @@ always_ff @(posedge clk) begin
     else begin
         if (reg_wr_i) begin
             case (reg_num_i)
-                2'h0: begin
+                2'b00: begin
                     text_start_addr <= reg_data_i;
                 end
-                2'h1: begin
+                2'b01: begin
                     text_line_width <= reg_data_i;
                 end
-                2'h2: begin
+                2'b10: begin
                     fine_scrollx    <= reg_data_i[10:8];
                     fine_scrolly    <= reg_data_i[3:0];
                 end
-                2'h3: begin
+                2'b11: begin
                     font_height     <= reg_data_i[3:0];
                     font_bank       <= reg_data_i[9:8];
                 end
-                default: ;
             endcase
         end
     end
 end
+
+// TODO: only can read video AUX data
+assign blit_data_o = vgen_data_read(reg_num_i[1:0]);
+
+// function to continuously select XVID_AUX_DATA read value to put on bus
+function [15:0] vgen_data_read(
+    input logic [1:0]   v_sel
+    );
+    case (v_sel)
+        2'b00:  vgen_data_read = VISIBLE_WIDTH[15:0];
+        2'b01:  vgen_data_read = VISIBLE_HEIGHT[15:0];
+        2'b10:  vgen_data_read = 16'hBEEF;    // TODO
+        2'b11: vgen_data_read = {(v_state != STATE_VISIBLE), 4'h0, v_count }; // negative when not visible
+    endcase
+endfunction
 
 // logic aliases
 logic font_pix;

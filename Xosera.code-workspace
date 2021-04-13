@@ -18,6 +18,7 @@
 			"Blitter",
 			"CDONE",
 			"CIPO",
+			"COLORTBL",
 			"CONSTVAL",
 			"COPI",
 			"CRESET",
@@ -46,6 +47,7 @@
 			"REFERENCECLK",
 			"RGBA",
 			"Rodrigues",
+			"SCROLLXY",
 			"SDLK",
 			"SPRAM",
 			"Tindie",
@@ -56,6 +58,7 @@
 			"Verilated",
 			"Vxosera",
 			"WARMBOOT",
+			"XRGB",
 			"Xark",
 			"Xosera",
 			"Yosys",
@@ -63,6 +66,7 @@
 			"blit",
 			"bus_bytesel",
 			"bytesel",
+			"chmod",
 			"combinational",
 			"default",
 			"dout",
@@ -131,6 +135,7 @@
 		"terminal.integrated.fontSize": 10,
 		"systemverilog.launchConfiguration": "verilator --sv --lint-only --language 1800-2012 --Wall -Wno-TIMESCALEMOD --relative-includes -I ../rtl --timescale-override 1ns/1ps",
 		"systemverilog.compileOnSave": true,
-		"workbench.list.multiSelectModifier": "alt"
+		"workbench.list.multiSelectModifier": "alt",
+		"workbench.editor.enablePreview": false
 	}
 }

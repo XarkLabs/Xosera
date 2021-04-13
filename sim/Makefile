@@ -77,7 +77,7 @@ IVERILOG_ARGS	:= -g2005-sv -Wall -I../rtl/ -l $(TECH_LIB)
 # Verilator C++ definitions and options
 SDL_RENDER	:= 1
 ifeq ($(strip $(SDL_RENDER)),1)
-LDFLAGS		:= -LDFLAGS "$(shell sdl2-config --libs)"
+LDFLAGS		:= -LDFLAGS "$(shell sdl2-config --libs) -lsdl2_image"
 SDL_CFLAGS	:= $(shell sdl2-config --cflags)
 endif
 # Note: Using -Os seems to provide the fastest compile+run simulation iteration time

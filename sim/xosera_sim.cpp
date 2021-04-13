@@ -21,6 +21,7 @@
 
 #include "verilated_vcd_c.h"    // for VM_TRACE
 #include <SDL.h>                // for SDL_RENDER
+#include <SDL_image.h>
 
 #define MAX_TRACE_FRAMES 4    // video frames to dump to VCD file (and then screen-shot and exit)
 
@@ -333,6 +334,11 @@ int main(int argc, char ** argv)
             fprintf(stderr, "SDL_Init() failed: %s\n", SDL_GetError());
             return EXIT_FAILURE;
         }
+        if ((IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) == 0)
+        {
+            fprintf(stderr, "IMG_Init() failed: %s\n", SDL_GetError());
+            return EXIT_FAILURE;
+        }
 
         window = SDL_CreateWindow(
             "Xosera-sim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, TOTAL_WIDTH, TOTAL_HEIGHT, SDL_WINDOW_SHOWN);
@@ -499,9 +505,15 @@ int main(int argc, char ** argv)
                             SDL_CreateRGBSurface(0, w, h, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
                         SDL_RenderReadPixels(
                             renderer, NULL, SDL_PIXELFORMAT_ARGB8888, screen_shot->pixels, screen_shot->pitch);
+#if 0
                         sprintf(
                             save_name, "logs/xosera_vsim_%dx%d_f%02d.bmp", VISIBLE_WIDTH, VISIBLE_HEIGHT, frame_num);
                         SDL_SaveBMP(screen_shot, save_name);
+#else
+                        sprintf(
+                            save_name, "logs/xosera_vsim_%dx%d_f%02d.png", VISIBLE_WIDTH, VISIBLE_HEIGHT, frame_num);
+                        IMG_SavePNG(screen_shot, save_name);
+#endif
                         SDL_FreeSurface(screen_shot);
                         printf("Frame %3u saved as \"%s\" (%dx%d)\n", frame_num, save_name, w, h);
                         take_shot = false;
@@ -609,6 +621,7 @@ int main(int argc, char ** argv)
         }
 
         SDL_DestroyWindow(window);
+        IMG_Quit();
         SDL_Quit();
     }
 #endif

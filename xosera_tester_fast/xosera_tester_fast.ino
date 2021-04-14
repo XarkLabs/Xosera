@@ -120,15 +120,15 @@ enum
     AUX_VID_W_FONTCTRL  = 0x0003,        // [9:8] 2KB font bank, [3:0] font height
     AUX_VID_R_WIDTH     = 0x0000,        // display resolution width
     AUX_VID_R_HEIGHT    = 0x0001,        // display resolution height
-    AUX_VID_R_UNUSED_2  = 0x0002,        // TODO
-    AUX_VID_R_SCANLINE  = 0x0003,        // [15] V blank, [14:11] zero [10:0] V line
+    AUX_VID_R_UNUSED_2  = 0x0003,        // TODO    <--- 🤔
+    AUX_VID_R_SCANLINE  = 0x0002,        // [15] V blank, [14:11] zero [10:0] V line
     AUX_W_FONT          = 0x4000,        // 0x4000-0x5FFF 8K byte font memory (even byte [15:8] ignored)
     AUX_W_COLORTBL      = 0x8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
     AUX_W_AUD           = 0xc000         // 0xC000-0x??? TODO (audio registers)
 };
 
 // for slower testing
-#if 0
+#if 1
 #define SLOW()                                                                                                         \
     NOP();                                                                                                             \
     NOP();                                                                                                             \
@@ -482,26 +482,16 @@ void setup()
 
     xvid_setw(XVID_AUX_ADDR, AUX_VID_R_WIDTH);        // select width
     uint16_t width = xvid_getw(XVID_AUX_DATA);
-    Serial.print("Xosera detected at resolution ");
-    Serial.print(width);
 
     xvid_setw(XVID_AUX_ADDR, AUX_VID_R_HEIGHT);        // select height
     uint16_t height = xvid_getw(XVID_AUX_DATA);
-    Serial.print("x");
-    Serial.println(height);
-
-#if 0
-    int8_t z = 0;
-    while (1)
+    if (width != height && width > height)
     {
-        Serial.print(z, DEC);
-        xvid_setw(XVID_WR_INC, 0);
-        xvid_setw(XVID_WR_ADDR, 0);
-        xvid_setw(XVID_DATA, 0x1f00 + z);
-        delay(1000);
-        z++;
+        Serial.print("Xosera detected at resolution ");
+        Serial.print(width);
+        Serial.print("x");
+        Serial.println(height);
     }
-#endif
 
     columns = width / 8;
     rows    = height / 16;
@@ -527,9 +517,9 @@ const PROGMEM char blurb[] =
     "        \xf9   8x8 or 8x16 character tile size (or truncated e.g., 8x10)\n"
     "        \xf9   Register based interface with 16 16-bit registers\n"
     "        \xf9   Read/write VRAM with programmable read/write address increment\n"
-    "        \xf9   Full speed 8-bit (using MOVEP opcode) rosco_m68k bus interface (by Ross Bamford)\n"
+    "        \xf9   Full speed 8-bit bus interface (with MOVEP) for rosco_m68k (by Ross Bamford)\n"
     "        \xf9   8KB of font RAM with multiple fonts (2KB per 8x8 fonts, 4K per 8x16 font)\n"
-    "        \xf9   \"Blitter\" to accelerate VRAM copy and fill operations (TODO, but used at init)\n"
+    "        \xf9   \"Blitter\" for fast VRAM copy & fill operations (TODO, but used at init)\n"
     "        \xf9   2-D operations \"blitter\" with modulo and shifting/masking (TODO)\n"
     "        \xf9   Dual overlayed \"planes\" of video (TODO)\n"
     "        \xf9   Wavetable stereo audio (TODO, spare debug IO for now)\n"
@@ -543,7 +533,7 @@ void show_blurb()
     Serial.println("Blurb text");
     xcls();
     xprint_P(blurb);
-    delay(2000);
+    delay(1000);
 
     // 2nd font (ST 8x8)
     Serial.println("ST 8x8 font");
@@ -555,7 +545,7 @@ void show_blurb()
     Serial.println("hex 8x8 font");
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
     xvid_setw(XVID_AUX_DATA, 0x0307);                    // 3st font in bank 3, 8 high
-    delay(1000);
+    delay(5000);
 
     // restore 1st font (ST 8x16)
     Serial.println("ST 8x16 font");
@@ -590,17 +580,36 @@ void show_blurb()
 
     Serial.println("Scroll via video VRAM display address");
     int16_t r = 0;
-    for (uint16_t i = 0; i < (rows * 2); i++)
+    for (uint16_t i = 0; i < (rows * 4); i++)
     {
         xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // set text start addr
         xvid_setw(XVID_AUX_DATA, r * columns);                // to one line down
-        delay(17);
+        for (int8_t f = 0; f < 16; f++)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // v fine scroll
+            xvid_setw(XVID_AUX_DATA, f);
+
+            // vsync
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            while (static_cast<int16_t>(xvid_getw(XVID_AUX_DATA)) >= 0)
+            {}
+            // vsync
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            while (static_cast<int16_t>(xvid_getw(XVID_AUX_DATA)) >= 0)
+            {}
+            // vsync
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            while (static_cast<int16_t>(xvid_getw(XVID_AUX_DATA)) >= 0)
+            {}
+        }
         if (++r > rows)
         {
             r = -rows;
         }
     }
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // reset text start addr
+    xvid_setw(XVID_AUX_DATA, 0x0000);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // reset text start addr
     xvid_setw(XVID_AUX_DATA, 0x0000);
     delay(1000);
 
@@ -642,9 +651,27 @@ void test_palette()
 {
     Serial.println("palette test");
     xcls();
-    xprint_P_rainbow(1, blurb);
-    delay(3000);
+    xcolor(0xf);
+    xprint_P(blurb);
 
+    Serial.println("Rosco rainbow cycle");
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        for (uint16_t k = 0; k != 0x4000; k++)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            uint16_t l = xvid_getw(XVID_AUX_DATA);               // read scanline
+            l          = l | ((0xf - (l & 0xf)) << 8);           // invert blue for some red
+            xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 0);        // set palette entry #0
+            xvid_setw(XVID_AUX_DATA, l);                         // set palette data
+        }
+    }
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 0);        // set palette entry #0
+    xvid_setw(XVID_AUX_DATA, 0x0104);                    // set palette data
+
+    xhome();
+    xprint_P_rainbow(1, blurb);
+    delay(1000);
     // color cycle palette
     Serial.println("color cycle nuclear glow");
     for (uint16_t k = 0; k < 120; k++)
@@ -652,20 +679,129 @@ void test_palette()
         xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 2);
         uint16_t n = random(0x0fff) & 0x777;
         xvid_setw(XVID_AUX_DATA, n);        // set palette data
-        delay(33);
+        delay(16);
     }
 
-
-#if 0        // TODO: something funny here (blanks 9" monitor)?
-    // grey default palette
+#if 1        // TODO: something funny here (blanks 9" monitor)?
+    // gray default palette
     Serial.println("grey palette test");
     for (uint8_t i = 0; i < 16; i++)
     {
         xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
-        xvid_setw(XVID_AUX_DATA, pgm_read_word(greypal + i));          // set palette data
+        xvid_setw(XVID_AUX_DATA, i);                         // set palette data
+    }
+    delay(1000);
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
+        xvid_setw(XVID_AUX_DATA, i << 4);                    // set palette data
+    }
+    delay(1000);
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
+        xvid_setw(XVID_AUX_DATA, i << 8);                    // set palette data
+    }
+    delay(1000);
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
+        uint16_t v = i ? 0x000 : 0xfff;
+        xvid_setw(XVID_AUX_DATA, v);        // set palette data
     }
     delay(2000);
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
+        uint16_t v = i ? 0xfff : 0x000;
+        xvid_setw(XVID_AUX_DATA, v);        // set palette data
+    }
+    delay(2000);
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
+        uint16_t v = i ? 0xfff : 0xfff;
+        xvid_setw(XVID_AUX_DATA, v);        // set palette data
+    }
+    delay(2000);
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);               // use WR address for palette index
+        xvid_setw(XVID_AUX_DATA, pgm_read_word(defpal + i));        // set palette data
+    }
+#if 0        // evil color?
+
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 12);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0xCCC);                      // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 12);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0xC0C);                      // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 12);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0x0CC);                      // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 12);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0x00C);                      // set palette data
+    delay(1000);
 #endif
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 0);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0x000);                     // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 1);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0x111);                     // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 2);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0x222);                     // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 3);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0x333);                     // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 4);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0x444);                     // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 5);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0x555);                     // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 6);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0x666);                     // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 7);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0x777);                     // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 8);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0x888);                     // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 9);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0x999);                     // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 10);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0xAAA);                      // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 11);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0xBBB);                      // set palette data
+    delay(1000);
+#if 0
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 12);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0xCCC);                      // set palette data
+    delay(1000);
+#endif
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 13);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0xDDD);                      // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 14);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0xEEE);                      // set palette data
+    delay(1000);
+    xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 15);        // use WR address for 595e index
+    xvid_setw(XVID_AUX_DATA, 0xFFF);                      // set palette data
+#endif
+    // restore default palette
+    Serial.println("restore palette test");
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);               // use WR address for palette index
+        xvid_setw(XVID_AUX_DATA, pgm_read_word(defpal + i));        // set palette data
+    }
 
     // color cycle palette
     Serial.println("color cycle palette test");
@@ -710,7 +846,7 @@ void test_reg_access()
     for (uint8_t r = XVID_AUX_ADDR; r <= XVID_WR_ADDR; r++)
     {
         xhome();
-        xpos(4, 4);
+        xpos(4, 4 + r);
         xprint("Register: ");
         switch (r)
         {
@@ -737,9 +873,12 @@ void test_reg_access()
         uint16_t v  = 0;
         do
         {
-            xvid_setw(XVID_WR_ADDR, cp);
-            xcolor(cur_color);
-            xprint_hex(v);
+            if ((v & 0xf) == 0xf)
+            {
+                xvid_setw(XVID_WR_ADDR, cp);
+                xcolor(cur_color);
+                xprint_hex(v);
+            }
             xvid_setw(r, v);
             rdata = xvid_getw(r);
             if (rdata != v)
@@ -748,6 +887,19 @@ void test_reg_access()
                 break;
             }
         } while (--v);
+        if (!error_flag)
+        {
+            xvid_setw(XVID_WR_ADDR, cp);
+            xcolor(0x0a);
+            xprint("PASSED");
+            xcolor(cur_color);
+        }
+        else
+        {
+            xvid_setw(XVID_WR_ADDR, cp);
+            xcolor(cur_color);
+            xprint("FAILED");
+        }
     }
 
     if (error_flag)
@@ -762,12 +914,12 @@ void test_reg_access()
         xprint("Register self-test passed.");
     }
 
-    xpos(0, 10);
+    xpos(0, 12);
     xprint("VRAM read/write check...");
 
     delay(1000);
 
-    xpos(4, 12);
+    xpos(4, 14);
     xprint("VRAM[");
     uint16_t ap = xvid_getw(XVID_WR_ADDR);
     xprint("    ] <=> ");
@@ -782,7 +934,7 @@ void test_reg_access()
 
         for (uint16_t a = (rows / 2) * columns; a != 0; a++)
         {
-            if ((a & 0xff) == 0)
+            if ((a & 0xff) == 0xfff)
             {
                 xvid_setw(XVID_WR_ADDR, ap);
                 xcolor(cur_color);
@@ -803,15 +955,15 @@ void test_reg_access()
             break;
         }
     }
+
     if (error_flag)
     {
-        xpos(0, 14);
+        xpos(0, 16);
         xprint("VRAM check FAILED!");
-        delay(2000);
     }
     else
     {
-        xpos(0, 14);
+        xpos(0, 16);
         xprint("VRAM check passed.");
     }
 
@@ -1040,16 +1192,16 @@ void loop()
         xcolor(c);
         xprint("Hello! ");
     }
-    delay(2000);
-
-    activity();        // blink LED
-    test_reg_access();
+    delay(1000);
 
     activity();        // blink LED
     show_blurb();
 
     activity();        // blink LED
     test_palette();
+
+    activity();        // blink LED
+    test_reg_access();
 
     activity();        // blink LED
     font_write();

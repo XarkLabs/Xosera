@@ -135,7 +135,7 @@ endtask
 
 always begin
 
-    #(15ms) ;
+    #(8ms) ;
     #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.XVID_WR_ADDR, test_addr[15:8]);
     #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.XVID_WR_ADDR, test_addr[7:0]);
 
@@ -147,6 +147,35 @@ always begin
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.XVID_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.XVID_DATA, readword[7:0]);
+    $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.XVID_AUX_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.XVID_AUX_ADDR, 8'h00);
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.XVID_AUX_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.XVID_AUX_DATA, readword[7:0]);
+    $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.XVID_AUX_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.XVID_AUX_ADDR, 8'h01);
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.XVID_AUX_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.XVID_AUX_DATA, readword[7:0]);
+    $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.XVID_AUX_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.XVID_AUX_ADDR, 8'h02);
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.XVID_AUX_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.XVID_AUX_DATA, readword[7:0]);
+    $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+
+    #(1ms) ;
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.XVID_AUX_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.XVID_AUX_ADDR, 8'h03);
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.XVID_AUX_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.XVID_AUX_DATA, readword[7:0]);
     $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
 end
@@ -170,7 +199,7 @@ always @(posedge clk) begin
         frame <= frame + 1;
         $display("Finished rendering frame #%1d", frame);
 
-        if (frame == 3) begin
+        if (frame == 2) begin
 `ifdef MEMDUMP
             f = $fopen("logs/xosera_tb_isim_vram.txt", "w");
             for (i = 0; i < 65536; i += 16) begin
@@ -209,10 +238,10 @@ always @(posedge clk) begin
     end
     if (xosera.blitter.bus_read_strobe) begin
         if (xosera.bus_bytesel_i) begin
-            $display("%0t BUS READ:  R[%1x] => __%02x", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_data_byte);
+            $display("%0t BUS READ:  R[%1x] => __%02x", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_data_o);
         end
         else begin
-            $display("%0t BUS READ:  R[%1x] => %02x__", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_data_byte);
+            $display("%0t BUS READ:  R[%1x] => %02x__", $realtime, xosera.blitter.bus_reg_num, xosera.blitter.bus_data_o);
         end
     end
 end

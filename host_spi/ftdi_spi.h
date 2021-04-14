@@ -42,15 +42,15 @@
 
 #define SPI_OUTPUTS (SPI_SCK | SPI_COPI | SPI_CS)
 
-#define FTDI_VENDOR  0x0403    // USB vendor ID for FTDI
-#define FTDI_FT232H  0x6014    // FT232H Hi-Speed Single Channel USB UART/FIFO
-#define FTDI_FT2232H 0x6010    // FT2232H Hi-Speed Dual USB UART/FIFO
-#define FTDI_FT4232H 0x6011    // FT4232H Hi-Speed Quad USB UART
+#define FTDI_VENDOR  0x0403        // USB vendor ID for FTDI
+#define FTDI_FT232H  0x6014        // FT232H Hi-Speed Single Channel USB UART/FIFO
+#define FTDI_FT2232H 0x6010        // FT2232H Hi-Speed Dual USB UART/FIFO
+#define FTDI_FT4232H 0x6011        // FT4232H Hi-Speed Quad USB UART
 
-extern unsigned int chunksize;    // set on open to the maximum size that can be sent/received per call
-int host_spi_open();              // open FTDI device for FPGA SPI I/O
-int host_spi_close();             // close FTDI device
-void host_spi_cs(bool cs);        // cs = false to select FPGA peripheral
-int host_spi_xfer_bytes(size_t num, uint8_t * buffer);    // send and receive num bytes over SPI
+extern unsigned int chunksize;                   // set on open to the maximum size that can be sent/received per call
+int                 host_spi_open();             // open FTDI device for FPGA SPI I/O
+int                 host_spi_close();            // close FTDI device
+void                host_spi_cs(bool cs);        // cs = false to select FPGA peripheral
+int                 host_spi_xfer_bytes(size_t num, uint8_t * buffer);        // send and receive num bytes over SPI
 
-#endif    // HOST_SPI_H
+#endif        // HOST_SPI_H

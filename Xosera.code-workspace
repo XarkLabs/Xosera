@@ -5,6 +5,7 @@
 		}
 	],
 	"settings": {
+		"editor.formatOnSave": true,
 		"editor.codeActionsOnSave": {
 			"source.fixAll.markdownlint": true
 		},
@@ -15,6 +16,7 @@
 		"cSpell.words": [
 			"ADBUS",
 			"BRAM",
+			"Bamford",
 			"Blitter",
 			"CDONE",
 			"CIPO",

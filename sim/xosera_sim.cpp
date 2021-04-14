@@ -19,11 +19,11 @@
 #include "Vxosera_main_vram.h"
 #include "Vxosera_main_xosera_main.h"
 
-#include "verilated_vcd_c.h"    // for VM_TRACE
-#include <SDL.h>                // for SDL_RENDER
+#include "verilated_vcd_c.h"        // for VM_TRACE
+#include <SDL.h>                    // for SDL_RENDER
 #include <SDL_image.h>
 
-#define MAX_TRACE_FRAMES 4    // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 4        // video frames to dump to VCD file (and then screen-shot and exit)
 
 // Current simulation time (64-bit unsigned)
 vluint64_t main_time        = 0;
@@ -36,32 +36,32 @@ bool          wait_close = false;
 
 class BusInterface
 {
-    const int   BUS_START_TIME = 3324934;    // 1685002;    // 640x480 2nd frame
+    const int   BUS_START_TIME = 3324934;        // 1685002;    // 640x480 2nd frame
     const float BUS_CLOCK_DIV  = 7.7;
 
     enum
     {
         // register 16-bit read/write (no side effects)
-        XVID_AUX_ADDR,    // reg 0: TODO video data (as set by VID_CTRL)
-        XVID_CONST,       // reg 1: TODO CPU data (instead of read from VRAM)
-        XVID_RD_ADDR,     // reg 2: address to read from VRAM
-        XVID_WR_ADDR,     // reg 3: address to write from VRAM
+        XVID_AUX_ADDR,        // reg 0: TODO video data (as set by VID_CTRL)
+        XVID_CONST,           // reg 1: TODO CPU data (instead of read from VRAM)
+        XVID_RD_ADDR,         // reg 2: address to read from VRAM
+        XVID_WR_ADDR,         // reg 3: address to write from VRAM
 
         // special, odd byte write triggers
-        XVID_DATA,        // reg 4: read/write word from/to VRAM RD/WR
-        XVID_DATA_2,      // reg 5: read/write word from/to VRAM RD/WR (for 32-bit)
-        XVID_AUX_DATA,    // reg 6: aux data (font/audio)
-        XVID_COUNT,       // reg 7: TODO blitter "repeat" count/trigger
+        XVID_DATA,            // reg 4: read/write word from/to VRAM RD/WR
+        XVID_DATA_2,          // reg 5: read/write word from/to VRAM RD/WR (for 32-bit)
+        XVID_AUX_DATA,        // reg 6: aux data (font/audio)
+        XVID_COUNT,           // reg 7: TODO blitter "repeat" count/trigger
 
         // write only, 16-bit
-        XVID_RD_INC,       // reg 9: read addr increment value
-        XVID_WR_INC,       // reg A: write addr increment value
-        XVID_WR_MOD,       // reg C: TODO write modulo width for 2D blit
-        XVID_RD_MOD,       // reg B: TODO read modulo width for 2D blit
-        XVID_WIDTH,        // reg 8: TODO width for 2D blit
-        XVID_BLIT_CTRL,    // reg D: TODO
-        XVID_UNUSED_1,     // reg E: TODO
-        XVID_UNUSED_2      // reg F: TODO
+        XVID_RD_INC,           // reg 9: read addr increment value
+        XVID_WR_INC,           // reg A: write addr increment value
+        XVID_WR_MOD,           // reg C: TODO write modulo width for 2D blit
+        XVID_RD_MOD,           // reg B: TODO read modulo width for 2D blit
+        XVID_WIDTH,            // reg 8: TODO width for 2D blit
+        XVID_BLIT_CTRL,        // reg D: TODO
+        XVID_UNUSED_1,         // reg E: TODO
+        XVID_UNUSED_2          // reg F: TODO
     };
 
     static const char * reg_name[];
@@ -186,26 +186,26 @@ public:
 
 const char * BusInterface::reg_name[] = {
     // register 16-bit read/write (no side effects)
-    "XVID_AUX_ADDR",    // reg 0: TODO video data (as set by VID_CTRL)
-    "XVID_CONST",       // reg 1: TODO CPU data (instead of read from VRAM)
-    "XVID_RD_ADDR",     // reg 2: address to read from VRAM
-    "XVID_WR_ADDR",     // reg 3: address to write from VRAM
+    "XVID_AUX_ADDR",        // reg 0: TODO video data (as set by VID_CTRL)
+    "XVID_CONST",           // reg 1: TODO CPU data (instead of read from VRAM)
+    "XVID_RD_ADDR",         // reg 2: address to read from VRAM
+    "XVID_WR_ADDR",         // reg 3: address to write from VRAM
 
     // special, odd byte write triggers
-    "XVID_DATA",        // reg 4: read/write word from/to VRAM RD/WR
-    "XVID_DATA_2",      // reg 5: read/write word from/to VRAM RD/WR (for 32-bit)
-    "XVID_AUX_DATA",    // reg 6: aux data (font/audio)
-    "XVID_COUNT",       // reg 7: TODO blitter "repeat" count/trigger
+    "XVID_DATA",            // reg 4: read/write word from/to VRAM RD/WR
+    "XVID_DATA_2",          // reg 5: read/write word from/to VRAM RD/WR (for 32-bit)
+    "XVID_AUX_DATA",        // reg 6: aux data (font/audio)
+    "XVID_COUNT",           // reg 7: TODO blitter "repeat" count/trigger
 
     // write only, 16-bit
-    "XVID_RD_INC",       // reg 9: read addr increment value
-    "XVID_WR_INC",       // reg A: write addr increment value
-    "XVID_WR_MOD",       // reg C: TODO write modulo width for 2D blit
-    "XVID_RD_MOD",       // reg B: TODO read modulo width for 2D blit
-    "XVID_WIDTH",        // reg 8: TODO width for 2D blit
-    "XVID_BLIT_CTRL",    // reg D: TODO
-    "XVID_UNUSED_1",     // reg E: TODO
-    "XVID_UNUSED_2"      // reg F: TODO
+    "XVID_RD_INC",           // reg 9: read addr increment value
+    "XVID_WR_INC",           // reg A: write addr increment value
+    "XVID_WR_MOD",           // reg C: TODO write modulo width for 2D blit
+    "XVID_RD_MOD",           // reg B: TODO read modulo width for 2D blit
+    "XVID_WIDTH",            // reg 8: TODO width for 2D blit
+    "XVID_BLIT_CTRL",        // reg D: TODO
+    "XVID_UNUSED_1",         // reg E: TODO
+    "XVID_UNUSED_2"          // reg F: TODO
 };
 
 #define REG_B(r, v) (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
@@ -349,10 +349,10 @@ int main(int argc, char ** argv)
         SDL_RenderClear(renderer);
     }
 
-    bool shot_all  = true;    // screenshot all frames
+    bool shot_all  = true;        // screenshot all frames
     bool take_shot = false;
 
-#endif    // SDL_RENDER
+#endif        // SDL_RENDER
 
     int  current_x          = 0;
     int  current_y          = 24;
@@ -370,11 +370,11 @@ int main(int argc, char ** argv)
 
     VerilatedVcdC * tfp = new VerilatedVcdC;
 
-    top->trace(tfp, 99);    // trace to heirarchal depth of 99
+    top->trace(tfp, 99);        // trace to heirarchal depth of 99
     tfp->open(trace_path);
 #endif
 
-    top->reset_i = 1;    // start in reset
+    top->reset_i = 1;        // start in reset
 
     bus.init(top, sim_bus);
 
@@ -382,14 +382,14 @@ int main(int argc, char ** argv)
     {
         if (main_time == 4)
         {
-            top->reset_i = 0;    // tale out of reset after 2 cycles
+            top->reset_i = 0;        // tale out of reset after 2 cycles
         }
 
 #if BUS_INTERFACE
         bus.process(top);
 #endif
 
-        top->clk = 1;    // clock rising
+        top->clk = 1;        // clock rising
         top->eval();
 
 #if VM_TRACE
@@ -397,7 +397,7 @@ int main(int argc, char ** argv)
 #endif
         main_time++;
 
-        top->clk = 0;    // clock falling
+        top->clk = 0;        // clock falling
         top->eval();
 
 #if VM_TRACE
@@ -439,7 +439,7 @@ int main(int argc, char ** argv)
                 }
 
                 // sim_render dithered border area
-                if (((current_x ^ current_y) & 1) == 1)    // non-visible
+                if (((current_x ^ current_y) & 1) == 1)        // non-visible
                 {
                     SDL_SetRenderDrawColor(renderer, (top->red_o << 3), (top->green_o << 3), (top->blue_o << 3), 255);
                 }

@@ -25,14 +25,14 @@ module video_gen(
             output logic [12:0]     fontram_addr_o,     // font memory byte address out (8x4KB)
             output logic            vram_sel_o,         // vram access select
             output logic [15:0]     vram_addr_o,        // vram word address out (16x64KB)
-            output logic [15:0]     blit_data_o,        // register/status data reads
+            output logic [15:0]     vgen_reg_data_o,        // register/status data reads
             // control inputs
             input  logic [15:0]     vram_data_i,        // vram word data in
             input  logic  [7:0]     fontram_data_i,     // font memory byte data in
             input  logic            enable_i,           // enable video (0=black output, 1=normal output)
-            input  logic            reg_wr_i,           // strobe to write internal config register number
-            input  logic  [1:0]     reg_num_i,          // internal config register number
-            input  logic [15:0]     reg_data_i,         // data for internal config register
+            input  logic            vgen_reg_wr_i,           // strobe to write internal config register number
+            input  logic  [1:0]     vgen_reg_num_i,          // internal config register number
+            input  logic [15:0]     vgen_reg_data_i,         // data for internal config register
             // video signal outputs
             output logic  [3:0]     pal_index_o,        // palette index outputs
             output logic            vsync_o, hsync_o,   // VGA sync outputs
@@ -169,21 +169,21 @@ always_ff @(posedge clk) begin
         font_bank       <= 2'b00;
     end
     else begin
-        if (reg_wr_i) begin
-            case (reg_num_i)
+        if (vgen_reg_wr_i) begin
+            case (vgen_reg_num_i)
                 2'b00: begin
-                    text_start_addr <= reg_data_i;
+                    text_start_addr <= vgen_reg_data_i;
                 end
                 2'b01: begin
-                    text_line_width <= reg_data_i;
+                    text_line_width <= vgen_reg_data_i;
                 end
                 2'b10: begin
-                    fine_scrollx    <= reg_data_i[10:8];
-                    fine_scrolly    <= reg_data_i[3:0];
+                    fine_scrollx    <= vgen_reg_data_i[10:8];
+                    fine_scrolly    <= vgen_reg_data_i[3:0];
                 end
                 2'b11: begin
-                    font_height     <= reg_data_i[3:0];
-                    font_bank       <= reg_data_i[9:8];
+                    font_height     <= vgen_reg_data_i[3:0];
+                    font_bank       <= vgen_reg_data_i[9:8];
                 end
             endcase
         end
@@ -191,19 +191,28 @@ always_ff @(posedge clk) begin
 end
 
 // TODO: only can read video AUX data
-assign blit_data_o = vgen_data_read(reg_num_i[1:0]);
-
-// function to continuously select XVID_AUX_DATA read value to put on bus
-function [15:0] vgen_data_read(
-    input logic [1:0]   v_sel
-    );
-    case (v_sel)
-        2'b00:  vgen_data_read = VISIBLE_WIDTH[15:0];
-        2'b01:  vgen_data_read = VISIBLE_HEIGHT[15:0];
-        2'b10:  vgen_data_read = 16'hBEEF;    // TODO
-        2'b11: vgen_data_read = {(v_state != STATE_VISIBLE), 4'h0, v_count }; // negative when not visible
+always_comb begin
+    case (vgen_reg_num_i[1:0])
+        2'b00:      vgen_reg_data_o = VISIBLE_WIDTH[15:0];
+        2'b01:      vgen_reg_data_o = VISIBLE_HEIGHT[15:0];
+        2'b10:      vgen_reg_data_o = {vsync, 4'h0, v_count }; // negative when not vsync
+        default:    vgen_reg_data_o = 16'b1000_0000_0000_0001;  // TODO feature bits
     endcase
-endfunction
+end
+
+//assign vgen_reg_data_o = vgen_data_read(vgen_reg_num_i);
+
+// // function to continuously select XVID_AUX_DATA read value to put on bus
+// function [15:0] vgen_data_read(
+//     input logic [1:0]   v_sel
+//     );
+//     case (v_sel)
+//         2'b00:  vgen_data_read = VISIBLE_WIDTH[15:0];
+//         2'b01:  vgen_data_read = VISIBLE_HEIGHT[15:0];
+//         2'b10:  vgen_data_read = 16'hBEEF;  // TODO feature bits
+//         2'b11:  vgen_data_read = {vsync, 4'h0, v_count }; // negative when not visible
+//     endcase
+// endfunction
 
 // logic aliases
 logic font_pix;
@@ -237,7 +246,7 @@ always_ff @(posedge clk) begin
         fontram_sel_o   <= 1'b0;
         vram_sel_o      <= 1'b0;
         vram_addr_o     <= 16'h0000;
-        pal_index_o      <= 4'b0;
+        pal_index_o     <= 4'b0;
         hsync_o         <= 1'b0;
         vsync_o         <= 1'b0;
         dv_de_o         <= 1'b0;
@@ -266,6 +275,7 @@ always_ff @(posedge clk) begin
 
             // bitmap generation
             if (bm_enable == 1'b1) begin
+
             end
 
             // text character generation
@@ -288,7 +298,7 @@ always_ff @(posedge clk) begin
 
                 3'b101: begin                               // read vram for color + text
                     vram_sel_o <= 1'b1;                     // select vram
-                    fontram_sel_o <= 1'b1;                  // select fontram (vram output & char y will drive fontram addr)
+                    fontram_sel_o <= ~bm_enable;                  // select fontram (vram output & char y will drive fontram addr)
                 end
 
                 3'b110: begin

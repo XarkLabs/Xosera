@@ -61,10 +61,6 @@ logic blit_vram_sel;            // blitter vram select
 logic blit_aux_sel;
 logic blit_wr;
 
-logic dbug_cs_strobe;             // debug ACK signal
-logic dbug_drive_bus;
-assign dbug_drive_bus = (bus_cs_n_i == cs_ENABLED && bus_rd_nwr_i == RnW_READ);
-
 logic [15:0] blit_addr;    // blitter vram addr
 logic [15:0] blit_data_in   /* verilator public */; // blitter VRAM/AUX data read
 logic [15:0] blit_data_out   /* verilator public */; // blitter bus VRAM/AUX data write
@@ -87,7 +83,7 @@ blitter blitter(
             .blit_data_i(blit_data_in),
             .blit_data_o(blit_data_out),
             .aux_data_i(vgen_data_out),
-            .bus_ack_o(dbug_cs_strobe),
+            .bus_ack_o(dbug_cs_strobe),            // TODO debug
             .reset_i(reset_i)
         );
 
@@ -107,14 +103,14 @@ video_gen video_gen(
     .blit_cycle_o(blit_vram_cycle),
     .fontram_sel_o(fontram_rd_en),
     .fontram_addr_o(fontram_addr),
-    .blit_data_o(vgen_data_out),
     .fontram_data_i(fontram_data_out),
     .vram_sel_o(vgen_sel),
     .vram_addr_o(vgen_addr),
     .vram_data_i(blit_data_in),
-    .reg_wr_i(vgen_reg_wr),
-    .reg_num_i(blit_addr[1:0]),
-    .reg_data_i(blit_data_out),
+    .vgen_reg_wr_i(vgen_reg_wr),
+    .vgen_reg_num_i(blit_addr[1:0]),
+    .vgen_reg_data_o(vgen_data_out),
+    .vgen_reg_data_i(blit_data_out),
     .pal_index_o(pal_index),
     .hsync_o(hsync_1),
     .vsync_o(vsync_1),
@@ -124,6 +120,10 @@ video_gen video_gen(
 // audio generation (TODO)
 assign audio_l_o = dbug_cs_strobe;                    // TODO: audio
 assign audio_r_o = dbug_drive_bus;                    // TODO: audio
+
+logic dbug_cs_strobe;               // TODO debug ACK signal
+logic dbug_drive_bus;               // TODO debug bus output signal
+assign dbug_drive_bus = (bus_cs_n_i == cs_ENABLED && bus_rd_nwr_i == RnW_READ);
 
 //  16x64K (128KB) video memory
 logic        vram_sel       /* verilator public */;
@@ -174,7 +174,7 @@ assign          palette_wr_en = (blit_addr[15:14] == AUX_COLORTBL) && blit_aux_s
 
 paletteram paletteram(
     .clk(clk),
-    .rd_en_i(dv_de_1),
+    .rd_en_i(1'b1),
     .rd_address_i({ 4'h0, pal_index}),
     .rd_data_o(pal_lookup),
     .wr_clk(clk),

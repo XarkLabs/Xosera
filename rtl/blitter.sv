@@ -140,7 +140,7 @@ SB_WARMBOOT boot(
                 .S1(boot_select[1])
             );
 `else
-always_comb begin
+always_ff @(posedge clk) begin
     if (reconfig) begin
         $display("XOSERA REBOOT: To flash config #0x%x", boot_select);
         $finish;

@@ -11,7 +11,6 @@
 `timescale 1ns/1ps
 
 module spi_target(
-           input  logic         clk,                // input clk (should be ~4x faster than SPI clock)
 
            input  logic         spi_sck_i,          // SPI clock
            input  logic         spi_copi_i,         // SPI data from initiator
@@ -22,7 +21,9 @@ module spi_target(
            output logic [7: 0]  receive_byte_o,     // data read from initiator
            output logic         transmit_strobe_o,  // data to send to initiator (on next initiator write)
            input  logic [7: 0]  transmit_byte_i,    // data to send to initiator (on next initiator write)
-           input  logic         reset_i             // reset
+
+           input  logic         reset_i,             // reset
+           input  logic         clk                 // input clk (should be ~4x faster than SPI clock)
        );
 
 // input synchronizers (shifts left each cycle with bit 0 is set from inputs and bit 1 is acted on)

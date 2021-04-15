@@ -14,15 +14,15 @@
 
 # Version bookkeeping
 GITSHORTHASH := $(shell git rev-parse --short HEAD)
-DIRTYFILES := $(-git status --porcelain --untracked-files=no . | grep -v _stats.txt)
+DIRTYFILES := $(shell git status --porcelain --untracked-files=no | grep -v _stats.txt | cut -d " " -f 3-)
 ifeq ($(strip $(DIRTYFILES)),)
 # prepend 0 for "clean"
 XOSERA_HASH := 0$(GITSHORTHASH)
-$(info === Xosera Upduino [$(XOSERA_HASH)], clean from git)
+$(info === Xosera iCEBreaker [$(XOSERA_HASH)] is CLEAN from git)
 else
 # prepend d for "dirty"
 XOSERA_HASH := d$(GITSHORTHASH)
-$(info === Xosera Upduino [$(XOSERA_HASH)], clean from git: $(DIRTYFILES))
+$(info === Xosera iCEBreaker [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
 # Xosera video mode selection:
@@ -43,7 +43,7 @@ VIDEO_MODE := MODE_848x480
 #   PMOD_XESS_VGA		 9-bit VGA, PMOD 1A&1B	http://www.xess.com/shop/product/stickit-vga/
 #   PMOD_XESS_VGA_SINGLE	 6-bit VGA, PMOD 1B	http://www.xess.com/shop/product/stickit-vga/ (half used)
 #
-VIDEO_OUTPUT := PMOD_DIGILENT_VGA
+VIDEO_OUTPUT := PMOD_1B2_DVI12
 
 # Xosera project setup for iCEBreaker FPGA target
 TOP := xosera_iceb
@@ -80,8 +80,7 @@ ICEMULTI := icemulti
 YOSYS_SYNTH_ARGS := -dsp -relut -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DGITHASH=$(XOSERA_HASH) -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DICEBREAKER
-#  -DSPI_INTERFACE
+DEFINES := -DGITHASH=$(XOSERA_HASH) -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DICEBREAKER -DSPI_INTERFACE
 
 # Verilator tool (used for "lint")
 VERILATOR := verilator
@@ -94,12 +93,12 @@ NEXTPNR_ARGS := --pre-pack $(SDC) --placer heap
 
 # defult target is make bitstream
 all: $(TOP).bin Makefile
-	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) ===
+	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) $(SPI_INTERFACE) ===
 	@echo     Type \"make prog\" to program the iCEBreaker via USB
 
 # program iCEBreaker FPGA via USB (may need udev rules or sudo on Linux)
 prog: $(TOP).bin Makefile
-	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) ===
+	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) $(SPI_INTERFACE) ===
 	$(ICEPROG) -d i:0x0403:0x6010 $<
 
 # run icetime to generate a timing report
@@ -139,7 +138,7 @@ clean:
 	@mkdir -p logs
 	@-cp $(TOP)_stats.txt logs/$(TOP)_stats_last.txt
 	$(NEXTPNR) -l logs/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
-	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(TOP)_stats.txt
+	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) $(SPI_INTERFACE) | tee $(TOP)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@$(NEXTPNR) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@sed -n '/Device utilisation/,/Info: Placed/p' logs/$(TOP)_nextpnr.log | sed '$$d' | grep -v ":     0/" | tee -a $(TOP)_stats.txt

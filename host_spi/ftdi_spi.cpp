@@ -146,9 +146,9 @@ int host_spi_open()
         return -1;
     }
 
-    static int          device_ids[]   = {FTDI_FT232H, FTDI_FT2232H, FTDI_FT4232H};
-    static const char * device_name[]  = {"FT232H", "FT2232H", "FT4232H"};
-    static unsigned int device_chunk[] = {1024, 4096, 2048};
+    static int          device_ids[]   = {FTDI_FT2232H, FTDI_FT232H, FTDI_FT4232H};
+    static const char * device_name[]  = {"FT2232H (iCEBreaker)", "FT232H (Upduino)", "FT4232H (?)"};
+    static unsigned int device_chunk[] = {4096, 1024, 2048};
 
     int id_num = 0;
     while (id_num < 3)

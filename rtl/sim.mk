@@ -14,15 +14,15 @@
 
 # Version bookkeeping
 GITSHORTHASH := $(shell git rev-parse --short HEAD)
-DIRTYFILES := $(shell git status --porcelain --untracked-files=no . ../rtl | grep -v _stats.txt | cut -d " " -f 3-)
+DIRTYFILES := $(shell git status --porcelain --untracked-files=no | grep -v _stats.txt | cut -d " " -f 3-)
 ifeq ($(strip $(DIRTYFILES)),)
 # prepend 0 for "clean"
 XOSERA_HASH := 0$(GITSHORTHASH)
-$(info === Xosera Upduino [$(XOSERA_HASH)] is CLEAN from git)
+$(info === Xosera simulation [$(XOSERA_HASH)] is CLEAN from git)
 else
 # prepend d for "dirty"
 XOSERA_HASH := d$(GITSHORTHASH)
-$(info === Xosera Upduino [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
+$(info === Xosera simulation [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
 # Xosera video mode selection:
@@ -43,7 +43,7 @@ TBTOP := xosera_tb
 VTOP := xosera_main
 
 # RTL source and include directory
-SRCDIR := ../rtl
+SRCDIR := .
 
 # Verilog source directories
 VPATH := $(SRCDIR)
@@ -58,7 +58,7 @@ INC := $(wildcard $(SRCDIR)/*.svh)
 BUS_INTERFACE	:= 1
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DGITHASH=$(XOSERA_HASH) -DFONT_MEM=$(FONTMEM) -D$(VIDEO_MODE) -DICE40UP5K
+DEFINES := -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K
 
 ifeq ($(strip $(BUS_INTERFACE)),1)
 DEFINES += -DBUS_INTERFACE
@@ -66,19 +66,21 @@ endif
 
 current_dir = $(shell pwd)
 
+LOGS	:= sim/logs
+
 # icestorm tools
 YOSYS_CONFIG := yosys-config
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # Icarus Verilog
-IVERILOG	:= iverilog
-IVERILOG_ARGS	:= -g2005-sv -Wall -I../rtl/ -l $(TECH_LIB)
+IVERILOG := iverilog
+IVERILOG_ARGS := -g2005-sv -I$(SRCDIR) -Wall -l $(TECH_LIB)
 
 # Verilator C++ definitions and options
-SDL_RENDER	:= 1
+SDL_RENDER := 1
 ifeq ($(strip $(SDL_RENDER)),1)
-LDFLAGS		:= -LDFLAGS "$(shell sdl2-config --libs) -lsdl2_image"
-SDL_CFLAGS	:= $(shell sdl2-config --cflags)
+LDFLAGS := -LDFLAGS "$(shell sdl2-config --libs) -lsdl2_image"
+SDL_CFLAGS := $(shell sdl2-config --cflags)
 endif
 # Note: Using -Os seems to provide the fastest compile+run simulation iteration time
 # Linux gcc needs -Wno-maybe-uninitialized
@@ -86,48 +88,48 @@ CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-s
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
-VERILATOR_ARGS := --relative-includes -I../rtl --timescale-override 1ns/1ps -Wall -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
+VERILATOR_ARGS := -I$(SRCDIR) -Mdir sim/obj_dir --timescale-override 1ns/1ps -Wall -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
 
 # Verillator C++ source driver
-CSRC := xosera_sim.cpp
+CSRC := sim/xosera_sim.cpp
 
 # default build native simulation executable
 all: vsim isim
 
 # build native simulation executable
-vsim: obj_dir/V$(VTOP)
+vsim: sim/obj_dir/V$(VTOP)
 	@echo === Verilator simulation configured for: $(VIDEO_MODE) ===
 	@echo Completed building Verilator simulation, use \"make vrun\" to run.
 
-isim: $(TBTOP) Makefile
+isim: sim/$(TBTOP) Makefile
 	@echo === Icarus Verilog simulation configured for: $(VIDEO_MODE) ===
 	@echo Completed building Icarus Verilog simulation, use \"make irun\" to run.
 
 # run Verilator to build and run native simulation executable
-vrun: obj_dir/V$(VTOP) Makefile
-	@mkdir -p logs
-	obj_dir/V$(VTOP) | tee logs/xosera_vsim.log
+vrun: sim/obj_dir/V$(VTOP) Makefile
+	@mkdir -p $(LOGS)
+	sim/obj_dir/V$(VTOP) | tee $(LOGS)/xosera_vsim.log
 
 # run Verilator to build and run native simulation executable
-irun: $(TBTOP)
-	./$(TBTOP) 2>&1 | tee logs/$(TBTOP)_isim.log
+irun: sim/$(TBTOP)
+	sim/$(TBTOP) 2>&1 | tee $(LOGS)/$(TBTOP)_isim.log
 
 # use Verilator to build native simulation executable
-obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) Makefile
-	rm -rf obj_dir
+sim/obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) Makefile
+	rm -rf sim/obj_dir && mkdir -p sim/obj_dir
 	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(TECH_LIB) $(SRC) $(current_dir)/$(CSRC)
-	cd obj_dir && make -f V$(VTOP).mk
+	cd sim/obj_dir && make -f V$(VTOP).mk
 
 # -j$(shell nproc)
 
 # use Icarus Verilog to build vvp simulation executable
-$(TBTOP): $(INC) $(TBTOP).sv $(SRC) Makefile
-	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TBTOP) $(TBTOP).sv $(SRC)
-	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -D$(VIDEO_MODE) -o $(TBTOP) $(current_dir)/$(TBTOP).sv $(SRC)
+sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) Makefile
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TBTOP) sim/$(TBTOP).sv $(SRC)
+	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -D$(VIDEO_MODE) -o sim/$(TBTOP) $(current_dir)/sim/$(TBTOP).sv $(SRC)
 
 # delete all targets that will be re-generated
 clean:
-	rm -rf obj_dir $(TBTOP)
+	rm -rf sim/obj_dir sim/$(TBTOP)
 
 # prevent make from deleting any intermediate files
 .SECONDARY:

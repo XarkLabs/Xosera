@@ -11,11 +11,11 @@
 `timescale 1ns/1ps
 
 // Default "mem" files and bank address for font data (1 2KB banks per 8x8 font, 2 banks for 8x16 font)
-`define FONT_FILE_0 "../fonts/font_ST_8x16.mem"
+`define FONT_FILE_0 "fonts/font_ST_8x16.mem"
 `define FONT_ADDR_0 0*2048
-`define FONT_FILE_1 "../fonts/font_ST_8x8.mem"
+`define FONT_FILE_1 "fonts/font_ST_8x8.mem"
 `define FONT_ADDR_1 2*2048
-`define FONT_FILE_2 "../fonts/hexfont_8x8.mem"
+`define FONT_FILE_2 "fonts/hexfont_8x8.mem"
 `define FONT_ADDR_2 3*2048
 // `define FONT_FILE_3
 // `define FONT_ADDR_3
@@ -38,7 +38,7 @@ initial begin
 `ifdef FONT_FILE_0
     $readmemb(`FONT_FILE_0, bram, `FONT_ADDR_0);
 `else
-    $readmemb("../fonts/font_ST_8x16.mem", bram, 0);
+    $readmemb("fonts/font_ST_8x16.mem", bram, 0);
 `endif
 `ifdef FONT_FILE_1
     $readmemb(`FONT_FILE_1, bram, `FONT_ADDR_1);

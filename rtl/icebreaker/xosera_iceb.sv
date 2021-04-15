@@ -51,8 +51,8 @@ module xosera_iceb(
         input  logic CLK                            // 12Mhz clock
     );
 
-`include "../rtl/xosera_clk_defs.svh"       // Xosera global clock definitions
-`include "../rtl/xosera_defs.svh"           // Xosera global definitions
+`include "xosera_clk_defs.svh"       // Xosera global clock definitions
+`include "xosera_defs.svh"           // Xosera global definitions
 
 assign FLASH_SSB    = 1'b1;             // prevent SPI flash interfering with other SPI/FTDI pins
 assign LEDG_N       = reset;            // green LED on when not in reset (active LOW LED)

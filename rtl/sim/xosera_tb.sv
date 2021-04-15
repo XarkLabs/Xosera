@@ -60,15 +60,15 @@ xosera_main xosera(
                 .reset_i(reset)                 // reset signal
             );
 
-`include "../rtl/xosera_clk_defs.svh"       // Xosera global Verilog definitions
-`include "../rtl/xosera_defs.svh"          // Xosera global Verilog definitions
+`include "xosera_clk_defs.svh"       // Xosera global Verilog definitions
+`include "xosera_defs.svh"          // Xosera global Verilog definitions
 
 parameter CLK_PERIOD    = (1000000000.0 / PIXEL_FREQ);
 parameter M68K_PERIOD   = 83.333;
 
 initial begin
     $timeformat(-9, 0, " ns", 20);
-    $dumpfile("logs/xosera_tb_isim.vcd");
+    $dumpfile("sim/logs/xosera_tb_isim.vcd");
     $dumpvars(0, xosera);
 
     frame = 0;

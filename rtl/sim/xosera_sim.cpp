@@ -23,6 +23,8 @@
 #include <SDL.h>                    // for SDL_RENDER
 #include <SDL_image.h>
 
+#define LOGDIR "sim/logs/"
+
 #define MAX_TRACE_FRAMES 4        // video frames to dump to VCD file (and then screen-shot and exit)
 
 // Current simulation time (64-bit unsigned)
@@ -365,7 +367,7 @@ int main(int argc, char ** argv)
     int  vsync_count = 0;
 
 #if VM_TRACE
-    const auto trace_path = "logs/xosera_vsim.vcd";
+    const auto trace_path = LOGDIR "xosera_vsim.vcd";
     printf("Started writing VCD waveform file to \"%s\"...\n", trace_path);
 
     VerilatedVcdC * tfp = new VerilatedVcdC;
@@ -507,11 +509,11 @@ int main(int argc, char ** argv)
                             renderer, NULL, SDL_PIXELFORMAT_ARGB8888, screen_shot->pixels, screen_shot->pitch);
 #if 0
                         sprintf(
-                            save_name, "logs/xosera_vsim_%dx%d_f%02d.bmp", VISIBLE_WIDTH, VISIBLE_HEIGHT, frame_num);
+                            save_name, LOGDIR "xosera_vsim_%dx%d_f%02d.bmp", VISIBLE_WIDTH, VISIBLE_HEIGHT, frame_num);
                         SDL_SaveBMP(screen_shot, save_name);
 #else
                         sprintf(
-                            save_name, "logs/xosera_vsim_%dx%d_f%02d.png", VISIBLE_WIDTH, VISIBLE_HEIGHT, frame_num);
+                            save_name, LOGDIR "xosera_vsim_%dx%d_f%02d.png", VISIBLE_WIDTH, VISIBLE_HEIGHT, frame_num);
                         IMG_SavePNG(screen_shot, save_name);
 #endif
                         SDL_FreeSurface(screen_shot);
@@ -563,7 +565,7 @@ int main(int argc, char ** argv)
 #endif
     }
 
-    FILE * mfp = fopen("logs/xosera_vsim_text.txt", "w");
+    FILE * mfp = fopen(LOGDIR "xosera_vsim_text.txt", "w");
     if (mfp != nullptr)
     {
         auto       vmem = top->xosera_main->vram->memory;
@@ -592,7 +594,7 @@ int main(int argc, char ** argv)
         fclose(mfp);
     }
 
-    FILE * bfp = fopen("logs/xosera_vsim_vram.bin", "w");
+    FILE * bfp = fopen(LOGDIR "xosera_vsim_vram.bin", "w");
     if (bfp != nullptr)
     {
         auto       vmem = top->xosera_main->vram->memory;

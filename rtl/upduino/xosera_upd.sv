@@ -53,8 +53,8 @@ module xosera_upd(
             input  logic    gpio_20         // input 12MHz clock (Upduino 3.0 needs OSC jumper shorted)
        );
 
-`include "../rtl/xosera_clk_defs.svh"       // Xosera global clock definitions
-`include "../rtl/xosera_defs.svh"           // Xosera global definitions
+`include "xosera_clk_defs.svh"       // Xosera global clock definitions
+`include "xosera_defs.svh"           // Xosera global definitions
 
 assign spi_cs = 1'b1;                   // prevent SPI flash interfering with other SPI/FTDI pins
 

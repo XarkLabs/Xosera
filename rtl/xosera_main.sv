@@ -32,6 +32,7 @@
 // Consider supporting open source FPGA tool development: https://www.patreon.com/fpga_dave
 
 `default_nettype none             // mandatory for Verilog sanity
+`timescale 1ns/1ps
 
 module xosera_main(
            input  logic         clk,                    // pixel clock

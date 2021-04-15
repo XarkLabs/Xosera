@@ -79,7 +79,7 @@ IVERILOG_ARGS := -g2005-sv -I$(SRCDIR) -Wall -l $(TECH_LIB)
 # Verilator C++ definitions and options
 SDL_RENDER := 1
 ifeq ($(strip $(SDL_RENDER)),1)
-LDFLAGS := -LDFLAGS "$(shell sdl2-config --libs) -lsdl2_image"
+LDFLAGS := -LDFLAGS "$(shell sdl2-config --libs) -lSDL2_image"
 SDL_CFLAGS := $(shell sdl2-config --cflags)
 endif
 # Note: Using -Os seems to provide the fastest compile+run simulation iteration time
@@ -88,7 +88,7 @@ CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-s
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
-VERILATOR_ARGS := -I$(SRCDIR) -Mdir sim/obj_dir --timescale-override 1ns/1ps -Wall -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
+VERILATOR_ARGS := -I$(SRCDIR) -Mdir sim/obj_dir -Wall -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
 
 # Verillator C++ source driver
 CSRC := sim/xosera_sim.cpp

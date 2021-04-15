@@ -10,6 +10,9 @@
 # rpt files
 *.rpt
 
+# rpt files
+*.vcd
+
 # log directories
 **/log*/*
 
@@ -17,13 +20,12 @@
 **/dot/*
 
 # Verilator output
-sim/obj_dir/*
+rtl/sim/obj_dir/*
 
 # host_spi executable
 host_spi/host_spi
 
 # iVerilog output files
-sim/xosera_tb
-sim/xosera_tb.vcd
+rtl/sim/xosera_tb
 .DS_Store
 utils/image_to_mem

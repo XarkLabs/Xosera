@@ -8,8 +8,14 @@ all: rtl utils host_spi
 iceb:
 	cd rtl && $(MAKE) iceb
 
+iceb_prog:
+	cd rtl && $(MAKE) iceb_prog
+
 upd:
 	cd rtl && $(MAKE) upd
+
+upd_prog:
+	cd rtl && $(MAKE) upd_prog
 
 # Build Xosera Verilator native simulation target
 rtl:

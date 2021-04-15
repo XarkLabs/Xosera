@@ -9,11 +9,12 @@
 # up5k_vga by E. Brombaugh (emeb) and further extensively
 # hacked by Xark for Xosera purposes
 
-# Tools used:
-#	Yosys / nextpnr-ice40 -- Synthesis and Next Generation Place and Route (Version nightly-20200609)
-#	Verilator -  fast C++ based simulator
-#	Icarus Verilog
-#	Built on GNU/Linux using Ubuntu 20.04 distribution
+# Primary tools (official binaries available from https://github.com/YosysHQ/fpga-toolchain)
+#	Yosys
+#	nextpnr-ice40
+#	Verilator		(optional)
+#	Icarus Verilog		(optional)
+#	Built using macOS BigSur 11.2 and GNU/Linux Ubuntu 20.04 distribution
 
 # Version bookkeeping
 GITSHORTHASH := $(shell git rev-parse --short HEAD)
@@ -37,7 +38,7 @@ endif
 #	MODE_800x600	800x600@60Hz	clock 40.000 (39.750) MHz
 #	MODE_1024x768	1024x768@60Hz	clock 65.000 (65.250) MHz [fails timing]
 #	MODE_1280x720	1280x720@60Hz	clock 74.176 (73.500) MHz [fails timing]
-VIDEO_MODE := MODE_848x480
+VIDEO_MODE ?= MODE_848x480
 
 # RTL source and include directory
 SRCDIR := .
@@ -117,10 +118,6 @@ $(DOT): %.dot: %.sv
 	mkdir -p dot
 	$(YOSYS) -l $(LOGS)/$(TOP)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
-# delete all targets that will be re-generated
-clean:
-	rm -f upduino/*.json upduino/*.asc upduino/*.rpt upduino/*.bin
-
 # synthesize Verilog and create json description
 %.json: $(SRC) $(INC) $(MEM) upduino.mk
 	@rm -f $@
@@ -146,14 +143,18 @@ clean:
 
 # make binary bitstream from ASCII bitstream
 %.bin: %.asc upduino.mk
-	@rm -f $(basename $@)_$(VIDEO_MODE).bin $@
-	$(ICEPACK) $< $(basename $@)_$(VIDEO_MODE).bin
-	$(ICEMULTI) -p0 $(basename $@)_$(VIDEO_MODE).bin -o $@
+	@rm -f $@
+	$(ICEPACK) $< upduino/$(basename $@)_$(VIDEO_MODE).bin
+	$(ICEMULTI) -p0 upduino/*.bin -o $@
 
 # make timing report from ASCII bitstream
 %.rpt: %.asc upduino.mk
 	@rm -f $@
 	$(ICETIME) -d $(DEVICE) -m -t -r $@ $<
+
+# delete all targets that will be re-generated
+clean:
+	rm -f xosera_upd.json xosera_upd.asc xosera_upd.rpt xosera_upd.bin $(wildcard upduino/*.bin)
 
 # prevent make from deleting any intermediate files
 .SECONDARY:

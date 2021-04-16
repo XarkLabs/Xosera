@@ -178,14 +178,30 @@ always begin
     #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.XVID_AUX_DATA, readword[7:0]);
     $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.XVID_AUX_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.XVID_AUX_ADDR, 8'h03);
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.XVID_AUX_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.XVID_AUX_DATA, readword[7:0]);
+    $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+
+    #(1500us) ;
+    #(M68K_PERIOD * 4)  write_reg(1'b0, xosera.blitter.XVID_AUX_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, xosera.blitter.XVID_AUX_ADDR, 8'h03);
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, xosera.blitter.XVID_AUX_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, xosera.blitter.XVID_AUX_DATA, readword[7:0]);
+    $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 end
 
 always @(posedge clk) begin
-    if (xosera.vram.sel && xosera.vram.wr_en) begin
-        $display("%0t Write VRAM[%04x] <= %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
-    end
-    else if (xosera.vram.sel && xosera.blit_vram_cycle) begin
-        $display("%0t Read VRAM[%04x] => %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
+    if (xosera.blitter.blit_state == xosera.blitter.READY) begin
+        if (xosera.vram.sel && xosera.vram.wr_en) begin
+            $display("%0t Write VRAM[%04x] <= %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
+        end
+        else if (xosera.vram.sel && xosera.blit_vram_cycle) begin
+            $display("%0t Read VRAM[%04x] => %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
+        end
     end
 end
 

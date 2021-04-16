@@ -200,8 +200,8 @@ always_ff @(posedge clk) begin
         vgen_ena_o          <= 1'b0;
         blit_vram_rd        <= 1'b0;
         blit_vram_rd_ack    <= 1'b0;
-        blit_aux_rd        <= 1'b0;
-        blit_aux_rd_ack    <= 1'b0;
+        blit_aux_rd         <= 1'b0;
+        blit_aux_rd_ack     <= 1'b0;
         blit_vram_sel_o     <= 1'b0;
         blit_aux_sel_o      <= 1'b0;
         blit_wr_o           <= 1'b0;
@@ -275,8 +275,6 @@ always_ff @(posedge clk) begin
                     reg_count    <= reg_count - 1;
                 end
             end
-
-            boot_select     <= even_wr_reg[1:0];
 
             blit_vram_sel_o <= 1'b0;            // clear vram select
             blit_aux_sel_o  <= 1'b0;            // clear aux select
@@ -364,6 +362,7 @@ always_ff @(posedge clk) begin
                             blit_2d             <= bus_data_byte[0];
                             blit_const          <= bus_data_byte[1];
                             reconfig            <= even_wr_reg[7:6] == 2'b10 && bus_data_byte[7:6] == 2'b10;
+                            boot_select         <= even_wr_reg[1:0];
                         end
                         XVID_UNUSED_1: begin
                         end

@@ -1,5 +1,11 @@
 # Informal list of notable Xosera changes
 
+2021-04-15 Xark
+
+* Fix AUX reads.  Now it is necessary to write register number to AUX_ADDR before each read (this primes the read for AUX_DATA)
+* Fixed reboot issues.  Now selecting FPGA reconfig 0-3 seems to work as expected.  Updated Make to show config slots populated. E.g. `VIDEO_MODE=MODE_640x480 make upd` and then `make upd_prog` (which defaults to 848x480) will program both configs into flash.
+* Other make fixes.
+
 2021-04-12 Xark
 
 * Recfactored registers (again).  Now more flexible with less "LUTs" using multi purpose "AUX" memory space.

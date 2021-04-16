@@ -1,8 +1,8 @@
-=== Upduino Xosera: MODE_640x480
+=== Upduino Xosera: MODE_848x480
 Yosys 0.9+4052 (git sha1 0ccc7229, clang 12.0.0 -fPIC -Os)
 nextpnr-ice40 -- Next Generation Place and Route (Version bb607913)
 Info: Device utilisation:
-Info: 	         ICESTORM_LC:   968/ 5280    18%
+Info: 	         ICESTORM_LC:   979/ 5280    18%
 Info: 	        ICESTORM_RAM:    17/   30    56%
 Info: 	               SB_IO:    35/   96    36%
 Info: 	               SB_GB:     5/    8    62%
@@ -10,4 +10,4 @@ Info: 	        ICESTORM_PLL:     1/    1   100%
 Info: 	         SB_WARMBOOT:     1/    1   100%
 Info: 	      ICESTORM_SPRAM:     4/    4   100%
 
-Info: Max frequency for clock 'pclk': 38.03 MHz (PASS at 25.18 MHz)
+Info: Max frequency for clock 'pclk': 37.34 MHz (PASS at 33.75 MHz)

@@ -22,10 +22,14 @@
 # Verilator output
 rtl/sim/obj_dir/*
 
+# iVerilog output files
+rtl/sim/xosera_tb
+
 # host_spi executable
 host_spi/host_spi
 
-# iVerilog output files
-rtl/sim/xosera_tb
-.DS_Store
+# utils executable
 utils/image_to_mem
+
+# macOS thing
+.DS_Store

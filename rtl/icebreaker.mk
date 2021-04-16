@@ -37,12 +37,6 @@ endif
 #	MODE_1280x720	1280x720@60Hz	clock 74.176 (73.500) MHz [fails timing]
 VIDEO_MODE ?= MODE_848x480
 
-# RTL source and include directory
-SRCDIR := .
-
-# log output directory
-LOGS	:= icebreaker/logs
-
 # Xosera video output selection:
 # Supported video outputs:
 #   PMOD_1B2_DVI12		12-bit DVI, PMOD 1A&1B	https://1bitsquared.com/products/pmod-digital-video-interface
@@ -51,6 +45,14 @@ LOGS	:= icebreaker/logs
 #   PMOD_XESS_VGA_SINGLE	 6-bit VGA, PMOD 1B	http://www.xess.com/shop/product/stickit-vga/ (half used)
 #
 VIDEO_OUTPUT ?= PMOD_1B2_DVI12
+
+FONTFILES := $(wildcard ../fonts/*.mem)
+
+# RTL source and include directory
+SRCDIR := .
+
+# log output directory
+LOGS	:= icebreaker/logs
 
 # Xosera project setup for iCEBreaker FPGA target
 TOP := xosera_iceb
@@ -88,7 +90,7 @@ DEFINES := -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5
 
 # Verilator tool (used for "lint")
 VERILATOR := verilator
-VERILATOR_ARGS := -I$(SRCDIR)-Iicebreaker -Wall -Wno-fatal -Wno-DECLFILENAME -Wno-UNUSED
+VERILATOR_ARGS := -I$(SRCDIR)-Iicebreaker -Wall -Wno-DECLFILENAME -Wno-UNUSED
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
@@ -96,43 +98,44 @@ NEXTPNR := nextpnr-ice40
 NEXTPNR_ARGS := --pre-pack $(SDC) --placer heap
 
 # defult target is make bitstream
-all: $(TOP).bin icebreaker.mk
-	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) $(SPI_INTERFACE) ===
+all: icebreaker/$(TOP)_$(VIDEO_MODE).bin icebreaker.mk
+	@echo === Finished Building iCEBreaker Xosera: $(VIDEO_OUTPUT) $(SPI_INTERFACE) ===
 
 # program iCEBreaker FPGA via USB (may need udev rules or sudo on Linux)
-prog: $(TOP).bin icebreaker.mk
-	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) $(SPI_INTERFACE) ===
-	-$(ICEPROG) -d i:0x0403:0x6010 $<
+prog: icebreaker/$(TOP)_$(VIDEO_MODE).bin icebreaker.mk
+	@echo === Programming iCEBreaker Xosera: $(VIDEO_OUTPUT) $(SPI_INTERFACE) ===
+	-$(ICEPROG) -d i:0x0403:0x6010 $(TOP).bin
 
 # run icetime to generate a timing report
-timing: $(TOP).rpt icebreaker.mk
+timing: icebreaker/$(TOP)_$(VIDEO_MODE).rpt icebreaker.mk
 	@echo iCETime timing report: $(TOP).rpt
 
+# run Yosys to generate a "dot" graphical representation of each design file
+ show: $(DOT) icebreaker.mk
+
 # run Yosys with "noflatten", which will produce a resource count per module
-count: $(SRC) $(INC) $(FONTMEM) icebreaker.mk
+count: $(SRC) $(INC) $(FONTFILES) icebreaker.mk
 	@mkdir -p $(LOGS)
-	$(YOSYS) -l $(LOGS)/$(TOP)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
+	$(YOSYS) -l $(LOGS)/$(TOP)_$(VIDEO_MODE)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 
 # run Verilator to check for Verilog issues
-lint: $(SRC) $(INC) $(FONTMEM) icebreaker.mk
+lint: $(SRC) $(INC) $(FONTFILES) icebreaker.mk
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC)
 
-# run Yosys to generate a "dot" graphical representation of each design file
-show: $(DOT)
-
-$(DOT): %.dot: %.sv
-	mkdir -p dot
-	$(YOSYS) -l $(LOGS)/$(TOP)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
+$(DOT): %.dot: %.sv icebreaker.mk
+	mkdir -p icebreaker/dot
+	$(YOSYS) -l $(LOGS)/$(TOP)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix icebreaker/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
-%.json: $(SRC) $(INC) $(MEM) icebreaker.mk
+%.json: $(SRC) $(INC) $(FONTFILES) icebreaker.mk
+	@echo === Building iCEBreaker Xosera ===
 	@rm -f $@
 	@mkdir -p $(LOGS)
 	-$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(TOP)_verilator.log
 	$(YOSYS) -l $(LOGS)/$(TOP)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
 
 # make ASCII bitstream from JSON description and device parameters
-%.asc: %.json $(PIN_DEF) $(SDC) $(MEM) icebreaker.mk
+icebreaker/%_$(VIDEO_MODE).asc: icebreaker/%_$(VIDEO_MODE).json $(PIN_DEF) $(SDC) icebreaker.mk
 	@rm -f $@
 	@mkdir -p $(LOGS)
 	@-cp $(TOP)_stats.txt $(LOGS)/$(TOP)_stats_last.txt
@@ -148,19 +151,19 @@ $(DOT): %.dot: %.sv
 	@-cat $(LOGS)/$(TOP)_stats_delta.txt
 
 # make binary bitstream from ASCII bitstream
-%.bin: %.asc icebreaker.mk
+icebreaker/%_$(VIDEO_MODE).bin: icebreaker/%_$(VIDEO_MODE).asc icebreaker.mk
 	@rm -f $@
-	$(ICEPACK) $< icebreaker/$(basename $@)_$(VIDEO_MODE).bin
-	$(ICEMULTI) -p0 icebreaker/*.bin -o $@
+	$(ICEPACK) $< $@
+	$(ICEMULTI) -v -v -p0 icebreaker/*.bin -o $(TOP).bin
 
 # make timing report from ASCII bitstream
-%.rpt: %.asc icebreaker.mk
+icebreaker/%_$(VIDEO_MODE).rpt: icebreaker/%_$(VIDEO_MODE).asc icebreaker.mk
 	@rm -f $@
 	$(ICETIME) -d $(DEVICE) -m -t -r $@ $<
 
 # delete all targets that will be re-generated
 clean:
-	rm -f xosera_iceb.json xosera_iceb.asc xosera_iceb.rpt xosera_iceb.bin $(wildcard icebreaker/*.bin)
+	rm -f xosera_iceb.bin $(wildcard icebreaker/*.json) $(wildcard icebreaker/*.asc) $(wildcard icebreaker/*.rpt) $(wildcard icebreaker/*.bin)
 
 # prevent make from deleting any intermediate files
 .SECONDARY:

@@ -120,15 +120,15 @@ enum
     AUX_VID_W_FONTCTRL  = 0x0003,        // [9:8] 2KB font bank, [3:0] font height
     AUX_VID_R_WIDTH     = 0x0000,        // display resolution width
     AUX_VID_R_HEIGHT    = 0x0001,        // display resolution height
-    AUX_VID_R_UNUSED_2  = 0x0003,        // TODO    <--- 🤔
-    AUX_VID_R_SCANLINE  = 0x0002,        // [15] V blank, [14:11] zero [10:0] V line
+    AUX_VID_R_FEATURES  = 0x0002,        // [15] = 1 (test)
+    AUX_VID_R_SCANLINE  = 0x0003,        // [15] V blank, [14:11] zero [10:0] V line
     AUX_W_FONT          = 0x4000,        // 0x4000-0x5FFF 8K byte font memory (even byte [15:8] ignored)
     AUX_W_COLORTBL      = 0x8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
     AUX_W_AUD           = 0xc000         // 0xC000-0x??? TODO (audio registers)
 };
 
 // for slower testing
-#if 1
+#if 0
 #define SLOW()                                                                                                         \
     NOP();                                                                                                             \
     NOP();                                                                                                             \
@@ -433,6 +433,18 @@ static void xprint_dec(uint16_t n)
     }
 }
 
+static void wait_vsync()
+{
+    // read scanline register and wait non-visible line (bit[15])
+    uint8_t v_flag;
+    do
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+        v_flag = xvid_gethb(XVID_AUX_DATA);                  // read scanline
+    } while (!(v_flag & 0x80));
+}
+
+
 static void error(const char * msg, uint16_t addr, uint16_t rdata, uint16_t vdata)
 {
     errors++;
@@ -452,15 +464,36 @@ static void error(const char * msg, uint16_t addr, uint16_t rdata, uint16_t vdat
 
 static void reboot_Xosera(uint8_t config)
 {
-    Serial.print("Reconfig Xosera FPGA");
+    Serial.print("Xosera resetting, switching to config #");
+    Serial.print(config & 0x3);
     xvid_setw(XVID_BLIT_CTRL, 0x8080 | ((config & 0x3) << 8));        // reboot FPGA to config
     do
     {
-        delay(10);
+        delay(20);
         Serial.print(".");
         xvid_setw(XVID_RD_ADDR, 0x1234);
     } while (xvid_getw(XVID_RD_ADDR) != 0x1234);
-    Serial.println("ready.");
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_WIDTH);        // select width
+    uint16_t width = xvid_getw(XVID_AUX_DATA);
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_HEIGHT);        // select height
+    uint16_t height = xvid_getw(XVID_AUX_DATA);
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_FEATURES);        // select features
+    uint16_t features = xvid_getw(XVID_AUX_DATA);
+
+    Serial.print("(");
+    Serial.print(width);
+    Serial.print("x");
+    Serial.print(height);
+    Serial.print(" Feature bits:");
+    Serial.print(features, BIN);
+    Serial.println(").  Xosera ready.");
+
+    columns = width / 8;
+    rows    = height / 16;
+    addr    = columns;
 }
 
 void setup()
@@ -480,23 +513,7 @@ void setup()
 
     reboot_Xosera(0);
 
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_WIDTH);        // select width
-    uint16_t width = xvid_getw(XVID_AUX_DATA);
-
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_HEIGHT);        // select height
-    uint16_t height = xvid_getw(XVID_AUX_DATA);
-    if (width != height && width > height)
-    {
-        Serial.print("Xosera detected at resolution ");
-        Serial.print(width);
-        Serial.print("x");
-        Serial.println(height);
-    }
-
-    columns = width / 8;
-    rows    = height / 16;
-    addr    = columns;
-    delay(4000);        // let the stunning boot logo display. :)
+    delay(3000);        // let the stunning boot logo display. :)
 
     randomSeed(0xc0ffee42);        // deterministic seed TODO
 }
@@ -533,25 +550,25 @@ void show_blurb()
     Serial.println("Blurb text");
     xcls();
     xprint_P(blurb);
-    delay(1000);
+    delay(500);
 
     // 2nd font (ST 8x8)
     Serial.println("ST 8x8 font");
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
     xvid_setw(XVID_AUX_DATA, 0x0207);                    // 2nd font in bank 2, 8 high
-    delay(1000);
+    delay(500);
 
     // 3rd font (hex 8x8 debug)
     Serial.println("hex 8x8 font");
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
     xvid_setw(XVID_AUX_DATA, 0x0307);                    // 3st font in bank 3, 8 high
-    delay(5000);
+    delay(1000);
 
     // restore 1st font (ST 8x16)
     Serial.println("ST 8x16 font");
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
     xvid_setw(XVID_AUX_DATA, 0x000F);                    // back to 1st font in bank 0, 16 high
-    delay(1000);
+    delay(500);
 
     // shrink font height
     Serial.println("Shrink font height");
@@ -560,7 +577,9 @@ void show_blurb()
         xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
         // set font height and switch to 8x8 font when < 8
         xvid_setw(XVID_AUX_DATA, (v < 8 ? 0x0200 : 0) | v);
-        delay(100);
+        wait_vsync();
+        wait_vsync();
+        wait_vsync();
     }
 
     Serial.println("Grow font height");
@@ -569,18 +588,20 @@ void show_blurb()
         xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
         // set font height and switch to 8x8 font when < 8
         xvid_setw(XVID_AUX_DATA, (v < 8 ? 0x0200 : 0) | v);
-        delay(100);
+        wait_vsync();
+        wait_vsync();
+        wait_vsync();
     }
 
     // restore 1st font (ST 8x16)
     Serial.println("ST 8x16 font");
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
     xvid_setw(XVID_AUX_DATA, 0x000F);                    // back to 1st font in bank 0, 16 high
-    delay(1000);
+    delay(500);
 
     Serial.println("Scroll via video VRAM display address");
     int16_t r = 0;
-    for (uint16_t i = 0; i < (rows * 4); i++)
+    for (uint16_t i = 0; i < (rows * 2); i++)
     {
         xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // set text start addr
         xvid_setw(XVID_AUX_DATA, r * columns);                // to one line down
@@ -589,18 +610,7 @@ void show_blurb()
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // v fine scroll
             xvid_setw(XVID_AUX_DATA, f);
 
-            // vsync
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
-            while (static_cast<int16_t>(xvid_getw(XVID_AUX_DATA)) >= 0)
-            {}
-            // vsync
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
-            while (static_cast<int16_t>(xvid_getw(XVID_AUX_DATA)) >= 0)
-            {}
-            // vsync
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
-            while (static_cast<int16_t>(xvid_getw(XVID_AUX_DATA)) >= 0)
-            {}
+            delay(5);
         }
         if (++r > rows)
         {
@@ -611,8 +621,8 @@ void show_blurb()
     xvid_setw(XVID_AUX_DATA, 0x0000);
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // reset text start addr
     xvid_setw(XVID_AUX_DATA, 0x0000);
-    delay(1000);
-
+    delay(500);
+#if 0
     Serial.println("Horizontal fine scroll");
     for (int x = 0; x < 8; x++)
     {
@@ -645,6 +655,7 @@ void show_blurb()
         delay(100);
     }
     delay(1000);
+#endif
 }
 
 void test_palette()
@@ -671,7 +682,7 @@ void test_palette()
 
     xhome();
     xprint_P_rainbow(1, blurb);
-    delay(1000);
+    delay(500);
     // color cycle palette
     Serial.println("color cycle nuclear glow");
     for (uint16_t k = 0; k < 120; k++)
@@ -679,7 +690,7 @@ void test_palette()
         xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 2);
         uint16_t n = random(0x0fff) & 0x777;
         xvid_setw(XVID_AUX_DATA, n);        // set palette data
-        delay(16);
+        wait_vsync();
     }
 
 #if 1        // TODO: something funny here (blanks 9" monitor)?
@@ -690,45 +701,46 @@ void test_palette()
         xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
         xvid_setw(XVID_AUX_DATA, i);                         // set palette data
     }
-    delay(1000);
+    delay(500);
     for (uint8_t i = 0; i < 16; i++)
     {
         xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
         xvid_setw(XVID_AUX_DATA, i << 4);                    // set palette data
     }
-    delay(1000);
+    delay(500);
     for (uint8_t i = 0; i < 16; i++)
     {
         xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
         xvid_setw(XVID_AUX_DATA, i << 8);                    // set palette data
     }
-    delay(1000);
+    delay(500);
     for (uint8_t i = 0; i < 16; i++)
     {
         xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
         uint16_t v = i ? 0x000 : 0xfff;
         xvid_setw(XVID_AUX_DATA, v);        // set palette data
     }
-    delay(2000);
+    delay(500);
     for (uint8_t i = 0; i < 16; i++)
     {
         xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
         uint16_t v = i ? 0xfff : 0x000;
         xvid_setw(XVID_AUX_DATA, v);        // set palette data
     }
-    delay(2000);
+    delay(500);
     for (uint8_t i = 0; i < 16; i++)
     {
         xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
         uint16_t v = i ? 0xfff : 0xfff;
         xvid_setw(XVID_AUX_DATA, v);        // set palette data
     }
-    delay(2000);
+    delay(500);
     for (uint8_t i = 0; i < 16; i++)
     {
         xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);               // use WR address for palette index
         xvid_setw(XVID_AUX_DATA, pgm_read_word(defpal + i));        // set palette data
     }
+#endif
 #if 0        // evil color?
 
     delay(1000);
@@ -744,7 +756,6 @@ void test_palette()
     xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 12);        // use WR address for 595e index
     xvid_setw(XVID_AUX_DATA, 0x00C);                      // set palette data
     delay(1000);
-#endif
     xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 0);        // use WR address for 595e index
     xvid_setw(XVID_AUX_DATA, 0x000);                     // set palette data
     delay(1000);
@@ -806,7 +817,7 @@ void test_palette()
     // color cycle palette
     Serial.println("color cycle palette test");
     uint8_t n = 3, m = 7;
-    for (uint16_t k = 0; k < 10; k++)
+    for (uint16_t k = 0; k < 5; k++)
     {
         for (uint8_t j = 1; j < 16; j++)
         {
@@ -836,7 +847,7 @@ void test_palette()
     delay(1000);
 }
 
-static const PROGMEM uint16_t data_pat[8] = {0xA5A5, 0x5A5A, 0xFFFF, 0x0123, 0x4567, 0x89AB, 0xCDEF, 0x0a20};
+static const PROGMEM uint16_t data_pat[8] = {0xA5A5, 0x5A5A, 0xFFFF, 0x0123, 0x4567, 0x89AB, 0xCDEF, 0x0220};
 
 void test_reg_access()
 {
@@ -1110,7 +1121,7 @@ void vram_speed()
         xprint_dec(elapsed_time);
         xprint(" ms");
         xprint(")\n");
-        delay(500);
+        delay(100);
     }
 }
 
@@ -1157,8 +1168,22 @@ void font_write()
     }
 
     reboot_Xosera(0);        // re-configure to reload fonts
-    delay(2000);             // let monitor sync
+    delay(1000);             // let monitor sync
 }
+
+#if 0
+static void reg_read_test()
+{
+    static uint16_t v[4];
+    for (uint8_t r = 0; r < 4; r++)
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+        v[r] =
+    }
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+    uint16_t l = xvid_getw(XVID_AUX_DATA);               // read scanline
+}
+#endif
 
 void activity()
 {

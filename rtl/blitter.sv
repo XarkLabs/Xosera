@@ -75,8 +75,6 @@ typedef enum logic [4:0] {
 assign bus_ack_o = (bus_write_strobe | bus_read_strobe);    // TODO: debug
 
 
-logic           blit_cpu_read;
-logic           blit_read_ack;
 blit_state_t    blit_state;
 
 // read/write storage for first 4 blitter registers
@@ -98,13 +96,19 @@ logic blit_const;
 logic           blit_busy;
 assign          blit_busy = ~reg_count[16]; // when reg_count underflows, high bit will be set
 logic           blit_line_end;
-assign          blit_line_end = width_counter[16];  // when reg_count underflows, high bit will be set
+assign          blit_line_end = width_counter[16];  // when width_counter underflows, high bit will be set
 logic [16:0]    width_counter;          // blit count (extra bit for underflow/done)
 logic [15:0]    blit_rd_addr;           // TODO VRAM read address
 logic [15:0]    blit_wr_addr;           // TODO VRAM write address
 
-logic [15:0]    aux_rd_data;
 logic [15:0]    vram_rd_data;           // word read from VRAM (for RD_ADDR)
+logic           blit_vram_rd;
+logic           blit_vram_rd_ack;
+
+logic [15:0]    aux_rd_data;
+logic           blit_aux_rd;
+logic           blit_aux_rd_ack;
+
 logic  [7:0]    even_wr_data;           // word written to even byte of XVID_DATA/XVID_DATA_2
 logic  [7:0]    even_wr_reg;            // other even byte (zeroed each write)
 
@@ -171,7 +175,7 @@ function [7:0] reg_read(
         case (r_sel[1:0])
             XVID_DATA[1:0],
             XVID_DATA_2[1:0]:   reg_read = (~b_sel) ? vram_rd_data[15:8] : vram_rd_data[7:0];
-            XVID_AUX_DATA[1:0]: reg_read = (~b_sel) ? aux_data_i[15:8] : aux_data_i[7:0];
+            XVID_AUX_DATA[1:0]: reg_read = (~b_sel) ? aux_rd_data[15:8]  : aux_rd_data[7:0];
             XVID_COUNT[1:0]:    reg_read = { blit_busy, 7'b0 };
         endcase
     end
@@ -193,9 +197,11 @@ always_ff @(posedge clk) begin
         // control signals
         reconfig            <= 1'b0;
         boot_select         <= 2'b00;
-        vgen_ena_o         <= 1'b0;
-        blit_cpu_read       <= 1'b0;
-        blit_read_ack       <= 1'b0;
+        vgen_ena_o          <= 1'b0;
+        blit_vram_rd        <= 1'b0;
+        blit_vram_rd_ack    <= 1'b0;
+        blit_aux_rd        <= 1'b0;
+        blit_aux_rd_ack    <= 1'b0;
         blit_vram_sel_o     <= 1'b0;
         blit_aux_sel_o      <= 1'b0;
         blit_wr_o           <= 1'b0;
@@ -226,18 +232,25 @@ always_ff @(posedge clk) begin
     end
     else begin
         // if a read was pending, save value from vram
-        if (blit_read_ack) begin
-            vram_rd_data     <= blit_data_i;
+        if (blit_vram_rd_ack) begin
+            vram_rd_data    <= blit_data_i;
+        end
+
+        if (blit_aux_rd_ack) begin
+            aux_rd_data     <= aux_data_i;
         end
 
         // if this is a blit cycle (vs video gen), or there is no pending blit vram/aux access
         if (blit_cycle_i || (!blit_vram_sel_o && !blit_aux_sel_o)) begin
 
-            blit_read_ack   <= blit_cpu_read;   // ack is one cycle after read with blitter access
-            blit_cpu_read   <= 1'b0;
+            blit_vram_rd_ack    <= blit_vram_rd;    // ack is one cycle after read with blitter access
+            blit_vram_rd        <= 1'b0;
+
+            blit_aux_rd_ack     <= blit_aux_rd;     // ack is one cycle after read with aux access
+            blit_aux_rd         <= 1'b0;
 
             // if we did a read, increment read addr
-            if (blit_cpu_read) begin
+            if (blit_vram_rd) begin
                 reg_rd_addr  <= reg_rd_addr + reg_rd_inc;   //(blit_line_end ? reg_rd_mod : reg_rd_inc);
             end
 
@@ -299,6 +312,9 @@ always_ff @(posedge clk) begin
                     case (bus_reg_num)
                         XVID_AUX_ADDR: begin
                             reg_aux_addr[7:0]   <= bus_data_byte;
+                            blit_addr_o         <= { reg_aux_addr[15:8], bus_data_byte };      // output read address
+                            blit_aux_sel_o     <= 1'b1;            // select AUX
+                            blit_aux_rd        <= 1'b1;            // remember pending aux read request
                         end
                         XVID_CONST: begin
                             reg_const[7:0]      <= bus_data_byte;
@@ -307,7 +323,7 @@ always_ff @(posedge clk) begin
                             reg_rd_addr[7:0]    <= bus_data_byte;
                             blit_addr_o         <= { reg_rd_addr[15:8], bus_data_byte };      // output read address
                             blit_vram_sel_o     <= 1'b1;            // select VRAM
-                            blit_cpu_read       <= 1'b1;            // remember pending read request
+                            blit_vram_rd        <= 1'b1;            // remember pending vramread request
                         end
                         XVID_WR_ADDR: begin
                             reg_wr_addr[7:0]    <= bus_data_byte;

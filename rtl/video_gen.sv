@@ -188,31 +188,15 @@ always_ff @(posedge clk) begin
             endcase
         end
     end
-end
 
-// TODO: only can read video AUX data
-always_comb begin
-    case (vgen_reg_num_i[1:0])
-        2'b00:      vgen_reg_data_o = VISIBLE_WIDTH[15:0];
-        2'b01:      vgen_reg_data_o = VISIBLE_HEIGHT[15:0];
-        2'b10:      vgen_reg_data_o = {vsync, 4'h0, v_count }; // negative when not vsync
-        default:    vgen_reg_data_o = 16'b1000_0000_0000_0001;  // TODO feature bits
+    case (vgen_reg_num_i)
+        2'b00:      vgen_reg_data_o <= VISIBLE_WIDTH[15:0];
+        2'b01:      vgen_reg_data_o <= VISIBLE_HEIGHT[15:0];
+        2'b10:      vgen_reg_data_o <= 16'b1000_0000_0000_0001;  // TODO feature bits
+        2'b11:      vgen_reg_data_o <= {(v_state != STATE_VISIBLE), 4'h0, v_count }; // negative when not vsync
     endcase
+
 end
-
-//assign vgen_reg_data_o = vgen_data_read(vgen_reg_num_i);
-
-// // function to continuously select XVID_AUX_DATA read value to put on bus
-// function [15:0] vgen_data_read(
-//     input logic [1:0]   v_sel
-//     );
-//     case (v_sel)
-//         2'b00:  vgen_data_read = VISIBLE_WIDTH[15:0];
-//         2'b01:  vgen_data_read = VISIBLE_HEIGHT[15:0];
-//         2'b10:  vgen_data_read = 16'hBEEF;  // TODO feature bits
-//         2'b11:  vgen_data_read = {vsync, 4'h0, v_count }; // negative when not visible
-//     endcase
-// endfunction
 
 // logic aliases
 logic font_pix;

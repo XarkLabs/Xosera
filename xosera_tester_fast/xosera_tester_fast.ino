@@ -128,7 +128,7 @@ enum
 };
 
 // for slower testing
-#if 0
+#if 1
 #define SLOW()                                                                                                         \
     NOP();                                                                                                             \
     NOP();                                                                                                             \
@@ -472,7 +472,8 @@ static void reboot_Xosera(uint8_t config)
         delay(20);
         Serial.print(".");
         xvid_setw(XVID_RD_ADDR, 0x1234);
-    } while (xvid_getw(XVID_RD_ADDR) != 0x1234);
+        xvid_setw(XVID_CONST, 0xABCD);
+    } while (xvid_getw(XVID_RD_ADDR) != 0x1234 || xvid_getw(XVID_CONST) != 0xABCD);
 
     xvid_setw(XVID_AUX_ADDR, AUX_VID_R_WIDTH);        // select width
     uint16_t width = xvid_getw(XVID_AUX_DATA);
@@ -577,8 +578,8 @@ void show_blurb()
         xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
         // set font height and switch to 8x8 font when < 8
         xvid_setw(XVID_AUX_DATA, (v < 8 ? 0x0200 : 0) | v);
-        wait_vsync();
-        wait_vsync();
+
+        delay(150);
         wait_vsync();
     }
 
@@ -588,8 +589,7 @@ void show_blurb()
         xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
         // set font height and switch to 8x8 font when < 8
         xvid_setw(XVID_AUX_DATA, (v < 8 ? 0x0200 : 0) | v);
-        wait_vsync();
-        wait_vsync();
+        delay(150);
         wait_vsync();
     }
 
@@ -610,7 +610,7 @@ void show_blurb()
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // v fine scroll
             xvid_setw(XVID_AUX_DATA, f);
 
-            delay(5);
+            wait_vsync();
         }
         if (++r > rows)
         {
@@ -1159,15 +1159,18 @@ void font_write()
     Serial.println("Font memory write");
     xcls();
     xprint_P(blurb);
-    for (uint16_t a = 0; a < 4096; a++)
+    for (uint16_t a = 0; a < 4096; a += 4)
     {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_FONT | a);        // scroll
-        // set font height and switch to 8x8 font when < 8
-        xvid_setw(XVID_AUX_DATA, a & 1 ? 0x5555 : 0xaaaa);
-        delay(5);
+        for (uint16_t b = a; b < (a + 4); b++)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_W_FONT | b);
+            // set font height and switch to 8x8 font when < 8
+            xvid_setw(XVID_AUX_DATA, b ? 0x5555 : 0xaaaa);
+        }
+        wait_vsync();
     }
 
-    reboot_Xosera(0);        // re-configure to reload fonts
+    reboot_Xosera(1);        // re-configure to reload fonts
     delay(1000);             // let monitor sync
 }
 

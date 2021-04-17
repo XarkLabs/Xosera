@@ -74,10 +74,10 @@ logic       vga_hs;                     // vga hsync
 logic       vga_vs;                     // vga vsync
 logic       dv_de;                      // DV display enable
 `ifdef SPI_INTERFACE
-logic   spi_sck;
-logic   spi_copi;
-logic   spi_cipo;
-logic   spi_cs_n;
+logic       spi_sck;
+logic       spi_copi;
+logic       spi_cipo;
+logic       spi_cs_n;
 `endif
 
 assign nreset       = BTN_N;            // active LOW reset button
@@ -91,12 +91,12 @@ assign bus_out_ena = (bus_cs_n == cs_ENABLED && bus_rd_nwr == RnW_READ);
 
 `ifdef SPI_INTERFACE   // SPU interface to drive bus signals
     // assign SPI GPIO for SPI interface (to emulate bus interface)
+    assign spi_cs_n     = LEDR_N;
     assign spi_sck      = FLASH_SCK;
     assign spi_copi     = FLASH_IO0;
-    assign spi_cipo     = FLASH_IO1;
-    assign spi_cs_n     = LEDR_N;
-    assign FLASH_IO2    = audio_l;
-    assign FLASH_IO3    = audio_r;
+    assign FLASH_IO1    = spi_cipo;
+    assign FLASH_IO2    = spi_receive_strobe;   // TODO audio_l;
+    assign FLASH_IO3    = bus_cs_n; // TODO audio_r;
 `else   // direct bus interface
     // tri-state data bus unless Xosera is both selected and bus is reading
     `ifdef SYNTHESIS
@@ -249,6 +249,7 @@ xosera_main xosera_main(
 `ifdef SPI_INTERFACE
 // operate Xosera bus interface via SPI commands
 
+logic   spi_select;
 logic   spi_receive_strobe;
 logic   spi_transmit_strobe;
 logic   [7:0] spi_receive_data;
@@ -259,6 +260,7 @@ spi_target  spi_target(
             .spi_copi_i(spi_copi),
             .spi_cipo_o(spi_cipo),
             .spi_cs_i(spi_cs_n),
+            .select_o(spi_select),
             .receive_strobe_o(spi_receive_strobe),
             .receive_byte_o(spi_receive_data),
             .transmit_strobe_o(spi_transmit_strobe),
@@ -266,6 +268,43 @@ spi_target  spi_target(
             .reset_i(reset),
             .clk(pclk)
 );
+
+logic       spi_2nd_byte;
+logic       spi_cs_n_hold;
+logic [7:0] spi_cmd_byte;       // W . . BS R3 R2 R1 R0
+logic [7:0] spi_data_byte;
+
+assign bus_rd_nwr           = ~spi_cmd_byte[7];
+assign bus_bytesel          = spi_cmd_byte[4];
+assign bus_reg_num          = spi_cmd_byte[3:0];
+assign bus_data_in          = spi_data_byte;
+assign spi_transmit_data    = spi_2nd_byte ? bus_data_out : 8'hFF;
+
+always_ff @(posedge pclk) begin
+    if (!spi_select) begin
+        spi_2nd_byte    <= 1'b0;
+        spi_cmd_byte    <= 8'b10000000;
+        spi_data_byte   <= 8'h00;
+        bus_cs_n        <= 1'b1;        // de-select bus
+        spi_cs_n_hold   <= 1'b1;
+    end
+    else begin
+        bus_cs_n        <= spi_cs_n_hold;
+        spi_cs_n_hold   <= 1'b1;
+        if (spi_receive_strobe) begin
+            if (!spi_2nd_byte) begin
+                spi_cmd_byte    <= spi_receive_data;
+            end
+            else begin
+                bus_cs_n        <= 1'b0;        // select bus
+                spi_cs_n_hold   <= 1'b0;        // hold for next cycle
+                spi_data_byte   <= spi_receive_data;
+            end
+            spi_2nd_byte    <= ~spi_2nd_byte;
+        end
+    end
+end
+
 `endif
 
 endmodule

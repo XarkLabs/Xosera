@@ -34,7 +34,7 @@ endif
 #	MODE_800x600	800x600@60Hz	clock 40.000 MHz
 #	MODE_1024x768	1024x768@60Hz	clock 65.000 MHz
 #	MODE_1280x720	1280x720@60Hz	clock 74.176 MHz
-VIDEO_MODE := MODE_848x480
+VIDEO_MODE := MODE_640x480
 
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
@@ -97,25 +97,25 @@ CSRC := sim/xosera_sim.cpp
 all: vsim isim
 
 # build native simulation executable
-vsim: sim/obj_dir/V$(VTOP)
+vsim: sim/obj_dir/V$(VTOP) sim.mk
 	@echo === Verilator simulation configured for: $(VIDEO_MODE) ===
 	@echo Completed building Verilator simulation, use \"make vrun\" to run.
 
-isim: sim/$(TBTOP) Makefile
+isim: sim/$(TBTOP) sim.mk
 	@echo === Icarus Verilog simulation configured for: $(VIDEO_MODE) ===
 	@echo Completed building Icarus Verilog simulation, use \"make irun\" to run.
 
 # run Verilator to build and run native simulation executable
-vrun: sim/obj_dir/V$(VTOP) Makefile
+vrun: sim/obj_dir/V$(VTOP) sim.mk
 	@mkdir -p $(LOGS)
 	sim/obj_dir/V$(VTOP) | tee $(LOGS)/xosera_vsim.log
 
 # run Verilator to build and run native simulation executable
-irun: sim/$(TBTOP)
+irun: sim/$(TBTOP) sim.mk
 	sim/$(TBTOP) 2>&1 | tee $(LOGS)/$(TBTOP)_isim.log
 
 # use Verilator to build native simulation executable
-sim/obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) Makefile
+sim/obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) sim.mk
 	rm -rf sim/obj_dir && mkdir -p sim/obj_dir
 	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(TECH_LIB) $(SRC) $(current_dir)/$(CSRC)
 	cd sim/obj_dir && make -f V$(VTOP).mk
@@ -123,7 +123,7 @@ sim/obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) Makefile
 # -j$(shell nproc)
 
 # use Icarus Verilog to build vvp simulation executable
-sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) Makefile
+sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) sim.mk
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TBTOP) sim/$(TBTOP).sv $(SRC)
 	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -D$(VIDEO_MODE) -o sim/$(TBTOP) $(current_dir)/sim/$(TBTOP).sv $(SRC)
 

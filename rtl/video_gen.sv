@@ -44,8 +44,12 @@ module video_gen(
 
 `include "xosera_defs.svh"        // Xosera global Verilog definitions
 
-localparam H_MEM_BEGIN = OFFSCREEN_WIDTH - 9;           // memory fetch starts 1 character early to prime output shift-logic
-localparam H_MEM_END = TOTAL_WIDTH - 9;                 // memory fetch ends 1 character early (to empty shift-logic)
+// NOTE: 10 is "magic number", but I think it is (wavey hands...):
+// -8 for one char "early" (to prime shift register)
+// -1 for one extra pixel to start read (present address)
+// -1 to hit last "case (char_x)" case to latch value to shift out
+localparam H_MEM_BEGIN = OFFSCREEN_WIDTH - 10;          // memory fetch starts 1 character early to prime output shift-logic
+localparam H_MEM_END = TOTAL_WIDTH - 10;                // memory fetch ends 1 character early (to empty shift-logic)
 
 // bitmap generation signals
 logic [15: 0] bitmap_start_addr;                        // bitmap start address

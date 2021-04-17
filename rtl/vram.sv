@@ -34,9 +34,10 @@ always_ff @(posedge clk) begin
         if (wr_en) begin
             memory[address_in] <= data_in;
         end
-        data_out <= memory[address_in];
     end
 end
+
+assign data_out = memory[address_in];
 
 `else
 

@@ -19,8 +19,12 @@ set_io -nowarn spi_cs 16 # Connected to SPI flash, drive high unless using SPI f
 # If using the FTDI MPSSE engine, the following signals apply
 set_io -nowarn spi_sck 15  # Shared with the flash
 set_io -nowarn spi_ssn 16  # Connected to SPI flash, drive high unless using SPI flash!
-set_io -nowarn spi_copi 17 # Shared with the flash	# NOTE: These will seem backwards for FTDI SPI slave...
-set_io -nowarn spi_cipo 14 # Shared with the flash
+set_io -nowarn spi_mosi 17 # Shared with the flash
+set_io -nowarn spi_miso 14 # Shared with the flash
+
+# NOTE: Above SPI signals seemed backwards for FTDI SPI perhiperal use, so here are aliases
+set_io -nowarn spi_cipo 17 # Shared with the flash
+set_io -nowarn spi_copi 14 # Shared with the flash
 
 # Normal GPIO pins, left side
 set_io -nowarn gpio_23 23

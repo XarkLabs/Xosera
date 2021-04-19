@@ -44,10 +44,6 @@ iceb: icebreaker
 iceb_prog:
 	cd rtl && $(MAKE) iceb_prog
 
-# Build Xosera Verilator native simulation target
-rtl:
-	cd rtl && $(MAKE) all
-
 # Build all project targets
 sim:
 	cd rtl && $(MAKE) sim

@@ -16,7 +16,7 @@
 
 // FTDI signals used on iCE40UP5K boards
 //
-// PIN    | UART | PC Dir | Signal | iCEBreaker | Upduino 3.x
+// PIN    | UART | PC Dir | Signal | iCEBreaker | UPduino 3.x
 // -------+------+--------+--------+------------+----------------
 // ADBUS0 | TXD  | output |    SCK | FLASH_SCK  | spi_sck
 // ADBUS1 | RXD  | output |   COPI | FLASH_IO0  | spi_copi
@@ -31,7 +31,7 @@
 // **  = Connected on iCEBreaker 1.0e or above (SPI lights red LED)
 // *** = With TP11 connected to R pin (via ~300Ohm resistor, SPI lights red LED)
 //
-// NOTE: Since Upduino has single channel FT232H, serial_rxd and serial_txd
+// NOTE: Since UPduino has single channel FT232H, serial_rxd and serial_txd
 //       UART signals are shared with SPI signals spi_sck and spi_cipo.
 
 // FTDI bit definitions to match above

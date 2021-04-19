@@ -4,7 +4,7 @@
 # Note that they are negative logic (write a 0 to turn on).
 # These are also brought out to the left side of the board.
 # Cut the board trace on jumper R28 to disable the onboard 3 color LED.
-#set_io -nowarn led_red 39 # NOTE: RGB order for 3.x prototype Upduino (now fixed)
+#set_io -nowarn led_red 39 # NOTE: RGB order for 3.x prototype UPduino (now fixed)
 #set_io -nowarn led_green 40
 #set_io -nowarn led_blue 41
 set_io -nowarn led_red 41
@@ -22,7 +22,7 @@ set_io -nowarn spi_ssn 16  # Connected to SPI flash, drive high unless using SPI
 set_io -nowarn spi_mosi 17 # Shared with the flash
 set_io -nowarn spi_miso 14 # Shared with the flash
 
-# NOTE: Above SPI signals seemed backwards for FTDI SPI perhiperal use, so here are aliases
+# NOTE: Above SPI signals seemed backwards for FTDI SPI peripheral use, so here are aliases
 set_io -nowarn spi_cipo 17 # Shared with the flash
 set_io -nowarn spi_copi 14 # Shared with the flash
 

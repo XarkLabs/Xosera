@@ -17,15 +17,15 @@ In the top directory of Xosera, there is a "driver" Makefile that has the follow
 * make all
   * build everything (RTL, simulation, uitls and host_spi)
 * make upduino
-  * build Xosera for Upduino v3 (see rtl/upduino.mk for options)
+  * build Xosera for UPduino v3 (see rtl/upduino.mk for options)
 * make upd_prog
-  * build Xosera and program Upduino v3 (see rtl/upduino.mk for options)
+  * build Xosera and program UPduino v3 (see rtl/upduino.mk for options)
 * make icebreaker
   * build Xosera for iCEBreaker (see rtl/icebreaker.mk for options)
 * make iceb_prog
   * build Xosera and program iCEBreaker (see rtl/icebreaker.mk for options)
 * make rtl
-  * build Upduino and iCEBreaker bitstream
+  * build UPduino and iCEBreaker bitstream
 * make sim
   *build Icarus Verilog and Verilalator simulation files
 * make isim
@@ -56,13 +56,13 @@ You can consult the most recent `rtl/xosera_upd_stats.txt` or `rtl/xosera_iceb_s
 
 <a name="upduino-target"></a>
 
-## Upduino FPGA Target (also used with rosco_m68k Xosera PCB)
+## UPduino FPGA Target (also used with rosco_m68k Xosera PCB)
 
-​The [Upduino 3.0​](https://github.com/tinyvision-ai-inc/UPduino-v3.0) is a low-cost open-source FPGA iCE40UP5K ​board suitable for breadboards or embedding.
+​The [UPduino 3.0​](https://github.com/tinyvision-ai-inc/UPduino-v3.0) is a low-cost open-source FPGA iCE40UP5K ​board suitable for breadboards or embedding.
 
-If you are using an Upduino 3.0, then you will need to short the "OSC" jumper so gpio_20 is 12MHz input clock.
+If you are using an UPduino 3.0, then you will need to short the "OSC" jumper so gpio_20 is 12MHz input clock.
 
-Upduino boards require a VGA (or HDMI/DVI) breakout board or breadboard hookup. I have been using a modified Xess StickIt!-VGA (without all pins soldered, as shown [here](https://hackaday.io/project/173731/gallery#8e9ad0d7c922e14d922da6ecdfc4d165)​), but any 3.3V VGA breakout-board should work (up to 4-bits red, green and blue for 4096 colors, but less bits also works).  You can also just wire a VGA connector and a few resistors to make an [R2R DAC](https://en.wikipedia.org/wiki/Resistor_ladder#R%E2%80%932R_resistor_ladder_network_(digital_to_analog_conversion))​ as shown [here](https://papilio.cc/index.php?n=Papilio.ArcadeMegaWing)​ (or [here](https://fraserinnovations.com/fpga-tutor/fpga-beginner-tutorial-vga-experiment-fpga-board-for-beginner-experiment-13/)​ or an 8-color version [here](https://www.fpga4fun.com/PongGame.html)).  For DV (HDMI compatible) video, you can also use the 1bq PMOD with a ribbon-cable "braid" like I have done. ![1BitSquared DV PMOD \"braid\"](pics/1BitSquared_DV_PMOD_braid.jpg)
+UPduino boards require a VGA (or HDMI/DVI) breakout board or breadboard hookup. I have been using a modified Xess StickIt!-VGA (without all pins soldered, as shown [here](https://hackaday.io/project/173731/gallery#8e9ad0d7c922e14d922da6ecdfc4d165)​), but any 3.3V VGA breakout-board should work (up to 4-bits red, green and blue for 4096 colors, but less bits also works).  You can also just wire a VGA connector and a few resistors to make an [R2R DAC](https://en.wikipedia.org/wiki/Resistor_ladder#R%E2%80%932R_resistor_ladder_network_(digital_to_analog_conversion))​ as shown [here](https://papilio.cc/index.php?n=Papilio.ArcadeMegaWing)​ (or [here](https://fraserinnovations.com/fpga-tutor/fpga-beginner-tutorial-vga-experiment-fpga-board-for-beginner-experiment-13/)​ or an 8-color version [here](https://www.fpga4fun.com/PongGame.html)).  For DV (HDMI compatible) video, you can also use the 1bq PMOD with a ribbon-cable "braid" like I have done. ![1BitSquared DV PMOD \"braid\"](pics/1BitSquared_DV_PMOD_braid.jpg)
 
 If you can also change the pin mappings used in [rtl/xosera_upd.sv](upduino/xosera_upd.sv).
 

@@ -10,7 +10,7 @@ Inspired in concept by it's "namesake" the [Commander X16](https://www.commander
 
 ![Xosera 848x480 DVI Font Test](pics/XoseraTest_848x480_DVI.jpg)
 
-Currently the design is supported for the [iCE40UP5K FPGA](https://www.latticesemi.com/en/Products/FPGAandCPLD/iCE40UltraPlus) which is fully supported by the open [Yosys/NextPNR tools](https://github.com/YosysHQ).  Development is being done on both the [iCEBreaker FPGA](https://github.com/icebreaker-fpga/icebreaker) board as well as the [Upduino 3.0](https://github.com/tinyvision-ai-inc/UPduino-v3.0) board (or Upduino 2.x with external oscillator).
+Currently the design is supported for the [iCE40UP5K FPGA](https://www.latticesemi.com/en/Products/FPGAandCPLD/iCE40UltraPlus) which is fully supported by the open [Yosys/NextPNR tools](https://github.com/YosysHQ).  Development is being done on both the [iCEBreaker FPGA](https://github.com/icebreaker-fpga/icebreaker) board as well as the [UPduino 3.0](https://github.com/tinyvision-ai-inc/UPduino-v3.0) board (or UPduino 2.x with external oscillator).
 
 This is currently a work in progress, but you can follow along at [Hackaday.io](https://hackaday.io/Xark) or in the [rosco_m68k Discord](https://discord.gg/zGUB7R8) (in the #projects channel).
 

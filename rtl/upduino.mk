@@ -1,7 +1,7 @@
-# upduino.mk - Xosera for Upduino v3.x FPGA board
+# upduino.mk - Xosera for UPduino v3.x FPGA board
 # vim: set noet ts=8 sw=8
 #
-# NOTE: This assumes Upduino 3.x with PLL and needs either the "OSC" jumper shorted (recommended, but dedicates gpio_20 as a clock).
+# NOTE: This assumes UPduino 3.x with PLL and needs either the "OSC" jumper shorted (recommended, but dedicates gpio_20 as a clock).
 # Also, since the RGB LED pins are used as GPIO inputs, jumper R28 should be cut to disconnect the RGB LED (which can interfere with input).
 
 # Using icestorm tools + yosys + nextpnr
@@ -22,11 +22,11 @@ DIRTYFILES := $(shell git status --porcelain --untracked-files=no | grep -v _sta
 ifeq ($(strip $(DIRTYFILES)),)
 # prepend 0 for "clean"
 XOSERA_HASH := 0$(GITSHORTHASH)
-$(info === Xosera Upduino [$(XOSERA_HASH)] is CLEAN from git)
+$(info === Xosera UPduino [$(XOSERA_HASH)] is CLEAN from git)
 else
 # prepend d for "dirty"
 XOSERA_HASH := D$(GITSHORTHASH)
-$(info === Xosera Upduino [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
+$(info === Xosera UPduino [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
 # Xosera video mode selection:
@@ -48,7 +48,7 @@ SRCDIR := .
 # log output directory
 LOGS	:= upduino/logs
 
-# Xosera project setup for Upduino v3.0
+# Xosera project setup for UPduino v3.0
 TOP := xosera_upd
 SDC := $(SRCDIR)/timing/$(VIDEO_MODE).py
 PIN_DEF := upduino/upduino_v3.pcf
@@ -93,11 +93,11 @@ NEXTPNR_ARGS := --pre-pack $(SDC) --placer heap
 
 # defult target is make bitstream
 all: upduino/$(TOP)_$(VIDEO_MODE).bin upduino.mk
-	@echo === Finished Building Upduino Xosera ===
+	@echo === Finished Building UPduino Xosera ===
 
-# program Upduino FPGA via USB (may need udev rules or sudo on Linux)
+# program UPduino FPGA via USB (may need udev rules or sudo on Linux)
 prog: upduino/$(TOP)_$(VIDEO_MODE).bin upduino.mk
-	@echo === Programming Upduino Xosera ===
+	@echo === Programming UPduino Xosera ===
 	$(ICEPROG) -d i:0x0403:0x6014 $(TOP).bin
 
 # run icetime to generate a timing report
@@ -122,7 +122,7 @@ $(DOT): %.dot: %.sv upduino.mk
 
 # synthesize Verilog and create json description
 upduino/%_$(VIDEO_MODE).json: $(SRC) $(INC) $(FONTFILES) upduino.mk
-	@echo === Building Upduino Xosera ===
+	@echo === Building UPduino Xosera ===
 	@rm -f $@
 	@mkdir -p $(LOGS)
 	-$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(TOP)_verilator.log
@@ -134,7 +134,7 @@ upduino/%_$(VIDEO_MODE).asc: upduino/%_$(VIDEO_MODE).json $(PIN_DEF) $(SDC) updu
 	@mkdir -p $(LOGS)
 	@-cp $(TOP)_stats.txt $(LOGS)/$(TOP)_stats_last.txt
 	$(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
-	@echo === Upduino Xosera: $(VIDEO_MODE) | tee $(TOP)_stats.txt
+	@echo === UPduino Xosera: $(VIDEO_MODE) | tee $(TOP)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@$(NEXTPNR) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@sed -n '/Device utilisation/,/Info: Placed/p' $(LOGS)/$(TOP)_nextpnr.log | sed '$$d' | grep -v ":     0/" | tee -a $(TOP)_stats.txt

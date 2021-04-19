@@ -29,7 +29,7 @@ static void ftdi_put_byte(uint8_t data);
 static void ftdi_put_word(uint16_t data);
 static void host_spi_cleanup();
 
-// Toggle FTDI ADBUS3 (aka CTS) line used as FPGA SS on iCEBreaker (and Upduino 3.x via TP11)
+// Toggle FTDI ADBUS3 (aka CTS) line used as FPGA SS on iCEBreaker (and UPduino 3.x via TP11)
 // NOTE: cs = false to select (active low)
 void host_spi_cs(bool cs)
 {
@@ -147,7 +147,7 @@ int host_spi_open()
     }
 
     static int          device_ids[]   = {FTDI_FT2232H, FTDI_FT232H, FTDI_FT4232H};
-    static const char * device_name[]  = {"FT2232H (iCEBreaker)", "FT232H (Upduino)", "FT4232H (?)"};
+    static const char * device_name[]  = {"FT2232H (iCEBreaker)", "FT232H (UPduino)", "FT4232H (?)"};
     static unsigned int device_chunk[] = {4096, 1024, 2048};
 
     int id_num = 0;

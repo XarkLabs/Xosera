@@ -16,7 +16,7 @@
 enum
 {
     // AVR hardware pins
-    LED         = 1 << PB5,        // LED, also Upduino RST pin via ~470 ohm resistor (LED on, else FPGA reset)
+    LED         = 1 << PB5,        // Arduino LED
     BUS_CS_N    = 1 << PB2,        // active LOW select signal for Xosera
     BUS_RNW     = 1 << PB3,        // write/read signal for Xosera (0=write to Xosera, 1=read from Xosera)
     BUS_BYTESEL = 1 << PB4,        // even/oodd byte select (address line a0 or A1 for 68K with MOVEP)
@@ -42,13 +42,12 @@ enum
     TEST_RED   = 1 << PC4,        // off=no read errors, on=one or more read verify errors
 
     // "logical" defines for signal meanings (makes code easier to read)
-    // NOTE: We always want LED on, unless except to reset FPGA at startup
-    BUS_ON  = LED | 0,                  // LOW to select Xosera
-    BUS_OFF = LED | BUS_CS_N,           // HIGH to de-select Xosera
-    BUS_WR  = LED | 0,                  // LOW write to Xosera
-    BUS_RD  = LED | BUS_RNW,            // HIGH read from Xosera (will outut on data bus when selected)
-    BUS_MSB = LED | 0,                  // LOW even byte (MSB, bits [15:8] for Xosera)
-    BUS_LSB = LED | BUS_BYTESEL,        // HIGH odd byte (LSB, bits  [7:0] for Xosera)
+    BUS_ON  = 0,                  // LOW to select Xosera
+    BUS_OFF = BUS_CS_N,           // HIGH to de-select Xosera
+    BUS_WR  = 0,                  // LOW write to Xosera
+    BUS_RD  = BUS_RNW,            // HIGH read from Xosera (will outut on data bus when selected)
+    BUS_MSB = 0,                  // LOW even byte (MSB, bits [15:8] for Xosera)
+    BUS_LSB = BUS_BYTESEL,        // HIGH odd byte (LSB, bits  [7:0] for Xosera)
 
     // defines for GPIO output signals (BUS_Dx are bi-directional)
     PB_OUTPUTS = LED | BUS_CS_N | BUS_RNW | BUS_BYTESEL,
@@ -506,7 +505,7 @@ static void reboot_Xosera(uint8_t config)
 
 void setup()
 {
-    PORTB = BUS_CS_N;          // reset Xosera (LED off) and de-select (for safety)
+    PORTB = BUS_CS_N;          // de-select Xosera (for safety)
     DDRB  = PB_OUTPUTS;        // set control signals as outputs
     leds  = TEST_GREEN;        // set default test LEDs
     DDRC  = leds | PC_OUTPUTS;

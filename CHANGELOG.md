@@ -55,7 +55,7 @@
 2021-04-03 #4 - Xark
 
 * Glitch filter seemed to do no harm, so removed ifdef
-* Removed dead-pin hack ifdef (due to fresh Upduino with a working pin 38 setup)
+* Removed dead-pin hack ifdef (due to fresh UPduino with a working pin 38 setup)
 * Reversed bit order on Arduino tester (easier to make fast)
 
 2021-04-03 #3 - Xark

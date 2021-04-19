@@ -28,17 +28,17 @@ vsim:
 vrun:
 	$(MAKE) -f sim.mk vrun
 
-# Build Xosera Upduino 3.x FPGA bitstream
+# Build Xosera UPduino 3.x FPGA bitstream
 upd:
 	$(MAKE) -f upduino.mk
-	@echo Type \"make upd_prog\" to program the Upduino via USB
+	@echo Type \"make upd_prog\" to program the UPduino via USB
 
 # Build Xosera iCEBreaker FPGA bitstream
 iceb:
 	$(MAKE) -f icebreaker.mk
 	@echo Type \"make iceb_prog\" to program the iCEBreaker via USB
 
-# Build and program Xosera Upduino 3.x FPGA bitstream
+# Build and program Xosera UPduino 3.x FPGA bitstream
 upd_prog:
 	$(MAKE) -f upduino.mk prog
 

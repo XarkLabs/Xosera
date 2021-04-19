@@ -1,5 +1,5 @@
 
-### Upduino v3.0 pins for Xosera
+### UPduino v3.0 pins for Xosera
 
           [Xosera]       PCF  Pin#  _____  Pin#  PCF       [Xosera]
                              ------| USB |------

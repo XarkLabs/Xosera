@@ -73,11 +73,11 @@ logic [3:0] vga_b;                      // vga blue (4-bits)
 logic       vga_hs;                     // vga hsync
 logic       vga_vs;                     // vga vsync
 logic       dv_de;                      // DV display enable
-`ifdef SPI_INTERFACE
-logic       spi_sck;
-logic       spi_copi;
-logic       spi_cipo;
-logic       spi_cs_n;
+`ifdef SPI_INTERFACE    // SPI target interface (FPGA is the peripheral)
+logic       spi_sck;                    // SPI clock from controller
+logic       spi_copi;                   // SPI controller out/peripheral in
+logic       spi_cipo;                   // SPI controller in/peripheral out
+logic       spi_cs_n;                   // SPI CS for FPGA from controller
 `endif
 
 assign nreset       = BTN_N;            // active LOW reset button
@@ -278,7 +278,7 @@ assign bus_rd_nwr           = ~spi_cmd_byte[7];
 assign bus_bytesel          = spi_cmd_byte[4];
 assign bus_reg_num          = spi_cmd_byte[3:0];
 assign bus_data_in          = spi_data_byte;
-assign spi_transmit_data    = spi_2nd_byte ? bus_data_out : 8'hFF;
+assign spi_transmit_data    = spi_2nd_byte ? bus_data_out : 8'hCB;
 
 always_ff @(posedge pclk) begin
     if (!spi_select) begin

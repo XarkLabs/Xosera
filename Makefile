@@ -16,7 +16,7 @@ info:
 	@echo "   make upd_prog   - build Xosera and program UPduino v3 (see rtl/upduino.mk for options)"
 	@echo "   make icebreaker - build Xosera for iCEBreaker (see rtl/icebreaker.mk for options)"
 	@echo "   make iceb_prog  - build Xosera and program iCEBreaker (see rtl/icebreaker.mk for options)"
-	@echo "   make rtl        - build UPduino and iCEBreaker bitstream"
+	@echo "   make rtl        - build UPduino, iCEBreaker bitstreams and simulation targets"
 	@echo "   make sim        - build Icarus Verilog and Verilalator simulation files"
 	@echo "   make isim       - build Icarus Verilog simulation files"
 	@echo "   make irun       - build and run Icarus Verilog simulation"
@@ -24,43 +24,55 @@ info:
 	@echo "   make vrun       - build and run Verilator C++ & SDL2 native visual simulation"
 	@echo "   make utils      - build utilities (currently image_to_mem font converter)"
 	@echo "   make host_spi   - build PC side of FTDI SPI test utility (needs libftdi1)"
+	@echo "   make xvid_spi   - build PC XVID API over FTDI SPI test utility (needs libftdi1)"
 	@echo "   make clean      - clean files that can be rebuilt"
 
-all: rtl utils host_spi
+# Build all project targets
+all: rtl utils host_spi xvid_spi
 
+# Build UPduino bitstream
 upduino:
 	cd rtl && $(MAKE) upd
 
+# Build UPduino bitstream
 upd: upduino
 
+# Build UPduino bitstream and progam via USB
 upd_prog:
 	cd rtl && $(MAKE) upd_prog
 
+# Build iCEBreaker bitstream
 icebreaker:
 	cd rtl && $(MAKE) iceb
 
+# Build iCEBreaker bitstream
 iceb: icebreaker
 
+# Build iCEBreaker bitstream and program via USB
 iceb_prog:
 	cd rtl && $(MAKE) iceb_prog
 
-# Build all project targets
+# Build all RTL synthesis and simulation targets
+rtl:
+	cd rtl && $(MAKE) all
+
+# Build all simulation targets
 sim:
 	cd rtl && $(MAKE) sim
 
-# Build all project targets
+# Build Icarus Verilog simulation targets
 isim:
 	cd rtl && $(MAKE) isim
 
-# Build all project targets
+# Build Icarus and run Verilog simulation
 irun:
 	cd rtl && $(MAKE) irun
 
-# Build all project targets
+# Build Verilator simulation targets
 vsim:
 	cd rtl && $(MAKE) vsim
 
-# Build all project targets
+# Build and run Verilator simulation targets
 vrun:
 	cd rtl && $(MAKE) vrun
 
@@ -68,14 +80,19 @@ vrun:
 utils:
 	cd utils && $(MAKE)
 
-# Build host SPI command utility
+# Build host SPI test utility
 host_spi:
 	cd host_spi && $(MAKE)
+
+# Build xvid over SPI test utility
+xvid_spi:
+	cd xvid_spi && $(MAKE)
 
 # Clean all project targets
 clean:
 	cd rtl && $(MAKE) clean
 	cd utils && $(MAKE) clean
 	cd host_spi && $(MAKE) clean
+	cd xvid_spi && $(MAKE) clean
 
-.PHONY: all rtl sim utils host_spi clean
+.PHONY: all upduino upd upd_prog icebreaker iceb iceb_prog rtl sim isim irun vsim vrun utils host_spi xvid_spi clean

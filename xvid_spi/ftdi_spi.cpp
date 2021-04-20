@@ -224,7 +224,7 @@ int host_spi_open()
 
         ftdi_put_byte(EN_DIV_5);
         ftdi_put_byte(TCK_DIVISOR);
-        //        ftdi_put_word(0x0);        // 12 Mhz / (0 + 1 * 2) = 6 MHz
+        // ftdi_put_word(0x0);        // 12 Mhz / (0 + 1 * 2) = 6 MHz (too fast!)
         ftdi_put_word(0x1);        // 12 Mhz / (1 + 1 * 2) = 3 MHz
     }
 
@@ -238,6 +238,7 @@ int host_spi_open()
 
 int host_spi_close()
 {
+    host_spi_cs(true);
     host_spi_cleanup();
 
     return 0;
@@ -247,6 +248,8 @@ static void host_spi_cleanup()
 {
     if (ftdi_device_opened)
     {
+        host_spi_cs(true);
+
         if (ftdi_set_device_latency)
         {
             ftdi_set_latency_timer(&ftdi_ctx, ftdi_original_latency);

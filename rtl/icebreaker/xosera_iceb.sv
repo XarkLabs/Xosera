@@ -78,9 +78,11 @@ logic       spi_sck;                    // SPI clock from controller
 logic       spi_copi;                   // SPI controller out/peripheral in
 logic       spi_cipo;                   // SPI controller in/peripheral out
 logic       spi_cs_n;                   // SPI CS for FPGA from controller
+
 `endif
 
-assign nreset       = BTN_N;            // active LOW reset button
+logic  spi_reset_n = 1'b1;                              // SPI "soft" reset
+assign nreset       = BTN_N && spi_reset_n;            // active LOW reset button
 
 // split tri-state data lines into in/out signals for inside FPGA
 logic bus_out_ena;
@@ -287,12 +289,17 @@ always_ff @(posedge pclk) begin
         spi_data_byte   <= 8'h00;
         bus_cs_n        <= 1'b1;        // de-select bus
         spi_cs_n_hold   <= 1'b1;
+        spi_reset_n     <= 1'b1;
     end
     else begin
         bus_cs_n        <= spi_cs_n_hold;
         spi_cs_n_hold   <= 1'b1;
+        spi_reset_n     <= 1'b1;
         if (spi_receive_strobe) begin
             if (!spi_2nd_byte) begin
+                if (spi_receive_data[6:5] == 2'b11) begin
+                    spi_reset_n <= 1'b0;
+                end
                 spi_cmd_byte    <= spi_receive_data;
             end
             else begin

@@ -70,10 +70,11 @@ static void hexdump(size_t num, uint8_t * mem)
     printf("\n");
 }
 
-void delay(int ms)
+void delay_ms(int ms)
 {
-    usleep(ms * 100);
+    usleep(ms * 1000);
 }
+
 
 // SPI "bus command" message format. Always sends/receives two bytes:
 //              +---+---+---+---+---+---+---+---+
@@ -104,8 +105,8 @@ enum
 
 #define DEBUG_HEXDUMP 0
 
-#define MAX_SEND    256
-#define FLUSH_QUEUE 240
+#define MAX_SEND    1024
+#define FLUSH_QUEUE 1020
 
 static uint8_t   send_buffer[MAX_SEND];
 static uint8_t   xmit_buffer[MAX_SEND];
@@ -149,6 +150,12 @@ inline void spi_queue_cmd(uint8_t cmd, uint8_t data)
     {
         spi_queue_flush();
     }
+}
+
+void delay(int ms)
+{
+    spi_queue_flush();
+    delay_ms(ms);
 }
 
 static inline void xvid_setw(uint8_t r, uint16_t word)
@@ -212,15 +219,49 @@ static uint16_t addr;
 static uint16_t data;
 static uint16_t rdata;
 
+#include "buddy_font.h"
+
+static void spi_reset()
+{
+    spi_queue_flush();
+    host_spi_cs(false);        // de-select
+    spi_queue_cmd(0xff, 0xff);
+    spi_queue_cmd(0xff, 0xff);
+    spi_queue_cmd(0xff, 0xff);
+    spi_queue_cmd(0xff, 0xff);
+    spi_queue_cmd(0xff, 0xff);
+    spi_queue_cmd(0xff, 0xff);
+    spi_queue_flush();
+    host_spi_cs(true);        // de-select
+}
+
+static void sync_Xosera()
+{
+    printf("Waiting for SPI sync...\n");
+    do
+    {
+        spi_reset();
+        delay_ms(100);
+        xvid_setw(XVID_CONST, 0xB007);
+    } while (xvid_getw(XVID_CONST) != 0xB007);
+    printf("Good.\n");
+}
+
 static void reboot_Xosera(uint8_t config)
 {
 #if 1
     printf("Xosera resetting, switching to config #%d...\n", config & 0x3);
+    host_spi_cs(true);        // de-select
+    delay_ms(10);
     xvid_setw(XVID_BLIT_CTRL, 0x8080 | ((config & 0x3) << 8));        // reboot FPGA to config
     do
     {
+        spi_queue_flush();
+        host_spi_cs(true);        // de-select
+        delay_ms(100);
         xvid_setw(XVID_RD_ADDR, 0x1234);
         xvid_setw(XVID_CONST, 0xABCD);
+        spi_queue_flush();
 
     } while (xvid_getw(XVID_RD_ADDR) != 0x1234 || xvid_getw(XVID_CONST) != 0xABCD);
 #endif
@@ -234,7 +275,7 @@ static void reboot_Xosera(uint8_t config)
     xvid_setw(XVID_AUX_ADDR, AUX_VID_R_FEATURES);        // select features
     features = xvid_getw(XVID_AUX_DATA);
 
-    printf("(%dx%d, features=0x%08x) ready.\n", width, height, features);
+    printf("(%dx%d, features=0x%04x) ready.\n", width, height, features);
 
     //    width  = 848;
     //    height = 480;
@@ -445,7 +486,7 @@ void show_blurb()
         // set font height and switch to 8x8 font when < 8
         xvid_setw(XVID_AUX_DATA, (v < 8 ? 0x0200 : 0) | v);
 
-        wait_vsync(10);
+        wait_vsync(1);
     }
 
     printf("Grow font height\n");
@@ -454,7 +495,7 @@ void show_blurb()
         xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
         // set font height and switch to 8x8 font when < 8
         xvid_setw(XVID_AUX_DATA, (v < 8 ? 0x0200 : 0) | v);
-        wait_vsync(10);
+        wait_vsync(1);
     }
 
     // restore 1st font (ST 8x16)
@@ -465,7 +506,7 @@ void show_blurb()
 
     printf("Scroll via video VRAM display address\n");
     int16_t r = 0;
-    for (uint16_t i = 0; i < (rows * 3); i++)
+    for (uint16_t i = 0; i < (rows); i++)
     {
         xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // set text start addr
         xvid_setw(XVID_AUX_DATA, r * columns);                // to one line down
@@ -571,15 +612,12 @@ void test_reg_access()
         xprint(" <=> ");
 
         uint16_t cp = xvid_getw(XVID_WR_ADDR);
-        uint16_t v  = 0;
-        do
+        for (int i = 0; i < 8; i++)
         {
-            if ((v & 0xf) == 0xf)
-            {
-                xvid_setw(XVID_WR_ADDR, cp);
-                xcolor(cur_color);
-                xprint_hex(v);
-            }
+            uint16_t v = data_pat[i];
+            xvid_setw(XVID_WR_ADDR, cp);
+            xcolor(cur_color);
+            xprint_hex(v);
             xvid_setw(r, v);
             rdata = xvid_getw(r);
             if (rdata != v)
@@ -587,7 +625,7 @@ void test_reg_access()
                 problem("reg verify", r, rdata, v);
                 break;
             }
-        } while (--v);
+        }
         if (!error_flag)
         {
             xvid_setw(XVID_WR_ADDR, cp);
@@ -633,7 +671,7 @@ void test_reg_access()
         xcolor(cur_color);
         xprint_hex(v);
 
-        for (uint16_t a = (rows / 2) * columns; a != 0; a++)
+        for (int a = 0x600; a < 0x10000; a++)
         {
             if ((a & 0xfff) == 0xfff)
             {
@@ -671,6 +709,32 @@ void test_reg_access()
     delay(2000);
 }
 
+void draw_buddy()
+{
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
+    xvid_setw(XVID_AUX_DATA, 0x0207);                    // 2nd font in bank 2, 8 high
+    rows <<= 1;
+
+    xcls(0xff);
+    for (int y = 0; y < 16; y++)
+    {
+        xvid_setw(XVID_WR_ADDR, y * columns);
+        for (int x = 0; x < 16; x++)
+        {
+            xvid_setw(XVID_DATA, 0x0f00 | (y * 16 + x));
+        }
+    }
+    for (uint16_t a = 0; a < 2048; a++)
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_W_FONT | 4096 | a);
+        xvid_setw(XVID_AUX_DATA, buddy_font[a]);
+    }
+
+    delay(4000);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
+    xvid_setw(XVID_AUX_DATA, 0x000F);                    // back to 1st font in bank 0, 16 high
+}
+
 int main(int argc, char ** argv)
 {
     (void)argc;
@@ -679,39 +743,33 @@ int main(int argc, char ** argv)
     {
         exit(EXIT_FAILURE);
     }
-#if 0
-    size_t len = 0;
 
-    for (int i = 1; i < argc && len < sizeof(to_send); i++)
-    {
-        char * endptr = nullptr;
-        int    value  = static_cast<int>(strtoul(argv[i], &endptr, 0) & 0xffUL);
-        if (endptr != nullptr && *endptr == '\0')
-        {
-            data[len] = static_cast<uint8_t>(value);
-            len++;
-        }
-        else
-        {
-            break;
-        }
-    }
-#endif
+    sync_Xosera();
 
     reboot_Xosera(0);
 
-    //    xcls();
+    delay(5000);        // let the stunning boot logo display. :)
 
-    xhome();
-    xcolor(cur_color);
-    for (int i = 0; i < 64; i++)
+    xcls();
+    xprint("Xosera Retro Graphics Adapter: Mode ");
+    xprint_int(width);
+    xprint("x");
+    xprint_int(height);
+    xprint(" (SPI/FTDI PC tester)\n\n");
+
+    for (int i = 0; i < 409; i++)
     {
-        if (++cur_color > 0xf) cur_color = 1;
-        xcolor(cur_color);
-        xprint("Hello!  This is a test of some text to see if it gets sent correctly over SPI!\n");
+        uint8_t c = (i & 0xf) ? (i & 0xf) : 1;
+        xcolor(c);
+        xprint("Hello! ");
     }
 
-    for (uint16_t k = 0; k < 5000; k++)
+    delay(2000);
+    xcolor(0xf);
+    xcls();
+    draw_buddy();
+
+    for (uint16_t k = 0; k < 2000; k++)
     {
         xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
         uint16_t l = xvid_getw(XVID_AUX_DATA);               // read scanline
@@ -729,7 +787,7 @@ int main(int argc, char ** argv)
 
     show_blurb();
 
-    usleep(10 * 10000);
+    delay_ms(100);
 
     exit(EXIT_SUCCESS);
 }

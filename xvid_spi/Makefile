@@ -15,7 +15,7 @@ LDLIBS += -L/opt/homebrew/lib -lftdi1
 endif
 else
 # Linux
-CCFLAGS += -std=c++11 -Wall -Wextra -Os -I/usr/include/libftdi1
+CCFLAGS += -std=c++11 -Wall -Wextra  -Wno-unused-function -Wno-unused-variable -Os -I/usr/include/libftdi1
 LDLIBS += -lftdi1
 endif
 

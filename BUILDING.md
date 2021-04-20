@@ -50,7 +50,7 @@ In the top directory of Xosera, there is a "driver" Makefile that has the follow
 * Utilities and Verilator simulation require C++ compiler
 * SDL2 and SDL2_Image required for Verilator visual simulation
 
-NOTE: It has been reported that sometimes `nextpnr-ice40` can fail to meet timing on this design, but that building again it can make it work (non-determinstic, and it may depend on exact version of tools used, I tend to use quite recent ones).
+NOTE: `nextpnr-ice40` sometimes can fail to meet timing on this design as the "maximum frequency" can vary by several MHz each run.  Usually re-building once or twice will eventually get it to work (non-determinstic, and it may depend on exact version of tools used, I tend to use quite recent ones).
 
 You can consult the most recent `rtl/xosera_upd_stats.txt` or `rtl/xosera_iceb_stats.txt` to see the tool versions I am using and the design results achieved.  These are submitted to git to make "size and speed" regressions easier to notice (as well as to help others building or modifying Xosera).
 

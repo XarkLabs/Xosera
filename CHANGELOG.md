@@ -1,5 +1,20 @@
 # Informal list of notable Xosera changes
 
+2021-04-20 Xark
+
+* Added another bit to AUX_VID registers for GFX_CTRL register with horizontal and vertical pixel doubling (horizontal only wired up)
+* Moved global definitions into a Verilog package
+* Fixed up image_to_mem utility to also output C code
+* Used utility to add 128x128 monochome "font pic" as a test.  Worked, but still want a real bitmap mode. :)
+
+2021-04-18 Xark
+
+* Added SPI controller to iCEBreaker that allows low-level "bus" access from PC
+* Wrote xvid_spi test program that runs about the same register API as AVR, but on PC ove SPI (retro eGPU :) )
+* Added some tests for SPI to xvid
+* Fixed SPI flush issue
+* Added "remote reset" to help sync SPI when starting (works well, but FTDI SPI gets funky after ^C) - trying UART
+
 2021-04-15 Xark
 
 * Fix AUX reads.  Now it is necessary to write register number to AUX_ADDR before each read (this primes the read for AUX_DATA)

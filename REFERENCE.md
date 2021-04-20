@@ -81,6 +81,10 @@ To access these registers, write the register address to `XVID_AUX_ADDR`, then w
 | 0x1   | `AUX_VID_W_TILEWIDTH` |W/O| [15:0] words per line (TODO a bit funky...)                                         |
 | 0x2   | `AUX_VID_W_SCROLLXY`  |W/O| [10:8] horizontal (0-7) pixel scroll, [3:0] vertical (0-15) pixel scroll            |
 | 0x3   | `AUX_VID_W_FONTCTRL`  |W/O| [9:8] font bank (0-3 8x8, 0/2 8x16),  [3:0] font Y height-1 (0-15) (8x8 font if < 8)|
+| 0x4   | `AUX_VID_W_GFXCTRL`   |W/O| [0] h pixel double                                                                  |
+| 0x5   | `AUX_VID_W_UNUSED5`   |W/O|                                                                                     |
+| 0x6   | `AUX_VID_W_UNUSED6`   |W/O|                                                                                     |
+| 0x7   | `AUX_VID_W_UNUSED7`   |W/O|                                                                                     |
 
 ###### Read-only AUX_VID Registers
 
@@ -88,5 +92,5 @@ To access these registers, write the register address to `XVID_AUX_ADDR`, then w
 --------| ----------------------|---| ------------------------------------------------------------------------------------|
 | 0x0   | `AUX_VID_R_WIDTH`     |R/O| [15:0] configured display resolution width (e.g., 640 or 848)                       |
 | 0x1   | `AUX_VID_R_HEIGHT`    |R/O| [15:0] configured display resolution height (e.g. 480)                              |
-| 0x2   | `AUX_VID_R_UNUSED_2`  |R/O| TODO TBD 🤔                                                                           |
+| 0x2   | `AUX_VID_R_FEATURES`  |R/O| [15:0] configured features [bits TBD]                                               |
 | 0x3   | `AUX_VID_R_SCANLINE`  |R/O| [15] V blank, [14:11] zero [10:0] V line (bit 15 set for all non-visible lines)     |

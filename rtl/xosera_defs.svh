@@ -130,3 +130,4 @@ parameter RnW_WRITE         = 1'b0;
 parameter RnW_READ          = 1'b1;
 parameter cs_ENABLED        = 1'b0;
 parameter cs_DISABLED       = 1'b1;
+

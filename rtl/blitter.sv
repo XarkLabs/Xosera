@@ -10,6 +10,8 @@
 `default_nettype none             // mandatory for Verilog sanity
 `timescale 1ns/1ps
 
+`include "xosera_pkg.sv"
+
 module blitter(
     input  logic            bus_cs_n_i,         // register select strobe
     input  logic            bus_rd_nwr_i,       // 0 = write, 1 = read
@@ -40,31 +42,6 @@ localparam [31:0] githash = 32'H`GITHASH;
 logic [14*8:1]  logostring = "Xosera v0.12 #";    // boot msg
 
 localparam CLEARDATA = 16'h0220;    // value VRAM cleared to on init (blue+white space) TODO: zero for final?
-
-// video reg_controller registers (16x16-bit words)
-typedef enum logic [3:0] {
-        // register 16-bit read/write (no side effects)
-		XVID_AUX_ADDR,          // reg 0: TODO video data (as set by VID_CTRL)
-		XVID_CONST,             // reg 1: TODO CPU data (instead of read from VRAM)
-		XVID_RD_ADDR,           // reg 2: address to read from VRAM
-		XVID_WR_ADDR,           // reg 3: address to write from VRAM
-
-        // special registers (with side effects), odd byte write triggers effect
-		XVID_DATA,              // reg 4: read/write word from/to VRAM RD/WR
-		XVID_DATA_2,            // reg 5: read/write word from/to VRAM RD/WR (for 32-bit)
-		XVID_AUX_DATA,          // reg 6: aux data (font/audio)
-		XVID_COUNT,             // reg 7: TODO blitter "repeat" count/trigger
-
-        // write only, 16-bit
-		XVID_RD_INC,            // reg 9: read addr increment value
-		XVID_WR_INC,            // reg A: write addr increment value
-		XVID_WR_MOD,            // reg C: TODO write modulo width for 2D blit
-		XVID_RD_MOD,            // reg B: TODO read modulo width for 2D blit
-		XVID_WIDTH,             // reg 8: TODO width for 2D blit
-		XVID_BLIT_CTRL,         // reg D: TODO
-		XVID_UNUSED_1,          // reg E: TODO
-		XVID_UNUSED_2           // reg F: TODO
-} register_t;
 
 typedef enum logic [4:0] {
     INIT, CLEAR, LOGO_1, LOGO_2, LOGO_3, LOGO_4, LOGO_5, LOGO_6, LOGO_7, LOGO_8, LOGO_9, LOGO_10, LOGO_11, LOGO_12, LOGO_13, LOGO_14,
@@ -164,19 +141,19 @@ function [7:0] reg_read(
     if (r_sel[2] == 1'b0) begin
         // first 4 registers directly readable
         case (r_sel[1:0])
-            XVID_AUX_ADDR[1:0]: reg_read = (~b_sel) ? reg_aux_addr[15:8] : reg_aux_addr[7:0];
-            XVID_CONST[1:0]:    reg_read = (~b_sel) ? reg_const[15:8]    : reg_const[7:0];
-            XVID_RD_ADDR[1:0]:  reg_read = (~b_sel) ? reg_rd_addr[15:8]  : reg_rd_addr[7:0];
-            XVID_WR_ADDR[1:0]:  reg_read = (~b_sel) ? reg_wr_addr[15:8]  : reg_wr_addr[7:0];
+            xv::XVID_AUX_ADDR[1:0]: reg_read = (~b_sel) ? reg_aux_addr[15:8] : reg_aux_addr[7:0];
+            xv::XVID_CONST[1:0]:    reg_read = (~b_sel) ? reg_const[15:8]    : reg_const[7:0];
+            xv::XVID_RD_ADDR[1:0]:  reg_read = (~b_sel) ? reg_rd_addr[15:8]  : reg_rd_addr[7:0];
+            xv::XVID_WR_ADDR[1:0]:  reg_read = (~b_sel) ? reg_wr_addr[15:8]  : reg_wr_addr[7:0];
         endcase
     end
     else begin
         // the other 4 read registers are "synthetic"
         case (r_sel[1:0])
-            XVID_DATA[1:0],
-            XVID_DATA_2[1:0]:   reg_read = (~b_sel) ? vram_rd_data[15:8] : vram_rd_data[7:0];
-            XVID_AUX_DATA[1:0]: reg_read = (~b_sel) ? aux_rd_data[15:8]  : aux_rd_data[7:0];
-            XVID_COUNT[1:0]:    reg_read = { blit_busy, 7'b0 };
+            xv::XVID_DATA[1:0],
+            xv::XVID_DATA_2[1:0]:   reg_read = (~b_sel) ? vram_rd_data[15:8] : vram_rd_data[7:0];
+            xv::XVID_AUX_DATA[1:0]: reg_read = (~b_sel) ? aux_rd_data[15:8]  : aux_rd_data[7:0];
+            xv::XVID_COUNT[1:0]:    reg_read = { blit_busy, 7'b0 };
         endcase
     end
 endfunction
@@ -285,20 +262,20 @@ always_ff @(posedge clk) begin
                 if (!bus_bytesel) begin
                     // special storage for certain registers
                     case (bus_reg_num)
-                        XVID_AUX_ADDR: begin
+                        xv::XVID_AUX_ADDR: begin
                             reg_aux_addr[15:8]  <= bus_data_byte;
                         end
-                        XVID_CONST: begin
+                        xv::XVID_CONST: begin
                             reg_const[15:8]     <= bus_data_byte;
                         end
-                        XVID_RD_ADDR: begin
+                        xv::XVID_RD_ADDR: begin
                             reg_rd_addr[15:8]   <= bus_data_byte;
                         end
-                        XVID_WR_ADDR: begin
+                        xv::XVID_WR_ADDR: begin
                             reg_wr_addr[15:8]   <= bus_data_byte;
                         end
-                        XVID_DATA,
-                        XVID_DATA_2: begin
+                        xv::XVID_DATA,
+                        xv::XVID_DATA_2: begin
                             even_wr_data        <= bus_data_byte;   // data reg even byte storage
                         end
                         default: begin
@@ -308,65 +285,65 @@ always_ff @(posedge clk) begin
                 end
                 else begin
                     case (bus_reg_num)
-                        XVID_AUX_ADDR: begin
+                        xv::XVID_AUX_ADDR: begin
                             reg_aux_addr[7:0]   <= bus_data_byte;
                             blit_addr_o         <= { reg_aux_addr[15:8], bus_data_byte };      // output read address
                             blit_aux_sel_o     <= 1'b1;            // select AUX
                             blit_aux_rd        <= 1'b1;            // remember pending aux read request
                         end
-                        XVID_CONST: begin
+                        xv::XVID_CONST: begin
                             reg_const[7:0]      <= bus_data_byte;
                         end
-                        XVID_RD_ADDR: begin
+                        xv::XVID_RD_ADDR: begin
                             reg_rd_addr[7:0]    <= bus_data_byte;
                             blit_addr_o         <= { reg_rd_addr[15:8], bus_data_byte };      // output read address
                             blit_vram_sel_o     <= 1'b1;            // select VRAM
                             blit_vram_rd        <= 1'b1;            // remember pending vramread request
                         end
-                        XVID_WR_ADDR: begin
+                        xv::XVID_WR_ADDR: begin
                             reg_wr_addr[7:0]    <= bus_data_byte;
                         end
-                        XVID_DATA,
-                        XVID_DATA_2: begin
+                        xv::XVID_DATA,
+                        xv::XVID_DATA_2: begin
                             blit_addr_o         <= reg_wr_addr;    // output write address
                             blit_data_o         <= { even_wr_data, bus_data_byte };      // output write data
                             blit_vram_sel_o     <= 1'b1;            // select VRAM
                             blit_wr_o           <= 1'b1;            // write
                         end
-                        XVID_AUX_DATA: begin
+                        xv::XVID_AUX_DATA: begin
                             blit_addr_o         <= reg_aux_addr;
                             blit_data_o         <= { even_wr_reg, bus_data_byte };
                             blit_aux_sel_o      <= 1'b1;
                             blit_wr_o           <= 1'b1;
                         end
-                        XVID_COUNT: begin
+                        xv::XVID_COUNT: begin
                             reg_count           <= { 1'b0, even_wr_reg, bus_data_byte };    // TODO async
                             width_counter       <=  { 1'b0, reg_width };
                         end
-                        XVID_RD_INC: begin
+                        xv::XVID_RD_INC: begin
                             reg_rd_inc          <= { even_wr_reg, bus_data_byte };
                         end
-                        XVID_WR_INC: begin
+                        xv::XVID_WR_INC: begin
                             reg_wr_inc          <= { even_wr_reg, bus_data_byte };
                         end
-                        XVID_RD_MOD: begin
+                        xv::XVID_RD_MOD: begin
                             reg_rd_mod          <= { even_wr_reg, bus_data_byte };
                         end
-                        XVID_WR_MOD: begin
+                        xv::XVID_WR_MOD: begin
                             reg_wr_mod          <= { even_wr_reg, bus_data_byte };
                         end
-                        XVID_WIDTH: begin
+                        xv::XVID_WIDTH: begin
                             reg_width           <= { even_wr_reg, bus_data_byte };
                         end
-                        XVID_BLIT_CTRL: begin
+                        xv::XVID_BLIT_CTRL: begin
                             blit_2d             <= bus_data_byte[0];
                             blit_const          <= bus_data_byte[1];
                             reconfig            <= even_wr_reg[7:6] == 2'b10 && bus_data_byte[7:6] == 2'b10;
                             boot_select         <= even_wr_reg[1:0];
                         end
-                        XVID_UNUSED_1: begin
+                        xv::XVID_UNUSED_1: begin
                         end
-                        XVID_UNUSED_2: begin
+                        xv::XVID_UNUSED_2: begin
                         end
                     endcase
                     even_wr_reg <= 8'h00;

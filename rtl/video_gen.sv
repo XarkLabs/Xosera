@@ -18,6 +18,8 @@
 `default_nettype none             // mandatory for Verilog sanity
 `timescale 1ns/1ps
 
+`include "xosera_pkg.sv"
+
 module video_gen(
             // control outputs
             output logic            blit_cycle_o,       // 0=video memory cycle, 1=Blit memory cycle
@@ -31,7 +33,7 @@ module video_gen(
             input  logic  [7:0]     fontram_data_i,     // font memory byte data in
             input  logic            enable_i,           // enable video (0=black output, 1=normal output)
             input  logic            vgen_reg_wr_i,           // strobe to write internal config register number
-            input  logic  [1:0]     vgen_reg_num_i,          // internal config register number
+            input  logic  [2:0]     vgen_reg_num_i,          // internal config register number
             input  logic [15:0]     vgen_reg_data_i,         // data for internal config register
             // video signal outputs
             output logic  [3:0]     pal_index_o,        // palette index outputs
@@ -50,6 +52,10 @@ module video_gen(
 // -1 to hit last "case (char_x)" case to latch value to shift out
 localparam H_MEM_BEGIN = OFFSCREEN_WIDTH - 10;          // memory fetch starts 1 character early to prime output shift-logic
 localparam H_MEM_END = TOTAL_WIDTH - 10;                // memory fetch ends 1 character early (to empty shift-logic)
+
+// mode options
+logic pixel_h_dbl;
+logic pixel_v_dbl;
 
 // bitmap generation signals
 logic [15: 0] bitmap_start_addr;                        // bitmap start address
@@ -171,35 +177,42 @@ always_ff @(posedge clk) begin
         fine_scrolly    <= 4'b0000;
         font_height     <= 4'b1111;
         font_bank       <= 2'b00;
+        pixel_h_dbl     <= 1'b0;
+        pixel_v_dbl     <= 1'b0;
     end
     else begin
         if (vgen_reg_wr_i) begin
             case (vgen_reg_num_i)
-                2'b00: begin
+                xv::AUX_VID_W_DISPSTART[2:0]: begin
                     text_start_addr <= vgen_reg_data_i;
                 end
-                2'b01: begin
+                xv::AUX_VID_W_TILEWIDTH[2:0]: begin
                     text_line_width <= vgen_reg_data_i;
                 end
-                2'b10: begin
+                xv::AUX_VID_W_SCROLLXY[2:0]: begin
                     fine_scrollx    <= vgen_reg_data_i[10:8];
                     fine_scrolly    <= vgen_reg_data_i[3:0];
                 end
-                2'b11: begin
+                xv::AUX_VID_W_FONTCTRL[2:0]: begin
                     font_height     <= vgen_reg_data_i[3:0];
                     font_bank       <= vgen_reg_data_i[9:8];
                 end
+                xv::AUX_VID_W_GFXCTRL[2:0]: begin
+                    pixel_h_dbl     <= vgen_reg_data_i[0];
+                    pixel_v_dbl     <= vgen_reg_data_i[1];
+                end
+                default: begin
+                end
             endcase
         end
+
+        case (vgen_reg_num_i[1:0])
+            2'b00:      vgen_reg_data_o <= VISIBLE_WIDTH[15:0];
+            2'b01:      vgen_reg_data_o <= VISIBLE_HEIGHT[15:0];
+            2'b10:      vgen_reg_data_o <= 16'b1000_0000_0000_0001;  // TODO feature bits
+            2'b11:      vgen_reg_data_o <= {(v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 3'b000, v_count }; // negative when not vsync
+        endcase
     end
-
-    case (vgen_reg_num_i)
-        2'b00:      vgen_reg_data_o <= VISIBLE_WIDTH[15:0];
-        2'b01:      vgen_reg_data_o <= VISIBLE_HEIGHT[15:0];
-        2'b10:      vgen_reg_data_o <= 16'b1000_0000_0000_0001;  // TODO feature bits
-        2'b11:      vgen_reg_data_o <= {(v_state != STATE_VISIBLE), 4'h0, v_count }; // negative when not vsync
-    endcase
-
 end
 
 // logic aliases
@@ -217,7 +230,6 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         tg_enable       <= 1'b0;                        // text generation enable
         bm_enable       <= 1'b0;                        // text generation enable
-
         h_state         <= STATE_PRE_SYNC;
         v_state         <= STATE_VISIBLE;
         mem_fetch       <= 1'b0;
@@ -247,12 +259,14 @@ always_ff @(posedge clk) begin
         vram_sel_o <= 1'b0;                                 // default to no VRAM access
         fontram_sel_o <= 1'b0;                              // default to no font access
 
-        // shift font pixel data left (7 is new pixel)
-        font_shift_out <= {font_shift_out[6: 0], 1'b0};
-
-        char_x <= char_x + 1;                               // increment character cell column
         if (mem_fetch_sync) begin
-            char_x <= 3'b0;                                 // reset on fetch sync signal
+            char_x <= fine_scrollx;                         // reset on fetch sync signal
+        end
+
+        // shift font pixel data left (7 is new pixel)
+        if (~pixel_h_dbl | ~h_count[0]) begin
+            font_shift_out <= {font_shift_out[6: 0], 1'b0};
+            char_x <= char_x + 1;                               // increment character cell column
         end
 
         // memory read for text
@@ -261,44 +275,38 @@ always_ff @(posedge clk) begin
             // set memory cycle
             blit_cycle_o <= char_x[1];                      // blitter and video alternate every 2 cycles
 
-            // bitmap generation
-            if (bm_enable == 1'b1) begin
+            // // bitmap generation
+            // if (bm_enable == 1'b1) begin
 
-            end
+            // end
 
             // text character generation
-            case (char_x)                                   // do memory access based on char column
-                3'b000: begin
+            case ({ char_x, h_count[0] & pixel_h_dbl })                                   // do memory access based on char column
+                4'b0000: begin
                 end
-
-                3'b001: begin
+                4'b0010: begin
                 end
-
-                3'b010: begin
+                4'b0100: begin
                 end
-
-                3'b011: begin
+                4'b0110: begin
                 end
-
-                3'b100: begin
+                4'b1000: begin
                     vram_addr_o <= text_addr;               // put text+color address on vram bus
                 end
-
-                3'b101: begin                               // read vram for color + text
+                4'b1010: begin                               // read vram for color + text
                     vram_sel_o <= 1'b1;                     // select vram
                     fontram_sel_o <= ~bm_enable;                  // select fontram (vram output & char y will drive fontram addr)
                 end
-
-                3'b110: begin
+                4'b1100: begin
                     text_color_temp <= vram_data_i[15: 8];  // save color data from vram
                 end
-
-                3'b111: begin                               // switch to new character data for next pixel
+                4'b1110: begin                               // switch to new character data for next pixel
                     font_shift_out <= fontram_data_i;       // use next font data byte
                     text_color <= text_color_temp;          // use next font color byte (screen color if monochrome)
                     text_addr <= text_addr + 1;             // next char+attribute
                 end
-
+                default: begin
+                end
             endcase
         end
 

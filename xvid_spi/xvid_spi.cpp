@@ -47,6 +47,10 @@ enum
     AUX_VID_W_TILEWIDTH = 0x0001,        // tile line width (usually WIDTH/8)
     AUX_VID_W_SCROLLXY  = 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
     AUX_VID_W_FONTCTRL  = 0x0003,        // [9:8] 2KB font bank, [3:0] font height
+    AUX_VID_W_GFXCTRL   = 0x0004,        // [0] h pix double
+    AUX_VID_W_UNUSED5   = 0x0005,
+    AUX_VID_W_UNUSED6   = 0x0006,
+    AUX_VID_W_UNUSED7   = 0x0007,
     AUX_VID_R_WIDTH     = 0x0000,        // display resolution width
     AUX_VID_R_HEIGHT    = 0x0001,        // display resolution height
     AUX_VID_R_FEATURES  = 0x0002,        // [15] = 1 (test)
@@ -55,7 +59,6 @@ enum
     AUX_W_COLORTBL      = 0x8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
     AUX_W_AUD           = 0xc000         // 0xC000-0x??? TODO (audio registers)
 };
-
 
 static void hexdump(size_t num, uint8_t * mem)
 {
@@ -730,7 +733,13 @@ void draw_buddy()
         xvid_setw(XVID_AUX_DATA, buddy_font[a]);
     }
 
-    delay(4000);
+    delay(2000);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0003);                   // set palette data
+    delay(2000);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0000);                   // set palette data
+    delay(2000);
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
     xvid_setw(XVID_AUX_DATA, 0x000F);                    // back to 1st font in bank 0, 16 high
 }
@@ -765,6 +774,7 @@ int main(int argc, char ** argv)
     }
 
     delay(2000);
+
     xcolor(0xf);
     xcls();
     draw_buddy();
@@ -783,11 +793,22 @@ int main(int argc, char ** argv)
         xvid_setw(XVID_AUX_DATA, defpal[i]);                 // set palette data
     }
 
-    test_reg_access();
+    //    test_reg_access();
 
     show_blurb();
 
-    delay_ms(100);
+    delay_ms(2000);
+
+    xhome();
+
+    xprint_rainbow(1, blurb);
+
+    delay_ms(2000);
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0001);                   // set palette data
+
+    delay_ms(2000);
 
     exit(EXIT_SUCCESS);
 }

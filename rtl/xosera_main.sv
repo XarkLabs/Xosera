@@ -34,6 +34,8 @@
 `default_nettype none             // mandatory for Verilog sanity
 `timescale 1ns/1ps
 
+`include "xosera_pkg.sv"
+
 module xosera_main(
            input  logic         clk,                    // pixel clock
            input  logic         bus_cs_n_i,             // register select strobe (active low)
@@ -50,12 +52,6 @@ module xosera_main(
        );
 
 `include "xosera_defs.svh"        // Xosera global Verilog definitions
-
-// blit_addr[15:14] address space when AUX is selected with blit_aux_sel
-parameter   AUX_VID         = 2'b00;
-parameter   AUX_FONT        = 2'b01;
-parameter   AUX_COLORTBL    = 2'b10;
-parameter   AUX_AUD         = 2'b11;
 
 logic blit_vram_cycle;          // cycle is for blitter (vs video)
 logic blit_vram_sel;            // blitter vram select
@@ -94,7 +90,7 @@ logic [15:0] vgen_addr;     // video vram addr
 logic [15:0] vgen_data_out; // video reg reads
 
 logic vgen_reg_wr;
-assign vgen_reg_wr = (blit_addr[15:14] == AUX_VID) && blit_aux_sel && blit_wr;
+assign vgen_reg_wr = (blit_addr[15:14] == xv::AUX_VID_W_DISPSTART[15:14]) && blit_aux_sel && blit_wr;
 
 //  video generation
 video_gen video_gen(
@@ -109,7 +105,7 @@ video_gen video_gen(
     .vram_addr_o(vgen_addr),
     .vram_data_i(blit_data_in),
     .vgen_reg_wr_i(vgen_reg_wr),
-    .vgen_reg_num_i(blit_addr[1:0]),
+    .vgen_reg_num_i(blit_addr[2:0]),
     .vgen_reg_data_o(vgen_data_out),
     .vgen_reg_data_i(blit_data_out),
     .pal_index_o(pal_index),
@@ -154,7 +150,7 @@ logic           fontram_rd_en       /* verilator public */;
 logic [12:0]    fontram_addr        /* verilator public */; // 13-bit byte address
 logic  [7:0]    fontram_data_out    /* verilator public */;
 logic           fontram_wr_en       /* verilator public */;
-assign          fontram_wr_en = (blit_addr[15:14] == AUX_FONT) && blit_aux_sel && blit_wr;
+assign          fontram_wr_en = (blit_addr[15:14] == xv::AUX_FONT[15:14]) && blit_aux_sel && blit_wr;
 
 fontram fontram(
     .clk(clk),
@@ -171,7 +167,7 @@ fontram fontram(
 logic  [3:0]    pal_index       /* verilator public */;
 logic [15:0]    pal_lookup      /* verilator public */;
 logic           palette_wr_en   /* verilator public */;
-assign          palette_wr_en = (blit_addr[15:14] == AUX_COLORTBL) && blit_aux_sel && blit_wr;
+assign          palette_wr_en = (blit_addr[15:14] == xv::AUX_COLORTBL[15:14]) && blit_aux_sel && blit_wr;
 
 paletteram paletteram(
     .clk(clk),

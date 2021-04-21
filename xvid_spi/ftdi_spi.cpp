@@ -225,9 +225,8 @@ int host_spi_open()
         ftdi_put_byte(EN_DIV_5);
         ftdi_put_byte(TCK_DIVISOR);
         // ftdi_put_word(0x0);        // 12 Mhz / (0 + 1 * 2) = 6 MHz (too fast!)
-        ftdi_put_word(0x1);        // 12 Mhz / (1 + 1 * 2) = 3 MHz
+        ftdi_put_word(0x2);        // 12 Mhz / (2 + 1 * 2) = 2 MHz
     }
-
 
     sleep(1);
 

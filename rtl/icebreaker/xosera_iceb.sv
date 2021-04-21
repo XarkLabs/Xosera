@@ -46,7 +46,11 @@ module xosera_iceb(
 `endif
         output logic P1A1, P1A2, P1A3, P1A4, P1A7, P1A8, P1A9, P1A10,   // PMOD 1A
         output logic P1B1, P1B2, P1B3, P1B4, P1B7, P1B8, P1B9, P1B10,   // PMOD 1B
+`ifdef SPI_INTERFACE
+        output logic P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10,   // PMOD 2 (8-bit bi-dir data bus)
+`else
         inout  logic P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10,   // PMOD 2 (8-bit bi-dir data bus)
+`endif
         output logic FLASH_SSB,                     // SPI flash CS (drive high unless using SPI flash)
         input  logic CLK                            // 12Mhz clock
     );
@@ -81,8 +85,8 @@ logic       spi_cs_n;                   // SPI CS for FPGA from controller
 
 `endif
 
-logic  spi_reset_n = 1'b1;                              // SPI "soft" reset
-assign nreset       = BTN_N && spi_reset_n;            // active LOW reset button
+logic  spi_reset;                       // SPI "soft" reset
+assign nreset       = BTN_N;            // active LOW reset button
 
 // split tri-state data lines into in/out signals for inside FPGA
 logic bus_out_ena;
@@ -214,7 +218,7 @@ logic reset = 1'b1;         // default in reset state
 
 always_ff @(posedge pclk) begin
     // reset count and stay in reset if pll_lock lost or bus_nreset
-    if (!pll_lock || !nreset) begin
+    if (!pll_lock || !nreset || spi_reset) begin
         reset_cnt   <= 0;
         reset       <= 1'b1;
     end
@@ -270,44 +274,44 @@ spi_target  spi_target(
             .reset_i(reset),
             .clk(pclk)
 );
+// SPI cmd byte (all active HIGH):
+//  7  6  5  4  3  2  1  0
+// CS WR RS BS R3 R2 R1 R0
+logic [7:0] spi_cmd_byte        = 8'h00;
+logic [7:0] spi_data_byte       = 8'h00;
+logic       spi_payload_byte    = 1'b0;   // true on 2nd byte (payload byte) of packet
+logic       spi_cs_hold0        = 1'b0;   // saved CS from spi_cmd_byte (held for two cycles)
+logic       spi_cs_hold1        = 1'b0;   // saved CS from spi_cmd_byte (held for two cycles)
+logic       spi_rs_hold0        = 1'b0;   // saved CS from spi_cmd_byte (held for two cycles)
+logic       spi_rs_hold1        = 1'b0;   // saved CS from spi_cmd_byte (held for two cycles)
 
-logic       spi_2nd_byte;
-logic       spi_cs_n_hold;
-logic [7:0] spi_cmd_byte;       // W . . BS R3 R2 R1 R0
-logic [7:0] spi_data_byte;
+assign bus_cs_n             = ~spi_cs_hold0;                            // CS bit
+assign bus_rd_nwr           = ~spi_cmd_byte[6];                         // WR bit
+assign bus_bytesel          = spi_cmd_byte[4];                          // BS bit
+assign spi_reset            = spi_cmd_byte[5];                          // RS bit
+assign bus_reg_num          = spi_cmd_byte[3:0];                        // register bits
+assign bus_data_in          = spi_data_byte;                            // bus data to write
+assign spi_transmit_data    = spi_payload_byte ? bus_data_out : 8'hCB;  // bus data to read
 
-assign bus_rd_nwr           = ~spi_cmd_byte[7];
-assign bus_bytesel          = spi_cmd_byte[4];
-assign bus_reg_num          = spi_cmd_byte[3:0];
-assign bus_data_in          = spi_data_byte;
-assign spi_transmit_data    = spi_2nd_byte ? bus_data_out : 8'hCB;
+assign { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 } = spi_cmd_byte;  // TODO debug
 
 always_ff @(posedge pclk) begin
-    if (!spi_select) begin
-        spi_2nd_byte    <= 1'b0;
-        spi_cmd_byte    <= 8'b10000000;
-        spi_data_byte   <= 8'h00;
-        bus_cs_n        <= 1'b1;        // de-select bus
-        spi_cs_n_hold   <= 1'b1;
-        spi_reset_n     <= 1'b1;
+    spi_cs_hold0        <= spi_cs_hold1;                 // clear held CS
+    spi_cs_hold1        <= 1'b0;                        // clear held CS
+    spi_cmd_byte[5]     <= 1'b0;                        // clear RS bit
+    if (!spi_select) begin                              // if SPI de-selected
+        spi_payload_byte    <= 1'b0;                    // next byte is command byte
     end
-    else begin
-        bus_cs_n        <= spi_cs_n_hold;
-        spi_cs_n_hold   <= 1'b1;
-        spi_reset_n     <= 1'b1;
-        if (spi_receive_strobe) begin
-            if (!spi_2nd_byte) begin
-                if (spi_receive_data[6:5] == 2'b11) begin
-                    spi_reset_n <= 1'b0;
-                end
-                spi_cmd_byte    <= spi_receive_data;
-            end
-            else begin
-                bus_cs_n        <= 1'b0;        // select bus
-                spi_cs_n_hold   <= 1'b0;        // hold for next cycle
-                spi_data_byte   <= spi_receive_data;
-            end
-            spi_2nd_byte    <= ~spi_2nd_byte;
+    if (spi_receive_strobe) begin                       // if an SPI byte received
+        if (!spi_payload_byte) begin                    // if not a payload byte (aka is a command byte)
+            spi_cmd_byte        <= spi_receive_data;    // save command byte
+            spi_payload_byte    <= 1'b1;
+        end
+        else begin                                      // else payload byte
+            spi_data_byte       <= spi_receive_data;    // put data byte on bus
+            spi_cs_hold0        <= spi_cmd_byte[7];     // hold CS for next cycle
+            spi_cs_hold1        <= spi_cmd_byte[7];     // hold CS for next cycle
+            spi_payload_byte    <= 1'b0;                // next byte is command byte
         end
     end
 end

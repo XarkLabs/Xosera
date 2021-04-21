@@ -101,9 +101,11 @@ void delay_ms(int ms)
 
 enum
 {
-    SPI_CMD_WR      = 0x80,
+    SPI_CMD_CS      = 0x80,
+    SPI_CMD_WR      = 0x40,
+    SPI_CMD_RS      = 0x20,
     SPI_CMD_BYTESEL = 0x10,
-    SPI_CMD_REGMASK = 0x0f
+    SPI_CMD_REGMASK = 0x0F
 };
 
 #define DEBUG_HEXDUMP 0
@@ -163,24 +165,24 @@ void delay(int ms)
 
 static inline void xvid_setw(uint8_t r, uint16_t word)
 {
-    spi_queue_cmd(SPI_CMD_WR | (r & SPI_CMD_REGMASK), (word >> 8) & 0xff);
-    spi_queue_cmd(SPI_CMD_WR | SPI_CMD_BYTESEL | (r & SPI_CMD_REGMASK), word & 0xff);
+    spi_queue_cmd(SPI_CMD_CS | SPI_CMD_WR | (r & SPI_CMD_REGMASK), (word >> 8) & 0xff);
+    spi_queue_cmd(SPI_CMD_CS | SPI_CMD_WR | SPI_CMD_BYTESEL | (r & SPI_CMD_REGMASK), word & 0xff);
 }
 
 static inline void xvid_setlb(uint8_t r, uint8_t lsb)
 {
-    spi_queue_cmd(SPI_CMD_WR | SPI_CMD_BYTESEL | (r & SPI_CMD_REGMASK), lsb & 0xff);
+    spi_queue_cmd(SPI_CMD_CS | SPI_CMD_WR | SPI_CMD_BYTESEL | (r & SPI_CMD_REGMASK), lsb & 0xff);
 }
 
 static inline void xvid_sethb(uint8_t r, uint8_t msb)
 {
-    spi_queue_cmd(SPI_CMD_WR | (r & SPI_CMD_REGMASK), msb & 0xff);
+    spi_queue_cmd(SPI_CMD_CS | SPI_CMD_WR | (r & SPI_CMD_REGMASK), msb & 0xff);
 }
 
 static inline uint16_t xvid_getw(uint8_t r)
 {
-    spi_queue_cmd((r & SPI_CMD_REGMASK), 0xff);
-    spi_queue_cmd(SPI_CMD_BYTESEL | (r & SPI_CMD_REGMASK), 0xff);
+    spi_queue_cmd(SPI_CMD_CS | (r & SPI_CMD_REGMASK), 0xff);
+    spi_queue_cmd(SPI_CMD_CS | SPI_CMD_BYTESEL | (r & SPI_CMD_REGMASK), 0xff);
     size_t len = spi_queue_flush();
     return (xmit_buffer[len - 3] << 8) | xmit_buffer[len - 1];
 }
@@ -188,7 +190,7 @@ static inline uint16_t xvid_getw(uint8_t r)
 // bytesel = LSB (default) or 0 for MSB
 static inline uint8_t xvid_getb(uint8_t r, uint8_t bytesel = 1)
 {
-    spi_queue_cmd((r & SPI_CMD_REGMASK) | (bytesel ? SPI_CMD_BYTESEL : 0), 0xff);
+    spi_queue_cmd(SPI_CMD_CS | (bytesel ? SPI_CMD_BYTESEL : 0) | (r & SPI_CMD_REGMASK), 0xff);
     size_t len = spi_queue_flush();
     return xmit_buffer[len - 1];
 }
@@ -227,27 +229,39 @@ static uint16_t rdata;
 static void spi_reset()
 {
     spi_queue_flush();
-    host_spi_cs(false);        // de-select
-    spi_queue_cmd(0xff, 0xff);
-    spi_queue_cmd(0xff, 0xff);
-    spi_queue_cmd(0xff, 0xff);
-    spi_queue_cmd(0xff, 0xff);
-    spi_queue_cmd(0xff, 0xff);
-    spi_queue_cmd(0xff, 0xff);
-    spi_queue_flush();
-    host_spi_cs(true);        // de-select
+    spi_queue_cmd(SPI_CMD_RS, SPI_CMD_RS);
+    for (int i = 0; i < 100; i++)
+    {
+        spi_queue_cmd(0x00, 0x00);
+        size_t len = spi_queue_flush();
+        if (xmit_buffer[len - 2] == 0xcb)
+        {
+            break;
+        }
+    }
 }
 
-static void sync_Xosera()
+static bool sync_Xosera()
 {
-    printf("Waiting for SPI sync...\n");
-    do
+    printf("Waiting for Xosera SPI sync...");
+    fflush(stdout);
+    bool result = false;
+    for (int retry = 0; retry < 4; retry++)
     {
         spi_reset();
-        delay_ms(100);
         xvid_setw(XVID_CONST, 0xB007);
-    } while (xvid_getw(XVID_CONST) != 0xB007);
-    printf("Good.\n");
+        uint16_t v = xvid_getw(XVID_CONST);
+        if (v == 0xb007)
+        {
+            result = true;
+            break;
+        }
+        fflush(stdout);
+    }
+
+    printf("%s.\n", result ? "Okay." : "Failed.");
+
+    return result;
 }
 
 static void reboot_Xosera(uint8_t config)
@@ -744,8 +758,23 @@ void draw_buddy()
     xvid_setw(XVID_AUX_DATA, 0x000F);                    // back to 1st font in bank 0, 16 high
 }
 
+bool reset_xosera = false;
+
 int main(int argc, char ** argv)
 {
+    for (int i = 1; i < argc; i++)
+    {
+        if (strcmp(argv[i], "-r") == 0)
+        {
+            reset_xosera = true;
+        }
+        else
+        {
+            printf("Unknown option \"%s\"\n", argv[i]);
+            exit(EXIT_FAILURE);
+        }
+    }
+
     (void)argc;
     (void)argv;
     if (host_spi_open() < 0)
@@ -753,7 +782,15 @@ int main(int argc, char ** argv)
         exit(EXIT_FAILURE);
     }
 
-    sync_Xosera();
+    bool res = sync_Xosera();
+
+    if (reset_xosera)
+    {
+        host_spi_close();
+        printf("Exiting after reset (\"-r\" option)\n");
+
+        exit(res ? EXIT_SUCCESS : EXIT_FAILURE);
+    }
 
     reboot_Xosera(0);
 
@@ -809,6 +846,8 @@ int main(int argc, char ** argv)
     xvid_setw(XVID_AUX_DATA, 0x0001);                   // set palette data
 
     delay_ms(2000);
+
+    host_spi_close();
 
     exit(EXIT_SUCCESS);
 }

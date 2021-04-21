@@ -111,19 +111,22 @@ enum
     XVID_UNUSED_E,         // reg E: TODO
     XVID_UNUSED_F,         // reg F: TODO
 
-    // AUX access using AUX_ADDR/AUX_DATA
+    // AUX read-only setting AUX_ADDR, reading AUX_DATA
     AUX_VID             = 0x0000,        // 0-8191 8-bit address (bits 15:8 ignored writing)
     AUX_VID_W_DISPSTART = 0x0000,        // display start address
     AUX_VID_W_TILEWIDTH = 0x0001,        // tile line width (usually WIDTH/8)
     AUX_VID_W_SCROLLXY  = 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
     AUX_VID_W_FONTCTRL  = 0x0003,        // [9:8] 2KB font bank, [3:0] font height
-    AUX_VID_R_WIDTH     = 0x0000,        // display resolution width
-    AUX_VID_R_HEIGHT    = 0x0001,        // display resolution height
-    AUX_VID_R_FEATURES  = 0x0002,        // [15] = 1 (test)
-    AUX_VID_R_SCANLINE  = 0x0003,        // [15] V blank, [14:11] zero [10:0] V line
-    AUX_W_FONT          = 0x4000,        // 0x4000-0x5FFF 8K byte font memory (even byte [15:8] ignored)
-    AUX_W_COLORTBL      = 0x8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
-    AUX_W_AUD           = 0xc000         // 0xC000-0x??? TODO (audio registers)
+    AUX_VID_W_GFXCTRL   = 0x0004,        // [1] v double TODO, [0] h double
+
+    // AUX write-only setting AUX_ADDR, writing AUX_DATA
+    AUX_VID_R_WIDTH    = 0x0000,        // display resolution width
+    AUX_VID_R_HEIGHT   = 0x0001,        // display resolution height
+    AUX_VID_R_FEATURES = 0x0002,        // [15] = 1 (test)
+    AUX_VID_R_SCANLINE = 0x0003,        // [15] V blank, [14:11] zero [10:0] V line
+    AUX_W_FONT         = 0x4000,        // 0x4000-0x5FFF 8K byte font memory (even byte [15:8] ignored)
+    AUX_W_COLORTBL     = 0x8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
+    AUX_W_AUD          = 0xc000         // 0xC000-0x??? TODO (audio registers)
 };
 
 // for slower testing
@@ -625,23 +628,27 @@ void show_blurb()
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // reset text start addr
     xvid_setw(XVID_AUX_DATA, 0x0000);
     delay(500);
-#if 0
+#if 1
     Serial.println("Horizontal fine scroll");
     for (int x = 0; x < 8; x++)
     {
+        wait_vsync();
         xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // scroll
         // set font height and switch to 8x8 font when < 8
-        xvid_setw(XVID_AUX_DATA, x);
-        delay(100);
+        xvid_setw(XVID_AUX_DATA, x << 8);
+        delay(500);
     }
     for (int x = 7; x > 0; x--)
     {
+        wait_vsync();
         xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // scroll
         // set font height and switch to 8x8 font when < 8
-        xvid_setw(XVID_AUX_DATA, x);
-        delay(100);
+        xvid_setw(XVID_AUX_DATA, x << 8);
+        delay(500);
     }
     delay(1000);
+#endif
+#if 0
     Serial.println("Vertical fine scroll");
     for (int x = 0; x < 16; x++)
     {
@@ -703,6 +710,22 @@ void test_palette()
         xvid_setw(XVID_AUX_DATA, n);        // set palette data
         wait_vsync();
     }
+    delay(5000);
+    // restore default palette
+    Serial.println("restore palette test");
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);               // use WR address for palette index
+        xvid_setw(XVID_AUX_DATA, pgm_read_word(defpal + i));        // set palette data
+    }
+
+    Serial.println("double wide");
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0xFFFF);                   // set palette data
+    delay(5000);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0000);                   // set palette data
+    delay(5000);
 
 #if 1        // TODO: something funny here (blanks 9" monitor)?
     // gray default palette

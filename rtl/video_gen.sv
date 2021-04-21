@@ -27,14 +27,14 @@ module video_gen(
             output logic [12:0]     fontram_addr_o,     // font memory byte address out (8x4KB)
             output logic            vram_sel_o,         // vram access select
             output logic [15:0]     vram_addr_o,        // vram word address out (16x64KB)
-            output logic [15:0]     vgen_reg_data_o,        // register/status data reads
+            output logic [15:0]     vgen_reg_data_o,    // register/status data reads
             // control inputs
             input  logic [15:0]     vram_data_i,        // vram word data in
             input  logic  [7:0]     fontram_data_i,     // font memory byte data in
             input  logic            enable_i,           // enable video (0=black output, 1=normal output)
-            input  logic            vgen_reg_wr_i,           // strobe to write internal config register number
-            input  logic  [2:0]     vgen_reg_num_i,          // internal config register number
-            input  logic [15:0]     vgen_reg_data_i,         // data for internal config register
+            input  logic            vgen_reg_wr_i,      // strobe to write internal config register number
+            input  logic  [2:0]     vgen_reg_num_i,     // internal config register number
+            input  logic [15:0]     vgen_reg_data_i,    // data for internal config register
             // video signal outputs
             output logic  [3:0]     pal_index_o,        // palette index outputs
             output logic            vsync_o, hsync_o,   // VGA sync outputs
@@ -76,7 +76,7 @@ logic  [2: 0] fine_scrollx;                             // X fine scroll
 logic  [3: 0] fine_scrolly;                             // Y fine scroll
 logic  [7: 0] font_shift_out;                           // bit pattern shifting out for current font character line
 logic  [7: 0] text_color;                               // background/foreground color attribute for current character
-logic  [7: 0] text_color_temp;                          // background/foreground color for next character
+logic  [15:0] vram_save;                                // background/foreground color for next character
 
 // feature enable signals
 logic tg_enable;                                        // text generation
@@ -239,7 +239,7 @@ always_ff @(posedge clk) begin
         text_addr       <= 16'h0000;
         text_line_addr  <= 16'h0000;
         text_color      <= 8'h00;
-        text_color_temp <= 8'h00;
+        vram_save       <= 16'h0000;
         char_x          <= 3'b0;
         char_y          <= 4'b0;
         blit_cycle_o    <= 1'b0;
@@ -259,26 +259,20 @@ always_ff @(posedge clk) begin
         vram_sel_o <= 1'b0;                                 // default to no VRAM access
         fontram_sel_o <= 1'b0;                              // default to no font access
 
-        if (mem_fetch_sync) begin
-            char_x <= fine_scrollx;                         // reset on fetch sync signal
-        end
-
         // shift font pixel data left (7 is new pixel)
         if (~pixel_h_dbl | ~h_count[0]) begin
             font_shift_out <= {font_shift_out[6: 0], 1'b0};
             char_x <= char_x + 1;                               // increment character cell column
         end
 
-        // memory read for text
-        if (tg_enable && mem_fetch) begin
+        if (mem_fetch_sync) begin
+            char_x <= 3'b000;   // TODO not quite... fine_scrollx;                         // reset on fetch sync signal
+        end
 
+        // memory read for text
+        if (mem_fetch) begin
             // set memory cycle
             blit_cycle_o <= char_x[1];                      // blitter and video alternate every 2 cycles
-
-            // // bitmap generation
-            // if (bm_enable == 1'b1) begin
-
-            // end
 
             // text character generation
             case ({ char_x, h_count[0] & pixel_h_dbl })                                   // do memory access based on char column
@@ -292,17 +286,17 @@ always_ff @(posedge clk) begin
                 end
                 4'b1000: begin
                     vram_addr_o <= text_addr;               // put text+color address on vram bus
+                    vram_sel_o <= tg_enable;                     // select vram
                 end
                 4'b1010: begin                               // read vram for color + text
-                    vram_sel_o <= 1'b1;                     // select vram
-                    fontram_sel_o <= ~bm_enable;                  // select fontram (vram output & char y will drive fontram addr)
+                    fontram_sel_o <= tg_enable;                  // select fontram (vram output & char y will drive fontram addr)
                 end
                 4'b1100: begin
-                    text_color_temp <= vram_data_i[15: 8];  // save color data from vram
+                    vram_save <= vram_data_i;  // save color data from vram
                 end
                 4'b1110: begin                               // switch to new character data for next pixel
-                    font_shift_out <= fontram_data_i;       // use next font data byte
-                    text_color <= text_color_temp;          // use next font color byte (screen color if monochrome)
+                    text_color <= vram_save[15:8];
+                    font_shift_out <= tg_enable ? fontram_data_i : 8'h00;       // use next font data byte
                     text_addr <= text_addr + 1;             // next char+attribute
                 end
                 default: begin

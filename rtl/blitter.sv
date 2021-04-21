@@ -377,12 +377,16 @@ always_ff @(posedge clk) begin
                         blit_vram_sel_o <= 1'b1;
                         blit_wr_o       <= 1'b1;
 `ifdef TESTPATTERN
-                        blit_data_o     <= {1'b1, reg_wr_addr[8:6], reg_wr_addr[7:4], reg_wr_addr[7:0] };
+                        blit_data_o     <= {(reg_wr_addr[7:4] ^ 4'b1111), reg_wr_addr[7:4], reg_wr_addr[7:0] };
 `endif
                         blit_state      <= CLEAR;
                     end
                     else begin
+`ifdef TESTPATTERN
+                        blit_state      <= LOGO_END;
+`else
                         blit_state      <= LOGO_1;
+`endif
                     end
                 end
                 LOGO_1: begin

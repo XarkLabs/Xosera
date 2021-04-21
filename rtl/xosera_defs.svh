@@ -131,3 +131,4 @@ parameter RnW_READ          = 1'b1;
 parameter cs_ENABLED        = 1'b0;
 parameter cs_DISABLED       = 1'b1;
 
+//`define TESTPATTERN     // init with "test pattern"

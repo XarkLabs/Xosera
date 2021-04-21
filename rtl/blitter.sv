@@ -358,7 +358,11 @@ always_ff @(posedge clk) begin
                     // NOTE: relies on initial state set by reset
                     blit_vram_sel_o <= 1'b1;
                     blit_wr_o       <= 1'b1;
+`ifdef TESTPATTERN
+                    blit_data_o     <= 16'h0000;
+`else
                     blit_data_o     <= CLEARDATA;
+`endif
                     blit_addr_o     <= 16'h0000;
 `ifdef SYNTHESIS
                     reg_count       <= 17'h0FFFF;
@@ -372,6 +376,9 @@ always_ff @(posedge clk) begin
                     if (blit_busy) begin
                         blit_vram_sel_o <= 1'b1;
                         blit_wr_o       <= 1'b1;
+`ifdef TESTPATTERN
+                        blit_data_o     <= {1'b1, reg_wr_addr[8:6], reg_wr_addr[7:4], reg_wr_addr[7:0] };
+`endif
                         blit_state      <= CLEAR;
                     end
                     else begin

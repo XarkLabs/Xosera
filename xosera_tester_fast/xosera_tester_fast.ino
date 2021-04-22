@@ -252,6 +252,8 @@ static inline uint8_t xvid_gethb(uint8_t r)
     return xvid_getb(r, BUS_MSB);
 }
 
+#define delay_ms delay
+
 static bool     error_flag = false;
 static uint8_t  leds;                    // diagnostic LEDs
 static uint8_t  cur_color = 0x02;        // color for status line (green or red after error)
@@ -443,6 +445,11 @@ static void wait_vsync(uint16_t num = 1)
     uint8_t v_flag;
     while (num--)
     {
+        do
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            v_flag = xvid_gethb(XVID_AUX_DATA);                  // read scanline upper byte
+        } while ((v_flag & 0x80));                               // loop if on blanked line
         do
         {
             xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
@@ -1227,9 +1234,99 @@ void activity()
     DDRC = leds | PC_OUTPUTS;
 }
 
+void test_smoothscroll()
+{
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
+    xvid_setw(XVID_AUX_DATA, 80);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // zero fine scroll
+    xvid_setw(XVID_AUX_DATA, 0);
+
+    for (int r = 0; r < 2; r++)
+    {
+        for (int x = 0; x < 8; x++)
+        {
+            wait_vsync();
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, x << 8);
+            delay_ms(150);
+        }
+        for (int x = 7; x >= 0; x--)
+        {
+            wait_vsync();
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, x << 8);
+            delay_ms(150);
+        }
+    }
+
+    for (int r = 0; r < 2; r++)
+    {
+        for (int x = 0; x < 8; x++)
+        {
+            wait_vsync(2);
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, x << 8);
+        }
+        for (int x = 7; x >= 0; x--)
+        {
+            wait_vsync(2);
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, x << 8);
+        }
+    }
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
+    xvid_setw(XVID_AUX_DATA, 80 * 2);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // zero fine scroll
+    xvid_setw(XVID_AUX_DATA, 0);
+
+    for (int r = 0; r < 2; r++)
+    {
+        for (int x = 0; x < 100; x++)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, x >> 3);
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8);
+            wait_vsync(1);
+        }
+        for (int x = 100; x >= 0; x--)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, x >> 3);
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8);
+            wait_vsync(1);
+        }
+    }
+
+    for (int r = 0; r < 2; r++)
+    {
+        for (int x = 0; x < 200; x++)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, ((x >> 4) * (80 * 2)) + (x >> 3));
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | ((x & 0xf) ^ 0x00));
+            wait_vsync(1);
+        }
+        for (int x = 200; x >= 0; x--)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, ((x >> 4) * (80 * 2)) + (x >> 3));
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | ((x & 0xf) ^ 0x00));
+            wait_vsync(1);
+        }
+    }
+}
+
 void loop()
 {
     activity();        // blink LED
+
+    delay(3000);
+    test_smoothscroll();
 
     // clear all VRAM
     uint16_t i = 0;

@@ -81,9 +81,11 @@ void delay_ms(int ms)
 
 // SPI "bus command" message format. Always sends/receives two bytes:
 //              +---+---+---+---+---+---+---+---+
-// Command byte |WR | 0 | 0 |BS |     REGNUM    |
+// Command byte |CS |WR |RS |BS |     REGNUM    |
 //              +---+---+---+---+---+---+---+---+
+// CS bit     = 0 for de-selected, 1 for selected
 // WR bit     = 0 for read, 1 for write
+// RS bit     = 1 for normal, 1 for reset
 // BS bit     = 0 for even, 1 for odd byte of register
 // REGNUM     = Xosera 4-bit register number
 // Command byte SPI reply will be 0xCB (for command byte)
@@ -150,11 +152,6 @@ inline void spi_queue_cmd(uint8_t cmd, uint8_t data)
 {
     *send_ptr++ = cmd;
     *send_ptr++ = data;
-
-    if (spi_queue_len() > FLUSH_QUEUE)
-    {
-        spi_queue_flush();
-    }
 }
 
 void delay(int ms)
@@ -167,16 +164,28 @@ static inline void xvid_setw(uint8_t r, uint16_t word)
 {
     spi_queue_cmd(SPI_CMD_CS | SPI_CMD_WR | (r & SPI_CMD_REGMASK), (word >> 8) & 0xff);
     spi_queue_cmd(SPI_CMD_CS | SPI_CMD_WR | SPI_CMD_BYTESEL | (r & SPI_CMD_REGMASK), word & 0xff);
+    if (spi_queue_len() > FLUSH_QUEUE)
+    {
+        spi_queue_flush();
+    }
 }
 
 static inline void xvid_setlb(uint8_t r, uint8_t lsb)
 {
     spi_queue_cmd(SPI_CMD_CS | SPI_CMD_WR | SPI_CMD_BYTESEL | (r & SPI_CMD_REGMASK), lsb & 0xff);
+    if (spi_queue_len() > FLUSH_QUEUE)
+    {
+        spi_queue_flush();
+    }
 }
 
 static inline void xvid_sethb(uint8_t r, uint8_t msb)
 {
     spi_queue_cmd(SPI_CMD_CS | SPI_CMD_WR | (r & SPI_CMD_REGMASK), msb & 0xff);
+    if (spi_queue_len() > FLUSH_QUEUE)
+    {
+        spi_queue_flush();
+    }
 }
 
 static inline uint16_t xvid_getw(uint8_t r)
@@ -226,33 +235,30 @@ static uint16_t rdata;
 
 #include "buddy_font.h"
 
-static void spi_reset()
+static void spi_reset(uint8_t cmd)
 {
     spi_queue_flush();
-    spi_queue_cmd(SPI_CMD_RS, SPI_CMD_RS);
+    spi_queue_cmd(cmd, cmd);
     for (int i = 0; i < 100; i++)
     {
         delay_ms(10);
-        spi_queue_cmd(0x00, 0x00);
         size_t len = spi_queue_flush();
         if (xmit_buffer[len - 2] == 0xcb)
         {
             break;
         }
+        spi_queue_cmd(cmd, cmd);
     }
 }
 
 static bool sync_Xosera(bool reset)
 {
-    printf("Waiting for Xosera SPI sync...");
+    printf("Waiting for Xosera SPI sync%s...", reset ? " and reset" : "");
     fflush(stdout);
     bool result = false;
     for (int retry = 0; retry < 4; retry++)
     {
-        if (reset)
-        {
-            spi_reset();
-        }
+        spi_reset(reset ? SPI_CMD_RS : 0);
         host_spi_cs(true);        // de-select
         xvid_setw(XVID_CONST, 0xB007);
         uint16_t v = xvid_getw(XVID_CONST);
@@ -263,26 +269,43 @@ static bool sync_Xosera(bool reset)
         }
     }
 
-    printf("%s.\n", result ? "Okay." : "Failed.");
+    printf("%s\n", result ? "okay." : "FAILED!");
 
     return result;
 }
 
-static void reboot_Xosera(uint8_t config)
+static void reboot_Xosera(int8_t config)
 {
-    printf("Xosera reconfiguring to config #%d...\n", config & 0x3);
-    host_spi_cs(true);        // de-select
-    delay_ms(10);
-    xvid_setw(XVID_BLIT_CTRL, 0x8080 | ((config & 0x3) << 8));        // reboot FPGA to config
+    if (config >= 0)
+    {
+        printf("Xosera reconfiguring to config #%d...\n", config & 0x3);
+        host_spi_cs(true);        // de-select
+        delay_ms(10);
+        //        xvid_setw(XVID_BLIT_CTRL, 0x8080 | ((config & 0x3) << 8));        // reboot FPGA to config
+        spi_queue_flush();
+        delay_ms(70);
+        host_spi_cs(true);        // de-select
+    }
     do
     {
         spi_queue_flush();
         host_spi_cs(true);        // de-select
-        delay_ms(100);
+        delay_ms(10);
         xvid_setw(XVID_RD_ADDR, 0x1234);
         xvid_setw(XVID_CONST, 0xABCD);
         spi_queue_flush();
     } while (xvid_getw(XVID_RD_ADDR) != 0x1234 || xvid_getw(XVID_CONST) != 0xABCD);
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_WIDTH);        // select width
+    width = xvid_getw(XVID_AUX_DATA);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_HEIGHT);        // select height
+    height = xvid_getw(XVID_AUX_DATA);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_FEATURES);        // select features
+    features = xvid_getw(XVID_AUX_DATA);
+    printf("(%dx%d, features=0x%04x) ready.\n", width, height, features);
+    columns = width / 8;
+    rows    = height / 16;
+    addr    = columns;
 }
 
 // read scanline register and wait for non-visible line (bit[15])
@@ -741,8 +764,13 @@ void draw_buddy()
     xvid_setw(XVID_AUX_DATA, 0x000F);                    // back to 1st font in bank 0, 16 high
 }
 
-bool reset_only = false;
-bool no_reset   = false;
+bool reset_only    = false;
+bool no_reset      = false;
+int  xosera_config = -1;
+
+#define MAX_CMDS 256
+int    num_cmds = 0;
+char * cmd_list[MAX_CMDS];
 
 int main(int argc, char ** argv)
 {
@@ -751,20 +779,46 @@ int main(int argc, char ** argv)
         if (strcmp(argv[i], "-r") == 0)
         {
             reset_only = true;
+            continue;
         }
         else if (strcmp(argv[i], "-n") == 0)
         {
             no_reset = true;
+            continue;
         }
-        else
+        else if (strncmp(argv[i], "-c", 2) == 0)
         {
-            printf("Unknown option \"%s\"\n", argv[i]);
-            exit(EXIT_FAILURE);
+            if (argv[i][2] < '0' || argv[i][2] > '3')
+            {
+                printf("Config needs to be 0 - 3\n");
+                exit(EXIT_FAILURE);
+            }
+            xosera_config = argv[i][2] & 0x3;
+            continue;
         }
+        else if (argv[i][0] == 'R' || argv[i][0] == 'r')
+        {
+            char * rn = strdup(argv[i]);
+            if (num_cmds < MAX_CMDS)
+            {
+                cmd_list[num_cmds++] = rn;
+            }
+            else
+            {
+                printf("Too many commands (> %d)\n", MAX_CMDS);
+                exit(EXIT_FAILURE);
+            }
+            continue;
+        }
+        printf("Unknown option \"%s\"\n", argv[i]);
+        exit(EXIT_FAILURE);
     }
 
-    (void)argc;
-    (void)argv;
+    for (int i = 0; i < num_cmds; i++)
+    {
+        printf("CMD %d: %s\n", i, cmd_list[i]);
+    }
+
     if (host_spi_open() < 0)
     {
         exit(EXIT_FAILURE);
@@ -780,24 +834,10 @@ int main(int argc, char ** argv)
         exit(res ? EXIT_SUCCESS : EXIT_FAILURE);
     }
 
-    if (!no_reset)
-    {
-        reboot_Xosera(0);
-    }
-
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_WIDTH);        // select width
-    width = xvid_getw(XVID_AUX_DATA);
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_HEIGHT);        // select height
-    height = xvid_getw(XVID_AUX_DATA);
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_FEATURES);        // select features
-    features = xvid_getw(XVID_AUX_DATA);
-    printf("(%dx%d, features=0x%04x) ready.\n", width, height, features);
-    columns = width / 8;
-    rows    = height / 16;
-    addr    = columns;
+    reboot_Xosera(xosera_config);
 
     delay(5000);        // let the stunning boot logo display. :)
-
+#if 0
     xcls();
     xprint("Xosera Retro Graphics Adapter: Mode ");
     xprint_int(width);
@@ -813,26 +853,76 @@ int main(int argc, char ** argv)
     }
 
     delay(5000);
+#endif
+
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
     xvid_setw(XVID_AUX_DATA, 80);
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // zero fine scroll
     xvid_setw(XVID_AUX_DATA, 0);
 
-    for (int x = 0; x < 8; x++)
+    for (int r = 0; r < 2; r++)
     {
-        printf("x=%d\n", x);
-        wait_vsync();
-        xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-        xvid_setw(XVID_AUX_DATA, x << 8);
-        delay_ms(500);
+        for (int x = 0; x < 8; x++)
+        {
+            printf("x=%d\n", x);
+            wait_vsync();
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, x << 8);
+            delay_ms(300);
+        }
+        for (int x = 7; x >= 0; x--)
+        {
+            printf("x=%d\n", x);
+            wait_vsync();
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, x << 8);
+            delay_ms(300);
+        }
     }
-    for (int x = 7; x >= 0; x--)
+
+    for (int r = 0; r < 16; r++)
     {
-        printf("x=%d\n", x);
-        wait_vsync();
-        xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-        xvid_setw(XVID_AUX_DATA, x << 8);
-        delay_ms(500);
+        for (int x = 0; x < 8; x++)
+        {
+            wait_vsync();
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, x << 8);
+            wait_vsync();
+        }
+        for (int x = 7; x >= 0; x--)
+        {
+            wait_vsync();
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, x << 8);
+            wait_vsync();
+        }
+    }
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
+    xvid_setw(XVID_AUX_DATA, 80 * 2);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // zero fine scroll
+    xvid_setw(XVID_AUX_DATA, 0);
+
+    for (int r = 0; r < 4; r++)
+    {
+        for (int x = 0; x < 80 * 8; x++)
+        {
+            wait_vsync();
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, x >> 3);
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8);
+            wait_vsync();
+        }
+        for (int x = 80 * 8; x >= 0; x--)
+        {
+            wait_vsync();
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, x >> 3);
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8);
+            wait_vsync();
+        }
     }
 
     xcolor(0xf);

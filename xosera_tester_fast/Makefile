@@ -11,10 +11,12 @@ AVR_SERIAL ?= /dev/tty.usbserial-AJ5OKW84
 all: build
 
 build:
-	arch -x86_64 /bin/bash -c "$(ARDUINO_PATH)/Arduino --verify ./xosera_tester_fast.ino"
+	mkdir -p temp
+	cat xosera_tester_arduino.cpp xosera_tests.cpp > temp/xosera_tester_fast.ino
+	arch -x86_64 /bin/bash -c "$(ARDUINO_PATH)/Arduino --verify ./temp/xosera_tester_fast.ino"
 
 upload:
-	arch -x86_64 /bin/bash -c "$(ARDUINO_PATH)/Arduino --upload ./xosera_tester_fast.ino"
+	arch -x86_64 /bin/bash -c "$(ARDUINO_PATH)/Arduino --upload ./temp/xosera_tester_fast.ino"
 
 test: upload
 	screen $(AVR_SERIAL) 115200
@@ -23,6 +25,6 @@ term:
 	screen $(AVR_SERIAL) 115200
 
 clean:
-	@echo "I'm always clean..."
+	rm -rf temp
 
 .PHONY: all prog test term clean

@@ -1,0 +1,7 @@
+temp/*
+*.o
+*.dis
+*.elf
+*.map
+*.sym
+

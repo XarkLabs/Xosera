@@ -38,7 +38,7 @@ bool          wait_close = false;
 
 class BusInterface
 {
-    const int   BUS_START_TIME = 3324934;        // 1685002;    // 640x480 2nd frame
+    const int   BUS_START_TIME = 1685002;        // 640x480 2nd frame
     const float BUS_CLOCK_DIV  = 7.7;
 
     enum
@@ -214,6 +214,8 @@ const char * BusInterface::reg_name[] = {
 #define REG_W(r, v)                                                                                                    \
     ((BusInterface::XVID_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
 
+#define X_COLS 80
+
 BusInterface bus;
 int          BusInterface::test_data_len   = 999;
 uint16_t     BusInterface::test_data[1024] = {REG_W(WR_ADDR, 0x3),
@@ -227,7 +229,7 @@ uint16_t     BusInterface::test_data[1024] = {REG_W(WR_ADDR, 0x3),
                                           REG_W(WR_ADDR, 0x0),
                                           REG_W(DATA, 0x0e00 | '\x0e'),
                                           REG_W(DATA, 0x0e00 | '\x0f'),
-                                          REG_W(WR_ADDR, 106 * 5),
+                                          REG_W(WR_ADDR, X_COLS * 5),
                                           REG_W(DATA, 0x0200 | 'A'),
                                           REG_B(DATA, 't'),
                                           REG_B(DATA, 'a'),
@@ -253,7 +255,7 @@ uint16_t     BusInterface::test_data[1024] = {REG_W(WR_ADDR, 0x3),
                                           REG_B(DATA, 't'),
                                           REG_B(DATA, ' '),
                                           REG_B(DATA, '\x1c'),
-                                          REG_B(WR_INC, 105),
+                                          REG_B(WR_INC, X_COLS - 1),
                                           REG_B(DATA, '\x1d'),
                                           REG_B(WR_INC, 1),
                                           REG_B(DATA, '\x1e'),

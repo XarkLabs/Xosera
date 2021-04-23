@@ -543,7 +543,10 @@ int main(int argc, char ** argv)
                 printf("Exiting simulation.\n");
                 break;
             }
-            frame_num += 1;
+            if (TOTAL_HEIGHT == y_max + 1)
+            {
+                frame_num += 1;
+            }
         }
 
         vga_vsync_previous = vsync;

@@ -764,6 +764,124 @@ void draw_buddy()
     xvid_setw(XVID_AUX_DATA, 0x000F);                    // back to 1st font in bank 0, 16 high
 }
 
+
+void test_smoothscroll()
+{
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
+    xvid_setw(XVID_AUX_DATA, columns);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // zero fine scroll
+    xvid_setw(XVID_AUX_DATA, 0);
+
+    for (int r = 0; r < 2; r++)
+    {
+        for (int x = 0; x < 8; x++)
+        {
+            wait_vsync();
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, x << 8);
+            delay_ms(150);
+        }
+        for (int x = 7; x >= 0; x--)
+        {
+            wait_vsync();
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, x << 8);
+            delay_ms(150);
+        }
+    }
+
+    for (int r = 0; r < 2; r++)
+    {
+        for (int x = 0; x < 8; x++)
+        {
+            wait_vsync(2);
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, x << 8);
+        }
+        for (int x = 7; x >= 0; x--)
+        {
+            wait_vsync(2);
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, x << 8);
+        }
+    }
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
+    xvid_setw(XVID_AUX_DATA, columns * 2);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // zero fine scroll
+    xvid_setw(XVID_AUX_DATA, 0);
+
+    for (int r = 0; r < 2; r++)
+    {
+        for (int x = 0; x < 100; x++)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, x >> 3);
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8);
+            wait_vsync(1);
+        }
+        for (int x = 100; x >= 0; x--)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, x >> 3);
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8);
+            wait_vsync(1);
+        }
+    }
+
+    for (int r = 0; r < 2; r++)
+    {
+        for (int x = 0; x < 200; x++)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 3));
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | ((x & 0xf) ^ 0x00));
+            wait_vsync(1);
+        }
+        for (int x = 200; x >= 0; x--)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 3));
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | ((x & 0xf) ^ 0x00));
+            wait_vsync(1);
+        }
+    }
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0001);                   // set palette data
+
+    for (int r = 0; r < 2; r++)
+    {
+        for (int x = 0; x < 200; x++)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 4));
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | ((x & 0xf) ^ 0x00));
+            wait_vsync(5);
+        }
+        for (int x = 200; x >= 0; x--)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 4));
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | ((x & 0xf) ^ 0x00));
+            wait_vsync(5);
+        }
+    }
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0000);                   // set palette data
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
+    xvid_setw(XVID_AUX_DATA, columns);
+}
+
+
 bool reset_only    = false;
 bool no_reset      = false;
 int  xosera_config = -1;
@@ -854,76 +972,7 @@ int main(int argc, char ** argv)
 
     delay(5000);
 #endif
-
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
-    xvid_setw(XVID_AUX_DATA, 80);
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // zero fine scroll
-    xvid_setw(XVID_AUX_DATA, 0);
-
-    for (int r = 0; r < 2; r++)
-    {
-        for (int x = 0; x < 8; x++)
-        {
-            printf("x=%d\n", x);
-            wait_vsync();
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, x << 8);
-            delay_ms(300);
-        }
-        for (int x = 7; x >= 0; x--)
-        {
-            printf("x=%d\n", x);
-            wait_vsync();
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, x << 8);
-            delay_ms(300);
-        }
-    }
-
-    for (int r = 0; r < 16; r++)
-    {
-        for (int x = 0; x < 8; x++)
-        {
-            wait_vsync();
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, x << 8);
-            wait_vsync();
-        }
-        for (int x = 7; x >= 0; x--)
-        {
-            wait_vsync();
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, x << 8);
-            wait_vsync();
-        }
-    }
-
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
-    xvid_setw(XVID_AUX_DATA, 80 * 2);
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // zero fine scroll
-    xvid_setw(XVID_AUX_DATA, 0);
-
-    for (int r = 0; r < 4; r++)
-    {
-        for (int x = 0; x < 80 * 8; x++)
-        {
-            wait_vsync();
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
-            xvid_setw(XVID_AUX_DATA, x >> 3);
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8);
-            wait_vsync();
-        }
-        for (int x = 80 * 8; x >= 0; x--)
-        {
-            wait_vsync();
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
-            xvid_setw(XVID_AUX_DATA, x >> 3);
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8);
-            wait_vsync();
-        }
-    }
+    test_smoothscroll();
 
     xcolor(0xf);
     xcls();

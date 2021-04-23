@@ -447,14 +447,14 @@ static void wait_vsync(uint16_t num = 1)
     {
         do
         {
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
-            v_flag = xvid_gethb(XVID_AUX_DATA);                  // read scanline upper byte
-        } while ((v_flag & 0x80));                               // loop if on blanked line
+            xvid_setlb(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            v_flag = xvid_gethb(XVID_AUX_DATA);                   // read scanline upper byte
+        } while ((v_flag & 0x80));                                // loop if on blanked line
         do
         {
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
-            v_flag = xvid_gethb(XVID_AUX_DATA);                  // read scanline upper byte
-        } while (!(v_flag & 0x80));                              // loop if on visible line
+            xvid_setlb(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            v_flag = xvid_gethb(XVID_AUX_DATA);                   // read scanline upper byte
+        } while (!(v_flag & 0x80));                               // loop if on visible line
     }
 }
 
@@ -594,7 +594,7 @@ void show_blurb()
         // set font height and switch to 8x8 font when < 8
         xvid_setw(XVID_AUX_DATA, (v < 8 ? 0x0200 : 0) | v);
 
-        wait_vsync(300);
+        wait_vsync(5);
     }
 
     Serial.println("Grow font height");
@@ -603,7 +603,7 @@ void show_blurb()
         xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
         // set font height and switch to 8x8 font when < 8
         xvid_setw(XVID_AUX_DATA, (v < 8 ? 0x0200 : 0) | v);
-        wait_vsync(300);
+        wait_vsync(5);
     }
 
     // restore 1st font (ST 8x16)
@@ -614,7 +614,7 @@ void show_blurb()
 
     Serial.println("Scroll via video VRAM display address");
     int16_t r = 0;
-    for (uint16_t i = 0; i < (rows * 3); i++)
+    for (uint16_t i = 0; i < static_cast<uint16_t>(rows * 3); i++)
     {
         xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // set text start addr
         xvid_setw(XVID_AUX_DATA, r * columns);                // to one line down
@@ -623,9 +623,9 @@ void show_blurb()
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // v fine scroll
             xvid_setw(XVID_AUX_DATA, f);
 
-            wait_vsync(10);
+            wait_vsync(1);
         }
-        if (++r > rows + 10)
+        if (++r > (rows * 2))
         {
             r = -rows;
         }
@@ -728,11 +728,12 @@ void test_palette()
 
     Serial.println("double wide");
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
-    xvid_setw(XVID_AUX_DATA, 0xFFFF);                   // set palette data
-    delay(5000);
+    xvid_setw(XVID_AUX_DATA, 0x0001);                   // set palette data
+    delay(2000);
+    Serial.println("double wide");
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
     xvid_setw(XVID_AUX_DATA, 0x0000);                   // set palette data
-    delay(5000);
+    delay(1000);
 
 #if 1        // TODO: something funny here (blanks 9" monitor)?
     // gray default palette
@@ -891,6 +892,12 @@ static const PROGMEM uint16_t data_pat[8] = {0xA5A5, 0x5A5A, 0xFFFF, 0x0123, 0x4
 
 void test_reg_access()
 {
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // reset text start addr
+    xvid_setw(XVID_AUX_DATA, columns);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // reset text start addr
+    xvid_setw(XVID_AUX_DATA, columns);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // reset text start addr
+    xvid_setw(XVID_AUX_DATA, 0x0000);
     xcls();
     xprint("Xosera read/write register self-test...\n");
 
@@ -1205,9 +1212,9 @@ void font_write()
         {
             xvid_setw(XVID_AUX_ADDR, AUX_W_FONT | b);
             // set font height and switch to 8x8 font when < 8
-            xvid_setw(XVID_AUX_DATA, a ? 0x5555 : 0xaaaa);
+            xvid_setw(XVID_AUX_DATA, (a & 1) ? 0x5555 : 0xaaaa);
         }
-        wait_vsync(5);
+        wait_vsync(1);
     }
 
     delay(1000);        // let monitor sync
@@ -1249,45 +1256,52 @@ void test_4096_colors()
     }
     delay(500);
 
-    for (int count = 0; count < (60 * 3); count++)
+    for (int count = 0; count < (60 * 5); count++)
     {
         uint8_t v_flag;
+        xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
         do
         {
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
-            v_flag = xvid_gethb(XVID_AUX_DATA);                  // read scanline upper byte
-        } while ((v_flag & 0x80));                               // loop if in blank
+            xvid_setlb(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            v_flag = xvid_gethb(XVID_AUX_DATA);                   // read scanline upper byte
+        } while ((v_flag & 0x80));                                // loop if in blank
+        do
+        {
+            xvid_setlb(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            v_flag = xvid_gethb(XVID_AUX_DATA);                   // read scanline upper byte
+        } while (!(v_flag & 0x80));                               // loop if on visible line
         noInterrupts();
         do
         {
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
-            v_flag = xvid_gethb(XVID_AUX_DATA);                  // read scanline upper byte
-        } while (!(v_flag & 0x80));                              // loop if on visible line
-        do
-        {
-            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
-            v_flag = xvid_gethb(XVID_AUX_DATA);                  // read scanline upper byte
-        } while ((v_flag & 0x80));                               // loop if in blank
+            xvid_setlb(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            v_flag = xvid_gethb(XVID_AUX_DATA);                   // read scanline upper byte
+        } while ((v_flag & 0x80));                                // loop if in blank
 
-        uint8_t l = 0;
+        uint8_t  l  = 0;
+        uint16_t ls = 0;
         do
         {
-            uint16_t ls = l << 4;
+            xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 0);        // use WR address for palette index
+            xvid_setw(XVID_AUX_DATA, ls);                        // set palette data
+            for (uint8_t i = 1; i != 16; i++)
+            {
+                xvid_setlb(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for palette index
+                xvid_setw(XVID_AUX_DATA, ls | i);                     // set palette data
+            }
+            ls = ++l << 4;
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
             do
             {
                 xvid_setlb(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
                 v_flag = xvid_gethb(XVID_AUX_DATA);                   // read scanline upper byte
             } while (!(v_flag & 0x40));                               // loop if on visible line
-            for (uint8_t i = 16; i != 0xff; i--)
-            {
-                xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for palette index
-                xvid_setw(XVID_AUX_DATA, ls | i);                    // set palette data
-            }
-        } while (l += 2);
-        for (uint8_t i = 16; i != 0xff; i--)
+        } while (l);
+        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 0);        // use WR address for palette index
+        xvid_setw(XVID_AUX_DATA, 0);                         // set palette data
+        for (uint8_t i = 1; i != 16; i++)
         {
-            xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for palette index
-            xvid_setw(XVID_AUX_DATA, 0);                         // set palette data
+            xvid_setlb(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for palette index
+            xvid_setw(XVID_AUX_DATA, 0);                          // set palette data
         }
         interrupts();
     }
@@ -1385,6 +1399,33 @@ void test_smoothscroll()
             wait_vsync(1);
         }
     }
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0001);                   // set palette data
+
+    for (int r = 0; r < 2; r++)
+    {
+        for (int x = 0; x < 200; x++)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 4));
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | ((x & 0xf) ^ 0x00));
+            wait_vsync(1);
+        }
+        for (int x = 200; x >= 0; x--)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 4));
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | ((x & 0xf) ^ 0x00));
+            wait_vsync(1);
+        }
+    }
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0000);                   // set palette data
+
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
     xvid_setw(XVID_AUX_DATA, columns);
 }
@@ -1415,7 +1456,7 @@ void loop()
     {
         uint8_t c = (i & 0xf) ? (i & 0xf) : 1;
         xcolor(c);
-        xprint("Hello! ");
+        xprint("Hello rosco_m68k! ");
     }
     test_smoothscroll();
     delay(2000);

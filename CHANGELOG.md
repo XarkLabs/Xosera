@@ -1,5 +1,19 @@
 # Informal list of notable Xosera changes
 
+2021-04-22 Xark
+
+* Cleaned up tester, did Q&D 4096 colors-at-once test (looks okay - needs a copper to be solid)
+* Updated "even register byte" buffer logic.  Now zeros only on switching register for "shared" buffer.  This allows single byte AUX_ADDR updates for (e.g.) COLORTBL.
+* Updated VRAM fetch/output logic to support a "clean" horizontal pixel double (in conjunction with horizontal scrolling)
+* To do this "right" I needed to add another bit to horizontal scroll register (now 0-15 for double wide chars). Pixel doubled modes can still single pixel scroll now.
+* Updated smooth scroll test to also test pixel doubled.  Buttery smooth and (AFAICT) pixel perfect.
+
+2021-04-21 Xark
+
+* Re-did VRAM fetch/output logic.  This fixed some "column 0" issues (and made things cleaner).
+* Verified horizontal smooth scroll is spot on.  Adjusted memory fetch boundaries to be as tight as possible.
+* Disabled pixel double because it is not "playing nice" yet
+
 2021-04-20 Xark
 
 * Added another bit to AUX_VID registers for GFX_CTRL register with horizontal and vertical pixel doubling (horizontal only wired up)

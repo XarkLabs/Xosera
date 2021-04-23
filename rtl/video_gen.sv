@@ -18,8 +18,6 @@
 `default_nettype none             // mandatory for Verilog sanity
 `timescale 1ns/1ps
 
-`include "xosera_pkg.sv"
-
 module video_gen(
             // control outputs
             output logic            blit_cycle_o,       // 0=video memory cycle, 1=Blit memory cycle
@@ -44,6 +42,7 @@ module video_gen(
             input  logic            clk                 // clock (video pixel clock)
        );
 
+`include "xosera_pkg.sv"
 `include "xosera_defs.svh"        // Xosera global Verilog definitions
 
 // Emperically determined (at extremes of horizontal scroll [worst case])
@@ -68,9 +67,9 @@ logic [15:0]    text_addr;                                // address to fetch ch
 logic [15:0]    text_line_addr;                           // address of start of character+color attribute line
 logic  [3:0]    font_height;                              // max height of font cell
 logic  [1:0]    font_bank;                                // font bank 0-3 (0/1 with 8x16)
-logic  [2:0]    char_x;                                   // current column of font cell (also controls memory access timing)
+logic  [3:0]    char_x;                                   // current column of font cell (synchronized with memory access timing)
 logic  [3:0]    char_y;                                   // current line of font cell
-logic  [2:0]    fine_scrollx;                             // X fine scroll
+logic  [3:0]    fine_scrollx;                             // X fine scroll
 logic  [3:0]    fine_scrolly;                             // Y fine scroll
 logic  [7:0]    text_color;                               // bit pattern shifting out for current font character line
 logic  [7:0]    font_shift_out;                           // bit pattern shifting out for current font character line
@@ -138,8 +137,8 @@ always_comb begin
         end
     end
 
-    // set mem_fetch next toggle for video memory access
-    mem_fetch_toggle = mem_fetch ? H_MEM_END[10:0] : (H_MEM_BEGIN[10:0] - { 8'b0, fine_scrollx });
+    // set mem_fetch next toggle for video memory access (pixel_h_dbl subtracts an extra 16)
+    mem_fetch_toggle = mem_fetch ? H_MEM_END[10:0] : (H_MEM_BEGIN[10:0] - { 6'b0, pixel_h_dbl, fine_scrollx });
 
     // scanning horizontally left to right, offscreen pixels are on left before visible pixels
     case (h_state)
@@ -171,7 +170,7 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         text_start_addr <= 16'h0000;
         text_line_width <= CHARS_WIDE[15:0];
-        fine_scrollx    <= 3'b000;
+        fine_scrollx    <= 4'b0000;
         fine_scrolly    <= 4'b0000;
         font_height     <= 4'b1111;
         font_bank       <= 2'b00;
@@ -188,7 +187,7 @@ always_ff @(posedge clk) begin
                     text_line_width <= vgen_reg_data_i;
                 end
                 xv::AUX_VID_W_SCROLLXY[2:0]: begin
-                    fine_scrollx    <= vgen_reg_data_i[10:8];
+                    fine_scrollx    <= vgen_reg_data_i[11:8];
                     fine_scrolly    <= vgen_reg_data_i[3:0];
                 end
                 xv::AUX_VID_W_FONTCTRL[2:0]: begin
@@ -240,7 +239,7 @@ always_ff @(posedge clk) begin
         text_addr       <= 16'h0000;
         text_line_addr  <= 16'h0000;
         vram_data_save  <= 16'h0000;
-        char_x          <= 3'b0;
+        char_x          <= 4'b0;
         char_y          <= 4'b0;
         blit_cycle_o    <= 1'b0;
         fontram_sel_o   <= 1'b0;
@@ -269,42 +268,22 @@ always_ff @(posedge clk) begin
             text_color      <= vram_data_save[15:8];    // used previously saved color
         end
         else begin
+            if (~(pixel_h_dbl & char_x[0]))             // only shift on even pixels with pixel_h_dbl
             font_shift_out <= {font_shift_out[6: 0], 1'b0}; // shift font line data (high bit is current pixel)
         end
 
-        char_x <= char_x + 1;                               // increment character cell column
+        char_x <= char_x + (pixel_h_dbl ? 1 : 2);       // increment character cell column (by 2 normally, 1 if pixel doubled)
 
         if (mem_fetch_sync) begin
-            char_x <= 3'b000;   //fine_scrollx;             // reset on char_x cycle on fetch sync signal
+            char_x <= 4'b0000;             // reset on char_x cycle on fetch sync signal
         end
 
         // memory read for text
-        if (mem_fetch) begin
-            // text character generation
-            case (char_x)                                   // do memory access based on char column
-                3'b000: begin
-                    blit_cycle_o <= 1'b0;
-                    vram_sel_o <= tg_enable;                // select vram
-                    vram_addr_o <= text_addr;               // put text+color address on vram bus
-                    text_addr <= text_addr + 1;             // next char+attribute
-                end
-                3'b001: begin
-                end
-                3'b010: begin
-                end
-                3'b011: begin
-                end
-                3'b100: begin
-                end
-                3'b101: begin                               // read vram for color + text
-                end
-                3'b110: begin
-                end
-                3'b111: begin                               // switch to new character data for next pixel
-                end
-                default: begin
-                end
-            endcase
+        if (mem_fetch && char_x == 4'b000) begin
+            blit_cycle_o <= ~tg_enable;
+            vram_sel_o <= tg_enable;                // select vram
+            vram_addr_o <= text_addr;               // put text+color address on vram bus
+            text_addr <= text_addr + 1;             // next char+attribute
         end
 
         // color lookup
@@ -318,7 +297,6 @@ always_ff @(posedge clk) begin
                 text_line_addr <= text_line_addr + text_line_width; // new line start address
                 text_addr <= text_line_addr + text_line_width;   // new text start address
             end
-
             else begin                                      // else next line of char cell
                 char_y <= char_y + 1;                       // next char tile line
                 text_addr <= text_line_addr;                // text addr back to line start

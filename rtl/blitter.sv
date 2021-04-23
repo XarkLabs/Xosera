@@ -86,8 +86,11 @@ logic [15:0]    aux_rd_data;
 logic           blit_aux_rd;
 logic           blit_aux_rd_ack;
 
-logic  [7:0]    even_wr_data;           // word written to even byte of XVID_DATA/XVID_DATA_2
-logic  [7:0]    even_wr_reg;            // other even byte (zeroed each write)
+logic  [7:0]    reg_data_even;           // word written to even byte of XVID_DATA/XVID_DATA_2
+logic  [7:0]    reg_other_even;          // other even byte (zeroed each write)
+logic  [3:0]    reg_other_reg;           // register associated with reg_other_even
+logic  [7:0]    reg_even_byte;
+assign reg_even_byte = (reg_other_reg == bus_reg_num) ? reg_other_even : 8'h00;
 
 logic           bus_write_strobe;       // strobe when a word of data written
 logic           bus_read_strobe;        // strobe when a word of data read
@@ -205,6 +208,9 @@ always_ff @(posedge clk) begin
         reg_wr_mod          <= 16'h0000;
         reg_width           <= 16'h0000;
         reg_count           <= 17'h10000;   // 16th bit is set on underfow
+        reg_data_even       <= 8'h00;
+        reg_other_even      <= 8'h00;
+        reg_other_reg       <= 4'h0;
 
     end
     else begin
@@ -276,10 +282,11 @@ always_ff @(posedge clk) begin
                         end
                         xv::XVID_DATA,
                         xv::XVID_DATA_2: begin
-                            even_wr_data        <= bus_data_byte;   // data reg even byte storage
+                            reg_data_even       <= bus_data_byte;   // data reg even byte storage
                         end
                         default: begin
-                            even_wr_reg         <= bus_data_byte;   // generic even byte storage
+                            reg_other_even      <= bus_data_byte;   // generic even byte storage
+                            reg_other_reg       <= bus_reg_num;
                         end
                     endcase
                 end
@@ -306,47 +313,46 @@ always_ff @(posedge clk) begin
                         xv::XVID_DATA,
                         xv::XVID_DATA_2: begin
                             blit_addr_o         <= reg_wr_addr;    // output write address
-                            blit_data_o         <= { even_wr_data, bus_data_byte };      // output write data
+                            blit_data_o         <= { reg_data_even, bus_data_byte };      // output write data
                             blit_vram_sel_o     <= 1'b1;            // select VRAM
                             blit_wr_o           <= 1'b1;            // write
                         end
                         xv::XVID_AUX_DATA: begin
                             blit_addr_o         <= reg_aux_addr;
-                            blit_data_o         <= { even_wr_reg, bus_data_byte };
+                            blit_data_o         <= { reg_even_byte, bus_data_byte };
                             blit_aux_sel_o      <= 1'b1;
                             blit_wr_o           <= 1'b1;
                         end
                         xv::XVID_COUNT: begin
-                            reg_count           <= { 1'b0, even_wr_reg, bus_data_byte };    // TODO async
+                            reg_count           <= { 1'b0, reg_even_byte, bus_data_byte };    // TODO async
                             width_counter       <=  { 1'b0, reg_width };
                         end
                         xv::XVID_RD_INC: begin
-                            reg_rd_inc          <= { even_wr_reg, bus_data_byte };
+                            reg_rd_inc          <= { reg_even_byte, bus_data_byte };
                         end
                         xv::XVID_WR_INC: begin
-                            reg_wr_inc          <= { even_wr_reg, bus_data_byte };
+                            reg_wr_inc          <= { reg_even_byte, bus_data_byte };
                         end
                         xv::XVID_RD_MOD: begin
-                            reg_rd_mod          <= { even_wr_reg, bus_data_byte };
+                            reg_rd_mod          <= { reg_even_byte, bus_data_byte };
                         end
                         xv::XVID_WR_MOD: begin
-                            reg_wr_mod          <= { even_wr_reg, bus_data_byte };
+                            reg_wr_mod          <= { reg_even_byte, bus_data_byte };
                         end
                         xv::XVID_WIDTH: begin
-                            reg_width           <= { even_wr_reg, bus_data_byte };
+                            reg_width           <= { reg_even_byte, bus_data_byte };
                         end
                         xv::XVID_BLIT_CTRL: begin
                             blit_2d             <= bus_data_byte[0];
                             blit_const          <= bus_data_byte[1];
-                            reconfig            <= even_wr_reg[7:6] == 2'b10 && bus_data_byte[7:6] == 2'b10;
-                            boot_select         <= even_wr_reg[1:0];
+                            reconfig            <= reg_even_byte[7:6] == 2'b10 && bus_data_byte[7:6] == 2'b10;
+                            boot_select         <= reg_even_byte[1:0];
                         end
                         xv::XVID_UNUSED_1: begin
                         end
                         xv::XVID_UNUSED_2: begin
                         end
                     endcase
-                    even_wr_reg <= 8'h00;
                 end
             end
 

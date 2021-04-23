@@ -1234,10 +1234,76 @@ void activity()
     DDRC = leds | PC_OUTPUTS;
 }
 
+void test_4096_colors()
+{
+    xcls();
+    for (int c = 0; c < columns; c++)
+    {
+        xvid_setw(XVID_WR_ADDR, c);
+        xvid_setw(XVID_WR_INC, columns);
+        uint8_t color = c / (columns / 16);
+        for (int y = 0; y < rows; y++)
+        {
+            xvid_setw(XVID_DATA, (color << 12) | (color << 8) | ' ');
+        }
+    }
+    delay(500);
+
+    for (int count = 0; count < (60 * 3); count++)
+    {
+        uint8_t v_flag;
+        do
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            v_flag = xvid_gethb(XVID_AUX_DATA);                  // read scanline upper byte
+        } while ((v_flag & 0x80));                               // loop if in blank
+        noInterrupts();
+        do
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            v_flag = xvid_gethb(XVID_AUX_DATA);                  // read scanline upper byte
+        } while (!(v_flag & 0x80));                              // loop if on visible line
+        do
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+            v_flag = xvid_gethb(XVID_AUX_DATA);                  // read scanline upper byte
+        } while ((v_flag & 0x80));                               // loop if in blank
+
+        uint8_t l = 0;
+        do
+        {
+            uint16_t ls = l << 4;
+            do
+            {
+                xvid_setlb(XVID_AUX_ADDR, AUX_VID_R_SCANLINE);        // set scanline reg
+                v_flag = xvid_gethb(XVID_AUX_DATA);                   // read scanline upper byte
+            } while (!(v_flag & 0x40));                               // loop if on visible line
+            for (uint8_t i = 16; i != 0xff; i--)
+            {
+                xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for palette index
+                xvid_setw(XVID_AUX_DATA, ls | i);                    // set palette data
+            }
+        } while (l += 2);
+        for (uint8_t i = 16; i != 0xff; i--)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for palette index
+            xvid_setw(XVID_AUX_DATA, 0);                         // set palette data
+        }
+        interrupts();
+    }
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);               // use WR address for palette index
+        xvid_setw(XVID_AUX_DATA, pgm_read_word(defpal + i));        // set palette data
+    }
+
+    delay(1000);
+}
+
 void test_smoothscroll()
 {
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
-    xvid_setw(XVID_AUX_DATA, 80);
+    xvid_setw(XVID_AUX_DATA, columns);
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // zero fine scroll
     xvid_setw(XVID_AUX_DATA, 0);
 
@@ -1276,7 +1342,7 @@ void test_smoothscroll()
     }
 
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
-    xvid_setw(XVID_AUX_DATA, 80 * 2);
+    xvid_setw(XVID_AUX_DATA, columns * 2);
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // zero fine scroll
     xvid_setw(XVID_AUX_DATA, 0);
 
@@ -1305,7 +1371,7 @@ void test_smoothscroll()
         for (int x = 0; x < 200; x++)
         {
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
-            xvid_setw(XVID_AUX_DATA, ((x >> 4) * (80 * 2)) + (x >> 3));
+            xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 3));
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
             xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | ((x & 0xf) ^ 0x00));
             wait_vsync(1);
@@ -1313,12 +1379,14 @@ void test_smoothscroll()
         for (int x = 200; x >= 0; x--)
         {
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
-            xvid_setw(XVID_AUX_DATA, ((x >> 4) * (80 * 2)) + (x >> 3));
+            xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 3));
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
             xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | ((x & 0xf) ^ 0x00));
             wait_vsync(1);
         }
     }
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
+    xvid_setw(XVID_AUX_DATA, columns);
 }
 
 void loop()
@@ -1326,7 +1394,6 @@ void loop()
     activity();        // blink LED
 
     delay(3000);
-    test_smoothscroll();
 
     // clear all VRAM
     uint16_t i = 0;
@@ -1336,6 +1403,7 @@ void loop()
         xvid_setw(XVID_DATA, 0x0220);        // green on black space
     } while (++i);
 
+    test_4096_colors();
     xcls();
     xprint("Xosera Retro Graphics Adapter: Mode ");
     xprint_int(width);
@@ -1343,13 +1411,13 @@ void loop()
     xprint_int(height);
     xprint(" (AVR " MHZSTR " test rig)\n\n");
 
-    for (int i = 0; i < 409; i++)
+    for (int i = 0; i < 2048; i++)
     {
         uint8_t c = (i & 0xf) ? (i & 0xf) : 1;
         xcolor(c);
         xprint("Hello! ");
     }
-
+    test_smoothscroll();
     delay(2000);
 
     activity();        // blink LED

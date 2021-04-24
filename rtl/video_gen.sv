@@ -122,7 +122,7 @@ always_comb     mem_fetch_sync = (~mem_fetch && mem_fetch_next);
 logic [10: 0] h_count_next;
 logic [10: 0] v_count_next;
 
-// combinational block for video timing generation
+// combinational block for video counters
 always_comb begin
     h_count_next = h_count + 1;
     v_count_next = v_count;
@@ -135,7 +135,10 @@ always_comb begin
             v_count_next = 0;
         end
     end
+end
 
+// combinational block for video fetch start and stop
+always_comb begin
     // set mem_fetch next toggle for video memory access (h_double subtracts an extra 16)
     if (mem_fetch) begin
         mem_fetch_toggle = H_MEM_END[10:0];
@@ -143,7 +146,10 @@ always_comb begin
     else begin
         mem_fetch_toggle = (h_double ? H2X_MEM_BEGIN[10:0] : H_MEM_BEGIN[10:0]) - { 7'b0, fine_scrollx };
     end
+end
 
+// combinational block for horizontal video state
+always_comb begin
     // scanning horizontally left to right, offscreen pixels are on left before visible pixels
     case (h_state)
         STATE_PRE_SYNC:
@@ -155,7 +161,10 @@ always_comb begin
         STATE_VISIBLE:
             h_count_next_state = xv::TOTAL_WIDTH - 1;
     endcase
+end
 
+// combinational block for vertical video state
+always_comb begin
     // scanning vertically top to bottom, offscreen lines are on bottom after visible lines
     case (v_state)
         STATE_PRE_SYNC:
@@ -182,6 +191,7 @@ always_ff @(posedge clk) begin
         v_double        <= 1'b0;            // vertical pixel double (repeat)
     end
     else begin
+        // video register write
         if (vgen_reg_wr_i) begin
             case (vgen_reg_num_i)
                 xv::AUX_VID_W_DISPSTART[2:0]: begin
@@ -207,24 +217,25 @@ always_ff @(posedge clk) begin
             endcase
         end
 
+        // video register read
         case (vgen_reg_num_i[1:0])
-            2'b00:      vgen_reg_data_o <= xv::VISIBLE_WIDTH[15:0];
-            2'b01:      vgen_reg_data_o <= xv::VISIBLE_HEIGHT[15:0];
-            2'b10:      vgen_reg_data_o <= 16'b1000000000000001;  // TODO feature bits
+            2'b00:      vgen_reg_data_o <= {4'h0, xv::VISIBLE_WIDTH[11:0]};
+            2'b01:      vgen_reg_data_o <= {4'h0, xv::VISIBLE_HEIGHT[11:0]};
+            2'b10:      vgen_reg_data_o <= 16'b1000000000000001;  // TODO define feature bits
             2'b11:      vgen_reg_data_o <= {(v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 3'b000, v_count }; // negative when not vsync
         endcase
     end
 end
 
 // logic aliases
-logic font_pix;
-logic [3: 0] forecolor;
-logic [3: 0] backcolor;
-logic  [7:0]    text_tile;                              // current character
-assign font_pix = font_shift_out[7];                    // current pixel from font data shift-logic out
-assign forecolor = text_color[3:0];                     // current character foreground color palette index (0-15)
-assign backcolor = text_color[7:4];                     // current character background color palette index (0-15)
-assign text_tile = vram_data_save[7:0];                 // current character tile index
+logic           font_pix;                       // current pixel from font data shift-logic out
+assign          font_pix = font_shift_out[7];
+logic [3: 0]    forecolor;                      // current character foreground color palette index (0-15)
+assign          forecolor = text_color[3:0];
+logic [3: 0]    backcolor;                      // current character background color palette index (0-15)
+assign          backcolor = text_color[7:4];
+logic  [7:0]    text_tile;                      // current character tile index
+assign          text_tile = vram_data_save[7:0];
 
 // continually form fontram address from text data from vram and char_y (avoids extra cycle for lookup)
 assign fontram_addr_o = font_height[3]  ? {font_bank[1], vram_data_i[7: 0], char_y[4:1]}
@@ -273,30 +284,30 @@ always_ff @(posedge clk) begin
             text_color      <= vram_data_save[15:8];    // used previously saved color
         end
         else begin
-            if (~(h_double & char_x[0]))             // only shift on even pixels with h_double
+            if (~(h_double & char_x[0]))                // only shift on even pixels with h_double
             font_shift_out <= {font_shift_out[6: 0], 1'b0}; // shift font line data (high bit is current pixel)
         end
 
-        char_x <= char_x + (h_double ? 1 : 2);       // increment character cell column (by 2 normally, 1 if pixel doubled)
+        char_x <= char_x + (h_double ? 1 : 2);          // increment character cell column (by 2 normally, 1 if pixel doubled)
 
-        if (mem_fetch_sync) begin
-            char_x <= 4'b0000;             // reset on char_x cycle on fetch sync signal
+        if (mem_fetch_sync) begin                       // on memory fetch sync signal
+            char_x <= 4'b0000;                          // reset on char_x cycle (to start at proper pixel)
         end
 
         // memory read for text
         if (mem_fetch && char_x == 4'b000) begin
             blit_cycle_o <= ~tg_enable;
-            vram_sel_o <= tg_enable;                // select vram
-            vram_addr_o <= text_addr;               // put text+color address on vram bus
-            text_addr <= text_addr + 1;             // next char+attribute
+            vram_sel_o <= tg_enable;                    // select vram
+            vram_addr_o <= text_addr;                   // put text+color address on vram bus
+            text_addr <= text_addr + 1;                 // next char+attribute
         end
 
         // pixel color lookup
         pal_index_o <= font_pix ? forecolor : backcolor;
 
         // end of line
-        if (h_last_line_pixel) begin                    // if last pixel of scan-line
-            text_addr <= text_line_addr;                // text addr back to line start
+        if (h_last_line_pixel) begin                        // if last pixel of scan-line
+            text_addr <= text_line_addr;                    // text addr back to line start
             if (char_y == { font_height, v_double }) begin  // if last line of char cell
                 char_y <= 5'h0;                             // reset char cell line
                 text_line_addr <= text_line_addr + text_line_width; // new line start address

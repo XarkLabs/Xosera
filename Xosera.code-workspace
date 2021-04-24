@@ -142,6 +142,25 @@
 		"terminal.integrated.fontSize": 11,
 		"workbench.editor.enablePreview": false,
 		"verilog.linting.verilator.arguments": "--sv --language 1800-2012 -Irtl -I.. -Wall -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY",
-		"verilog.linting.linter": "verilator"
+		"verilog.linting.linter": "verilator",
+		"todo-tree.highlights.defaultHighlight": {
+			"icon": "alert",
+			"type": "text",
+			"foreground": "red",
+			/*			"background": "white", */
+			"opacity": 50,
+			"iconColour": "blue"
+		},
+		"todo-tree.highlights.customHighlight": {
+			"TODO": {
+				"icon": "check",
+				"type": "word"
+			},
+			"FIXME": {
+				"foreground": "black",
+				"iconColour": "yellow",
+				"gutterIcon": true
+			}
+		}
 	}
 }

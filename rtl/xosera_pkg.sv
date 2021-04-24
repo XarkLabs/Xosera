@@ -1,9 +1,21 @@
+
+
+// xosera_pkg.sv - Common definitions for Xosera
+//
+// vim: set et ts=4 sw=4
+//
+// Copyright (c) 2020 Xark - https://hackaday.io/Xark
+//
+// See top-level LICENSE file for license information. (Hint: MIT)
+//
+
 `ifndef XOSERA_PKG
 `define XOSERA_PKG
 
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
+// "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
 // Xosera directly addressable registers (16 x 16-bit word)
 typedef enum logic [3:0]{
@@ -62,16 +74,6 @@ typedef enum logic [15:0]{
     AUX_VID_R_UNUSED7  = AUX_VID | 16'h0007
 } aux_vid_r_t;
 
-
-// xosera_defs.svh
-//
-// vim: set et ts=4 sw=4
-//
-// Copyright (c) 2020 Xark - https://hackaday.io/Xark
-//
-// See top-level LICENSE file for license information. (Hint: MIT)
-//
-
 `ifdef MODE_640x400     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x480     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_720x400     // 28.322 MHz (requested), 28.500 MHz (achieved)
@@ -85,95 +87,101 @@ typedef enum logic [15:0]{
 
 `ifdef    MODE_640x400
 // VGA mode 640x480 @ 60Hz (pixel clock 25.175Mhz)
-localparam VISIBLE_WIDTH     = 640;                          // horizontal active pixels
-localparam VISIBLE_HEIGHT    = 400;                          // vertical active lines
-localparam H_FRONT_PORCH     = 16;                           // H pre-sync (front porch) pixels
-localparam H_SYNC_PULSE      = 96;                           // H sync pulse pixels
-localparam H_BACK_PORCH      = 48;                           // H post-sync (back porch) pixels
-localparam V_FRONT_PORCH     = 12;                           // V pre-sync (front porch) lines
-localparam V_SYNC_PULSE      = 2;                            // V sync pulse lines
-localparam V_BACK_PORCH      = 35;                           // V post-sync (back porch) lines
-localparam H_SYNC_POLARITY   = 1'b0;                         // H sync pulse active level
-localparam V_SYNC_POLARITY   = 1'b1;                         // V sync pulse active level
+localparam PIXEL_FREQ        = 25_175_000;  // pixel clock in Hz
+localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
+localparam VISIBLE_HEIGHT    = 400;         // vertical active lines
+localparam H_FRONT_PORCH     = 16;          // H pre-sync (front porch) pixels
+localparam H_SYNC_PULSE      = 96;          // H sync pulse pixels
+localparam H_BACK_PORCH      = 48;          // H post-sync (back porch) pixels
+localparam V_FRONT_PORCH     = 12;          // V pre-sync (front porch) lines
+localparam V_SYNC_PULSE      = 2;           // V sync pulse lines
+localparam V_BACK_PORCH      = 35;          // V post-sync (back porch) lines
+localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
+localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
 `elsif    MODE_640x480
 // VGA mode 640x480 @ 60Hz (pixel clock 25.175Mhz)
-localparam VISIBLE_WIDTH     = 640;                          // horizontal active pixels
-localparam VISIBLE_HEIGHT    = 480;                          // vertical active lines
-localparam H_FRONT_PORCH     = 16;                           // H pre-sync (front porch) pixels
-localparam H_SYNC_PULSE      = 96;                           // H sync pulse pixels
-localparam H_BACK_PORCH      = 48;                           // H post-sync (back porch) pixels
-localparam V_FRONT_PORCH     = 10;                           // V pre-sync (front porch) lines
-localparam V_SYNC_PULSE      = 2;                            // V sync pulse lines
-localparam V_BACK_PORCH      = 33;                           // V post-sync (back porch) lines
-localparam H_SYNC_POLARITY   = 1'b0;                         // H sync pulse active level
-localparam V_SYNC_POLARITY   = 1'b0;                         // V sync pulse active level
+localparam PIXEL_FREQ        = 25_175_000;  // pixel clock in Hz
+localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
+localparam VISIBLE_HEIGHT    = 480;         // vertical active lines
+localparam H_FRONT_PORCH     = 16;          // H pre-sync (front porch) pixels
+localparam H_SYNC_PULSE      = 96;          // H sync pulse pixels
+localparam H_BACK_PORCH      = 48;          // H post-sync (back porch) pixels
+localparam V_FRONT_PORCH     = 10;          // V pre-sync (front porch) lines
+localparam V_SYNC_PULSE      = 2;           // V sync pulse lines
+localparam V_BACK_PORCH      = 33;          // V post-sync (back porch) lines
+localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
+localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 
 `elsif    MODE_720x400
 // VGA mode 720x400 @ 70Hz (pixel clock 28.322Mhz)
-localparam VISIBLE_WIDTH     = 720;                          // horizontal active pixels
-localparam VISIBLE_HEIGHT    = 400;                          // vertical active lines
-localparam H_FRONT_PORCH     = 18;                           // H pre-sync (front porch) pixels
-localparam H_SYNC_PULSE      = 108;                          // H sync pulse pixels
-localparam H_BACK_PORCH      = 54;                           // H post-sync (back porch) pixels
-localparam V_FRONT_PORCH     = 12;                           // V pre-sync (front porch) lines
-localparam V_SYNC_PULSE      = 2;                            // V sync pulse lines
-localparam V_BACK_PORCH      = 35;                           // V post-sync (back porch) lines
-localparam H_SYNC_POLARITY   = 1'b0;                         // H sync pulse active level
-localparam V_SYNC_POLARITY   = 1'b1;                         // V sync pulse active level
+localparam PIXEL_FREQ        = 28_322_000;  // pixel clock in Hz
+localparam VISIBLE_WIDTH     = 720;         // horizontal active pixels
+localparam VISIBLE_HEIGHT    = 400;         // vertical active lines
+localparam H_FRONT_PORCH     = 18;          // H pre-sync (front porch) pixels
+localparam H_SYNC_PULSE      = 108;         // H sync pulse pixels
+localparam H_BACK_PORCH      = 54;          // H post-sync (back porch) pixels
+localparam V_FRONT_PORCH     = 12;          // V pre-sync (front porch) lines
+localparam V_SYNC_PULSE      = 2;           // V sync pulse lines
+localparam V_BACK_PORCH      = 35;          // V post-sync (back porch) lines
+localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
+localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
 `elsif    MODE_848x480
 // VGA mode 848x480 @ 60Hz (pixel clock 33.750Mhz)
-localparam VISIBLE_WIDTH     = 848;                          // horizontal active pixels
-localparam VISIBLE_HEIGHT    = 480;                          // vertical active lines
-localparam H_FRONT_PORCH     = 16;                           // H pre-sync (front porch) pixels
-localparam H_SYNC_PULSE      = 112;                          // H sync pulse pixels
-localparam H_BACK_PORCH      = 112;                          // H post-sync (back porch) pixels
-localparam V_FRONT_PORCH     = 6;                            // V pre-sync (front porch) lines
-localparam V_SYNC_PULSE      = 8;                            // V sync pulse lines
-localparam V_BACK_PORCH      = 23;                           // V post-sync (back porch) lines
-localparam H_SYNC_POLARITY   = 1'b1;                         // H sync pulse active level
-localparam V_SYNC_POLARITY   = 1'b1;                         // V sync pulse active level
+localparam PIXEL_FREQ        = 33_750_000;  // pixel clock in Hz
+localparam VISIBLE_WIDTH     = 848;         // horizontal active pixels
+localparam VISIBLE_HEIGHT    = 480;         // vertical active lines
+localparam H_FRONT_PORCH     = 16;          // H pre-sync (front porch) pixels
+localparam H_SYNC_PULSE      = 112;         // H sync pulse pixels
+localparam H_BACK_PORCH      = 112;         // H post-sync (back porch) pixels
+localparam V_FRONT_PORCH     = 6;           // V pre-sync (front porch) lines
+localparam V_SYNC_PULSE      = 8;           // V sync pulse lines
+localparam V_BACK_PORCH      = 23;          // V post-sync (back porch) lines
+localparam H_SYNC_POLARITY   = 1'b1;        // H sync pulse active level
+localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
 `elsif    MODE_800x600
 // VGA mode 800x600 @ 60Hz (pixel clock 40.000Mhz)
-localparam VISIBLE_WIDTH     = 800;                          // horizontal active pixels
-localparam VISIBLE_HEIGHT    = 600;                          // vertical active lines
-localparam H_FRONT_PORCH     = 40;                           // H pre-sync (front porch) pixels
-localparam H_SYNC_PULSE      = 128;                          // H sync pulse pixels
-localparam H_BACK_PORCH      = 88;                           // H post-sync (back porch) pixels
-localparam V_FRONT_PORCH     = 1;                            // V pre-sync (front porch) lines
-localparam V_SYNC_PULSE      = 4;                            // V sync pulse lines
-localparam V_BACK_PORCH      = 23;                           // V post-sync (back porch) lines
-localparam H_SYNC_POLARITY   = 1'b1;                         // H sync pulse active level
-localparam V_SYNC_POLARITY   = 1'b1;                         // V sync pulse active level
+localparam PIXEL_FREQ        = 40_000_000;  // pixel clock in Hz
+localparam VISIBLE_WIDTH     = 800;         // horizontal active pixels
+localparam VISIBLE_HEIGHT    = 600;         // vertical active lines
+localparam H_FRONT_PORCH     = 40;          // H pre-sync (front porch) pixels
+localparam H_SYNC_PULSE      = 128;         // H sync pulse pixels
+localparam H_BACK_PORCH      = 88;          // H post-sync (back porch) pixels
+localparam V_FRONT_PORCH     = 1;           // V pre-sync (front porch) lines
+localparam V_SYNC_PULSE      = 4;           // V sync pulse lines
+localparam V_BACK_PORCH      = 23;          // V post-sync (back porch) lines
+localparam H_SYNC_POLARITY   = 1'b1;        // H sync pulse active level
+localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
 `elsif    MODE_1024x768
 // VGA mode 1024x768 @ 60Hz (pixel clock 65.000Mhz)
-localparam VISIBLE_WIDTH     = 1024;                         // horizontal active pixels
-localparam VISIBLE_HEIGHT    = 768;                          // vertical active lines
-localparam H_FRONT_PORCH     = 24;                           // H pre-sync (front porch) pixels
-localparam H_SYNC_PULSE      = 136;                          // H sync pulse pixels
-localparam H_BACK_PORCH      = 160;                          // H post-sync (back porch) pixels
-localparam V_FRONT_PORCH     = 3;                            // V pre-sync (front porch) lines
-localparam V_SYNC_PULSE      = 6;                            // V sync pulse lines
-localparam V_BACK_PORCH      = 29;                           // V post-sync (back porch) lines
-localparam H_SYNC_POLARITY   = 1'b0;                         // H sync pulse active level
-localparam V_SYNC_POLARITY   = 1'b0;                         // V sync pulse active level
+localparam PIXEL_FREQ        = 65_000_000;  // pixel clock in Hz
+localparam VISIBLE_WIDTH     = 1024;        // horizontal active pixels
+localparam VISIBLE_HEIGHT    = 768;         // vertical active lines
+localparam H_FRONT_PORCH     = 24;          // H pre-sync (front porch) pixels
+localparam H_SYNC_PULSE      = 136;         // H sync pulse pixels
+localparam H_BACK_PORCH      = 160;         // H post-sync (back porch) pixels
+localparam V_FRONT_PORCH     = 3;           // V pre-sync (front porch) lines
+localparam V_SYNC_PULSE      = 6;           // V sync pulse lines
+localparam V_BACK_PORCH      = 29;          // V post-sync (back porch) lines
+localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
+localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 
 `elsif    MODE_1280x720
 // VGA mode 1280x720 @ 60Hz (pixel clock 74.250Mhz)
-localparam VISIBLE_WIDTH     = 1280;                         // horizontal active pixels
-localparam VISIBLE_HEIGHT    = 720;                          // vertical active lines
-localparam H_FRONT_PORCH     = 110;                          // H pre-sync (front porch) pixels
-localparam H_SYNC_PULSE      = 40;                           // H sync pulse pixels
-localparam H_BACK_PORCH      = 220;                          // H post-sync (back porch) pixels
-localparam V_FRONT_PORCH     = 5;                            // V pre-sync (front porch) lines
-localparam V_SYNC_PULSE      = 5;                            // V sync pulse lines
-localparam V_BACK_PORCH      = 20;                           // V post-sync (back porch) lines
-localparam H_SYNC_POLARITY   = 1'b1;                         // H sync pulse active level
-localparam V_SYNC_POLARITY   = 1'b1;                         // V sync pulse active level
-
+localparam PIXEL_FREQ        = 74_250_000;  // pixel clock in Hz
+localparam VISIBLE_WIDTH     = 1280;        // horizontal active pixels
+localparam VISIBLE_HEIGHT    = 720;         // vertical active lines
+localparam H_FRONT_PORCH     = 110;         // H pre-sync (front porch) pixels
+localparam H_SYNC_PULSE      = 40;          // H sync pulse pixels
+localparam H_BACK_PORCH      = 220;         // H post-sync (back porch) pixels
+localparam V_FRONT_PORCH     = 5;           // V pre-sync (front porch) lines
+localparam V_SYNC_PULSE      = 5;           // V sync pulse lines
+localparam V_BACK_PORCH      = 20;          // V post-sync (back porch) lines
+localparam H_SYNC_POLARITY   = 1'b1;        // H sync pulse active level
+localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 `endif
 
 // calculated video mode parametereters
@@ -183,54 +191,16 @@ localparam OFFSCREEN_WIDTH   = TOTAL_WIDTH - VISIBLE_WIDTH;
 localparam OFFSCREEN_HEIGHT  = TOTAL_HEIGHT - VISIBLE_HEIGHT;
 
 // character font related constants
-localparam FONT_WIDTH        = 8;                            // 8 pixels wide character tiles (1 byte)
-localparam FONT_HEIGHT       = 16;                           // up to 16 pixels high character tiles
-localparam FONT_CHARS        = 256;                          // number of character tiles per font
-localparam CHARS_WIDE        = (VISIBLE_WIDTH/FONT_WIDTH);
-localparam CHARS_HIGH        = (VISIBLE_HEIGHT/FONT_HEIGHT);
-localparam FONT_SIZE         = (FONT_CHARS * FONT_HEIGHT);   // bytes per font (up to 8x16 character tiles)
+localparam FONT_WIDTH        = 8;                               // 8 pixels wide character tiles
+localparam FONT_HEIGHT       = 16;                              // up to 16 pixels high character tiles
+localparam CHARS_WIDE        = (VISIBLE_WIDTH/FONT_WIDTH);      // default tiled mode width
+localparam CHARS_HIGH        = (VISIBLE_HEIGHT/FONT_HEIGHT);    // default tiled mode height
 
-// symbolic bus signals (to be a bit more clear)
+// symbolic Xosera bus signals (to be a bit more clear)
 localparam RnW_WRITE         = 1'b0;
 localparam RnW_READ          = 1'b1;
 localparam cs_ENABLED        = 1'b0;
 localparam cs_DISABLED       = 1'b1;
-
-
-// xosera_defs.svh
-//
-// vim: set et ts=4 sw=4
-//
-// Copyright (c) 2020 Xark - https://hackaday.io/Xark
-//
-// See top-level LICENSE file for license information. (Hint: MIT)
-//
-`ifdef MODE_640x400     // 25.175 MHz (requested), 25.125 MHz (achieved)
-`elsif MODE_640x480     // 25.175 MHz (requested), 25.125 MHz (achieved)
-`elsif MODE_720x400     // 28.322 MHz (requested), 28.500 MHz (achieved)
-`elsif MODE_848x480     // 33.750 MHz (requested), 33.750 MHz (achieved)
-`elsif MODE_800x600     // 40.000 MHz (requested), 39.750 MHz (achieved) [tight timing]
-`elsif MODE_1024x768    // 65.000 MHz (requested), 65.250 MHz (achieved) [fails timing]
-`elsif MODE_1280x720    // 74.176 MHz (requested), 73.500 MHz (achieved) [fails timing]
-`else
-`define MODE_640x480    // default
-`endif
-
-`ifdef    MODE_640x400      // 25.175 MHz (requested), 25.125 MHz (achieved)
-localparam PIXEL_FREQ        = 25_175_000;   // pixel clock in Hz
-`elsif    MODE_640x480      // 25.175 MHz (requested), 25.125 MHz (achieved)
-localparam PIXEL_FREQ        = 25_175_000;   // pixel clock in Hz
-`elsif    MODE_720x400      // 28.322 MHz (requested), 28.500 MHz (achieved)
-localparam PIXEL_FREQ        = 28_322_000;   // pixel clock in Hz
-`elsif    MODE_848x480      // 33.750 MHz (requested), 33.750 MHz (achieved)
-localparam PIXEL_FREQ        = 33_750_000;   // pixel clock in Hz
-`elsif    MODE_800x600      // 40.000 MHz (requested), 39.750 MHz (achieved) [tight timing]
-localparam PIXEL_FREQ        = 40_000_000;   // pixel clock in Hz
-`elsif MODE_1024x768        // 65.000 MHz (requested), 65.250 MHz (achieved) [fails timing]
-localparam PIXEL_FREQ        = 65_000_000;   // pixel clock in Hz
-`elsif MODE_1280x720        // 74.176 MHz (requested), 73.500 MHz (achieved) [fails timing]
-localparam PIXEL_FREQ        = 74_250_000;   // pixel clock in Hz
-`endif
 
 `ifdef ICE40UP5K    // iCE40UltraPlus5K specific
 // Lattice/SiliconBlue PLL "magic numbers" to derive pixel clock from 12Mhz oscillator (from "icepll" utility)

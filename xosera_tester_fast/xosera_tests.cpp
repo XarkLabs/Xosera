@@ -67,6 +67,19 @@ static void xcolor(uint8_t color)
 
 static uint8_t ln;
 
+static void read_Settings()
+{
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_WIDTH);        // select width
+    width = xvid_getw(XVID_AUX_DATA);
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_HEIGHT);        // select height
+    height = xvid_getw(XVID_AUX_DATA);
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_FEATURES);        // select features
+    features = xvid_getw(XVID_AUX_DATA);
+}
+
 static void xhome()
 {
     // home wr addr
@@ -221,19 +234,6 @@ static void error(const char * msg, uint16_t addr, uint16_t rdata, uint16_t vdat
     error_flag = true;
 }
 
-static void read_Settings()
-{
-
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_WIDTH);        // select width
-    width = xvid_getw(XVID_AUX_DATA);
-
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_HEIGHT);        // select height
-    height = xvid_getw(XVID_AUX_DATA);
-
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_FEATURES);        // select features
-    features = xvid_getw(XVID_AUX_DATA);
-}
-
 static void reboot_Xosera(uint8_t config)
 {
 #if 1
@@ -250,6 +250,7 @@ static void reboot_Xosera(uint8_t config)
     } while (xvid_getw(XVID_RD_ADDR) != 0x1234 || xvid_getw(XVID_CONST) != 0xABCD);
 
     read_Settings();
+
     Serial.print("(");
     platform_print_dec(width);
     Serial.print("x");
@@ -1167,7 +1168,10 @@ void loop()
         xvid_setw(XVID_RD_ADDR, i);
         xvid_setw(XVID_DATA, 0x0220);        // green on black space
     } while (++i);
+
+    test_4096_colors();
 #endif
+
     xcls();
     xprint("Xosera Retro Graphics Adapter: Mode ");
     xprint_int(width);
@@ -1194,6 +1198,9 @@ void loop()
 
     activity();        // blink LED
     test_reg_access();
+    
+    activity();        // blink LED
+    test_4096_colors();
 
     activity();        // blink LED
     test_4096_colors();

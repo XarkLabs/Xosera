@@ -48,7 +48,7 @@ module video_gen(
 // Emperically determined (at extremes of horizontal scroll [worst case])
 // (odd numbers because 4 cycle latency through "fetch pipeline" and buffered)
 localparam H_MEM_BEGIN = OFFSCREEN_WIDTH-13;            // memory fetch starts over a character early
-localparam H2X_MEM_BEGIN = OFFSCREEN_WIDTH-(13+8);      // and a bit earlier with horizontal double
+localparam H2X_MEM_BEGIN = OFFSCREEN_WIDTH-(13+8);      // and 8 pixels earlier with horizontal pixel double
 localparam H_MEM_END = TOTAL_WIDTH-4;                   // memory fetch can ends a bit early
 
 // mode options
@@ -68,8 +68,8 @@ logic [15:0]    text_addr;                                // address to fetch ch
 logic [15:0]    text_line_addr;                           // address of start of character+color attribute line
 logic  [3:0]    font_height;                              // max height of font cell
 logic  [1:0]    font_bank;                                // font bank 0-3 (0/1 with 8x16)
-logic  [3:0]    char_x;                                   // current column of font cell (synchronized with memory access timing)
-logic  [3:0]    char_y;                                   // current line of font cell
+logic  [3:0]    char_x;                                   // current column of font cell (extra bit for horizontal double)
+logic  [4:0]    char_y;                                   // current line of font cell (extra bit for vertical double)
 logic  [3:0]    fine_scrollx;                             // X fine scroll
 logic  [4:0]    fine_scrolly;                             // Y fine scroll
 logic  [7:0]    text_color;                               // bit pattern shifting out for current font character line
@@ -228,8 +228,9 @@ assign forecolor = text_color[3:0];                     // current character for
 assign backcolor = text_color[7:4];                     // current character background color palette index (0-15)
 assign text_tile = vram_data_save[7:0];                 // current character tile index
 
-// continually form fontram address from text data from vram and char_y (avoids extra cycle for lookup) TODO: Interleave fonts?
-assign fontram_addr_o = font_height[3] ? {font_bank[1], vram_data_i[7: 0], char_y[3:0]} : {font_bank[1:0], vram_data_i[7: 0], char_y[2:0]};
+// continually form fontram address from text data from vram and char_y (avoids extra cycle for lookup)
+assign fontram_addr_o = font_height[3]  ? {font_bank[1], vram_data_i[7: 0], char_y[4:1]}
+                                        : {font_bank[1:0], vram_data_i[7: 0], char_y[3:1]};
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -246,7 +247,7 @@ always_ff @(posedge clk) begin
         text_line_addr  <= 16'h0000;
         vram_data_save  <= 16'h0000;
         char_x          <= 4'b0;
-        char_y          <= 4'b0;
+        char_y          <= 5'b0;
         blit_cycle_o    <= 1'b0;
         fontram_sel_o   <= 1'b0;
         vram_sel_o      <= 1'b0;
@@ -298,23 +299,20 @@ always_ff @(posedge clk) begin
         // end of line
         if (h_last_line_pixel) begin                    // if last pixel of scan-line
             text_addr <= text_line_addr;                // text addr back to line start
-            // advance to next char line, unless v doubled in which case only on even scanline + fine scroll
-            if (!v_double || !(v_count[0] ^ ~fine_scrolly[0])) begin
-                if (char_y == font_height) begin                // if last line of char cell
-                    char_y <= 4'h0;                             // reset font line
-                    text_line_addr <= text_line_addr + text_line_width; // new line start address
-                    text_addr <= text_line_addr + text_line_width;   // new text start address
-                end
-                else begin                                      // else next line of char cell
-                    char_y <= char_y + 1;                       // next char tile line
-                end
+            if (char_y == { font_height, v_double }) begin  // if last line of char cell
+                char_y <= 5'h0;                             // reset char cell line
+                text_line_addr <= text_line_addr + text_line_width; // new line start address
+                text_addr <= text_line_addr + text_line_width;      // new text start address
+            end
+            else begin                                      // else next line of char cell
+                char_y <= char_y + (v_double ? 1 : 2);      // next char tile line (by 2 normally, 1 if pixel doubled)
             end
         end
 
         // end of frame
         if (v_last_frame_pixel) begin                       // if last pixel of frame
             tg_enable <= enable_i;                          // enable/disable text generation
-            char_y <= v_double ? fine_scrolly[4:1] : fine_scrolly[3:0]; // start next frame at Y fine scroll line (shifted if v double)
+            char_y <= v_double ? fine_scrolly : { fine_scrolly[3:0], 1'b0 }; // start next frame at Y fine scroll line
             text_addr <= text_start_addr;                   // reset to start of text data
             text_line_addr <= text_start_addr;              // reset to start of text data
         end

@@ -6,9 +6,8 @@
 //
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
-
-`default_nettype none             // mandatory for Verilog sanity
-`timescale 1ns/1ps
+`default_nettype none               // mandatory for Verilog sanity
+`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
 `include "xosera_pkg.sv"
 
@@ -32,8 +31,6 @@ module blitter(
     input  logic            reset_i,
     input  logic            clk
     );
-
-`include "xosera_defs.svh"           // Xosera global Verilog definitions
 
 `ifndef GITHASH
 `define GITHASH d0000000
@@ -398,8 +395,8 @@ always_ff @(posedge clk) begin
                 LOGO_1: begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_wr_o           <= 1'b1;
-                    blit_addr_o         <= (1 * CHARS_WIDE + 1);
-                    reg_wr_addr         <= (1 * CHARS_WIDE + 2);
+                    blit_addr_o         <= (1 * xv::CHARS_WIDE + 1);
+                    reg_wr_addr         <= (1 * xv::CHARS_WIDE + 2);
                     blit_data_o         <= { 8'h0F, logostring[14*8-:8] };
                     blit_state          <= LOGO_2;
                 end

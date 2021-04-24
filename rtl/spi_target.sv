@@ -7,8 +7,10 @@
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
 
-`default_nettype none             // mandatory for Verilog sanity
-`timescale 1ns/1ps
+`default_nettype none               // mandatory for Verilog sanity
+`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
+
+`include "xosera_pkg.sv"
 
 module spi_target(
 

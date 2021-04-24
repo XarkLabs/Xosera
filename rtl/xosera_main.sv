@@ -31,8 +31,8 @@
 // Special thanks to everyone involved with the IceStorm/Yosys/NextPNR (etc.) open source FPGA projects.
 // Consider supporting open source FPGA tool development: https://www.patreon.com/fpga_dave
 
-`default_nettype none             // mandatory for Verilog sanity
-`timescale 1ns/1ps
+`default_nettype none               // mandatory for Verilog sanity
+`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
 `include "xosera_pkg.sv"
 
@@ -50,8 +50,6 @@ module xosera_main(
            output logic         audio_l_o, audio_r_o,   // left and right audio PWM output
            input  logic         reset_i                 // reset signal
        );
-
-`include "xosera_defs.svh"        // Xosera global Verilog definitions
 
 logic blit_vram_cycle;          // cycle is for blitter (vs video)
 logic blit_vram_sel;            // blitter vram select
@@ -120,7 +118,7 @@ assign audio_r_o = dbug_drive_bus;                    // TODO: audio
 
 logic dbug_cs_strobe;               // TODO debug ACK signal
 logic dbug_drive_bus;               // TODO debug bus output signal
-assign dbug_drive_bus = (bus_cs_n_i == cs_ENABLED && bus_rd_nwr_i == RnW_READ);
+assign dbug_drive_bus = (bus_cs_n_i == xv::cs_ENABLED && bus_rd_nwr_i == xv::RnW_READ);
 
 //  16x64K (128KB) video memory
 logic        vram_sel       /* verilator public */;

@@ -7,11 +7,10 @@
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
 // For info about iCEBreaker: https://1bitsquared.com/products/icebreaker
+`default_nettype none               // mandatory for Verilog sanity
+`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
-//
-
-`default_nettype none   // mandatory for Verilog sanity
-`timescale 1ns/1ps
+`include "xosera_pkg.sv"
 
 `ifdef PMOD_1B2_DVI12
 `elsif PMOD_DIGILENT_VGA
@@ -55,9 +54,6 @@ module xosera_iceb(
         input  logic CLK                            // 12Mhz clock
     );
 
-`include "xosera_clk_defs.svh"       // Xosera global clock definitions
-`include "xosera_defs.svh"           // Xosera global definitions
-
 assign FLASH_SSB    = 1'b1;             // prevent SPI flash interfering with other SPI/FTDI pins
 assign LEDG_N       = reset;            // green LED on when not in reset (active LOW LED)
 assign TX = RX;                         // loopback serial
@@ -93,7 +89,7 @@ logic bus_out_ena;
 logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
 // only set bus to output if CS enabled and read
-assign bus_out_ena = (bus_cs_n == cs_ENABLED && bus_rd_nwr == RnW_READ);
+assign bus_out_ena = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ);
 
 `ifdef SPI_INTERFACE   // SPU interface to drive bus signals
     // assign SPI GPIO for SPI interface (to emulate bus interface)
@@ -191,9 +187,9 @@ logic pll_lock;              // indicates when PLL frequency has locked-on
 /* verilator lint_off PINMISSING */
 SB_PLL40_PAD
     #(
-        .DIVR(PLL_DIVR),        // DIVR from video mode
-        .DIVF(PLL_DIVF),        // DIVF from video mode
-        .DIVQ(PLL_DIVQ),        // DIVQ from video mode
+        .DIVR(xv::PLL_DIVR),        // DIVR from video mode
+        .DIVF(xv::PLL_DIVF),        // DIVF from video mode
+        .DIVQ(xv::PLL_DIVQ),        // DIVQ from video mode
         .FEEDBACK_PATH("SIMPLE"),
         .FILTER_RANGE(3'b001),
         .PLLOUT_SELECT("GENCLK")

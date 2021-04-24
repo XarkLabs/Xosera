@@ -6,9 +6,10 @@
 //
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
+`default_nettype none               // mandatory for Verilog sanity
+`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
-`default_nettype none             // mandatory for Verilog sanity
-`timescale 1ns/1ps
+`include "xosera_pkg.sv"
 
 module bus_interface(
             // bus interface signals
@@ -27,8 +28,6 @@ module bus_interface(
            input  logic         clk,                    // input clk (should be > 2x faster than bus signals)
            input  logic         reset_i                 // reset
        );
-
-`include "xosera_defs.svh"        // Xosera global Verilog definitions
 
 // input synchronizers (shifts right each cycle with high bit set from inputs and bit 0 is acted on)
 logic [3:0] cs_r;               // also "history bits" for detecting rising edge two cycles delayed (to allow bus to settle)
@@ -71,8 +70,8 @@ always_ff @(posedge clk) begin
     else begin
         // synchronize new input on leftmost bit, shifting bits right
         // NOTE: inverting bus_cs_n_i here to make it active high
-        cs_r           <= { (bus_cs_n_i == cs_ENABLED) ? 1'b1 : 1'b0, cs_r[3: 1] };
-        read_r          <= { (bus_rd_nwr_i == RnW_READ), read_r[1] };
+        cs_r           <= { (bus_cs_n_i == xv::cs_ENABLED) ? 1'b1 : 1'b0, cs_r[3: 1] };
+        read_r          <= { (bus_rd_nwr_i == xv::RnW_READ), read_r[1] };
         reg_num_r[0]    <= reg_num_r[1];
         reg_num_r[1]    <= bus_reg_num_i;
         bytesel_r       <= { bus_bytesel_i, bytesel_r[1] };

@@ -48,6 +48,7 @@ module video_gen(
 // Emperically determined (at extremes of horizontal scroll [worst case])
 // (odd numbers because 4 cycle latency through "fetch pipeline" and buffered)
 localparam H_MEM_BEGIN = OFFSCREEN_WIDTH-13;            // memory fetch starts over a character early
+localparam H2X_MEM_BEGIN = OFFSCREEN_WIDTH-(13+8);      // and a bit earlier with horizontal double
 localparam H_MEM_END = TOTAL_WIDTH-4;                   // memory fetch can ends a bit early
 
 // mode options
@@ -138,7 +139,12 @@ always_comb begin
     end
 
     // set mem_fetch next toggle for video memory access (h_double subtracts an extra 16)
-    mem_fetch_toggle = mem_fetch ? H_MEM_END[10:0] : (H_MEM_BEGIN[10:0] - { 6'b0, h_double, fine_scrollx });
+    if (mem_fetch) begin
+        mem_fetch_toggle = H_MEM_END[10:0];
+    end
+    else begin
+        mem_fetch_toggle = (h_double ? H2X_MEM_BEGIN[10:0] : H_MEM_BEGIN[10:0]) - { 7'b0, fine_scrollx };
+    end
 
     // scanning horizontally left to right, offscreen pixels are on left before visible pixels
     case (h_state)

@@ -218,7 +218,8 @@ const char * BusInterface::reg_name[] = {
 
 BusInterface bus;
 int          BusInterface::test_data_len   = 999;
-uint16_t     BusInterface::test_data[1024] = {REG_W(WR_ADDR, 0x3),
+uint16_t     BusInterface::test_data[1024] = {0xffff,
+                                          REG_W(WR_ADDR, 0x3),
                                           REG_W(WR_INC, 0x1),
                                           REG_W(DATA, 0x0200 | 'H'),
                                           REG_B(DATA, 'e'),

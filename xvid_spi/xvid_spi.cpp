@@ -6,13 +6,13 @@
 //
 // See top-level LICENSE file for license information. (Hint: MIT)
 
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <unistd.h>
 
 #include "ftdi_spi.h"
@@ -112,8 +112,13 @@ enum
 
 #define DEBUG_HEXDUMP 0
 
+#if 1
 #define MAX_SEND    1024
 #define FLUSH_QUEUE 1020
+#else
+#define MAX_SEND    16
+#define FLUSH_QUEUE 4
+#endif
 
 static uint8_t   send_buffer[MAX_SEND];
 static uint8_t   xmit_buffer[MAX_SEND];
@@ -148,10 +153,12 @@ inline int spi_queue_flush()
     return len;
 }
 
-inline void spi_queue_cmd(uint8_t cmd, uint8_t data)
+inline int spi_queue_cmd(uint8_t cmd, uint8_t data)
 {
+    int off     = static_cast<int>(send_ptr - send_buffer);
     *send_ptr++ = cmd;
     *send_ptr++ = data;
+    return off;
 }
 
 void delay(int ms)
@@ -190,18 +197,22 @@ static inline void xvid_sethb(uint8_t r, uint8_t msb)
 
 static inline uint16_t xvid_getw(uint8_t r)
 {
-    spi_queue_cmd(SPI_CMD_CS | (r & SPI_CMD_REGMASK), 0xff);
-    spi_queue_cmd(SPI_CMD_CS | SPI_CMD_BYTESEL | (r & SPI_CMD_REGMASK), 0xff);
-    size_t len = spi_queue_flush();
-    return (xmit_buffer[len - 3] << 8) | xmit_buffer[len - 1];
+    int msb = spi_queue_cmd(SPI_CMD_CS | (r & SPI_CMD_REGMASK), 0xff);
+    int lsb = spi_queue_cmd(SPI_CMD_CS | SPI_CMD_BYTESEL | (r & SPI_CMD_REGMASK), 0xff);
+    spi_queue_flush();
+    assert(xmit_buffer[msb] == 0xcb);
+    assert(xmit_buffer[lsb] == 0xcb);
+
+    return (xmit_buffer[msb + 1] << 8) | xmit_buffer[lsb + 1];
 }
 
 // bytesel = LSB (default) or 0 for MSB
 static inline uint8_t xvid_getb(uint8_t r, uint8_t bytesel = 1)
 {
-    spi_queue_cmd(SPI_CMD_CS | (bytesel ? SPI_CMD_BYTESEL : 0) | (r & SPI_CMD_REGMASK), 0xff);
-    size_t len = spi_queue_flush();
-    return xmit_buffer[len - 1];
+    int off = spi_queue_cmd(SPI_CMD_CS | (bytesel ? SPI_CMD_BYTESEL : 0) | (r & SPI_CMD_REGMASK), 0xff);
+    spi_queue_flush();
+    assert(xmit_buffer[off] == 0xcb);
+    return xmit_buffer[off + 1];
 }
 
 static inline uint8_t xvid_getlb(uint8_t r)
@@ -955,7 +966,7 @@ int main(int argc, char ** argv)
     reboot_Xosera(xosera_config);
 
     delay(5000);        // let the stunning boot logo display. :)
-#if 0
+#if 1
     xcls();
     xprint("Xosera Retro Graphics Adapter: Mode ");
     xprint_int(width);

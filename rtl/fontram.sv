@@ -6,9 +6,10 @@
 //
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
+`default_nettype none               // mandatory for Verilog sanity
+`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
-`default_nettype none             // mandatory for Verilog sanity
-`timescale 1ns/1ps
+`include "xosera_pkg.sv"
 
 // Default "mem" files and bank address for font data (1 2KB banks per 8x8 font, 2 banks for 8x16 font)
 `ifdef TESTPATTERN
@@ -25,15 +26,15 @@
 // `define FONT_ADDR_3
 
 module fontram(
-           input logic clk,
-           input logic rd_en_i,
-           input logic [12: 0] rd_address_i,
-           output logic [7: 0] rd_data_o,
-           input logic wr_clk,
-           input logic wr_en_i,
-           input logic [12: 0] wr_address_i,
-           input logic [7: 0] wr_data_i
-       );
+    input  logic         clk,
+    input  logic         rd_en_i,
+    input  logic [12:0]  rd_address_i,
+    output logic  [7:0]  rd_data_o,
+    input  logic         wr_clk,
+    input  logic         wr_en_i,
+    input  logic [12:0]  wr_address_i,
+    input  logic  [7:0]  wr_data_i
+);
 // infer 8x8KB font BRAM
 logic [7: 0] bram[8191: 0];
 `ifndef SHOW        // yosys show command doesn't like "too long" init string
@@ -56,6 +57,7 @@ initial begin
 end
 `endif
 
+// Infer BRAM block
 always_ff @(posedge wr_clk) begin
     if (wr_en_i) begin
         bram[wr_address_i] <= wr_data_i;

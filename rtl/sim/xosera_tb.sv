@@ -6,18 +6,19 @@
 //
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
-`default_nettype none    // mandatory for Verilog sanity
-`timescale 1ns/1ps
+//`default_nettype none    // mandatory for Verilog sanity
+//`timescale 1ns/1ps
 
-`define MEMDUMP
+`default_nettype none               // mandatory for Verilog sanity
+`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
 `include "xosera_pkg.sv"
+
+`define MEMDUMP                     // dump VRAM contents to file
 
 module xosera_tb();
 
 import xv::*;
-
-//`include "xosera_defs.svh"  // Xosera global Verilog definitions
 
 logic clk;
 logic reset;
@@ -63,9 +64,6 @@ xosera_main xosera(
                 .audio_r_o(audio_r),            // right audio PWM channel
                 .reset_i(reset)                 // reset signal
             );
-
-`include "xosera_clk_defs.svh"       // Xosera global Verilog definitions
-`include "xosera_defs.svh"          // Xosera global Verilog definitions
 
 parameter CLK_PERIOD    = (1000000000.0 / PIXEL_FREQ);
 parameter M68K_PERIOD   = 83.333;

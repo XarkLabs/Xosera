@@ -11,8 +11,10 @@
 //
 // NOTE: UPduino 3.x needs the "OSC" jumper shorted to provide 12MHz clock to drive PLL
 
-`default_nettype none   // mandatory for Verilog sanity
-`timescale 1ns/1ps
+`default_nettype none               // mandatory for Verilog sanity
+`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
+
+`include "xosera_pkg.sv"
 
 //                         UPduino v3.0 pinout for Xosera
 //
@@ -43,6 +45,7 @@
 //          [BUS_DATA6]   gpio_38 | 23           26 | gpio_46   [DV_DE]
 //          [BUS_DATA7]   gpio_28 | 24           25 | gpio_24   [DV_CLK]
 //                                -------------------
+// NOTE: Xosera assumes 12MHz OSC jumper is shorted, and R28 RGB LED jumper is cut (using RGB for input)
 
 module xosera_upd(
             // left side (USB at top)
@@ -85,9 +88,6 @@ module xosera_upd(
             input  logic    gpio_20         // input 12MHz clock (UPduino 3.0 needs OSC jumper shorted)
        );
 
-`include "xosera_clk_defs.svh"       // Xosera global clock definitions
-`include "xosera_defs.svh"           // Xosera global definitions
-
 assign spi_cs = 1'b1;                   // prevent SPI flash interfering with other SPI/FTDI pins
 
 // gpio pin aliases
@@ -122,7 +122,7 @@ logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
 
 // only set bus to output if Xosera is selected and read is selected
-assign bus_out_ena = (bus_cs_n == cs_ENABLED && bus_rd_nwr == RnW_READ);
+assign bus_out_ena = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ);
 
 `ifdef SYNTHESIS
 // NOTE: Need to use iCE40 SB_IO primitive to control tri-state properly here
@@ -184,9 +184,9 @@ logic pll_lock;              // indicates when PLL frequency has locked-on
 /* verilator lint_off PINMISSING */
 SB_PLL40_CORE
     #(
-        .DIVR(PLL_DIVR),        // DIVR from video mode
-        .DIVF(PLL_DIVF),        // DIVF from video mode
-        .DIVQ(PLL_DIVQ),        // DIVQ from video mode
+        .DIVR(xv::PLL_DIVR),        // DIVR from video mode
+        .DIVF(xv::PLL_DIVF),        // DIVF from video mode
+        .DIVQ(xv::PLL_DIVQ),        // DIVQ from video mode
         .FEEDBACK_PATH("SIMPLE"),
         .FILTER_RANGE(3'b001),
         .PLLOUT_SELECT("GENCLK")

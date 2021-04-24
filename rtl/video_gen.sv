@@ -14,42 +14,40 @@
 //     https://github.com/smunaut/ice40-playground
 //
 // Learning from both of these projects (and others) helped me significantly improve this design
-
-`default_nettype none             // mandatory for Verilog sanity
-`timescale 1ns/1ps
-
-module video_gen(
-            // control outputs
-            output logic            blit_cycle_o,       // 0=video memory cycle, 1=Blit memory cycle
-            output logic            fontram_sel_o,      // fontram access select
-            output logic [12:0]     fontram_addr_o,     // font memory byte address out (8x4KB)
-            output logic            vram_sel_o,         // vram access select
-            output logic [15:0]     vram_addr_o,        // vram word address out (16x64KB)
-            output logic [15:0]     vgen_reg_data_o,    // register/status data reads
-            // control inputs
-            input  logic [15:0]     vram_data_i,        // vram word data in
-            input  logic  [7:0]     fontram_data_i,     // font memory byte data in
-            input  logic            enable_i,           // enable video (0=black output, 1=normal output)
-            input  logic            vgen_reg_wr_i,      // strobe to write internal config register number
-            input  logic  [2:0]     vgen_reg_num_i,     // internal config register number
-            input  logic [15:0]     vgen_reg_data_i,    // data for internal config register
-            // video signal outputs
-            output logic  [3:0]     pal_index_o,        // palette index outputs
-            output logic            vsync_o, hsync_o,   // VGA sync outputs
-            output logic            dv_de_o,            // VGA video active signal (needed for HDMI)
-            // standard signals
-            input  logic            reset_i,            // system reset in
-            input  logic            clk                 // clock (video pixel clock)
-       );
+`default_nettype none               // mandatory for Verilog sanity
+`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
 `include "xosera_pkg.sv"
-`include "xosera_defs.svh"        // Xosera global Verilog definitions
+
+module video_gen(
+    // control outputs
+    output logic            blit_cycle_o,       // 0=video memory cycle, 1=Blit memory cycle
+    output logic            fontram_sel_o,      // fontram access select
+    output logic [12:0]     fontram_addr_o,     // font memory byte address out (8x4KB)
+    output logic            vram_sel_o,         // vram access select
+    output logic [15:0]     vram_addr_o,        // vram word address out (16x64KB)
+    output logic [15:0]     vgen_reg_data_o,    // register/status data reads
+    // control inputs
+    input  logic [15:0]     vram_data_i,        // vram word data in
+    input  logic  [7:0]     fontram_data_i,     // font memory byte data in
+    input  logic            enable_i,           // enable video (0=black output, 1=normal output)
+    input  logic            vgen_reg_wr_i,      // strobe to write internal config register number
+    input  logic  [2:0]     vgen_reg_num_i,     // internal config register number
+    input  logic [15:0]     vgen_reg_data_i,    // data for internal config register
+    // video signal outputs
+    output logic  [3:0]     pal_index_o,        // palette index outputs
+    output logic            vsync_o, hsync_o,   // VGA sync outputs
+    output logic            dv_de_o,            // VGA video active signal (needed for HDMI)
+    // standard signals
+    input  logic            reset_i,            // system reset in
+    input  logic            clk                 // clock (video pixel clock)
+);
 
 // Emperically determined (at extremes of horizontal scroll [worst case])
 // (odd numbers because 4 cycle latency through "fetch pipeline" and buffered)
-localparam H_MEM_BEGIN = OFFSCREEN_WIDTH-13;            // memory fetch starts over a character early
-localparam H2X_MEM_BEGIN = OFFSCREEN_WIDTH-(13+8);      // and 8 pixels earlier with horizontal pixel double
-localparam H_MEM_END = TOTAL_WIDTH-4;                   // memory fetch can ends a bit early
+localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-13;            // memory fetch starts over a character early
+localparam H2X_MEM_BEGIN = xv::OFFSCREEN_WIDTH-(13+8);      // and 8 pixels earlier with horizontal pixel double
+localparam H_MEM_END = xv::TOTAL_WIDTH-4;                   // memory fetch can ends a bit early
 
 // mode options
 logic h_double;
@@ -149,25 +147,25 @@ always_comb begin
     // scanning horizontally left to right, offscreen pixels are on left before visible pixels
     case (h_state)
         STATE_PRE_SYNC:
-            h_count_next_state = H_FRONT_PORCH - 1;
+            h_count_next_state = xv::H_FRONT_PORCH - 1;
         STATE_SYNC:
-            h_count_next_state = H_FRONT_PORCH + H_SYNC_PULSE - 1;
+            h_count_next_state = xv::H_FRONT_PORCH + xv::H_SYNC_PULSE - 1;
         STATE_POST_SYNC:
-            h_count_next_state = OFFSCREEN_WIDTH - 1;
+            h_count_next_state = xv::OFFSCREEN_WIDTH - 1;
         STATE_VISIBLE:
-            h_count_next_state = TOTAL_WIDTH - 1;
+            h_count_next_state = xv::TOTAL_WIDTH - 1;
     endcase
 
     // scanning vertically top to bottom, offscreen lines are on bottom after visible lines
     case (v_state)
         STATE_PRE_SYNC:
-            v_count_next_state = VISIBLE_HEIGHT + V_FRONT_PORCH - 1;
+            v_count_next_state = xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH - 1;
         STATE_SYNC:
-            v_count_next_state = VISIBLE_HEIGHT + V_FRONT_PORCH + V_SYNC_PULSE - 1;
+            v_count_next_state = xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH + xv::V_SYNC_PULSE - 1;
         STATE_POST_SYNC:
-            v_count_next_state = TOTAL_HEIGHT - 1;
+            v_count_next_state = xv::TOTAL_HEIGHT - 1;
         STATE_VISIBLE:
-            v_count_next_state = VISIBLE_HEIGHT - 1;
+            v_count_next_state = xv::VISIBLE_HEIGHT - 1;
     endcase
 end
 
@@ -175,7 +173,7 @@ end
 always_ff @(posedge clk) begin
     if (reset_i) begin
         text_start_addr <= 16'h0000;
-        text_line_width <= CHARS_WIDE[15:0];
+        text_line_width <= xv::CHARS_WIDE[15:0];
         fine_scrollx    <= 4'b0000;         // low bit is for "1/2 doubled pixel" when h_double
         fine_scrolly    <= 5'b00000;        // low bit is for "1/2 doubled pixel" when v_double
         font_height     <= 4'b1111;
@@ -210,9 +208,9 @@ always_ff @(posedge clk) begin
         end
 
         case (vgen_reg_num_i[1:0])
-            2'b00:      vgen_reg_data_o <= VISIBLE_WIDTH[15:0];
-            2'b01:      vgen_reg_data_o <= VISIBLE_HEIGHT[15:0];
-            2'b10:      vgen_reg_data_o <= 16'b1000_0000_0000_0001;  // TODO feature bits
+            2'b00:      vgen_reg_data_o <= xv::VISIBLE_WIDTH[15:0];
+            2'b01:      vgen_reg_data_o <= xv::VISIBLE_HEIGHT[15:0];
+            2'b10:      vgen_reg_data_o <= 16'b1000000000000001;  // TODO feature bits
             2'b11:      vgen_reg_data_o <= {(v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 3'b000, v_count }; // negative when not vsync
         endcase
     end
@@ -325,8 +323,8 @@ always_ff @(posedge clk) begin
         mem_fetch <= mem_fetch_next;
 
         // set video output signals (color already set)
-        hsync_o <= hsync ? H_SYNC_POLARITY : ~H_SYNC_POLARITY;
-        vsync_o <= vsync ? V_SYNC_POLARITY : ~V_SYNC_POLARITY;
+        hsync_o <= hsync ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
+        vsync_o <= vsync ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
         dv_de_o <= dv_display_ena;
     end
 end

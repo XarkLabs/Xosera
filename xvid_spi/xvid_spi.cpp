@@ -461,30 +461,32 @@ const uint16_t defpal[16] = {
 };
 
 const char blurb[] =
-    "\n\n"
-    "    Xosera is an FPGA based video adapter designed with the rosco_m68k retro computer\n"
-    "    in mind. Inspired in concept by it's \"namesake\" the Commander X16's VERA, Xosera\n"
-    "    is an original open-source video adapter design, built with open-source tools, that\n"
-    "    is being tailored with features appropriate for a Motorola 68K era retro computer.\n"
-    "    \n"
-    "        \xf9   VGA or HDMI (DVI) output at 848x480@60Hz or 640x480@60Hz (16:9 or 4:3)\n"
-    "        \xf9   16 or 256 color palette out of 4096 colors (12-bit RGB)\n"
-    "        \xf9   128KB of embedded video RAM (16-bit words @33/25 MHz)\n"
-    "        \xf9   Character tile based modes with color attribute byte\n"
-    "        \xf9   Pixel doubled bitmap modes (e.g. 424x240 or 320x240)\n"
-    "        \xf9   Smooth horizontal and vertical tile scrolling\n"
-    "        \xf9   8x8 or 8x16 character tile size (or truncated e.g., 8x10)\n"
-    "        \xf9   Register based interface with 16 16-bit registers\n"
-    "        \xf9   Read/write VRAM with programmable read/write address increment\n"
-    "        \xf9   Full speed 8-bit bus interface (with MOVEP) for rosco_m68k (by Ross Bamford)\n"
-    "        \xf9   8KB of font RAM with multiple fonts (2KB per 8x8 fonts, 4K per 8x16 font)\n"
-    "        \xf9   \"Blitter\" for fast VRAM copy & fill operations (TODO, but used at init)\n"
-    "        \xf9   2-D operations \"blitter\" with modulo and shifting/masking (TODO)\n"
-    "        \xf9   Dual overlayed \"planes\" of video (TODO)\n"
-    "        \xf9   Wavetable stereo audio (TODO, spare debug IO for now)\n"
-    "        \xf9   Bit-mapped 16 and 256 color graphics modes (256 color TODO)\n"
-    "        \xf9   16-color tile mode with \"game\" attributes (e.g., mirroring) (TODO)\n"
-    "        \xf9   At least one \"cursor\" sprite (and likely more, TODO)\n";
+    "01234567890123456789012345678901234567890123456789012345678901234567890123456789\n"
+    "\n"
+    "Xosera is an FPGA based video adapter designed with the rosco_m68k retro\n"
+    "computer in mind. Inspired in concept by it's \"namesake\" the Commander X16's\n"
+    "VERA, Xosera is an original open-source video adapter design, built with open-\n"
+    "source tools, that is being tailored with features appropriate for a Motorola\n"
+    "68K era retro computer.\n"
+    "\n"
+    "  \xf9  VGA or HDMI/DVI output at 848x480 or 640x480 (16:9 or 4:3 @ 60Hz)\n"
+    "  \xf9  16 or 256 color palette out of 4096 colors (12-bit RGB)\n"
+    "  \xf9  128KB of embedded video RAM (16-bit words @33/25 MHz)\n"
+    "  \xf9  Character tile based modes with color attribute byte\n"
+    "  \xf9  Pixel doubled bitmap modes (e.g. 424x240 or 320x240)\n"
+    "  \xf9  Smooth horizontal and vertical tile scrolling\n"
+    "  \xf9  8x8 or 8x16 character tile size (or truncated e.g., 8x10)\n"
+    "  \xf9  Register based interface with 16 16-bit registers\n"
+    "  \xf9  Read/write VRAM with programmable read/write address increment\n"
+    "  \xf9  Full speed bus interface (with MOVEP) for rosco_m68k (by Ross Bamford)\n"
+    "  \xf9  Multiple fonts (2KB per 8x8 fonts, 4K per 8x16 font)\n"
+    "  \xf9  \"Blitter\" for fast VRAM copy & fill operations (TODO, but used at init)\n"
+    "  \xf9  2-D operations \"blitter\" with modulo and shifting/masking (TODO)\n"
+    "  \xf9  Dual overlayed \"planes\" of video (TODO)\n"
+    "  \xf9  Wavetable stereo audio (TODO, spare debug IO for now)\n"
+    "  \xf9  Bit-mapped 16 and 256 color graphics modes (256 color TODO)\n"
+    "  \xf9  16-color tile mode with \"game\" attributes (e.g., mirroring) (TODO)\n"
+    "  \xf9  At least one \"cursor\" sprite (and likely more, TODO)\n";
 
 void show_blurb()
 {
@@ -778,10 +780,23 @@ void draw_buddy()
 
 void test_smoothscroll()
 {
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
-    xvid_setw(XVID_AUX_DATA, columns);
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // zero fine scroll
-    xvid_setw(XVID_AUX_DATA, 0);
+    xcls();
+    xprint_rainbow(1, blurb);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0000);                   // set palette data
+    delay(2000);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0001);                   // set palette data
+    delay(2000);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0002);                   // set palette data
+    delay(2000);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0003);                   // set palette data
+    delay(2000);
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0000);                   // set palette data
+    delay(2000);
 
     for (int r = 0; r < 2; r++)
     {
@@ -844,20 +859,20 @@ void test_smoothscroll()
 
     for (int r = 0; r < 2; r++)
     {
-        for (int x = 0; x < 200; x++)
+        for (int x = 0; x < 100; x++)
         {
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
             xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 3));
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | ((x & 0xf) ^ 0x00));
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | (x & 0xf));
             wait_vsync(1);
         }
-        for (int x = 200; x >= 0; x--)
+        for (int x = 100; x >= 0; x--)
         {
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
             xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 3));
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | ((x & 0xf) ^ 0x00));
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | (x & 0xf));
             wait_vsync(1);
         }
     }
@@ -867,29 +882,63 @@ void test_smoothscroll()
 
     for (int r = 0; r < 2; r++)
     {
-        for (int x = 0; x < 200; x++)
+        for (int x = 0; x < 100; x++)
         {
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
             xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 4));
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | ((x & 0xf) ^ 0x00));
-            wait_vsync(5);
+            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | (x & 0xf));
+            wait_vsync(1);
         }
-        for (int x = 200; x >= 0; x--)
+        for (int x = 100; x >= 0; x--)
         {
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
             xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 4));
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | ((x & 0xf) ^ 0x00));
-            wait_vsync(5);
+            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | (x & 0xf));
+            wait_vsync(1);
         }
     }
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0003);                   // set palette data
+
+    for (int r = 0; r < 2; r++)
+    {
+        for (int x = 0; x < 100; x++)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, ((x >> 5) * (columns * 2)) + (x >> 4));
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | (x & 0x1f));
+            wait_vsync(1);
+        }
+        for (int x = 100; x >= 0; x--)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, ((x >> 5) * (columns * 2)) + (x >> 4));
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | (x & 0x1f));
+            wait_vsync(1);
+        }
+    }
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+    xvid_setw(XVID_AUX_DATA, 0x0000);                     // set palette data
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);         // fine scroll
+    xvid_setw(XVID_AUX_DATA, 0x0000);                     // set palette data
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
+    xvid_setw(XVID_AUX_DATA, columns);
+
+    delay(5000);
 
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
     xvid_setw(XVID_AUX_DATA, 0x0000);                   // set palette data
 
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_TILEWIDTH);        // set width
     xvid_setw(XVID_AUX_DATA, columns);
+
+    delay(2000);
 }
 
 

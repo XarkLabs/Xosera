@@ -322,15 +322,16 @@ static void xcolor(uint8_t color)
     xvid_setw(XVID_WR_ADDR, wa);
 }
 
-uint8_t ln = 0;
+static uint8_t ln;
 
 static void xhome()
 {
     // home wr addr
+    read_Settings();
     xvid_setw(XVID_WR_INC, 1);
     xvid_setw(XVID_WR_ADDR, 0);
-    xcolor(cur_color);        // green-on-black
     ln = 0;
+    xcolor(cur_color);        // green-on-black
 }
 
 static void xpos(uint8_t h, uint8_t v)
@@ -345,7 +346,7 @@ static void xcls(uint8_t v = ' ')
 {
     // clear screen
     xhome();
-    for (uint16_t i = 0; i < columns * rows; i++)
+    for (uint16_t i = 0; i < (columns * rows); i++)
     {
         xvid_setlb(XVID_DATA, v);
     }
@@ -476,6 +477,19 @@ static void error(const char * msg, uint16_t addr, uint16_t rdata, uint16_t vdat
     error_flag = true;
 }
 
+static void read_Settings()
+{
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_WIDTH);        // select width
+    width = xvid_getw(XVID_AUX_DATA);
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_HEIGHT);        // select height
+    height = xvid_getw(XVID_AUX_DATA);
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_FEATURES);        // select features
+    features = xvid_getw(XVID_AUX_DATA);
+}
+
 static void reboot_Xosera(uint8_t config)
 {
 #if 1
@@ -491,15 +505,7 @@ static void reboot_Xosera(uint8_t config)
         xvid_setw(XVID_CONST, 0xABCD);
     } while (xvid_getw(XVID_RD_ADDR) != 0x1234 || xvid_getw(XVID_CONST) != 0xABCD);
 
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_WIDTH);        // select width
-    width = xvid_getw(XVID_AUX_DATA);
-
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_HEIGHT);        // select height
-    height = xvid_getw(XVID_AUX_DATA);
-
-    xvid_setw(XVID_AUX_ADDR, AUX_VID_R_FEATURES);        // select features
-    features = xvid_getw(XVID_AUX_DATA);
-
+    read_Settings();
     Serial.print("(");
     Serial.print(width);
     Serial.print("x");
@@ -1248,7 +1254,7 @@ void test_4096_colors()
     {
         xvid_setw(XVID_WR_ADDR, c);
         xvid_setw(XVID_WR_INC, columns);
-        uint8_t color = c / (columns / 16);
+        uint8_t color = (c / (columns / 16)) ^ 0xf;
         for (int y = 0; y < rows; y++)
         {
             xvid_setw(XVID_DATA, (color << 12) | (color << 8) | ' ');
@@ -1387,7 +1393,7 @@ void test_smoothscroll()
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
             xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 3));
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | ((x & 0xf) ^ 0x00));
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | (x & 0xf));
             wait_vsync(1);
         }
         for (int x = 200; x >= 0; x--)
@@ -1395,7 +1401,7 @@ void test_smoothscroll()
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
             xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 3));
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | ((x & 0xf) ^ 0x00));
+            xvid_setw(XVID_AUX_DATA, (x & 0x7) << 8 | (x & 0xf));
             wait_vsync(1);
         }
     }
@@ -1410,7 +1416,7 @@ void test_smoothscroll()
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
             xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 4));
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | ((x & 0xf) ^ 0x00));
+            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | (x & 0xf));
             wait_vsync(1);
         }
         for (int x = 200; x >= 0; x--)
@@ -1418,10 +1424,35 @@ void test_smoothscroll()
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
             xvid_setw(XVID_AUX_DATA, ((x >> 4) * (columns * 2)) + (x >> 4));
             xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
-            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | ((x & 0xf) ^ 0x00));
+            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | (x & 0xf));
             wait_vsync(1);
         }
     }
+
+    xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
+    xvid_setw(XVID_AUX_DATA, 0x0003);                   // set palette data
+
+    for (int r = 0; r < 2; r++)
+    {
+        for (int x = 0; x < 200; x++)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, ((x >> 5) * (columns * 2)) + (x >> 4));
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | (x & 0x1f));
+            wait_vsync(1);
+        }
+        for (int x = 200; x >= 0; x--)
+        {
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_DISPSTART);        // start addr
+            xvid_setw(XVID_AUX_DATA, ((x >> 5) * (columns * 2)) + (x >> 4));
+            xvid_setw(XVID_AUX_ADDR, AUX_VID_W_SCROLLXY);        // fine scroll
+            xvid_setw(XVID_AUX_DATA, (x & 0xf) << 8 | (x & 0x1f));
+            wait_vsync(1);
+        }
+    }
+
+    delay(2000);
 
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
     xvid_setw(XVID_AUX_DATA, 0x0000);                   // set palette data
@@ -1435,7 +1466,7 @@ void loop()
     activity();        // blink LED
 
     delay(3000);
-
+#if 0
     // clear all VRAM
     uint16_t i = 0;
     do
@@ -1443,8 +1474,7 @@ void loop()
         xvid_setw(XVID_RD_ADDR, i);
         xvid_setw(XVID_DATA, 0x0220);        // green on black space
     } while (++i);
-
-    test_4096_colors();
+#endif
     xcls();
     xprint("Xosera Retro Graphics Adapter: Mode ");
     xprint_int(width);
@@ -1458,8 +1488,10 @@ void loop()
         xcolor(c);
         xprint("Hello rosco_m68k! ");
     }
-    test_smoothscroll();
     delay(2000);
+
+    activity();        // blink LED
+    test_smoothscroll();
 
     activity();        // blink LED
     show_blurb();
@@ -1469,6 +1501,9 @@ void loop()
 
     activity();        // blink LED
     test_reg_access();
+
+    activity();        // blink LED
+    test_4096_colors();
 
     activity();        // blink LED
     font_write();

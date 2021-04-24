@@ -51,8 +51,8 @@ localparam H_MEM_BEGIN = OFFSCREEN_WIDTH-13;            // memory fetch starts o
 localparam H_MEM_END = TOTAL_WIDTH-4;                   // memory fetch can ends a bit early
 
 // mode options
-logic pixel_h_dbl;
-logic pixel_v_dbl;
+logic h_double;
+logic v_double;
 
 // bitmap generation signals
 logic [15:0]    bitmap_start_addr;                        // bitmap start address
@@ -70,7 +70,7 @@ logic  [1:0]    font_bank;                                // font bank 0-3 (0/1 
 logic  [3:0]    char_x;                                   // current column of font cell (synchronized with memory access timing)
 logic  [3:0]    char_y;                                   // current line of font cell
 logic  [3:0]    fine_scrollx;                             // X fine scroll
-logic  [3:0]    fine_scrolly;                             // Y fine scroll
+logic  [4:0]    fine_scrolly;                             // Y fine scroll
 logic  [7:0]    text_color;                               // bit pattern shifting out for current font character line
 logic  [7:0]    font_shift_out;                           // bit pattern shifting out for current font character line
 logic [15:0]    vram_data_save;                           // background/foreground color attribute for current character
@@ -137,8 +137,8 @@ always_comb begin
         end
     end
 
-    // set mem_fetch next toggle for video memory access (pixel_h_dbl subtracts an extra 16)
-    mem_fetch_toggle = mem_fetch ? H_MEM_END[10:0] : (H_MEM_BEGIN[10:0] - { 6'b0, pixel_h_dbl, fine_scrollx });
+    // set mem_fetch next toggle for video memory access (h_double subtracts an extra 16)
+    mem_fetch_toggle = mem_fetch ? H_MEM_END[10:0] : (H_MEM_BEGIN[10:0] - { 6'b0, h_double, fine_scrollx });
 
     // scanning horizontally left to right, offscreen pixels are on left before visible pixels
     case (h_state)
@@ -170,12 +170,12 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         text_start_addr <= 16'h0000;
         text_line_width <= CHARS_WIDE[15:0];
-        fine_scrollx    <= 4'b0000;
-        fine_scrolly    <= 4'b0000;
+        fine_scrollx    <= 4'b0000;         // low bit is for "1/2 doubled pixel" when h_double
+        fine_scrolly    <= 5'b00000;        // low bit is for "1/2 doubled pixel" when v_double
         font_height     <= 4'b1111;
         font_bank       <= 2'b00;
-        pixel_h_dbl     <= 1'b0;
-        pixel_v_dbl     <= 1'b0;
+        h_double        <= 1'b0;            // horizontal pixel double (repeat)
+        v_double        <= 1'b0;            // vertical pixel double (repeat)
     end
     else begin
         if (vgen_reg_wr_i) begin
@@ -188,15 +188,15 @@ always_ff @(posedge clk) begin
                 end
                 xv::AUX_VID_W_SCROLLXY[2:0]: begin
                     fine_scrollx    <= vgen_reg_data_i[11:8];
-                    fine_scrolly    <= vgen_reg_data_i[3:0];
+                    fine_scrolly    <= vgen_reg_data_i[4:0];
                 end
                 xv::AUX_VID_W_FONTCTRL[2:0]: begin
                     font_height     <= vgen_reg_data_i[3:0];
                     font_bank       <= vgen_reg_data_i[9:8];
                 end
                 xv::AUX_VID_W_GFXCTRL[2:0]: begin
-                    pixel_h_dbl     <= vgen_reg_data_i[0];
-                    pixel_v_dbl     <= vgen_reg_data_i[1];
+                    h_double        <= vgen_reg_data_i[0];
+                    v_double        <= vgen_reg_data_i[1];
                 end
                 default: begin
                 end
@@ -268,11 +268,11 @@ always_ff @(posedge clk) begin
             text_color      <= vram_data_save[15:8];    // used previously saved color
         end
         else begin
-            if (~(pixel_h_dbl & char_x[0]))             // only shift on even pixels with pixel_h_dbl
+            if (~(h_double & char_x[0]))             // only shift on even pixels with h_double
             font_shift_out <= {font_shift_out[6: 0], 1'b0}; // shift font line data (high bit is current pixel)
         end
 
-        char_x <= char_x + (pixel_h_dbl ? 1 : 2);       // increment character cell column (by 2 normally, 1 if pixel doubled)
+        char_x <= char_x + (h_double ? 1 : 2);       // increment character cell column (by 2 normally, 1 if pixel doubled)
 
         if (mem_fetch_sync) begin
             char_x <= 4'b0000;             // reset on char_x cycle on fetch sync signal
@@ -286,27 +286,29 @@ always_ff @(posedge clk) begin
             text_addr <= text_addr + 1;             // next char+attribute
         end
 
-        // color lookup
-        // text pixel output
+        // pixel color lookup
         pal_index_o <= font_pix ? forecolor : backcolor;
 
         // end of line
-        if (h_last_line_pixel) begin                        // if last pixel of scan-line
-            if (char_y == font_height) begin                // if last line of char cell
-                char_y <= 4'h0;                             // reset font line
-                text_line_addr <= text_line_addr + text_line_width; // new line start address
-                text_addr <= text_line_addr + text_line_width;   // new text start address
-            end
-            else begin                                      // else next line of char cell
-                char_y <= char_y + 1;                       // next char tile line
-                text_addr <= text_line_addr;                // text addr back to line start
+        if (h_last_line_pixel) begin                    // if last pixel of scan-line
+            text_addr <= text_line_addr;                // text addr back to line start
+            // advance to next char line, unless v doubled in which case only on even scanline + fine scroll
+            if (!v_double || !(v_count[0] ^ ~fine_scrolly[0])) begin
+                if (char_y == font_height) begin                // if last line of char cell
+                    char_y <= 4'h0;                             // reset font line
+                    text_line_addr <= text_line_addr + text_line_width; // new line start address
+                    text_addr <= text_line_addr + text_line_width;   // new text start address
+                end
+                else begin                                      // else next line of char cell
+                    char_y <= char_y + 1;                       // next char tile line
+                end
             end
         end
 
         // end of frame
         if (v_last_frame_pixel) begin                       // if last pixel of frame
             tg_enable <= enable_i;                          // enable/disable text generation
-            char_y <= fine_scrolly;                         // start next frame at Y fine scroll line in char
+            char_y <= v_double ? fine_scrolly[4:1] : fine_scrolly[3:0]; // start next frame at Y fine scroll line (shifted if v double)
             text_addr <= text_start_addr;                   // reset to start of text data
             text_line_addr <= text_start_addr;              // reset to start of text data
         end

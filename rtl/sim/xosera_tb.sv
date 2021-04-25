@@ -15,6 +15,7 @@
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
 `define MEMDUMP                     // dump VRAM contents to file
+//`define BUSTEST
 
 module xosera_tb();
 
@@ -135,8 +136,8 @@ task read_reg(
 endtask
 
 
+`ifdef BUSTEST
 always begin
-
     #(8ms) ;
     #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_ADDR, test_addr[15:8]);
     #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_ADDR, test_addr[7:0]);
@@ -195,6 +196,7 @@ always begin
     #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_AUX_DATA, readword[7:0]);
     $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 end
+`endif
 
 always @(posedge clk) begin
     if (xosera.blitter.blit_state == xosera.blitter.READY) begin

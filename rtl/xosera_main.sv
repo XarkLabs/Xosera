@@ -51,7 +51,6 @@ module xosera_main(
            input  logic         reset_i                 // reset signal
        );
 
-logic blit_vram_cycle;          // cycle is for blitter (vs video)
 logic blit_vram_sel;            // blitter vram select
 logic blit_aux_sel;
 logic blit_wr;
@@ -69,7 +68,7 @@ blitter blitter(
             .bus_bytesel_i(bus_bytesel_i),        // 0=even byte, 1=odd byte
             .bus_data_i(bus_data_i),              // 8-bit data bus input
             .bus_data_o(bus_data_o),              // 8-bit data bus output
-            .blit_cycle_i(blit_vram_cycle),
+            .vgen_sel_i(vgen_sel),
             .vgen_ena_o(vgen_ena),
             .blit_vram_sel_o(blit_vram_sel),
             .blit_aux_sel_o(blit_aux_sel),
@@ -95,7 +94,6 @@ video_gen video_gen(
     .clk(clk),
     .reset_i(reset_i),
     .enable_i(vgen_ena),
-    .blit_cycle_o(blit_vram_cycle),
     .fontram_sel_o(fontram_rd_en),
     .fontram_addr_o(fontram_addr),
     .fontram_data_i(fontram_data_out),
@@ -127,9 +125,9 @@ logic [15:0] vram_addr      /* verilator public */; // 16-bit word address
 logic [15:0] vram_data_in   /* verilator public */;
 logic [15:0] vram_data_out  /* verilator public */;
 
-always_comb vram_sel        = blit_vram_cycle ? blit_vram_sel             : vgen_sel    ;
-always_comb vram_wr         = blit_vram_cycle ? (blit_wr & blit_vram_sel) : 1'b0;
-always_comb vram_addr       = blit_vram_cycle ? blit_addr                 : vgen_addr;
+always_comb vram_sel        = vgen_sel ? 1'b1 : blit_vram_sel;
+always_comb vram_wr         = vgen_sel ? 1'b0 : (blit_wr & blit_vram_sel);
+always_comb vram_addr       = vgen_sel ? vgen_addr : blit_addr;
 always_comb vram_data_in    = blit_data_out;
 always_comb blit_data_in    = vram_data_out;
 

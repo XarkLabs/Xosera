@@ -24,9 +24,14 @@ integer i;
 logic [15: 0] memory[0: 65535] /* verilator public */;
 
 // clear RAM to avoid simulation errors
-initial
-    for (i = 0; i < 65536; i = i + 1)
+initial begin
+    for (i = 0; i < 65536; i = i + 1) begin
         memory[i] = 16'hdead;    // "garbage"
+    end
+
+    $readmemb("fonts/hexfont_8x16.mem", memory, 16'hF000);
+
+end
 
 // synchronous write (keeps memory updated for easy simulator access)
 always_ff @(posedge clk) begin

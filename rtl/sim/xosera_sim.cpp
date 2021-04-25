@@ -25,7 +25,7 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 4        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 2        // video frames to dump to VCD file (and then screen-shot and exit)
 
 // Current simulation time (64-bit unsigned)
 vluint64_t main_time        = 0;
@@ -129,6 +129,7 @@ public:
             {
                 enable    = false;
                 last_time = bus_time - 1;
+                return;
             }
 
             if (bus_time >= last_time)
@@ -600,14 +601,36 @@ int main(int argc, char ** argv)
         fclose(mfp);
     }
 
-    FILE * bfp = fopen(LOGDIR "xosera_vsim_vram.bin", "w");
-    if (bfp != nullptr)
     {
-        auto       vmem = top->xosera_main->vram->memory;
-        uint16_t * mem  = &vmem[0];
-        fwrite(mem, 128 * 1024, 1, bfp);
-        fclose(bfp);
+        FILE * bfp = fopen(LOGDIR "xosera_vsim_vram.bin", "w");
+        if (bfp != nullptr)
+        {
+            auto       vmem = top->xosera_main->vram->memory;
+            uint16_t * mem  = &vmem[0];
+            fwrite(mem, 128 * 1024, 1, bfp);
+            fclose(bfp);
+        }
     }
+
+    {
+        FILE * tfp = fopen(LOGDIR "xosera_vsim_vram_hex.txt", "w");
+        if (tfp != nullptr)
+        {
+            auto       vmem = top->xosera_main->vram->memory;
+            uint16_t * mem  = &vmem[0];
+            for (int i = 0; i < 65536; i += 16)
+            {
+                fprintf(tfp, "%04x:", i);
+                for (int j = i; j < i + 16; j++)
+                {
+                    fprintf(tfp, " %04x", mem[j]);
+                }
+                fprintf(tfp, "\n");
+            }
+            fclose(tfp);
+        }
+    }
+
 
     top->final();
 

@@ -21,7 +21,6 @@
 
 module video_gen(
     // control outputs
-    output logic            blit_cycle_o,       // 0=video memory cycle, 1=Blit memory cycle
     output logic            fontram_sel_o,      // fontram access select
     output logic [12:0]     fontram_addr_o,     // font memory byte address out (8x4KB)
     output logic            vram_sel_o,         // vram access select
@@ -45,8 +44,8 @@ module video_gen(
 
 // Emperically determined (at extremes of horizontal scroll [worst case])
 // (odd numbers because 4 cycle latency through "fetch pipeline" and buffered)
-localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-13;            // memory fetch starts over a character early
-localparam H2X_MEM_BEGIN = xv::OFFSCREEN_WIDTH-(13+8);      // and 8 pixels earlier with horizontal pixel double
+localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-7;            // memory fetch starts over a tile early
+localparam H2X_MEM_BEGIN = xv::OFFSCREEN_WIDTH-(7+8);      // and 8 pixels earlier with horizontal pixel double
 localparam H_MEM_END = xv::TOTAL_WIDTH-4;                   // memory fetch can ends a bit early
 
 // mode options
@@ -62,17 +61,22 @@ logic [15:0]    bitmap_data_next;                         // next bitmap word to
 // text generation signals
 logic [15:0]    text_start_addr;                          // text start address (word address)
 logic [15:0]    text_line_width;
-logic [15:0]    text_addr;                                // address to fetch character+color attribute
-logic [15:0]    text_line_addr;                           // address of start of character+color attribute line
+logic [15:0]    text_addr;                                // address to fetch tile+color attribute
+logic [15:0]    text_line_addr;                           // address of start of tile+color attribute line
 logic  [3:0]    font_height;                              // max height of font cell
-logic  [1:0]    font_bank;                                // font bank 0-3 (0/1 with 8x16)
-logic  [3:0]    char_x;                                   // current column of font cell (extra bit for horizontal double)
-logic  [4:0]    char_y;                                   // current line of font cell (extra bit for vertical double)
+logic           font_use_vram;                            // 0=fontmem, 1=vram
+logic  [4:0]    font_bank;                                // vram/fontmem font bank 0-3 (0/1 with 8x16) fontmem, or 2KB/4K
+logic  [3:0]    tile_x;                                   // current column of font cell (extra bit for horizontal double)
+logic  [4:0]    tile_y;                                   // current line of font cell (extra bit for vertical double)
 logic  [3:0]    fine_scrollx;                             // X fine scroll
 logic  [4:0]    fine_scrolly;                             // Y fine scroll
-logic  [7:0]    text_color;                               // bit pattern shifting out for current font character line
-logic  [7:0]    font_shift_out;                           // bit pattern shifting out for current font character line
-logic [15:0]    vram_data_save;                           // background/foreground color attribute for current character
+logic  [7:0]    text_color;                               // bit pattern shifting out for current font tile line
+logic  [7:0]    font_shift_out;                           // bit pattern shifting out for current font tile line
+logic [15:0]    vram_data_save;                           // background/foreground color attribute for current tile
+
+logic           tile_start;
+assign          tile_start = mem_fetch && tile_x == 4'b000;
+logic [15:0]    font_addr;
 
 // feature enable signals
 logic tg_enable;                                        // text generation
@@ -107,7 +111,7 @@ logic           v_last_frame_pixel;
 logic           [1: 0] h_state_next;
 logic           [1: 0] v_state_next;
 logic           mem_fetch_next;
-logic           mem_fetch_sync;
+logic           h_start_line_fetch;
 
 always_comb     hsync = (h_state == STATE_SYNC);
 always_comb     vsync = (v_state == STATE_SYNC);
@@ -117,7 +121,7 @@ always_comb     v_last_frame_pixel = (v_state_next == STATE_VISIBLE) && (v_state
 always_comb     h_state_next = (h_count == h_count_next_state) ? h_state + 1 : h_state;
 always_comb     v_state_next = (h_last_line_pixel && v_count == v_count_next_state) ? v_state + 1 : v_state;
 always_comb     mem_fetch_next = (v_state == STATE_VISIBLE && h_count == mem_fetch_toggle) ? ~mem_fetch : mem_fetch;
-always_comb     mem_fetch_sync = (~mem_fetch && mem_fetch_next);
+always_comb     h_start_line_fetch = (~mem_fetch && mem_fetch_next);
 
 logic [10: 0] h_count_next;
 logic [10: 0] v_count_next;
@@ -182,11 +186,12 @@ end
 always_ff @(posedge clk) begin
     if (reset_i) begin
         text_start_addr <= 16'h0000;
-        text_line_width <= xv::CHARS_WIDE[15:0];
+        text_line_width <= xv::TILES_WIDE[15:0];
         fine_scrollx    <= 4'b0000;         // low bit is for "1/2 doubled pixel" when h_double
         fine_scrolly    <= 5'b00000;        // low bit is for "1/2 doubled pixel" when v_double
         font_height     <= 4'b1111;
-        font_bank       <= 2'b00;
+        font_use_vram   <= 1'b0;
+        font_bank       <= 5'b00000;
         h_double        <= 1'b0;            // horizontal pixel double (repeat)
         v_double        <= 1'b0;            // vertical pixel double (repeat)
     end
@@ -206,7 +211,8 @@ always_ff @(posedge clk) begin
                 end
                 xv::AUX_VID_W_FONTCTRL[2:0]: begin
                     font_height     <= vgen_reg_data_i[3:0];
-                    font_bank       <= vgen_reg_data_i[9:8];
+                    font_use_vram   <= vgen_reg_data_i[8];
+                    font_bank       <= vgen_reg_data_i[15:11];
                 end
                 xv::AUX_VID_W_GFXCTRL[2:0]: begin
                     h_double        <= vgen_reg_data_i[0];
@@ -230,16 +236,14 @@ end
 // logic aliases
 logic           font_pix;                       // current pixel from font data shift-logic out
 assign          font_pix = font_shift_out[7];
-logic [3: 0]    forecolor;                      // current character foreground color palette index (0-15)
+logic [3: 0]    forecolor;                      // current tile foreground color palette index (0-15)
 assign          forecolor = text_color[3:0];
-logic [3: 0]    backcolor;                      // current character background color palette index (0-15)
+logic [3: 0]    backcolor;                      // current tile background color palette index (0-15)
 assign          backcolor = text_color[7:4];
-logic  [7:0]    text_tile;                      // current character tile index
-assign          text_tile = vram_data_save[7:0];
+logic  [7:0]    text_tile;                      // current tile index
 
-// continually form fontram address from text data from vram and char_y (avoids extra cycle for lookup)
-assign fontram_addr_o = font_height[3]  ? {font_bank[1], vram_data_i[7: 0], char_y[4:1]}
-                                        : {font_bank[1:0], vram_data_i[7: 0], char_y[3:1]};
+assign font_addr = font_height[3]   ? {font_bank[4:1], vram_data_i[7: 0], tile_y[4:1]}
+                                    : {font_bank[4:0], vram_data_i[7: 0], tile_y[3:1]};
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -255,9 +259,8 @@ always_ff @(posedge clk) begin
         text_addr       <= 16'h0000;
         text_line_addr  <= 16'h0000;
         vram_data_save  <= 16'h0000;
-        char_x          <= 4'b0;
-        char_y          <= 5'b0;
-        blit_cycle_o    <= 1'b0;
+        tile_x          <= 4'b0;
+        tile_y          <= 5'b0;
         fontram_sel_o   <= 1'b0;
         vram_sel_o      <= 1'b0;
         vram_addr_o     <= 16'h0000;
@@ -270,58 +273,72 @@ always_ff @(posedge clk) begin
     else begin
 
         // default outputs
-        blit_cycle_o <= 1'b1;                           // default to let bltter have VRAM access
         vram_sel_o <= 1'b0;                             // default to no VRAM access
         fontram_sel_o <= 1'b0;                          // default to no font access
 
-        if (vram_sel_o) begin                           // if was VRAM selected (from previous cycle)
-            fontram_sel_o <= ~bm_enable;                // then select font lookup if not bitmap mode
+        if (mem_fetch) begin
+            if (~(h_double & tile_x[0])) begin                // only shift on even pixels with h_double
+                font_shift_out <= {font_shift_out[6: 0], 1'b0}; // shift font line data (high bit is current pixel)
+                case (tile_x[3:1])
+                    3'b000: begin
+                        vram_sel_o      <= tg_enable;                   // select vram
+                        vram_addr_o     <= text_addr;                   // put text+color address on vram bus
+                        text_addr       <= text_addr + 1;               // next tile+attribute
+                    end
+                    3'b001: begin
+                    end
+                    3'b010: begin
+                        vram_data_save  <= vram_data_i;                 // then save current VRAM data (color for next tile)
+                        vram_sel_o     <= font_use_vram & tg_enable;   // select vram
+                        fontram_sel_o  <= ~font_use_vram & tg_enable;  // select fontram
+                        vram_addr_o    <= font_addr;
+                        fontram_addr_o <= font_addr[12:0];
+                    end
+                    3'b011: begin
+                    end
+                    3'b100: begin
+                        font_shift_out  <= font_use_vram ? vram_data_i[7:0] : fontram_data_i;            // use font lookup data to set font line shift out
+                        text_tile       <= vram_data_save[7:0];         // used previously saved tile
+                        text_color      <= vram_data_save[15:8];        // used previously saved color
+                    end
+                    3'b101: begin
+                    end
+                    3'b110: begin
+                    end
+                    3'b111: begin
+                    end
+                endcase
+            end
         end
 
-        if (fontram_sel_o) begin                        // if font was selected (from previous cycle)
-            vram_data_save  <= vram_data_i;             // then save current VRAM data (color for next char)
-            font_shift_out  <= fontram_data_i;          // use font lookup data to set font line shift out
-            text_color      <= vram_data_save[15:8];    // used previously saved color
-        end
-        else begin
-            if (~(h_double & char_x[0]))                // only shift on even pixels with h_double
-            font_shift_out <= {font_shift_out[6: 0], 1'b0}; // shift font line data (high bit is current pixel)
-        end
-
-        char_x <= char_x + (h_double ? 1 : 2);          // increment character cell column (by 2 normally, 1 if pixel doubled)
-
-        if (mem_fetch_sync) begin                       // on memory fetch sync signal
-            char_x <= 4'b0000;                          // reset on char_x cycle (to start at proper pixel)
-        end
-
-        // memory read for text
-        if (mem_fetch && char_x == 4'b000) begin
-            blit_cycle_o <= ~tg_enable;
-            vram_sel_o <= tg_enable;                    // select vram
-            vram_addr_o <= text_addr;                   // put text+color address on vram bus
-            text_addr <= text_addr + 1;                 // next char+attribute
-        end
-
-        // pixel color lookup
+        // pixel color output
         pal_index_o <= font_pix ? forecolor : backcolor;
+
+        // next pixel
+        tile_x <= tile_x + (h_double ? 1 : 2);          // increment tile cell column (by 2 normally, 1 if pixel doubled)
+
+        // start of line
+        if (h_start_line_fetch) begin                       // on line fetch start signal
+            tile_x <= 4'b0000;                              // reset on tile_x cycle (to start tile line at proper pixel)
+        end
 
         // end of line
         if (h_last_line_pixel) begin                        // if last pixel of scan-line
             text_addr <= text_line_addr;                    // text addr back to line start
-            if (char_y == { font_height, v_double }) begin  // if last line of char cell
-                char_y <= 5'h0;                             // reset char cell line
+            if (tile_y == { font_height, v_double }) begin  // if last line of tile cell
+                tile_y <= 5'h0;                             // reset tile cell line
                 text_line_addr <= text_line_addr + text_line_width; // new line start address
                 text_addr <= text_line_addr + text_line_width;      // new text start address
             end
-            else begin                                      // else next line of char cell
-                char_y <= char_y + (v_double ? 1 : 2);      // next char tile line (by 2 normally, 1 if pixel doubled)
+            else begin                                      // else next line of tile cell
+                tile_y <= tile_y + (v_double ? 1 : 2);      // next tile tile line (by 2 normally, 1 if pixel doubled)
             end
         end
 
         // end of frame
         if (v_last_frame_pixel) begin                       // if last pixel of frame
             tg_enable <= enable_i;                          // enable/disable text generation
-            char_y <= v_double ? fine_scrolly : { fine_scrolly[3:0], 1'b0 }; // start next frame at Y fine scroll line
+            tile_y <= v_double ? fine_scrolly : { fine_scrolly[3:0], 1'b0 }; // start next frame at Y fine scroll line
             text_addr <= text_start_addr;                   // reset to start of text data
             text_line_addr <= text_start_addr;              // reset to start of text data
         end

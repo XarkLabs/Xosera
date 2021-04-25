@@ -55,7 +55,7 @@ typedef enum logic [15:0]{
     AUX_VID_W_DISPSTART = AUX_VID | 16'h0000,        // display start address
     AUX_VID_W_TILEWIDTH = AUX_VID | 16'h0001,        // tile line width (normally WIDTH/8)
     AUX_VID_W_SCROLLXY  = AUX_VID | 16'h0002,        // [10:8] H fine scroll, [3:0] V fine scroll
-    AUX_VID_W_FONTCTRL  = AUX_VID | 16'h0003,        // [9:8] 2KB font bank, [3:0] font height
+    AUX_VID_W_FONTCTRL  = AUX_VID | 16'h0003,        // [15:11] 2KB/4K VRAM font bank,[8] bram/vram [3:0] font height
     AUX_VID_W_GFXCTRL   = AUX_VID | 16'h0004,        // [0] h pix double
     AUX_VID_W_UNUSED5   = AUX_VID | 16'h0005,
     AUX_VID_W_UNUSED6   = AUX_VID | 16'h0006,
@@ -190,11 +190,11 @@ localparam TOTAL_HEIGHT      = V_FRONT_PORCH + V_SYNC_PULSE + V_BACK_PORCH + VIS
 localparam OFFSCREEN_WIDTH   = TOTAL_WIDTH - VISIBLE_WIDTH;
 localparam OFFSCREEN_HEIGHT  = TOTAL_HEIGHT - VISIBLE_HEIGHT;
 
-// character font related constants
-localparam FONT_WIDTH        = 8;                               // 8 pixels wide character tiles
-localparam FONT_HEIGHT       = 16;                              // up to 16 pixels high character tiles
-localparam CHARS_WIDE        = (VISIBLE_WIDTH/FONT_WIDTH);      // default tiled mode width
-localparam CHARS_HIGH        = (VISIBLE_HEIGHT/FONT_HEIGHT);    // default tiled mode height
+// tile related constants
+localparam TILE_WIDTH        = 8;                               // 8 pixels wide tiles
+localparam TILE_HEIGHT       = 16;                              // 8 or 16 pixels high tiles (but can be truncated)
+localparam TILES_WIDE        = (VISIBLE_WIDTH/TILE_WIDTH);      // default tiled mode width
+localparam TILES_HIGH        = (VISIBLE_HEIGHT/TILE_HEIGHT);    // default tiled mode height
 
 // symbolic Xosera bus signals (to be a bit more clear)
 localparam RnW_WRITE         = 1'b0;

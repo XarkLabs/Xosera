@@ -43,7 +43,9 @@ logic [7: 0] bus_data_out;
 integer i, j, f;
 integer frame;
 integer test_addr;
+integer test_addr2;
 integer test_data;
+integer test_data2;
 logic [15:0] readword;
 logic last_vs;
 
@@ -67,7 +69,7 @@ xosera_main xosera(
             );
 
 parameter CLK_PERIOD    = (1000000000.0 / PIXEL_FREQ);
-parameter M68K_PERIOD   = 83.333;
+parameter M68K_PERIOD   = 70.333333333333;
 
 initial begin
     $timeformat(-9, 0, " ns", 20);
@@ -76,7 +78,9 @@ initial begin
 
     frame = 0;
     test_addr = 'hABCD;
+    test_addr2 = 'h1234;
     test_data = 'hDA7A;
+    test_data2 = 'hC0DE;
     clk = 1'b0;
 
     bus_cs_n = 1'b1;
@@ -127,30 +131,59 @@ task read_reg(
     #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
     #40 data = xosera.bus_data_o;
     #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
-    // verilator lint_off WIDTH
     bus_rd_nwr = 1'b0;
     bus_bytesel = 1'b0;
     bus_reg_num = 4'b0;
-    bus_data_in = 1'b0;
-    // verilator lint_on WIDTH
+    bus_data_in = 8'b0;
 endtask
 
 
 `ifdef BUSTEST
+
 always begin
-    #(8ms) ;
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_ADDR, test_addr[15:8]);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_ADDR, test_addr[7:0]);
+    bus_cs_n = 1'b1;
+    bus_rd_nwr = 1'b0;
+    bus_bytesel = 1'b0;
+    bus_reg_num = 4'b0;
+    bus_data_in = 8'b0;
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_DATA, test_data[15:8]);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_DATA, test_data[7:0]);
+    if (xosera.blitter.blit_state == xosera.blitter.IDLE) begin
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_RD_ADDR, test_addr[15:8]);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_RD_ADDR, test_addr[7:0]);
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_ADDR, test_addr[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_ADDR, test_addr[7:0]);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_DATA, readword[7:0]);
-    $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_DATA, test_data[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_DATA, test_data[7:0]);
+
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_RD_ADDR, test_addr[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_RD_ADDR, test_addr[7:0]);
+
+        #(M68K_PERIOD * 4);
+
+        #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_DATA, readword[15:8]);
+        #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_DATA, readword[7:0]);
+        $display("%0t READ R[%x] => %04x %04x", $realtime, xosera.blitter.bus_reg_num, readword, xosera.blitter.vram_rd_data);
+
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_ADDR, test_addr2[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_ADDR, test_addr2[7:0]);
+
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_DATA, test_data2[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_DATA, test_data2[7:0]);
+
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_RD_ADDR, test_addr2[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_RD_ADDR, test_addr2[7:0]);
+
+        #(M68K_PERIOD * 4);
+
+        #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_DATA, readword[15:8]);
+        #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_DATA, readword[7:0]);
+        $display("%0t READ R[%x] => %04x %04x", $realtime, xosera.blitter.bus_reg_num, readword, xosera.blitter.vram_rd_data);
+    end
+    else begin
+        #(M68K_PERIOD * 4);
+    end
+
+`ifdef ZZZUNDEF
 
     #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_ADDR, 8'h00);
     #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_AUX_ADDR, 8'h00);
@@ -195,17 +228,25 @@ always begin
     #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_AUX_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_AUX_DATA, readword[7:0]);
     $display("%0t READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+
+`endif
+
 end
 `endif
 
-always @(posedge clk) begin
-    if (xosera.blitter.blit_state == xosera.blitter.READY) begin
+integer flag = 0;
+always @(negedge clk) begin
+    if (xosera.blitter.blit_state == xosera.blitter.IDLE) begin
         if (xosera.vram.sel && xosera.vram.wr_en) begin
             $display("%0t Write VRAM[%04x] <= %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
         end
-        else if (xosera.vram.sel && xosera.blit_vram_cycle) begin
-            $display("%0t Read VRAM[%04x] => %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
+        else if (xosera.vram.sel && !xosera.vgen_sel) begin
+            flag <= 1;
         end
+    end
+    if (flag == 1) begin
+        $display("%0t Read VRAM[%04x] => %04x", $realtime, xosera.vram.address_in, xosera.vram.data_out);
+        flag <= 0;
     end
 end
 

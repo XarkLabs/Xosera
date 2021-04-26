@@ -48,12 +48,11 @@ typedef enum logic [4:0] {
 
 assign bus_ack_o = (bus_write_strobe | bus_read_strobe);    // TODO: debug
 
-
 blit_state_t    blit_state;
 
 // read/write storage for first 4 blitter registers
 logic [15:0]    reg_aux_addr;           // ctrl reg/font/palette address
-logic [15:0]    reg_const;               // blitter constant data
+logic [15:0]    reg_const;              // blitter constant data
 logic [15:0]    reg_rd_addr;            // VRAM read address
 logic [15:0]    reg_wr_addr;            // VRAM write address
 
@@ -64,8 +63,8 @@ logic [15:0]    reg_wr_inc;
 logic [15:0]    reg_rd_mod;
 logic [15:0]    reg_wr_mod;
 logic [15:0]    reg_width;
-logic blit_2d;
-logic blit_const;
+logic           blit_2d;
+logic           blit_const;
 
 logic           blit_busy;
 assign          blit_busy = ~reg_count[16]; // when reg_count underflows, high bit will be set
@@ -87,7 +86,7 @@ logic  [7:0]    reg_data_even;           // word written to even byte of XVID_DA
 logic  [7:0]    reg_other_even;          // other even byte (zeroed each write)
 logic  [3:0]    reg_other_reg;           // register associated with reg_other_even
 logic  [7:0]    reg_even_byte;
-assign reg_even_byte = (reg_other_reg == bus_reg_num) ? reg_other_even : 8'h00;
+assign          reg_even_byte = (reg_other_reg == bus_reg_num) ? reg_other_even : 8'h00;
 
 logic           bus_write_strobe;       // strobe when a word of data written
 logic           bus_read_strobe;        // strobe when a word of data read
@@ -211,21 +210,20 @@ always_ff @(posedge clk) begin
 
     end
     else begin
-        // if a read was pending, save value from vram
+        // if a read ack is pending, save value from vram/aux
         if (blit_vram_rd_ack) begin
             vram_rd_data    <= blit_data_i;
         end
+        blit_vram_rd_ack <= 1'b0;
 
         if (blit_aux_rd_ack) begin
             aux_rd_data     <= aux_data_i;
         end
+        blit_aux_rd_ack <= 1'b0;
 
         if (!vgen_sel_i) begin
             blit_vram_rd_ack    <= blit_vram_rd;    // ack is one cycle after read with blitter access
-            blit_vram_rd        <= 1'b0;
-
             blit_aux_rd_ack     <= blit_aux_rd;     // ack is one cycle after read with aux access
-            blit_aux_rd         <= 1'b0;
 
             // if we did a read, increment read addr
             if (blit_vram_rd) begin
@@ -253,13 +251,13 @@ always_ff @(posedge clk) begin
                     reg_count    <= reg_count - 1;
                 end
             end
-
+            blit_vram_rd    <= 1'b0;
+            blit_aux_rd     <= 1'b0;
             blit_vram_sel_o <= 1'b0;            // clear vram select
             blit_aux_sel_o  <= 1'b0;            // clear aux select
             blit_wr_o       <= 1'b0;            // clear write
+            blit_addr_o     <= reg_wr_addr;    // assume VRAM write output address // TODO is this a good idea?
         end
-
-        blit_addr_o     <= reg_wr_addr;    // assume VRAM write output address // TODO is this a good idea?
 
         if (bus_write_strobe) begin
             if (!bus_bytesel) begin

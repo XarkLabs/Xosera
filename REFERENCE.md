@@ -78,10 +78,10 @@ To access these registers, write the register address to `XVID_AUX_ADDR`, then w
 | Reg # | Name                  |R/W| Description                                                                         |
 --------| ----------------------|---| ------------------------------------------------------------------------------------|
 | 0x0   | `AUX_VID_W_DISPSTART` |W/O| [15:0] starting VRAM address for display (wraps at 0xffff)                          |
-| 0x1   | `AUX_VID_W_TILEWIDTH` |W/O| [15:0] words per line (TODO a bit funky...)                                         |
-| 0x2   | `AUX_VID_W_SCROLLXY`  |W/O| [10:8] horizontal (0-7) pixel scroll, [3:0] vertical (0-15) pixel scroll            |
-| 0x3   | `AUX_VID_W_FONTCTRL`  |W/O| [9:8] font bank (0-3 8x8, 0/2 8x16),  [3:0] font Y height-1 (0-15) (8x8 font if < 8)|
-| 0x4   | `AUX_VID_W_GFXCTRL`   |W/O| [0] h pixel double                                                                  |
+| 0x1   | `AUX_VID_W_TILEWIDTH` |W/O| [15:0] words per display line                                                       |
+| 0x2   | `AUX_VID_W_SCROLLXY`  |W/O| [11:8] H pixel scroll, [4:0] V pixel scroll                                         |
+| 0x3   | `AUX_VID_W_FONTCTRL`  |W/O| [15:11] 2KB/4KB font bank (8x8/8x16),[8] 0=FONTMEM/1=VRAM, [3:0] font height-1      |
+| 0x4   | `AUX_VID_W_GFXCTRL`   |W/O| [1] V pixel double, [0] H pixel double                                              |
 | 0x5   | `AUX_VID_W_UNUSED5`   |W/O|                                                                                     |
 | 0x6   | `AUX_VID_W_UNUSED6`   |W/O|                                                                                     |
 | 0x7   | `AUX_VID_W_UNUSED7`   |W/O|                                                                                     |

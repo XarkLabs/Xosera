@@ -10,6 +10,8 @@
 `default_nettype none             // mandatory for Verilog sanity
 `timescale 1ns/1ps
 
+`include "xosera_pkg.sv"
+
 module vram(
            input  logic         clk,
            input  logic         sel,
@@ -29,7 +31,9 @@ initial begin
         memory[i] = 16'hdead;    // "garbage"
     end
 
-    $readmemb("fonts/hexfont_8x16.mem", memory, 16'hF000);
+    $readmemb("fonts/vga_8x16.mem", memory, 16'he000);
+    $readmemb("fonts/v9958_8x8.mem", memory, 16'hf000);
+    $readmemb("fonts/hexfont_8x8.mem", memory, 16'hf800);
 
 end
 

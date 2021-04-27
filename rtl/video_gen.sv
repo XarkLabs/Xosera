@@ -45,7 +45,7 @@ module video_gen(
 // Emperically determined (at extremes of horizontal scroll [worst case])
 // (odd numbers because 4 cycle latency through "fetch pipeline" and buffered)
 localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-7;            // memory fetch starts over a tile early
-localparam H2X_MEM_BEGIN = xv::OFFSCREEN_WIDTH-(7+8);      // and 8 pixels earlier with horizontal pixel double
+localparam H2X_MEM_BEGIN = xv::OFFSCREEN_WIDTH-(7+5);      // and 8 pixels earlier with horizontal pixel double
 localparam H_MEM_END = xv::TOTAL_WIDTH-4;                   // memory fetch can ends a bit early
 
 // mode options
@@ -84,10 +84,10 @@ logic bm_enable;                                        // bitmap enable
 
 // video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
 typedef enum logic [1:0] {
-    STATE_PRE_SYNC = 2'b00,
-    STATE_SYNC = 2'b01,
+    STATE_PRE_SYNC  = 2'b00,
+    STATE_SYNC      = 2'b01,
     STATE_POST_SYNC = 2'b10,
-    STATE_VISIBLE = 2'b11
+    STATE_VISIBLE   = 2'b11
 } video_signal_st;
 
 // sync generation signals (and combinatorial logic "next" versions)
@@ -271,13 +271,12 @@ always_ff @(posedge clk) begin
     end
 
     else begin
-
         // default outputs
         vram_sel_o <= 1'b0;                             // default to no VRAM access
         fontram_sel_o <= 1'b0;                          // default to no font access
 
         if (mem_fetch) begin
-            if (~(h_double & tile_x[0])) begin                // only shift on even pixels with h_double
+            if (~h_double) begin
                 font_shift_out <= {font_shift_out[6: 0], 1'b0}; // shift font line data (high bit is current pixel)
                 case (tile_x[3:1])
                     3'b000: begin
@@ -289,15 +288,15 @@ always_ff @(posedge clk) begin
                     end
                     3'b010: begin
                         vram_data_save  <= vram_data_i;                 // then save current VRAM data (color for next tile)
-                        vram_sel_o     <= font_use_vram & tg_enable;   // select vram
-                        fontram_sel_o  <= ~font_use_vram & tg_enable;  // select fontram
+                        vram_sel_o     <= font_use_vram & tg_enable;    // select vram
+                        fontram_sel_o  <= ~font_use_vram & tg_enable;   // select fontram
                         vram_addr_o    <= font_addr;
                         fontram_addr_o <= font_addr[12:0];
                     end
                     3'b011: begin
                     end
                     3'b100: begin
-                        font_shift_out  <= font_use_vram ? vram_data_i[7:0] : fontram_data_i;            // use font lookup data to set font line shift out
+                        font_shift_out  <= font_use_vram ? vram_data_i[7:0] : fontram_data_i; // use font lookup data to set font line shift out
                         text_tile       <= vram_data_save[7:0];         // used previously saved tile
                         text_color      <= vram_data_save[15:8];        // used previously saved color
                     end
@@ -306,6 +305,38 @@ always_ff @(posedge clk) begin
                     3'b110: begin
                     end
                     3'b111: begin
+                    end
+                    default: begin
+                    end
+                endcase
+            end
+            else begin
+                if (tile_x[0]) begin
+                    font_shift_out <= {font_shift_out[6: 0], 1'b0}; // shift font line data (high bit is current pixel)
+                end
+                case (tile_x)
+                    4'b0101: begin
+                        vram_sel_o      <= tg_enable;                   // select vram
+                        vram_addr_o     <= text_addr;                   // put text+color address on vram bus
+                        text_addr       <= text_addr + 1;               // next tile+attribute
+                    end
+                    4'b0110: begin
+                    end
+                    4'b0111: begin
+                        vram_data_save  <= vram_data_i;                 // then save current VRAM data (color for next tile)
+                        vram_sel_o     <= font_use_vram & tg_enable;    // select vram
+                        fontram_sel_o  <= ~font_use_vram & tg_enable;   // select fontram
+                        vram_addr_o    <= font_addr;
+                        fontram_addr_o <= font_addr[12:0];
+                    end
+                    4'b1000: begin
+                    end
+                    4'b1001: begin
+                        font_shift_out  <= font_use_vram ? vram_data_i[7:0] : fontram_data_i; // use font lookup data to set font line shift out
+                        text_tile       <= vram_data_save[7:0];         // used previously saved tile
+                        text_color      <= vram_data_save[15:8];        // used previously saved color
+                    end
+                    default: begin
                     end
                 endcase
             end

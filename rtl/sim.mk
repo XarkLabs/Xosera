@@ -74,7 +74,7 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # Icarus Verilog
 IVERILOG := iverilog
-IVERILOG_ARGS := -g2005-sv -I$(SRCDIR) -Wall -l $(TECH_LIB)
+IVERILOG_ARGS := -g2012 -I$(SRCDIR) -Wall -l $(TECH_LIB)
 
 # Verilator C++ definitions and options
 SDL_RENDER := 1
@@ -124,7 +124,7 @@ sim/obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) sim.mk
 
 # use Icarus Verilog to build vvp simulation executable
 sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) sim.mk
-	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TBTOP) sim/$(TBTOP).sv $(SRC)
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES)  -v $(TECH_LIB) --top-module $(TBTOP) sim/$(TBTOP).sv $(SRC)
 	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -D$(VIDEO_MODE) -o sim/$(TBTOP) $(current_dir)/sim/$(TBTOP).sv $(SRC)
 
 # delete all targets that will be re-generated

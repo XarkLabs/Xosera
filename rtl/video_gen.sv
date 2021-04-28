@@ -22,13 +22,13 @@
 module video_gen(
     // control outputs
     output logic            fontram_sel_o,      // fontram access select
-    output logic [12:0]     fontram_addr_o,     // font memory byte address out (8x4KB)
+    output logic [11:0]     fontram_addr_o,     // font memory byte address out (8x4KB)
     output logic            vram_sel_o,         // vram access select
     output logic [15:0]     vram_addr_o,        // vram word address out (16x64KB)
     output logic [15:0]     vgen_reg_data_o,    // register/status data reads
     // control inputs
     input  logic [15:0]     vram_data_i,        // vram word data in
-    input  logic  [7:0]     fontram_data_i,     // font memory byte data in
+    input  logic [15:0]     fontram_data_i,     // font memory byte data in
     input  logic            enable_i,           // enable video (0=black output, 1=normal output)
     input  logic            vgen_reg_wr_i,      // strobe to write internal config register number
     input  logic  [2:0]     vgen_reg_num_i,     // internal config register number
@@ -65,7 +65,7 @@ logic [15:0]    text_addr;                                // address to fetch ti
 logic [15:0]    text_line_addr;                           // address of start of tile+color attribute line
 logic  [3:0]    font_height;                              // max height of font cell
 logic           font_use_vram;                            // 0=fontmem, 1=vram
-logic  [4:0]    font_bank;                                // vram/fontmem font bank 0-3 (0/1 with 8x16) fontmem, or 2KB/4K
+logic  [5:0]    font_bank;                                // vram/fontmem font bank 0-3 (0/1 with 8x16) fontmem, or 2KB/4K
 logic  [3:0]    tile_x;                                   // current column of font cell (extra bit for horizontal double)
 logic  [4:0]    tile_y;                                   // current line of font cell (extra bit for vertical double)
 logic  [3:0]    fine_scrollx;                             // X fine scroll
@@ -191,7 +191,7 @@ always_ff @(posedge clk) begin
         fine_scrolly    <= 5'b00000;        // low bit is for "1/2 doubled pixel" when v_double
         font_height     <= 4'b1111;
         font_use_vram   <= 1'b0;
-        font_bank       <= 5'b00000;
+        font_bank       <= 6'b00000;
         h_double        <= 1'b0;            // horizontal pixel double (repeat)
         v_double        <= 1'b0;            // vertical pixel double (repeat)
     end
@@ -212,7 +212,7 @@ always_ff @(posedge clk) begin
                 xv::AUX_VID_W_FONTCTRL[2:0]: begin
                     font_height     <= vgen_reg_data_i[3:0];
                     font_use_vram   <= vgen_reg_data_i[8];
-                    font_bank       <= vgen_reg_data_i[15:11];
+                    font_bank       <= vgen_reg_data_i[15:10];
                 end
                 xv::AUX_VID_W_GFXCTRL[2:0]: begin
                     h_double        <= vgen_reg_data_i[0];
@@ -242,8 +242,8 @@ logic [3: 0]    backcolor;                      // current tile background color
 assign          backcolor = text_color[7:4];
 logic  [7:0]    text_tile;                      // current tile index
 
-assign font_addr = font_height[3]   ? {font_bank[4:1], vram_data_i[7: 0], tile_y[4:1]}
-                                    : {font_bank[4:0], vram_data_i[7: 0], tile_y[3:1]};
+assign font_addr = font_height[3]   ? {font_bank[5:1], vram_data_i[7: 0], tile_y[4:2]}
+                                    : {font_bank[5:0], vram_data_i[7: 0], tile_y[3:2]};
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -291,12 +291,17 @@ always_ff @(posedge clk) begin
                         vram_sel_o     <= font_use_vram & tg_enable;    // select vram
                         fontram_sel_o  <= ~font_use_vram & tg_enable;   // select fontram
                         vram_addr_o    <= font_addr;
-                        fontram_addr_o <= font_addr[12:0];
+                        fontram_addr_o <= font_addr[11:0];
                     end
                     3'b011: begin
                     end
                     3'b100: begin
-                        font_shift_out  <= font_use_vram ? vram_data_i[7:0] : fontram_data_i; // use font lookup data to set font line shift out
+                        if (tile_y[1]) begin
+                            font_shift_out  <= font_use_vram ? vram_data_i[7:0] : fontram_data_i[7:0]; // use font lookup data to set font line shift out
+                        end
+                        else begin
+                            font_shift_out  <= font_use_vram ? vram_data_i[15:8] : fontram_data_i[15:8]; // use font lookup data to set font line shift out
+                        end
                         text_tile       <= vram_data_save[7:0];         // used previously saved tile
                         text_color      <= vram_data_save[15:8];        // used previously saved color
                     end
@@ -327,12 +332,17 @@ always_ff @(posedge clk) begin
                         vram_sel_o     <= font_use_vram & tg_enable;    // select vram
                         fontram_sel_o  <= ~font_use_vram & tg_enable;   // select fontram
                         vram_addr_o    <= font_addr;
-                        fontram_addr_o <= font_addr[12:0];
+                        fontram_addr_o <= font_addr[11:0];
                     end
                     4'b1000: begin
                     end
                     4'b1001: begin
-                        font_shift_out  <= font_use_vram ? vram_data_i[7:0] : fontram_data_i; // use font lookup data to set font line shift out
+                        if (tile_y[1]) begin
+                            font_shift_out  <= font_use_vram ? vram_data_i[7:0] : fontram_data_i[7:0]; // use font lookup data to set font line shift out
+                        end
+                        else begin
+                            font_shift_out  <= font_use_vram ? vram_data_i[15:8] : fontram_data_i[15:8]; // use font lookup data to set font line shift out
+                        end
                         text_tile       <= vram_data_save[7:0];         // used previously saved tile
                         text_color      <= vram_data_save[15:8];        // used previously saved color
                     end

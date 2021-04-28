@@ -1,14 +1,12 @@
-#pragma GCC optimize("Os")
+#pragma GCC optimize("O2")
 #include <Arduino.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "ST_8x8.h"
-#include "vga_8x16.h"
-
 // Xosera Test Jig (using Arduino Pro Mini AVR @ 8MHz/3.3v with direct port access)
 // A FPGA based video card for rosco_m68k retro computers (and others)
 // See https://github.com/rosco-m68k/hardware-projects/tree/feature/xosera/xosera
+#include "vga_8x16w.h"
 // See
 
 // Times I observed (AVR 328P @ 16MHz):
@@ -16,6 +14,7 @@
 // 64KB x 8-bit write time = 65 ms
 // 64KB x 16-bit read time = 157 ms
 // 64KB x 8-bit read time = 119 ms
+#include "ST_8x8w.h"
 
 enum
 {
@@ -272,14 +271,14 @@ static uint16_t rdata;
 static uint32_t errors;        // read verify error count
 static uint32_t count;         // read verify error count
 
-const uint16_t font_vram_addr  = 0xe000;
+const uint16_t font_vram_addr  = 0xF000;
 const uint16_t font0_vram_8x16 = font_vram_addr + 0x010F;
-const uint16_t font1_vram_8x8  = font_vram_addr + 0x1107;
-const uint16_t font2_vram_8x8  = font_vram_addr + 0x1907;
+const uint16_t font1_vram_8x8  = font_vram_addr + 0x0907;
+const uint16_t font2_vram_8x8  = font_vram_addr + 0x0D07;
 
 const uint16_t font0_bram_8x16 = 0x000F;
-const uint16_t font1_bram_8x8  = 0x1007;
-const uint16_t font2_bram_8x8  = 0x1807;
+const uint16_t font1_bram_8x8  = 0x0807;
+const uint16_t font2_bram_8x8  = 0x0C07;
 
 const PROGMEM uint16_t defpal[16] = {
     0x0000,        // black
@@ -1463,33 +1462,33 @@ void test_smoothscroll()
 
 void test_font()
 {
-    for (uint16_t i = 0; i < 0x1000; i++)
-    {
-        xvid_setw(XVID_WR_ADDR, font_vram_addr + i);
-        xvid_setw(XVID_DATA, pgm_read_byte(vga_8x16 + i));
-    }
-
-    for (uint16_t i = 0; i < 0x800; i++)
-    {
-        xvid_setw(XVID_WR_ADDR, font_vram_addr + 0x1000 + i);
-        xvid_setw(XVID_DATA, pgm_read_byte(ST_8x8 + i));
-    }
-
-    for (uint16_t i = 0; i < 0x800; i++)
-    {
-        xvid_setw(XVID_WR_ADDR, font_vram_addr + 0x1800 + i);
-        xvid_setw(XVID_DATA, pgm_read_byte(ST_8x8 + i) & (i & 1 ? 0xaaaa : 0x5555));
-    }
-
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
     xvid_setw(XVID_AUX_DATA, font0_vram_8x16);           // VRAM font @ 0xf000 8x16
+    for (uint16_t i = 0; i < 0x800; i++)
+    {
+        xvid_setw(XVID_WR_ADDR, font_vram_addr + i);
+        xvid_setw(XVID_DATA, pgm_read_word(vga_8x16w + i) & (i & 1 ? 0xaaaa : 0x5555));
+    }
     delay(5000);
+
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
     xvid_setw(XVID_AUX_DATA, font1_vram_8x8);            // VRAM font @ 0xf000 8x16
-    delay(1000);
+    for (uint16_t i = 0; i < 0x400; i++)
+    {
+        xvid_setw(XVID_WR_ADDR, font_vram_addr + 0x800 + i);
+        xvid_setw(XVID_DATA, pgm_read_word(ST_8x8w + i));
+    }
+    delay(5000);
+
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
     xvid_setw(XVID_AUX_DATA, font2_vram_8x8);            // VRAM font @ 0xf000 8x16
+    for (uint16_t i = 0; i < 0x400; i++)
+    {
+        xvid_setw(XVID_WR_ADDR, font_vram_addr + 0xC00 + i);
+        xvid_setw(XVID_DATA, pgm_read_word(ST_8x8w + i) & (i & 1 ? 0xaaaa : 0x5555));
+    }
     delay(5000);
+
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_FONTCTRL);        // A_font_ctrl
     xvid_setw(XVID_AUX_DATA, font0_vram_8x16);           // VRAM font @ 0xf000 8x16
     delay(1000);

@@ -6,10 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-bool   c_mode   = false;
-bool   invert   = false;
-char * in_file  = nullptr;
-char * out_file = nullptr;
+bool   word_mode = false;
+bool   c_mode    = false;
+bool   invert    = false;
+char * in_file   = nullptr;
+char * out_file  = nullptr;
 
 int font_height = 0;
 int font_chars  = 0;
@@ -31,6 +32,10 @@ int main(int argc, char ** argv)
             else if (strcmp("-c", argv[a]) == 0)
             {
                 c_mode = true;
+            }
+            else if (strcmp("-w", argv[a]) == 0)
+            {
+                word_mode = true;
             }
             else if (strcmp("-8", argv[a]) == 0)
             {
@@ -70,6 +75,7 @@ int main(int argc, char ** argv)
         printf("Usage:  image_to_mem <input font image> <output font mem> [-i]\n");
         printf("   -i   Invert pixels\n");
         printf("   -c   Output C compatible code, vs Verilog mem\n");
+        printf("   -w   16-bit word output\n");
         printf("   -8   Override font size auto-detect and use 8x8\n");
         printf("   -16  Override font size auto-detect and use 8x16\n");
         exit(EXIT_FAILURE);
@@ -220,7 +226,7 @@ int main(int argc, char ** argv)
                     fprintf(fp, "// 0x%02x '%s'\n", cn, isprint(cn) ? lit : hex);
                     for (int y = 0; y < font_height; y++)
                     {
-                        if (c_mode)
+                        if (c_mode && (!word_mode || !(y & 1)))
                         {
                             fprintf(fp, "0b");
                         }
@@ -238,26 +244,40 @@ int main(int argc, char ** argv)
                             }
                             fprintf(fp, "%s", pixel ? "1" : "0");
                         }
-                        if (c_mode)
+                        if (!word_mode)
                         {
-                            fprintf(fp, ",");
-                        }
-                        fprintf(fp, "    // ");
-                        for (int x = 0; x < 8; x++)
-                        {
-                            SDL_Color rgb;
-                            Uint32    data = getpixel(image, cx + x, cy + y);
-                            SDL_GetRGB(data, image->format, &rgb.r, &rgb.g, &rgb.b);
-                            int v = (rgb.r + rgb.g + rgb.b) / 3;
-
-                            bool pixel = (v >= 128);
-                            if (invert)
+                            if (c_mode)
                             {
-                                pixel = !pixel;
+                                fprintf(fp, ",");
                             }
-                            fprintf(fp, "%s", pixel ? "#" : ".");
+                            fprintf(fp, "    // ");
+                            for (int x = 0; x < 8; x++)
+                            {
+                                SDL_Color rgb;
+                                Uint32    data = getpixel(image, cx + x, cy + y);
+                                SDL_GetRGB(data, image->format, &rgb.r, &rgb.g, &rgb.b);
+                                int v = (rgb.r + rgb.g + rgb.b) / 3;
+
+                                bool pixel = (v >= 128);
+                                if (invert)
+                                {
+                                    pixel = !pixel;
+                                }
+                                fprintf(fp, "%s", pixel ? "#" : ".");
+                            }
+                            fprintf(fp, "\n");
                         }
-                        fprintf(fp, "\n");
+                        else
+                        {
+                            if (y & 1)
+                            {
+                                if (c_mode)
+                                {
+                                    fprintf(fp, ",");
+                                }
+                                fprintf(fp, "\n");
+                            }
+                        }
                     }
                     fprintf(fp, "\n");
                     cn++;

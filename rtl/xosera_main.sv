@@ -143,8 +143,8 @@ vram vram(
 //  8x8KB font memory
 // TODO: Make font memory 16-bits wide?
 logic           fontram_rd_en       /* verilator public */;
-logic [12:0]    fontram_addr        /* verilator public */; // 13-bit byte address
-logic  [7:0]    fontram_data_out    /* verilator public */;
+logic [11:0]    fontram_addr        /* verilator public */; // 13-bit byte address
+logic [15:0]    fontram_data_out    /* verilator public */;
 logic           fontram_wr_en       /* verilator public */;
 assign          fontram_wr_en = (blit_addr[15:14] == xv::AUX_FONT[15:14]) && blit_aux_sel && blit_wr;
 
@@ -155,8 +155,8 @@ fontram fontram(
     .rd_data_o(fontram_data_out),
     .wr_clk(clk),
     .wr_en_i(fontram_wr_en),
-    .wr_address_i(blit_addr[12:0]),
-    .wr_data_i(blit_data_out[7:0])
+    .wr_address_i(blit_addr[11:0]),
+    .wr_data_i(blit_data_out)
 );
 
 // video palette RAM

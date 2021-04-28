@@ -167,6 +167,12 @@
 				"iconColour": "yellow",
 				"gutterIcon": true
 			}
+		},
+		"editor.tokenColorCustomizations": {
+			"[Dark+ Material]": {
+				"keywords": "#54e9e9",
+				"numbers": "#fdfd52"
+			}
 		}
 	}
 }

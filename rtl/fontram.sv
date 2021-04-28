@@ -13,46 +13,46 @@
 
 // Default "mem" files and bank address for font data (1 2KB banks per 8x8 font, 2 banks for 8x16 font)
 `ifdef TESTPATTERN
-`define FONT_FILE_0 "fonts/hexfont_8x16.mem"
+`define FONT_FILE_0 "fonts/vga_8x16w.mem"
 `else
-`define FONT_FILE_0 "fonts/font_ST_8x16.mem"
+`define FONT_FILE_0 "fonts/ST_8x16w.mem"
 `endif
-`define FONT_ADDR_0 0*2048
+`define FONT_ADDR_0 0*1024
 `define FONT_FILE_1 "fonts/font_ST_8x8.mem"
-`define FONT_ADDR_1 2*2048
+`define FONT_ADDR_1 2*1024
 `define FONT_FILE_2 "fonts/hexfont_8x8.mem"
-`define FONT_ADDR_2 3*2048
+`define FONT_ADDR_2 3*1024
 // `define FONT_FILE_3
 // `define FONT_ADDR_3
 
 module fontram(
     input  logic         clk,
     input  logic         rd_en_i,
-    input  logic [12:0]  rd_address_i,
-    output logic  [7:0]  rd_data_o,
+    input  logic [11:0]  rd_address_i,
+    output logic [15:0]  rd_data_o,
     input  logic         wr_clk,
     input  logic         wr_en_i,
-    input  logic [12:0]  wr_address_i,
-    input  logic  [7:0]  wr_data_i
+    input  logic [11:0]  wr_address_i,
+    input  logic [15:0]  wr_data_i
 );
 // infer 8x8KB font BRAM
-logic [7: 0] bram[8191: 0];
+logic [15: 0] bram[4095: 0];
 `ifndef SHOW        // yosys show command doesn't like "too long" init string
 initial begin
 
 `ifdef FONT_FILE_0
     $readmemb(`FONT_FILE_0, bram, `FONT_ADDR_0);
 `else
-    $readmemb("fonts/font_ST_8x16.mem", bram, 0);
+    $readmemb("fonts/font_ST_8x16w.mem", bram, 0);
 `endif
 `ifdef FONT_FILE_1
-    $readmemb(`FONT_FILE_1, bram, `FONT_ADDR_1);
+ //   $readmemb(`FONT_FILE_1, bram, `FONT_ADDR_1);
 `endif
 `ifdef FONT_FILE_2
-    $readmemb(`FONT_FILE_2, bram, `FONT_ADDR_2);
+//    $readmemb(`FONT_FILE_2, bram, `FONT_ADDR_2);
 `endif
 `ifdef FONT_FILE_3
-    $readmemb(`FONT_FILE_3, bram, `FONT_ADDR_3);
+ //   $readmemb(`FONT_FILE_3, bram, `FONT_ADDR_3);
 `endif
 end
 `endif

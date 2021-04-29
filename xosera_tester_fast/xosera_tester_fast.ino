@@ -1,4 +1,4 @@
-#pragma GCC optimize("O2")
+#pragma GCC optimize("O3")
 #include <Arduino.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -143,7 +143,7 @@ enum
 #define SLOW()
 #endif
 
-static inline void xvid_setw(uint8_t r, uint16_t word)
+/* static inline */ void xvid_setw(uint8_t r, uint16_t word)
 {
     uint8_t msb = word >> 8;
     uint8_t lsb = word;
@@ -296,25 +296,6 @@ const PROGMEM uint16_t defpal[16] = {
     0x0F55,        // light red
     0x0F5F,        // light magenta
     0x0FF5,        // yellow
-    0x0FFF         // white
-};
-
-const PROGMEM uint16_t greypal[16] = {
-    0x0000,        // black
-    0x0111,        // blue
-    0x0222,        // green
-    0x0333,        // cyan
-    0x0444,        // red
-    0x0555,        // magenta
-    0x0666,        // brown
-    0x0777,        // light gray
-    0x0888,        // dark gray
-    0x0999,        // light blue
-    0x0aaa,        // light green
-    0x0bbb,        // light cyan
-    0x0ccc,        // light red
-    0x0ddd,        // light magenta
-    0x0eee,        // yellow
     0x0FFF         // white
 };
 
@@ -729,14 +710,6 @@ void test_palette()
     xprint_P(blurb);
 
     // restore default palette
-    Serial.println("restore palette test");
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);                // use WR address for palette index
-        xvid_setw(XVID_AUX_DATA, pgm_read_word(greypal + i));        // set palette data
-    }
-    delay(500);
-
     Serial.println("Rosco rainbow cycle");
     for (uint16_t k = 0; k < 500; k++)
     {
@@ -780,55 +753,6 @@ void test_palette()
     xvid_setw(XVID_AUX_ADDR, AUX_VID_W_GFXCTRL);        // use WR address for palette index
     xvid_setw(XVID_AUX_DATA, 0x0000);                   // set palette data
     delay(1000);
-
-#if 1        // TODO: something funny here (blanks 9" monitor)?
-    // gray default palette
-    Serial.println("grey palette test");
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
-        xvid_setw(XVID_AUX_DATA, i);                         // set palette data
-    }
-    wait_vsync(60);
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
-        xvid_setw(XVID_AUX_DATA, i << 4);                    // set palette data
-    }
-    wait_vsync(60);
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
-        xvid_setw(XVID_AUX_DATA, i << 8);                    // set palette data
-    }
-    wait_vsync(60);
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
-        uint16_t v = i ? 0x000 : 0xfff;
-        xvid_setw(XVID_AUX_DATA, v);        // set palette data
-    }
-    wait_vsync(60);
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
-        uint16_t v = i ? 0xfff : 0x000;
-        xvid_setw(XVID_AUX_DATA, v);        // set palette data
-    }
-    wait_vsync(60);
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for 595e index
-        uint16_t v = i ? 0xfff : 0xfff;
-        xvid_setw(XVID_AUX_DATA, v);        // set palette data
-    }
-    wait_vsync(60);
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);               // use WR address for palette index
-        xvid_setw(XVID_AUX_DATA, pgm_read_word(defpal + i));        // set palette data
-    }
-#endif
 
     // restore default palette
     Serial.println("restore palette test");

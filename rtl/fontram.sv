@@ -13,14 +13,14 @@
 
 // Default "mem" files and bank address for font data (1 2KB banks per 8x8 font, 2 banks for 8x16 font)
 `ifdef TESTPATTERN
-`define FONT_FILE_0 "fonts/vga_8x16w.mem"
+`define FONT_FILE_0 "fonts/hexfont_8x16w.mem"
 `else
-`define FONT_FILE_0 "fonts/ST_8x16w.mem"
+`define FONT_FILE_0 "fonts/font_ST_8x16w.mem"
 `endif
 `define FONT_ADDR_0 0*1024
-`define FONT_FILE_1 "fonts/font_ST_8x8.mem"
+`define FONT_FILE_1 "fonts/font_ST_8x8w.mem"
 `define FONT_ADDR_1 2*1024
-`define FONT_FILE_2 "fonts/hexfont_8x8.mem"
+`define FONT_FILE_2 "fonts/hexfont_8x8w.mem"
 `define FONT_ADDR_2 3*1024
 // `define FONT_FILE_3
 // `define FONT_ADDR_3

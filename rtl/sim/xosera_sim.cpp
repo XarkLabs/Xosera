@@ -25,7 +25,7 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 2        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 4        // video frames to dump to VCD file (and then screen-shot and exit)
 
 // Current simulation time (64-bit unsigned)
 vluint64_t main_time        = 0;
@@ -62,8 +62,8 @@ class BusInterface
         XVID_RD_MOD,           // reg B: TODO read modulo width for 2D blit
         XVID_WIDTH,            // reg 8: TODO width for 2D blit
         XVID_BLIT_CTRL,        // reg D: TODO
-        XVID_UNUSED_1,         // reg E: TODO
-        XVID_UNUSED_2          // reg F: TODO
+        XVID_UNUSED_E,         // reg E: TODO
+        XVID_UNUSED_F          // reg F: TODO
     };
 
     static const char * reg_name[];
@@ -207,8 +207,8 @@ const char * BusInterface::reg_name[] = {
     "XVID_RD_MOD",           // reg B: TODO read modulo width for 2D blit
     "XVID_WIDTH",            // reg 8: TODO width for 2D blit
     "XVID_BLIT_CTRL",        // reg D: TODO
-    "XVID_UNUSED_1",         // reg E: TODO
-    "XVID_UNUSED_2"          // reg F: TODO
+    "XVID_UNUSED_E",         // reg E: TODO
+    "XVID_UNUSED_F"          // reg F: TODO
 };
 
 #define REG_B(r, v) (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)

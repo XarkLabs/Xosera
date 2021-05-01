@@ -38,8 +38,8 @@ typedef enum logic [3:0]{
     XVID_RD_MOD    = 4'hB,        // reg B: TODO read modulo width for 2D blit
     XVID_WIDTH     = 4'hC,        // reg 8: TODO width for 2D blit
     XVID_BLIT_CTRL = 4'hD,        // reg D: TODO
-    XVID_UNUSED_1  = 4'hE,        // reg E: TODO
-    XVID_UNUSED_2  = 4'hF         // reg F: TODO
+    XVID_UNUSED_E  = 4'hE,        // reg E: TODO
+    XVID_UNUSED_F  = 4'hF         // reg F: TODO
 } register_t;
 
 // AUX memory areas

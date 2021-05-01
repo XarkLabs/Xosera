@@ -35,7 +35,7 @@ Font/tile memory is writable in AUX address space (but not readable).
 | 0x4   | `XVID_DATA`      | R/W/+ | read/write VRAM word at `RD`/`WR_ADDR` then add `RD`/`WR_INC`[Note X]
 | 0x5   | `XVID_DATA_2`    | R/W/+ | 2nd`XVID_DATA`(to allow for 32-bit read/write) [Note X]
 | 0x6   | `XVID_AUX_DATA`  | R/W/+ | read/write AUX word at `AUX_ADDR` [Note X]
-| 0x7   | `XVID_COUNT`     | R/W/+ | write blitter count and start operation, read blitter status
+| 0x7   | `XVID_COUNT`     | R/W/+ | write blitter count and start operation or read blitter status
 | 0x8   | `XVID_RD_INC`    | W/O   | `RD_ADDR` increment per word read
 | 0xA   | `XVID_WR_INC`    | W/O   | `WR_ADDR` increment per word write
 | 0x9   | `XVID_WR_MOD`    | W/O   | `WR_ADDR` increment every `WIDTH` words read (in 2D mode)

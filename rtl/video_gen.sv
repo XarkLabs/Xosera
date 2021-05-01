@@ -45,8 +45,8 @@ module video_gen(
 // Emperically determined (at extremes of horizontal scroll [worst case])
 // (odd numbers because 4 cycle latency through "fetch pipeline" and buffered)
 localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-7;            // memory fetch starts over a tile early
-localparam H2X_MEM_BEGIN = xv::OFFSCREEN_WIDTH-(7+5);      // and 8 pixels earlier with horizontal pixel double
-localparam H_MEM_END = xv::TOTAL_WIDTH-4;                   // memory fetch can ends a bit early
+localparam H2X_MEM_BEGIN = xv::OFFSCREEN_WIDTH-12;         // and 8 pixels earlier with horizontal pixel double
+localparam H_MEM_END = xv::TOTAL_WIDTH-1;                  // memory fetch can ends a bit early
 
 // mode options
 logic h_double;
@@ -89,6 +89,57 @@ typedef enum logic [1:0] {
     STATE_POST_SYNC = 2'b10,
     STATE_VISIBLE   = 2'b11
 } video_signal_st;
+
+// video config registers read/write
+always_ff @(posedge clk) begin
+    if (reset_i) begin
+        text_start_addr <= 16'h0000;
+        text_line_width <= xv::TILES_WIDE[15:0];
+        fine_scrollx    <= 4'b0000;         // low bit is for "1/2 doubled pixel" when h_double
+        fine_scrolly    <= 5'b00000;        // low bit is for "1/2 doubled pixel" when v_double
+        font_height     <= 4'b1111;
+        font_use_vram   <= 1'b0;
+        font_bank       <= 6'b00000;
+        h_double        <= 1'b0;            // horizontal pixel double (repeat)
+        v_double        <= 1'b0;            // vertical pixel double (repeat)
+    end
+    else begin
+        // video register write
+        if (vgen_reg_wr_i) begin
+            case (vgen_reg_num_i)
+                xv::AUX_VID_W_DISPSTART[2:0]: begin
+                    text_start_addr <= vgen_reg_data_i;
+                end
+                xv::AUX_VID_W_TILEWIDTH[2:0]: begin
+                    text_line_width <= vgen_reg_data_i;
+                end
+                xv::AUX_VID_W_SCROLLXY[2:0]: begin
+                    fine_scrollx    <= vgen_reg_data_i[11:8];
+                    fine_scrolly    <= vgen_reg_data_i[4:0];
+                end
+                xv::AUX_VID_W_FONTCTRL[2:0]: begin
+                    font_height     <= vgen_reg_data_i[3:0];
+                    font_use_vram   <= vgen_reg_data_i[8];
+                    font_bank       <= vgen_reg_data_i[15:10];
+                end
+                xv::AUX_VID_W_GFXCTRL[2:0]: begin
+                    h_double        <= vgen_reg_data_i[0];
+                    v_double        <= vgen_reg_data_i[1];
+                end
+                default: begin
+                end
+            endcase
+        end
+
+        // video register read
+        case (vgen_reg_num_i[1:0])
+            2'b00:      vgen_reg_data_o <= {4'h0, xv::VISIBLE_WIDTH[11:0]};
+            2'b01:      vgen_reg_data_o <= {4'h0, xv::VISIBLE_HEIGHT[11:0]};
+            2'b10:      vgen_reg_data_o <= 16'b1000000000000001;  // TODO define feature bits
+            2'b11:      vgen_reg_data_o <= {(v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 3'b000, v_count }; // negative when not vsync
+        endcase
+    end
+end
 
 // sync generation signals (and combinatorial logic "next" versions)
 logic [1: 0] h_state;
@@ -148,7 +199,7 @@ always_comb begin
         mem_fetch_toggle = H_MEM_END[10:0];
     end
     else begin
-        mem_fetch_toggle = (h_double ? H2X_MEM_BEGIN[10:0] : H_MEM_BEGIN[10:0]) - { 7'b0, fine_scrollx };
+        mem_fetch_toggle = (h_double ? H2X_MEM_BEGIN[10:0] : H_MEM_BEGIN[10:0]) - { 7'b0, fine_scrollx[3] & h_double, fine_scrollx[2:0] };
     end
 end
 
@@ -182,57 +233,6 @@ always_comb begin
     endcase
 end
 
-// video config registers
-always_ff @(posedge clk) begin
-    if (reset_i) begin
-        text_start_addr <= 16'h0000;
-        text_line_width <= xv::TILES_WIDE[15:0];
-        fine_scrollx    <= 4'b0000;         // low bit is for "1/2 doubled pixel" when h_double
-        fine_scrolly    <= 5'b00000;        // low bit is for "1/2 doubled pixel" when v_double
-        font_height     <= 4'b1111;
-        font_use_vram   <= 1'b0;
-        font_bank       <= 6'b00000;
-        h_double        <= 1'b0;            // horizontal pixel double (repeat)
-        v_double        <= 1'b0;            // vertical pixel double (repeat)
-    end
-    else begin
-        // video register write
-        if (vgen_reg_wr_i) begin
-            case (vgen_reg_num_i)
-                xv::AUX_VID_W_DISPSTART[2:0]: begin
-                    text_start_addr <= vgen_reg_data_i;
-                end
-                xv::AUX_VID_W_TILEWIDTH[2:0]: begin
-                    text_line_width <= vgen_reg_data_i;
-                end
-                xv::AUX_VID_W_SCROLLXY[2:0]: begin
-                    fine_scrollx    <= vgen_reg_data_i[11:8];
-                    fine_scrolly    <= vgen_reg_data_i[4:0];
-                end
-                xv::AUX_VID_W_FONTCTRL[2:0]: begin
-                    font_height     <= vgen_reg_data_i[3:0];
-                    font_use_vram   <= vgen_reg_data_i[8];
-                    font_bank       <= vgen_reg_data_i[15:10];
-                end
-                xv::AUX_VID_W_GFXCTRL[2:0]: begin
-                    h_double        <= vgen_reg_data_i[0];
-                    v_double        <= vgen_reg_data_i[1];
-                end
-                default: begin
-                end
-            endcase
-        end
-
-        // video register read
-        case (vgen_reg_num_i[1:0])
-            2'b00:      vgen_reg_data_o <= {4'h0, xv::VISIBLE_WIDTH[11:0]};
-            2'b01:      vgen_reg_data_o <= {4'h0, xv::VISIBLE_HEIGHT[11:0]};
-            2'b10:      vgen_reg_data_o <= 16'b1000000000000001;  // TODO define feature bits
-            2'b11:      vgen_reg_data_o <= {(v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 3'b000, v_count }; // negative when not vsync
-        endcase
-    end
-end
-
 // logic aliases
 logic           font_pix;                       // current pixel from font data shift-logic out
 assign          font_pix = font_shift_out[7];
@@ -242,6 +242,7 @@ logic [3: 0]    backcolor;                      // current tile background color
 assign          backcolor = text_color[7:4];
 logic  [7:0]    text_tile;                      // current tile index
 
+// generate font address from vram_data_i (assumed to be tile tile to lookup) and tile_y
 assign font_addr = font_height[3]   ? {font_bank[5:1], vram_data_i[7: 0], tile_y[4:2]}
                                     : {font_bank[5:0], vram_data_i[7: 0], tile_y[3:2]};
 

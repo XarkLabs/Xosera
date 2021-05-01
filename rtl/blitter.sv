@@ -343,9 +343,9 @@ always_ff @(posedge clk) begin
                         reconfig            <= reg_even_byte[7:6] == 2'b10 && bus_data_byte[7:6] == 2'b10;
                         boot_select         <= reg_even_byte[1:0];
                     end
-                    xv::XVID_UNUSED_1: begin
+                    xv::XVID_UNUSED_E: begin
                     end
-                    xv::XVID_UNUSED_2: begin
+                    xv::XVID_UNUSED_F: begin
                     end
                 endcase
             end // bus_bytesel

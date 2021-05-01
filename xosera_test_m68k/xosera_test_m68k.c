@@ -9,7 +9,8 @@
 
 #include "xosera_regs.h"
 
-// rosco_m68k Xosera board address (See https://github.com/rosco-m68k/hardware-projects/blob/feature/xosera/xosera/code/pld/decoder/ic3_decoder.pld#L25)
+// rosco_m68k Xosera board address (See
+// https://github.com/rosco-m68k/hardware-projects/blob/feature/xosera/xosera/code/pld/decoder/ic3_decoder.pld#L25)
 xosera_regs_t * xosera_ptr = (xosera_regs_t *)0xf80060;
 
 void kmain()

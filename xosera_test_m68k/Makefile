@@ -4,10 +4,14 @@
 # Copyright (c) 2021 Xark
 # MIT LICENSE
 
+ifndef ROSCO_M68K_DIR
+$(error Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
+endif
+
 EXTRA_CFLAGS?=-g -O2 -fomit-frame-pointer
 #EXTRA_VASMFLAGS?=-showopt
-SYSINCDIR?=../libs/build/include
-SYSLIBDIR?=../libs/build/lib
+SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
+SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib
 DEFINES=-DROSCO_M68K
 CFLAGS=-std=c11 -ffreestanding -ffunction-sections -fdata-sections \
     -Wall -Wextra -Werror -Wno-unused-function -pedantic -I$(SYSINCDIR) \
@@ -35,7 +39,7 @@ KERMIT=kermit
 SERIAL?=/dev/modem
 BAUD?=9600
 
-# Output config (assume name of directory)
+# Output config (assume same as name of directory)
 PROGRAM_BASENAME=$(shell basename $(CURDIR))
 
 # Set other output files using output basname
@@ -88,18 +92,18 @@ dump: $(BINARY)
 
 # upload binary to rosco (if ready and kermit present)
 load: $(BINARY)
-	kermit -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
+	$(KERMIT) -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
 
-# This is handy to test on Ubuntu
+# This is handy to test on Ubuntu Linux (kills previous "screen", opens one in shell window/tab)
 test: rle_images.h $(BINARY) $(DISASM)
 	-killall screen && sleep 1
-	kermit -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
+	$(KERMIT) -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
 	gnome-terminal --geometry=80x25 --title="rosco_m68k $(SERIAL)" -- screen $(SERIAL) $(BAUD)
 
-# This is handy to test on MacOS (kills previous screen, opens new window/tab)
+# This is handy to test on MacOS (kills previous "screen", opens new one in shell window/tab)
 mactest: $(BINARY) $(DISASM)
 	-killall screen && sleep 1
-	kermit -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
+	$(KERMIT) -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
 	echo "#! /bin/sh" > $(TMPDIR)/rosco_screen.sh
 	echo "/usr/bin/screen $(SERIAL) $(BAUD)" >> $(TMPDIR)/rosco_screen.sh
 	chmod +x $(TMPDIR)/rosco_screen.sh

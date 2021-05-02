@@ -87,7 +87,7 @@ logic [15:0] vgen_addr;     // video vram addr
 logic [15:0] vgen_data_out; // video reg reads
 
 logic vgen_reg_wr;
-assign vgen_reg_wr = (blit_addr[15:14] == xv::AUX_VID_W_DISPSTART[15:14]) && blit_aux_sel && blit_wr;
+assign vgen_reg_wr = (blit_addr[15:14] == xv::AUX_DISPSTART[15:14]) && blit_aux_sel && blit_wr;
 
 //  video generation
 video_gen video_gen(
@@ -101,7 +101,7 @@ video_gen video_gen(
     .vram_addr_o(vgen_addr),
     .vram_data_i(blit_data_in),
     .vgen_reg_wr_i(vgen_reg_wr),
-    .vgen_reg_num_i(blit_addr[2:0]),
+    .vgen_reg_num_i(blit_addr[3:0]),
     .vgen_reg_data_o(vgen_data_out),
     .vgen_reg_data_i(blit_data_out),
     .pal_index_o(pal_index),
@@ -146,7 +146,7 @@ logic           fontram_rd_en       /* verilator public */;
 logic [11:0]    fontram_addr        /* verilator public */; // 13-bit byte address
 logic [15:0]    fontram_data_out    /* verilator public */;
 logic           fontram_wr_en       /* verilator public */;
-assign          fontram_wr_en = (blit_addr[15:14] == xv::AUX_FONT[15:14]) && blit_aux_sel && blit_wr;
+assign          fontram_wr_en = (blit_addr[15:14] == xv::AUX_FONTMEM[15:14]) && blit_aux_sel && blit_wr;
 
 fontram fontram(
     .clk(clk),
@@ -163,7 +163,7 @@ fontram fontram(
 logic  [3:0]    pal_index       /* verilator public */;
 logic [15:0]    pal_lookup      /* verilator public */;
 logic           palette_wr_en   /* verilator public */;
-assign          palette_wr_en = (blit_addr[15:14] == xv::AUX_COLORTBL[15:14]) && blit_aux_sel && blit_wr;
+assign          palette_wr_en = (blit_addr[15:14] == xv::AUX_COLORMEM[15:14]) && blit_aux_sel && blit_wr;
 
 paletteram paletteram(
     .clk(clk),

@@ -1,5 +1,19 @@
 # Informal list of notable Xosera changes
 
+2021-05-01+ Xark
+
+* Fonts can now be in VRAM or the 8KB of font RAM
+* Fonts are now stored as two bytes in a 16-bit word (same for VRAM or font RAM)
+* Revamped pixel fetch "loop"
+* Made most AUX video registers read/write (makes things easier, software can query display addr, width etc.)
+* Started work on bitmap mode, currently testing with 8x1 text mode (with color attribute byte and bitmap byte) - needs more flexible pixel fetch
+* Fixed RD_ADDR and RD_INC to work properly
+* Received rosco_m68k prototype PCB boards. Assembled one, works great.  Dangled 74HCT245 pin out to allow re-flash of Xosera w/o powering down rosco_m68k (vs hard reset with rosco)
+* Did a fair bit of preliminary work on Xosera rosco_m68k, mostly experimenting with GCC to get it to use the MOVEP opcode for Xosera registers optimally.
+* Found a pretty good solution (with a minimal amount if inline asm)
+* Fleshed out API, wrote some test code.  Scrutinizing disassembly and it appears to be working nicely.
+* Did small test and 8MHz rosco_m68k can write to Xosera VRAM at ~820 KB/sec vs main memory at ~1040 KB/sec (8-bit bus and MOVEP.L vs 16-bit and MOVE.L)
+
 2021-04-22 Xark
 
 * Cleaned up tester, did Q&D 4096 colors-at-once test (looks okay - needs a copper to be solid)

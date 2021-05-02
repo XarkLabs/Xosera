@@ -28,9 +28,18 @@ rtl/sim/xosera_tb
 # host_spi executable
 host_spi/host_spi
 
-# utils executable
+# executables
 utils/image_to_mem
+xvid_spi/xvid_spi
+
+# rosco_m68k files
+xosera_test_m68k/*.elf
+xosera_test_m68k/*.o
+xosera_test_m68k/*.s
+xosera_test_m68k/*.i
+xosera_test_m68k/*.sym
+xosera_test_m68k/*.dis
+xosera_test_m68k/*.map
 
 # macOS thing
 .DS_Store
-xvid_spi/xvid_spi

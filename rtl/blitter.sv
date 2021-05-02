@@ -32,9 +32,6 @@ module blitter(
     input  logic            clk
     );
 
-`ifndef GITHASH
-`define GITHASH d0000000
-`endif
 localparam [31:0] githash = 32'H`GITHASH;
 logic [14*8:1]  logostring = "Xosera v0.12 #";    // boot msg
 
@@ -350,6 +347,15 @@ always_ff @(posedge clk) begin
                 endcase
             end // bus_bytesel
         end // bus_write_strobe
+
+        if (bus_read_strobe & bus_bytesel) begin
+            if (bus_reg_num == xv::XVID_DATA || bus_reg_num == xv::XVID_DATA_2) begin
+                // if we did a read, increment read addr
+                blit_addr_o         <= reg_rd_addr;      // output read address
+                blit_vram_sel_o     <= 1'b1;            // select VRAM
+                blit_vram_rd        <= 1'b1;            // remember pending vramread request
+            end
+        end
 
         case (vgen_sel_i ? IDLE : blit_state)
             IDLE: begin

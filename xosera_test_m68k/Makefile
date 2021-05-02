@@ -8,7 +8,7 @@ ifndef ROSCO_M68K_DIR
 $(error Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
 endif
 
-EXTRA_CFLAGS?=-g -O2 -fomit-frame-pointer
+EXTRA_CFLAGS?=-g -Os -fomit-frame-pointer -save-temps
 #EXTRA_VASMFLAGS?=-showopt
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
 SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib
@@ -20,7 +20,7 @@ GCC_LIBS=$(shell $(CC) --print-search-dirs \
     | grep libraries:\ = \
     | sed 's/libraries: =/-L/g' \
     | sed 's/:/m68000\/ -L/g')m68000/
-LIBS=-lprintf -lcstdlib -lmachine -lstart_serial -ldebug_stub -lgcc
+LIBS=-lprintf -lcstdlib -lmachine -lstart_serial -lgcc
 ASFLAGS=-mcpu=68010 -march=68010
 LDFLAGS=-T $(SYSLIBDIR)/ld/serial/rosco_m68k_program.ld -L $(SYSLIBDIR) \
     -Map=$(MAP) --gc-sections --oformat=elf32-m68k

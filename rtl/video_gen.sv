@@ -31,7 +31,7 @@ module video_gen(
     input  logic [15:0]     fontram_data_i,     // font memory byte data in
     input  logic            enable_i,           // enable video (0=black output, 1=normal output)
     input  logic            vgen_reg_wr_i,      // strobe to write internal config register number
-    input  logic  [2:0]     vgen_reg_num_i,     // internal config register number
+    input  logic  [3:0]     vgen_reg_num_i,     // internal config register number
     input  logic [15:0]     vgen_reg_data_i,    // data for internal config register
     // video signal outputs
     output logic  [3:0]     pal_index_o,        // palette index outputs
@@ -41,6 +41,8 @@ module video_gen(
     input  logic            reset_i,            // system reset in
     input  logic            clk                 // clock (video pixel clock)
 );
+
+localparam [31:0] githash = 32'H`GITHASH;
 
 // Emperically determined (at extremes of horizontal scroll [worst case])
 // (odd numbers because 4 cycle latency through "fetch pipeline" and buffered)
@@ -79,8 +81,8 @@ assign          tile_start = mem_fetch && tile_x == 4'b000;
 logic [15:0]    font_addr;
 
 // feature enable signals
-logic tg_enable;                                        // text generation
-logic bm_enable;                                        // bitmap enable
+logic vg_enable;                                       // video generation enabled (else black/blank)
+logic bm_enable;                                        // bitmap enable (else text mode)
 
 // video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
 typedef enum logic [1:0] {
@@ -102,41 +104,59 @@ always_ff @(posedge clk) begin
         font_bank       <= 6'b00000;
         h_double        <= 1'b0;            // horizontal pixel double (repeat)
         v_double        <= 1'b0;            // vertical pixel double (repeat)
+        bm_enable       <= 1'b0;            // bitmap mode
     end
     else begin
         // video register write
         if (vgen_reg_wr_i) begin
-            case (vgen_reg_num_i)
-                xv::AUX_VID_W_DISPSTART[2:0]: begin
+            case (vgen_reg_num_i[2:0])
+                xv::AUX_DISPSTART[2:0]: begin
                     text_start_addr <= vgen_reg_data_i;
                 end
-                xv::AUX_VID_W_TILEWIDTH[2:0]: begin
+                xv::AUX_DISPWIDTH[2:0]: begin
                     text_line_width <= vgen_reg_data_i;
                 end
-                xv::AUX_VID_W_SCROLLXY[2:0]: begin
+                xv::AUX_SCROLLXY[2:0]: begin
                     fine_scrollx    <= vgen_reg_data_i[11:8];
                     fine_scrolly    <= vgen_reg_data_i[4:0];
                 end
-                xv::AUX_VID_W_FONTCTRL[2:0]: begin
-                    font_height     <= vgen_reg_data_i[3:0];
-                    font_use_vram   <= vgen_reg_data_i[8];
+                xv::AUX_FONTCTRL[2:0]: begin
                     font_bank       <= vgen_reg_data_i[15:10];
+                    font_use_vram   <= vgen_reg_data_i[8];
+                    font_height     <= vgen_reg_data_i[3:0];
                 end
-                xv::AUX_VID_W_GFXCTRL[2:0]: begin
-                    h_double        <= vgen_reg_data_i[0];
+                xv::AUX_GFXCTRL[2:0]: begin
+                    bm_enable       <= vgen_reg_data_i[15];
                     v_double        <= vgen_reg_data_i[1];
+                    h_double        <= vgen_reg_data_i[0];
                 end
-                default: begin
+                xv::AUX_UNUSED_5[2:0]: begin
+                end
+                xv::AUX_UNUSED_6[2:0]: begin
+                end
+                xv::AUX_UNUSED_7[2:0]: begin
                 end
             endcase
         end
 
         // video register read
-        case (vgen_reg_num_i[1:0])
-            2'b00:      vgen_reg_data_o <= {4'h0, xv::VISIBLE_WIDTH[11:0]};
-            2'b01:      vgen_reg_data_o <= {4'h0, xv::VISIBLE_HEIGHT[11:0]};
-            2'b10:      vgen_reg_data_o <= 16'b1000000000000001;  // TODO define feature bits
-            2'b11:      vgen_reg_data_o <= {(v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 3'b000, v_count }; // negative when not vsync
+        case (vgen_reg_num_i[3:0])
+            xv::AUX_DISPSTART[3:0]:     vgen_reg_data_o <= text_start_addr;
+            xv::AUX_DISPWIDTH[3:0]:     vgen_reg_data_o <= text_line_width;
+            xv::AUX_SCROLLXY[3:0]:      vgen_reg_data_o <= { 4'b0000, fine_scrollx, 3'b000, fine_scrolly };
+            xv::AUX_FONTCTRL[3:0]:      vgen_reg_data_o <= { font_bank, 1'b0, font_use_vram, 4'b0000, font_height  };
+            xv::AUX_GFXCTRL[3:0]:       vgen_reg_data_o <= { bm_enable, 13'b0000000000000, v_double, h_double };
+            xv::AUX_UNUSED_5[3:0]:      vgen_reg_data_o <= 16'h0000;
+            xv::AUX_UNUSED_6[3:0]:      vgen_reg_data_o <= 16'h0000;
+            xv::AUX_UNUSED_7[3:0]:      vgen_reg_data_o <= 16'h0000;
+            xv::AUX_R_WIDTH[3:0]:       vgen_reg_data_o <= {4'h0, xv::VISIBLE_WIDTH[11:0]};
+            xv::AUX_R_HEIGHT[3:0]:      vgen_reg_data_o <= {4'h0, xv::VISIBLE_HEIGHT[11:0]};
+            xv::AUX_R_FEATURES[3:0]:    vgen_reg_data_o <= 16'b1000000000000001;  // TODO define feature bits
+            xv::AUX_R_SCANLINE[3:0]:    vgen_reg_data_o <= {(v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 3'b000, v_count }; // negative when not vsync
+            xv::AUX_R_GITHASH_H[3:0]:   vgen_reg_data_o <= githash[31:16];
+            xv::AUX_R_GITHASH_L[3:0]:   vgen_reg_data_o <= githash[15:0];
+            xv::AUX_R_UNUSED_E[3:0]: ;
+            xv::AUX_R_UNUSED_F[3:0]: ;
         endcase
     end
 end
@@ -166,7 +186,7 @@ logic           h_start_line_fetch;
 
 always_comb     hsync = (h_state == STATE_SYNC);
 always_comb     vsync = (v_state == STATE_SYNC);
-always_comb     dv_display_ena = tg_enable && (h_state == STATE_VISIBLE) && (v_state == STATE_VISIBLE);
+always_comb     dv_display_ena = vg_enable && (h_state == STATE_VISIBLE) && (v_state == STATE_VISIBLE);
 always_comb     h_last_line_pixel = (h_state_next == STATE_PRE_SYNC) && (h_state == STATE_VISIBLE);
 always_comb     v_last_frame_pixel = (v_state_next == STATE_VISIBLE) && (v_state == STATE_POST_SYNC) && h_last_line_pixel;
 always_comb     h_state_next = (h_count == h_count_next_state) ? h_state + 1 : h_state;
@@ -248,8 +268,6 @@ assign font_addr = font_height[3]   ? {font_bank[5:1], vram_data_i[7: 0], tile_y
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        tg_enable       <= 1'b0;                        // text generation enable
-        bm_enable       <= 1'b0;                        // text generation enable
         h_state         <= STATE_PRE_SYNC;
         v_state         <= STATE_VISIBLE;
         mem_fetch       <= 1'b0;
@@ -269,19 +287,20 @@ always_ff @(posedge clk) begin
         hsync_o         <= 1'b0;
         vsync_o         <= 1'b0;
         dv_de_o         <= 1'b0;
+        vg_enable       <= 1'b1;            // video starts disabled
     end
 
     else begin
         // default outputs
-        vram_sel_o <= 1'b0;                             // default to no VRAM access
-        fontram_sel_o <= 1'b0;                          // default to no font access
+        vram_sel_o      <= 1'b0;                            // default to no VRAM access
+        fontram_sel_o   <= 1'b0;                            // default to no font access
 
         if (mem_fetch) begin
             if (~h_double) begin
                 font_shift_out <= {font_shift_out[6: 0], 1'b0}; // shift font line data (high bit is current pixel)
                 case (tile_x[3:1])
                     3'b000: begin
-                        vram_sel_o      <= tg_enable;                   // select vram
+                        vram_sel_o      <= vg_enable;                   // select vram
                         vram_addr_o     <= text_addr;                   // put text+color address on vram bus
                         text_addr       <= text_addr + 1;               // next tile+attribute
                     end
@@ -289,19 +308,24 @@ always_ff @(posedge clk) begin
                     end
                     3'b010: begin
                         vram_data_save  <= vram_data_i;                 // then save current VRAM data (color for next tile)
-                        vram_sel_o     <= font_use_vram & tg_enable;    // select vram
-                        fontram_sel_o  <= ~font_use_vram & tg_enable;   // select fontram
+                        vram_sel_o     <= font_use_vram & ~bm_enable & vg_enable;    // select vram
+                        fontram_sel_o  <= ~font_use_vram & ~bm_enable & vg_enable;   // select fontram
                         vram_addr_o    <= font_addr;
                         fontram_addr_o <= font_addr[11:0];
                     end
                     3'b011: begin
                     end
                     3'b100: begin
-                        if (tile_y[1]) begin
-                            font_shift_out  <= font_use_vram ? vram_data_i[7:0] : fontram_data_i[7:0]; // use font lookup data to set font line shift out
+                        if (bm_enable) begin
+                            font_shift_out  <= vram_data_save[7:0];
                         end
                         else begin
-                            font_shift_out  <= font_use_vram ? vram_data_i[15:8] : fontram_data_i[15:8]; // use font lookup data to set font line shift out
+                            if (tile_y[1]) begin    // use even or odd byte from font word
+                                font_shift_out  <= font_use_vram ? vram_data_i[7:0] : fontram_data_i[7:0];  // use font lookup data to set font line shift out
+                            end
+                            else begin
+                                font_shift_out  <= font_use_vram ? vram_data_i[15:8] : fontram_data_i[15:8]; // use font lookup data to set font line shift out
+                            end
                         end
                         text_tile       <= vram_data_save[7:0];         // used previously saved tile
                         text_color      <= vram_data_save[15:8];        // used previously saved color
@@ -322,7 +346,7 @@ always_ff @(posedge clk) begin
                 end
                 case (tile_x)
                     4'b0101: begin
-                        vram_sel_o      <= tg_enable;                   // select vram
+                        vram_sel_o      <= vg_enable;                   // select vram
                         vram_addr_o     <= text_addr;                   // put text+color address on vram bus
                         text_addr       <= text_addr + 1;               // next tile+attribute
                     end
@@ -330,19 +354,24 @@ always_ff @(posedge clk) begin
                     end
                     4'b0111: begin
                         vram_data_save  <= vram_data_i;                 // then save current VRAM data (color for next tile)
-                        vram_sel_o     <= font_use_vram & tg_enable;    // select vram
-                        fontram_sel_o  <= ~font_use_vram & tg_enable;   // select fontram
+                        vram_sel_o     <= font_use_vram & ~bm_enable & vg_enable;    // select vram
+                        fontram_sel_o  <= ~font_use_vram & ~bm_enable & vg_enable;   // select fontram
                         vram_addr_o    <= font_addr;
                         fontram_addr_o <= font_addr[11:0];
                     end
                     4'b1000: begin
                     end
                     4'b1001: begin
-                        if (tile_y[1]) begin
-                            font_shift_out  <= font_use_vram ? vram_data_i[7:0] : fontram_data_i[7:0]; // use font lookup data to set font line shift out
+                        if (bm_enable) begin
+                            font_shift_out  <= vram_data_save[7:0];
                         end
                         else begin
-                            font_shift_out  <= font_use_vram ? vram_data_i[15:8] : fontram_data_i[15:8]; // use font lookup data to set font line shift out
+                            if (tile_y[1]) begin
+                                font_shift_out  <= font_use_vram ? vram_data_i[7:0] : fontram_data_i[7:0]; // use font lookup data to set font line shift out
+                            end
+                            else begin
+                                font_shift_out  <= font_use_vram ? vram_data_i[15:8] : fontram_data_i[15:8]; // use font lookup data to set font line shift out
+                            end
                         end
                         text_tile       <= vram_data_save[7:0];         // used previously saved tile
                         text_color      <= vram_data_save[15:8];        // used previously saved color
@@ -357,20 +386,20 @@ always_ff @(posedge clk) begin
         pal_index_o <= font_pix ? forecolor : backcolor;
 
         // next pixel
-        tile_x <= tile_x + (h_double ? 1 : 2);          // increment tile cell column (by 2 normally, 1 if pixel doubled)
+        tile_x <= tile_x + (h_double ? 1 : 2);              // increment tile cell column (by 2 normally, 1 if pixel doubled)
 
         // start of line
         if (h_start_line_fetch) begin                       // on line fetch start signal
-            tile_x <= 4'b0000;                              // reset on tile_x cycle (to start tile line at proper pixel)
+            tile_x <= 4'b0000;                                  // reset on tile_x cycle (to start tile line at proper pixel)
         end
 
         // end of line
         if (h_last_line_pixel) begin                        // if last pixel of scan-line
             text_addr <= text_line_addr;                    // text addr back to line start
-            if (tile_y == { font_height, v_double }) begin  // if last line of tile cell
-                tile_y <= 5'h0;                             // reset tile cell line
-                text_line_addr <= text_line_addr + text_line_width; // new line start address
-                text_addr <= text_line_addr + text_line_width;      // new text start address
+            if (tile_y == { font_height, v_double } || bm_enable) begin  // if last line of tile cell
+                tile_y          <= 5'h0;                                // reset tile cell line
+                text_line_addr  <= text_line_addr + text_line_width;    // new line start address
+                text_addr       <= text_line_addr + text_line_width;    // new text start address
             end
             else begin                                      // else next line of tile cell
                 tile_y <= tile_y + (v_double ? 1 : 2);      // next tile tile line (by 2 normally, 1 if pixel doubled)
@@ -379,10 +408,10 @@ always_ff @(posedge clk) begin
 
         // end of frame
         if (v_last_frame_pixel) begin                       // if last pixel of frame
-            tg_enable <= enable_i;                          // enable/disable text generation
-            tile_y <= v_double ? fine_scrolly : { fine_scrolly[3:0], 1'b0 }; // start next frame at Y fine scroll line
-            text_addr <= text_start_addr;                   // reset to start of text data
-            text_line_addr <= text_start_addr;              // reset to start of text data
+            vg_enable      <= enable_i;                        // enable/disable text generation
+            tile_y          <= v_double ? fine_scrolly : { fine_scrolly[3:0], 1'b0 }; // start next frame at Y fine scroll line
+            text_addr       <= text_start_addr;                 // reset to start of text data
+            text_line_addr  <= text_start_addr;                 // reset to start of text data
         end
 
         // update registered signals from combinatorial "next" versions

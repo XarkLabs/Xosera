@@ -12,12 +12,12 @@ AlignTrailingComments: true
 AllowAllArgumentsOnNextLine: true
 AllowAllConstructorInitializersOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: false
-AllowShortEnumsOnASingleLine: true
+AllowShortEnumsOnASingleLine: false
 AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: Inline
+AllowShortFunctionsOnASingleLine: false
 AllowShortLambdasOnASingleLine: All
-AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None

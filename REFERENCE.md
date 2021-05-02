@@ -77,20 +77,20 @@ To access these registers, write the register address to `XVID_AUX_ADDR`, then w
 
 | Reg # | Name                  |R/W| Description                                                                         |
 --------| ----------------------|---| ------------------------------------------------------------------------------------|
-| 0x0   | `AUX_VID_W_DISPSTART` |W/O| [15:0] starting VRAM address for display (wraps at 0xffff)                          |
-| 0x1   | `AUX_VID_W_TILEWIDTH` |W/O| [15:0] words per display line                                                       |
-| 0x2   | `AUX_VID_W_SCROLLXY`  |W/O| [11:8] H pixel scroll, [4:0] V pixel scroll                                         |
-| 0x3   | `AUX_VID_W_FONTCTRL`  |W/O| [15:11] 2KB/4KB font bank (8x8/8x16),[8] 0=FONTMEM/1=VRAM, [3:0] font height-1      |
-| 0x4   | `AUX_VID_W_GFXCTRL`   |W/O| [1] V pixel double, [0] H pixel double                                              |
-| 0x5   | `AUX_VID_W_UNUSED5`   |W/O|                                                                                     |
-| 0x6   | `AUX_VID_W_UNUSED6`   |W/O|                                                                                     |
-| 0x7   | `AUX_VID_W_UNUSED7`   |W/O|                                                                                     |
+| 0x0   | `AUX_DISPSTART` |W/O| [15:0] starting VRAM address for display (wraps at 0xffff)                          |
+| 0x1   | `AUX_DISPWIDTH` |W/O| [15:0] words per display line                                                       |
+| 0x2   | `AUX_SCROLLXY`  |W/O| [11:8] H pixel scroll, [4:0] V pixel scroll                                         |
+| 0x3   | `AUX_FONTCTRL`  |W/O| [15:11] 2KB/4KB font bank (8x8/8x16),[8] 0=FONTMEM/1=VRAM, [3:0] font height-1      |
+| 0x4   | `AUX_GFXCTRL`   |W/O| [15] bitmap mode [1] V pixel double, [0] H pixel double                             |
+| 0x5   | `AUX_UNUSED5`   |W/O|                                                                                     |
+| 0x6   | `AUX_UNUSED6`   |W/O|                                                                                     |
+| 0x7   | `AUX_UNUSED7`   |W/O|                                                                                     |
 
 ###### Read-only AUX_VID Registers
 
 | Reg # | Name                  |R/W| Description                                                                         |
 --------| ----------------------|---| ------------------------------------------------------------------------------------|
-| 0x0   | `AUX_VID_R_WIDTH`     |R/O| [15:0] configured display resolution width (e.g., 640 or 848)                       |
-| 0x1   | `AUX_VID_R_HEIGHT`    |R/O| [15:0] configured display resolution height (e.g. 480)                              |
-| 0x2   | `AUX_VID_R_FEATURES`  |R/O| [15:0] configured features [bits TBD]                                               |
-| 0x3   | `AUX_VID_R_SCANLINE`  |R/O| [15] V blank, [14:11] zero [10:0] V line (bit 15 set for all non-visible lines)     |
+| 0x0   | `AUX_R_WIDTH`     |R/O| [15:0] configured display resolution width (e.g., 640 or 848)                       |
+| 0x1   | `AUX_R_HEIGHT`    |R/O| [15:0] configured display resolution height (e.g. 480)                              |
+| 0x2   | `AUX_R_FEATURES`  |R/O| [15:0] configured features [bits TBD]                                               |
+| 0x3   | `AUX_R_SCANLINE`  |R/O| [15] V blank (non-visible), [14] H blank [13:11] zero [10:0] V line                 |

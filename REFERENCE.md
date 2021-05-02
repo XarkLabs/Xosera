@@ -58,7 +58,7 @@ The `BLIT_CTRL` also has bits that allow Xosera "re-configure" itself.  This wil
 
 ### Other AUX Memory Areas
 
-| Name             | Address Range | R/W| Width    | Description                                                           |
+| Name             | Address Range | R/W| Width          | Description                                                     |
 |------------------| --------------|-----|---------------|-----------------------------------------------------------------|
 | `AUX_VID_`*      | 0x0000-0x3FFF |  -  | 16-bit [15:0] | AUX_VID register area, see below                                |
 | `AUX_W_FONT`     | 0x4000-0x5FFF | W/O |  8-bit  [7:0] | 8KB font/tile memory (even byte, bits [15:8] ignored)           |
@@ -73,24 +73,28 @@ These registers deal with video generation configuration and video status.
 
 To access these registers, write the register address to `XVID_AUX_ADDR`, then write the register data to `XVID_VID_DATA`.  Note that the registers are read-only or write-only (and their addresses overlap).
 
-###### Write-only AUX_VID Registers
+###### Read-Write AUX_VID Registers
 
 | Reg # | Name                  |R/W| Description                                                                         |
 --------| ----------------------|---| ------------------------------------------------------------------------------------|
-| 0x0   | `AUX_DISPSTART` |W/O| [15:0] starting VRAM address for display (wraps at 0xffff)                          |
-| 0x1   | `AUX_DISPWIDTH` |W/O| [15:0] words per display line                                                       |
-| 0x2   | `AUX_SCROLLXY`  |W/O| [11:8] H pixel scroll, [4:0] V pixel scroll                                         |
-| 0x3   | `AUX_FONTCTRL`  |W/O| [15:11] 2KB/4KB font bank (8x8/8x16),[8] 0=FONTMEM/1=VRAM, [3:0] font height-1      |
-| 0x4   | `AUX_GFXCTRL`   |W/O| [15] bitmap mode [1] V pixel double, [0] H pixel double                             |
-| 0x5   | `AUX_UNUSED5`   |W/O|                                                                                     |
-| 0x6   | `AUX_UNUSED6`   |W/O|                                                                                     |
-| 0x7   | `AUX_UNUSED7`   |W/O|                                                                                     |
+| 0x0   | `AUX_DISPSTART`       |R/W| [15:0] starting VRAM address for display (wraps at 0xffff)                          |
+| 0x1   | `AUX_DISPWIDTH`       |R/W| [15:0] words per display line                                                       |
+| 0x2   | `AUX_SCROLLXY`        |R/W| [11:8] H pixel scroll, [4:0] V pixel scroll                                         |
+| 0x3   | `AUX_FONTCTRL`        |R/W| [15:11] 2KB/4KB font bank (8x8/8x16),[8] 0=FONTMEM/1=VRAM, [3:0] font height-1      |
+| 0x4   | `AUX_GFXCTRL`         |R/W| [15] bitmap mode [1] V pixel double, [0] H pixel double                             |
+| 0x5   | `AUX_UNUSED5`         |R/W|                                                                                     |
+| 0x6   | `AUX_UNUSED6`         |R/W|                                                                                     |
+| 0x7   | `AUX_UNUSED7`         |R/W|                                                                                     |
 
 ###### Read-only AUX_VID Registers
 
 | Reg # | Name                  |R/W| Description                                                                         |
 --------| ----------------------|---| ------------------------------------------------------------------------------------|
-| 0x0   | `AUX_R_WIDTH`     |R/O| [15:0] configured display resolution width (e.g., 640 or 848)                       |
-| 0x1   | `AUX_R_HEIGHT`    |R/O| [15:0] configured display resolution height (e.g. 480)                              |
-| 0x2   | `AUX_R_FEATURES`  |R/O| [15:0] configured features [bits TBD]                                               |
-| 0x3   | `AUX_R_SCANLINE`  |R/O| [15] V blank (non-visible), [14] H blank [13:11] zero [10:0] V line                 |
+| 0x8   | `AUX_R_WIDTH`         |R/O| [15:0] configured display resolution width (e.g., 640 or 848)                       |
+| 0x9   | `AUX_R_HEIGHT`        |R/O| [15:0] configured display resolution height (e.g. 480)                              |
+| 0xA   | `AUX_R_FEATURES`      |R/O| [15:0] configured features [bits TBD]                                               |
+| 0xB   | `AUX_R_SCANLINE`      |R/O| [15] V blank (non-visible), [14] H blank [10:0] V line                              |
+| 0xC   | `AUX_R_GITHASH_H`     |R/O| [15:0] high 16-bits of 32-bit Git hash build identifier                             |
+| 0xD   | `AUX_R_GITHASH_L`     |R/O| [15:0] low 16-bits of 32-bit Git hash build identifier                              |
+| 0xE   | `AUX_R_UNUSED_E`      |R/O| [15:0] low 16-bits of 32-bit Git hash build identifier                              |
+| 0xF   | `AUX_R_UNUSED_F`      |R/O| [15:0] low 16-bits of 32-bit Git hash build identifier                              |

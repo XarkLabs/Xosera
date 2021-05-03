@@ -83,7 +83,7 @@ ICEMULTI := icemulti
 
 # Yosys synthesis arguments
 # TODO: too slow, maybe buggy: YOSYS_SYNTH_ARGS := -dsp -abc9 -abc2 -relut -top $(TOP)
-YOSYS_SYNTH_ARGS := -dsp -top $(TOP)
+YOSYS_SYNTH_ARGS := -dsp -abc2 -relut -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DICEBREAKER -DSPI_INTERFACE
@@ -95,7 +95,7 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
-NEXTPNR_ARGS := --pre-pack $(SDC) --placer heap
+NEXTPNR_ARGS := --pre-pack $(SDC) --placer heap --opt-timing
 
 # defult target is make bitstream
 all: icebreaker/$(TOP)_$(VIDEO_MODE).bin icebreaker.mk

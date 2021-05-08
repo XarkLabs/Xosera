@@ -204,28 +204,23 @@ SB_PLL40_PAD
 /* verilator lint_on PINMISSING */
 `else
 // for simulation use 1:1 input clock (and testbench can simulate proper frequency)
-assign pll_lock = 1'b1;
+assign pll_lock = 1'b0;
 assign pclk     = CLK;
 `endif
 
 // reset logic waits for PLL lock & reset button released (with small delay)
-logic [7:0] reset_cnt;      // counter for reset delay (assures memories ready)
 logic reset = 1'b1;         // default in reset state
 
 always_ff @(posedge pclk) begin
-    // reset count and stay in reset if pll_lock lost or bus_nreset
+    // reset if pll_lock lost, or reset button or SPI reset
     if (!pll_lock || !nreset || spi_reset) begin
-        reset_cnt   <= 0;
         reset       <= 1'b1;
+`ifdef SYNTHESIS
+        pll_lock    <= 1'b1;    // so reset asserted for one cycle in sim
+`endif
     end
     else begin
-        if (!&reset_cnt) begin
-            reset_cnt   <= reset_cnt + 1;
-            reset       <= 1'b1;
-        end
-        else begin
-            reset       <= 1'b0;
-        end
+        reset       <= 1'b0;
     end
 end
 

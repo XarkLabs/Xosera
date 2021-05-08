@@ -91,7 +91,7 @@ initial begin
 
     // reset for 5 clocks
     reset = 1'b1;
-    #(CLK_PERIOD * 5) reset = 1'b0;
+    #(CLK_PERIOD * 2) reset = 1'b0;
 end
 
 // function to continuously select read value to put on bus

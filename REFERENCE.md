@@ -96,5 +96,5 @@ To access these registers, write the register address to `XVID_AUX_ADDR`, then w
 | 0xB   | `AUX_R_SCANLINE`      |R/O| [15] V blank (non-visible), [14] H blank [10:0] V line                              |
 | 0xC   | `AUX_R_GITHASH_H`     |R/O| [15:0] high 16-bits of 32-bit Git hash build identifier                             |
 | 0xD   | `AUX_R_GITHASH_L`     |R/O| [15:0] low 16-bits of 32-bit Git hash build identifier                              |
-| 0xE   | `AUX_R_UNUSED_E`      |R/O| [15:0] low 16-bits of 32-bit Git hash build identifier                              |
-| 0xF   | `AUX_R_UNUSED_F`      |R/O| [15:0] low 16-bits of 32-bit Git hash build identifier                              |
+| 0xE   | `AUX_R_UNUSED_E`      |R/O|                                                                                     |
+| 0xF   | `AUX_R_UNUSED_F`      |R/O|                                                                                     |

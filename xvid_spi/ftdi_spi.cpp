@@ -230,6 +230,13 @@ int host_spi_open()
 
     sleep(1);
 
+    // drain input
+    uint8_t dummy_data;
+    do
+    {
+        rc = ftdi_read_data(&ftdi_ctx, &dummy_data, 1);
+    } while (rc == 1);
+
     printf("Success.\n");
 
     return 0;

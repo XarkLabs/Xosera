@@ -204,7 +204,7 @@ SB_PLL40_PAD
 /* verilator lint_on PINMISSING */
 `else
 // for simulation use 1:1 input clock (and testbench can simulate proper frequency)
-assign pll_lock = 1'b0;
+assign pll_lock = 1'b1;
 assign pclk     = CLK;
 `endif
 
@@ -215,9 +215,6 @@ always_ff @(posedge pclk) begin
     // reset if pll_lock lost, or reset button or SPI reset
     if (!pll_lock || !nreset || spi_reset) begin
         reset       <= 1'b1;
-`ifdef SYNTHESIS
-        pll_lock    <= 1'b1;    // so reset asserted for one cycle in sim
-`endif
     end
     else begin
         reset       <= 1'b0;

@@ -109,32 +109,34 @@ always_ff @(posedge clk) begin
     else begin
         // video register write
         if (vgen_reg_wr_i) begin
-            case (vgen_reg_num_i[2:0])
-                xv::AUX_DISPSTART[2:0]: begin
+            case (vgen_reg_num_i[3:0])
+                xv::AUX_DISPSTART[3:0]: begin
                     text_start_addr <= vgen_reg_data_i;
                 end
-                xv::AUX_DISPWIDTH[2:0]: begin
+                xv::AUX_DISPWIDTH[3:0]: begin
                     text_line_width <= vgen_reg_data_i;
                 end
-                xv::AUX_SCROLLXY[2:0]: begin
+                xv::AUX_SCROLLXY[3:0]: begin
                     fine_scrollx    <= vgen_reg_data_i[11:8];
                     fine_scrolly    <= vgen_reg_data_i[4:0];
                 end
-                xv::AUX_FONTCTRL[2:0]: begin
+                xv::AUX_FONTCTRL[3:0]: begin
                     font_bank       <= vgen_reg_data_i[15:10];
                     font_use_vram   <= vgen_reg_data_i[8];
                     font_height     <= vgen_reg_data_i[3:0];
                 end
-                xv::AUX_GFXCTRL[2:0]: begin
+                xv::AUX_GFXCTRL[3:0]: begin
                     bm_enable       <= vgen_reg_data_i[15];
                     v_double        <= vgen_reg_data_i[1];
                     h_double        <= vgen_reg_data_i[0];
                 end
-                xv::AUX_UNUSED_5[2:0]: begin
+                xv::AUX_UNUSED_5[3:0]: begin
                 end
-                xv::AUX_UNUSED_6[2:0]: begin
+                xv::AUX_UNUSED_6[3:0]: begin
                 end
-                xv::AUX_UNUSED_7[2:0]: begin
+                xv::AUX_UNUSED_7[3:0]: begin
+                end
+                default: begin
                 end
             endcase
         end

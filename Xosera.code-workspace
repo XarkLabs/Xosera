@@ -19,6 +19,7 @@
 			"BRAM",
 			"Bamford",
 			"Blitter",
+			"Bogo",
 			"CDONE",
 			"CIPO",
 			"COLORTBL",
@@ -185,6 +186,15 @@
 				"keywords": "#54e9e9",
 				"numbers": "#fdfd52"
 			}
+		},
+		"files.associations": {
+			"*.sv": "systemverilog",
+			"array": "cpp",
+			"iterator": "cpp",
+			"string": "cpp",
+			"string_view": "cpp",
+			"vector": "cpp",
+			"ranges": "cpp"
 		}
 	}
 }

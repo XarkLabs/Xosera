@@ -112,7 +112,7 @@ video_gen video_gen(
 
 // audio generation (TODO)
 assign audio_l_o = dbug_cs_strobe;                    // TODO: audio
-assign audio_r_o = dbug_drive_bus;                    // TODO: audio
+assign audio_r_o = blit_aux_sel; //dbug_drive_bus;                    // TODO: audio
 
 logic dbug_cs_strobe;               // TODO debug ACK signal
 logic dbug_drive_bus;               // TODO debug bus output signal

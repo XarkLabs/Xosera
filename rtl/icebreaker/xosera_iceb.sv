@@ -78,11 +78,10 @@ logic       spi_sck;                    // SPI clock from controller
 logic       spi_copi;                   // SPI controller out/peripheral in
 logic       spi_cipo;                   // SPI controller in/peripheral out
 logic       spi_cs_n;                   // SPI CS for FPGA from controller
-
 `endif
 
-logic  spi_reset;                       // SPI "soft" reset
-assign nreset       = BTN_N;            // active LOW reset button
+logic       spi_reset   = 1'b0;         // SPI "soft" reset (if SPI_INTERFACE)
+assign      nreset      = BTN_N;        // active LOW reset button
 
 // split tri-state data lines into in/out signals for inside FPGA
 logic bus_out_ena;

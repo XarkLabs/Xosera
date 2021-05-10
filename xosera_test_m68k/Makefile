@@ -8,7 +8,7 @@ ifndef ROSCO_M68K_DIR
 $(error Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
 endif
 
-EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer -save-temps
+EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer
 #EXTRA_VASMFLAGS?=-showopt
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
 SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib

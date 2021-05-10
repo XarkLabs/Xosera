@@ -85,7 +85,7 @@ typedef struct _xreg
 #define XVA_unused_f  0xF
 
 // Xosera register base ptr
-extern volatile xreg_t * xosera_ptr;
+extern volatile xreg_t * const xosera_ptr;
 
 // set high byte of xosera_reg xr to 8-bit byte bh
 #define xv_setbh(xr, bh) (xosera_ptr[XVR_##xr >> 2].b.h = (bh))

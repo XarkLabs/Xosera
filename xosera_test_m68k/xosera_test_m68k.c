@@ -27,12 +27,10 @@
 
 // Define rosco_m68k Xosera board base address pointer (See
 // https://github.com/rosco-m68k/hardware-projects/blob/feature/xosera/xosera/code/pld/decoder/ic3_decoder.pld#L25)
-volatile xreg_t * xosera_ptr = (volatile xreg_t *)0xf80060;        // rosco_m68k Xosera base
+volatile xreg_t * const xosera_ptr = (volatile xreg_t * const)0xf80060;        // rosco_m68k Xosera base
 
 // dummy global variable
 uint32_t global;        // this is used to prevent the compiler from optimizing out tests
-
-uint16_t CPU_MHz;
 
 // timer helpers
 static uint32_t start_tick;
@@ -73,9 +71,6 @@ bool checkchar()
 
 bool delay_check(int ms)
 {
-    (void)ms;
-    __asm__ __volatile__("nop");
-#if 0
     while (ms > 0)
     {
         if (checkchar())
@@ -91,7 +86,7 @@ bool delay_check(int ms)
         delay(d);
         ms -= d;
     }
-#endif
+
     return false;
 }
 
@@ -137,7 +132,7 @@ void test_hello()
         }
     }
     //    printf("], ending rd_addr = 0x%04x\n", xv_getw(rd_addr));
-    printf("%s ending rd_addr = 0x%04x\n", good ? "Good" : "bad", xv_getw(rd_addr));
+    printf("%s] Ending rd_addr = 0x%04x\n", good ? "Good" : "bad", xv_getw(rd_addr));
 }
 
 uint32_t mem_buffer[1];
@@ -221,36 +216,38 @@ void test_vram_speed()
     printf("MOVE.L  main RAM read   128KB x 16 (2MB)    %d ms (%d KB/sec)\n", elapsed, (1000 * 128 * reps) / elapsed);
 }
 
+uint16_t rosco_m68k_CPUMHz()
+{
+    uint32_t count;
+    uint32_t tv;
+    __asm__ __volatile__(
+        "   moveq.l #0,%[count]\n"
+        "   move.w  _TIMER_100HZ+2.w,%[tv]\n"
+        "0: cmp.w   _TIMER_100HZ+2.w,%[tv]\n"
+        "   beq.s   0b\n"
+        "   move.w  _TIMER_100HZ+2.w,%[tv]\n"
+        "1: addq.w  #1,%[count]\n"                   //   4  cycles
+        "   cmp.w   _TIMER_100HZ+2.w,%[tv]\n"        //  12  cycles
+        "   beq.s   1b\n"                            // 10/8 cycles (taken/not)
+        : [count] "=d"(count), [tv] "=&d"(tv)
+        :
+        :);
+    uint16_t MHz = ((count * 26) + 500) / 1000;
+    printf("rosco_m68k: m68k CPU speed %d.%d MHz (BogoMIPS %d @ 26 cyc/loop estimated)\n", MHz / 10, MHz % 10, count);
+
+    return MHz / 10;
+}
+
 uint32_t test_count;
 void     xosera_test()
 {
     while (true)
     {
-#if 1        // BUG: if this is present
+        rosco_m68k_CPUMHz();
         printf("\n*** xosera_test_m68k iteration: %d\n", test_count++);
-        {
-            uint32_t count;
-            uint32_t tv = 0;
-            __asm__ __volatile__(
-                "   moveq.l #0,%[count]\n"
-                "   move.w  _TIMER_100HZ+2.w,%[tv]\n"
-                "0: cmp.w   _TIMER_100HZ+2.w,%[tv]\n"
-                "   beq.s   0b\n"
-                "   move.w  _TIMER_100HZ+2.w,%[tv]\n"
-                "1: addq.w  #1,%[count]\n"                   //   4  cycles
-                "   cmp.w   _TIMER_100HZ+2.w,%[tv]\n"        //  12  cycles
-                "   beq.s   1b\n"                            // 10/8 cycles (taken/not)
-                : [count] "=d"(count)
-                : [tv] "d"(
-                    tv)        // <=== I think this is the root issue (I don't tell gcc I am trashing the "zero" input)
-                :);
-            CPU_MHz = ((count * 27) + 5000) / 10000;
-            printf("rosco_m68k: BogoMIPS %d, %d MHz (estimated)\n", count, CPU_MHz);
-        }
 
-        printf("xosera_init(-1)...");
-#endif
-        if (xosera_init(-1))
+        printf("xosera_init(0)...");
+        if (xosera_init(0))
         {
             printf("success.\n");
         }
@@ -268,8 +265,7 @@ void     xosera_test()
         uint16_t width    = xv_reg_getw(vidwidth);
         uint16_t height   = xv_reg_getw(vidheight);
         uint16_t features = xv_reg_getw(features);
-        xv_reg_setw(dispstart, 0x0123);
-        xv_aux_setw(XVA_dispstart, 0x0123);        // <== BUG this doesn't make it to Xosera HW (on -O3)
+        xv_reg_setw(dispstart, test_count);
         uint16_t dispstart = xv_reg_getw(dispstart);
         uint16_t dispwidth = xv_reg_getw(dispwidth);
         uint16_t scrollxy  = xv_reg_getw(scrollxy);
@@ -277,7 +273,6 @@ void     xosera_test()
 
         printf("Xosera #%08x\n", githash);
         printf("Mode: %dx%d  Features:0x%04x\n", width, height, features);
-        printf("poke dispstart, 0x%04x\n", 0x0123);
         printf("dispstart:0x%04x dispwidth:0x%04x\n", dispstart, dispwidth);
         printf(" scrollxy:0x%04x   gfxctrl:0x%04x\n", scrollxy, gfxctrl);
 
@@ -287,13 +282,13 @@ void     xosera_test()
         }
 
         test_hello();
-        if (delay_check(3000))
+        if (delay_check(2000))
         {
             break;
         }
 
         test_vram_speed();
-        if (delay_check(3000))
+        if (delay_check(2000))
         {
             break;
         }

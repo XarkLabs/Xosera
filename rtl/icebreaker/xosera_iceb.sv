@@ -46,7 +46,7 @@ module xosera_iceb(
         output logic P1A1, P1A2, P1A3, P1A4, P1A7, P1A8, P1A9, P1A10,   // PMOD 1A
         output logic P1B1, P1B2, P1B3, P1B4, P1B7, P1B8, P1B9, P1B10,   // PMOD 1B
 `ifdef SPI_INTERFACE
-        output logic P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10,   // PMOD 2 (8-bit bi-dir data bus)
+// DBUG        output logic P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10,   // PMOD 2 (8-bit bi-dir data bus)
 `else
         inout  logic P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10,   // PMOD 2 (8-bit bi-dir data bus)
 `endif
@@ -280,7 +280,7 @@ assign bus_reg_num          = spi_cmd_byte[3:0];                        // regis
 assign bus_data_in          = spi_data_byte;                            // bus data to write
 assign spi_transmit_data    = spi_payload_byte ? bus_data_out : 8'hCB;  // bus data to read
 
-assign { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 } = spi_cmd_byte;  // TODO debug
+// DBUG assign { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 } = spi_cmd_byte;  // TODO debug
 
 always_ff @(posedge pclk) begin
     spi_cs_hold0        <= spi_cs_hold1;                 // clear held CS

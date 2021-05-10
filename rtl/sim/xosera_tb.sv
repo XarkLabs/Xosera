@@ -240,7 +240,7 @@ always @(negedge clk) begin
         if (xosera.vram.sel && xosera.vram.wr_en) begin
             $display("%0t Write VRAM[%04x] <= %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
         end
-        else if (xosera.vram.sel && !xosera.vgen_sel) begin
+        else if (xosera.vram.sel && !xosera.vgen_vram_sel) begin
             flag <= 1;
         end
     end

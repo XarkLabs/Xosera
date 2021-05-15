@@ -194,7 +194,9 @@
 			"string": "cpp",
 			"string_view": "cpp",
 			"vector": "cpp",
-			"ranges": "cpp"
+			"ranges": "cpp",
+			"ios": "c",
+			"chrono": "c"
 		}
 	}
 }

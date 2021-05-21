@@ -114,34 +114,32 @@ TODO The above registers most likely need to be multiplexed for "plane B" contro
  <tr>
  <tr>
   <td>0x0</td>
-  <td><code>GFXCTRL</code></td>
-  <td colspan="5" align="center">tile addr B</td>
-  <td colspan="1" align="center">H2X B</td>
-  <td colspan="1" align="center">V2X B</td>
-  <td colspan="1" align="center">B ena</td>
-  <td colspan="5" align="center">tile addr A</td>
-  <td colspan="1" align="center">H2X A</td>
-  <td colspan="1" align="center">V2X A</td>
-  <td colspan="1" align="center">A ena</td>
+  <td><code>GFXCTRL_A/B</code></td>
+  <td colspan="5" align="center">tilemap addr [15:11]</td>
+  <td colspan="2" align="center">-</td>
+  <td colspan="1" align="center">tile VRAM</td>
+  <td colspan="4" align="center">Font height-1 [7:4]</td>
+  <td colspan="1" align="center">H dbl.</td>
+  <td colspan="1" align="center">V dbl.</td>
+  <td colspan="1" align="center">4-bit</td>
+  <td colspan="1" align="center">bitmap</td>
  </tr>
   <td>0x1</td>
-  <td><code>DISPSTART</code></td>
-  <td colspan="16" align="center">VRAM word address [15:0]</td>
+  <td><code>SCROLL_A/B</code></td>
+  <td colspan="3" align="center">-</td>
+  <td colspan="5" align="center">V offset [12:8]</td>
+  <td colspan="4" align="center">-</td>
+  <td colspan="4" align="center">H offset [3:0]</td>
  </tr>
  <tr>
   <td>0x2</td>
-  <td><code>DISPWIDTH</code></td>
-  <td colspan="16" align="center">words per tile or bitmap line [15:0]</td>
+  <td><code>DISPSTART_A/B</code></td>
+  <td colspan="16" align="center">VRAM addres [15:0]</td>
  </tr>
  <tr>
   <td>0x3</td>
-  <td><code>FONTCTRL</code></td>
-  <td colspan="1" align="center">tiled</td>
-  <td colspan="1" align="center">VRAM</td>
-  <td colspan="1" align="center">-</td>
-  <td colspan="5" align="center">V offset [4:0]</td>
-  <td colspan="4" align="center">Font height-1 [15:12]</td>
-  <td colspan="4" align="center">H offset [11:8]</td>
+  <td><code>DISPWIDTH_A/B</code></td>
+  <td colspan="16" align="center">words per line [15:0]</td>
  </tr>
 </table>
 

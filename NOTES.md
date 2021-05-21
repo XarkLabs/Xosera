@@ -93,37 +93,56 @@ TODO The above registers most likely need to be multiplexed for "plane B" contro
 <table>
  <tr>
   <th>Reg #</th>
-  <th>Name</th>
-  <th>bit&nbsp;15</th>
-  <th>bit&nbsp;14</th>
-  <th>bit&nbsp;13</th>
-  <th>bit&nbsp;12</th>
-  <th>bit&nbsp;11</th>
-  <th>bit&nbsp;10</th>
-  <th>bit&nbsp;9</th>
-  <th>bit&nbsp;8</th>
-  <th>bit&nbsp;7</th>
-  <th>bit&nbsp;6</th>
-  <th>bit&nbsp;5</th>
-  <th>bit&nbsp;4</th>
-  <th>bit&nbsp;3</th>
-  <th>bit&nbsp;2</th>
-  <th>bit&nbsp;1</th>
-  <th>bit&nbsp;0</th>
- </tr>
+  <th>15</th>
+  <th>14</th>
+  <th>13</th>
+  <th>12</th>
+  <th>11</th>
+  <th>10</th>
+  <th>9</th>
+  <th>8</th>
+  <th>7</th>
+  <th>6</th>
+  <th>5</th>
+  <th>4</th>
+  <th>3</th>
+  <th>2</th>
+  <th>1</th>
+  <th>0</th>
+  </tr>
  <tr>
  <tr>
   <td>0x0</td>
-  <td><code>GFXCTRL_A/B</code></td>
   <td colspan="5" align="center">tilemap addr [15:11]</td>
   <td colspan="2" align="center">-</td>
-  <td colspan="1" align="center">tile VRAM</td>
+  <td colspan="1" align="center">tile in VRAM</td>
   <td colspan="4" align="center">Font height-1 [7:4]</td>
   <td colspan="1" align="center">H dbl.</td>
   <td colspan="1" align="center">V dbl.</td>
   <td colspan="1" align="center">4-bit</td>
   <td colspan="1" align="center">bitmap</td>
  </tr>
+</table>
+
+<table>
+ <tr>
+  <th>15</th>
+  <th>14</th>
+  <th>13</th>
+  <th>12</th>
+  <th>11</th>
+  <th>10</th>
+  <th>9</th>
+  <th>8</th>
+  <th>7</th>
+  <th>6</th>
+  <th>5</th>
+  <th>4</th>
+  <th>3</th>
+  <th>2</th>
+  <th>1</th>
+  <th>0</th>
+  </tr>
   <td>0x1</td>
   <td><code>SCROLL_A/B</code></td>
   <td colspan="3" align="center">-</td>

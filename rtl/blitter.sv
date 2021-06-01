@@ -384,10 +384,10 @@ always_ff @(posedge clk) begin
                     blit_wr_o       <= 1'b1;
 `ifdef TESTPATTERN
                     if (reg_wr_addr[3:0] == 4'h1) begin
-                        blit_data_o     <= { 8'h1f, reg_wr_addr[15:8] };
+                        blit_data_o     <= { 8'h02, reg_wr_addr[15:8] };
                     end
                     else if (reg_wr_addr[3:0] == 4'h2) begin
-                        blit_data_o     <= { 8'h1f, reg_wr_addr[7:4], 4'h0 };
+                        blit_data_o     <= { 8'h02, reg_wr_addr[7:4], 4'h0 };
                     end
                     else begin
                         blit_data_o     <= {(reg_wr_addr[7:4] ^ 4'b1111), reg_wr_addr[7:4], reg_wr_addr[7:0] };

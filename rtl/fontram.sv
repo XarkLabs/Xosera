@@ -36,7 +36,7 @@ module fontram(
     input  logic [15:0]  wr_data_i
 );
 // infer 8x8KB font BRAM
-logic [15: 0] bram[4095: 0];
+logic [15: 0] bram[0 : 4095];
 `ifndef SHOW        // yosys show command doesn't like "too long" init string
 initial begin
 
@@ -46,13 +46,13 @@ initial begin
     $readmemb("fonts/font_ST_8x16w.mem", bram, 0);
 `endif
 `ifdef FONT_FILE_1
- //   $readmemb(`FONT_FILE_1, bram, `FONT_ADDR_1);
+    $readmemb(`FONT_FILE_1, bram, `FONT_ADDR_1);
 `endif
 `ifdef FONT_FILE_2
-//    $readmemb(`FONT_FILE_2, bram, `FONT_ADDR_2);
+    $readmemb(`FONT_FILE_2, bram, `FONT_ADDR_2);
 `endif
 `ifdef FONT_FILE_3
- //   $readmemb(`FONT_FILE_3, bram, `FONT_ADDR_3);
+    $readmemb(`FONT_FILE_3, bram, `FONT_ADDR_3);
 `endif
 end
 `endif

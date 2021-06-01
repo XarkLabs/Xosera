@@ -143,6 +143,7 @@ static void xprint(const char * str)
 {
     xv_setw(wr_inc, 1);
     xv_setw(wr_addr, screen_addr + (text_v * text_columns) + text_h);
+    xv_setbh(data, text_color);
 
     char c;
     while ((c = *str++) != '\0')
@@ -194,6 +195,69 @@ static void xprint(const char * str)
     }
 }
 
+static void xprint_rainbow(const char * str)
+{
+    xv_setw(wr_inc, 1);
+    xv_setw(wr_addr, screen_addr + (text_v * text_columns) + text_h);
+    xv_setbh(data, text_color);
+
+    char c;
+    while ((c = *str++) != '\0')
+    {
+        if ((uint8_t)c >= ' ')
+        {
+            xv_setbl(data, c);
+            if (++text_h >= text_columns)
+            {
+                text_h = 0;
+                if (++text_v >= text_rows)
+                {
+                    text_v = 0;
+                }
+            }
+            continue;
+        }
+        switch (c)
+        {
+            case '\r':
+                text_h = 0;
+                xv_setw(wr_addr, screen_addr + (text_v * text_columns) + text_h);
+                break;
+            case '\n':
+                text_h = 0;
+                if (++text_v >= text_rows)
+                {
+                    text_v = text_rows - 1;
+                }
+                xv_setw(wr_addr, screen_addr + (text_v * text_columns) + text_h);
+                text_color = ((text_color + 1) & 0xf);
+                if (!text_color)
+                {
+                    text_color++;
+                }
+                xv_setbh(data, text_color);
+                break;
+            case '\b':
+                if (--text_h < 0)
+                {
+                    text_h = text_columns - 1;
+                    if (--text_v < 0)
+                    {
+                        text_v = 0;
+                    }
+                }
+                xv_setw(wr_addr, screen_addr + (text_v * text_columns) + text_h);
+                break;
+            case '\f':
+                xcls();
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+
 static char xprint_buff[4096];
 static void xprintf(const char * fmt, ...)
 {
@@ -202,6 +266,42 @@ static void xprintf(const char * fmt, ...)
     vsnprintf(xprint_buff, sizeof(xprint_buff), fmt, args);
     xprint(xprint_buff);
     va_end(args);
+}
+
+const char blurb[] =
+    "\n"
+    "Xosera is an FPGA based video adapter designed with the rosco_m68k retro\n"
+    "computer in mind. Inspired in concept by it's \"namesake\" the Commander X16's\n"
+    "VERA, Xosera is an original open-source video adapter design, built with open-\n"
+    "source tools, that is being tailored with features appropriate for a Motorola\n"
+    "68K era retro computer, such as the rosco_m68k (or even an 8-bit CPU).\n"
+    "\n"
+    "  \xf9  VGA or HDMI/DVI output at 848x480 or 640x480 (16:9 or 4:3 @ 60Hz)\n"
+    "  \xf9  256 color palette out of 4096 colors (12-bit RGB)\n"
+    "  \xf9  128KB of embedded video RAM (16-bit words @33/25 MHz)\n"
+    "  \xf9  Register based interface with 16 16-bit registers\n"
+    "  \xf9  Read/write VRAM with programmable read/write address increment\n"
+    "  \xf9  Fast 8-bit bus interface (using MOVEP) for rosco_m68k (by Ross Bamford)\n"
+    "  \xf9  Fonts writable in VRAM or in dedicated 8KB of font memory\n"
+    "  \xf9  Multiple fonts (2KB per 8x8 fonts, 4K per 8x16 font)\n"
+    "  \xf9  8x8 or 8x16 character tile size (or truncated e.g., 8x10)\n"
+    "  \xf9  Character tile based modes with color attribute byte\n"
+    "  \xf9  Horizontal and/or veritical pixel doubling (e.g. 424x240 or 320x240)\n"
+    "  \xf9  Smooth horizontal and vertical tile scrolling\n"
+    "  \xf9  2-color full-res bitmap mode (with attribute per 8 pixels, ala Sinclair)\n"
+    "  \xf9  TODO: Two 16 color \"planes\" or combined for 256 colors\n"
+    "  \xf9  TODO: Bit-mapped 16 and 256 color graphics modes\n"
+    "  \xf9  TODO: 16-color tile mode with \"game\" attributes (e.g., mirroring)\n"
+    "  \xf9  TODO: \"Blitter\" for fast VRAM copy & fill operations\n"
+    "  \xf9  TODO: 2-D operations \"blitter\" with modulo and shifting/masking\n"
+    "  \xf9  TODO: At least one \"cursor\" sprite (or more)\n"
+    "  \xf9  TODO: Wavetable stereo audio (spare debug GPIOs for now)\n";
+
+void test_blurb()
+{
+    // Show some text
+    //    xcls();
+    xprint_rainbow(blurb);
 }
 
 void test_hello()
@@ -360,7 +460,7 @@ uint16_t rosco_m68k_CPUMHz()
         :
         :);
     uint16_t MHz = ((count * 26) + 500) / 1000;
-    xprintf("rosco_m68k: m68k CPU speed %d.%d MHz (BogoMIPS %d @ 26 cyc/loop estimated)\n", MHz / 10, MHz % 10, count);
+    xprintf("rosco_m68k: m68k CPU speed %d.%d MHz (estimated, BogoMIPS %d @ 26 cyc/loop)\n", MHz / 10, MHz % 10, count);
 
     return MHz / 10;
 }
@@ -388,7 +488,7 @@ void     xosera_demo()
         xprintf("*** xosera_test_m68k iteration: %d\n", test_count++);
         rosco_m68k_CPUMHz();
 
-        delay_check(10000);
+        delay_check(5000);
 
         uint32_t githash   = (xv_reg_getw(githash_h) << 16) | xv_reg_getw(githash_l);
         uint16_t width     = xv_reg_getw(vidwidth);
@@ -408,6 +508,12 @@ void     xosera_demo()
         {
             break;
         }
+
+        xcolor(0x02);
+        xcls();
+        rosco_m68k_CPUMHz();
+        test_blurb();
+        delay_check(15000);
 
         test_hello();
         if (delay_check(3000))

@@ -10,6 +10,9 @@
 # rpt files
 *.rpt
 
+# rpt files
+*.vcd
+
 # log directories
 **/log*/*
 
@@ -17,11 +20,28 @@
 **/dot/*
 
 # Verilator output
-sim/obj_dir/*
+rtl/sim/obj_dir/*
+
+# iVerilog output files
+rtl/sim/xosera_tb
 
 # host_spi executable
 host_spi/host_spi
 
-# iVerilog output files
-sim/xosera_tb
-sim/xosera_tb.vcd
+# executables
+utils/image_to_mem
+xvid_spi/xvid_spi
+
+# object files
+**/*.o
+
+# rosco files
+**_m68k/*.elf
+**_m68k/*.s
+**_m68k/*.i
+**_m68k/*.sym
+**_m68k/*.dis
+**_m68k/*.map
+
+# macOS thing
+.DS_Store

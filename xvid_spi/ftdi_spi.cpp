@@ -21,7 +21,7 @@ unsigned int         chunksize;                 // set on open to the maximum si
 static bool          ftdi_device_opened;        // true if device was opened (and should be closed at exit)
 static bool          ftdi_set_device_latency;        // true if latency was set (and should be restored at exit)
 static unsigned char ftdi_original_latency;          // saved original FTDI latency value
-static bool          slow_clock = true;
+static bool          slow_clock = false;
 
 static struct ftdi_context ftdi_ctx;        // context for libftdi
 
@@ -220,14 +220,22 @@ int host_spi_open()
     }
     else        // normal
     {
-        // 12 Mhz / (0 + 1 * 2) = 6 MHz
+
+
         ftdi_put_byte(EN_DIV_5);
         ftdi_put_byte(TCK_DIVISOR);
-        ftdi_put_word(0x00);
+        // ftdi_put_word(0x0);        // 12 Mhz / (0 + 1 * 2) = 6 MHz (too fast!)
+        ftdi_put_word(0x2);        // 12 Mhz / (2 + 1 * 2) = 2 MHz
     }
 
-
     sleep(1);
+
+    // drain input
+    uint8_t dummy_data;
+    do
+    {
+        rc = ftdi_read_data(&ftdi_ctx, &dummy_data, 1);
+    } while (rc == 1);
 
     printf("Success.\n");
 
@@ -236,6 +244,7 @@ int host_spi_open()
 
 int host_spi_close()
 {
+    host_spi_cs(true);
     host_spi_cleanup();
 
     return 0;
@@ -245,6 +254,8 @@ static void host_spi_cleanup()
 {
     if (ftdi_device_opened)
     {
+        host_spi_cs(true);
+
         if (ftdi_set_device_latency)
         {
             ftdi_set_latency_timer(&ftdi_ctx, ftdi_original_latency);

@@ -33,6 +33,13 @@ upd:
 	$(MAKE) -f upduino.mk
 	@echo Type \"make upd_prog\" to program the UPduino via USB
 
+# Build combo Xosera UPduino 3.x FPGA bitstream for rosco_m6k board
+xosera_board:
+	$(MAKE) -f upduino.mk clean
+	VIDEO_MODE=MODE_640x480 $(MAKE) -f upduino.mk
+	VIDEO_MODE=MODE_848x480 $(MAKE) -f upduino.mk
+	@echo Type \"make xosera_prog\" to program the UPduino via USB
+
 # Build Xosera iCEBreaker FPGA bitstream
 iceb:
 	$(MAKE) -f icebreaker.mk
@@ -41,6 +48,11 @@ iceb:
 # Build and program Xosera UPduino 3.x FPGA bitstream
 upd_prog:
 	$(MAKE) -f upduino.mk prog
+
+# Build and program combo Xosera UPduino 3.x FPGA bitstream for rosco_m6k board
+xosera_prog:
+	VIDEO_MODE=MODE_640x480 $(MAKE) -f upduino.mk
+	VIDEO_MODE=MODE_848x480 $(MAKE) -f upduino.mk prog
 
 # Build and program Xosera iCEBreaker FPGA bitstream
 iceb_prog:
@@ -52,4 +64,4 @@ clean:
 	$(MAKE) -f upduino.mk clean
 	$(MAKE) -f icebreaker.mk clean
 
-.PHONY: all prog sim isim irun vsim vrun upd iceb iceb_prog upd_prog clean
+.PHONY: all prog sim isim irun vsim vrun upd iceb xosera_board iceb_prog upd_prog xosera_prog clean

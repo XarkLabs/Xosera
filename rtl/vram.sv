@@ -49,33 +49,32 @@ end
 
 `else
 
-logic   [3:0] select;           // bit for currently selected bank
-logic   [3:0] read_select;      // selected bank from last access for read
+logic         select0;          // bank0 selected
 logic [15: 0] data0;            // data output from bank0
+logic         select1;          // bank1 selected  
 logic [15: 0] data1;            // data output from bank1
+logic         select2;          // bank2 selected  
 logic [15: 0] data2;            // data output from bank2
+logic         select3;          // bank3 selected  
 logic [15: 0] data3;            // data output from bank3
+logic   [1:0] read_bank;      // selected bank from last access for read
 
-assign select = {(address_in[15:14] == 2'b00),
-                 (address_in[15:14] == 2'b01),
-                 (address_in[15:14] == 2'b10),
-                 (address_in[15:14] == 2'b11)};
+assign select0   =  (address_in[15:14] == 2'b00);
+assign select1   =  (address_in[15:14] == 2'b01);
+assign select2   =  (address_in[15:14] == 2'b10);
+assign select3   =  (address_in[15:14] == 2'b11);
 
 always_ff @(posedge clk) begin
-    read_select <= select;      // save currently selected banks
+    read_bank <= address_in[15:14];      // save currently selected bank
 end
 
 always_comb begin
-    data_out = data0;
-    if (read_select[1]) begin
-        data_out = data1;
-    end
-    else if (read_select[2]) begin
-        data_out = data2;
-    end
-    else if (read_select[3]) begin
-        data_out = data3;
-    end
+    case (read_bank)
+        2'b00: data_out = data0;
+        2'b01: data_out = data1;
+        2'b10: data_out = data2;
+        2'b11: data_out = data3;
+    endcase
 end
 
 SB_SPRAM256KA umem0 (
@@ -83,7 +82,7 @@ SB_SPRAM256KA umem0 (
                   .DATAIN(data_in),
                   .MASKWREN(4'b1111),
                   .WREN(wr_en),
-                  .CHIPSELECT(select[0]),
+                  .CHIPSELECT(select0),
                   .CLOCK(clk),
                   .STANDBY(1'b0),
                   .SLEEP(1'b0),
@@ -95,7 +94,7 @@ SB_SPRAM256KA umem1 (
                   .DATAIN(data_in),
                   .MASKWREN(4'b1111),
                   .WREN(wr_en),
-                  .CHIPSELECT(select[1]),
+                  .CHIPSELECT(select1),
                   .CLOCK(clk),
                   .STANDBY(1'b0),
                   .SLEEP(1'b0),
@@ -107,7 +106,7 @@ SB_SPRAM256KA umem2 (
                   .DATAIN(data_in),
                   .MASKWREN(4'b1111),
                   .WREN(wr_en),
-                  .CHIPSELECT(select[2]),
+                  .CHIPSELECT(select2),
                   .CLOCK(clk),
                   .STANDBY(1'b0),
                   .SLEEP(1'b0),
@@ -119,7 +118,7 @@ SB_SPRAM256KA umem3 (
                   .DATAIN(data_in),
                   .MASKWREN(4'b1111),
                   .WREN(wr_en),
-                  .CHIPSELECT(select[3]),
+                  .CHIPSELECT(select3),
                   .CLOCK(clk),
                   .STANDBY(1'b0),
                   .SLEEP(1'b0),

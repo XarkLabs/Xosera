@@ -58,7 +58,7 @@ INC := $(wildcard $(SRCDIR)/*.svh)
 BUS_INTERFACE	:= 1
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K
 
 ifeq ($(strip $(BUS_INTERFACE)),1)
 DEFINES += -DBUS_INTERFACE
@@ -112,6 +112,7 @@ vrun: sim/obj_dir/V$(VTOP) sim.mk
 
 # run Verilator to build and run native simulation executable
 irun: sim/$(TBTOP) sim.mk
+	@mkdir -p $(LOGS)
 	sim/$(TBTOP) 2>&1 | tee $(LOGS)/$(TBTOP)_isim.log
 
 # use Verilator to build native simulation executable

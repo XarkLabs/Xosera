@@ -145,7 +145,7 @@ endtask
 
 
 `ifdef BUSTEST
-
+/* verilator lint_off LATCH */
 always begin
     bus_cs_n = 1'b1;
     bus_rd_nwr = 1'b0;
@@ -256,6 +256,7 @@ always begin
 
 `endif
 end
+/* verilator lint_on LATCH */
 `endif
 
 integer flag = 0;

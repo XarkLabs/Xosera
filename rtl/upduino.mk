@@ -80,7 +80,7 @@ ICEMULTI := icemulti
 YOSYS_SYNTH_ARGS := -dsp  -abc2 -relut -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K -DUPDUINO
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K -DUPDUINO
 
 # Verilator tool (used for "lint")
 VERILATOR := verilator

@@ -359,7 +359,6 @@ int main(int argc, char ** argv)
     bool take_shot = false;
 
 #endif        // SDL_RENDER
-    bool warn_height        = false;
     int  current_x          = 0;
     int  current_y          = 0;
     bool vga_hsync_previous = !H_SYNC_POLARITY;
@@ -399,7 +398,8 @@ int main(int argc, char ** argv)
         top->eval();
 
 #if VM_TRACE
-        if (frame_num <= MAX_TRACE_FRAMES) tfp->dump(main_time);
+        if (frame_num <= MAX_TRACE_FRAMES)
+            tfp->dump(main_time);
 #endif
         main_time++;
 
@@ -407,7 +407,8 @@ int main(int argc, char ** argv)
         top->eval();
 
 #if VM_TRACE
-        if (frame_num <= MAX_TRACE_FRAMES) tfp->dump(main_time);
+        if (frame_num <= MAX_TRACE_FRAMES)
+            tfp->dump(main_time);
 #endif
         main_time++;
 
@@ -463,28 +464,34 @@ int main(int argc, char ** argv)
 #endif
         current_x++;
 
-        if (hsync) hsync_count++;
+        if (hsync)
+            hsync_count++;
 
         // end of hsync
         if (!hsync && vga_hsync_previous)
         {
-            if (hsync_count > hsync_max) hsync_max = hsync_count;
-            if (hsync_count < hsync_min || !hsync_min) hsync_min = hsync_count;
+            if (hsync_count > hsync_max)
+                hsync_max = hsync_count;
+            if (hsync_count < hsync_min || !hsync_min)
+                hsync_min = hsync_count;
             hsync_count = 0;
 
-            if (current_x > x_max) x_max = current_x;
+            if (current_x > x_max)
+                x_max = current_x;
 
             current_x = 0;
             current_y++;
 
-            if (vsync) vsync_count++;
+            if (vsync)
+                vsync_count++;
         }
 
         vga_hsync_previous = hsync;
 
         if (!vsync && vga_vsync_previous)
         {
-            if (current_y - 1 > y_max) y_max = current_y - 1;
+            if (current_y - 1 > y_max)
+                y_max = current_y - 1;
 
             if (frame_num > 0)
             {

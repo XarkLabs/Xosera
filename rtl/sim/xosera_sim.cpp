@@ -359,7 +359,7 @@ int main(int argc, char ** argv)
     bool take_shot = false;
 
 #endif        // SDL_RENDER
-
+    bool warn_height        = false;
     int  current_x          = 0;
     int  current_y          = 0;
     bool vga_hsync_previous = !H_SYNC_POLARITY;
@@ -549,6 +549,10 @@ int main(int argc, char ** argv)
             if (TOTAL_HEIGHT == y_max + 1)
             {
                 frame_num += 1;
+            }
+            else if (TOTAL_HEIGHT <= y_max)
+            {
+                printf("line %d >= TOTAL_HEIGHT\n", y_max);
             }
         }
 

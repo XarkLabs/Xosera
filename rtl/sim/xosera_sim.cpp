@@ -361,7 +361,7 @@ int main(int argc, char ** argv)
 #endif        // SDL_RENDER
 
     int  current_x          = 0;
-    int  current_y          = 24;
+    int  current_y          = 0;
     bool vga_hsync_previous = !H_SYNC_POLARITY;
     bool vga_vsync_previous = !V_SYNC_POLARITY;
     int  frame_num          = 0;
@@ -545,6 +545,7 @@ int main(int argc, char ** argv)
                 printf("Exiting simulation.\n");
                 break;
             }
+
             if (TOTAL_HEIGHT == y_max + 1)
             {
                 frame_num += 1;

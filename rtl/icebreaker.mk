@@ -90,7 +90,7 @@ DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MOD
 
 # Verilator tool (used for "lint")
 VERILATOR := verilator
-VERILATOR_ARGS := -I$(SRCDIR)-Iicebreaker -Wall -Wno-DECLFILENAME -Wno-UNUSED
+VERILATOR_ARGS := -I$(SRCDIR) -Wall -Wno-DECLFILENAME -Wno-UNUSED
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools

@@ -40,6 +40,12 @@ endif
 #	MODE_1280x720	1280x720@60Hz	clock 74.176 (73.500) MHz [fails timing]
 VIDEO_MODE ?= MODE_848x480
 
+# Xosera video output selection:
+# Supported video outputs:
+#   PMOD_1B2_DVI12		12-bit DVI, PMOD 1A&1B	https://1bitsquared.com/products/pmod-digital-video-interface
+#   PMOD_DIGILENT_VGA		12-bit VGA, PMOD 1A&1B	https://store.digilentinc.com/pmod-vga-video-graphics-array/
+VIDEO_OUTPUT ?= PMOD_DIGILENT_VGA
+
 FONTFILES := $(wildcard ../fonts/*.mem)
 
 # RTL source and include directory
@@ -80,11 +86,11 @@ ICEMULTI := icemulti
 YOSYS_SYNTH_ARGS := -dsp  -abc2 -relut -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K -DUPDUINO
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
 
 # Verilator tool (used for "lint")
 VERILATOR := verilator
-VERILATOR_ARGS := -I$(SRCDIR) -Iupduino -Wall -Wno-DECLFILENAME -Wno-UNUSED
+VERILATOR_ARGS := -I$(SRCDIR) -Wall -Wno-DECLFILENAME -Wno-UNUSED
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
@@ -93,11 +99,11 @@ NEXTPNR_ARGS := --pre-pack $(SDC) --placer heap --opt-timing
 
 # defult target is make bitstream
 all: upduino/$(TOP)_$(VIDEO_MODE).bin upduino.mk
-	@echo === Finished Building UPduino Xosera ===
+	@echo === Finished Building UPduino Xosera: $(VIDEO_OUTPUT) ===
 
 # program UPduino FPGA via USB (may need udev rules or sudo on Linux)
 prog: upduino/$(TOP)_$(VIDEO_MODE).bin upduino.mk
-	@echo === Programming UPduino Xosera ===
+	@echo === Programming UPduino Xosera: $(VIDEO_OUTPUT) ===
 	$(ICEPROG) -d i:0x0403:0x6014 $(TOP).bin
 
 # run icetime to generate a timing report
@@ -134,7 +140,7 @@ upduino/%_$(VIDEO_MODE).asc: upduino/%_$(VIDEO_MODE).json $(PIN_DEF) $(SDC) updu
 	@mkdir -p $(LOGS)
 	@-cp $(TOP)_stats.txt $(LOGS)/$(TOP)_stats_last.txt
 	$(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
-	@echo === UPduino Xosera: $(VIDEO_MODE) | tee $(TOP)_stats.txt
+	@echo === UPduino Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(TOP)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@$(NEXTPNR) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@sed -n '/Device utilisation/,/Info: Placed/p' $(LOGS)/$(TOP)_nextpnr.log | sed '$$d' | grep -v ":     0/" | tee -a $(TOP)_stats.txt

@@ -33,12 +33,19 @@ upd:
 	$(MAKE) -f upduino.mk
 	@echo Type \"make upd_prog\" to program the UPduino via USB
 
-# Build combo Xosera UPduino 3.x FPGA bitstream for rosco_m6k board
-xosera_board:
+# Build combo Xosera UPduino 3.x FPGA VGA bitstream for rosco_m6k board
+xosera_vga:
 	$(MAKE) -f upduino.mk clean
-	VIDEO_MODE=MODE_640x480 $(MAKE) -f upduino.mk
-	VIDEO_MODE=MODE_848x480 $(MAKE) -f upduino.mk
-	@echo Type \"make xosera_prog\" to program the UPduino via USB
+	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_640x480 $(MAKE) -f upduino.mk
+	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_848x480 $(MAKE) -f upduino.mk
+	mv xosera_upd.bin xosera_board_vga.bin
+
+# Build combo Xosera UPduino 3.x FPGA DVI bitstream for rosco_m6k board
+xosera_dvi:
+	$(MAKE) -f upduino.mk clean
+	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_640x480 $(MAKE) -f upduino.mk
+	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_848x480 $(MAKE) -f upduino.mk
+	mv xosera_upd.bin xosera_board_dvi.bin
 
 # Build Xosera iCEBreaker FPGA bitstream
 iceb:
@@ -48,11 +55,6 @@ iceb:
 # Build and program Xosera UPduino 3.x FPGA bitstream
 upd_prog:
 	$(MAKE) -f upduino.mk prog
-
-# Build and program combo Xosera UPduino 3.x FPGA bitstream for rosco_m6k board
-xosera_prog:
-	VIDEO_MODE=MODE_640x480 $(MAKE) -f upduino.mk
-	VIDEO_MODE=MODE_848x480 $(MAKE) -f upduino.mk prog
 
 # Build and program Xosera iCEBreaker FPGA bitstream
 iceb_prog:

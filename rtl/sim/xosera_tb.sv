@@ -143,6 +143,32 @@ task read_reg(
     bus_data_in = 8'b0;
 endtask
 
+function logic [63:0] regname(
+        input logic [3:0] num
+    );
+    begin
+        case (num)
+            4'h0: regname = "AUX_ADDR";
+            4'h1: regname = "CONST   ";
+            4'h2: regname = "RD_ADDR ";
+            4'h3: regname = "WR_ADDR ";
+            4'h4: regname = "DATA    ";
+            4'h5: regname = "DATA_2  ";
+            4'h6: regname = "AUX_DATA";
+            4'h7: regname = "COUNT   ";
+            4'h8: regname = "RD_INC  ";
+            4'h9: regname = "WR_INC  ";
+            4'hA: regname = "WR_MOD  ";
+            4'hB: regname = "RD_MOD  ";
+            4'hC: regname = "WIDTH   ";
+            4'hD: regname = "BLITCTRL";
+            4'hE: regname = "UNUSED_E";
+            4'hF: regname = "UNUSED_F";
+            default: regname = "????????";
+        endcase
+    end
+endfunction
+
 
 `ifdef BUSTEST
 /* verilator lint_off LATCH */
@@ -155,7 +181,7 @@ always begin
 
     if (xosera.blitter.blit_state == xosera.blitter.IDLE) begin
 //        # 500ms;
-        # 1ms;
+        # 10ms;
         #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_ADDR, test_addr[15:8]);
         #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_ADDR, test_addr[7:0]);
 
@@ -179,15 +205,15 @@ always begin
 
         #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_DATA, readword[15:8]);
         #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_DATA, readword[7:0]);
-        $display("%0t REG READ R[%x] => %04x %04x", $realtime, xosera.blitter.bus_reg_num, readword, xosera.blitter.vram_rd_data);
+        $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
         #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_DATA, readword[15:8]);
         #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_DATA, readword[7:0]);
-        $display("%0t REG READ R[%x] => %04x %04x", $realtime, xosera.blitter.bus_reg_num, readword, xosera.blitter.vram_rd_data);
+        $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
         #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_DATA, readword[15:8]);
         #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_DATA, readword[7:0]);
-        $display("%0t REG READ R[%x] => %04x %04x", $realtime, xosera.blitter.bus_reg_num, readword, xosera.blitter.vram_rd_data);
+        $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
         #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_ADDR, test_addr2[15:8]);
         #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_ADDR, test_addr2[7:0]);
@@ -202,7 +228,7 @@ always begin
 
         #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_DATA, readword[15:8]);
         #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_DATA, readword[7:0]);
-        $display("%0t REG READ R[%x] => %04x %04x", $realtime, xosera.blitter.bus_reg_num, readword, xosera.blitter.vram_rd_data);
+        $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
     end
     else begin
         #(M68K_PERIOD * 4);
@@ -318,24 +344,21 @@ always @(posedge clk) begin
 end
 
 // NOTE: Horrible hacky Verilog string array to print register name (fixed 8 characters, and in reverse order).
-reg [16*8*8:1] reg_name = 
-    "UNUSED_FUNUSED_EBLITCTRLWIDTH   RD_MOD  WR_MOD  WR_INC  RD_INC  COUNT   AUX_DATADATA_2  DATA    WR_ADDR RD_ADDR CONST   AUX_ADDR";
-
 always @(posedge clk) begin
     if (xosera.blitter.bus_write_strobe) begin
         if (xosera.blitter.bus_bytesel) begin
-            $display("%0t BUS WRITE:  R[%1x:%s] <= __%02x", $realtime, xosera.blitter.bus_reg_num, reg_name[xosera.blitter.bus_reg_num*8*8-:64], xosera.blitter.bus_data_byte);
+            $display("%0t BUS WRITE:  R[%1x:%s] <= __%02x", $realtime, xosera.blitter.bus_reg_num, regname(xosera.blitter.bus_reg_num), xosera.blitter.bus_data_byte);
         end
         else begin
-            $display("%0t BUS WRITE:  R[%1x:%s] <= %02x__", $realtime, xosera.blitter.bus_reg_num, reg_name[xosera.blitter.bus_reg_num*8*8-:64],xosera.blitter.bus_data_byte);
+            $display("%0t BUS WRITE:  R[%1x:%s] <= %02x__", $realtime, xosera.blitter.bus_reg_num, regname(xosera.blitter.bus_reg_num),xosera.blitter.bus_data_byte);
         end
     end
     if (xosera.blitter.bus_read_strobe) begin
         if (xosera.bus_bytesel_i) begin
-            $display("%0t BUS READ:  R[%1x:%s] => __%02x", $realtime, xosera.blitter.bus_reg_num, reg_name[xosera.blitter.bus_reg_num*8*8-:64],xosera.blitter.bus_data_o);
+            $display("%0t BUS READ:  R[%1x:%s] => __%02x", $realtime, xosera.blitter.bus_reg_num, regname(xosera.blitter.bus_reg_num),xosera.blitter.bus_data_o);
         end
         else begin
-            $display("%0t BUS READ:  R[%1x:%s] => %02x__", $realtime, xosera.blitter.bus_reg_num, reg_name[xosera.blitter.bus_reg_num*8*8-:64], xosera.blitter.bus_data_o);
+            $display("%0t BUS READ:  R[%1x:%s] => %02x__", $realtime, xosera.blitter.bus_reg_num, regname(xosera.blitter.bus_reg_num), xosera.blitter.bus_data_o);
         end
     end
 end

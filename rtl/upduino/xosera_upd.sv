@@ -26,8 +26,8 @@
 //                         <DONE> |  4           45 | spi_miso  (14)
 //           [BUS_CS_N]   led_red |  5           44 | gpio_20   <N/A w/OSC>
 //         [BUS_RD_NWR] led_green |  6     U     43 | gpio_10   <in-only unused>
-//        [BUS_BYTESEL]  led_blue |  7     P     42 | <12 MHz>
-//                          <+5V> |  8     D     41 | <GND>
+//        [BUS_BYTESEL]  led_blue |  7     P     42 | <GND>     <silkscreen errata>
+//                          <+5V> |  8     D     41 | <12 MHz>  <silkscreen errata>
 //                        <+3.3V> |  9     U     40 | gpio_12   [VGA_HS]
 //                          <GND> | 10     I     39 | gpio_21   [VGA_VS]
 //       [BUS_REG_NUM0]   gpio_23 | 11     N     38 | gpio_13   [VGA_R3]

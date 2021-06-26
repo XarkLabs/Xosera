@@ -468,27 +468,44 @@ uint16_t rosco_m68k_CPUMHz()
 uint32_t test_count;
 void     xosera_demo()
 {
+    printf("xosera_init(1)...");
+    if (xosera_init(1))
+    {
+        printf("success.\n");
+    }
+    else
+    {
+        printf("Failed!\n");
+    }
+
+    if (delay_check(5000))
+    {
+        return;
+    }
+
     while (true)
     {
-        printf("xosera_init(0)...");
-        if (xosera_init(0))
+        printf("xosera_sync()...");
+        if (xosera_sync())
         {
             printf("success.\n");
         }
         else
         {
             printf("Failed!\n");
+
             if (delay_check(5000))
             {
                 break;
             }
             continue;
         }
+
         xcls();
         xprintf("*** xosera_test_m68k iteration: %d\n", test_count++);
         rosco_m68k_CPUMHz();
 
-        delay_check(5000);
+        delay_check(1000);
 
         uint32_t githash   = (xv_reg_getw(githash_h) << 16) | xv_reg_getw(githash_l);
         uint16_t width     = xv_reg_getw(vidwidth);
@@ -504,7 +521,7 @@ void     xosera_demo()
         xprintf("dispstart:0x%04x dispwidth:0x%04x\n", dispstart, dispwidth);
         xprintf(" scrollxy:0x%04x   gfxctrl:0x%04x\n", scrollxy, gfxctrl);
 
-        if (delay_check(5000))        // extra time for monitor to sync
+        if (delay_check(1000))        // extra time for monitor to sync
         {
             break;
         }
@@ -513,7 +530,7 @@ void     xosera_demo()
         xcls();
         rosco_m68k_CPUMHz();
         test_blurb();
-        delay_check(15000);
+        delay_check(5000);
 
         test_hello();
         if (delay_check(3000))

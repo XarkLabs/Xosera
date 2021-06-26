@@ -6,7 +6,7 @@
 # up5k_vga by E. Brombaugh (emeb) and further extensively
 # hacked by Xark for Xosera purposes
 
-# Primary tools (official binaries available from https://github.com/YosysHQ/fpga-toolchain)
+# Primary tools (official binaries available from https://github.com/YosysHQ/oss-cad-suite-build/releases/latest)
 #	Yosys
 #	nextpnr-ice40
 #	Verilator		(optional)

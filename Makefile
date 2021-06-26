@@ -5,7 +5,8 @@ ICEPROG := iceprog
 
 # Build all project targets
 info:
-	@echo "NOTE: Requires YosysHQ tools (https://github.com/YosysHQ/fpga-toolchain)"
+	@echo "NOTE: Requires YosysHQ tools."
+	@echo "      (e.g. https://github.com/YosysHQ/oss-cad-suite-build/releases/latest)"
 	@echo "      (Sadly, brew and distribution versions seem sadly outdated)"
 	@echo "      Simulation requires Icarus Verilog and/or Verilator"
 	@echo "      Utilities and Verilator simulation require C++ compiler"

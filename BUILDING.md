@@ -2,11 +2,9 @@
 
 ## ​Tools Needed
 
-Xosera uses the [Yosys/NextPNR​](https://github.com/YosysHQ) open-source FPGA toolchain and is currently targeting the [Lattice iCE40UltraPlus](https://www.latticesemi.com/en/Products/FPGAandCPLD/iCE40UltraPlus) 5K FPGA.  While these tools can all be built from source, I highly recommend the convenient binary releases from the [open-tool-forge/fpga-toolchain​](https://github.com/YosysHQ/fpga-toolchain) and available for Linux, MacOS and Windows.  These can be easily used without privileges (just unpack and set your path) and have pretty much all the tools required to synthesize designs for the Lattice iCE40 and ECP5 FPGAs.
+Xosera uses the [Yosys/NextPNR​](https://github.com/YosysHQ) open-source FPGA toolchain and is currently targeting the [Lattice iCE40UltraPlus](https://www.latticesemi.com/en/Products/FPGAandCPLD/iCE40UltraPlus) 5K FPGA.  While these tools can all be built from source, I highly recommend the convenient binary releases from the [YosysHQ OSS CAD Suite builds​](https://github.com/YosysHQ/oss-cad-suite-build) and available for Linux (x64, ARM, RV64), MacOS and Windows.  These can be easily used without privileges (just unpack and set your path) and have pretty much all the tools required to synthesize designs for the Lattice iCE40 and ECP5 FPGAs (as well as simulation and a lot more).
 
 I have tested Xosera FPGA bitstream generation successfully on all three OSes.  Under Windows I used [Cygwin64](https://cygwin.com/) shell for GNU "make" and a few other Unix utilities ([MSYS2](https://www.msys2.org/) may also work).
-
-However, note that the simulation targets require either [Verilator](https://www.veripool.org/wiki/verilator)​ or [Icarus Verilog](http://iverilog.icarus.com/)​ to be installed (which are not currently included in the fpga-toolchain releases).  These are primarily used for development, debugging and testing of the design (and allows inspection of all signals over time - hard to do inside a real FPGA).
 
 There is also a simple C++ FTDI utility included "host_spi", that can be used to send SPI target commands from the PC via USB FTDI to the Xosera design (for easier testing and development).  It uses the open-source [libftdi](https://www.intra2net.com/en/developer/libftdi/) library​ and can run under Linux, macOS and windows.
 

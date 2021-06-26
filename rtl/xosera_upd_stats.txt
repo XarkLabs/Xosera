@@ -1,8 +1,8 @@
-=== UPduino Xosera: MODE_848x480
-Yosys 0.9+4081 (git sha1 8cfed1a9, clang 10.0.0-4ubuntu1 -fPIC -Os)
-nextpnr-ice40 -- Next Generation Place and Route (Version a3d8b4f9)
+=== UPduino Xosera: PMOD_1B2_DVI12 MODE_848x480
+Yosys 0.9+4081 (git sha1 862e84eb, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
+nextpnr-ice40 -- Next Generation Place and Route (Version 454617f0)
 Info: Device utilisation:
-Info: 	         ICESTORM_LC:  1144/ 5280    21%
+Info: 	         ICESTORM_LC:  1150/ 5280    21%
 Info: 	        ICESTORM_RAM:    17/   30    56%
 Info: 	               SB_IO:    36/   96    37%
 Info: 	               SB_GB:     5/    8    62%
@@ -10,4 +10,4 @@ Info: 	        ICESTORM_PLL:     1/    1   100%
 Info: 	         SB_WARMBOOT:     1/    1   100%
 Info: 	      ICESTORM_SPRAM:     4/    4   100%
 
-Info: Max frequency for clock 'pclk': 41.63 MHz (PASS at 33.75 MHz)
+Info: Max frequency for clock 'pclk': 39.93 MHz (PASS at 33.77 MHz)

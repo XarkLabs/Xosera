@@ -56,7 +56,6 @@ LOGS	:= upduino/logs
 
 # Xosera project setup for UPduino v3.0
 TOP := xosera_upd
-SDC := $(SRCDIR)/timing/$(VIDEO_MODE).py
 PIN_DEF := upduino/upduino_v3.pcf
 DEVICE := up5k
 PACKAGE := sg48
@@ -95,7 +94,7 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
-NEXTPNR_ARGS := --pre-pack $(SDC) --placer heap --opt-timing
+NEXTPNR_ARGS := --placer heap --opt-timing
 
 # defult target is make bitstream
 all: upduino/$(TOP)_$(VIDEO_MODE).bin upduino.mk
@@ -135,7 +134,7 @@ upduino/%_$(VIDEO_MODE).json: $(SRC) $(INC) $(FONTFILES) upduino.mk
 	$(YOSYS) -l $(LOGS)/$(TOP)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
 
 # make ASCII bitstream from JSON description and device parameters
-upduino/%_$(VIDEO_MODE).asc: upduino/%_$(VIDEO_MODE).json $(PIN_DEF) $(SDC) upduino.mk
+upduino/%_$(VIDEO_MODE).asc: upduino/%_$(VIDEO_MODE).json $(PIN_DEF) upduino.mk
 	@rm -f $@
 	@mkdir -p $(LOGS)
 	@-cp $(TOP)_stats.txt $(LOGS)/$(TOP)_stats_last.txt

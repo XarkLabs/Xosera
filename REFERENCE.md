@@ -54,7 +54,7 @@ Since the registers are 16-bit words (with no individual byte access) and bus ac
 TODO `BLIT_CTRL`[0] enables 2-D blit mode (where `WIDTH` and `RD`/`WR_MOD` are used to blit rectangular areas)
 TODO `BLIT_CTRL`[1] enables blit using `CONST` data value as source instead of reading VRAM.
 
-The `BLIT_CTRL` also has bits that allow Xosera "re-configure" itself.  This will cause the FPGA to reload a configuration from flash memory (4 are selectable). Write the value 0x8x80 to `XVID_VID_CTRL` and Xosera FPGA will reconfigure itself, like at power on (VRAM will be clear and AUX memory will be reloaded).  Bits [1:0] (0x808n) will select the firmware to reconfigure to (0 normally, but others configs can be setup).  The FPGA takes about 80-100 milliseconds to reconfigure and initialize (you can repeatedly write to a register and wait until it reads back to know the FPGA has reconfigured).
+The `BLIT_CTRL` also has bits that allow Xosera "re-configure" itself.  This will cause the FPGA to reload a configuration from flash memory (4 are selectable). Write the value 0x8x80 to `XVID_VID_CTRL` and Xosera FPGA will reconfigure itself, like at power on (VRAM will be clear and AUX memory will be reloaded).  Bits [9:8] will select the firmware to reconfigure to (normally, 0 for 640x480 mode, 1 for 848x480 mode with the other configs user defined).  The FPGA takes about 80-100 milliseconds to reconfigure and initialize (you can repeatedly write to a register (e.g., `XVID_CONST`) and wait until it reads back to know the FPGA has finished reconfiguring).
 
 ### Other AUX Memory Areas
 

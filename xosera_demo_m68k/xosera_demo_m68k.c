@@ -308,6 +308,7 @@ void test_hello()
 {
     static const char test_string[] = "Xosera on rosco_m68k";
 
+    xcls();
     xv_setw(wr_inc, 1);                            // set write inc
     xv_setw(wr_addr, 0x0000);                      // set write address
     xv_setw(data, 0x0200 | test_string[0]);        // set full word
@@ -321,32 +322,25 @@ void test_hello()
     }
 
     // read test
-    xv_setw(rd_inc, 0);
-    xv_setw(rd_addr, 0x0000);
     xv_setw(rd_inc, 1);
-
-    printf("Read back rd_addr= 0x0000, rd_inc=0x0001 [");
-    bool     good = true;
-    uint16_t ub   = 0x0200;
+    xv_setw(rd_addr, 0x0000);
+    xpos(0, 8);
+    xprintf("Read back rd_addr= 0x0000, rd_inc=0x0001 [");
+    bool good = true;
     for (size_t i = 0; i < sizeof(test_string) - 1; i++)
     {
-        if (i == sizeof(test_string) - 5)
-        {
-            ub = 0x0400;
-        }
         uint16_t v = xv_getw(data);
-        if (v == (ub | test_string[i]))
+        if ((v & 0xff) == test_string[i])
         {
-            printf("%c", v & 0xff);
+            xprintf("%c", v & 0xff);
         }
         else
         {
-            printf("<bad:%04x %c != %c>", v, test_string[i], v & 0xff);
+            xprintf("<bad:%04x %c != %c>", v, test_string[i], v & 0xff);
             good = false;
         }
     }
-    //    printf("], ending rd_addr = 0x%04x\n", xv_getw(rd_addr));
-    printf("%s] Ending rd_addr = 0x%04x\n", good ? "Good" : "bad", xv_getw(rd_addr));
+    xprintf("%s] Ending rd_addr = 0x%04x\n", good ? "Good" : "bad", xv_getw(rd_addr));
 }
 
 uint32_t mem_buffer[1];
@@ -363,8 +357,7 @@ void test_vram_speed()
     int main_read  = 0;
 
     const int reps = 16;
-
-    uint32_t v = ((0x2f00 | 'G') << 16) | (0x4f00 | 'o');
+    uint32_t  v    = ((0x2f00 | 'G') << 16) | (0x4f00 | 'o');
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
@@ -469,11 +462,7 @@ uint32_t test_count;
 void     xosera_demo()
 {
     printf("xosera_init(1)...");
-    if (xosera_init(1))
-    {
-        printf("success.\n");
-    }
-    else
+    if (!xosera_sync())
     {
         printf("Failed!\n");
     }
@@ -485,22 +474,6 @@ void     xosera_demo()
 
     while (true)
     {
-        printf("xosera_sync()...");
-        if (xosera_sync())
-        {
-            printf("success.\n");
-        }
-        else
-        {
-            printf("Failed!\n");
-
-            if (delay_check(5000))
-            {
-                break;
-            }
-            continue;
-        }
-
         xcls();
         xprintf("*** xosera_test_m68k iteration: %d\n", test_count++);
         rosco_m68k_CPUMHz();

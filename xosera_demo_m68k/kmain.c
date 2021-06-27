@@ -22,9 +22,5 @@ extern void xosera_demo();
 void kmain()
 {
     mcDelaymsec10(200);        // wait a bit for terminal window
-    printf("\n\f\nxosera_demo_m68k started...\n\n");
-
     xosera_demo();
-
-    printf("xosera_demo_m68k exiting.\n");
 }

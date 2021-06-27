@@ -25,7 +25,7 @@
 //        [BUS_RESET_N]     <RST> |  3           46 | spi_mosi  (17)
 //                         <DONE> |  4           45 | spi_miso  (14)
 //           [BUS_CS_N]   led_red |  5           44 | gpio_20   <N/A w/OSC>
-//         [BUS_RD_NWR] led_green |  6     U     43 | gpio_10   <in-only unused>
+//         [BUS_RD_NWR] led_green |  6     U     43 | gpio_10   <unused>
 //        [BUS_BYTESEL]  led_blue |  7     P     42 | <GND>     <silkscreen errata>
 //                          <+5V> |  8     D     41 | <12 MHz>  <silkscreen errata>
 //                        <+3.3V> |  9     U     40 | gpio_12   [VGA_HS]
@@ -67,7 +67,7 @@ module xosera_upd(
             inout  logic    gpio_38,        // m68k bus data 6
             inout  logic    gpio_28,        // m68k bus data 7
             // right side (USB at top)
-            input  logic    gpio_10,        // unused (NOTE: this gpio can't be output)
+            output logic    gpio_10,        // unused
             output logic    gpio_12,        // video hsync
             output logic    gpio_21,        // video vsync
             output logic    gpio_13,        // video R[3]
@@ -113,8 +113,10 @@ assign bus_reg_num  = { gpio_27, gpio_26, gpio_25, gpio_23 };   // gpio for regi
 assign bus_data     = { gpio_28, gpio_38, gpio_42, gpio_36, gpio_43, gpio_34, gpio_37, gpio_31 };   // gpio for data bus
 
 // assign audio output signals to gpio
-assign gpio_32      = audio_l;           // left audio channel gpio
-assign gpio_35      = audio_r;           // right audio channel gpio
+assign gpio_32      = audio_l;          // left audio channel gpio
+assign gpio_35      = audio_r;          // right audio channel gpio
+
+assign gpio_10      = 1'b0;             // must assign unused output
 
 // split tri-state data lines into in/out signals for inside FPGA
 logic bus_out_ena;

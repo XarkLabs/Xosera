@@ -24,6 +24,10 @@
 #include <basicio.h>
 #include <machine.h>
 
+//#define DELAY_TIME 5000        // human speed
+#define DELAY_TIME 1000        // impatient human speed
+//#define DELAY_TIME 100        // machine speed
+
 #include "xosera_api.h"
 
 // Define rosco_m68k Xosera board base address pointer (See
@@ -52,6 +56,9 @@ uint32_t timer_stop()
 
     return (stop_tick - start_tick) * 10;
 }
+
+//#undef checkchar
+//#define checkchar() false
 
 #if !defined(checkchar)        // newer rosco_m68k library addition, this is in case not present
 bool checkchar()
@@ -307,6 +314,7 @@ void test_blurb()
 void test_hello()
 {
     static const char test_string[] = "Xosera on rosco_m68k";
+    static uint16_t   test_read[sizeof(test_string)];
 
     xcls();
     xv_setw(wr_inc, 1);                            // set write inc
@@ -325,25 +333,45 @@ void test_hello()
     xv_setw(rd_inc, 1);
     xv_setw(rd_addr, 0x0000);
     xpos(0, 8);
-    xprintf("Read back rd_addr= 0x0000, rd_inc=0x0001 [");
+    xcolor(0x07);
+    xprintf("Read VRAM test, with auto-increment.\n\n");
+    xprintf("  Start rd_addr=0x0000, rd_inc=0x0001\n\n");
+
+    uint16_t * tp = test_read;
+    for (int16_t c = 0; c < 5; c++)
+    {
+        *tp++ = xv_getw(data);
+        *tp++ = xv_getw(data);
+        *tp++ = xv_getw(data);
+        *tp++ = xv_getw(data);
+    }
+
+    xv_setw(wr_inc, 1);                        // set write inc
+    xv_setw(wr_addr, text_columns * 2);        // set write address
+
     bool good = true;
     for (size_t i = 0; i < sizeof(test_string) - 1; i++)
     {
-        uint16_t v = xv_getw(data);
-        if ((v & 0xff) == test_string[i])
+        uint16_t v = test_read[i];
+        xv_setw(data, v);
+        if ((v & 0xff) != test_string[i])
         {
-            xprintf("%c", v & 0xff);
-        }
-        else
-        {
-            xprintf("<bad:%04x %c != %c>", v, test_string[i], v & 0xff);
             good = false;
         }
     }
-    xprintf("%s] Ending rd_addr = 0x%04x\n", good ? "Good" : "bad", xv_getw(rd_addr));
+    uint16_t end_addr = xv_getw(rd_addr);
+    // incremented one extra, because data was already pre-read
+    if (end_addr != sizeof(test_string))
+    {
+        good = false;
+    }
+    xprintf("Ending rd_addr=0x%04x.  Test: ", end_addr);
+    xcolor(good ? 0x02 : 0x4f);
+    xprintf("%s\n", good ? "good" : "BAD!");
+    xcolor(0x02);
 }
 
-uint32_t mem_buffer[1];
+uint32_t mem_buffer[16];
 
 void test_vram_speed()
 {
@@ -356,8 +384,9 @@ void test_vram_speed()
     int main_write = 0;
     int main_read  = 0;
 
-    const int reps = 16;
-    uint32_t  v    = ((0x2f00 | 'G') << 16) | (0x4f00 | 'o');
+    int reps = 16;        // just a few flashes for write test
+    printf("VRAM write x %d\n", reps);
+    uint32_t v = ((0x0f00 | 'G') << 16) | (0xf000 | 'o');
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
@@ -374,22 +403,9 @@ void test_vram_speed()
     {
         return;
     }
-    timer_start();
-    for (int loop = 0; loop < reps; loop++)
-    {
-        uint16_t count = 0x8000;        // VRAM long count
-        do
-        {
-            v = xv_getl(data);
-        } while (--count);
-        v ^= 0xff00ff00;
-    }
-    vram_read = timer_stop();
-    global    = v;        // save v so GCC doesn't optimize away test
-    if (checkchar())
-    {
-        return;
-    }
+    reps = 32;        // main ram test (NOTE: I am not even incrementing pointer below - like "fake
+                      // register" write)
+    printf("main RAM write x %d\n", reps);
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
@@ -408,6 +424,27 @@ void test_vram_speed()
     {
         return;
     }
+    reps = 32;        // a bit longer read test (to show stable during read)
+    printf("VRAM read x %d\n", reps);
+    timer_start();
+    for (int loop = 0; loop < reps; loop++)
+    {
+        uint16_t count = 0x8000;        // VRAM long count
+        do
+        {
+            v = xv_getl(data);
+        } while (--count);
+        v ^= 0xff00ff00;
+    }
+    vram_read = timer_stop();
+    global    = v;        // save v so GCC doesn't optimize away test
+    if (checkchar())
+    {
+        return;
+    }
+    reps = 32;        // main ram test (NOTE: I am not even incrementing pointer below - like "fake
+                      // register" read)
+    printf("main RAM read x %d\n", reps);
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
@@ -422,7 +459,7 @@ void test_vram_speed()
     }
     main_read = timer_stop();
     global    = v;        // save v so GCC doesn't optimize away test
-
+    printf("done\n");
 
     xprintf("MOVEP.L VRAM write      128KB x 16 (2MB)    %d ms (%d KB/sec)\n",
             vram_write,
@@ -461,12 +498,10 @@ uint16_t rosco_m68k_CPUMHz()
 uint32_t test_count;
 void     xosera_demo()
 {
-    printf("xosera_init(1)...");
-    if (!xosera_sync())
-    {
-        printf("Failed!\n");
-    }
-
+    printf("\nxosera_init(1)...", xosera_init(1) ? "succeeded" : "FAILED");
+    // wait for monitor to unblank
+    bool success = xosera_init(1);
+    printf("%s\n", success ? "succeeded" : "FAILED");
     if (delay_check(5000))
     {
         return;
@@ -474,11 +509,10 @@ void     xosera_demo()
 
     while (true)
     {
+        xcolor(0x02);
         xcls();
         xprintf("*** xosera_test_m68k iteration: %d\n", test_count++);
         rosco_m68k_CPUMHz();
-
-        delay_check(1000);
 
         uint32_t githash   = (xv_reg_getw(githash_h) << 16) | xv_reg_getw(githash_l);
         uint16_t width     = xv_reg_getw(vidwidth);
@@ -494,7 +528,7 @@ void     xosera_demo()
         xprintf("dispstart:0x%04x dispwidth:0x%04x\n", dispstart, dispwidth);
         xprintf(" scrollxy:0x%04x   gfxctrl:0x%04x\n", scrollxy, gfxctrl);
 
-        if (delay_check(1000))        // extra time for monitor to sync
+        if (delay_check(DELAY_TIME))
         {
             break;
         }
@@ -502,19 +536,28 @@ void     xosera_demo()
         xcolor(0x02);
         xcls();
         rosco_m68k_CPUMHz();
+
         test_blurb();
-        delay_check(5000);
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
 
         test_hello();
-        if (delay_check(3000))
+        if (delay_check(DELAY_TIME))
         {
             break;
         }
 
         test_vram_speed();
-        if (delay_check(3000))
+        if (delay_check(DELAY_TIME))
         {
             break;
         }
+    }
+
+    while (checkchar())
+    {
+        readchar();
     }
 }

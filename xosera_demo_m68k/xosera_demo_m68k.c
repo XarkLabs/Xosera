@@ -24,8 +24,8 @@
 #include <basicio.h>
 #include <machine.h>
 
-//#define DELAY_TIME 5000        // human speed
-#define DELAY_TIME 1000        // impatient human speed
+#define DELAY_TIME 5000        // human speed
+//#define DELAY_TIME 1000        // impatient human speed
 //#define DELAY_TIME 100        // machine speed
 
 #include "xosera_api.h"
@@ -313,7 +313,7 @@ void test_blurb()
 
 void test_hello()
 {
-    static const char test_string[] = "Xosera on rosco_m68k";
+    static const char test_string[] = "Xosera is mostly running happily on rosco_m68k";
     static uint16_t   test_read[sizeof(test_string)];
 
     xcls();
@@ -338,11 +338,8 @@ void test_hello()
     xprintf("  Start rd_addr=0x0000, rd_inc=0x0001\n\n");
 
     uint16_t * tp = test_read;
-    for (int16_t c = 0; c < 5; c++)
+    for (uint16_t c = 0; c < (sizeof(test_string) - 1); c++)
     {
-        *tp++ = xv_getw(data);
-        *tp++ = xv_getw(data);
-        *tp++ = xv_getw(data);
         *tp++ = xv_getw(data);
     }
 
@@ -371,13 +368,15 @@ void test_hello()
     xcolor(0x02);
 }
 
-uint32_t mem_buffer[16];
+uint32_t mem_buffer[128 * 1024];
 
 void test_vram_speed()
 {
     xcls();
-    xv_setw(wr_addr, 0x0000);
     xv_setw(wr_inc, 1);
+    xv_setw(wr_addr, 0x0000);
+    xv_setw(rd_inc, 1);
+    xv_setw(rd_addr, 0x0000);
 
     int vram_write = 0;
     int vram_read  = 0;
@@ -429,12 +428,12 @@ void test_vram_speed()
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
-        uint16_t count = 0x8000;        // VRAM long count
+        uint32_t * ptr   = mem_buffer;
+        uint16_t   count = 0x8000;        // VRAM long count
         do
         {
-            v = xv_getl(data);
+            *ptr++ = xv_getl(data);
         } while (--count);
-        v ^= 0xff00ff00;
     }
     vram_read = timer_stop();
     global    = v;        // save v so GCC doesn't optimize away test
@@ -498,10 +497,16 @@ uint16_t rosco_m68k_CPUMHz()
 uint32_t test_count;
 void     xosera_demo()
 {
-    printf("\nxosera_init(1)...", xosera_init(1) ? "succeeded" : "FAILED");
+    while (checkchar())
+    {
+        readchar();
+    }
+
+    printf("\nxosera_init(0)...");
     // wait for monitor to unblank
-    bool success = xosera_init(1);
-    printf("%s\n", success ? "succeeded" : "FAILED");
+    bool success = xosera_init(0);
+    printf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xv_reg_getw(vidwidth), xv_reg_getw(vidheight));
+
     if (delay_check(5000))
     {
         return;

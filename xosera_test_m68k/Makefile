@@ -98,7 +98,7 @@ load: $(BINARY)
 	$(KERMIT) -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
 
 # This is handy to test on Ubuntu Linux (kills previous "screen", opens one in shell window/tab)
-test: rle_images.h $(BINARY) $(DISASM)
+test: $(BINARY) $(DISASM)
 	-killall screen && sleep 1
 	$(KERMIT) -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
 	gnome-terminal --geometry=80x25 --title="rosco_m68k $(SERIAL)" -- screen $(SERIAL) $(BAUD)
@@ -113,5 +113,14 @@ mactest: $(BINARY) $(DISASM)
 	sleep 1
 	open -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
 
+# This is handy to test on MacOS (kills previous "screen", opens new one in shell window/tab)
+macterm:
+	-killall screen && sleep 1
+	echo "#! /bin/sh" > $(TMPDIR)/rosco_screen.sh
+	echo "/usr/bin/screen $(SERIAL) $(BAUD)" >> $(TMPDIR)/rosco_screen.sh
+	chmod +x $(TMPDIR)/rosco_screen.sh
+	sleep 1
+	open -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
+
 # Makefile magic (for "phony" targets that are not real files)
-.PHONY: all clean dump disasm load test mactest
+.PHONY: all clean dump disasm load test mactest macterm

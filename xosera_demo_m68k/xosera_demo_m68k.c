@@ -57,9 +57,6 @@ uint32_t timer_stop()
     return (stop_tick - start_tick) * 10;
 }
 
-//#undef checkchar
-//#define checkchar() false
-
 #if !defined(checkchar)        // newer rosco_m68k library addition, this is in case not present
 bool checkchar()
 {
@@ -368,109 +365,11 @@ void test_hello()
     xcolor(0x02);
 }
 
-uint32_t mem_buffer[128 * 1024];
-
-void test_vram_speed()
+void test_mono_bitmap()
 {
-    xcls();
-    xv_setw(wr_inc, 1);
-    xv_setw(wr_addr, 0x0000);
-    xv_setw(rd_inc, 1);
-    xv_setw(rd_addr, 0x0000);
-
-    int vram_write = 0;
-    int vram_read  = 0;
-    int main_write = 0;
-    int main_read  = 0;
-
-    int reps = 16;        // just a few flashes for write test
-    printf("VRAM write x %d\n", reps);
-    uint32_t v = ((0x0f00 | 'G') << 16) | (0xf000 | 'o');
-    timer_start();
-    for (int loop = 0; loop < reps; loop++)
-    {
-        uint16_t count = 0x8000;        // VRAM long count
-        do
-        {
-            xv_setl(data, v);
-        } while (--count);
-        v ^= 0xff00ff00;
-    }
-    vram_write = timer_stop();
-    global     = v;        // save v so GCC doesn't optimize away test
-    if (checkchar())
-    {
-        return;
-    }
-    reps = 32;        // main ram test (NOTE: I am not even incrementing pointer below - like "fake
-                      // register" write)
-    printf("main RAM write x %d\n", reps);
-    timer_start();
-    for (int loop = 0; loop < reps; loop++)
-    {
-        uint32_t * ptr   = mem_buffer;
-        uint16_t   count = 0x8000;        // VRAM long count
-        do
-        {
-            //            *ptr++ = loop;    // GCC keeps trying to be clever, we want a fair test
-            __asm__ __volatile__("move.l %[loop],(%[ptr])" : : [loop] "d"(loop), [ptr] "a"(ptr) :);
-        } while (--count);
-        v ^= 0xff00ff00;
-    }
-    main_write = timer_stop();
-    global     = v;        // save v so GCC doesn't optimize away test
-    if (checkchar())
-    {
-        return;
-    }
-    reps = 32;        // a bit longer read test (to show stable during read)
-    printf("VRAM read x %d\n", reps);
-    timer_start();
-    for (int loop = 0; loop < reps; loop++)
-    {
-        uint32_t * ptr   = mem_buffer;
-        uint16_t   count = 0x8000;        // VRAM long count
-        do
-        {
-            *ptr++ = xv_getl(data);
-        } while (--count);
-    }
-    vram_read = timer_stop();
-    global    = v;        // save v so GCC doesn't optimize away test
-    if (checkchar())
-    {
-        return;
-    }
-    reps = 32;        // main ram test (NOTE: I am not even incrementing pointer below - like "fake
-                      // register" read)
-    printf("main RAM read x %d\n", reps);
-    timer_start();
-    for (int loop = 0; loop < reps; loop++)
-    {
-        uint32_t * ptr   = mem_buffer;
-        uint16_t   count = 0x8000;        // VRAM long count
-        do
-        {
-            //            v += *ptr++;    // GCC keeps trying to be clever, we want a fair test
-            __asm__ __volatile__("move.l (%[ptr]),%[v]" : [v] "+d"(v) : [ptr] "a"(ptr) :);
-        } while (--count);
-        v ^= 0xff00ff00;
-    }
-    main_read = timer_stop();
-    global    = v;        // save v so GCC doesn't optimize away test
-    printf("done\n");
-
-    xprintf("MOVEP.L VRAM write      128KB x 16 (2MB)    %d ms (%d KB/sec)\n",
-            vram_write,
-            (1000 * 128 * reps) / vram_write);
-    xprintf(
-        "MOVEP.L VRAM read       128KB x 16 (2MB)    %d ms (%d KB/sec)\n", vram_read, (1000 * 128 * reps) / vram_read);
-    xprintf("MOVE.L  main RAM write  128KB x 16 (2MB)    %d ms (%d KB/sec)\n",
-            main_write,
-            (1000 * 128 * reps) / main_write);
-    xprintf(
-        "MOVE.L  main RAM read   128KB x 16 (2MB)    %d ms (%d KB/sec)\n", main_read, (1000 * 128 * reps) / main_read);
+    xv_reg_setw(gfxctrl, 0x8000);
 }
+
 
 uint16_t rosco_m68k_CPUMHz()
 {
@@ -489,22 +388,27 @@ uint16_t rosco_m68k_CPUMHz()
         :
         :);
     uint16_t MHz = ((count * 26) + 500) / 1000;
-    xprintf("rosco_m68k: m68k CPU speed %d.%d MHz (estimated, BogoMIPS %d @ 26 cyc/loop)\n", MHz / 10, MHz % 10, count);
+    xprintf("rosco_m68k: m68k CPU speed %d.%d MHz (%d.%d BogoMIPS)\n",
+            MHz / 10,
+            MHz % 10,
+            count * 3 / 10000,
+            ((count * 3) % 10000) / 10);
 
-    return MHz / 10;
+    return (MHz + 5) / 10;
 }
 
 uint32_t test_count;
 void     xosera_demo()
 {
+    // flush any input charaters to avoid instant exit
     while (checkchar())
     {
         readchar();
     }
 
-    printf("\nxosera_init(0)...");
+    printf("\nxosera_init(1)...");
     // wait for monitor to unblank
-    bool success = xosera_init(0);
+    bool success = xosera_init(1);
     printf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xv_reg_getw(vidwidth), xv_reg_getw(vidheight));
 
     if (delay_check(5000))
@@ -516,7 +420,7 @@ void     xosera_demo()
     {
         xcolor(0x02);
         xcls();
-        xprintf("*** xosera_test_m68k iteration: %d\n", test_count++);
+        xprintf("*** xosera_demo_m68k iteration: %d\n", test_count++);
         rosco_m68k_CPUMHz();
 
         uint32_t githash   = (xv_reg_getw(githash_h) << 16) | xv_reg_getw(githash_l);
@@ -554,7 +458,7 @@ void     xosera_demo()
             break;
         }
 
-        test_vram_speed();
+        test_mono_bitmap();
         if (delay_check(DELAY_TIME))
         {
             break;

@@ -28,9 +28,5 @@ extern void xosera_test();
 void kmain()
 {
     mcDelaymsec10(200);        // wait a bit for terminal window
-    printf("\n\f\nxosera_test_m68k started.  Hello, now look at the other monitor. :)\n\n");
-
     xosera_test();
-
-    printf("xosera_test_m68k exiting.\n");
 }

@@ -14,6 +14,7 @@
  * ------------------------------------------------------------
  */
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -22,6 +23,10 @@
 
 #include <basicio.h>
 #include <machine.h>
+
+#define DELAY_TIME 5000        // human speed
+//#define DELAY_TIME 1000        // impatient human speed
+//#define DELAY_TIME 100        // machine speed
 
 #include "xosera_api.h"
 
@@ -57,7 +62,7 @@ bool checkchar()
 {
     int rc;
     __asm__ __volatile__(
-        "move.l #6,%%d1\n"
+        "move.l #6,%%d1\n"        // CHECKCHAR
         "trap   #14\n"
         "move.b %%d0,%[rc]\n"
         "ext.w  %[rc]\n"
@@ -90,13 +95,91 @@ bool delay_check(int ms)
     return false;
 }
 
+static void dputc(char c)
+{
+    __asm__ __volatile__(
+        "move.w %[chr],%%d0\n"
+        "move.l #2,%%d1\n"        // SENDCHAR
+        "trap   #14\n"
+        :
+        : [chr] "d"(c)
+        : "d0", "d1");
+}
+
+static void dprint(const char * str)
+{
+    register char c;
+    while ((c = *str++) != '\0')
+    {
+        if (c == '\n')
+        {
+            dputc('\r');
+        }
+        dputc(c);
+    }
+}
+
+static char dprint_buff[4096];
+static void dprintf(const char * fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
+    dprint(dprint_buff);
+    va_end(args);
+}
+
+uint16_t screen_addr;
+uint8_t  text_color = 0x02;        // dark green on black
+uint8_t  text_columns;
+uint8_t  text_rows;
+int8_t   text_h;
+int8_t   text_v;
+
+static void get_textmode_settings()
+{
+    //    int mode = 0;               // xv_reg_getw(gfxctrl);
+    //    bool v_dbl     = mode & 2;
+    int tile_size = 16;         //((xv_reg_getw(fontctrl) & 0xf) + 1) << (v_dbl ? 1 : 0);
+    screen_addr   = 0;          // xv_reg_getw(dispstart);
+    text_columns  = 106;        // xv_reg_getw(dispwidth);
+    //    text_rows      = (xv_reg_getw(vidheight) + (tile_size - 1)) / tile_size;
+    text_rows = 480 / tile_size;
+}
+
+static void xcls()
+{
+    get_textmode_settings();
+    xv_setw(wr_addr, screen_addr);
+    xv_setw(wr_inc, 1);
+    xv_setbh(data, text_color);
+    for (uint16_t i = 0; i < (text_columns * text_rows); i++)
+    {
+        xv_setbl(data, ' ');
+    }
+    xv_setw(wr_addr, screen_addr);
+}
+
+static void xmsg(int x, int y, int color, const char * msg)
+{
+    xv_setw(wr_addr, (y * text_columns) + x);
+    xv_setbh(data, color);
+    char c;
+    while ((c = *msg++) != '\0')
+    {
+        xv_setbl(data, c);
+    }
+}
+
 void test_hello()
 {
-    static const char test_string[] = "Xosera on rosco_m68k";
+    static const char test_string[] = "Xosera is mostly running happily on rosco_m68k";
+    static uint16_t   test_read[sizeof(test_string)];
 
-    printf(">>> %s\n", __FUNCTION__);
+    xcls();
+    xmsg(0, 0, 0xa, "WROTE:");
     xv_setw(wr_inc, 1);                            // set write inc
-    xv_setw(wr_addr, 0x0000);                      // set write address
+    xv_setw(wr_addr, 0x0008);                      // set write address
     xv_setw(data, 0x0200 | test_string[0]);        // set full word
     for (size_t i = 1; i < sizeof(test_string) - 1; i++)
     {
@@ -108,44 +191,58 @@ void test_hello()
     }
 
     // read test
-    xv_setw(rd_inc, 0x0001);
-    xv_setw(rd_addr, 0x0000);
+    dprintf("Read VRAM test, with auto-increment.\n\n");
+    dprintf(" Begin: rd_addr=0x0000, rd_inc=0x0001\n");
+    xv_setw(rd_inc, 1);
+    xv_setw(rd_addr, 0x0008);
+    uint16_t * tp = test_read;
+    for (uint16_t c = 0; c < (sizeof(test_string) - 1); c++)
+    {
+        *tp++ = xv_getw(data);
+    }
+    uint16_t end_addr = xv_getw(rd_addr);
 
-    printf("Read back rd_addr= 0x0000, rd_inc=0x0001 [");
-    bool     good = true;
-    uint16_t ub   = 0x0200;
+    xmsg(0, 2, 0xa, "READ:");
+    xv_setw(wr_inc, 1);                              // set write inc
+    xv_setw(wr_addr, (text_columns * 2) + 8);        // set write address
+
+    bool good = true;
     for (size_t i = 0; i < sizeof(test_string) - 1; i++)
     {
-        if (i == sizeof(test_string) - 5)
+        uint16_t v = test_read[i];
+        xv_setw(data, v);
+        if ((v & 0xff) != test_string[i])
         {
-            ub = 0x0400;
-        }
-        uint16_t v = xv_getw(data);
-        if (v == (ub | test_string[i]))
-        {
-            //            printf("%c", v & 0xff);
-        }
-        else
-        {
-            //            printf("<bad:%04x>", v);
             good = false;
         }
     }
-    //    printf("], ending rd_addr = 0x%04x\n", xv_getw(rd_addr));
-    printf("%s] Ending rd_addr = 0x%04x\n", good ? "Good" : "bad", xv_getw(rd_addr));
+    // incremented one extra, because data was already pre-read
+    if (end_addr != sizeof(test_string) + 8)
+    {
+        good = false;
+    }
+    dprintf("   End: rd_addr=0x%04x.  Test: ", end_addr);
+    dprintf("%s\n", good ? "good" : "BAD!");
 }
 
-uint32_t mem_buffer[1];
-
-void test_vram_speed()
+uint32_t mem_buffer[128 * 1024];
+void     test_vram_speed()
 {
-    printf(">>> %s\n", __FUNCTION__);
-    xv_setw(wr_addr, 0x0000);
+    xcls();
     xv_setw(wr_inc, 1);
+    xv_setw(wr_addr, 0x0000);
+    xv_setw(rd_inc, 1);
+    xv_setw(rd_addr, 0x0000);
 
-    const int reps = 16;
+    int vram_write = 0;
+    int vram_read  = 0;
+    int main_write = 0;
+    int main_read  = 0;
 
-    uint32_t v = ((0x2f00 | 'G') << 16) | (0x4f00 | 'o');
+    int reps = 16;        // just a few flashes for write test
+    xmsg(0, 0, 0x02, "VRAM write     ");
+    dprintf("VRAM write x %d\n", reps);
+    uint32_t v = ((0x0f00 | 'G') << 16) | (0xf000 | 'o');
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
@@ -156,30 +253,16 @@ void test_vram_speed()
         } while (--count);
         v ^= 0xff00ff00;
     }
-    uint32_t elapsed = timer_stop();
-    global           = v;        // save v so GCC doesn't optimize away test
-    printf("MOVEP.L VRAM write      128KB x 16 (2MB)    %d ms (%d KB/sec)\n", elapsed, (1000 * 128 * reps) / elapsed);
+    vram_write = timer_stop();
+    global     = v;        // save v so GCC doesn't optimize away test
     if (checkchar())
     {
         return;
     }
-    timer_start();
-    for (int loop = 0; loop < reps; loop++)
-    {
-        uint16_t count = 0x8000;        // VRAM long count
-        do
-        {
-            v = xv_getl(data);
-        } while (--count);
-        v ^= 0xff00ff00;
-    }
-    elapsed = timer_stop();
-    global  = v;        // save v so GCC doesn't optimize away test
-    printf("MOVEP.L VRAM read       128KB x 16 (2MB)    %d ms (%d KB/sec)\n", elapsed, (1000 * 128 * reps) / elapsed);
-    if (checkchar())
-    {
-        return;
-    }
+    reps = 32;        // main ram test (NOTE: I am not even incrementing pointer below - like "fake
+                      // register" write)
+    xmsg(0, 0, 0x02, "main RAM write ");
+    dprintf("main RAM write x %d\n", reps);
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
@@ -192,13 +275,34 @@ void test_vram_speed()
         } while (--count);
         v ^= 0xff00ff00;
     }
-    elapsed = timer_stop();
-    global  = v;        // save v so GCC doesn't optimize away test
-    printf("MOVE.L  main RAM write  128KB x 16 (2MB)    %d ms (%d KB/sec)\n", elapsed, (1000 * 128 * reps) / elapsed);
+    main_write = timer_stop();
+    global     = v;        // save v so GCC doesn't optimize away test
     if (checkchar())
     {
         return;
     }
+    reps = 32;        // a bit longer read test (to show stable during read)
+    xmsg(0, 0, 0x02, "VRAM read      ");
+    dprintf("VRAM read x %d\n", reps);
+    timer_start();
+    for (int loop = 0; loop < reps; loop++)
+    {
+        uint16_t count = 0x8000;        // VRAM long count
+        do
+        {
+            v = xv_getl(data);
+        } while (--count);
+    }
+    vram_read = timer_stop();
+    global    = v;        // save v so GCC doesn't optimize away test
+    if (checkchar())
+    {
+        return;
+    }
+    reps = 32;        // main ram test (NOTE: I am not even incrementing pointer below - like "fake
+                      // register" read)
+    xmsg(0, 0, 0x02, "main RAM read  ");
+    dprintf("main RAM read x %d\n", reps);
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
@@ -211,9 +315,58 @@ void test_vram_speed()
         } while (--count);
         v ^= 0xff00ff00;
     }
-    elapsed = timer_stop();
-    global  = v;        // save v so GCC doesn't optimize away test
-    printf("MOVE.L  main RAM read   128KB x 16 (2MB)    %d ms (%d KB/sec)\n", elapsed, (1000 * 128 * reps) / elapsed);
+    main_read = timer_stop();
+    global    = v;         // save v so GCC doesn't optimize away test
+    reps      = 32;        // a bit longer read test (to show stable during read)
+    xmsg(0, 0, 0x02, "VRAM slow read ");
+    dprintf("VRAM slow read x %d\n", reps);
+    timer_start();
+    for (int loop = 0; loop < reps; loop++)
+    {
+        uint16_t count = 0x8000;        // VRAM long count
+        do
+        {
+            xv_setw(rd_addr, 0);
+            v = xv_getbl(data);
+        } while (--count);
+    }
+    vram_read = timer_stop();
+    global    = v;        // save v so GCC doesn't optimize away test
+    if (checkchar())
+    {
+        return;
+    }
+    reps = 32;        // a bit longer read test (to show stable during read)
+    xmsg(0, 0, 0x02, "VRAM slow read2");
+    dprintf("VRAM slow read2 x %d\n", reps);
+    timer_start();
+    for (int loop = 0; loop < reps; loop++)
+    {
+        uint16_t count = 0x8000;        // VRAM long count
+        do
+        {
+            xv_setw(rd_addr, count & 0xff);
+            v = xv_getbl(data);
+        } while (--count);
+    }
+    vram_read = timer_stop();
+    global    = v;        // save v so GCC doesn't optimize away test
+    if (checkchar())
+    {
+        return;
+    }
+    dprintf("done\n");
+
+    dprintf("MOVEP.L VRAM write      128KB x 16 (2MB)    %d ms (%d KB/sec)\n",
+            vram_write,
+            (1000 * 128 * reps) / vram_write);
+    dprintf(
+        "MOVEP.L VRAM read       128KB x 16 (2MB)    %d ms (%d KB/sec)\n", vram_read, (1000 * 128 * reps) / vram_read);
+    dprintf("MOVE.L  main RAM write  128KB x 16 (2MB)    %d ms (%d KB/sec)\n",
+            main_write,
+            (1000 * 128 * reps) / main_write);
+    dprintf(
+        "MOVE.L  main RAM read   128KB x 16 (2MB)    %d ms (%d KB/sec)\n", main_read, (1000 * 128 * reps) / main_read);
 }
 
 uint16_t rosco_m68k_CPUMHz()
@@ -233,64 +386,79 @@ uint16_t rosco_m68k_CPUMHz()
         :
         :);
     uint16_t MHz = ((count * 26) + 500) / 1000;
-    printf("rosco_m68k: m68k CPU speed %d.%d MHz (BogoMIPS %d @ 26 cyc/loop estimated)\n", MHz / 10, MHz % 10, count);
+    dprintf("rosco_m68k: m68k CPU speed %d.%d MHz (%d.%d BogoMIPS)\n",
+            MHz / 10,
+            MHz % 10,
+            count * 3 / 10000,
+            ((count * 3) % 10000) / 10);
 
-    return MHz / 10;
+    return (MHz + 5) / 10;
 }
 
 uint32_t test_count;
 void     xosera_test()
 {
+    // flush any input charaters to avoid instant exit
+    while (checkchar())
+    {
+        readchar();
+    }
+
+    dprintf("Xosera_test_m68k\nGo!\n");
+
+    dprintf("\nxosera_init(1)...");
+    // wait for monitor to unblank
+    bool success = xosera_init(1);
+    dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xv_reg_getw(vidwidth), xv_reg_getw(vidheight));
+
+    if (delay_check(5000))
+    {
+        return;
+    }
+
     while (true)
     {
+        xcls();
+        dprintf("*** xosera_test_m68k iteration: %d\n", test_count++);
         rosco_m68k_CPUMHz();
-        printf("\n*** xosera_test_m68k iteration: %d\n", test_count++);
 
-        printf("xosera_init(0)...");
-        if (xosera_init(0))
-        {
-            printf("success.\n");
-        }
-        else
-        {
-            printf("Failed!\n");
-            if (delay_check(5000))
-            {
-                break;
-            }
-            continue;
-        }
-
-        uint32_t githash  = (xv_reg_getw(githash_h) << 16) | xv_reg_getw(githash_l);
-        uint16_t width    = xv_reg_getw(vidwidth);
-        uint16_t height   = xv_reg_getw(vidheight);
-        uint16_t features = xv_reg_getw(features);
-        xv_reg_setw(dispstart, test_count);
+        uint32_t githash   = (xv_reg_getw(githash_h) << 16) | xv_reg_getw(githash_l);
+        uint16_t width     = xv_reg_getw(vidwidth);
+        uint16_t height    = xv_reg_getw(vidheight);
+        uint16_t features  = xv_reg_getw(features);
         uint16_t dispstart = xv_reg_getw(dispstart);
         uint16_t dispwidth = xv_reg_getw(dispwidth);
         uint16_t scrollxy  = xv_reg_getw(scrollxy);
         uint16_t gfxctrl   = xv_reg_getw(gfxctrl);
 
-        printf("Xosera #%08x\n", githash);
-        printf("Mode: %dx%d  Features:0x%04x\n", width, height, features);
-        printf("dispstart:0x%04x dispwidth:0x%04x\n", dispstart, dispwidth);
-        printf(" scrollxy:0x%04x   gfxctrl:0x%04x\n", scrollxy, gfxctrl);
+        dprintf("Xosera #%08x\n", githash);
+        dprintf("Mode: %dx%d  Features:0x%04x\n", width, height, features);
+        dprintf("dispstart:0x%04x dispwidth:0x%04x\n", dispstart, dispwidth);
+        dprintf(" scrollxy:0x%04x   gfxctrl:0x%04x\n", scrollxy, gfxctrl);
 
-        if (delay_check(5000))        // extra time for monitor to sync
+        xmsg(0, 0, 0x02, "Xosera rosco_m68k test utility");
+
+        if (delay_check(DELAY_TIME))
         {
             break;
         }
 
+
         test_hello();
-        if (delay_check(2000))
+        if (delay_check(DELAY_TIME))
         {
             break;
         }
 
         test_vram_speed();
-        if (delay_check(2000))
+        if (delay_check(DELAY_TIME))
         {
             break;
         }
+    }
+
+    while (checkchar())
+    {
+        readchar();
     }
 }

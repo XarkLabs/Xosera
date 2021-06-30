@@ -13,17 +13,27 @@ There is also a simple C++ FTDI utility included "host_spi", that can be used to
 In the top directory of Xosera, there is a "driver" Makefile that has the following targets:
 
 * make all
-  * build everything (RTL, simulation, uitls and host_spi)
+  * build (almost) everything (RTL, simulation, uitls and host_spi)
 * make upduino
   * build Xosera for UPduino v3 (see rtl/upduino.mk for options)
 * make upd_prog
   * build Xosera and program UPduino v3 (see rtl/upduino.mk for options)
+* make upd_prog
+  * build Xosera and program UPduino v3 (see rtl/upduino.mk for options)
+* make xosera_vga
+  * build full Xosera firmware for rosco_m68k Xosera card for VGA PMOD (combined bitstreams)
+* make xosera_dvi
+  * build full Xosera firmware for rosco_m68k Xosera card DVI PMOD (combined bitstreams)
+* make xosera_vga_prog
+  * build and program full Xosera firmware for rosco_m68k Xosera card for VGA PMOD (combined bitstreams for 640x480 and 848x480)
+* make xosera_dvi_prog
+  * build and program full Xosera firmware for rosco_m68k Xosera card DVI PMOD (combined bitstreams for 640x480 and 848x480)
 * make icebreaker
-  * build Xosera for iCEBreaker (see rtl/icebreaker.mk for options)
+  * build Xosera for iCEBreaker FPGA (see rtl/icebreaker.mk for options)
 * make iceb_prog
   * build Xosera and program iCEBreaker (see rtl/icebreaker.mk for options)
 * make rtl
-  * build UPduino and iCEBreaker bitstream
+  * build both UPduino and iCEBreaker bitstreams
 * make sim
   *build Icarus Verilog and Verilalator simulation files
 * make isim
@@ -38,19 +48,23 @@ In the top directory of Xosera, there is a "driver" Makefile that has the follow
   * build utilities (currently image_to_mem font converter)
 * make host_spi
   * build PC side of FTDI SPI test utility (needs libftdi1)
+* make xvid_spi
+  * Operate Xosera bus via SPI from PC (needs libftdi1)
 * make clean
   * clean files that can be rebuilt
 
 #### Dependencies
 
-* Requires YosysHQ tools (<https://github.com/YosysHQ/fpga-toolchain>).  Sadly, brew and distribution versions seem sadly outdated (if you get `TOK_ERROR` or similar, this is likely why).
-* Simulation requires Icarus Verilog and/or Verilator
-* Utilities and Verilator simulation require C++ compiler
+* Requires YosysHQ tools.  I recommend using the binaries in the [YosysHQ OSS-CAD-Suite](https://github.com/YosysHQ/oss-cad-suite-build) nightly builds for Linux, MacOS and Windows .  Sadly, brew and distribution versions seem sadly outdated (if you get `TOK_ERROR` or similar, this is likely why).
+* Simulation requires Icarus Verilog and/or Verilator (included in YosysHQ OSS-CAD-Suite)
+* Utilities and Verilator simulation require a C++ compiler (gcc or clang)
 * SDL2 and SDL2_Image required for Verilator visual simulation
+* host SPI utilities require libftdi1
 
-NOTE: `nextpnr-ice40` sometimes can fail to meet timing on this design as the "maximum frequency" can vary by several MHz each run.  Usually re-building once or twice will eventually get it to work (non-determinstic, and it may depend on exact version of tools used, I tend to use quite recent ones).
+On a Ubuntu system, the following packages are needed to be installed (along with the OSS-CAD-Suite or equivalent tools) to build Xosera:
+```sudo apt install build-essential unzip libsdl2-dev libsdl2-image-dev libftdi1-dev```
 
-You can consult the most recent `rtl/xosera_upd_stats.txt` or `rtl/xosera_iceb_stats.txt` to see the tool versions I am using and the design results achieved.  These are submitted to git to make "size and speed" regressions easier to notice (as well as to help others building or modifying Xosera).
+You can consult the most recent `rtl/xosera_upd_stats.txt` or `rtl/xosera_iceb_stats.txt` to see the tool versions I have been using and the design results achieved.  These are submitted to git to make "size and speed" regressions easier to notice (as well as to help others building or modifying Xosera).
 
 <a name="upduino-target"></a>
 
@@ -60,9 +74,11 @@ You can consult the most recent `rtl/xosera_upd_stats.txt` or `rtl/xosera_iceb_s
 
 If you are using an UPduino 3.0, then you will need to short the "OSC" jumper so gpio_20 is 12MHz input clock.
 
-UPduino boards require a VGA (or HDMI/DVI) breakout board or breadboard hookup. I have been using a modified Xess StickIt!-VGA (without all pins soldered, as shown [here](https://hackaday.io/project/173731/gallery#8e9ad0d7c922e14d922da6ecdfc4d165)​), but any 3.3V VGA breakout-board should work (up to 4-bits red, green and blue for 4096 colors, but less bits also works).  You can also just wire a VGA connector and a few resistors to make an [R2R DAC](https://en.wikipedia.org/wiki/Resistor_ladder#R%E2%80%932R_resistor_ladder_network_(digital_to_analog_conversion))​ as shown [here](https://papilio.cc/index.php?n=Papilio.ArcadeMegaWing)​ (or [here](https://fraserinnovations.com/fpga-tutor/fpga-beginner-tutorial-vga-experiment-fpga-board-for-beginner-experiment-13/)​ or an 8-color version [here](https://www.fpga4fun.com/PongGame.html)).  For DV (HDMI compatible) video, you can also use the 1bq PMOD with a ribbon-cable "braid" like I have done. ![1BitSquared DV PMOD \"braid\"](pics/1BitSquared_DV_PMOD_braid.jpg)
+UPduino boards require a VGA (or HDMI/DVI) breakout board or breadboard hookup. I have been using a modified Xess StickIt!-VGA (without all pins soldered, as shown [here](https://hackaday.io/project/173731/gallery#8e9ad0d7c922e14d922da6ecdfc4d165)​), but any 3.3V VGA breakout-board should work (up to 4-bits red, green and blue for 4096 colors, but less bits also works).  You can also just wire a VGA connector and a few resistors to make an [R2R DAC](https://en.wikipedia.org/wiki/Resistor_ladder#R%E2%80%932R_resistor_ladder_network_(digital_to_analog_conversion))​ as shown [here](https://papilio.cc/index.php?n=Papilio.ArcadeMegaWing)​ (or [here](https://fraserinnovations.com/fpga-tutor/fpga-beginner-tutorial-vga-experiment-fpga-board-for-beginner-experiment-13/)​ or an 8-color version [here](https://www.fpga4fun.com/PongGame.html)).  For DV (HDMI compatible) video, you can also use the 1BitSquared PMOD with a ribbon-cable "braid" like I have done. ![1BitSquared DV PMOD \"braid\"](pics/1BitSquared_DV_PMOD_braid.jpg)  Note that the UPduino Xosera can be synthesized for either VGA or DVI, but this only changes the pinout (the unused pins on the Digilent VGA are repurposed for DVI CK and DE signals).  When synthesized for DVI, it will configure the pins so on an Xosera PCB for rosco_m68k to match the DVI PMOD (it gets confusing - the initial pin choices were for VGA on a breadboard...).
 
 If you can also change the pin mappings used in [rtl/xosera_upd.sv](upduino/xosera_upd.sv).
+
+Included are some test programs for Arduino AVR (pro-mini) that can operate UPduino Xosera.
 
 <a name="icebreaker-target"></a>
 

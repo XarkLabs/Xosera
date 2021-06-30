@@ -2,7 +2,7 @@
 # vim: set noet ts=8 sw=8
 #
 # NOTE: This assumes UPduino 3.x with PLL and needs either the "OSC" jumper shorted (recommended, but dedicates gpio_20 as a clock).
-# Also, since the RGB LED pins are used as GPIO inputs, jumper R28 should be cut to disconnect the RGB LED (which can interfere with input).
+# Also, since the RGB LED pins are used as GPIO inputs (jumper R28 can be cut to disconnect the RGB LED - but seems okay).
 
 # Using icestorm tools + yosys + nextpnr
 # Modified from examples in icestorm distribution for

@@ -3,7 +3,7 @@
 # 12 MHz clock
 set_io -nowarn CLK        35
 
-# Set input clock frequency for nextpnr-ice40
+# Set clock pin frequency for nextpnr-ice40 to 12MHz
 set_frequency CLK         12
 
 # RS232

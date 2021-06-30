@@ -53,8 +53,8 @@ set_io -nowarn gpio_28 28
 set_io -nowarn gpio_20 20
 set_io -nowarn gpio_10 10
 
-# Set input clock frequency for nextpnr-ice40
-set_frequency gpio_20 12
+# Set clock pin frequency for nextpnr-ice40 to 12MHz
+set_frequency gpio_20  12
 
 # Following are also found on v2.x of the UPduino
 set_io -nowarn gpio_12 12

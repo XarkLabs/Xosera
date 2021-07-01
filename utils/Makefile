@@ -4,10 +4,17 @@
 LDFLAGS		:= $(shell sdl2-config --libs) -lSDL2_image
 SDL_CFLAGS	:= $(shell sdl2-config --cflags)
 
-CFLAGS		:= -std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-sign-compare -Wno-unused-parameter $(SDL_CFLAGS)
+CFLAGS		:= -Os -std=c++14 -Wall -Wextra -Werror $(SDL_CFLAGS)
 
-image_to_mem: image_to_mem.cpp
+all: image_to_mem image_to_monobitmap
+
+image_to_mem: Makefile image_to_mem.cpp
+	$(CXX) $(CFLAGS) $^ -o $@ $(LDFLAGS) 
+
+image_to_monobitmap: Makefile image_to_monobitmap.cpp
 	$(CXX) $(CFLAGS) $^ -o $@ $(LDFLAGS) 
 
 clean:
-	rm -f image_to_mem
+	rm -f image_to_mem image_to_monobitmap
+
+.PHONY:image_to_mem image_to_monobitmap

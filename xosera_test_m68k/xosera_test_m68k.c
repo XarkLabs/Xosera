@@ -23,6 +23,7 @@
 
 #include <basicio.h>
 #include <machine.h>
+#include <sdfat.h>
 
 #define DELAY_TIME 5000        // human speed
 //#define DELAY_TIME 1000        // impatient human speed
@@ -34,8 +35,12 @@
 // https://github.com/rosco-m68k/hardware-projects/blob/feature/xosera/xosera/code/pld/decoder/ic3_decoder.pld#L25)
 volatile xreg_t * const xosera_ptr = (volatile xreg_t * const)0xf80060;        // rosco_m68k Xosera base
 
+bool use_sd;
+
 // dummy global variable
 uint32_t global;        // this is used to prevent the compiler from optimizing out tests
+
+uint32_t mem_buffer[128 * 1024];
 
 // timer helpers
 static uint32_t start_tick;
@@ -97,6 +102,7 @@ bool delay_check(int ms)
 
 static void dputc(char c)
 {
+#ifndef __INTELLISENSE__
     __asm__ __volatile__(
         "move.w %[chr],%%d0\n"
         "move.l #2,%%d1\n"        // SENDCHAR
@@ -104,6 +110,7 @@ static void dputc(char c)
         :
         : [chr] "d"(c)
         : "d0", "d1");
+#endif
 }
 
 static void dprint(const char * str)
@@ -225,8 +232,7 @@ void test_hello()
     dprintf("%s\n", good ? "good" : "BAD!");
 }
 
-uint32_t mem_buffer[128 * 1024];
-void     test_vram_speed()
+void test_vram_speed()
 {
     xcls();
     xv_setw(wr_inc, 1);
@@ -395,6 +401,42 @@ uint16_t rosco_m68k_CPUMHz()
     return (MHz + 5) / 10;
 }
 
+static void test_sd_mono_bitmap(const char * filename)
+{
+    dprintf("Loading mono bitmap: \"%s\"", filename);
+    void * file = fl_fopen(filename, "r");
+
+    if (file != NULL)
+    {
+        int cnt   = 0;
+        int vaddr = 0;
+
+        while (vaddr < 0x10000 && (cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
+        {
+            /* period every 4KiB, does not noticeably affect speed */
+            if (!(vaddr % 0x7))
+            {
+                dprintf(".");
+            }
+
+            uint16_t * maddr = (uint16_t *)mem_buffer;
+            xv_setw(wr_addr, vaddr);
+            for (int i = 0; i < cnt; i += 2)
+            {
+                xv_setw(data, *maddr++);
+            }
+            vaddr += (cnt >> 1);
+        }
+
+        fl_fclose(file);
+        dprintf("done!\n");
+    }
+    else
+    {
+        dprintf(" - FAILED\n");
+    }
+}
+
 uint32_t test_count;
 void     xosera_test()
 {
@@ -404,14 +446,33 @@ void     xosera_test()
         readchar();
     }
 
-    dprintf("Xosera_test_m68k\nGo!\n");
+    dprintf("Xosera_test_m68k\n");
+
+    if (SD_check_support())
+    {
+        dprintf("SD card supported: ");
+
+        if (SD_FAT_initialize())
+        {
+            dprintf("card ready\n");
+            use_sd = true;
+        }
+        else
+        {
+            dprintf("no card\n");
+        }
+    }
+    else
+    {
+        dprintf("No SD card support.\n");
+    }
 
     dprintf("\nxosera_init(1)...");
     // wait for monitor to unblank
     bool success = xosera_init(1);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xv_reg_getw(vidwidth), xv_reg_getw(vidheight));
 
-    if (delay_check(5000))
+    if (delay_check(4000))
     {
         return;
     }
@@ -436,13 +497,37 @@ void     xosera_test()
         dprintf("dispstart:0x%04x dispwidth:0x%04x\n", dispstart, dispwidth);
         dprintf(" scrollxy:0x%04x   gfxctrl:0x%04x\n", scrollxy, gfxctrl);
 
-        xmsg(0, 0, 0x02, "Xosera rosco_m68k test utility");
+        for (int y = 0; y < 30; y += 3)
+        {
+            xmsg(20, y, (y & 0xf) ? (y & 0xf) : 0xf0, ">>> Xosera rosco_m68k test utility <<<<");
+        }
 
         if (delay_check(DELAY_TIME))
         {
             break;
         }
 
+        if (use_sd)
+        {
+            xv_reg_setw(gfxctrl, 0x8000);
+            test_sd_mono_bitmap("/mountains_mono.xmb");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            xv_reg_setw(gfxctrl, 0x0000);
+        }
+
+        if (use_sd)
+        {
+            xv_reg_setw(gfxctrl, 0x8000);
+            test_sd_mono_bitmap("/mona_lisa_mono.xmb");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            xv_reg_setw(gfxctrl, 0x0000);
+        }
 
         test_hello();
         if (delay_check(DELAY_TIME))
@@ -456,6 +541,7 @@ void     xosera_test()
             break;
         }
     }
+    xv_reg_setw(gfxctrl, 0x0000);
 
     while (checkchar())
     {

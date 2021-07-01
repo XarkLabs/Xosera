@@ -22,7 +22,7 @@ GCC_LIBS=$(shell $(CC) --print-search-dirs \
     | grep libraries:\ = \
     | sed 's/libraries: =/-L/g' \
     | sed 's/:/m68000\/ -L/g')m68000/
-LIBS=-lprintf -lcstdlib -lmachine -lstart_serial -lgcc
+LIBS=-lsdfat -lprintf -lcstdlib -lmachine -lstart_serial -lgcc
 ASFLAGS=-mcpu=68010 -march=68010
 LDFLAGS=-T $(SYSLIBDIR)/ld/serial/rosco_m68k_program.ld -L $(SYSLIBDIR) \
     -Map=$(MAP) --gc-sections --oformat=elf32-m68k
@@ -41,7 +41,7 @@ KERMIT=kermit
 SERIAL?=/dev/modem
 BAUD?=9600
 
-# Output config (assume same as name of directory)
+# Output config (assume name of directory)
 PROGRAM_BASENAME=$(shell basename $(CURDIR))
 
 # Set other output files using output basname
@@ -101,7 +101,7 @@ load: $(BINARY)
 test: $(BINARY) $(DISASM)
 	-killall screen && sleep 1
 	$(KERMIT) -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
-	gnome-terminal --geometry=80x25 --title="rosco_m68k $(SERIAL)" -- screen $(SERIAL) $(BAUD)
+	gnome-terminal --geometry=106x30 --title="rosco_m68k $(SERIAL)" -- screen $(SERIAL) $(BAUD)
 
 # This is handy to test on MacOS (kills previous "screen", opens new one in shell window/tab)
 mactest: $(BINARY) $(DISASM)

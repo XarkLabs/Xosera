@@ -37,18 +37,20 @@
 `include "xosera_pkg.sv"
 
 module xosera_main(
-           input  logic         clk,                    // pixel clock
-           input  logic         bus_cs_n_i,             // register select strobe (active low)
-           input  logic         bus_rd_nwr_i,           // 0 = write, 1 = read
-           input  logic [3:0]   bus_reg_num_i,          // register number
-           input  logic         bus_bytesel_i,          // 0 = even byte, 1 = odd byte
-           input  logic [7:0]   bus_data_i,             // 8-bit data bus input
-           output logic [7:0]   bus_data_o,             // 8-bit data bus output
-           output logic [3:0]   red_o, green_o, blue_o, // RGB 4-bit color outputs
-           output logic         hsync_o, vsync_o,       // horizontal and vertical sync
-           output logic         dv_de_o,                // pixel visible (aka display enable)
-           output logic         audio_l_o, audio_r_o,   // left and right audio PWM output
-           input  logic         reset_i                 // reset signal
+           input  wire logic        clk,                    // pixel clock
+           input  wire logic        bus_cs_n_i,             // register select strobe (active low)
+           input  wire logic        bus_rd_nwr_i,           // 0 = write, 1 = read
+           input  wire logic [3:0]  bus_reg_num_i,          // register number
+           input  wire logic        bus_bytesel_i,          // 0 = even byte, 1 = odd byte
+           input  wire logic [7:0]  bus_data_i,             // 8-bit data bus input
+           output logic [7:0]       bus_data_o,             // 8-bit data bus output
+           output logic [3:0]       red_o, green_o, blue_o, // RGB 4-bit color outputs
+           output logic             hsync_o, vsync_o,       // horizontal and vertical sync
+           output logic             dv_de_o,                // pixel visible (aka display enable)
+           output logic             audio_l_o, audio_r_o,   // left and right audio PWM output
+           output logic             reconfig_o,             // reconfigure iCE40 from flash
+           output logic [1:0]       boot_select_o,          // reconfigure congigureation number (0-3)
+           input  wire logic        reset_i                 // reset signal
        );
 
 logic blit_vram_sel         /* verilator public */;     // blitter VRAM select
@@ -81,6 +83,25 @@ assign  blit_fontram_wr     = blit_fontram_sel & blit_wr;
 assign  blit_paletteram_wr  = blit_paletteram_sel && blit_wr;
 assign  blit_other_wr       = blit_paletteram_sel && blit_wr;
 
+logic vgen_ena;                 // enable text/bitmap generation
+logic vgen_vram_sel;            // video vram select (read)
+logic [15:0] vgen_vram_addr;    // video vram addr
+logic [15:0] vgen_reg_data_out; // video data out for blitter reg reads
+
+logic dbug_cs_strobe;               // TODO debug ACK signal
+logic dbug_drive_bus;               // TODO debug bus output signal
+
+logic           fontram_rd_en       /* verilator public */;
+logic [11:0]    fontram_addr        /* verilator public */; // 12-bit word address
+logic [15:0]    fontram_data_out    /* verilator public */;
+
+logic  [3:0]    pal_index       /* verilator public */;
+logic [15:0]    pal_lookup      /* verilator public */;
+
+logic           vsync_1;
+logic           hsync_1;
+logic           dv_de_1;
+
 blitter blitter(
             .clk(clk),
             .bus_cs_n_i(bus_cs_n_i),            // register select strobe
@@ -98,14 +119,11 @@ blitter blitter(
             .blit_data_i(blit_data_in),         // 16-bit word read from aux/vram
             .blit_data_o(blit_data_out),        // 16-bit word write to aux/vram
             .aux_data_i(vgen_reg_data_out),
+            .reconfig_o(reconfig_o),
+            .boot_select_o(boot_select_o),
             .bus_ack_o(dbug_cs_strobe),            // TODO debug
             .reset_i(reset_i)
         );
-
-logic vgen_ena;                 // enable text/bitmap generation
-logic vgen_vram_sel;            // video vram select (read)
-logic [15:0] vgen_vram_addr;    // video vram addr
-logic [15:0] vgen_reg_data_out; // video data out for blitter reg reads
 
 //  video generation
 video_gen video_gen(
@@ -132,8 +150,6 @@ video_gen video_gen(
 assign audio_l_o = dbug_cs_strobe;                    // TODO: audio
 assign audio_r_o = blit_aux_sel; //dbug_drive_bus;                    // TODO: audio
 
-logic dbug_cs_strobe;               // TODO debug ACK signal
-logic dbug_drive_bus;               // TODO debug bus output signal
 assign dbug_drive_bus = (bus_cs_n_i == xv::cs_ENABLED && bus_rd_nwr_i == xv::RnW_READ);
 
 //  16x64K (128KB) video memory
@@ -159,10 +175,6 @@ vram vram(
 );
 
 //  16-bit x 4KB font memory
-logic           fontram_rd_en       /* verilator public */;
-logic [11:0]    fontram_addr        /* verilator public */; // 12-bit word address
-logic [15:0]    fontram_data_out    /* verilator public */;
-
 fontram fontram(
     .clk(clk),
     .rd_en_i(fontram_rd_en),
@@ -175,9 +187,6 @@ fontram fontram(
 );
 
 // video palette RAM
-logic  [3:0]    pal_index       /* verilator public */;
-logic [15:0]    pal_lookup      /* verilator public */;
-
 paletteram paletteram(
     .clk(clk),
     .rd_en_i(1'b1),
@@ -190,10 +199,6 @@ paletteram paletteram(
 );
 
 // palette RAM lookup (delays video 1 cycle for BRAM)
-logic           vsync_1;
-logic           hsync_1;
-logic           dv_de_1;
-
 always_ff @(posedge clk) begin
     vsync_o     <= vsync_1;
     hsync_o     <= hsync_1;
@@ -209,3 +214,4 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
+`default_nettype wire               // restore default

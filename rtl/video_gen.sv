@@ -27,19 +27,19 @@ module video_gen(
     output logic [15:0]     vram_addr_o,        // vram word address out (16x64KB)
     output logic [15:0]     vgen_reg_data_o,    // register/status data reads
     // control inputs
-    input  logic [15:0]     vram_data_i,        // vram word data in
-    input  logic [15:0]     fontram_data_i,     // font memory byte data in
-    input  logic            enable_i,           // enable video (0=black output, 1=normal output)
-    input  logic            vgen_reg_wr_i,      // strobe to write internal config register number
-    input  logic  [3:0]     vgen_reg_num_i,     // internal config register number
-    input  logic [15:0]     vgen_reg_data_i,    // data for internal config register
+    input wire  logic [15:0]    vram_data_i,        // vram word data in
+    input wire  logic [15:0]    fontram_data_i,     // font memory byte data in
+    input wire  logic           enable_i,           // enable video (0=black output, 1=normal output)
+    input wire  logic           vgen_reg_wr_i,      // strobe to write internal config register number
+    input wire  logic  [3:0]    vgen_reg_num_i,     // internal config register number
+    input wire  logic [15:0]    vgen_reg_data_i,    // data for internal config register
     // video signal outputs
-    output logic  [3:0]     pal_index_o,        // palette index outputs
-    output logic            vsync_o, hsync_o,   // VGA sync outputs
-    output logic            dv_de_o,            // VGA video active signal (needed for HDMI)
+    output logic       [3:0]    pal_index_o,        // palette index outputs
+    output logic                vsync_o, hsync_o,   // VGA sync outputs
+    output logic                dv_de_o,            // VGA video active signal (needed for HDMI)
     // standard signals
-    input  logic            reset_i,            // system reset in
-    input  logic            clk                 // clock (video pixel clock)
+    input wire logic            reset_i,            // system reset in
+    input wire logic            clk                 // clock (video pixel clock)
 );
 
 localparam [31:0] githash = 32'H`GITHASH;
@@ -77,7 +77,6 @@ logic  [7:0]    font_shift_out;                           // bit pattern shiftin
 logic [15:0]    vram_data_save;                           // background/foreground color attribute for current tile
 
 logic           tile_start;
-assign          tile_start = mem_fetch && tile_x == 4'b000;
 logic [15:0]    font_addr;
 
 // feature enable signals
@@ -91,6 +90,29 @@ typedef enum logic [1:0] {
     STATE_POST_SYNC = 2'b10,
     STATE_VISIBLE   = 2'b11
 } video_signal_st;
+
+// sync generation signals (and combinatorial logic "next" versions)
+logic [1: 0] h_state;
+logic [10: 0] h_count;
+logic [10: 0] h_count_next_state;
+
+logic [1: 0] v_state;
+logic [10: 0] v_count;
+logic [10: 0] v_count_next_state;
+
+logic mem_fetch;
+logic [10: 0] mem_fetch_toggle;
+
+// sync condition indicators (combinatorial)
+logic           hsync;
+logic           vsync;
+logic           dv_display_ena;
+logic           h_last_line_pixel;
+logic           v_last_frame_pixel;
+logic           [1: 0] h_state_next;
+logic           [1: 0] v_state_next;
+logic           mem_fetch_next;
+logic           h_start_line_fetch;
 
 // video config registers read/write
 always_ff @(posedge clk) begin
@@ -163,36 +185,15 @@ always_ff @(posedge clk) begin
     end
 end
 
-// sync generation signals (and combinatorial logic "next" versions)
-logic [1: 0] h_state;
-logic [10: 0] h_count;
-logic [10: 0] h_count_next_state;
-
-logic [1: 0] v_state;
-logic [10: 0] v_count;
-logic [10: 0] v_count_next_state;
-
-logic mem_fetch;
-logic [10: 0] mem_fetch_toggle;
-
-// sync condition indicators (combinatorial)
-logic           hsync;
-logic           vsync;
-logic           dv_display_ena;
-logic           h_last_line_pixel;
-logic           v_last_frame_pixel;
-logic           [1: 0] h_state_next;
-logic           [1: 0] v_state_next;
-logic           mem_fetch_next;
-logic           h_start_line_fetch;
+assign          tile_start = mem_fetch && tile_x == 4'b000;
 
 always_comb     hsync = (h_state == STATE_SYNC);
 always_comb     vsync = (v_state == STATE_SYNC);
 always_comb     dv_display_ena = vg_enable && (h_state == STATE_VISIBLE) && (v_state == STATE_VISIBLE);
 always_comb     h_last_line_pixel = (h_state_next == STATE_PRE_SYNC) && (h_state == STATE_VISIBLE);
 always_comb     v_last_frame_pixel = (v_state_next == STATE_VISIBLE) && (v_state == STATE_POST_SYNC) && h_last_line_pixel;
-always_comb     h_state_next = (h_count == h_count_next_state) ? h_state + 1 : h_state;
-always_comb     v_state_next = (h_last_line_pixel && v_count == v_count_next_state) ? v_state + 1 : v_state;
+always_comb     h_state_next = (h_count == h_count_next_state) ? h_state + 1'b1 : h_state;
+always_comb     v_state_next = (h_last_line_pixel && v_count == v_count_next_state) ? v_state + 1'b1 : v_state;
 always_comb     mem_fetch_next = (v_state == STATE_VISIBLE && h_count == mem_fetch_toggle) ? ~mem_fetch : mem_fetch;
 always_comb     h_start_line_fetch = (~mem_fetch && mem_fetch_next);
 
@@ -201,12 +202,12 @@ logic [10: 0] v_count_next;
 
 // combinational block for video counters
 always_comb begin
-    h_count_next = h_count + 1;
+    h_count_next = h_count + 1'b1;
     v_count_next = v_count;
 
     if (h_last_line_pixel) begin
         h_count_next = 0;
-        v_count_next = v_count + 1;
+        v_count_next = v_count + 1'b1;
 
         if (v_last_frame_pixel) begin
             v_count_next = 0;
@@ -304,7 +305,7 @@ always_ff @(posedge clk) begin
                     3'b000: begin
                         vram_sel_o      <= vg_enable;                   // select vram
                         vram_addr_o     <= text_addr;                   // put text+color address on vram bus
-                        text_addr       <= text_addr + 1;               // next tile+attribute
+                        text_addr       <= text_addr + 1'b1;            // next tile+attribute
                     end
                     3'b001: begin
                     end
@@ -350,7 +351,7 @@ always_ff @(posedge clk) begin
                     4'b0101: begin
                         vram_sel_o      <= vg_enable;                   // select vram
                         vram_addr_o     <= text_addr;                   // put text+color address on vram bus
-                        text_addr       <= text_addr + 1;               // next tile+attribute
+                        text_addr       <= text_addr + 1'b1;            // next tile+attribute
                     end
                     4'b0110: begin
                     end
@@ -388,7 +389,7 @@ always_ff @(posedge clk) begin
         pal_index_o <= font_pix ? forecolor : backcolor;
 
         // next pixel
-        tile_x <= tile_x + (h_double ? 1 : 2);              // increment tile cell column (by 2 normally, 1 if pixel doubled)
+        tile_x <= tile_x + (h_double ? 4'd1 : 4'd2);     // increment tile cell column (by 2 normally, 1 if pixel doubled)
 
         // start of line
         if (h_start_line_fetch) begin                       // on line fetch start signal
@@ -404,7 +405,7 @@ always_ff @(posedge clk) begin
                 text_addr       <= text_line_addr + text_line_width;    // new text start address
             end
             else begin                                      // else next line of tile cell
-                tile_y <= tile_y + (v_double ? 1 : 2);      // next tile tile line (by 2 normally, 1 if pixel doubled)
+                tile_y <= tile_y + (v_double ? 5'd1 : 5'd2);      // next tile tile line (by 2 normally, 1 if pixel doubled)
             end
         end
 
@@ -431,3 +432,4 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
+`default_nettype wire               // restore default

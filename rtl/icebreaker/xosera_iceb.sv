@@ -207,6 +207,24 @@ assign pll_lock = 1'b1;
 assign pclk     = CLK;
 `endif
 
+logic           reconfig;                   // set to 1 to force reconfigure of FPGA
+logic   [1:0]   boot_select;                // two bit number for flash configuration to load on reconfigure
+
+`ifdef SYNTHESIS
+SB_WARMBOOT boot(
+                .BOOT(reconfig),
+                .S0(boot_select[0]),
+                .S1(boot_select[1])
+            );
+`else
+always @* begin
+    if (reconfig) begin
+        $display("XOSERA REBOOT: To flash config #0x%x", boot_select);
+        $finish;
+    end
+end
+`endif
+
 // reset logic waits for PLL lock & reset button released (with small delay)
 logic reset = 1'b1;         // default in reset state
 
@@ -236,6 +254,8 @@ xosera_main xosera_main(
             .bus_data_o(bus_data_out),
             .audio_l_o(audio_l),
             .audio_r_o(audio_r),
+            .reconfig_o(reconfig),
+            .boot_select_o(boot_select),
             .reset_i(reset),
             .clk(pclk)
 );
@@ -306,3 +326,5 @@ end
 `endif
 
 endmodule
+
+`default_nettype wire               // restore default

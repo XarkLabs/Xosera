@@ -412,6 +412,12 @@ int main(int argc, char ** argv)
 #endif
         main_time++;
 
+        if (top->reconfig_o)
+        {
+            printf("FPGA RECONFIG: config #0x%x\n", top->boot_select_o);
+            done = true;
+        }
+
         if (frame_num > 1 && top->xosera_main->vram_sel && top->xosera_main->vram_wr)
         {
             printf(" => write VRAM[0x%04x]=0x%04x\n", top->xosera_main->vram_addr, top->xosera_main->blit_data_out);

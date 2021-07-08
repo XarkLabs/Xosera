@@ -142,6 +142,36 @@ assign bus_data     = bus_out_ena ? bus_data_out : 8'bZ;
 assign bus_data_in  = bus_data;
 `endif
 
+// PLL to derive proper video frequency from 12MHz oscillator (gpio_20 with OSC jumper shorted)
+logic pclk;                  // video pixel clock output from PLL block
+logic pll_lock;              // indicates when PLL frequency has locked-on
+
+`ifdef SYNTHESIS
+/* verilator lint_off PINMISSING */
+SB_PLL40_CORE
+    #(
+        .DIVR(xv::PLL_DIVR),        // DIVR from video mode
+        .DIVF(xv::PLL_DIVF),        // DIVF from video mode
+        .DIVQ(xv::PLL_DIVQ),        // DIVQ from video mode
+        .FEEDBACK_PATH("SIMPLE"),
+        .FILTER_RANGE(3'b001),
+        .PLLOUT_SELECT("GENCLK")
+    )
+    pll_inst (
+        .LOCK(pll_lock),        // signal indicates PLL lock
+        .RESETB(1'b1),
+        .BYPASS(1'b0),
+        .REFERENCECLK(gpio_20), // input reference clock
+        .PLLOUTGLOBAL(pclk)     // PLL output clock (via global buffer)
+    );
+/* verilator lint_on PINMISSING */
+
+`else
+// for simulation use 1:1 input clock (and testbench can simulate proper frequency)
+assign pll_lock = 1'b1;
+assign pclk = gpio_20;
+`endif
+
 // video output signals
 `ifdef SYNTHESIS
 // DV PMOD mode (but still works great for VGA)
@@ -192,34 +222,22 @@ assign { gpio_44,  gpio_4,   gpio_3,   gpio_48,  gpio_45,  gpio_47  } =
 assign gpio_2   = pclk;    // output HDMI clk
 `endif
 
-// PLL to derive proper video frequency from 12MHz oscillator (gpio_20 with OSC jumper shorted)
-logic pclk;                  // video pixel clock output from PLL block
-logic pll_lock;              // indicates when PLL frequency has locked-on
+logic           reconfig;                   // set to 1 to force reconfigure of FPGA
+logic   [1:0]   boot_select;                // two bit number for flash configuration to load on reconfigure
 
 `ifdef SYNTHESIS
-/* verilator lint_off PINMISSING */
-SB_PLL40_CORE
-    #(
-        .DIVR(xv::PLL_DIVR),        // DIVR from video mode
-        .DIVF(xv::PLL_DIVF),        // DIVF from video mode
-        .DIVQ(xv::PLL_DIVQ),        // DIVQ from video mode
-        .FEEDBACK_PATH("SIMPLE"),
-        .FILTER_RANGE(3'b001),
-        .PLLOUT_SELECT("GENCLK")
-    )
-    pll_inst (
-        .LOCK(pll_lock),        // signal indicates PLL lock
-        .RESETB(1'b1),
-        .BYPASS(1'b0),
-        .REFERENCECLK(gpio_20), // input reference clock
-        .PLLOUTGLOBAL(pclk)     // PLL output clock (via global buffer)
-    );
-/* verilator lint_on PINMISSING */
-
+SB_WARMBOOT boot(
+                .BOOT(reconfig),
+                .S0(boot_select[0]),
+                .S1(boot_select[1])
+            );
 `else
-// for simulation use 1:1 input clock (and testbench can simulate proper frequency)
-assign pll_lock = 1'b1;
-assign pclk = gpio_20;
+always @* begin
+    if (reconfig) begin
+        $display("XOSERA REBOOT: To flash config #0x%x", boot_select);
+        $finish;
+    end
+end
 `endif
 
 // reset logic waits for PLL lock & reset button released (with small delay)
@@ -252,6 +270,10 @@ xosera_main xosera_main(
                 .bus_data_o(bus_data_out),
                 .audio_l_o(audio_l),
                 .audio_r_o(audio_r),
+                .reconfig_o(reconfig),
+                .boot_select_o(boot_select),
                 .reset_i(reset)
             );
 endmodule
+
+`default_nettype wire               // restore default

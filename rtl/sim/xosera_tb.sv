@@ -32,6 +32,9 @@ logic dv_de;
 logic audio_l;
 logic audio_r;
 
+logic reconfig;
+logic [1:0] boot_select;
+
 // bus interface
 logic bus_cs_n;
 logic bus_rd_nwr;
@@ -68,6 +71,8 @@ xosera_main xosera(
                 .bus_data_o(bus_data_out),      // 8-bit data bus output
                 .audio_l_o(audio_l),            // left audio PWM channel
                 .audio_r_o(audio_r),            // right audio PWM channel
+                .reconfig_o(reconfig),          // reconfigure FPGA
+                .boot_select_o(boot_select),    // reconfigure selection
                 .reset_i(reset)                 // reset signal
             );
 
@@ -169,6 +174,12 @@ function logic [63:0] regname(
     end
 endfunction
 
+always @* begin
+    if (reconfig) begin
+        $display("XOSERA REBOOT: To flash config #0x%x", boot_select);
+        $finish;
+    end
+end
 
 `ifdef BUSTEST
 /* verilator lint_off LATCH */
@@ -364,3 +375,5 @@ always @(posedge clk) begin
 end
 
 endmodule
+
+`default_nettype wire               // restore default

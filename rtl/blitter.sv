@@ -12,24 +12,26 @@
 `include "xosera_pkg.sv"
 
 module blitter(
-    input  logic            bus_cs_n_i,         // register select strobe
-    input  logic            bus_rd_nwr_i,       // 0 = write, 1 = read
-    input  logic  [3:0]     bus_reg_num_i,      // register number
-    input  logic            bus_bytesel_i,      // 0=even byte, 1=odd byte
-    input  logic  [7:0]     bus_data_i,         // 8-bit data bus input
-    output logic  [7:0]     bus_data_o,         // 8-bit data bus output
-    input  logic            vgen_sel_i,         // 0 = blitter, 1=video generation
-    output logic            vgen_ena_o,         // 0 = video blank, 1 = video on
-    output logic            blit_vram_sel_o,    // VRAM select
-    output logic            blit_aux_sel_o,     // AUX select
-    output logic            blit_wr_o,          // VRAM/AUX read/write
-    output logic    [15:0]  blit_addr_o,        // VRAM/AUX address
-    input  logic    [15:0]  blit_data_i,        // VRAM read data
-    output logic    [15:0]  blit_data_o,        // VRAM/AUX write data
-    input  logic    [15:0]  aux_data_i,         // AUX read data
-    output logic            bus_ack_o,          // TODO ACK strobe for debug
-    input  logic            reset_i,
-    input  logic            clk
+    input  wire logic           bus_cs_n_i,         // register select strobe
+    input  wire logic           bus_rd_nwr_i,       // 0 = write, 1 = read
+    input  wire logic   [3:0]   bus_reg_num_i,      // register number
+    input  wire logic           bus_bytesel_i,      // 0=even byte, 1=odd byte
+    input  wire logic   [7:0]   bus_data_i,         // 8-bit data bus input
+    output logic        [7:0]   bus_data_o,         // 8-bit data bus output
+    input  wire logic           vgen_sel_i,         // 0 = blitter, 1=video generation
+    output logic                vgen_ena_o,         // 0 = video blank, 1 = video on
+    output logic                blit_vram_sel_o,    // VRAM select
+    output logic                blit_aux_sel_o,     // AUX select
+    output logic                blit_wr_o,          // VRAM/AUX read/write
+    output logic        [15:0]  blit_addr_o,        // VRAM/AUX address
+    input  wire logic   [15:0]  blit_data_i,        // VRAM read data
+    output logic        [15:0]  blit_data_o,        // VRAM/AUX write data
+    input  wire logic   [15:0]  aux_data_i,         // AUX read data
+    output logic                reconfig_o,         // reconfigure iCE40 from flash
+    output logic        [ 1:0]  boot_select_o,      // reconfigure congigureation number (0-3)
+    output logic                bus_ack_o,          // TODO ACK strobe for debug
+    input  wire logic           reset_i,
+    input  wire logic           clk
     );
 
 localparam [31:0] githash = 32'H`GITHASH;
@@ -42,8 +44,6 @@ typedef enum logic [4:0] {
     LOGO_H0, LOGO_H1, LOGO_H2, LOGO_H3, LOGO_H4, LOGO_H5, LOGO_H6, LOGO_H7, LOGO_END,
     IDLE
 } blit_state_t;
-
-assign bus_ack_o = (bus_write_strobe | bus_read_strobe);    // TODO: debug
 
 blit_state_t    blit_state;
 
@@ -63,13 +63,13 @@ logic [15:0]    reg_width;
 logic           blit_2d;
 logic           blit_const;
 
+logic [16:0]    width_counter;          // blit count (extra bit for underflow/done)
+logic [15:0]    blit_rd_addr;           // TODO VRAM read address
+logic [15:0]    blit_wr_addr;           // TODO VRAM write address
 logic           blit_busy;
 assign          blit_busy = ~reg_count[16]; // when reg_count underflows, high bit will be set
 logic           blit_line_end;
 assign          blit_line_end = width_counter[16];  // when width_counter underflows, high bit will be set
-logic [16:0]    width_counter;          // blit count (extra bit for underflow/done)
-logic [15:0]    blit_rd_addr;           // TODO VRAM read address
-logic [15:0]    blit_wr_addr;           // TODO VRAM write address
 
 logic [15:0]    vram_rd_data;           // word read from VRAM (for RD_ADDR)
 logic           blit_vram_rd;
@@ -83,13 +83,15 @@ logic  [7:0]    reg_data_even;           // word written to even byte of XVID_DA
 logic  [7:0]    reg_other_even;          // other even byte (zeroed each write)
 logic  [3:0]    reg_other_reg;           // register associated with reg_other_even
 logic  [7:0]    reg_even_byte;
+logic  [3:0]    bus_reg_num;            // bus register on bus
 assign          reg_even_byte = (reg_other_reg == bus_reg_num) ? reg_other_even : 8'h00;
 
 logic           bus_write_strobe;       // strobe when a word of data written
 logic           bus_read_strobe;        // strobe when a word of data read
-logic  [3:0]    bus_reg_num;            // bus register on bus
 logic           bus_bytesel;            // msb/lsb on bus
 logic  [7:0]    bus_data_byte;          // data byte from bus
+
+assign bus_ack_o = (bus_write_strobe | bus_read_strobe);    // TODO: debug
 
 // bus_interface handles signal synchronization, CS and register writes to Xosera
 bus_interface bus(
@@ -106,24 +108,6 @@ bus_interface bus(
                   .clk(clk),                            // input clk (should be > 2x faster than bus signals)
                   .reset_i(reset_i)                     // reset
               );
-
-logic           reconfig;                   // set to 1 to force reconfigure of FPGA
-logic   [1:0]   boot_select;                // two bit number for flash configuration to load on reconfigure
-
-`ifdef SYNTHESIS
-SB_WARMBOOT boot(
-                .BOOT(reconfig),
-                .S0(boot_select[0]),
-                .S1(boot_select[1])
-            );
-`else
-always @* begin
-    if (reconfig) begin
-        $display("XOSERA REBOOT: To flash config #0x%x", boot_select);
-        $finish;
-    end
-end
-`endif
 
 // continuously output byte selected for read from Xosera (to be put on bus when selected for read)
 assign bus_data_o = reg_read(bus_bytesel, bus_reg_num);
@@ -168,8 +152,8 @@ endfunction
 always_ff @(posedge clk) begin
     if (reset_i) begin
         // control signals
-        reconfig            <= 1'b0;
-        boot_select         <= 2'b00;
+        reconfig_o          <= 1'b0;
+        boot_select_o       <= 2'b00;
         vgen_ena_o          <= 1'b0;
         blit_vram_rd        <= 1'b0;
         blit_vram_rd_ack    <= 1'b0;
@@ -236,7 +220,7 @@ always_ff @(posedge clk) begin
                     width_counter <= { 1'b0, reg_width };
                 end
                 else begin
-                    width_counter <= width_counter - 1;
+                    width_counter <= width_counter - 1'b1;
                     // if not 2-D blit, prevent blit_end_line (bit 16 of width_counter)
                     if (!blit_2d) begin
                         width_counter[16] <= 1'b0;
@@ -245,7 +229,7 @@ always_ff @(posedge clk) begin
 
                 // decrement count register if blitter busy
                 if (blit_busy) begin
-                    reg_count    <= reg_count - 1;
+                    reg_count    <= reg_count - 1'b1;
                 end
             end
             blit_vram_rd    <= 1'b0;
@@ -337,8 +321,8 @@ always_ff @(posedge clk) begin
                     xv::XVID_BLIT_CTRL: begin
                         blit_2d             <= bus_data_byte[0];
                         blit_const          <= bus_data_byte[1];
-                        reconfig            <= reg_even_byte[7:6] == 2'b10 && bus_data_byte[7:6] == 2'b10;
-                        boot_select         <= reg_even_byte[1:0];
+                        reconfig_o          <= reg_even_byte[7:6] == 2'b10 && bus_data_byte[7:6] == 2'b10;
+                        boot_select_o       <= reg_even_byte[1:0];
                     end
                     xv::XVID_UNUSED_E: begin
                     end
@@ -550,3 +534,4 @@ always_ff @(posedge clk) begin
     end
 end
 endmodule
+`default_nettype wire               // restore default

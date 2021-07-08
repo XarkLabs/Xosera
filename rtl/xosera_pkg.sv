@@ -15,6 +15,16 @@
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
+// hack for radiant
+`ifdef SYNTHESIS
+`ifndef YOSYS       // assume Radiant
+`define GITHASH         d0000000
+`define ICE40UP5K
+`define MODE_848x480
+`define PMOD_1B2_DVI12
+`endif
+`endif
+
 `ifndef GITHASH
 `define GITHASH d0000000            // unknown Git hash (assumed dirty)
 `endif
@@ -243,3 +253,5 @@ localparam PLL_DIVQ    =    3'b011;         // DIVQ =  3
 
 endpackage
 `endif
+
+`default_nettype wire               // restore default

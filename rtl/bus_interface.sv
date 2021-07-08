@@ -13,20 +13,20 @@
 
 module bus_interface(
             // bus interface signals
-           input  logic         bus_cs_n_i,             // register select strobe
-           input  logic         bus_rd_nwr_i,           // 0 = write, 1 = read
-           input  logic  [3:0]  bus_reg_num_i,          // register number
-           input  logic         bus_bytesel_i,          // 0=even byte, 1=odd byte
-           input  logic  [7:0]  bus_data_i,             // 8-bit data bus input (broken out from bi-dir data bus)
+           input wire logic         bus_cs_n_i,             // register select strobe
+           input wire logic         bus_rd_nwr_i,           // 0 = write, 1 = read
+           input wire logic [3:0]   bus_reg_num_i,          // register number
+           input wire logic         bus_bytesel_i,          // 0=even byte, 1=odd byte
+           input wire logic [7:0]   bus_data_i,             // 8-bit data bus input (broken out from bi-dir data bus)
            // blitter interface signals
-           output logic         write_strobe_o,         // strobe for register write
-           output logic         read_strobe_o,          // strobe for register read
-           output logic  [3:0]  reg_num_o,              // register number read/written
-           output logic         bytesel_o,              // byte selected of register read/written
-           output logic  [7:0]  bytedata_o,             // byte written to register
+           output logic             write_strobe_o,         // strobe for register write
+           output logic             read_strobe_o,          // strobe for register read
+           output logic  [3:0]      reg_num_o,              // register number read/written
+           output logic             bytesel_o,              // byte selected of register read/written
+           output logic  [7:0]      bytedata_o,             // byte written to register
            // standard signals
-           input  logic         clk,                    // input clk (should be > 2x faster than bus signals)
-           input  logic         reset_i                 // reset
+           input wire logic         clk,                    // input clk (should be > 2x faster than bus signals)
+           input wire logic         reset_i                 // reset
        );
 
 // input synchronizers (shifts right each cycle with high bit set from inputs and bit 0 is acted on)
@@ -48,19 +48,9 @@ assign      bytesel     = bytesel_r[0];
 logic [7:0] data;
 assign      data        = data_r[0];
 
-initial begin
-    cs_r           = 4'b0;               // CS has additional "history bits" to detect edge
-    read_r          = 2'b0;
-    bytesel_r       = 2'b0;
-    reg_num_r[0]    = 4'h0;
-    reg_num_r[1]    = 4'h0;
-    data_r[0]       = 8'h00;
-    data_r[1]       = 8'h00;
-end
-
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        cs_r           <= 4'h0;
+        cs_r            <= 4'h0;
         write_strobe_o  <= 1'b0;
         read_strobe_o   <= 1'b0;
         reg_num_o       <= 4'h0;
@@ -97,3 +87,4 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
+`default_nettype wire               // restore default

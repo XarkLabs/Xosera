@@ -38,7 +38,7 @@ bool          wait_close = false;
 
 class BusInterface
 {
-    const int   BUS_START_TIME = 1685002;        // 640x480 2nd frame
+    const int   BUS_START_TIME = 2467208;        // 2nd frame
     const float BUS_CLOCK_DIV  = 7.7;
 
     enum
@@ -64,6 +64,26 @@ class BusInterface
         XVID_BLIT_CTRL,        // reg D: TODO
         XVID_UNUSED_E,         // reg E: TODO
         XVID_UNUSED_F          // reg F: TODO
+    };
+
+    enum
+    {
+        AUX_DISPSTART   = 0x0000,        // display start address
+        AUX_DISPWIDTH   = 0x0001,        // display width in words
+        AUX_SCROLLXY    = 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
+        AUX_FONTCTRL    = 0x0003,        // [15:11] 1KW/2KW font bank,[8] bram/vram [3:0] font height
+        AUX_GFXCTRL     = 0x0004,        // [0] h pix double
+        AUX_UNUSED_5    = 0x0005,
+        AUX_UNUSED_6    = 0x0006,
+        AUX_UNUSED_7    = 0x0007,
+        AUX_R_WIDTH     = 0x0008,        // display resolution width
+        AUX_R_HEIGHT    = 0x0009,        // display resolution height
+        AUX_R_FEATURES  = 0x000A,        // [15] = 1 (test)
+        AUX_R_SCANLINE  = 0x000B,        // [15] V blank, [14] H blank, [13:11] zero [10:0] V line
+        AUX_R_GITHASH_H = 0x000C,
+        AUX_R_GITHASH_L = 0x000D,
+        AUX_R_UNUSED_E  = 0x000E,
+        AUX_R_UNUSED_F  = 0x000F
     };
 
     static const char * reg_name[];
@@ -219,8 +239,9 @@ const char * BusInterface::reg_name[] = {
 
 BusInterface bus;
 int          BusInterface::test_data_len   = 999;
-uint16_t     BusInterface::test_data[1024] = {0xffff,
-                                          REG_W(WR_ADDR, 0x3),
+uint16_t     BusInterface::test_data[1024] = {REG_W(AUX_ADDR, AUX_GFXCTRL), REG_W(AUX_DATA, 0x8000), 0xFFFF};
+#if 0
+uint16_t     BusInterface::test_stfont[1024] = {REG_W(WR_ADDR, 0x3),
                                           REG_W(WR_INC, 0x1),
                                           REG_W(DATA, 0x0200 | 'H'),
                                           REG_B(DATA, 'e'),
@@ -263,6 +284,7 @@ uint16_t     BusInterface::test_data[1024] = {0xffff,
                                           REG_B(DATA, '\x1e'),
                                           REG_B(DATA, '\x1f'),
                                           0xffff};
+#endif
 
 void ctrl_c(int s)
 {
@@ -367,7 +389,8 @@ int main(int argc, char ** argv)
     int  x_max              = 0;
     int  y_max              = 0;
     int  hsync_count = 0, hsync_min = 0, hsync_max = 0;
-    int  vsync_count = 0;
+    int  vsync_count  = 0;
+    bool image_loaded = false;
 
 #if VM_TRACE
     const auto trace_path = LOGDIR "xosera_vsim.vcd";
@@ -421,6 +444,26 @@ int main(int argc, char ** argv)
         if (frame_num > 1 && top->xosera_main->vram_sel && top->xosera_main->vram_wr)
         {
             printf(" => write VRAM[0x%04x]=0x%04x\n", top->xosera_main->vram_addr, top->xosera_main->blit_data_out);
+        }
+
+        if (frame_num > 1 && !image_loaded)
+        {
+            FILE * bfp = fopen("sim/mountains_mono.xmb", "r");
+            if (bfp != nullptr)
+            {
+                auto       vmem = top->xosera_main->vram->memory;
+                uint16_t * mem  = &vmem[0];
+                if (fread(mem, (VISIBLE_WIDTH / 8) * 2 * VISIBLE_HEIGHT, 1, bfp) == 1)
+                {
+                    printf("loaded %d\n", (VISIBLE_WIDTH / 8) * 2 * VISIBLE_HEIGHT);
+                }
+                fclose(bfp);
+                image_loaded = true;
+            }
+            else
+            {
+                printf("failed\n");
+            }
         }
 
         bool hsync = H_SYNC_POLARITY ? top->hsync_o : !top->hsync_o;

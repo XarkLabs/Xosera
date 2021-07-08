@@ -30,7 +30,9 @@ host_spi/host_spi
 
 # executables
 utils/image_to_mem
+utils/image_to_monobitmap
 xvid_spi/xvid_spi
+**/*.xmb
 
 # object files
 **/*.o

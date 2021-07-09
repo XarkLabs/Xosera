@@ -151,7 +151,7 @@ int main(int argc, char ** argv)
 
     while (!quit)
     {
-        int        out_size   = out_width * 2 * out_height;
+        int        out_size   = (out_width / 8) * 2 * out_height;
         uint16_t * out_pixels = (uint16_t *)malloc(out_size);
 
         if (!out_pixels)

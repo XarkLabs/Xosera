@@ -35,11 +35,15 @@ volatile bool done;
 bool          sim_render = SDL_RENDER;
 bool          sim_bus    = BUS_INTERFACE;
 bool          wait_close = false;
+bool          upload_data;
+const char *  upload_name;
+char          upload_payload[128 * 1024];
+int           upload_size;
 
 class BusInterface
 {
     const int   BUS_START_TIME = 2467208;        // 2nd frame
-    const float BUS_CLOCK_DIV  = 7.7;
+    const float BUS_CLOCK_DIV  = 4;              // 7.7;
 
     enum
     {
@@ -89,8 +93,7 @@ class BusInterface
     static const char * reg_name[];
     enum
     {
-        BUS_PREP,
-        BUS_STROBE,
+        BUS_START,
         BUS_HOLD,
         BUS_STROBEOFF,
         BUS_END
@@ -100,6 +103,9 @@ class BusInterface
     int64_t last_time;
     int     state;
     int     index;
+    bool    data_upload;
+    int     data_upload_count;
+    int     data_upload_index;
 
     static int      test_data_len;
     static uint16_t test_data[1024];
@@ -132,10 +138,13 @@ public:
 
     void init(Vxosera_main * top, bool _enable)
     {
-        enable          = _enable;
-        index           = 0;
-        state           = BUS_PREP;
-        top->bus_cs_n_i = 1;
+        enable            = _enable;
+        index             = 0;
+        state             = BUS_START;
+        data_upload       = false;
+        data_upload_count = 0;
+        data_upload_index = 0;
+        top->bus_cs_n_i   = 1;
     }
 
     void process(Vxosera_main * top)
@@ -145,37 +154,51 @@ public:
         if (enable && main_time >= BUS_START_TIME)
         {
             int64_t bus_time = (main_time - BUS_START_TIME) / BUS_CLOCK_DIV;
-            if (test_data[index] == 0xffff)
-            {
-                enable    = false;
-                last_time = bus_time - 1;
-                return;
-            }
 
             if (bus_time >= last_time)
             {
                 last_time = bus_time + 1;
 
+                if (test_data[index] == 0xfffe)
+                {
+                    data_upload       = upload_size > 0;
+                    data_upload_count = upload_size;        // byte count
+                    data_upload_index = 0;
+                    index++;
+                }
+                if (!data_upload && test_data[index] == 0xffff)
+                {
+                    enable    = false;
+                    last_time = bus_time - 1;
+                    return;
+                }
                 int bytesel = (test_data[index] & 0x1000) ? 1 : 0;
                 int reg_num = (test_data[index] >> 8) & 0xf;
                 int data    = test_data[index] & 0xff;
 
+                if (data_upload && state == BUS_START)
+                {
+                    bytesel = data_upload_index & 1;
+                    reg_num = XVID_DATA;
+                    data    = upload_payload[data_upload_index++];
+                    if (data_upload_index >= data_upload_count)
+                    {
+                        data_upload = false;
+                    }
+                }
+
                 switch (state)
                 {
-                    case BUS_PREP:
+                    case BUS_START:
                         printf("[@t=%lu] ", main_time);
 
-                        top->bus_cs_n_i    = 0;
+                        top->bus_cs_n_i    = 1;
                         top->bus_bytesel_i = bytesel;
                         top->bus_rd_nwr_i  = 0;
                         top->bus_reg_num_i = reg_num;
                         top->bus_data_i    = data;
                         sprintf(tempstr, "r[0x%x] %s.%3s", reg_num, reg_name[reg_num], bytesel ? "lsb*" : "msb");
-                        printf("  %-25.25s <= 0x%02x\n", tempstr, data);
-                        break;
-                    case BUS_STROBE:
-                        top->bus_cs_n_i = 1;
-                        last_time       = bus_time + 2;
+                        printf("  %-25.25s <= 0x%02x\n", tempstr, data & 0xff);
                         break;
                     case BUS_HOLD:
                         break;
@@ -188,8 +211,13 @@ public:
                         top->bus_rd_nwr_i  = 0;
                         top->bus_reg_num_i = 0;
                         top->bus_data_i    = 0;
-                        last_time          = bus_time + 9;
-                        if (++index > test_data_len)
+                        //                        last_time          = bus_time + 9;
+                        if (data_upload)
+                        {
+                            if (data_upload_index >= data_upload_count)
+                                data_upload = false;
+                        }
+                        else if (++index >= test_data_len)
                         {
                             enable = false;
                         }
@@ -200,7 +228,7 @@ public:
                 state = state + 1;
                 if (state > BUS_END)
                 {
-                    state = BUS_PREP;
+                    state = BUS_START;
                 }
             }
         }
@@ -234,12 +262,19 @@ const char * BusInterface::reg_name[] = {
 #define REG_B(r, v) (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_W(r, v)                                                                                                    \
     ((BusInterface::XVID_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
+#define REG_UPLOAD() 0xfffe
+#define REG_END()    0xffff
 
 #define X_COLS 80
 
 BusInterface bus;
 int          BusInterface::test_data_len   = 999;
-uint16_t     BusInterface::test_data[1024] = {REG_W(AUX_ADDR, AUX_GFXCTRL), REG_W(AUX_DATA, 0x8000), 0xFFFF};
+uint16_t     BusInterface::test_data[1024] = {REG_W(AUX_ADDR, AUX_GFXCTRL),
+                                          REG_W(AUX_DATA, 0x8000),
+                                          REG_W(WR_INC, 0x0001),
+                                          REG_W(WR_ADDR, 0x0000),
+                                          REG_UPLOAD(),
+                                          REG_END()};
 #if 0
 uint16_t     BusInterface::test_stfont[1024] = {REG_W(WR_ADDR, 0x3),
                                           REG_W(WR_INC, 0x1),
@@ -283,7 +318,7 @@ uint16_t     BusInterface::test_stfont[1024] = {REG_W(WR_ADDR, 0x3),
                                           REG_B(WR_INC, 1),
                                           REG_B(DATA, '\x1e'),
                                           REG_B(DATA, '\x1f'),
-                                          0xffff};
+                                          REG_END()};
 #endif
 
 void ctrl_c(int s)
@@ -331,8 +366,36 @@ int main(int argc, char ** argv)
         {
             wait_close = true;
         }
+        if (strcmp(argv[nextarg] + 1, "u") == 0)
+        {
+            nextarg += 1;
+            if (nextarg >= argc)
+            {
+                printf("-u needs filename\n");
+                exit(EXIT_FAILURE);
+            }
+            upload_data = true;
+            upload_name = argv[nextarg];
+        }
         nextarg += 1;
     }
+
+    if (upload_data)
+    {
+        printf("Reading upload data: %s\n", upload_name);
+        FILE * bfp = fopen(upload_name, "r");
+        if (bfp != nullptr)
+        {
+            upload_size = fread(upload_payload, 1, sizeof(upload_payload), bfp);
+            printf("  loaded %d bytes\n", upload_size);
+            fclose(bfp);
+        }
+        else
+        {
+            printf("  failed\n");
+        }
+    }
+
 
 #if BUS_INTERFACE
     // bus test data init
@@ -444,26 +507,6 @@ int main(int argc, char ** argv)
         if (frame_num > 1 && top->xosera_main->vram_sel && top->xosera_main->vram_wr)
         {
             printf(" => write VRAM[0x%04x]=0x%04x\n", top->xosera_main->vram_addr, top->xosera_main->blit_data_out);
-        }
-
-        if (frame_num > 1 && !image_loaded)
-        {
-            FILE * bfp = fopen("sim/mountains_mono.xmb", "r");
-            if (bfp != nullptr)
-            {
-                auto       vmem = top->xosera_main->vram->memory;
-                uint16_t * mem  = &vmem[0];
-                if (fread(mem, (VISIBLE_WIDTH / 8) * 2 * VISIBLE_HEIGHT, 1, bfp) == 1)
-                {
-                    printf("loaded %d\n", (VISIBLE_WIDTH / 8) * 2 * VISIBLE_HEIGHT);
-                }
-                fclose(bfp);
-                image_loaded = true;
-            }
-            else
-            {
-                printf("failed\n");
-            }
         }
 
         bool hsync = H_SYNC_POLARITY ? top->hsync_o : !top->hsync_o;

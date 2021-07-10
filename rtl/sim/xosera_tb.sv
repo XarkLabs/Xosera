@@ -79,7 +79,7 @@ xosera_main xosera(
             );
 
 parameter CLK_PERIOD    = (1000000000.0 / PIXEL_FREQ);
-parameter M68K_PERIOD   = 70.333333333333;
+parameter M68K_PERIOD   = 80;
 
 initial begin
     $timeformat(-9, 0, " ns", 20);
@@ -142,7 +142,7 @@ task read_reg(
     bus_reg_num = r_num;
 
     #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
-    #40 data = xosera.bus_data_o;
+    #50ns data = xosera.bus_data_o;
     #(M68K_PERIOD * 2) bus_cs_n = 1'b1;
     bus_rd_nwr = 1'b0;
     bus_bytesel = 1'b0;
@@ -161,9 +161,9 @@ task inject_file(
 
     while (!$feof(File)) begin
         r = $fread(tempbyte, File);
-        #(M68K_PERIOD * 1)  write_reg(1'b0, XVID_DATA, tempbyte);
+        #(M68K_PERIOD * 2)  write_reg(1'b0, XVID_DATA, tempbyte);
         r = $fread(tempbyte, File);
-        #(M68K_PERIOD * 1)  write_reg(1'b1, XVID_DATA, tempbyte);
+        #(M68K_PERIOD * 2)  write_reg(1'b1, XVID_DATA, tempbyte);
     end
 
     $fclose(File);

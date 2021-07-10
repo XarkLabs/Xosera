@@ -181,7 +181,13 @@
 			"random": "c"
 		},
 		"C_Cpp.default.includePath": [
-			"/opt/homebrew/include/SDL2/"
+			"${default}",
+			"/home/kenj/oss-cad-suite/share/verilator/include",
+			"/home/kenj/oss-cad-suite/share/verilator/include/vltstd",
+			"/usr/include/SDL2",
+			"/opt/homebrew/include/SDL2/",
+			"${workspaceFolder}/rtl/sim",
+			"${workspaceFolder}/rtl/sim/obj_dir"
 		]
 	}
 }

@@ -16,6 +16,8 @@
 
 `define MEMDUMP                     // dump VRAM contents to file
 `define BUSTEST
+`define MAX_FRAMES      4
+`define LOAD_MONOBM
 
 module xosera_tb();
 
@@ -119,7 +121,7 @@ task write_reg(
     bus_data_in = data;
 
     #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
-    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
+    #(M68K_PERIOD * 2) bus_cs_n = 1'b1;
     // verilator lint_off WIDTH
     bus_rd_nwr = 1'b0;
     bus_bytesel = 1'b0;
@@ -141,12 +143,33 @@ task read_reg(
 
     #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
     #40 data = xosera.bus_data_o;
-    #(M68K_PERIOD * 4) bus_cs_n = 1'b1;
+    #(M68K_PERIOD * 2) bus_cs_n = 1'b1;
     bus_rd_nwr = 1'b0;
     bus_bytesel = 1'b0;
     bus_reg_num = 4'b0;
     bus_data_in = 8'b0;
 endtask
+
+// function to continuously select read value to put on bus
+task inject_file(
+    );
+    integer File;
+    integer r;
+    logic [7:0] tempbyte;
+
+    File = $fopen("sim/mountains_mono_640x480w.raw", "rb");
+
+    while (!$feof(File)) begin
+        r = $fread(tempbyte, File);
+        #(M68K_PERIOD * 1)  write_reg(1'b0, XVID_DATA, tempbyte);
+        r = $fread(tempbyte, File);
+        #(M68K_PERIOD * 1)  write_reg(1'b1, XVID_DATA, tempbyte);
+    end
+
+    $fclose(File);
+endtask
+
+
 
 function logic [63:0] regname(
         input logic [3:0] num
@@ -192,6 +215,27 @@ always begin
 
     if (xosera.blitter.blit_state == xosera.blitter.IDLE) begin
 //        # 500ms;
+
+`ifdef LOAD_MONOBM
+        # 10ms;
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_INC, test_inc[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_INC, test_inc[7:0]);
+
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_ADDR, 8'h00);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_ADDR, 8'h00);
+
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_ADDR, AUX_GFXCTRL[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_AUX_ADDR, AUX_GFXCTRL[7:0]);
+
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_DATA, 8'h80);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_AUX_DATA, 8'h00);
+
+        inject_file();  // pump binary file into DATA
+
+        # 1000ms;
+
+`endif
+`ifdef ZZZUNDEF // read test
         # 10ms;
         #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_ADDR, test_addr[15:8]);
         #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_ADDR, test_addr[7:0]);
@@ -240,12 +284,15 @@ always begin
         #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_DATA, readword[15:8]);
         #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_DATA, readword[7:0]);
         $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+
+`endif
+
     end
     else begin
         #(M68K_PERIOD * 4);
     end
 
-`ifdef ZZZUNDEF
+`ifdef ZZZUNDEF // some other test...
 
     #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_ADDR, 8'h00);
     #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_AUX_ADDR, 8'h00);
@@ -326,7 +373,7 @@ always @(posedge clk) begin
         frame <= frame + 1;
         $display("Finished rendering frame #%1d", frame);
 
-        if (frame == 2) begin
+        if (frame == `MAX_FRAMES) begin
 `ifdef MEMDUMP
             f = $fopen("logs/xosera_tb_isim_vram.txt", "w");
             for (i = 0; i < 65536; i += 16) begin

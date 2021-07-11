@@ -83,9 +83,21 @@ assign  blit_fontram_wr     = blit_fontram_sel & blit_wr;
 assign  blit_paletteram_wr  = blit_paletteram_sel && blit_wr;
 assign  blit_other_wr       = blit_paletteram_sel && blit_wr;
 
+//  16x64K (128KB) video memory
+logic        vram_sel       /* verilator public */;
+logic        vram_wr        /* verilator public */;
+logic [15:0] vram_addr      /* verilator public */; // 16-bit word address
+logic [15:0] vram_data_in   /* verilator public */;
+logic [15:0] vram_data_out  /* verilator public */;
+logic        vgen_vram_load;
+logic [15:0] vgen_vram_read;
+logic        blit_vram_load;
+logic [15:0] blit_vram_read;
+
 logic vgen_ena;                 // enable text/bitmap generation
 logic vgen_vram_sel;            // video vram select (read)
 logic [15:0] vgen_vram_addr;    // video vram addr
+logic [15:0] vgen_data_in;      // video vram read data
 logic [15:0] vgen_reg_data_out; // video data out for blitter reg reads
 
 logic dbug_cs_strobe;               // TODO debug ACK signal
@@ -101,6 +113,41 @@ logic [15:0]    pal_lookup      /* verilator public */;
 logic           vsync_1;
 logic           hsync_1;
 logic           dv_de_1;
+
+// audio generation (TODO)
+assign audio_l_o = dbug_cs_strobe;                    // TODO: audio
+assign audio_r_o = blit_aux_sel; //dbug_drive_bus;                    // TODO: audio
+
+assign dbug_drive_bus = (bus_cs_n_i == xv::cs_ENABLED && bus_rd_nwr_i == xv::RnW_READ);
+
+assign vram_sel        = vgen_vram_sel ? 1'b1 : blit_vram_sel;
+assign vram_wr         = vgen_vram_sel ? 1'b0 : (blit_wr & blit_vram_sel);
+assign vram_addr       = vgen_vram_sel ? vgen_vram_addr : blit_addr;
+assign vram_data_in    = blit_data_out;
+assign blit_data_in    = blit_vram_load ? vram_data_out : blit_vram_read;
+assign vgen_data_in    = vgen_vram_load ? vram_data_out : vgen_vram_read;
+ 
+// save vgen value read from vram
+always_ff @(posedge clk) begin
+    if (vgen_vram_load) begin
+        vgen_vram_read <= vram_data_out;
+        vgen_vram_load <= 1'b0; 
+    end
+    if (vgen_vram_sel) begin
+        vgen_vram_load <= 1'b1;
+    end
+end
+
+// save blit value read from vram
+always_ff @(posedge clk) begin
+    if (blit_vram_load) begin
+        blit_vram_read <= vram_data_out;
+        blit_vram_load <= 1'b0; 
+    end
+    if (blit_vram_sel) begin
+        blit_vram_load <= ~blit_wr;
+    end
+end
 
 blitter blitter(
             .clk(clk),
@@ -135,7 +182,7 @@ video_gen video_gen(
     .fontram_data_i(fontram_data_out),
     .vram_sel_o(vgen_vram_sel),
     .vram_addr_o(vgen_vram_addr),
-    .vram_data_i(blit_data_in),
+    .vram_data_i(vgen_data_in),
     .vgen_reg_wr_i(blit_vgen_reg_wr),
     .vgen_reg_num_i(blit_addr[3:0]),
     .vgen_reg_data_o(vgen_reg_data_out),
@@ -145,25 +192,6 @@ video_gen video_gen(
     .vsync_o(vsync_1),
     .dv_de_o(dv_de_1)
 );
-
-// audio generation (TODO)
-assign audio_l_o = dbug_cs_strobe;                    // TODO: audio
-assign audio_r_o = blit_aux_sel; //dbug_drive_bus;                    // TODO: audio
-
-assign dbug_drive_bus = (bus_cs_n_i == xv::cs_ENABLED && bus_rd_nwr_i == xv::RnW_READ);
-
-//  16x64K (128KB) video memory
-logic        vram_sel       /* verilator public */;
-logic        vram_wr        /* verilator public */;
-logic [15:0] vram_addr      /* verilator public */; // 16-bit word address
-logic [15:0] vram_data_in   /* verilator public */;
-logic [15:0] vram_data_out  /* verilator public */;
-
-always_comb vram_sel        = vgen_vram_sel ? 1'b1 : blit_vram_sel;
-always_comb vram_wr         = vgen_vram_sel ? 1'b0 : (blit_wr & blit_vram_sel);
-always_comb vram_addr       = vgen_vram_sel ? vgen_vram_addr : blit_addr;
-always_comb vram_data_in    = blit_data_out;
-always_comb blit_data_in    = vram_data_out;
 
 vram vram(
     .clk(clk),

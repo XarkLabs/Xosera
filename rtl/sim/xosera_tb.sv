@@ -47,15 +47,14 @@ logic [7: 0] bus_data_out;
 
 integer i, j, f;
 integer frame;
-integer test_addr;
-integer test_inc;
-integer test_addr2;
-integer test_data0;
-integer test_data1;
-integer test_data2;
-integer test_data3;
+logic [15:0] test_addr;
+logic [15:0] test_inc;
+logic [15:0] test_addr2;
+logic [15:0] test_data0;
+logic [15:0] test_data1;
+logic [15:0] test_data2;
+logic [15:0] test_data3;
 logic [15:0] readword;
-logic last_vs;
 
 xosera_main xosera(
                 .clk(clk),
@@ -120,14 +119,12 @@ task write_reg(
     bus_reg_num = r_num;
     bus_data_in = data;
 
-    #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
+    # 10ns bus_cs_n = 1'b0;    // CS strobe
     #(M68K_PERIOD * 2) bus_cs_n = 1'b1;
-    // verilator lint_off WIDTH
-    bus_rd_nwr = 1'b0;
-    bus_bytesel = 1'b0;
-    bus_reg_num = 4'b0;
-    bus_data_in = 1'b0;
-    // verilator lint_on WIDTH
+    bus_rd_nwr = 1'bX;
+    bus_bytesel = 1'bX;
+    bus_reg_num = 4'bX;
+    bus_data_in = 8'bX;
 endtask
 
 task read_reg(
@@ -141,35 +138,47 @@ task read_reg(
     bus_bytesel = b_sel;
     bus_reg_num = r_num;
 
-    #(M68K_PERIOD * 2) bus_cs_n = 1'b0;    // strobe
-    #50ns data = xosera.bus_data_o;
-    #(M68K_PERIOD * 2) bus_cs_n = 1'b1;
-    bus_rd_nwr = 1'b0;
-    bus_bytesel = 1'b0;
-    bus_reg_num = 4'b0;
-    bus_data_in = 8'b0;
+    # 10ns bus_cs_n = 1'b0;    // strobe
+    #(M68K_PERIOD) data = xosera.bus_data_o;
+    #(M68K_PERIOD) bus_cs_n = 1'b1;
+    bus_rd_nwr = 1'bX;
+    bus_bytesel = 1'bX;
+    bus_reg_num = 4'bX;
+    bus_data_in = 8'bX;
+endtask
+
+task xvid_setw(
+    input  logic [3:0]   r_num,
+    input  logic [15:0]   data
+    );
+
+    write_reg(1'b0, r_num, data[15:8]);
+    #(M68K_PERIOD * 2);
+    write_reg(1'b1, r_num, data[7:0]);
+    #(M68K_PERIOD * 2);
+
 endtask
 
 // function to continuously select read value to put on bus
 task inject_file(
+    string filename,
+    logic [3:0] r_num
     );
-    integer File;
+    integer fd;
     integer r;
     logic [7:0] tempbyte;
 
-    File = $fopen("sim/mountains_mono_640x480w.raw", "rb");
+    fd = $fopen(filename, "rb");
 
-    while (!$feof(File)) begin
-        r = $fread(tempbyte, File);
-        #(M68K_PERIOD * 2)  write_reg(1'b0, XVID_DATA, tempbyte);
-        r = $fread(tempbyte, File);
-        #(M68K_PERIOD * 2)  write_reg(1'b1, XVID_DATA, tempbyte);
+    while (!$feof(fd)) begin
+        r = $fread(tempbyte, fd);
+        #(M68K_PERIOD * 2)  write_reg(1'b0, r_num, tempbyte);
+        r = $fread(tempbyte, fd);
+        #(M68K_PERIOD * 2)  write_reg(1'b1, r_num, tempbyte);
     end
 
-    $fclose(File);
+    $fclose(fd);
 endtask
-
-
 
 function logic [63:0] regname(
         input logic [3:0] num
@@ -214,23 +223,18 @@ always begin
     bus_data_in = 8'b0;
 
     if (xosera.blitter.blit_state == xosera.blitter.IDLE) begin
-//        # 500ms;
 
 `ifdef LOAD_MONOBM
-        # 10ms;
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_INC, test_inc[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_INC, test_inc[7:0]);
+        while (xosera.video_gen.v_last_frame_pixel != 1'b1) begin
+            # 1ns;
+        end
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_ADDR, 8'h00);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_ADDR, 8'h00);
+        #(M68K_PERIOD * 2)  xvid_setw(XVID_WR_INC, test_inc);
+        #(M68K_PERIOD * 2)  xvid_setw(XVID_WR_ADDR, 16'h0000);
+        #(M68K_PERIOD * 2)  xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+        #(M68K_PERIOD * 2)  xvid_setw(XVID_AUX_DATA, 16'h8000);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_ADDR, AUX_GFXCTRL[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_AUX_ADDR, AUX_GFXCTRL[7:0]);
-
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_DATA, 8'h80);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_AUX_DATA, 8'h00);
-
-        inject_file();  // pump binary file into DATA
+        inject_file("sim/mountains_mono_640x480w.raw", XVID_DATA);  // pump binary file into DATA
 
         # 1000ms;
 
@@ -287,11 +291,6 @@ always begin
 
 `endif
 
-    end
-    else begin
-        #(M68K_PERIOD * 4);
-    end
-
 `ifdef ZZZUNDEF // some other test...
 
     #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_ADDR, 8'h00);
@@ -339,6 +338,11 @@ always begin
     $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
 `endif
+
+    end
+    else begin
+        #(M68K_PERIOD * 4);
+    end
 end
 /* verilator lint_on LATCH */
 `endif
@@ -369,7 +373,7 @@ always begin
 end
 
 always @(posedge clk) begin
-    if (last_vs != vsync && vsync != V_SYNC_POLARITY) begin
+    if (xosera.video_gen.v_last_frame_pixel == 1'b1) begin
         frame <= frame + 1;
         $display("Finished rendering frame #%1d", frame);
 
@@ -397,8 +401,6 @@ always @(posedge clk) begin
             $finish;
         end
     end
-
-    last_vs <= vsync;
 end
 
 // NOTE: Horrible hacky Verilog string array to print register name (fixed 8 characters, and in reverse order).

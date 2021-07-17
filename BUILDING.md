@@ -112,4 +112,4 @@ In the "icebreaker" directory is the Makefile to build Xosera for the iCEBreaker
 * **clean**
   * deletes all output files that can be rebuilt
 
-[WIP]
+[WIP...]

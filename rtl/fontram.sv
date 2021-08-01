@@ -26,14 +26,14 @@
 // `define FONT_ADDR_3
 
 module fontram(
-    input wire logic        clk,
-    input wire logic        rd_en_i,
-    input wire logic [11:0] rd_address_i,
-    output logic     [15:0] rd_data_o,
-    input wire logic        wr_clk,
-    input wire logic        wr_en_i,
-    input wire logic [11:0] wr_address_i,
-    input wire logic [15:0] wr_data_i
+    input  logic         clk,
+    input  logic         rd_en_i,
+    input  logic [11:0]  rd_address_i,
+    output logic [15:0]  rd_data_o,
+    input  logic         wr_clk,
+    input  logic         wr_en_i,
+    input  logic [11:0]  wr_address_i,
+    input  logic [15:0]  wr_data_i
 );
 // infer 8x8KB font BRAM
 logic [15: 0] bram[0 : 4095];
@@ -71,4 +71,3 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
-`default_nettype wire               // restore default

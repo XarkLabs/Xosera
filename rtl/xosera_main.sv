@@ -37,20 +37,20 @@
 `include "xosera_pkg.sv"
 
 module xosera_main(
-           input  wire logic        clk,                    // pixel clock
-           input  wire logic        bus_cs_n_i,             // register select strobe (active low)
-           input  wire logic        bus_rd_nwr_i,           // 0 = write, 1 = read
-           input  wire logic [3:0]  bus_reg_num_i,          // register number
-           input  wire logic        bus_bytesel_i,          // 0 = even byte, 1 = odd byte
-           input  wire logic [7:0]  bus_data_i,             // 8-bit data bus input
-           output logic [7:0]       bus_data_o,             // 8-bit data bus output
-           output logic [3:0]       red_o, green_o, blue_o, // RGB 4-bit color outputs
-           output logic             hsync_o, vsync_o,       // horizontal and vertical sync
-           output logic             dv_de_o,                // pixel visible (aka display enable)
-           output logic             audio_l_o, audio_r_o,   // left and right audio PWM output
-           output logic             reconfig_o,             // reconfigure iCE40 from flash
-           output logic [1:0]       boot_select_o,          // reconfigure congigureation number (0-3)
-           input  wire logic        reset_i                 // reset signal
+           input  logic         clk,                    // pixel clock
+           input  logic         bus_cs_n_i,             // register select strobe (active low)
+           input  logic         bus_rd_nwr_i,           // 0 = write, 1 = read
+           input  logic [3:0]   bus_reg_num_i,          // register number
+           input  logic         bus_bytesel_i,          // 0 = even byte, 1 = odd byte
+           input  logic [7:0]   bus_data_i,             // 8-bit data bus input
+           output logic [7:0]   bus_data_o,             // 8-bit data bus output
+           output logic [3:0]   red_o, green_o, blue_o, // RGB 4-bit color outputs
+           output logic         hsync_o, vsync_o,       // horizontal and vertical sync
+           output logic         dv_de_o,                // pixel visible (aka display enable)
+           output logic         audio_l_o, audio_r_o,   // left and right audio PWM output
+           output logic         reconfig_o,             // reconfigure iCE40 from flash
+           output logic [1:0]   boot_select_o,          // reconfigure congigureation number (0-3)
+           input  logic         reset_i                 // reset signal
        );
 
 logic blit_vram_sel         /* verilator public */;     // blitter VRAM select
@@ -242,4 +242,3 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
-`default_nettype wire               // restore default

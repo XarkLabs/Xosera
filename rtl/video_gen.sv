@@ -27,19 +27,19 @@ module video_gen(
     output logic [15:0]     vram_addr_o,        // vram word address out (16x64KB)
     output logic [15:0]     vgen_reg_data_o,    // register/status data reads
     // control inputs
-    input wire  logic [15:0]    vram_data_i,        // vram word data in
-    input wire  logic [15:0]    fontram_data_i,     // font memory byte data in
-    input wire  logic           enable_i,           // enable video (0=black output, 1=normal output)
-    input wire  logic           vgen_reg_wr_i,      // strobe to write internal config register number
-    input wire  logic  [3:0]    vgen_reg_num_i,     // internal config register number
-    input wire  logic [15:0]    vgen_reg_data_i,    // data for internal config register
+    input  logic [15:0]     vram_data_i,        // vram word data in
+    input  logic [15:0]     fontram_data_i,     // font memory byte data in
+    input  logic            enable_i,           // enable video (0=black output, 1=normal output)
+    input  logic            vgen_reg_wr_i,      // strobe to write internal config register number
+    input  logic  [3:0]     vgen_reg_num_i,     // internal config register number
+    input  logic [15:0]     vgen_reg_data_i,    // data for internal config register
     // video signal outputs
-    output logic       [3:0]    pal_index_o,        // palette index outputs
-    output logic                vsync_o, hsync_o,   // VGA sync outputs
-    output logic                dv_de_o,            // VGA video active signal (needed for HDMI)
+    output logic  [3:0]     pal_index_o,        // palette index outputs
+    output logic            vsync_o, hsync_o,   // VGA sync outputs
+    output logic            dv_de_o,            // VGA video active signal (needed for HDMI)
     // standard signals
-    input wire logic            reset_i,            // system reset in
-    input wire logic            clk                 // clock (video pixel clock)
+    input  logic            reset_i,            // system reset in
+    input  logic            clk                 // clock (video pixel clock)
 );
 
 localparam [31:0] githash = 32'H`GITHASH;
@@ -432,4 +432,3 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
-`default_nettype wire               // restore default

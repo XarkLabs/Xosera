@@ -275,5 +275,3 @@ xosera_main xosera_main(
                 .reset_i(reset)
             );
 endmodule
-
-`default_nettype wire               // restore default

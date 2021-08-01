@@ -13,12 +13,12 @@
 `include "xosera_pkg.sv"
 
 module vram(
-           input wire logic         clk,
-           input wire logic         sel,
-           input wire logic         wr_en,
-           input wire logic [15: 0] address_in,
-           input wire logic [15: 0] data_in,
-           output logic     [15: 0] data_out
+           input  logic         clk,
+           input  logic         sel,
+           input  logic         wr_en,
+           input  logic [15: 0] address_in,
+           input  logic [15: 0] data_in,
+           output logic [15: 0] data_out
        );
 
 `ifndef SYNTHESIS
@@ -26,10 +26,8 @@ logic [15: 0] memory[0: 65535] /* verilator public */;
 
 // clear RAM to avoid simulation errors
 initial begin
-    for (integer i = 0; i < 256; i = i + 1) begin
-        for (integer j = 0; j < 256; j = j + 1) begin
-            memory[(i*256)+j] = 16'hdead;    // "garbage"
-        end
+    for (integer i = 0; i < 65536; i = i + 1) begin
+        memory[i] = 16'hdead;    // "garbage"
     end
 
     $readmemb("fonts/font_ST_8x16w.mem", memory, 16'hf000);
@@ -78,7 +76,6 @@ always_comb begin
     endcase
 end
 
-`ifdef YOSYS
 SB_SPRAM256KA umem0 (
                   .ADDRESS(address_in[13: 0]),
                   .DATAIN(data_in),
@@ -127,57 +124,6 @@ SB_SPRAM256KA umem3 (
                   .POWEROFF(1'b1),
                   .DATAOUT(data3)
               );
-`else   // assume Radiant
-SP256K umem0 (
-        .AD(address_in[13: 0]),
-        .DI(data_in),
-        .MASKWE(4'b1111),
-        .WE(wr_en),
-        .CS(select0),
-        .CK(clk),
-        .STDBY(1'b0),
-        .SLEEP(1'b0),
-        .PWROFF_N(1'b1),
-        .DO(data0)
-    );
-SP256K umem1 (
-        .AD(address_in[13: 0]),
-        .DI(data_in),
-        .MASKWE(4'b1111),
-        .WE(wr_en),
-        .CS(select1),
-        .CK(clk),
-        .STDBY(1'b0),
-        .SLEEP(1'b0),
-        .PWROFF_N(1'b1),
-        .DO(data1)
-    );
-SP256K umem2 (
-        .AD(address_in[13: 0]),
-        .DI(data_in),
-        .MASKWE(4'b1111),
-        .WE(wr_en),
-        .CS(select2),
-        .CK(clk),
-        .STDBY(1'b0),
-        .SLEEP(1'b0),
-        .PWROFF_N(1'b1),
-        .DO(data2)
-    );
-SP256K umem3 (
-        .AD(address_in[13: 0]),
-        .DI(data_in),
-        .MASKWE(4'b1111),
-        .WE(wr_en),
-        .CS(select3),
-        .CK(clk),
-        .STDBY(1'b0),
-        .SLEEP(1'b0),
-        .PWROFF_N(1'b1),
-        .DO(data3)
-    );
-`endif
 `endif
 
 endmodule
-`default_nettype wire               // restore default

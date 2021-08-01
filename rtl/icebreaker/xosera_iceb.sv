@@ -326,5 +326,3 @@ end
 `endif
 
 endmodule
-
-`default_nettype wire               // restore default

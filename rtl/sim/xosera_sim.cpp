@@ -19,8 +19,13 @@
 #include "Vxosera_main_vram.h"
 #include "Vxosera_main_xosera_main.h"
 
+#define USE_FST 1
+#if USE_FST
+#include "verilated_fst_c.h"        // for VM_TRACE
+#else
 #include "verilated_vcd_c.h"        // for VM_TRACE
-#include <SDL.h>                    // for SDL_RENDER
+#endif
+#include <SDL.h>        // for SDL_RENDER
 #include <SDL_image.h>
 
 #define LOGDIR "sim/logs/"
@@ -456,10 +461,15 @@ int main(int argc, char ** argv)
     bool image_loaded = false;
 
 #if VM_TRACE
+#if USE_FST
+    const auto trace_path = LOGDIR "xosera_vsim.fst";
+    printf("Started writing FST waveform file to \"%s\"...\n", trace_path);
+    VerilatedFstC * tfp = new VerilatedFstC;
+#else
     const auto trace_path = LOGDIR "xosera_vsim.vcd";
     printf("Started writing VCD waveform file to \"%s\"...\n", trace_path);
-
     VerilatedVcdC * tfp = new VerilatedVcdC;
+#endif
 
     top->trace(tfp, 99);        // trace to heirarchal depth of 99
     tfp->open(trace_path);

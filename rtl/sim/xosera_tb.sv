@@ -82,7 +82,7 @@ parameter M68K_PERIOD   = 80;
 
 initial begin
     $timeformat(-9, 0, " ns", 20);
-    $dumpfile("sim/logs/xosera_tb_isim.vcd");
+    $dumpfile("sim/logs/xosera_tb_isim.fst");
     $dumpvars(0, xosera);
 
     frame = 0;

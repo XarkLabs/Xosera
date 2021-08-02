@@ -88,7 +88,7 @@ CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-s
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
-VERILATOR_ARGS := -I$(SRCDIR) -Mdir sim/obj_dir -Wall -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
+VERILATOR_ARGS := -I$(SRCDIR) -Mdir sim/obj_dir -Wall --trace-fst -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
 
 # Verillator C++ source driver
 CSRC := sim/xosera_sim.cpp
@@ -113,7 +113,7 @@ vrun: sim/obj_dir/V$(VTOP) sim.mk
 # run Verilator to build and run native simulation executable
 irun: sim/$(TBTOP) sim.mk
 	@mkdir -p $(LOGS)
-	sim/$(TBTOP) 2>&1 | tee $(LOGS)/$(TBTOP)_isim.log
+	sim/$(TBTOP) -fst 2>&1 | tee $(LOGS)/$(TBTOP)_isim.log
 
 # use Verilator to build native simulation executable
 sim/obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) sim.mk

@@ -6,16 +6,39 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <algorithm>
+
 bool   word_mode = false;
 bool   c_mode    = false;
 bool   invert    = false;
+bool   color     = false;
 char * in_file   = nullptr;
 char * out_file  = nullptr;
 
-int out_width  = 640;
-int out_height = 480;
+int     out_width  = 640;
+int     out_height = 480;
+uint8_t color_byte = 0x0F;        // white on black default
+
+uint16_t palette[16] = {0x0000,
+                        0x000A,
+                        0x00A0,
+                        0x00AA,
+                        0x0A00,
+                        0x0A0A,
+                        0x0AA0,
+                        0x0AAA,
+                        0x0555,
+                        0x055F,
+                        0x05F5,
+                        0x05FF,
+                        0x0F55,
+                        0x0F5F,
+                        0x0FF5,
+                        0x0FFF};
 
 Uint32 getpixel(SDL_Surface * surface, int x, int y);
+
+uint16_t matchcolors(const SDL_Color rgb[8]);
 
 int main(int argc, char ** argv)
 {
@@ -28,6 +51,10 @@ int main(int argc, char ** argv)
             if (strcmp("-i", argv[a]) == 0)
             {
                 invert = true;
+            }
+            else if (strcmp("-c", argv[a]) == 0)
+            {
+                color = true;
             }
             else if (strcmp("-848", argv[a]) == 0)
             {
@@ -70,6 +97,10 @@ int main(int argc, char ** argv)
     if (invert)
     {
         printf("[Inverting pixels] ");
+    }
+    if (color)
+    {
+        printf("[2 color pixels] ");
     }
     printf("\n");
 
@@ -172,7 +203,8 @@ int main(int argc, char ** argv)
             {
                 for (int x = 0; x < out_width; x += 8)
                 {
-                    uint16_t val = 0;
+                    uint16_t  val            = 0;
+                    SDL_Color byte_pixels[8] = {};
                     if (y < h && x < w)
                     {
                         for (int b = 0; b < 8; b++)
@@ -180,7 +212,8 @@ int main(int argc, char ** argv)
                             SDL_Color rgb;
                             Uint32    data = getpixel(image, x + b, y);
                             SDL_GetRGB(data, image->format, &rgb.r, &rgb.g, &rgb.b);
-                            int v = (rgb.r + rgb.g + rgb.b) / 3;
+                            byte_pixels[b] = rgb;
+                            int v          = (rgb.r + rgb.g + rgb.b) / 3;
 
                             bool pixel = (v >= 128);
                             if (invert)
@@ -194,8 +227,14 @@ int main(int argc, char ** argv)
                             }
                         }
                     }
-
-                    *pptr++ = (val << 8) | 0x0F;        // big-endian!
+                    if (color)
+                    {
+                        *pptr++ = matchcolors(byte_pixels);
+                    }
+                    else
+                    {
+                        *pptr++ = (val << 8) | color_byte;        // big-endian!
+                    }
                 }
             }
 
@@ -255,4 +294,90 @@ Uint32 getpixel(SDL_Surface * surface, int x, int y)
         default:
             return 0; /* shouldn't happen, but avoids warnings */
     }
+}
+
+uint16_t matchcolors(const SDL_Color rgb[8])
+{
+    SDL_Color qrgb[8]  = {};
+    int       irgb[8]  = {};
+    int       icnt[16] = {};
+
+    for (int c = 0; c < 16; c++)
+    {
+        icnt[c] = -1;
+    }
+
+    for (int b = 0; b < 8; b++)
+    {
+        qrgb[b].r = rgb[b].r + 63 < 0x100 ? rgb[b].r + 15 : 0xff;
+        qrgb[b].g = rgb[b].g + 63 < 0x100 ? rgb[b].g + 15 : 0xff;
+        qrgb[b].b = rgb[b].b + 63 < 0x100 ? rgb[b].b + 15 : 0xff;
+    }
+
+    for (int b = 0; b < 8; b++)
+    {
+        qrgb[b].r = ((((qrgb[b].r) >> 6) & 0x3) << 2) | (((qrgb[b].r) >> 6) & 0x3);
+        qrgb[b].g = ((((qrgb[b].g) >> 6) & 0x3) << 2) | (((qrgb[b].r) >> 6) & 0x3);
+        qrgb[b].b = ((((qrgb[b].b) >> 6) & 0x3) << 2) | (((qrgb[b].r) >> 6) & 0x3);
+    }
+
+    for (int b = 0; b < 8; b++)
+    {
+        int best      = -1;
+        int best_dist = 99999;
+        for (int c = 0; c < 16; c++)
+        {
+            int dist = (((palette[c] & 0xf00) >> 8) - qrgb[b].r) * (((palette[c] & 0xf00) >> 8) - qrgb[b].r) +
+                       (((palette[c] & 0x0f0) >> 4) - qrgb[b].g) * (((palette[c] & 0x0f0) >> 4) - qrgb[b].g) +
+                       (((palette[c] & 0x00f) >> 0) - qrgb[b].b) * (((palette[c] & 0x00f) >> 0) - qrgb[b].b);
+
+            if (dist < best_dist)
+            {
+                best      = c;
+                best_dist = dist;
+            }
+        }
+        irgb[b] = best;
+        icnt[best] += 1;
+    }
+
+    int back     = 0;
+    int backbest = -1;
+    for (int c = 0; c < 16; c++)
+    {
+        if (icnt[c] > backbest)
+        {
+            back     = c;
+            backbest = icnt[c];
+        }
+    }
+    icnt[back] = -1;
+
+    int fore     = 15;
+    int forebest = -1;
+    for (int c = 15; c >= 0; --c)
+    {
+        if (icnt[c] > forebest)
+        {
+            fore     = c;
+            forebest = icnt[c];
+        }
+    }
+
+    if (back > fore)
+    {
+        std::swap(back, fore);
+    }
+
+    uint16_t val = 0;
+
+    for (int b = 0; b < 8; b++)
+    {
+        if (irgb[b] != back)
+        {
+            val |= (0x80 >> b);
+        }
+    }
+
+    return (val << 8) | (back << 4) | fore;
 }

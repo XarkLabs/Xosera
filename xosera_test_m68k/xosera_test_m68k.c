@@ -448,25 +448,6 @@ void     xosera_test()
 
     dprintf("Xosera_test_m68k\n");
 
-    if (SD_check_support())
-    {
-        dprintf("SD card supported: ");
-
-        if (SD_FAT_initialize())
-        {
-            dprintf("card ready\n");
-            use_sd = true;
-        }
-        else
-        {
-            dprintf("no card\n");
-        }
-    }
-    else
-    {
-        dprintf("No SD card support.\n");
-    }
-
     dprintf("\nxosera_init(1)...");
     // wait for monitor to unblank
     bool success = xosera_init(1);
@@ -505,6 +486,36 @@ void     xosera_test()
         if (delay_check(DELAY_TIME))
         {
             break;
+        }
+
+        if (SD_check_support())
+        {
+            dprintf("SD card supported: ");
+
+            if (SD_FAT_initialize())
+            {
+                dprintf("card ready\n");
+                use_sd = true;
+            }
+            else
+            {
+                dprintf("no card\n");
+            }
+        }
+        else
+        {
+            dprintf("No SD card support.\n");
+        }
+
+        if (use_sd)
+        {
+            xv_reg_setw(gfxctrl, 0x8000);
+            test_sd_mono_bitmap("/space_shuttle_color.xmb");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            xv_reg_setw(gfxctrl, 0x0000);
         }
 
         if (use_sd)

@@ -186,7 +186,7 @@ public:
                     bytesel = data_upload_index & 1;
                     reg_num = XVID_DATA;
                     data    = upload_payload[data_upload_index++];
-                    if (data_upload_index >= data_upload_count)
+                    if (data_upload_index > data_upload_count)
                     {
                         data_upload = false;
                     }

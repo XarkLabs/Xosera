@@ -36,11 +36,11 @@ typedef enum logic [3:0]{
     XVID_COUNT      = 4'h7,        // reg 7: TODO blitter "repeat" count/trigger
 
     // write only, 16-bit
-    XVID_RD_INC     = 4'h8,        // reg 9: read addr increment value
-    XVID_WR_INC     = 4'h9,        // reg A: write addr increment value
-    XVID_WR_MOD     = 4'hA,        // reg C: TODO write modulo width for 2D blit
+    XVID_RD_INC     = 4'h8,        // reg 8: read addr increment value
+    XVID_WR_INC     = 4'h9,        // reg 9: write addr increment value
+    XVID_WR_MOD     = 4'hA,        // reg A: TODO write modulo width for 2D blit
     XVID_RD_MOD     = 4'hB,        // reg B: TODO read modulo width for 2D blit
-    XVID_WIDTH      = 4'hC,        // reg 8: TODO width for 2D blit
+    XVID_WIDTH      = 4'hC,        // reg C: TODO width for 2D blit
     XVID_BLIT_CTRL  = 4'hD,        // reg D: TODO
     XVID_UNUSED_E   = 4'hE,        // reg E: TODO
     XVID_UNUSED_F   = 4'hF         // reg F: TODO

@@ -32,11 +32,11 @@ enum
     XVID_COUNT,           // reg 7: TODO blitter "repeat" count/trigger
 
     // write only, 16-bit
-    XVID_RD_INC,           // reg 9: read addr increment value
-    XVID_WR_INC,           // reg A: write addr increment value
-    XVID_WR_MOD,           // reg C: TODO write modulo width for 2D blit
+    XVID_RD_INC,           // reg 8: read addr increment value
+    XVID_WR_INC,           // reg 9: write addr increment value
+    XVID_WR_MOD,           // reg A: TODO write modulo width for 2D blit
     XVID_RD_MOD,           // reg B: TODO read modulo width for 2D blit
-    XVID_WIDTH,            // reg 8: TODO width for 2D blit
+    XVID_WIDTH,            // reg C: TODO width for 2D blit
     XVID_BLIT_CTRL,        // reg D: TODO
     XVID_UNUSED_E,         // reg E: TODO
     XVID_UNUSED_F,         // reg F: TODO
@@ -51,10 +51,10 @@ enum
     AUX_UNUSED5    = 0x0005,
     AUX_UNUSED6    = 0x0006,
     AUX_UNUSED7    = 0x0007,
-    AUX_R_WIDTH    = 0x0000,        // display resolution width
-    AUX_R_HEIGHT   = 0x0001,        // display resolution height
-    AUX_R_FEATURES = 0x0002,        // [15] = 1 (test)
-    AUX_R_SCANLINE = 0x0003,        // [15] V blank, [14:11] zero [10:0] V line
+    AUX_R_WIDTH    = 0x0008,        // display resolution width
+    AUX_R_HEIGHT   = 0x0009,        // display resolution height
+    AUX_R_FEATURES = 0x000A,        // [15] = 1 (test)
+    AUX_R_SCANLINE = 0x000B,        // [15] V blank, [14:11] zero [10:0] V line
     AUX_W_FONT     = 0x4000,        // 0x4000-0x5FFF 8K byte font memory (even byte [15:8] ignored)
     AUX_W_COLORTBL = 0x8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
     AUX_W_AUD      = 0xc000         // 0xC000-0x??? TODO (audio registers)

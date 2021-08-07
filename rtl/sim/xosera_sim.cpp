@@ -65,11 +65,11 @@ class BusInterface
         XVID_COUNT,           // reg 7: TODO blitter "repeat" count/trigger
 
         // write only, 16-bit
-        XVID_RD_INC,           // reg 9: read addr increment value
-        XVID_WR_INC,           // reg A: write addr increment value
-        XVID_WR_MOD,           // reg C: TODO write modulo width for 2D blit
+        XVID_RD_INC,           // reg 8: read addr increment value
+        XVID_WR_INC,           // reg 9: write addr increment value
+        XVID_WR_MOD,           // reg A: TODO write modulo width for 2D blit
         XVID_RD_MOD,           // reg B: TODO read modulo width for 2D blit
-        XVID_WIDTH,            // reg 8: TODO width for 2D blit
+        XVID_WIDTH,            // reg C: TODO width for 2D blit
         XVID_BLIT_CTRL,        // reg D: TODO
         XVID_UNUSED_E,         // reg E: TODO
         XVID_UNUSED_F          // reg F: TODO

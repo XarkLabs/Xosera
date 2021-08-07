@@ -258,7 +258,7 @@ localparam PLL_DIVQ    =    3'b011;         // DIVQ =  3
 `endif
 `endif
 
-`define TESTPATTERN     // init with "test pattern" instead of clear VRAM
+//`define TESTPATTERN     // init with "test pattern" instead of clear VRAM
 
 endpackage
 `endif

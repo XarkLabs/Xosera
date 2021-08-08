@@ -41,23 +41,29 @@ enum
     XVID_UNUSED_E,         // reg E: TODO
     XVID_UNUSED_F,         // reg F: TODO
 
-    // AUX access using AUX_ADDR/AUX_DATA
-    AUX_VID        = 0x0000,        // 0-8191 8-bit address (bits 15:8 ignored writing)
-    AUX_DISPSTART  = 0x0000,        // display start address
-    AUX_DISPWIDTH  = 0x0001,        // tile line width (usually WIDTH/8)
-    AUX_SCROLLXY   = 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
-    AUX_FONTCTRL   = 0x0003,        // [9:8] 2KB font bank, [3:0] font height
-    AUX_GFXCTRL    = 0x0004,        // [0] h pix double
-    AUX_UNUSED5    = 0x0005,
-    AUX_UNUSED6    = 0x0006,
-    AUX_UNUSED7    = 0x0007,
-    AUX_R_WIDTH    = 0x0008,        // display resolution width
-    AUX_R_HEIGHT   = 0x0009,        // display resolution height
-    AUX_R_FEATURES = 0x000A,        // [15] = 1 (test)
-    AUX_R_SCANLINE = 0x000B,        // [15] V blank, [14:11] zero [10:0] V line
-    AUX_W_FONT     = 0x4000,        // 0x4000-0x5FFF 8K byte font memory (even byte [15:8] ignored)
-    AUX_W_COLORTBL = 0x8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
-    AUX_W_AUD      = 0xc000         // 0xC000-0x??? TODO (audio registers)
+    // AUX address space regions
+    AUX_VID      = 0x0000,        // 0x0000-0x000f 16 word secondary regs
+    AUX_FONT     = 0x4000,        // 0x4000-0x5FFF 4K word font memory
+    AUX_COLORTBL = 0x8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
+    AUX_AUD      = 0xC000,        // 0xC000-0xC??? TODO (audio registers)
+
+    // AUX register access using AUX_ADDR/AUX_DATA
+    AUX_DISPSTART   = AUX_VID | 0x0000,        // display start address
+    AUX_DISPWIDTH   = AUX_VID | 0x0001,        // tile line width (usually WIDTH/8)
+    AUX_SCROLLXY    = AUX_VID | 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
+    AUX_FONTCTRL    = AUX_VID | 0x0003,        // [9:8] 2KB font bank, [3:0] font height
+    AUX_GFXCTRL     = AUX_VID | 0x0004,        // [0] h pix double
+    AUX_UNUSED5     = AUX_VID | 0x0005,
+    AUX_UNUSED6     = AUX_VID | 0x0006,
+    AUX_UNUSED7     = AUX_VID | 0x0007,
+    AUX_R_WIDTH     = AUX_VID | 0x0008,        // display resolution width
+    AUX_R_HEIGHT    = AUX_VID | 0x0009,        // display resolution height
+    AUX_R_FEATURES  = AUX_VID | 0x000A,        // [15] = 1 (test)
+    AUX_R_SCANLINE  = AUX_VID | 0x000B,        // [15] V blank, [14:11] zero [10:0] V line
+    AUX_R_GITHASH_H = AUX_VID | 0x000C,
+    AUX_R_GITHASH_L = AUX_VID | 0x000D,
+    AUX_R_UNUSED_E  = AUX_VID | 0x000E,
+    AUX_R_UNUSED_F  = AUX_VID | 0x000F
 };
 
 static void hexdump(size_t num, uint8_t * mem)
@@ -567,8 +573,8 @@ void show_blurb()
 
     for (uint8_t i = 0; i < 16; i++)
     {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for palette index
-        xvid_setw(XVID_AUX_DATA, defpal[i]);                 // set palette data
+        xvid_setw(XVID_AUX_ADDR, AUX_COLORTBL | i);        // use WR address for palette index
+        xvid_setw(XVID_AUX_DATA, defpal[i]);               // set palette data
     }
 
 #if 0
@@ -763,7 +769,7 @@ void draw_buddy()
     }
     for (uint16_t a = 0; a < 2048; a++)
     {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_FONT | 4096 | a);
+        xvid_setw(XVID_AUX_ADDR, AUX_FONT | 4096 | a);
         xvid_setw(XVID_AUX_DATA, buddy_font[a]);
     }
 
@@ -1041,16 +1047,16 @@ int main(int argc, char ** argv)
 
     for (uint16_t k = 0; k < 2000; k++)
     {
-        xvid_setw(XVID_AUX_ADDR, AUX_R_SCANLINE);            // set scanline reg
-        uint16_t l = xvid_getw(XVID_AUX_DATA);               // read scanline
-        l          = l | ((0xf - (l & 0xf)) << 8);           // invert blue for some red
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 0);        // set palette entry #0
-        xvid_setw(XVID_AUX_DATA, l);                         // set palette data
+        xvid_setw(XVID_AUX_ADDR, AUX_R_SCANLINE);          // set scanline reg
+        uint16_t l = xvid_getw(XVID_AUX_DATA);             // read scanline
+        l          = l | ((0xf - (l & 0xf)) << 8);         // invert blue for some red
+        xvid_setw(XVID_AUX_ADDR, AUX_COLORTBL | 0);        // set palette entry #0
+        xvid_setw(XVID_AUX_DATA, l);                       // set palette data
     }
     for (uint8_t i = 0; i < 16; i++)
     {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for palette index
-        xvid_setw(XVID_AUX_DATA, defpal[i]);                 // set palette data
+        xvid_setw(XVID_AUX_ADDR, AUX_COLORTBL | i);        // use WR address for palette index
+        xvid_setw(XVID_AUX_DATA, defpal[i]);               // set palette data
     }
 
     //    test_reg_access();

@@ -111,7 +111,7 @@ timing: icebreaker/$(TOP)_$(VIDEO_MODE).rpt icebreaker.mk
 	@echo iCETime timing report: $(TOP).rpt
 
 # run Yosys to generate a "dot" graphical representation of each design file
- show: $(DOT) icebreaker.mk
+show: $(DOT) icebreaker.mk
 
 # run Yosys with "noflatten", which will produce a resource count per module
 count: $(SRC) $(INC) $(FONTFILES) icebreaker.mk
@@ -141,6 +141,7 @@ icebreaker/%_$(VIDEO_MODE).asc: icebreaker/%_$(VIDEO_MODE).json $(PIN_DEF) icebr
 	@-cp $(TOP)_stats.txt $(LOGS)/$(TOP)_stats_last.txt
 	$(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) $(SPI_INTERFACE) | tee $(TOP)_stats.txt
+	@-tabbyadm version | tee -a $(TOP)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@$(NEXTPNR) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@sed -n '/Device utilisation/,/Info: Placed/p' $(LOGS)/$(TOP)_nextpnr.log | sed '$$d' | grep -v ":     0/" | tee -a $(TOP)_stats.txt

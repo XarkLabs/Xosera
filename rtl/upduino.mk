@@ -141,6 +141,7 @@ upduino/%_$(VIDEO_MODE).asc: upduino/%_$(VIDEO_MODE).json $(PIN_DEF) upduino.mk
 	@-cp $(TOP)_stats.txt $(LOGS)/$(TOP)_stats_last.txt
 	$(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 	@echo === UPduino Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(TOP)_stats.txt
+	@-tabbyadm version | tee -a $(TOP)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@$(NEXTPNR) -V 2>&1 | tee -a $(TOP)_stats.txt
 	@sed -n '/Device utilisation/,/Info: Placed/p' $(LOGS)/$(TOP)_nextpnr.log | sed '$$d' | grep -v ":     0/" | tee -a $(TOP)_stats.txt

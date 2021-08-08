@@ -33,6 +33,7 @@ endif
 # Supported modes:                           (exact) (actual)
 #	MODE_640x400	640x400@70Hz 	clock 25.175 (25.125) MHz
 #	MODE_640x480	640x480@60Hz	clock 25.175 (25.125) MHz
+#	MODE_640x480_75	640x480@75Hz	clock 31.500 (31.500) MHz
 #	MODE_720x400	720x400@70Hz 	clock 28.322 (28.500) MHz
 #	MODE_848x480	848x480@60Hz	clock 33.750 (33.750) MHz (16:9 480p)
 #	MODE_800x600	800x600@60Hz	clock 40.000 (39.750) MHz

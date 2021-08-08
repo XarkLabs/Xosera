@@ -250,6 +250,8 @@ static uint16_t addr;
 static uint16_t data;
 static uint16_t rdata;
 
+uint32_t mem_buffer[128 * 1024];
+
 #include "buddy_font.h"
 
 static void spi_reset(uint8_t cmd)
@@ -618,6 +620,40 @@ static void problem(const char * msg, uint16_t addr, uint16_t rdata, uint16_t vd
     errors++;
     printf("%s at 0x%04x, rd=%04x, vs %04x, errors %d\n", msg, addr, rdata, vdata, errors);
     error_flag = true;
+}
+
+
+static void test_mono_bitmap(const char * filename)
+{
+    printf("Loading mono bitmap: \"%s\"", filename);
+    FILE * file = fopen(filename, "r");
+
+    xvid_setw(XVID_WR_INC, 0x0001);
+
+    if (file != NULL)
+    {
+        int cnt   = 0;
+        int vaddr = 0;
+
+        while ((cnt = fread(mem_buffer, 1, 128 * 1024, file)) > 0)
+        {
+            uint8_t * maddr = (uint8_t *)mem_buffer;
+            xvid_setw(XVID_WR_ADDR, vaddr);
+            for (int i = 0; i < cnt; i += 2)
+            {
+                xvid_sethb(XVID_DATA, *maddr++);
+                xvid_setlb(XVID_DATA, *maddr++);
+            }
+            vaddr += (cnt >> 1);
+        }
+
+        fclose(file);
+        printf(" - done!\n");
+    }
+    else
+    {
+        printf(" - FAILED\n");
+    }
 }
 
 
@@ -1027,6 +1063,10 @@ int main(int argc, char ** argv)
 
     reboot_Xosera(xosera_config);
 
+    // text mode
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x0000);
+
     delay(5000);        // let the stunning boot logo display. :)
 #if 1
     xcls();
@@ -1045,7 +1085,7 @@ int main(int argc, char ** argv)
 
     delay(5000);
 #endif
-
+#if 0        // delme
     test_smoothscroll();
 
     xcolor(0xf);
@@ -1075,7 +1115,7 @@ int main(int argc, char ** argv)
     xhome();
 
     xprint_rainbow(1, blurb);
-
+#endif
     delay_ms(2000);
 
     xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);        // use WR address for palette index
@@ -1086,6 +1126,11 @@ int main(int argc, char ** argv)
     xcolor(0xf);
     xcls();
     draw_buddy();
+
+    // mono bitmap mode
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x8000);
+    test_mono_bitmap("space_shuttle_color_small.raw");
 
     host_spi_close();
 

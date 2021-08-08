@@ -1085,7 +1085,7 @@ int main(int argc, char ** argv)
 
     delay(5000);
 #endif
-#if 0        // delme
+
     test_smoothscroll();
 
     xcolor(0xf);
@@ -1115,7 +1115,7 @@ int main(int argc, char ** argv)
     xhome();
 
     xprint_rainbow(1, blurb);
-#endif
+
     delay_ms(2000);
 
     xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);        // use WR address for palette index

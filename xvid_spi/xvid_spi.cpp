@@ -755,7 +755,8 @@ void test_reg_access()
 void draw_buddy()
 {
     xvid_setw(XVID_AUX_ADDR, AUX_FONTCTRL);        // A_font_ctrl
-    xvid_setw(XVID_AUX_DATA, 0x0207);              // 2nd font in bank 2, 8 high
+    //    xvid_setw(XVID_AUX_DATA, 0x0207);              // 2nd font in bank 2, 8 high
+    xvid_setw(XVID_AUX_DATA, 0x4107);        // 2nd font in VRAM @ 0x4000, 8 high
     rows <<= 1;
 
     xcls(0xff);
@@ -767,10 +768,15 @@ void draw_buddy()
             xvid_setw(XVID_DATA, 0x0f00 | (y * 16 + x));
         }
     }
-    for (uint16_t a = 0; a < 2048; a++)
+    for (uint16_t a = 0; a < 1024; a++)
     {
-        xvid_setw(XVID_AUX_ADDR, AUX_FONT | 4096 | a);
-        xvid_setw(XVID_AUX_DATA, buddy_font[a]);
+        //        xvid_setw(XVID_AUX_ADDR, AUX_FONT | 4096 | a);
+        //        uint16_t w = (buddy_font[(a << 1) + 1] << 8) | buddy_font[(a << 1)];
+        //        xvid_setw(XVID_AUX_DATA, w);
+
+        xvid_setw(XVID_WR_ADDR, 0x4000 | a);
+        uint16_t w = (buddy_font[(a << 1) + 1] << 8) | buddy_font[(a << 1)];
+        xvid_setw(XVID_DATA, w);
     }
 
     delay(2000);
@@ -1039,6 +1045,7 @@ int main(int argc, char ** argv)
 
     delay(5000);
 #endif
+
     test_smoothscroll();
 
     xcolor(0xf);
@@ -1075,6 +1082,11 @@ int main(int argc, char ** argv)
     xvid_setw(XVID_AUX_DATA, 0x0001);             // set palette data
 
     delay(2000);
+
+    xcolor(0xf);
+    xcls();
+    draw_buddy();
+
     host_spi_close();
 
     exit(EXIT_SUCCESS);

@@ -1,9 +1,9 @@
-=== iCEBreaker Xosera: PMOD_DIGILENT_VGA MODE_640x480_75
-Package: oss-cad-suite-darwin-x64-20210807
-Yosys 0.9+4247 (git sha1 a24906a7, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
+=== iCEBreaker Xosera: PMOD_1B2_DVI12 MODE_848x480
+Package: oss-cad-suite-darwin-x64-20210809
+Yosys 0.9+4249 (git sha1 d8fcf1ab, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
 nextpnr-ice40 -- Next Generation Place and Route (Version dd637643)
 Info: Device utilisation:
-Info: 	         ICESTORM_LC:  1252/ 5280    23%
+Info: 	         ICESTORM_LC:  1263/ 5280    23%
 Info: 	        ICESTORM_RAM:    17/   30    56%
 Info: 	               SB_IO:    28/   96    29%
 Info: 	               SB_GB:     5/    8    62%
@@ -11,4 +11,4 @@ Info: 	        ICESTORM_PLL:     1/    1   100%
 Info: 	         SB_WARMBOOT:     1/    1   100%
 Info: 	      ICESTORM_SPRAM:     4/    4   100%
 
-Info: Max frequency for clock 'pclk': 32.75 MHz (PASS at 31.50 MHz)
+Info: Max frequency for clock 'pclk': 41.81 MHz (PASS at 33.77 MHz)

@@ -506,6 +506,17 @@ void     xosera_test()
         {
             dprintf("No SD card support.\n");
         }
+        // ST_KingTut_Dpaint_16.xb4
+        if (use_sd)
+        {
+            xv_reg_setw(gfxctrl, 0x0000);
+            test_sd_mono_bitmap("/ST_KingTut_Dpaint_16.xb4");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            xv_reg_setw(gfxctrl, 0x0000);
+        }
 
         if (use_sd)
         {

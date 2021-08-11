@@ -35,7 +35,11 @@ endif
 #	MODE_800x600	800x600@60Hz	clock 40.000 MHz
 #	MODE_1024x768	1024x768@60Hz	clock 65.000 MHz
 #	MODE_1280x720	1280x720@60Hz	clock 74.176 MHz
-VIDEO_MODE ?= MODE_848x480
+VIDEO_MODE ?= MODE_640x480
+
+#VRUN_TESTDATA ?= sim/space_shuttle_color_848x480w.raw
+#VRUN_TESTDATA ?= sim/mandel_320x240_16.raw
+VRUN_TESTDATA ?= sim/ST_KingTut_Dpaint_16.raw
 
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
@@ -109,7 +113,7 @@ isim: sim/$(TBTOP) sim.mk
 # run Verilator to build and run native simulation executable
 vrun: sim/obj_dir/V$(VTOP) sim.mk
 	@mkdir -p $(LOGS)
-	sim/obj_dir/V$(VTOP) -u sim/space_shuttle_color_848x480w.raw | tee $(LOGS)/xosera_vsim.log
+	sim/obj_dir/V$(VTOP) -u $(VRUN_TESTDATA) | tee $(LOGS)/xosera_vsim.log
 
 # run Verilator to build and run native simulation executable
 irun: sim/$(TBTOP) sim.mk

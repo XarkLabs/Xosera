@@ -243,6 +243,9 @@ xosera_main xosera_main(
             .red_o(vga_r),
             .green_o(vga_g),
             .blue_o(vga_b),
+            /* verilator lint_off PINCONNECTEMPTY */
+            .vblank_o(),                    // TODO Should probably have a pin?
+            /* verilator lint_on  PINCONNECTEMPTY */
             .vsync_o(vga_vs),
             .hsync_o(vga_hs),
             .dv_de_o(dv_de),

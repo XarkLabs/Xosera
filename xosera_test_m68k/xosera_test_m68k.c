@@ -25,6 +25,8 @@
 #include <machine.h>
 #include <sdfat.h>
 
+//#define USE_BPP4TEST        // for 4-bpp test gateware (Tut)
+
 #define DELAY_TIME 5000        // human speed
 //#define DELAY_TIME 1000        // impatient human speed
 //#define DELAY_TIME 100        // machine speed
@@ -411,7 +413,7 @@ static void test_sd_mono_bitmap(const char * filename)
         int cnt   = 0;
         int vaddr = 0;
 
-        while (vaddr < 0x10000 && (cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
+        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
         {
             /* period every 4KiB, does not noticeably affect speed */
             if (!(vaddr % 0x7))
@@ -421,7 +423,7 @@ static void test_sd_mono_bitmap(const char * filename)
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
             xv_setw(wr_addr, vaddr);
-            for (int i = 0; i < cnt; i += 2)
+            for (int i = 0; i < (cnt >> 1); i++)
             {
                 xv_setw(data, *maddr++);
             }
@@ -494,19 +496,32 @@ void     xosera_test()
 
             if (SD_FAT_initialize())
             {
-                dprintf("card ready\n");
+                dprintf("SD card ready\n");
                 use_sd = true;
             }
             else
             {
-                dprintf("no card\n");
+                dprintf("no SD card\n");
+                use_sd = false;
             }
         }
         else
         {
             dprintf("No SD card support.\n");
         }
-
+#if defined(USE_BPP4TEST)        // 4bpp test
+                                 // ST_KingTut_Dpaint_16.xb4
+        if (use_sd)
+        {
+            xv_reg_setw(gfxctrl, 0x0000);
+            test_sd_mono_bitmap("/ST_KingTut_Dpaint_16.xb4");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            xv_reg_setw(gfxctrl, 0x0000);
+        }
+#else
         if (use_sd)
         {
             xv_reg_setw(gfxctrl, 0x8000);
@@ -551,6 +566,7 @@ void     xosera_test()
         {
             break;
         }
+#endif
     }
     xv_reg_setw(gfxctrl, 0x0000);
 

@@ -19,6 +19,9 @@
 `define GITHASH d0000000            // unknown Git hash (assumed dirty)
 `endif
 
+//`define TESTPATTERN     // init with "test pattern" instead of clear VRAM
+//`define USE_BPP4TEST                // WIP test 4-bpp rendering
+
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
 // Xosera directly addressable registers (16 x 16-bit word)
@@ -79,6 +82,7 @@ typedef enum logic [15:0]{
 } aux_vid_r_t;
 
 `ifdef MODE_640x400     // 25.175 MHz (requested), 25.125 MHz (achieved)
+`elsif MODE_640x400_75  // 31.500 MHz (requested), 31.500 MHz (achieved)
 `elsif MODE_640x480     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x480_75  // 31.500 MHz (requested), 31.500 MHz (achieved)
 `elsif MODE_720x400     // 28.322 MHz (requested), 28.500 MHz (achieved)
@@ -101,6 +105,20 @@ localparam H_BACK_PORCH      = 48;          // H post-sync (back porch) pixels
 localparam V_FRONT_PORCH     = 12;          // V pre-sync (front porch) lines
 localparam V_SYNC_PULSE      = 2;           // V sync pulse lines
 localparam V_BACK_PORCH      = 35;          // V post-sync (back porch) lines
+localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
+localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
+
+`elsif    MODE_640x400_85
+// VGA mode 640x400 @ 85Hz (pixel clock 31.500Mhz)
+localparam PIXEL_FREQ        = 31_500_000;  // pixel clock in Hz
+localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
+localparam VISIBLE_HEIGHT    = 400;         // vertical active lines
+localparam H_FRONT_PORCH     = 32;          // H pre-sync (front porch) pixels
+localparam H_SYNC_PULSE      = 64;          // H sync pulse pixels
+localparam H_BACK_PORCH      = 96;          // H post-sync (back porch) pixels
+localparam V_FRONT_PORCH     = 1;           // V pre-sync (front porch) lines
+localparam V_SYNC_PULSE      = 3;           // V sync pulse lines
+localparam V_BACK_PORCH      = 41;          // V post-sync (back porch) lines
 localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
 localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
@@ -227,6 +245,10 @@ localparam cs_DISABLED       = 1'b1;
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b1000010;     // DIVF = 66
 localparam PLL_DIVQ    =    3'b101;         // DIVQ =  5
+`elsif    MODE_640x400_85 // 31.500 MHz (requested), 31.500 MHz (achieved)
+localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
+localparam PLL_DIVF    =    7'b1010011;     // DIVF = 83
+localparam PLL_DIVQ    =    3'b101;         // DIVQ =  5
 `elsif    MODE_640x480  // 25.175 MHz (requested), 25.125 MHz (achieved)
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b1000010;     // DIVF = 66
@@ -257,8 +279,6 @@ localparam PLL_DIVF    =    7'b0110000;     // DIVF = 48
 localparam PLL_DIVQ    =    3'b011;         // DIVQ =  3
 `endif
 `endif
-
-//`define TESTPATTERN     // init with "test pattern" instead of clear VRAM
 
 endpackage
 `endif

@@ -23,6 +23,19 @@ const int    V_SYNC_PULSE    = 2;             // V sync pulse lines
 const int    V_BACK_PORCH    = 35;            // V post-sync (back porch) lines
 const int    H_SYNC_POLARITY = 0;             // H sync pulse active level
 const int    V_SYNC_POLARITY = 1;             // V sync pulse active level
+#elif defined(MODE_640x400_85)                // 640x400@85Hz
+// VGA mode 640x480 @ 75Hz (pixel clock 31.5Mhz)
+const double PIXEL_CLOCK_MHZ = 31.500;        // pixel clock in MHz
+const int    VISIBLE_WIDTH   = 640;           // horizontal active pixels
+const int    VISIBLE_HEIGHT  = 400;           // vertical active lines
+const int    H_FRONT_PORCH   = 32;            // H pre-sync (front porch) pixels
+const int    H_SYNC_PULSE    = 64;            // H sync pulse pixels
+const int    H_BACK_PORCH    = 96;            // H post-sync (back porch) pixels
+const int    V_FRONT_PORCH   = 1;             // V pre-sync (front porch) lines
+const int    V_SYNC_PULSE    = 3;             // V sync pulse lines
+const int    V_BACK_PORCH    = 41;            // V post-sync (back porch) lines
+const int    H_SYNC_POLARITY = 0;             // H sync pulse active level
+const int    V_SYNC_POLARITY = 1;             // V sync pulse active level
 #elif defined(MODE_640x480)                   // 640x480@60Hz	(default)
 // VGA mode 640x480 @ 60Hz (pixel clock 25.175Mhz)
 const double PIXEL_CLOCK_MHZ = 25.175;        // pixel clock in MHz

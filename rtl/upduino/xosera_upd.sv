@@ -25,7 +25,7 @@
 //        [BUS_RESET_N]     <RST> |  3           46 | spi_mosi  (17)
 //                         <DONE> |  4           45 | spi_miso  (14)
 //           [BUS_CS_N]   led_red |  5           44 | gpio_20   <N/A w/OSC>
-//         [BUS_RD_NWR] led_green |  6     U     43 | gpio_10   <unused>
+//         [BUS_RD_NWR] led_green |  6     U     43 | gpio_10   <VBLANK>
 //        [BUS_BYTESEL]  led_blue |  7     P     42 | <GND>     <silkscreen errata>
 //                          <+5V> |  8     D     41 | <12 MHz>  <silkscreen errata>
 //                        <+3.3V> |  9     U     40 | gpio_12   [VGA_HS]
@@ -67,7 +67,7 @@ module xosera_upd(
             inout  logic    gpio_38,        // m68k bus data 6
             inout  logic    gpio_28,        // m68k bus data 7
             // right side (USB at top)
-            output logic    gpio_10,        // unused
+            output logic    gpio_10,        // VBLANK (Active high, regardless of resolution)
             output logic    gpio_12,        // video hsync
             output logic    gpio_21,        // video vsync
             output logic    gpio_13,        // video R[3]
@@ -104,6 +104,7 @@ logic [3:0] vga_b;                      // vga blue (4-bits)
 logic       vga_hs;                     // vga hsync
 logic       vga_vs;                     // vga vsync
 logic       dv_de;                      // DV display enable
+logic       in_vblank;                  // In vertical blanking interval
 
 // assign gpio pins to bus signals
 assign bus_cs_n     = led_red;          // RGB red as active low select
@@ -116,7 +117,7 @@ assign bus_data     = { gpio_28, gpio_38, gpio_42, gpio_36, gpio_43, gpio_34, gp
 assign gpio_32      = audio_l;          // left audio channel gpio
 assign gpio_35      = audio_r;          // right audio channel gpio
 
-assign gpio_10      = 1'b0;             // must assign unused output
+assign gpio_10      = in_vblank;        // Vertical blanking indicator
 
 // split tri-state data lines into in/out signals for inside FPGA
 logic bus_out_ena;
@@ -259,6 +260,7 @@ xosera_main xosera_main(
                 .red_o(vga_r),
                 .green_o(vga_g),
                 .blue_o(vga_b),
+                .vblank_o(in_vblank),
                 .vsync_o(vga_vs),
                 .hsync_o(vga_hs),
                 .dv_de_o(dv_de),

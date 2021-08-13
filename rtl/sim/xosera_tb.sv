@@ -38,6 +38,7 @@ logic reconfig;
 logic [1:0] boot_select;
 
 // bus interface
+logic vblank;
 logic bus_cs_n;
 logic bus_rd_nwr;
 logic bus_bytesel;
@@ -61,6 +62,7 @@ xosera_main xosera(
                 .red_o(red),                    // pixel clock
                 .green_o(green),                // pixel clock
                 .blue_o(blue),                  // pixel clock
+                .vblank_o(vblank),              // Vertical blank indicator
                 .vsync_o(vsync),                // vertical sync
                 .hsync_o(hsync),                // horizontal sync
                 .dv_de_o(dv_de),                // dv display enable

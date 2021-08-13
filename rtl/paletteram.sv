@@ -28,24 +28,7 @@ logic [15: 0] bram[0 : 255];
 
 initial begin
 
-`ifdef NEWSHIT
-        bram[0]    = 16'h0000;                      // black
-        bram[1]    = 16'h000A;                      // blue
-        bram[2]    = 16'h00A0;                      // green
-        bram[3]    = 16'h00AA;                      // cyan
-        bram[4]    = 16'h0A00;                      // red
-        bram[5]    = 16'h0A0A;                      // magenta
-        bram[6]    = 16'h0AA0;                      // brown
-        bram[7]    = 16'h0AAA;                      // light gray
-        bram[8]    = 16'h0555;                      // dark gray
-        bram[9]    = 16'h055F;                      // light blue
-        bram[10]   = 16'h05F5;                      // light green
-        bram[11]   = 16'h05FF;                      // light cyan
-        bram[12]   = 16'h0F55;                      // light red
-        bram[13]   = 16'h0F5F;                      // light magenta
-        bram[14]   = 16'h0FF5;                      // yellow
-        bram[15]   = 16'h0FFF;                      // white
-`else   // king tut pal
+`ifdef USE_BPP4TEST   // king tut pal
         bram[0]    = 16'h0000;
         bram[1]    = 16'h0002;
         bram[2]    = 16'h0023;
@@ -62,6 +45,23 @@ initial begin
         bram[13]   = 16'h0c82;
         bram[14]   = 16'h0ec4;
         bram[15]   = 16'h0ec6;
+`else
+        bram[0]    = 16'h0000;                      // black
+        bram[1]    = 16'h000A;                      // blue
+        bram[2]    = 16'h00A0;                      // green
+        bram[3]    = 16'h00AA;                      // cyan
+        bram[4]    = 16'h0A00;                      // red
+        bram[5]    = 16'h0A0A;                      // magenta
+        bram[6]    = 16'h0AA0;                      // brown
+        bram[7]    = 16'h0AAA;                      // light gray
+        bram[8]    = 16'h0555;                      // dark gray
+        bram[9]    = 16'h055F;                      // light blue
+        bram[10]   = 16'h05F5;                      // light green
+        bram[11]   = 16'h05FF;                      // light cyan
+        bram[12]   = 16'h0F55;                      // light red
+        bram[13]   = 16'h0F5F;                      // light magenta
+        bram[14]   = 16'h0FF5;                      // yellow
+        bram[15]   = 16'h0FFF;                      // white
 `endif
 
 

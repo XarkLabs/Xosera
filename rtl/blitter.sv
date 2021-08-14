@@ -232,6 +232,12 @@ always_ff @(posedge clk) begin
                     reg_count    <= reg_count - 1'b1;
                 end
             end
+
+            // if aux write auto increment
+            if (blit_aux_sel_o && blit_wr_o) begin
+                reg_aux_addr  <= reg_aux_addr + 1'b1;
+            end
+
             blit_vram_rd    <= 1'b0;
             blit_aux_rd     <= 1'b0;
             blit_vram_sel_o <= 1'b0;            // clear vram select

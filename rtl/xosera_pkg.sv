@@ -85,6 +85,7 @@ typedef enum logic [15:0]{
 `elsif MODE_640x400_75  // 31.500 MHz (requested), 31.500 MHz (achieved)
 `elsif MODE_640x480     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x480_75  // 31.500 MHz (requested), 31.500 MHz (achieved)
+`elsif MODE_640x480_85  // 36.000 MHz (requested), 36.000 MHz (achieved)
 `elsif MODE_720x400     // 28.322 MHz (requested), 28.500 MHz (achieved)
 `elsif MODE_848x480     // 33.750 MHz (requested), 33.750 MHz (achieved)
 `elsif MODE_800x600     // 40.000 MHz (requested), 39.750 MHz (achieved) [tight timing]
@@ -147,6 +148,20 @@ localparam H_BACK_PORCH      = 120;         // H post-sync (back porch) pixels
 localparam V_FRONT_PORCH     = 1;           // V pre-sync (front porch) lines
 localparam V_SYNC_PULSE      = 3;           // V sync pulse lines
 localparam V_BACK_PORCH      = 16;          // V post-sync (back porch) lines
+localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
+localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
+
+`elsif    MODE_640x480_85
+// VGA mode 640x480 @ 85Hz (pixel clock 36.000Mhz)
+localparam PIXEL_FREQ        = 36_000_000;  // pixel clock in Hz
+localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
+localparam VISIBLE_HEIGHT    = 480;         // vertical active lines
+localparam H_FRONT_PORCH     = 56;          // H pre-sync (front porch) pixels
+localparam H_SYNC_PULSE      = 56;          // H sync pulse pixels
+localparam H_BACK_PORCH      = 80;          // H post-sync (back porch) pixels
+localparam V_FRONT_PORCH     = 1;           // V pre-sync (front porch) lines
+localparam V_SYNC_PULSE      = 3;           // V sync pulse lines
+localparam V_BACK_PORCH      = 25;          // V post-sync (back porch) lines
 localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
 localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 
@@ -257,6 +272,10 @@ localparam PLL_DIVQ    =    3'b101;         // DIVQ =  5
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b1010011;     // DIVF = 83
 localparam PLL_DIVQ    =    3'b101;         // DIVQ =  5
+`elsif    MODE_640x480_85 // 36.000 MHz (requested), 36.000 MHz (achieved)
+localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
+localparam PLL_DIVF    =    7'b0101111;     // DIVF = 47
+localparam PLL_DIVQ    =    3'b100;         // DIVQ =  4
 `elsif    MODE_720x400  // 28.322 MHz (requested), 28.500 MHz (achieved)
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b1001011;     // DIVF = 75

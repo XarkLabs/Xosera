@@ -43,7 +43,7 @@ VIDEO_MODE ?= MODE_640x480
 # add -DUSE_BPP4TEST to DEFINES below for these tests:
 #VRUN_TESTDATA ?= -u ../testdata/raw/color_bars_test_pal.raw -u ../testdata/raw/color_bars_test.raw
 #VRUN_TESTDATA ?= -u ../testdata/raw/escher-relativity_320x240_16_pal.raw -u ../testdata/raw/escher-relativity_320x240_16.raw
-VRUN_TESTDATA ?= -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw ../testdata/raw/ST_KingTut_Dpaint_16.raw
+VRUN_TESTDATA ?= -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw
 
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb

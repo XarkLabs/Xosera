@@ -48,7 +48,7 @@ localparam [31:0] githash = 32'H`GITHASH;
 // Emperically determined (at extremes of horizontal scroll [worst case])
 // (odd numbers because 4 cycle latency through "fetch pipeline" and buffered)
 `ifdef USE_BPP4TEST
-localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-9;     // memory fetch starts over a tile early
+localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-18;     // memory fetch starts over a tile early
 `else
 localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-7;     // memory fetch starts over a tile early
 `endif
@@ -78,8 +78,8 @@ logic  [1:0]    pa_v_repeat;
 
 // temp signals
 logic [15:0]    pa_addr;                            // address to fetch tile+color attribute
+logic [15:0]    pa_data_save;                      // 1st fetched display data
 logic [15:0]    pa_line_addr;                       // address of start of tile+color attribute line
-logic [15:0]    pa_data_save;                       // background/foreground color attribute for current tile
 logic  [7:0]    pa_text_attrib;                     // bit pattern shifting out for current font tile line
 logic  [7:0]    pa_text_tile;                       // current tile index
 logic  [7:0]    pa_shift_out;                       // bit pattern shifting out for current font tile line
@@ -88,6 +88,8 @@ logic  [4:0]    pa_tile_y;                          // current line of font cell
 logic [15:0]    pa_font_addr;                       // font data address (VRAM or FONTRAM)
 
 `ifdef USE_BPP4TEST
+logic [15:0]    pa_data_save1;                      // 1st fetched display data
+logic [15:0]    pa_data_save2;                      // 2nd fetched display data
 logic  [15:0]   pa_pixel_shift;
 logic  [1:0]    pa_h_count;
 logic  [1:0]    pa_v_count;
@@ -117,7 +119,6 @@ logic [10: 0] mem_fetch_toggle;
 logic           hsync;
 logic           vsync;
 logic           dv_display_ena;
-logic           h_first_line_pixel;
 logic           h_last_line_pixel;
 logic           v_last_frame_pixel;
 logic           [1: 0] h_state_next;
@@ -289,8 +290,8 @@ always_ff @(posedge clk) begin
         pa_shift_out    <= 8'h00;
         pa_text_attrib  <= 8'h00;
         pa_addr         <= 16'h0000;
-        pa_line_addr    <= 16'h0000;
         pa_data_save    <= 16'h0000;
+        pa_line_addr    <= 16'h0000;
         pa_tile_x       <= 4'b0;
         pa_tile_y       <= 5'b0;
         fontram_sel_o   <= 1'b0;
@@ -304,6 +305,8 @@ always_ff @(posedge clk) begin
         pa_enable       <= 1'b1;            // plane A starts enabled
         vg_enable       <= 1'b1;            // video starts disabled
 `ifdef USE_BPP4TEST
+        pa_data_save1   <= 16'h0000;
+        pa_data_save2   <= 16'h0000;
         pa_h_count      <= 2'b00;
         pa_v_count      <= 2'b00;
 `endif
@@ -312,8 +315,8 @@ always_ff @(posedge clk) begin
         vram_sel_o      <= 1'b0;                            // default to no VRAM access
         fontram_sel_o   <= 1'b0;                            // default to no font access
 
-        if (mem_fetch) begin
 `ifdef USE_BPP4TEST
+        if (mem_fetch||h_start_line_fetch) begin
             fontram_addr_o  <= 12'b0;
             if (pa_h_count == 2'b00) begin
                 case (pa_tile_x[1:0])
@@ -325,7 +328,8 @@ always_ff @(posedge clk) begin
                     2'b01: begin
                     end
                     2'b10: begin
-                        pa_data_save    <= vram_data_i;     // then save current VRAM data (color for next tile)
+                        pa_data_save2   <= pa_data_save1;
+                        pa_data_save1   <= vram_data_i;         // then save current VRAM data (color for next tile)
                     end
                     2'b11: begin
                     end
@@ -333,6 +337,7 @@ always_ff @(posedge clk) begin
             end
             
 `else
+        if (mem_fetch) begin
             if (~pa_h_double) begin
                 pa_shift_out <= {pa_shift_out[6: 0], 1'b0}; // shift font line data (high bit is current pixel)
                 case (pa_tile_x[3:1])
@@ -421,18 +426,12 @@ always_ff @(posedge clk) begin
         if (pa_h_count == 2'b00) begin
             pa_h_count      <= pa_h_repeat;
             pa_tile_x       <= pa_tile_x + 1'b1;
-            if (dv_display_ena) begin
                 pa_pixel_shift  <= { pa_pixel_shift[11:0], 4'h0 };
-            end
             if (pa_tile_x[1:0] == 2'b11) begin
-                pa_pixel_shift  <= pa_data_save;
+                pa_pixel_shift  <= pa_data_save2;
             end
         end else begin
             pa_h_count  <= pa_h_count - 1'b1;
-        end
-
-        if (!dv_display_ena) begin
-            pa_h_count <= 2'b00;
         end
 `else
         // pixel color output
@@ -444,9 +443,10 @@ always_ff @(posedge clk) begin
 
         // start of line
         if (h_start_line_fetch) begin                   // on line fetch start signal
-            pa_tile_x   <= 4'b0000;                       // reset on pa_tile_x cycle (to start tile line at proper pixel)
 `ifdef USE_BPP4TEST
-            pa_h_count  <= pa_h_repeat;
+            pa_tile_x   <= 4'b1000;                       // reset on pa_tile_x cycle (to start tile line at proper pixel)
+`else
+            pa_tile_x   <= 4'b0000;                       // reset on pa_tile_x cycle (to start tile line at proper pixel)
 `endif
         end
 

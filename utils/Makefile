@@ -18,6 +18,6 @@ raw256to16color: Makefile raw256to16color.cpp
 	$(CXX) $(CFLAGS) raw256to16color.cpp -o raw256to16color $(LDFLAGS) 
 
 clean:
-	rm -f image_to_mem image_to_monobitmap
+	rm -f image_to_mem image_to_monobitmap raw256to16color
 
 .PHONY: all clean

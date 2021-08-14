@@ -37,8 +37,8 @@ Font/tile memory is writable in AUX address space (but not readable).
 | 0x6   | `XVID_AUX_DATA`  | R/W/+ | read/write AUX word at `AUX_ADDR` [Note X]
 | 0x7   | `XVID_COUNT`     | R/W/+ | write blitter count and start operation or read blitter status
 | 0x8   | `XVID_RD_INC`    | W/O   | `RD_ADDR` increment per word read
-| 0xA   | `XVID_WR_INC`    | W/O   | `WR_ADDR` increment per word write
-| 0x9   | `XVID_WR_MOD`    | W/O   | `WR_ADDR` increment every `WIDTH` words read (in 2D mode)
+| 0x9   | `XVID_WR_INC`    | W/O   | `WR_ADDR` increment per word write
+| 0xA   | `XVID_WR_MOD`    | W/O   | `WR_ADDR` increment every `WIDTH` words read (in 2D mode)
 | 0xB   | `XVID_RD_MOD`    | W/O   | `RD_ADDR` increment every `WIDTH` words write (in 2D mode)
 | 0xC   | `XVID_WIDTH`     | W/O   | width in words for 2D rectangular blit
 | 0xD   | `XVID_BLIT_CTRL` | W/O   | set blitter options see below

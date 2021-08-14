@@ -67,6 +67,7 @@ logic [3:0] bus_reg_num;                // bus 4-bit register index number (16-b
 logic [7:0] bus_data;                   // bus 8-bit bidirectional data I/O
 logic       audio_l;                    // left audio PWM
 logic       audio_r;                    // right audio PWM
+logic       bus_intr;                   // bus interrupt signal output (not used)
 logic [3:0] vga_r;                      // vga red (4-bit)
 logic [3:0] vga_g;                      // vga green (4-bits)
 logic [3:0] vga_b;                      // vga blue (4-bits)
@@ -243,6 +244,7 @@ xosera_main xosera_main(
             .red_o(vga_r),
             .green_o(vga_g),
             .blue_o(vga_b),
+            .bus_intr_o(bus_intr),
             .vsync_o(vga_vs),
             .hsync_o(vga_hs),
             .dv_de_o(dv_de),

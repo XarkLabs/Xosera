@@ -25,6 +25,8 @@
 #include <machine.h>
 #include <sdfat.h>
 
+//#define USE_BPP4TEST        // for 4-bpp test gateware (Tut)
+
 #define DELAY_TIME 5000        // human speed
 //#define DELAY_TIME 1000        // impatient human speed
 //#define DELAY_TIME 100        // machine speed
@@ -401,9 +403,9 @@ uint16_t rosco_m68k_CPUMHz()
     return (MHz + 5) / 10;
 }
 
-static void test_sd_mono_bitmap(const char * filename)
+static void load_sd_bitmap(const char * filename)
 {
-    dprintf("Loading mono bitmap: \"%s\"", filename);
+    dprintf("Loading bitmap: \"%s\"", filename);
     void * file = fl_fopen(filename, "r");
 
     if (file != NULL)
@@ -411,7 +413,7 @@ static void test_sd_mono_bitmap(const char * filename)
         int cnt   = 0;
         int vaddr = 0;
 
-        while (vaddr < 0x10000 && (cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
+        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
         {
             /* period every 4KiB, does not noticeably affect speed */
             if (!(vaddr % 0x7))
@@ -421,9 +423,45 @@ static void test_sd_mono_bitmap(const char * filename)
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
             xv_setw(wr_addr, vaddr);
-            for (int i = 0; i < cnt; i += 2)
+            for (int i = 0; i < (cnt >> 1); i++)
             {
                 xv_setw(data, *maddr++);
+            }
+            vaddr += (cnt >> 1);
+        }
+
+        fl_fclose(file);
+        dprintf("done!\n");
+    }
+    else
+    {
+        dprintf(" - FAILED\n");
+    }
+}
+
+static void load_sd_palette(const char * filename)
+{
+    dprintf("Loading colormap: \"%s\"", filename);
+    void * file = fl_fopen(filename, "r");
+
+    if (file != NULL)
+    {
+        int cnt   = 0;
+        int vaddr = 0;
+
+        while ((cnt = fl_fread(mem_buffer, 1, 256, file)) > 0)
+        {
+            /* period every 4KiB, does not noticeably affect speed */
+            if (!(vaddr % 0x7))
+            {
+                dprintf(".");
+            }
+
+            uint16_t * maddr = (uint16_t *)mem_buffer;
+            xv_setw(aux_addr, XV_AUX_COLORMEM);
+            for (int i = 0; i < (cnt >> 1); i++)
+            {
+                xv_setw(aux_data, *maddr++);
             }
             vaddr += (cnt >> 1);
         }
@@ -494,23 +532,59 @@ void     xosera_test()
 
             if (SD_FAT_initialize())
             {
-                dprintf("card ready\n");
+                dprintf("SD card ready\n");
                 use_sd = true;
             }
             else
             {
-                dprintf("no card\n");
+                dprintf("no SD card\n");
+                use_sd = false;
             }
         }
         else
         {
             dprintf("No SD card support.\n");
         }
-
+#if defined(USE_BPP4TEST)        // 4bpp test
+                                 // ST_KingTut_Dpaint_16.xb4
+        if (use_sd)
+        {
+            xv_reg_setw(gfxctrl, 0x0000);
+            load_sd_palette("/ST_KingTut_Dpaint_16_pal.raw");
+            load_sd_bitmap("/ST_KingTut_Dpaint_16.raw");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            xv_reg_setw(gfxctrl, 0x0000);
+        }
+        if (use_sd)
+        {
+            xv_reg_setw(gfxctrl, 0x0000);
+            load_sd_palette("/escher-relativity_320x240_16_pal.raw");
+            load_sd_bitmap("/escher-relativity_320x240_16.raw");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            xv_reg_setw(gfxctrl, 0x0000);
+        }
+        if (use_sd)
+        {
+            xv_reg_setw(gfxctrl, 0x0000);
+            load_sd_palette("/color_bars_test_pal.raw");
+            load_sd_bitmap("/color_bars_test.raw");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            xv_reg_setw(gfxctrl, 0x0000);
+        }
+#else
         if (use_sd)
         {
             xv_reg_setw(gfxctrl, 0x8000);
-            test_sd_mono_bitmap("/space_shuttle_color.xmb");
+            load_sd_bitmap("/space_shuttle_color_small.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -521,7 +595,7 @@ void     xosera_test()
         if (use_sd)
         {
             xv_reg_setw(gfxctrl, 0x8000);
-            test_sd_mono_bitmap("/mountains_mono.xmb");
+            load_sd_bitmap("/mountains_mono_640x480w.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -532,7 +606,7 @@ void     xosera_test()
         if (use_sd)
         {
             xv_reg_setw(gfxctrl, 0x8000);
-            test_sd_mono_bitmap("/mona_lisa_mono.xmb");
+            load_sd_bitmap("/escher-relativity_640x480w.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -551,6 +625,7 @@ void     xosera_test()
         {
             break;
         }
+#endif
     }
     xv_reg_setw(gfxctrl, 0x0000);
 

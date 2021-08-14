@@ -13,12 +13,12 @@
 `include "xosera_pkg.sv"
 
 module vram(
-           input  logic         clk,
-           input  logic         sel,
-           input  logic         wr_en,
-           input  logic [15: 0] address_in,
-           input  logic [15: 0] data_in,
-           output logic [15: 0] data_out
+           input  wire logic          clk,
+           input  wire logic          sel,
+           input  wire logic          wr_en,
+           input  wire logic [15: 0]  address_in,
+           input  wire logic [15: 0]  data_in,
+           output      logic [15: 0]  data_out
        );
 
 `ifndef SYNTHESIS

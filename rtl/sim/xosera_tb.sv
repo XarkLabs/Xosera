@@ -38,6 +38,7 @@ logic reconfig;
 logic [1:0] boot_select;
 
 // bus interface
+logic bus_intr;
 logic bus_cs_n;
 logic bus_rd_nwr;
 logic bus_bytesel;
@@ -61,6 +62,7 @@ xosera_main xosera(
                 .red_o(red),                    // pixel clock
                 .green_o(green),                // pixel clock
                 .blue_o(blue),                  // pixel clock
+                .bus_intr_o(bus_intr),          // interrupt signal
                 .vsync_o(vsync),                // vertical sync
                 .hsync_o(hsync),                // horizontal sync
                 .dv_de_o(dv_de),                // dv display enable
@@ -208,8 +210,14 @@ endfunction
 
 always @* begin
     if (reconfig) begin
-        $display("XOSERA REBOOT: To flash config #0x%x", boot_select);
+        $display("%0t XOSERA REBOOT: To flash config #0x%x", $realtime, boot_select);
         $finish;
+    end
+end
+
+always @(negedge clk) begin
+    if (bus_intr) begin
+        $display("%0t XOSERA INTERRUPT signal active", $realtime);
     end
 end
 

@@ -12,26 +12,26 @@
 `include "xosera_pkg.sv"
 
 module blitter(
-    input  logic            bus_cs_n_i,         // register select strobe
-    input  logic            bus_rd_nwr_i,       // 0 = write, 1 = read
-    input  logic  [3:0]     bus_reg_num_i,      // register number
-    input  logic            bus_bytesel_i,      // 0=even byte, 1=odd byte
-    input  logic  [7:0]     bus_data_i,         // 8-bit data bus input
-    output logic  [7:0]     bus_data_o,         // 8-bit data bus output
-    input  logic            vgen_sel_i,         // 0 = blitter, 1=video generation
-    output logic            vgen_ena_o,         // 0 = video blank, 1 = video on
-    output logic            blit_vram_sel_o,    // VRAM select
-    output logic            blit_aux_sel_o,     // AUX select
-    output logic            blit_wr_o,          // VRAM/AUX read/write
-    output logic    [15:0]  blit_addr_o,        // VRAM/AUX address
-    input  logic    [15:0]  blit_data_i,        // VRAM read data
-    output logic    [15:0]  blit_data_o,        // VRAM/AUX write data
-    input  logic    [15:0]  aux_data_i,         // AUX read data
-    output logic            reconfig_o,         // reconfigure iCE40 from flash
-    output logic    [ 1:0]  boot_select_o,      // reconfigure congigureation number (0-3)
-    output logic            bus_ack_o,          // TODO ACK strobe for debug
-    input  logic            reset_i,
-    input  logic            clk
+    input  wire logic            bus_cs_n_i,         // register select strobe
+    input  wire logic            bus_rd_nwr_i,       // 0 = write, 1 = read
+    input  wire logic [3:0]      bus_reg_num_i,      // register number
+    input  wire logic            bus_bytesel_i,      // 0=even byte, 1=odd byte
+    input  wire logic [7:0]      bus_data_i,         // 8-bit data bus input
+    output      logic [7:0]      bus_data_o,         // 8-bit data bus output
+    input  wire logic            vgen_sel_i,         // 0 = blitter, 1=video generation
+    output      logic            vgen_ena_o,         // 0 = video blank, 1 = video on
+    output      logic            blit_vram_sel_o,    // VRAM select
+    output      logic            blit_aux_sel_o,     // AUX select
+    output      logic            blit_wr_o,          // VRAM/AUX read/write
+    output      logic [15:0]     blit_addr_o,        // VRAM/AUX address
+    input  wire logic [15:0]     blit_data_i,        // VRAM read data
+    output      logic [15:0]     blit_data_o,        // VRAM/AUX write data
+    input  wire logic [15:0]     aux_data_i,         // AUX read data
+    output      logic            reconfig_o,         // reconfigure iCE40 from flash
+    output      logic [1:0]      boot_select_o,      // reconfigure congigureation number (0-3)
+    output      logic            bus_ack_o,          // TODO ACK strobe for debug
+    input  wire logic            reset_i,
+    input  wire logic            clk
     );
 
 localparam [31:0] githash = 32'H`GITHASH;
@@ -232,6 +232,12 @@ always_ff @(posedge clk) begin
                     reg_count    <= reg_count - 1'b1;
                 end
             end
+
+            // if aux write auto increment
+            if (blit_aux_sel_o && blit_wr_o) begin
+                reg_aux_addr  <= reg_aux_addr + 1'b1;
+            end
+
             blit_vram_rd    <= 1'b0;
             blit_aux_rd     <= 1'b0;
             blit_vram_sel_o <= 1'b0;            // clear vram select
@@ -534,3 +540,5 @@ always_ff @(posedge clk) begin
     end
 end
 endmodule
+
+`default_nettype wire               // restore default

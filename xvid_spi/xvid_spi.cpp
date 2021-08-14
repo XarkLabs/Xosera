@@ -32,32 +32,38 @@ enum
     XVID_COUNT,           // reg 7: TODO blitter "repeat" count/trigger
 
     // write only, 16-bit
-    XVID_RD_INC,           // reg 9: read addr increment value
-    XVID_WR_INC,           // reg A: write addr increment value
-    XVID_WR_MOD,           // reg C: TODO write modulo width for 2D blit
+    XVID_RD_INC,           // reg 8: read addr increment value
+    XVID_WR_INC,           // reg 9: write addr increment value
+    XVID_WR_MOD,           // reg A: TODO write modulo width for 2D blit
     XVID_RD_MOD,           // reg B: TODO read modulo width for 2D blit
-    XVID_WIDTH,            // reg 8: TODO width for 2D blit
+    XVID_WIDTH,            // reg C: TODO width for 2D blit
     XVID_BLIT_CTRL,        // reg D: TODO
     XVID_UNUSED_E,         // reg E: TODO
     XVID_UNUSED_F,         // reg F: TODO
 
-    // AUX access using AUX_ADDR/AUX_DATA
-    AUX_VID        = 0x0000,        // 0-8191 8-bit address (bits 15:8 ignored writing)
-    AUX_DISPSTART  = 0x0000,        // display start address
-    AUX_DISPWIDTH  = 0x0001,        // tile line width (usually WIDTH/8)
-    AUX_SCROLLXY   = 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
-    AUX_FONTCTRL   = 0x0003,        // [9:8] 2KB font bank, [3:0] font height
-    AUX_GFXCTRL    = 0x0004,        // [0] h pix double
-    AUX_UNUSED5    = 0x0005,
-    AUX_UNUSED6    = 0x0006,
-    AUX_UNUSED7    = 0x0007,
-    AUX_R_WIDTH    = 0x0000,        // display resolution width
-    AUX_R_HEIGHT   = 0x0001,        // display resolution height
-    AUX_R_FEATURES = 0x0002,        // [15] = 1 (test)
-    AUX_R_SCANLINE = 0x0003,        // [15] V blank, [14:11] zero [10:0] V line
-    AUX_W_FONT     = 0x4000,        // 0x4000-0x5FFF 8K byte font memory (even byte [15:8] ignored)
-    AUX_W_COLORTBL = 0x8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
-    AUX_W_AUD      = 0xc000         // 0xC000-0x??? TODO (audio registers)
+    // AUX address space regions
+    AUX_VID      = 0x0000,        // 0x0000-0x000f 16 word secondary regs
+    AUX_FONT     = 0x4000,        // 0x4000-0x5FFF 4K word font memory
+    AUX_COLORTBL = 0x8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
+    AUX_AUD      = 0xC000,        // 0xC000-0xC??? TODO (audio registers)
+
+    // AUX register access using AUX_ADDR/AUX_DATA
+    AUX_DISPSTART   = AUX_VID | 0x0000,        // display start address
+    AUX_DISPWIDTH   = AUX_VID | 0x0001,        // tile line width (usually WIDTH/8)
+    AUX_SCROLLXY    = AUX_VID | 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
+    AUX_FONTCTRL    = AUX_VID | 0x0003,        // [9:8] 2KB font bank, [3:0] font height
+    AUX_GFXCTRL     = AUX_VID | 0x0004,        // [0] h pix double
+    AUX_UNUSED5     = AUX_VID | 0x0005,
+    AUX_UNUSED6     = AUX_VID | 0x0006,
+    AUX_UNUSED7     = AUX_VID | 0x0007,
+    AUX_R_WIDTH     = AUX_VID | 0x0008,        // display resolution width
+    AUX_R_HEIGHT    = AUX_VID | 0x0009,        // display resolution height
+    AUX_R_FEATURES  = AUX_VID | 0x000A,        // [15] = 1 (test)
+    AUX_R_SCANLINE  = AUX_VID | 0x000B,        // [15] V blank, [14:11] zero [10:0] V line
+    AUX_R_GITHASH_H = AUX_VID | 0x000C,
+    AUX_R_GITHASH_L = AUX_VID | 0x000D,
+    AUX_R_UNUSED_E  = AUX_VID | 0x000E,
+    AUX_R_UNUSED_F  = AUX_VID | 0x000F
 };
 
 static void hexdump(size_t num, uint8_t * mem)
@@ -243,6 +249,8 @@ static uint8_t  rows;                    // in texts chars (words)
 static uint16_t addr;
 static uint16_t data;
 static uint16_t rdata;
+
+uint32_t mem_buffer[128 * 1024];
 
 #include "buddy_font.h"
 
@@ -567,8 +575,8 @@ void show_blurb()
 
     for (uint8_t i = 0; i < 16; i++)
     {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for palette index
-        xvid_setw(XVID_AUX_DATA, defpal[i]);                 // set palette data
+        xvid_setw(XVID_AUX_ADDR, AUX_COLORTBL | i);        // use WR address for palette index
+        xvid_setw(XVID_AUX_DATA, defpal[i]);               // set palette data
     }
 
 #if 0
@@ -612,6 +620,40 @@ static void problem(const char * msg, uint16_t addr, uint16_t rdata, uint16_t vd
     errors++;
     printf("%s at 0x%04x, rd=%04x, vs %04x, errors %d\n", msg, addr, rdata, vdata, errors);
     error_flag = true;
+}
+
+
+static void test_mono_bitmap(const char * filename)
+{
+    printf("Loading mono bitmap: \"%s\"", filename);
+    FILE * file = fopen(filename, "r");
+
+    xvid_setw(XVID_WR_INC, 0x0001);
+
+    if (file != NULL)
+    {
+        int cnt   = 0;
+        int vaddr = 0;
+
+        while ((cnt = fread(mem_buffer, 1, 128 * 1024, file)) > 0)
+        {
+            uint8_t * maddr = (uint8_t *)mem_buffer;
+            xvid_setw(XVID_WR_ADDR, vaddr);
+            for (int i = 0; i < cnt; i += 2)
+            {
+                xvid_sethb(XVID_DATA, *maddr++);
+                xvid_setlb(XVID_DATA, *maddr++);
+            }
+            vaddr += (cnt >> 1);
+        }
+
+        fclose(file);
+        printf(" - done!\n");
+    }
+    else
+    {
+        printf(" - FAILED\n");
+    }
 }
 
 
@@ -749,7 +791,8 @@ void test_reg_access()
 void draw_buddy()
 {
     xvid_setw(XVID_AUX_ADDR, AUX_FONTCTRL);        // A_font_ctrl
-    xvid_setw(XVID_AUX_DATA, 0x0207);              // 2nd font in bank 2, 8 high
+    //    xvid_setw(XVID_AUX_DATA, 0x0207);              // 2nd font in bank 2, 8 high
+    xvid_setw(XVID_AUX_DATA, 0x4107);        // 2nd font in VRAM @ 0x4000, 8 high
     rows <<= 1;
 
     xcls(0xff);
@@ -761,10 +804,15 @@ void draw_buddy()
             xvid_setw(XVID_DATA, 0x0f00 | (y * 16 + x));
         }
     }
-    for (uint16_t a = 0; a < 2048; a++)
+    for (uint16_t a = 0; a < 1024; a++)
     {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_FONT | 4096 | a);
-        xvid_setw(XVID_AUX_DATA, buddy_font[a]);
+        //        xvid_setw(XVID_AUX_ADDR, AUX_FONT | 4096 | a);
+        //        uint16_t w = (buddy_font[(a << 1) + 1] << 8) | buddy_font[(a << 1)];
+        //        xvid_setw(XVID_AUX_DATA, w);
+
+        xvid_setw(XVID_WR_ADDR, 0x4000 | a);
+        uint16_t w = (buddy_font[(a << 1) + 1] << 8) | buddy_font[(a << 1)];
+        xvid_setw(XVID_DATA, w);
     }
 
     delay(2000);
@@ -1015,6 +1063,10 @@ int main(int argc, char ** argv)
 
     reboot_Xosera(xosera_config);
 
+    // text mode
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x0000);
+
     delay(5000);        // let the stunning boot logo display. :)
 #if 1
     xcls();
@@ -1033,6 +1085,7 @@ int main(int argc, char ** argv)
 
     delay(5000);
 #endif
+
     test_smoothscroll();
 
     xcolor(0xf);
@@ -1041,16 +1094,16 @@ int main(int argc, char ** argv)
 
     for (uint16_t k = 0; k < 2000; k++)
     {
-        xvid_setw(XVID_AUX_ADDR, AUX_R_SCANLINE);            // set scanline reg
-        uint16_t l = xvid_getw(XVID_AUX_DATA);               // read scanline
-        l          = l | ((0xf - (l & 0xf)) << 8);           // invert blue for some red
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | 0);        // set palette entry #0
-        xvid_setw(XVID_AUX_DATA, l);                         // set palette data
+        xvid_setw(XVID_AUX_ADDR, AUX_R_SCANLINE);          // set scanline reg
+        uint16_t l = xvid_getw(XVID_AUX_DATA);             // read scanline
+        l          = l | ((0xf - (l & 0xf)) << 8);         // invert blue for some red
+        xvid_setw(XVID_AUX_ADDR, AUX_COLORTBL | 0);        // set palette entry #0
+        xvid_setw(XVID_AUX_DATA, l);                       // set palette data
     }
     for (uint8_t i = 0; i < 16; i++)
     {
-        xvid_setw(XVID_AUX_ADDR, AUX_W_COLORTBL | i);        // use WR address for palette index
-        xvid_setw(XVID_AUX_DATA, defpal[i]);                 // set palette data
+        xvid_setw(XVID_AUX_ADDR, AUX_COLORTBL | i);        // use WR address for palette index
+        xvid_setw(XVID_AUX_DATA, defpal[i]);               // set palette data
     }
 
     //    test_reg_access();
@@ -1069,6 +1122,16 @@ int main(int argc, char ** argv)
     xvid_setw(XVID_AUX_DATA, 0x0001);             // set palette data
 
     delay(2000);
+
+    xcolor(0xf);
+    xcls();
+    draw_buddy();
+
+    // mono bitmap mode
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x8000);
+    test_mono_bitmap("space_shuttle_color_small.raw");
+
     host_spi_close();
 
     exit(EXIT_SUCCESS);

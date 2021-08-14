@@ -138,7 +138,7 @@
 		},
 		"cSpell.allowCompoundWords": true,
 		"cSpell.diagnosticLevel": "Hint",
-		"terminal.integrated.fontSize": 11,
+		"terminal.integrated.fontSize": 12,
 		"workbench.editor.enablePreview": false,
 		"verilog.linting.verilator.arguments": "--sv --language 1800-2012 -Irtl -I.. -Wall -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY",
 		"verilog.linting.linter": "verilator",

@@ -11,7 +11,8 @@
 bool   word_mode = false;
 bool   c_mode    = false;
 bool   invert    = false;
-bool   color     = false;
+bool   monocolor = false;
+bool   color16   = false;
 char * in_file   = nullptr;
 char * out_file  = nullptr;
 
@@ -38,7 +39,8 @@ uint16_t palette[16] = {0x0000,
 
 Uint32 getpixel(SDL_Surface * surface, int x, int y);
 
-uint16_t matchcolors(const SDL_Color rgb[8]);
+void matchmonocolors(uint8_t *& ptr, const SDL_Color rgb[8]);
+void matchcolors(uint8_t *& ptr, const SDL_Color * rgb);
 
 int main(int argc, char ** argv)
 {
@@ -52,9 +54,15 @@ int main(int argc, char ** argv)
             {
                 invert = true;
             }
+            else if (strcmp("-m", argv[a]) == 0)
+            {
+                monocolor = true;
+            }
             else if (strcmp("-c", argv[a]) == 0)
             {
-                color = true;
+                color16    = true;
+                out_width  = 640 / 2;
+                out_height = 480 / 2;
             }
             else if (strcmp("-848", argv[a]) == 0)
             {
@@ -98,9 +106,13 @@ int main(int argc, char ** argv)
     {
         printf("[Inverting pixels] ");
     }
-    if (color)
+    if (monocolor)
     {
-        printf("[2 color pixels] ");
+        printf("[2 monocolor pixels] ");
+    }
+    if (color16)
+    {
+        printf("[4-bpp color pixels] ");
     }
     printf("\n");
 
@@ -110,7 +122,7 @@ int main(int argc, char ** argv)
     IMG_Init(IMG_INIT_PNG);
 
     SDL_Window * window =
-        SDL_CreateWindow("SDL2 Displaying Image", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 848, 480, 0);
+        SDL_CreateWindow("SDL2 Displaying Image", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 320, 240, 0);
 
     if (!window)
     {
@@ -182,8 +194,8 @@ int main(int argc, char ** argv)
 
     while (!quit)
     {
-        int        out_size   = (out_width / 8) * 2 * out_height;
-        uint16_t * out_pixels = (uint16_t *)malloc(out_size);
+        int       out_size   = color16 ? (out_width / 2) * out_height : (out_width / 8) * 2 * out_height;
+        uint8_t * out_pixels = (uint8_t *)malloc(out_size);
 
         if (!out_pixels)
         {
@@ -192,7 +204,7 @@ int main(int argc, char ** argv)
         }
 
         memset(out_pixels, 0, out_size);
-        uint16_t * pptr = out_pixels;
+        uint8_t * pptr = out_pixels;
 
         FILE * fp = fopen(out_file, "w");
         if (fp != nullptr)
@@ -227,13 +239,20 @@ int main(int argc, char ** argv)
                             }
                         }
                     }
-                    if (color)
+                    if (color16)
                     {
-                        *pptr++ = matchcolors(byte_pixels);
+                        matchcolors(pptr, &byte_pixels[4]);
+                        matchcolors(pptr, &byte_pixels[0]);
+                    }
+                    else if (monocolor)
+                    {
+                        matchmonocolors(pptr, byte_pixels);
                     }
                     else
                     {
-                        *pptr++ = (val << 8) | color_byte;        // big-endian!
+                        // big-endian!
+                        *pptr++ = val;
+                        *pptr++ = color_byte;
                     }
                 }
             }
@@ -296,7 +315,7 @@ Uint32 getpixel(SDL_Surface * surface, int x, int y)
     }
 }
 
-uint16_t matchcolors(const SDL_Color rgb[8])
+void matchmonocolors(uint8_t *& ptr, const SDL_Color rgb[8])
 {
     SDL_Color qrgb[8]  = {};
     int       irgb[8]  = {};
@@ -379,5 +398,48 @@ uint16_t matchcolors(const SDL_Color rgb[8])
         }
     }
 
-    return (val << 8) | (back << 4) | fore;
+    *ptr++ = (back << 4) | fore;
+    *ptr++ = val;
+}
+
+void matchcolors(uint8_t *& ptr, const SDL_Color * rgb)
+{
+    SDL_Color qrgb[4] = {};
+    int       irgb[4] = {};
+
+    for (int b = 0; b < 4; b++)
+    {
+        qrgb[b].r = rgb[b].r + 63 < 0x100 ? rgb[b].r + 15 : 0xff;
+        qrgb[b].g = rgb[b].g + 63 < 0x100 ? rgb[b].g + 15 : 0xff;
+        qrgb[b].b = rgb[b].b + 63 < 0x100 ? rgb[b].b + 15 : 0xff;
+    }
+
+    for (int b = 0; b < 4; b++)
+    {
+        qrgb[b].r = ((((qrgb[b].r) >> 6) & 0x3) << 2) | (((qrgb[b].r) >> 6) & 0x3);
+        qrgb[b].g = ((((qrgb[b].g) >> 6) & 0x3) << 2) | (((qrgb[b].r) >> 6) & 0x3);
+        qrgb[b].b = ((((qrgb[b].b) >> 6) & 0x3) << 2) | (((qrgb[b].r) >> 6) & 0x3);
+    }
+
+    for (int b = 0; b < 4; b++)
+    {
+        int best      = -1;
+        int best_dist = 99999;
+        for (int c = 0; c < 16; c++)
+        {
+            int dist = (((palette[c] & 0xf00) >> 8) - qrgb[b].r) * (((palette[c] & 0xf00) >> 8) - qrgb[b].r) +
+                       (((palette[c] & 0x0f0) >> 4) - qrgb[b].g) * (((palette[c] & 0x0f0) >> 4) - qrgb[b].g) +
+                       (((palette[c] & 0x00f) >> 0) - qrgb[b].b) * (((palette[c] & 0x00f) >> 0) - qrgb[b].b);
+
+            if (dist < best_dist)
+            {
+                best      = c;
+                best_dist = dist;
+            }
+        }
+        irgb[b] = best;
+    }
+
+    *ptr++ = ((irgb[0] & 0xf) << 4) | irgb[1];
+    *ptr++ = ((irgb[2] & 0xf) << 4) | irgb[3];
 }

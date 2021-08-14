@@ -36,7 +36,15 @@ endif
 #	MODE_800x600	800x600@60Hz	clock 40.000 MHz
 #	MODE_1024x768	1024x768@60Hz	clock 65.000 MHz
 #	MODE_1280x720	1280x720@60Hz	clock 74.176 MHz
-VIDEO_MODE ?= MODE_848x480
+VIDEO_MODE ?= MODE_640x480
+
+# monochrome + color attribute byte
+#VRUN_TESTDATA ?= -u ../testdata/raw/space_shuttle_color_640x480.raw
+
+# add -DUSE_BPP4TEST to DEFINES below for these tests:
+#VRUN_TESTDATA ?= -u ../testdata/raw/color_bars_test_pal.raw -u ../testdata/raw/color_bars_test.raw
+#VRUN_TESTDATA ?= -u ../testdata/raw/escher-relativity_320x240_16_pal.raw -u ../testdata/raw/escher-relativity_320x240_16.raw
+VRUN_TESTDATA ?= -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw
 
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
@@ -60,7 +68,8 @@ INC := $(wildcard $(SRCDIR)/*.svh)
 BUS_INTERFACE	:= 1
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K
+# -DUSE_BPP4TEST to test 4-bpp
+DEFINES := -DUSE_BPP4TEST -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K
 
 ifeq ($(strip $(BUS_INTERFACE)),1)
 DEFINES += -DBUS_INTERFACE
@@ -110,7 +119,7 @@ isim: sim/$(TBTOP) sim.mk
 # run Verilator to build and run native simulation executable
 vrun: sim/obj_dir/V$(VTOP) sim.mk
 	@mkdir -p $(LOGS)
-	sim/obj_dir/V$(VTOP) -u sim/space_shuttle_color_848x480w.raw | tee $(LOGS)/xosera_vsim.log
+	sim/obj_dir/V$(VTOP) $(VRUN_TESTDATA) | tee $(LOGS)/xosera_vsim.log
 
 # run Verilator to build and run native simulation executable
 irun: sim/$(TBTOP) sim.mk

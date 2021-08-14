@@ -15,6 +15,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <vector>
+
 #include "ftdi_spi.h"
 
 enum
@@ -38,7 +40,7 @@ enum
     XVID_RD_MOD,           // reg B: TODO read modulo width for 2D blit
     XVID_WIDTH,            // reg C: TODO width for 2D blit
     XVID_BLIT_CTRL,        // reg D: TODO
-    XVID_UNUSED_E,         // reg E: TODO
+    XVID_WR_PR_CMD,        // reg E: send a command to the primitive renderer
     XVID_UNUSED_F,         // reg F: TODO
 
     // AUX address space regions
@@ -63,7 +65,15 @@ enum
     AUX_R_GITHASH_H = AUX_VID | 0x000C,
     AUX_R_GITHASH_L = AUX_VID | 0x000D,
     AUX_R_UNUSED_E  = AUX_VID | 0x000E,
-    AUX_R_UNUSED_F  = AUX_VID | 0x000F
+    AUX_R_UNUSED_F  = AUX_VID | 0x000F,
+
+    // Primitive renderer commands
+    PR_COORDX1 = 0x0000,
+    PR_COORDY1 = 0x1000,
+    PR_COORDX2 = 0x2000,
+    PR_COORDY2 = 0x3000,
+    PR_COLOR   = 0x4000,
+    PR_EXECUTE = 0xF000
 };
 
 static void hexdump(size_t num, uint8_t * mem)
@@ -656,6 +666,54 @@ static void test_mono_bitmap(const char * filename)
     }
 }
 
+struct Coord
+{
+    float x1, y1, x2, y2;
+};
+
+static void test_draw_lines()
+{
+    const std::vector<Coord> coords{{0, 0, 2, 4},   {0, 4, 2, 0},   {3, 4, 3, 0},      {3, 0, 5, 0},   {5, 0, 5, 4},
+                                    {5, 4, 3, 4},   {8, 0, 6, 0},   {6, 0, 6, 2},      {6, 2, 8, 2},   {8, 2, 8, 4},
+                                    {8, 4, 6, 4},   {9, 0, 11, 0},  {9, 0, 9, 4},      {9, 2, 11, 2},  {9, 4, 11, 4},
+                                    {12, 0, 14, 0}, {14, 0, 14, 2}, {14, 2, 12, 2},    {12, 2, 14, 4}, {12, 4, 12, 0},
+                                    {15, 4, 16, 0}, {16, 0, 17, 4}, {15.5, 2, 16.5, 2}};
+
+    // Blue background
+    xvid_setw(XVID_WR_INC, 0x0001);
+    xvid_setw(XVID_WR_ADDR, 0x0000);
+    for (int i = 0; i < 80 * 480; ++i)
+    {
+        xvid_setw(XVID_DATA, 0x1111);
+    }
+
+    float scale_x  = 0.25;
+    float scale_y  = 5;
+    float offset_x = 0;
+    float offset_y = 0;
+
+    for (int i = 0; i < 10; ++i)
+    {
+        for (const auto & coord : coords)
+        {
+            // delay(50);
+
+
+            xvid_setw(XVID_WR_PR_CMD, PR_COORDX1 | static_cast<int>((coord.x1 * scale_x + offset_x)));
+            xvid_setw(XVID_WR_PR_CMD, PR_COORDY1 | static_cast<int>((coord.y1 * scale_y + offset_y)));
+            xvid_setw(XVID_WR_PR_CMD, PR_COORDX2 | static_cast<int>((coord.x2 * scale_x + offset_x)));
+            xvid_setw(XVID_WR_PR_CMD, PR_COORDY2 | static_cast<int>((coord.y2 * scale_y + offset_y)));
+            xvid_setw(XVID_WR_PR_CMD, PR_COLOR | (i + 2));
+            xvid_setw(XVID_WR_PR_CMD, PR_EXECUTE);
+        }
+
+        offset_y += 5 * scale_y;
+        scale_x += 0.25;
+        scale_y += 1;
+    }
+
+    delay(1000);
+}
 
 static const uint16_t data_pat[8] = {0xA5A5, 0x5A5A, 0xFFFF, 0x0123, 0x4567, 0x89AB, 0xCDEF, 0x0220};
 
@@ -1074,7 +1132,7 @@ int main(int argc, char ** argv)
     xvid_setw(XVID_AUX_DATA, 0x0000);
 
     delay(5000);        // let the stunning boot logo display. :)
-#if 1
+
     xcls();
     xprint("Xosera Retro Graphics Adapter: Mode ");
     xprint_int(width);
@@ -1089,8 +1147,7 @@ int main(int argc, char ** argv)
         xprint("Hello! ");
     }
 
-    delay(5000);
-#endif
+    delay(1000);
 
     test_smoothscroll();
 

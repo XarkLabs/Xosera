@@ -183,17 +183,28 @@ logic           vsync_1;
 logic           hsync_1;
 logic           dv_de_1;
 
+// primitive renderer
+logic           prim_rndr_ena_draw;    // primitive renderer enable draw
+logic [15:0]    prim_rndr_cmd;         // received primitive renderer command
+logic           prim_rndr_cmd_valid;   // is command valid
+logic           prim_rndr_vram_sel /* verilator public */;         // primitive renderer VRAM select
+logic           prim_rndr_wr           /* verilator public */;     // primitive renderer VRAM write
+logic [15:0]    prim_rndr_addr         /* verilator public */;     // primitive renderer VRAM addr
+logic [15:0]    prim_rndr_data_out     /* verilator public */;     // primitive renderer bus VRAM data write
+
 // audio generation (TODO)
 assign audio_l_o = dbug_cs_strobe;                    // TODO: audio
 assign audio_r_o = blit_xr_sel; //dbug_drive_bus;                    // TODO: audio
 
-assign vram_sel     = vgen_vram_sel ? 1'b1              : blit_vram_sel;
-assign vram_wr      = vgen_vram_sel ? 1'b0              : (blit_wr & blit_vram_sel);
-assign vram_mask    = vgen_vram_sel ? 4'b0000           : blit_mask;
-assign vram_addr    = vgen_vram_sel ? vgen_vram_addr    : blit_addr;
-assign vram_data_in = blit_data_out;
-assign blit_data_in = blit_vram_load ? vram_data_out    : blit_vram_read;
-assign vgen_data_in = vgen_vram_load ? vram_data_out    : vgen_vram_read;
+assign vram_sel        = vgen_vram_sel || blit_vram_sel || prim_rndr_vram_sel ? 1'b1 : 1'b0;
+assign vram_wr         = vgen_vram_sel  ? 1'b0 : (blit_wr & blit_vram_sel) || (prim_rndr_wr & prim_rndr_vram_sel);
+assign vram_mask       = vgen_vram_sel  ? 4'b0000        : blit_mask;
+assign vram_addr       = vgen_vram_sel  ? vgen_vram_addr : blit_vram_sel ? blit_addr : prim_rndr_addr;
+assign vram_data_in    = blit_vram_sel  ? blit_data_out  : prim_rndr_data_out;
+assign blit_data_in    = blit_vram_load ? vram_data_out  : blit_vram_read;
+assign vgen_data_in    = vgen_vram_load ? vram_data_out  : vgen_vram_read;
+ 
+assign prim_rndr_ena_draw   = !vgen_vram_sel && !blit_vram_sel;
 
 // save vgen value read from vram
 always_ff @(posedge clk) begin
@@ -240,8 +251,26 @@ blitter blitter(
     .intr_mask_o(intr_mask),            // set with write to SYS_CTRL
     .intr_clear_o(intr_clear),          // strobe with write to TIMER
     .bus_ack_o(dbug_cs_strobe),         // TODO debug
+    .prim_rndr_cmd_o(prim_rndr_cmd),                // received primitive renderer command
+    .prim_rndr_cmd_valid_o(prim_rndr_cmd_valid),    // is command valid
     .reset_i(reset_i)
 );
+
+// primitive renderer
+prim_renderer prim_renderer(
+    .ena_draw_i(prim_rndr_ena_draw),                // enable draw
+
+    .cmd_i(prim_rndr_cmd),                          // command
+    .cmd_valid_i(prim_rndr_cmd_valid),              // is command valid?
+
+    .prim_rndr_vram_sel_o(prim_rndr_vram_sel),      // primitive renderer VRAM select
+    .prim_rndr_wr_o(prim_rndr_wr),                  // primitive renderer VRAM write
+    .prim_rndr_addr_o(prim_rndr_addr),              // primitive renderer VRAM addr
+    .prim_rndr_data_out_o(prim_rndr_data_out),      // primitive renderer bus VRAM data write
+
+    .clk(clk),                                      // input clk
+    .reset_i(reset_i)                               // reset
+    );
 
 //  video generation
 video_gen video_gen(

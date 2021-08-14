@@ -55,3 +55,7 @@ Improvement ideas/TODO items (in no particular order):
 ![Xosera 16-color 640x400 VGA Test](pics/Xosera_16_color_test.jpg) Xosera 16-color 640x400 VGA Test
 
 ![Early Xosera 848x480 DVI Font Test](pics/XoseraTest_848x480_DVI.jpg) Early Xosera 848x480 DVI Font Test
+
+Contributors:
+
+* Daniel Cliche (danoidus)

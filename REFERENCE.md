@@ -583,3 +583,27 @@ for details of use.
 A simple executable ruby script, `bin2c.rb` is also provided in that directory. This is a simple
 utility that takes assembled copper binaries and outputs them as a C array (with associated size)
 for direct embedding into C code.
+
+### Pritive Renderer Commands
+
+| 0xA   | `XM_WR_PR_CMD` | W/O   | send a command to the primitive renderer (see section Primitive Renderer)
+
+To render a primitive, a sequence of commands must be written to the `XVID_WR_PR_CMD` register. Each command is 16-bit
+therefore the MSB must be sent before the LSB. The command will be accepted by the primitive renderer when the LSB is
+received. The renderer will draw the primitive after receiving the `PR_EXECUTE` command.
+
+In order to reduce the number of bus accesses, parameters such as coordinates or color are optional in the sequence of commands. If not sent, the last value of the given parameter received by the primitive renderer will be used.
+
+#### Draw Line
+
+To draw a line, send following sequence of commands:
+
+| Data   | Name           | Description
+---------|----------------|------------
+| 0x0vvv | `PR_COORDX1`   | set the 12-bit X1 coordinate (optional)
+| 0x1vvv | `PR_COORDY1`   | set the 12-bit Y1 coordinate (optional)
+| 0x2vvv | `PR_COORDX2`   | set the 12-bit X2 coordinate (optional)
+| 0x3vvv | `PR_COORDY2`   | set the 12-bit Y2 coordinate (optional)
+| 0x40vv | `PR_COLOR`     | set the 8-bit color (optional)
+| 0xFxxx | `PR_EXECUTE`   | draw the primitive
+

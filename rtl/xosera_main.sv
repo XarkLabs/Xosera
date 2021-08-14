@@ -44,8 +44,8 @@ module xosera_main(
            input  wire logic         bus_bytesel_i,          // 0 = even byte, 1 = odd byte
            input  wire logic [7:0]   bus_data_i,             // 8-bit data bus input
            output logic      [7:0]   bus_data_o,             // 8-bit data bus output
+           output logic              bus_intr_o,             // Vertical blank (active high)
            output logic      [3:0]   red_o, green_o, blue_o, // RGB 4-bit color outputs
-           output logic              vblank_o,               // Vertical blank (active high)
            output logic              hsync_o, vsync_o,       // horizontal and vertical sync
            output logic              dv_de_o,                // pixel visible (aka display enable)
            output logic              audio_l_o, audio_r_o,   // left and right audio PWM output
@@ -111,7 +111,7 @@ logic [15:0]    fontram_data_out    /* verilator public */;
 logic  [3:0]    pal_index       /* verilator public */;
 logic [15:0]    pal_lookup      /* verilator public */;
 
-logic           vblank_1;
+logic           bus_intr_1;
 logic           vsync_1;
 logic           hsync_1;
 logic           dv_de_1;
@@ -190,7 +190,7 @@ video_gen video_gen(
     .vgen_reg_data_o(vgen_reg_data_out),
     .vgen_reg_data_i(blit_data_out),
     .pal_index_o(pal_index),
-    .vblank_o(vblank_1),
+    .bus_intr_o(bus_intr_1),
     .hsync_o(hsync_1),
     .vsync_o(vsync_1),
     .dv_de_o(dv_de_1)
@@ -231,7 +231,7 @@ paletteram paletteram(
 
 // palette RAM lookup (delays video 1 cycle for BRAM)
 always_ff @(posedge clk) begin
-    vblank_o    <= vblank_1;
+    bus_intr_o  <= bus_intr_1;
     vsync_o     <= vsync_1;
     hsync_o     <= hsync_1;
     dv_de_o     <= dv_de_1;

@@ -8,7 +8,7 @@
      [BUS_RESET_N]     <RST> |  3           46 | spi_mosi  (17)
                       <DONE> |  4           45 | spi_miso  (14)
         [BUS_CS_N]   led_red |  5           44 | gpio_20   <N/A w/OSC>
-      [BUS_RD_NWR] led_green |  6     U     43 | gpio_10   <unused input>
+      [BUS_RD_NWR] led_green |  6     U     43 | gpio_10   <INTERRUPT>
      [BUS_BYTESEL]  led_blue |  7     P     42 | <12 MHz>
                        <+5V> |  8     D     41 | <GND>
                      <+3.3V> |  9     U     40 | gpio_12   [VGA_HS]

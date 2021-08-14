@@ -35,7 +35,7 @@ module video_gen(
     input  wire logic [15:0]     vgen_reg_data_i,    // data for internal config register
     // video signal outputs
     output      logic  [3:0]     pal_index_o,        // palette index outputs
-    output      logic            vblank_o,           // Vertical blank indicator (always active high)
+    output      logic            bus_intr_o,         // bus interrupt output
     output      logic            vsync_o, hsync_o,   // VGA sync outputs
     output      logic            dv_de_o,            // VGA video active signal (needed for HDMI)
     // standard signals
@@ -298,7 +298,7 @@ always_ff @(posedge clk) begin
         vram_sel_o      <= 1'b0;
         vram_addr_o     <= 16'h0000;
         pal_index_o     <= 4'b0;
-        vblank_o        <= 1'b0;
+        bus_intr_o      <= 1'b0;
         hsync_o         <= 1'b0;
         vsync_o         <= 1'b0;
         dv_de_o         <= 1'b0;
@@ -493,10 +493,10 @@ always_ff @(posedge clk) begin
         mem_fetch <= mem_fetch_next;
 
         // set video output signals (color already set)
-        hsync_o  <= hsync ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
-        vsync_o  <= vsync ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
-        vblank_o <= vsync;
-        dv_de_o  <= dv_display_ena;
+        bus_intr_o  <= vsync;   // TODO general purpose interrupt
+        hsync_o     <= hsync ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
+        vsync_o     <= vsync ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
+        dv_de_o     <= dv_display_ena;
     end
 end
 

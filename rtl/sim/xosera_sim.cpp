@@ -31,6 +31,7 @@
 #define LOGDIR "sim/logs/"
 
 #define MAX_TRACE_FRAMES 4        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_UPLOADS      4        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
 vluint64_t main_time        = 0;
@@ -40,10 +41,13 @@ volatile bool done;
 bool          sim_render = SDL_RENDER;
 bool          sim_bus    = BUS_INTERFACE;
 bool          wait_close = false;
-bool          upload_data;
-const char *  upload_name;
-char          upload_payload[128 * 1024];
-int           upload_size;
+
+int          num_uploads;
+int          next_upload;
+const char * upload_name[MAX_UPLOADS];
+uint8_t *    upload_payload[MAX_UPLOADS];
+int          upload_size[MAX_UPLOADS];
+uint8_t      upload_buffer[128 * 1024];
 
 class BusInterface
 {
@@ -95,6 +99,15 @@ class BusInterface
         AUX_R_UNUSED_F  = 0x000F
     };
 
+    enum
+    {
+        AUX_VID      = 0x0000,        // 0x0000-0x000F 16 word video registers (see below)
+        AUX_FONTMEM  = 0x4000,        // 0x4000-0x5FFF 8K byte font memory (even byte [15:8] ignored)
+        AUX_COLORMEM = 0x8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
+        AUX_OTHERMEM = 0xC000         // 0xC000-0x??? TODO (audio registers)
+
+    };
+
     static const char * reg_name[];
     enum
     {
@@ -109,6 +122,8 @@ class BusInterface
     int     state;
     int     index;
     bool    data_upload;
+    int     data_upload_mode;
+    int     data_upload_num;
     int     data_upload_count;
     int     data_upload_index;
 
@@ -147,6 +162,8 @@ public:
         index             = 0;
         state             = BUS_START;
         data_upload       = false;
+        data_upload_mode  = 0;
+        data_upload_num   = 0;
         data_upload_count = 0;
         data_upload_index = 0;
         top->bus_cs_n_i   = 1;
@@ -164,18 +181,24 @@ public:
             {
                 last_time = bus_time + 1;
 
-                if (test_data[index] == 0xfffe)
-                {
-                    data_upload       = upload_size > 0;
-                    data_upload_count = upload_size;        // byte count
-                    data_upload_index = 0;
-                    index++;
-                }
                 if (!data_upload && test_data[index] == 0xffff)
                 {
                     enable    = false;
                     last_time = bus_time - 1;
                     return;
+                }
+                if (!data_upload && (test_data[index] & 0xfff0) == 0xfff0)
+                {
+                    data_upload       = upload_size[data_upload_num] > 0;
+                    data_upload_mode  = test_data[index] & 0xf;
+                    data_upload_count = upload_size[data_upload_num];        // byte count
+                    data_upload_index = 0;
+                    printf("[Upload #%d started, %d bytes, mode %s]\n",
+                           data_upload_num + 1,
+                           data_upload_count,
+                           data_upload_mode ? "AUX_DATA" : "VRAM_DATA");
+
+                    index++;
                 }
                 int bytesel = (test_data[index] & 0x1000) ? 1 : 0;
                 int reg_num = (test_data[index] >> 8) & 0xf;
@@ -184,12 +207,8 @@ public:
                 if (data_upload && state == BUS_START)
                 {
                     bytesel = data_upload_index & 1;
-                    reg_num = XVID_DATA;
-                    data    = upload_payload[data_upload_index++];
-                    if (data_upload_index > data_upload_count)
-                    {
-                        data_upload = false;
-                    }
+                    reg_num = data_upload_mode ? XVID_AUX_DATA : XVID_DATA;
+                    data    = upload_payload[data_upload_num][data_upload_index++];
                 }
 
                 switch (state)
@@ -220,7 +239,11 @@ public:
                         if (data_upload)
                         {
                             if (data_upload_index >= data_upload_count)
+                            {
                                 data_upload = false;
+                                printf("[Upload #%d completed]\n", data_upload_num + 1);
+                                data_upload_num++;
+                            }
                         }
                         else if (++index >= test_data_len)
                         {
@@ -267,19 +290,27 @@ const char * BusInterface::reg_name[] = {
 #define REG_B(r, v) (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_W(r, v)                                                                                                    \
     ((BusInterface::XVID_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
-#define REG_UPLOAD() 0xfffe
-#define REG_END()    0xffff
+#define REG_UPLOAD()     0xfff0
+#define REG_UPLOAD_AUX() 0xfff1
+#define REG_END()        0xffff
 
 #define X_COLS 80
 
 BusInterface bus;
 int          BusInterface::test_data_len   = 999;
-uint16_t     BusInterface::test_data[1024] = {REG_W(AUX_ADDR, AUX_GFXCTRL),
-                                          REG_W(AUX_DATA, 0x8000),
-                                          REG_W(WR_INC, 0x0001),
-                                          REG_W(WR_ADDR, 0x0000),
-                                          REG_UPLOAD(),
-                                          REG_END()};
+uint16_t     BusInterface::test_data[1024] = {
+    // test data
+    REG_W(AUX_ADDR, AUX_GFXCTRL),
+    REG_W(AUX_DATA, 0x8000),
+    REG_W(AUX_ADDR, AUX_COLORMEM),
+    REG_UPLOAD_AUX(),
+    REG_W(WR_INC, 0x0001),
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),
+    REG_END()
+    // end test data
+};
+
 #if 0
 uint16_t     BusInterface::test_stfont[1024] = {REG_W(WR_ADDR, 0x3),
                                           REG_W(WR_INC, 0x1),
@@ -379,25 +410,44 @@ int main(int argc, char ** argv)
                 printf("-u needs filename\n");
                 exit(EXIT_FAILURE);
             }
-            upload_data = true;
-            upload_name = argv[nextarg];
+            // upload_data = true;
+            upload_name[num_uploads] = argv[nextarg];
+            num_uploads++;
         }
         nextarg += 1;
     }
 
-    if (upload_data)
+    if (num_uploads)
     {
-        printf("Reading upload data: %s\n", upload_name);
-        FILE * bfp = fopen(upload_name, "r");
-        if (bfp != nullptr)
+        for (int u = 0; u < num_uploads; u++)
         {
-            upload_size = fread(upload_payload, 1, sizeof(upload_payload), bfp);
-            printf("  loaded %d bytes\n", upload_size);
-            fclose(bfp);
-        }
-        else
-        {
-            printf("  failed\n");
+            printf("Reading upload data #%d: \"%s\"...", u + 1, upload_name[u]);
+            FILE * bfp = fopen(upload_name[u], "r");
+            if (bfp != nullptr)
+            {
+                int read_size = fread(upload_buffer, 1, sizeof(upload_buffer), bfp);
+                fclose(bfp);
+
+                if (read_size > 0)
+                {
+                    printf("read %d bytes.\n", read_size);
+                    upload_size[u]    = read_size;
+                    upload_payload[u] = (uint8_t *)malloc(read_size);
+                    memcpy(upload_payload[u], upload_buffer, read_size);
+                }
+                else
+                {
+                    printf("failed.\n");
+                    perror("fread failed");
+                    exit(EXIT_FAILURE);
+                }
+            }
+            else
+            {
+                printf("failed.\n");
+                perror("fopen failed");
+                exit(EXIT_FAILURE);
+            }
         }
     }
 
@@ -514,9 +564,17 @@ int main(int argc, char ** argv)
             done = true;
         }
 
-        if (frame_num > 1 && top->xosera_main->vram_sel && top->xosera_main->vram_wr)
+        if (frame_num > 1)
         {
-            printf(" => write VRAM[0x%04x]=0x%04x\n", top->xosera_main->vram_addr, top->xosera_main->blit_data_out);
+            if (top->xosera_main->blit_vram_sel && top->xosera_main->blit_wr)
+            {
+                printf(" => write VRAM[0x%04x]=0x%04x\n", top->xosera_main->blit_addr, top->xosera_main->blit_data_out);
+            }
+
+            if (top->xosera_main->blit_aux_sel && top->xosera_main->blit_wr)
+            {
+                printf(" => write AUX[0x%04x]=0x%04x\n", top->xosera_main->blit_addr, top->xosera_main->blit_data_out);
+            }
         }
 
         bool hsync = H_SYNC_POLARITY ? top->hsync_o : !top->hsync_o;

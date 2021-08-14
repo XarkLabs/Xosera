@@ -1,6 +1,7 @@
 // Quick & Dirty PNG to Verilog memb file converter
 // Xark - 2021
 // See top-level LICENSE file for license information. (Hint: MIT)
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

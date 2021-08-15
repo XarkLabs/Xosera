@@ -18,19 +18,18 @@ This is currently a work in progress, but you can follow along at [Hackaday.io](
 
 Planned Xosera features:
 
-* 128KB of embedded video RAM
 * Two over-layed "planes" of video
-* Up to 8x16 character size
 * Tile and Bit-mapped 16 and 256 color graphics modes
 * "Blitter" to accelerate copy and fill operations
 * At least one "cursor" sprite (and likely more)
-* Register based interface with auto-increment (as fast as direct mapped)
 
 Current Xosera features:
 
 * VGA or HDMI (DVI) output at 640x480@60Hz or 848x480@60Hz (16:9 widescreen 480p)
+* Register based interface with auto-increment (as fast as direct mapped)
+* 128KB of embedded video RAM (limited by current modest FPGA)
 * Character tile based modes with color attribute byte
-* 8x16 text with 4-bit foreground/background color per character
+* 8x16 text with 4-bit foreground/background color attribute per character
 * 2-color hi-res bitmap mode
 * 16 or 256 color palette out of 4096 colors (12-bit RGB)
 * 8KB of dedicated font RAM (or fonts can be in VRAM)
@@ -52,4 +51,8 @@ Improvement ideas/TODO items (in no particular order):
 * Consider "pixel shift" options for blitter (for un-aligned drawing)
 * Line-draw or polygon acceleration
 
-![Xosera 848x480 DVI Font Test](pics/XoseraTest_848x480_DVI.jpg)
+![Xosera 16-color 640x400 VGA Test](pics/Xosera_16_Color_Test.jpg)
+Xosera 16-color 640x400 VGA Test
+
+![Early Xosera 848x480 DVI Font Test](pics/XoseraTest_848x480_DVI.jpg)
+Early Xosera 848x480 DVI Font Test

@@ -56,24 +56,26 @@ TODO `BLIT_CTRL`[1] enables blit using `CONST` data value as source instead of r
 
 The `BLIT_CTRL` also has bits that allow Xosera "re-configure" itself.  This will cause the FPGA to reload a configuration from flash memory (4 are selectable). Write the value 0x8x80 to `XVID_VID_CTRL` and Xosera FPGA will reconfigure itself, like at power on (VRAM will be clear and AUX memory will be reloaded).  Bits [9:8] will select the firmware to reconfigure to (normally, 0 for 640x480 mode, 1 for 848x480 mode with the other configs user defined).  The FPGA takes about 80-100 milliseconds to reconfigure and initialize (you can repeatedly write to a register (e.g., `XVID_CONST`) and wait until it reads back to know the FPGA has finished reconfiguring).
 
-### Other AUX Memory Areas
+### AUX Memory Areas
 
 | Name             | Address Range | R/W| Width          | Description                                                     |
 |------------------| --------------|-----|---------------|-----------------------------------------------------------------|
 | `AUX_VID_`*      | 0x0000-0x3FFF | R/W*| 16-bit [15:0] | AUX_VID register area, see below                                |
 | `AUX_W_FONT`     | 0x4000-0x4FFF | W/O | 16-bit [15:0] | 8KB font/tile memory (4K words, high byte first for 8-bit font) |
-| `AUX_W_COLORTBL` | 0x8000-0x80FF | W/O |  8-bit  [7:0] | 256 word color lookup table (0xXRGB)                            |
+| `AUX_W_COLORTBL` | 0x8000-0x80FF | W/O | 16-bit [15:0] | 256 word color lookup table (0xXRGB)                            |
 | `AUX_W_AUD_`*    | 0xC000-0xFFFF |  -  |       -       | TODO TBD (audio registers?)                                     |
 
-To access these registers, write the register address to `XVID_AUX_ADDR`, then write the register data to `XVID_VID_DATA`.  Note that the registers are read-only or write-only (and their addresses overlap).
+To access the AUX region, write the AUX address to `XVID_AUX_ADDR`, then write to `XVID_VID_DATA`.
+
+Each word written to `XVID_VID_DATA` will also automatically increment `XVID_AUX_ADDR` (this allows faster consecutive writes, like for palette or font RAM update).  Note that this is not the case when reading `XVID_AUX_ADDR` (you _must_ write `XVID_AUX_ADDR` to trigger a read).
 
 TODO Make font memory read/write (perhaps with restrictions/slow read while in use)
 
 ### Xosera AUX_VID Registers
 
-These registers deal with video generation configuration and video status.
+This AUX region has registers that deal with video generation configuration and video status.
 
-To access these registers, write the register address to `XVID_AUX_ADDR`, then write the register data to `XVID_VID_DATA`.  Note that the registers are read-only or write-only (and their addresses overlap).
+To access these registers, write the register address to `XVID_AUX_ADDR`, then read or write register data to `XVID_VID_DATA`.  Note that some read-only registers overlap some write-only registers.
 
 ###### Read-Write AUX_VID Registers
 

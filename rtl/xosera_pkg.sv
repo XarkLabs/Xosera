@@ -20,7 +20,7 @@
 `endif
 
 //`define TESTPATTERN     // init with "test pattern" instead of clear VRAM
-//`define USE_BPP4TEST                // WIP test 4-bpp rendering
+//`define USE_BPPTEST                // WIP test 4-bpp rendering
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
@@ -80,6 +80,13 @@ typedef enum logic [15:0]{
     AUX_R_UNUSED_E  = AUX_VID | 16'h000E,
     AUX_R_UNUSED_F  = AUX_VID | 16'h000F
 } aux_vid_r_t;
+
+typedef enum logic [1:0] {
+    BPP_1_ATTR      = 2'b00,
+    BPP_2           = 2'b01,
+    BPP_4           = 2'b10,
+    BPP_8           = 2'b11
+} bpp_depth_t;
 
 `ifdef MODE_640x400     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x400_75  // 31.500 MHz (requested), 31.500 MHz (achieved)

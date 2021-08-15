@@ -25,7 +25,7 @@
 #include <machine.h>
 #include <sdfat.h>
 
-//#define USE_BPP4TEST        // for 4-bpp test gateware (Tut)
+//#define USE_BPPTEST        // for bpp test gateware
 
 #define DELAY_TIME 5000        // human speed
 //#define DELAY_TIME 1000        // impatient human speed
@@ -449,7 +449,7 @@ static void load_sd_palette(const char * filename)
         int cnt   = 0;
         int vaddr = 0;
 
-        while ((cnt = fl_fread(mem_buffer, 1, 256, file)) > 0)
+        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
         {
             /* period every 4KiB, does not noticeably affect speed */
             if (!(vaddr % 0x7))
@@ -545,8 +545,19 @@ void     xosera_test()
         {
             dprintf("No SD card support.\n");
         }
-#if defined(USE_BPP4TEST)        // 4bpp test
-                                 // ST_KingTut_Dpaint_16.xb4
+#if defined(USE_BPPTEST)        // 4/8 bpp test
+        if (use_sd)
+        {
+            xv_reg_setw(gfxctrl, 0x0000);
+            load_sd_palette("/xosera_r1_pal.raw");
+            load_sd_bitmap("/xosera_r1.raw");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            xv_reg_setw(gfxctrl, 0x0000);
+        }
+
         if (use_sd)
         {
             xv_reg_setw(gfxctrl, 0x0000);

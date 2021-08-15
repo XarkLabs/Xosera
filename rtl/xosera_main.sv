@@ -110,7 +110,7 @@ logic           fontram_rd_en       /* verilator public */;
 logic [11:0]    fontram_addr        /* verilator public */; // 12-bit word address
 logic [15:0]    fontram_data_out    /* verilator public */;
 
-logic  [3:0]    pal_index       /* verilator public */;
+logic  [7:0]    pal_index       /* verilator public */;
 logic [15:0]    pal_lookup      /* verilator public */;
 
 logic           bus_intr_1;
@@ -226,7 +226,7 @@ fontram fontram(
 paletteram paletteram(
     .clk(clk),
     .rd_en_i(1'b1),
-    .rd_address_i({ 4'h0, pal_index}),
+    .rd_address_i(pal_index),
     .rd_data_o(pal_lookup),
     .wr_clk(clk),
     .wr_en_i(blit_paletteram_wr),

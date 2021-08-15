@@ -10,22 +10,22 @@ char * in_file  = nullptr;
 char * out_file = nullptr;
 
 
+char    line[4096];
 uint8_t out_buffer[128 * 1024];
-uint8_t in_buffer[128 * 1024];
 
-bool pal = false;
+bool round = false;
 
 int main(int argc, char ** argv)
 {
-    printf("Extracts low nibble form each byte - Xark\n\n");
+    printf("Convert Gimp palette into Xosera binary palette - Xark\n\n");
 
     for (int a = 1; a < argc; a++)
     {
         if (argv[a][0] == '-')
         {
-            if (strcmp("-p", argv[a]) == 0)
+            if (strcmp("-r", argv[a]) == 0)
             {
-                pal = true;
+                round = true;
             }
             else
             {
@@ -53,28 +53,48 @@ int main(int argc, char ** argv)
 
     if (!in_file || !out_file)
     {
-        printf("raw256to16color: Extract low nibble from file\n");
-        printf("Usage:  raw256to16color <input file> <output file>\n");
-        printf(" -p   treat 3 bytes as 16-bit palette entry\n");
+        printf("pal_to_raw: Extract low nibble from file\n");
+        printf("Usage:  pal_to_raw <input file> <output file>\n");
+        printf(" -r   round colors to 4-bit (vs truncate)\n");
         exit(EXIT_FAILURE);
     }
 
-    printf("Input image file     : \"%s\"\n", in_file);
-    printf("Output mem font file : \"%s\"\n", out_file);
-    if (pal)
+    printf("Input gpl file     : \"%s\"\n", in_file);
+    printf("Output raw pal file : \"%s\"\n", out_file);
+    if (round)
     {
-        printf("Padding for 16-bit palette\n");
+        printf("[Rounding color values to 4-bit]\n");
     }
 
     size_t in_length = 0;
     {
-        FILE * fp = fopen(in_file, "rb");
+        FILE * fp = fopen(in_file, "r");
         if (fp != nullptr)
         {
-            printf("Reading input...\n");
+            while (fgets(line, sizeof(line) - 1, fp) != nullptr)
+            {
+                if (line[0] == '#')
+                {
+                    break;
+                }
+            }
+            int i = 0;
+            while (i < 256 && fgets(line, sizeof(line) - 1, fp) != nullptr)
+            {
+                int r = 0, g = 0, b = 0;
 
-            in_length = fread(in_buffer, 1, 128 * 1024, fp);
+                if (sscanf(line, "%u %u %u", &r, &g, &b) != 3)
+                {
+                    printf("error parsing: %s\n", line);
+                    exit(EXIT_FAILURE);
+                }
 
+                printf("[%02x] R=0x%02x, G=0x%02x, B=0x%02x\n", i, r, g, b);
+
+                //   *out = (r >> 4) & 0xf;
+
+                i++;
+            }
             fclose(fp);
             printf("Success, %zd bytes.\n", in_length);
         }
@@ -84,7 +104,7 @@ int main(int argc, char ** argv)
             exit(EXIT_FAILURE);
         }
     }
-
+#if 0
     uint8_t * ptr        = out_buffer;
     size_t    out_length = 0;
     if (!pal)
@@ -99,8 +119,8 @@ int main(int argc, char ** argv)
     {
         for (size_t i = 0; i < in_length; i += 3)
         {
-            *ptr++ = ((in_buffer[i + 0] >> 4) & 0xf);
-            *ptr++ = (((in_buffer[i + 1] >> 4) & 0xf) << 4) | ((in_buffer[i + 2] >> 4) & 0xf);
+            *ptr++ = (in_buffer[i + 0] & 0xf);
+            *ptr++ = ((in_buffer[i + 1] & 0xf) << 4) | (in_buffer[i + 2] & 0xf);
             out_length += 2;
         }
     }
@@ -120,6 +140,6 @@ int main(int argc, char ** argv)
         printf("*** Unable to open to output file\n");
         exit(EXIT_FAILURE);
     }
-
+#endif
     return EXIT_SUCCESS;
 }

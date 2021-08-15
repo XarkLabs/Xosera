@@ -34,7 +34,7 @@ module video_gen(
     input  wire logic  [3:0]     vgen_reg_num_i,     // internal config register number
     input  wire logic [15:0]     vgen_reg_data_i,    // data for internal config register
     // video signal outputs
-    output      logic  [3:0]     pal_index_o,        // palette index outputs
+    output      logic  [7:0]     pal_index_o,        // palette index outputs
     output      logic            bus_intr_o,         // bus interrupt output
     output      logic            vsync_o, hsync_o,   // VGA sync outputs
     output      logic            dv_de_o,            // VGA video active signal (needed for HDMI)
@@ -47,14 +47,17 @@ localparam [31:0] githash = 32'H`GITHASH;
 
 // Emperically determined (at extremes of horizontal scroll [worst case])
 // (odd numbers because 4 cycle latency through "fetch pipeline" and buffered)
-`ifdef USE_BPP4TEST
-localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-18;     // memory fetch starts over a tile early
-`else
-localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-7;     // memory fetch starts over a tile early
-`endif
+`ifdef USE_BPPTEST
+// 4bpp localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-18;     // memory fetch starts over a tile early
+localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-10;     // memory fetch starts over a tile early
 
 localparam H2X_MEM_BEGIN = xv::OFFSCREEN_WIDTH-12;  // and 8 pixels earlier with horizontal pixel double
 localparam H_MEM_END = xv::TOTAL_WIDTH-1;           // memory fetch can ends a bit early
+`else
+localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-7;     // memory fetch starts over a tile early
+localparam H2X_MEM_BEGIN = xv::OFFSCREEN_WIDTH-12;  // and 8 pixels earlier with horizontal pixel double
+localparam H_MEM_END = xv::TOTAL_WIDTH-1;           // memory fetch can ends a bit early
+`endif
 
 logic vg_enable;                                    // video generation enabled (else black/blank)
 
@@ -68,29 +71,36 @@ logic           pa_font_in_vram;                    // 0=fontmem, 1=vram
 logic           pa_bm_enable;                       // bitmap enable (else text mode)
 logic  [5:0]    pa_font_bank;                       // vram/fontmem font bank 0-3 (0/1 with 8x16) fontmem, or 2KB/4K
 logic  [3:0]    pa_font_height;                     // max height of font cell
-logic           pa_h_double;                        // horizontal pixel double
-logic           pa_v_double;                        // vertical pixel double
 
-`ifdef USE_BPP4TEST
-logic  [1:0]    pa_h_repeat;
-logic  [1:0]    pa_v_repeat;
+`ifdef USE_BPPTEST
+logic  [1:0]    pa_bpp;                             // bpp code (bpp_depth_t)
+logic  [7:0]    pa_colorbase;
+logic  [1:0]    pa_h_repeat;                        // horizontal pixel repeat
+logic  [1:0]    pa_v_repeat;                        // vertical pixel repeat
+logic  [2:0]    pa_tile_x;                          // current column of font cell
+logic  [3:0]    pa_tile_y;                          // current line of font cell
+`else
+logic  [3:0]    pa_tile_x;                          // current column of font cell (extra bit for horizontal double)
+logic  [4:0]    pa_tile_y;                          // current line of font cell (extra bit for vertical double)
 `endif
 
-// temp signals
-logic [15:0]    pa_addr;                            // address to fetch tile+color attribute
-logic [15:0]    pa_data_save;                      // 1st fetched display data
-logic [15:0]    pa_line_addr;                       // address of start of tile+color attribute line
+// obsolete?
+logic           pa_h_double;                        // horizontal pixel double
+logic           pa_v_double;                        // vertical pixel double
 logic  [7:0]    pa_text_attrib;                     // bit pattern shifting out for current font tile line
 logic  [7:0]    pa_text_tile;                       // current tile index
 logic  [7:0]    pa_shift_out;                       // bit pattern shifting out for current font tile line
-logic  [3:0]    pa_tile_x;                          // current column of font cell (extra bit for horizontal double)
-logic  [4:0]    pa_tile_y;                          // current line of font cell (extra bit for vertical double)
+
+// temp signals
+logic [15:0]    pa_addr;                            // address to fetch tile+color attribute
+logic [15:0]    pa_data_save;                       // 1st fetched display data
+logic [15:0]    pa_line_addr;                       // address of start of tile+color attribute line
 logic [15:0]    pa_font_addr;                       // font data address (VRAM or FONTRAM)
 
-`ifdef USE_BPP4TEST
+`ifdef USE_BPPTEST
 logic [15:0]    pa_data_save1;                      // 1st fetched display data
 logic [15:0]    pa_data_save2;                      // 2nd fetched display data
-logic  [15:0]   pa_pixel_shift;
+logic [15:0]    pa_pixel_shift;
 logic  [1:0]    pa_h_count;
 logic  [1:0]    pa_v_count;
 `endif
@@ -130,7 +140,11 @@ logic           h_start_line_fetch;
 always_ff @(posedge clk) begin
     if (reset_i) begin
         pa_start_addr       <= 16'h0000;
+`ifdef USE_BPPTEST
+        pa_line_width       <= 160;
+`else
         pa_line_width       <= xv::TILES_WIDE[15:0];
+`endif
         pa_fine_scrollx     <= 4'b0000;         // low bit is for "1/2 doubled pixel" when pa_h_double
         pa_fine_scrolly     <= 5'b00000;        // low bit is for "1/2 doubled pixel" when pa_v_double
         pa_font_height      <= 4'b1111;
@@ -139,7 +153,9 @@ always_ff @(posedge clk) begin
         pa_h_double         <= 1'b0;            // horizontal pixel double (repeat)
         pa_v_double         <= 1'b0;            // vertical pixel double (repeat)
         pa_bm_enable        <= 1'b0;            // bitmap mode
-`ifdef USE_BPP4TEST
+`ifdef USE_BPPTEST
+        pa_bpp              <= xv::BPP_8;
+        pa_colorbase        <= 8'h00;
         pa_h_repeat         <= 2'b01;           // TODO init to 1 temp for Tut
         pa_v_repeat         <= 2'b01;
 `endif
@@ -276,9 +292,11 @@ assign          forecolor = pa_text_attrib[3:0];
 logic [3: 0]    backcolor;                      // current tile background color palette index (0-15)
 assign          backcolor = pa_text_attrib[7:4];
 
+`ifndef USE_BPPTEST
 // generate font address from vram_data_i (assumed to be tile tile to lookup) and pa_tile_y
 assign pa_font_addr = pa_font_height[3] ? {pa_font_bank[5:1], vram_data_i[7: 0], pa_tile_y[4:2]}
                                         : {pa_font_bank[5:0], vram_data_i[7: 0], pa_tile_y[3:2]};
+`endif
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -292,19 +310,24 @@ always_ff @(posedge clk) begin
         pa_addr         <= 16'h0000;
         pa_data_save    <= 16'h0000;
         pa_line_addr    <= 16'h0000;
+`ifdef USE_BPPTEST
+        pa_tile_x       <= 3'b0;
+        pa_tile_y       <= 4'b0;
+`else
         pa_tile_x       <= 4'b0;
         pa_tile_y       <= 5'b0;
+`endif
         fontram_sel_o   <= 1'b0;
         vram_sel_o      <= 1'b0;
         vram_addr_o     <= 16'h0000;
-        pal_index_o     <= 4'b0;
+        pal_index_o     <= 8'b0;
         bus_intr_o      <= 1'b0;
         hsync_o         <= 1'b0;
         vsync_o         <= 1'b0;
         dv_de_o         <= 1'b0;
         pa_enable       <= 1'b1;            // plane A starts enabled
         vg_enable       <= 1'b1;            // video starts disabled
-`ifdef USE_BPP4TEST
+`ifdef USE_BPPTEST
         pa_data_save1   <= 16'h0000;
         pa_data_save2   <= 16'h0000;
         pa_h_count      <= 2'b00;
@@ -315,8 +338,8 @@ always_ff @(posedge clk) begin
         vram_sel_o      <= 1'b0;                            // default to no VRAM access
         fontram_sel_o   <= 1'b0;                            // default to no font access
 
-`ifdef USE_BPP4TEST
-        if (mem_fetch||h_start_line_fetch) begin
+`ifdef USE_BPPTEST
+        if (mem_fetch) begin
             fontram_addr_o  <= 12'b0;
             if (pa_h_count == 2'b00) begin
                 case (pa_tile_x[1:0])
@@ -324,12 +347,19 @@ always_ff @(posedge clk) begin
                         vram_sel_o      <= pa_enable;           // select vram
                         vram_addr_o     <= pa_addr;             // put text+color address on vram bus
                         pa_addr         <= pa_addr + 1'b1;      // next tile+attribute
+
+                        if (pa_bpp == xv::BPP_8) begin
+                            pa_data_save2   <= pa_data_save1;       // transfer last word read
+                            pa_data_save1   <= vram_data_i;         // then save current VRAM data
+                        end
                     end
                     2'b01: begin
                     end
                     2'b10: begin
-                        pa_data_save2   <= pa_data_save1;
-                        pa_data_save1   <= vram_data_i;         // then save current VRAM data (color for next tile)
+                        if (pa_bpp == xv::BPP_4) begin
+                            pa_data_save2   <= pa_data_save1;       // transfer last word read
+                            pa_data_save1   <= vram_data_i;         // then save current VRAM data
+                        end
                     end
                     2'b11: begin
                     end
@@ -420,22 +450,49 @@ always_ff @(posedge clk) begin
 `endif
         end
 
-`ifdef USE_BPP4TEST
-        pal_index_o <= pa_pixel_shift[15:12];
+`ifdef USE_BPPTEST
+        case (pa_bpp)
+            xv::BPP_1_ATTR,
+            xv::BPP_2:      pal_index_o <= { pa_colorbase[7:2], pa_pixel_shift[15:14] };
+            xv::BPP_4:      pal_index_o <= { pa_colorbase[7:4], pa_pixel_shift[15:12] };
+            xv::BPP_8:      pal_index_o <= pa_pixel_shift[15:8];
+        endcase
 
         if (pa_h_count == 2'b00) begin
             pa_h_count      <= pa_h_repeat;
+
             pa_tile_x       <= pa_tile_x + 1'b1;
-                pa_pixel_shift  <= { pa_pixel_shift[11:0], 4'h0 };
-            if (pa_tile_x[1:0] == 2'b11) begin
-                pa_pixel_shift  <= pa_data_save2;
-            end
+            case (pa_bpp)
+                xv::BPP_1_ATTR,
+                xv::BPP_2: begin
+                    pa_pixel_shift  <= { pa_pixel_shift[13:0], 2'h0 };
+                    if (pa_tile_x[2:0] == 3'b111) begin
+                        pa_pixel_shift  <= pa_data_save2;
+                        pa_tile_x   <= 3'b000;
+                    end
+                end
+                xv::BPP_4: begin
+                    pa_pixel_shift  <= { pa_pixel_shift[11:0], 4'h0 };
+                    if (pa_tile_x[1:0] == 2'b11) begin
+                        pa_pixel_shift  <= pa_data_save2;
+                        pa_tile_x   <= 3'b000;
+                    end
+                end
+                xv::BPP_8: begin
+                    pa_pixel_shift  <= { pa_pixel_shift[7:0], 8'h0 };
+                    if (pa_tile_x[0] == 1'b1) begin
+                        pa_pixel_shift  <= pa_data_save2;
+                        pa_tile_x   <= 3'b000;
+                    end
+                end
+            endcase
+
         end else begin
             pa_h_count  <= pa_h_count - 1'b1;
         end
 `else
         // pixel color output
-        pal_index_o <= font_pix ? forecolor : backcolor;
+        pal_index_o <= { 4'h0, font_pix ? forecolor : backcolor };
 
         // next pixel
         pa_tile_x <= pa_tile_x + (pa_h_double ? 4'd1 : 4'd2);     // increment tile cell column (by 2 normally, 1 if pixel doubled)
@@ -443,16 +500,19 @@ always_ff @(posedge clk) begin
 
         // start of line
         if (h_start_line_fetch) begin                   // on line fetch start signal
-`ifdef USE_BPP4TEST
-            pa_tile_x   <= 4'b1000;                       // reset on pa_tile_x cycle (to start tile line at proper pixel)
+`ifdef USE_BPPTEST
+            pa_tile_x   <= 3'b000;                      // reset on pa_tile_x cycle (to start tile line at proper pixel)
+            vram_sel_o      <= pa_enable;           // select vram
+            vram_addr_o     <= pa_addr;             // put text+color address on vram bus
+            pa_addr         <= pa_addr + 1'b1;      // next tile+attribute
 `else
-            pa_tile_x   <= 4'b0000;                       // reset on pa_tile_x cycle (to start tile line at proper pixel)
+            pa_tile_x   <= 4'b0000;                     // reset on pa_tile_x cycle (to start tile line at proper pixel)
 `endif
         end
 
         // end of line
         if (h_last_line_pixel) begin                    // if last pixel of scan-line
-`ifdef USE_BPP4TEST
+`ifdef USE_BPPTEST
             if (pa_v_count == 2'b00) begin
                 pa_v_count      <= pa_v_repeat;
                 pa_line_addr    <= pa_line_addr + pa_line_width;    // new line start address
@@ -477,12 +537,14 @@ always_ff @(posedge clk) begin
         // end of frame
         if (v_last_frame_pixel) begin                   // if last pixel of frame
             vg_enable       <= enable_i;                // enable/disable text generation
+`ifdef USE_BPPTEST
+            pa_v_count      <= pa_v_repeat;
+//            pa_tile_y       <= pa_fine_scrolly;       // TODO fine scroll
+`else
             pa_tile_y       <= pa_v_double ? pa_fine_scrolly : { pa_fine_scrolly[3:0], 1'b0 }; // start next frame at Y fine scroll line
+`endif
             pa_addr         <= pa_start_addr;           // reset to start of text data
             pa_line_addr    <= pa_start_addr;           // reset to start of text data
-`ifdef USE_BPP4TEST
-            pa_v_count      <= pa_v_repeat;
-`endif
         end
 
         // update registered signals from combinatorial "next" versions

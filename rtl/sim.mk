@@ -41,10 +41,15 @@ VIDEO_MODE ?= MODE_640x480
 # monochrome + color attribute byte
 #VRUN_TESTDATA ?= -u ../testdata/raw/space_shuttle_color_640x480.raw
 
-# add -DUSE_BPP4TEST to DEFINES below for these tests:
+# add -DUSE_BPPTEST to DEFINES below for these tests:
+#4bpp
 #VRUN_TESTDATA ?= -u ../testdata/raw/color_bars_test_pal.raw -u ../testdata/raw/color_bars_test.raw
 #VRUN_TESTDATA ?= -u ../testdata/raw/escher-relativity_320x240_16_pal.raw -u ../testdata/raw/escher-relativity_320x240_16.raw
-VRUN_TESTDATA ?= -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw
+#VRUN_TESTDATA ?= -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw
+#8bpp
+#VRUN_TESTDATA ?= -u ../testdata/raw/VGA_Balloon_320x200_256_pal.raw -u ../testdata/raw/VGA_Balloon_320x200_256.raw
+#VRUN_TESTDATA ?= -u ../testdata/raw/256_colors_pal.raw -u ../testdata/raw/256_colors.raw
+VRUN_TESTDATA ?= -u ../testdata/raw/xosera_r1_pal.raw -u ../testdata/raw/xosera_r1.raw
 
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
@@ -69,7 +74,7 @@ BUS_INTERFACE	:= 1
 
 # Verilog preprocessor definitions common to all modules
 # -DUSE_BPP4TEST to test 4-bpp
-DEFINES := -DUSE_BPP4TEST -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K
+DEFINES := -DUSE_BPPTEST -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K
 
 ifeq ($(strip $(BUS_INTERFACE)),1)
 DEFINES += -DBUS_INTERFACE

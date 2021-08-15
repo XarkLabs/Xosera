@@ -14,21 +14,22 @@
 module blitter(
     input  wire logic            bus_cs_n_i,         // register select strobe
     input  wire logic            bus_rd_nwr_i,       // 0 = write, 1 = read
-    input  wire logic [3:0]      bus_reg_num_i,      // register number
+    input  wire logic  [3:0]     bus_reg_num_i,      // register number
     input  wire logic            bus_bytesel_i,      // 0=even byte, 1=odd byte
-    input  wire logic [7:0]      bus_data_i,         // 8-bit data bus input
-    output      logic [7:0]      bus_data_o,         // 8-bit data bus output
+    input  wire logic  [7:0]     bus_data_i,         // 8-bit data bus input
+    output      logic  [7:0]     bus_data_o,         // 8-bit data bus output
     input  wire logic            vgen_sel_i,         // 0 = blitter, 1=video generation
     output      logic            vgen_ena_o,         // 0 = video blank, 1 = video on
     output      logic            blit_vram_sel_o,    // VRAM select
     output      logic            blit_aux_sel_o,     // AUX select
     output      logic            blit_wr_o,          // VRAM/AUX read/write
+    output      logic  [3:0]     blit_mask_o,        // VRAM nibble write masks
     output      logic [15:0]     blit_addr_o,        // VRAM/AUX address
     input  wire logic [15:0]     blit_data_i,        // VRAM read data
     output      logic [15:0]     blit_data_o,        // VRAM/AUX write data
     input  wire logic [15:0]     aux_data_i,         // AUX read data
     output      logic            reconfig_o,         // reconfigure iCE40 from flash
-    output      logic [1:0]      boot_select_o,      // reconfigure congigureation number (0-3)
+    output      logic  [1:0]     boot_select_o,      // reconfigure congigureation number (0-3)
     output      logic            bus_ack_o,          // TODO ACK strobe for debug
     input  wire logic            reset_i,
     input  wire logic            clk
@@ -148,6 +149,8 @@ function [7:0] hex_digit(
         hex_digit = 8'h30 + { 4'h0, n };
     end
 endfunction
+
+assign blit_mask_o = { blit_wr_o, blit_wr_o,  blit_wr_o, blit_wr_o };   // TODO replace blit_wr with just mask (non-zero for write)
 
 always_ff @(posedge clk) begin
     if (reset_i) begin

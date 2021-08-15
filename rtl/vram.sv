@@ -13,12 +13,13 @@
 `include "xosera_pkg.sv"
 
 module vram(
-           input  wire logic          clk,
-           input  wire logic          sel,
-           input  wire logic          wr_en,
-           input  wire logic [15: 0]  address_in,
-           input  wire logic [15: 0]  data_in,
-           output      logic [15: 0]  data_out
+           input  wire logic        clk,
+           input  wire logic        sel,
+           input  wire logic        wr_en,
+           input  wire logic  [3:0] wr_mask,
+           input  wire logic [15:0] address_in,
+           input  wire logic [15:0] data_in,
+           output      logic [15:0] data_out
        );
 
 `ifndef SYNTHESIS
@@ -40,7 +41,10 @@ end
 always_ff @(posedge clk) begin
     if (sel) begin
         if (wr_en) begin
-            memory[address_in] <= data_in;
+            if (wr_mask[0]) memory[address_in][ 3: 0]   <= data_in[ 3: 0];
+            if (wr_mask[1]) memory[address_in][ 7: 4]   <= data_in[ 7: 4];
+            if (wr_mask[2]) memory[address_in][11: 8]   <= data_in[11: 8];
+            if (wr_mask[3]) memory[address_in][15:12]   <= data_in[15:12];
         end
         data_out <= memory[address_in];
     end
@@ -79,7 +83,7 @@ end
 SB_SPRAM256KA umem0 (
                   .ADDRESS(address_in[13: 0]),
                   .DATAIN(data_in),
-                  .MASKWREN(4'b1111),
+                  .MASKWREN(wr_mask),
                   .WREN(wr_en),
                   .CHIPSELECT(select0),
                   .CLOCK(clk),
@@ -91,7 +95,7 @@ SB_SPRAM256KA umem0 (
 SB_SPRAM256KA umem1 (
                   .ADDRESS(address_in[13: 0]),
                   .DATAIN(data_in),
-                  .MASKWREN(4'b1111),
+                  .MASKWREN(wr_mask),
                   .WREN(wr_en),
                   .CHIPSELECT(select1),
                   .CLOCK(clk),
@@ -103,7 +107,7 @@ SB_SPRAM256KA umem1 (
 SB_SPRAM256KA umem2 (
                   .ADDRESS(address_in[13: 0]),
                   .DATAIN(data_in),
-                  .MASKWREN(4'b1111),
+                  .MASKWREN(wr_mask),
                   .WREN(wr_en),
                   .CHIPSELECT(select2),
                   .CLOCK(clk),
@@ -115,7 +119,7 @@ SB_SPRAM256KA umem2 (
 SB_SPRAM256KA umem3 (
                   .ADDRESS(address_in[13: 0]),
                   .DATAIN(data_in),
-                  .MASKWREN(4'b1111),
+                  .MASKWREN(wr_mask),
                   .WREN(wr_en),
                   .CHIPSELECT(select3),
                   .CLOCK(clk),

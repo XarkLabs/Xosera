@@ -54,9 +54,10 @@ module xosera_main(
            input  wire logic         reset_i                 // reset signal
        );
 
-logic blit_vram_sel         /* verilator public */;     // blitter VRAM select
-logic blit_aux_sel          /* verilator public */;     // blitter AUX select
-logic blit_wr               /* verilator public */;     // blitter VRAM/AUX rite
+logic        blit_vram_sel  /* verilator public */;     // blitter VRAM select
+logic        blit_aux_sel   /* verilator public */;     // blitter AUX select
+logic        blit_wr        /* verilator public */;     // blitter VRAM/AUX rite
+logic  [3:0] blit_mask      /* verilator public */;     // 4 nibble write masks for vram
 
 logic [15:0] blit_addr      /* verilator public */;     // blitter VRAM/AUX addr
 logic [15:0] blit_data_in   /* verilator public */;     // blitter VRAM/AUX data read
@@ -87,6 +88,7 @@ assign  blit_other_wr       = blit_paletteram_sel && blit_wr;
 //  16x64K (128KB) video memory
 logic        vram_sel       /* verilator public */;
 logic        vram_wr        /* verilator public */;
+logic  [3:0] vram_mask      /* verilator public */; // 4 nibble masks for vram write
 logic [15:0] vram_addr      /* verilator public */; // 16-bit word address
 logic [15:0] vram_data_in   /* verilator public */;
 logic [15:0] vram_data_out  /* verilator public */;
@@ -122,12 +124,13 @@ assign audio_r_o = blit_aux_sel; //dbug_drive_bus;                    // TODO: a
 
 assign dbug_drive_bus = (bus_cs_n_i == xv::cs_ENABLED && bus_rd_nwr_i == xv::RnW_READ);
 
-assign vram_sel        = vgen_vram_sel ? 1'b1 : blit_vram_sel;
-assign vram_wr         = vgen_vram_sel ? 1'b0 : (blit_wr & blit_vram_sel);
-assign vram_addr       = vgen_vram_sel ? vgen_vram_addr : blit_addr;
-assign vram_data_in    = blit_data_out;
-assign blit_data_in    = blit_vram_load ? vram_data_out : blit_vram_read;
-assign vgen_data_in    = vgen_vram_load ? vram_data_out : vgen_vram_read;
+assign vram_sel     = vgen_vram_sel ? 1'b1              : blit_vram_sel;
+assign vram_wr      = vgen_vram_sel ? 1'b0              : (blit_wr & blit_vram_sel);
+assign vram_mask    = vgen_vram_sel ? 4'b0000           : blit_mask;
+assign vram_addr    = vgen_vram_sel ? vgen_vram_addr    : blit_addr;
+assign vram_data_in = blit_data_out;
+assign blit_data_in = blit_vram_load ? vram_data_out    : blit_vram_read;
+assign vgen_data_in = vgen_vram_load ? vram_data_out    : vgen_vram_read;
  
 // save vgen value read from vram
 always_ff @(posedge clk) begin
@@ -164,6 +167,7 @@ blitter blitter(
             .blit_vram_sel_o(blit_vram_sel),    // blitter vram select
             .blit_aux_sel_o(blit_aux_sel),      // blitter aux memory select
             .blit_wr_o(blit_wr),                // blitter write
+            .blit_mask_o(blit_mask),            // vram nibble masks
             .blit_addr_o(blit_addr),            // vram/aux address
             .blit_data_i(blit_data_in),         // 16-bit word read from aux/vram
             .blit_data_o(blit_data_out),        // 16-bit word write to aux/vram
@@ -200,6 +204,7 @@ vram vram(
     .clk(clk),
     .sel(vram_sel),
     .wr_en(vram_wr),
+    .wr_mask(vram_mask),
     .address_in(vram_addr),
     .data_in(vram_data_in),
     .data_out(vram_data_out)

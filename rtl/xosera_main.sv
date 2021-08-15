@@ -198,7 +198,7 @@ assign audio_r_o = blit_xr_sel; //dbug_drive_bus;                    // TODO: au
 
 assign vram_sel        = vgen_vram_sel || blit_vram_sel || prim_rndr_vram_sel ? 1'b1 : 1'b0;
 assign vram_wr         = vgen_vram_sel  ? 1'b0 : (blit_wr & blit_vram_sel) || (prim_rndr_wr & prim_rndr_vram_sel);
-assign vram_mask       = vgen_vram_sel  ? 4'b0000        : blit_mask;
+assign vram_mask       = vgen_vram_sel  ? 4'b0000 : blit_vram_sel ? blit_mask : 4'b1111;
 assign vram_addr       = vgen_vram_sel  ? vgen_vram_addr : blit_vram_sel ? blit_addr : prim_rndr_addr;
 assign vram_data_in    = blit_vram_sel  ? blit_data_out  : prim_rndr_data_out;
 assign blit_data_in    = blit_vram_load ? vram_data_out  : blit_vram_read;

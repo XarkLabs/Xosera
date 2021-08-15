@@ -51,8 +51,6 @@ Improvement ideas/TODO items (in no particular order):
 * Consider "pixel shift" options for blitter (for un-aligned drawing)
 * Line-draw or polygon acceleration
 
-![Xosera 16-color 640x400 VGA Test](pics/Xosera_16_Color_Test.jpg)
-Xosera 16-color 640x400 VGA Test
+![Xosera 16-color 640x400 VGA Test](pics/Xosera_16_color_test.jpg) Xosera 16-color 640x400 VGA Test
 
-![Early Xosera 848x480 DVI Font Test](pics/XoseraTest_848x480_DVI.jpg)
-Early Xosera 848x480 DVI Font Test
+![Early Xosera 848x480 DVI Font Test](pics/XoseraTest_848x480_DVI.jpg) Early Xosera 848x480 DVI Font Test

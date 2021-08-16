@@ -1,0 +1,9 @@
+{reg: [
+  {bits: 4, name: "Tile Height", type: 4, attr: '(height-1)'},
+  {bits: 4, type: 1},
+  {bits: 1, name: "Mem", type: 4, attr: ['0 tile RAM', '1 VRAM']},
+  {bits: 2, type: 1},
+  {bits: 5, name: "Tile Base Address", type: 4, attr: ['(1K word boundary 8x8)', '(2K word boundry 8x16)']},
+], config: { bits: 16}}
+
+  

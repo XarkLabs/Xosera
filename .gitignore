@@ -1,5 +1,5 @@
 # JSON files
-*.json
+rtl/**/*.json
 
 # ASCII files
 *.asc

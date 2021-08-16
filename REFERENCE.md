@@ -90,6 +90,8 @@ To access these registers, write the register address to `XVID_AUX_ADDR`, then r
 | 0x6   | `AUX_UNUSED6`         |R/W|                                                                                     |
 | 0x7   | `AUX_UNUSED7`         |R/W|                                                                                     |
 
+<img src="./pics/wd_AUX_FONTCTRL.svg">
+
 TODO The above registers most likely need to be multiplexed for "plane B" control (or maybe pack both here...🤔)
 
 ###### Read-only AUX_VID Registers

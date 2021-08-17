@@ -90,7 +90,11 @@ To access these registers, write the register address to `XVID_AUX_ADDR`, then r
 | 0x6   | `AUX_UNUSED6`         |R/W|                                                                                     |
 | 0x7   | `AUX_UNUSED7`         |R/W|                                                                                     |
 
+(This is a test of improved register diagrams, but not ideal on GitHub dark)
 <img src="./pics/wd_AUX_FONTCTRL.svg">
+
+(Plan B test rendering register diagram to a white PNG, not ideal, but more readable)
+<img src="./pics/wd_AUX_FONTCTRL.png">
 
 TODO The above registers most likely need to be multiplexed for "plane B" control (or maybe pack both here...🤔)
 

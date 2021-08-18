@@ -671,6 +671,17 @@ struct Coord
     float x1, y1, x2, y2;
 };
 
+static void draw_line(const Coord & coord, int color)
+{
+    xvid_setw(XVID_WR_PR_CMD, PR_COORDX1 | static_cast<int>(coord.x1));
+    xvid_setw(XVID_WR_PR_CMD, PR_COORDY1 | static_cast<int>(coord.y1));
+    xvid_setw(XVID_WR_PR_CMD, PR_COORDX2 | static_cast<int>(coord.x2));
+    xvid_setw(XVID_WR_PR_CMD, PR_COORDY2 | static_cast<int>(coord.y2));
+    xvid_setw(XVID_WR_PR_CMD, PR_COLOR | color);
+    xvid_setw(XVID_WR_PR_CMD, PR_EXECUTE);
+    delay(1);
+}
+
 static void test_draw_lines()
 {
     const std::vector<Coord> coords{{0, 0, 2, 4},   {0, 4, 2, 0},   {3, 4, 3, 0},      {3, 0, 5, 0},   {5, 0, 5, 4},
@@ -684,7 +695,7 @@ static void test_draw_lines()
     xvid_setw(XVID_WR_ADDR, 0x0000);
     for (int i = 0; i < 80 * 480; ++i)
     {
-        xvid_setw(XVID_DATA, 0x1111);
+        xvid_setw(XVID_DATA, 0x1000);
     }
 
     float scale_x  = 0.25;
@@ -694,23 +705,23 @@ static void test_draw_lines()
 
     for (int i = 0; i < 10; ++i)
     {
-        for (const auto & coord : coords)
+        for (auto coord : coords)
         {
-            // delay(50);
 
-
-            xvid_setw(XVID_WR_PR_CMD, PR_COORDX1 | static_cast<int>((coord.x1 * scale_x + offset_x)));
-            xvid_setw(XVID_WR_PR_CMD, PR_COORDY1 | static_cast<int>((coord.y1 * scale_y + offset_y)));
-            xvid_setw(XVID_WR_PR_CMD, PR_COORDX2 | static_cast<int>((coord.x2 * scale_x + offset_x)));
-            xvid_setw(XVID_WR_PR_CMD, PR_COORDY2 | static_cast<int>((coord.y2 * scale_y + offset_y)));
-            xvid_setw(XVID_WR_PR_CMD, PR_COLOR | (i + 2));
-            xvid_setw(XVID_WR_PR_CMD, PR_EXECUTE);
+            coord.x1 = coord.x1 * scale_x + offset_x;
+            coord.y1 = coord.y1 * scale_y + offset_y;
+            coord.x2 = coord.x2 * scale_x + offset_x;
+            coord.y2 = coord.y2 * scale_y + offset_y;
+            draw_line(coord, i + 2);
         }
 
         offset_y += 5 * scale_y;
         scale_x += 0.25;
         scale_y += 1;
     }
+
+    draw_line({80, 0, 159, 479}, 2);
+    draw_line({120, 0, 120, 479}, 14);
 
     delay(1000);
 }

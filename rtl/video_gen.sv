@@ -51,7 +51,7 @@ localparam [31:0] githash = 32'H`GITHASH;
 // 4bpp localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-18;     // memory fetch starts over a tile early
 // 8bpp localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-10;     // memory fetch starts over a tile early
 // 1bpp localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-6;     // memory fetch starts over a tile early
-localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-10;     // memory fetch starts over a tile early
+localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-9;     // memory fetch starts over a tile early
 localparam H_MEM_END = xv::TOTAL_WIDTH-1;           // memory fetch can ends a bit early
 
 logic vg_enable;                                    // video generation enabled (else black/blank)
@@ -115,8 +115,8 @@ logic           hsync;
 logic           vsync;
 logic           dv_display_ena;
 logic           h_last_line_pixel;
-logic           v_last_visible_pixel;
-logic           v_last_frame_pixel;
+logic           v_last_visible_pixel  /* verilator public */;
+logic           v_last_frame_pixel  /* verilator public */;
 logic           [1: 0] h_state_next;
 logic           [1: 0] v_state_next;
 logic           mem_fetch_next;
@@ -163,9 +163,9 @@ always_ff @(posedge clk) begin
                     pa_colorbase    <= vgen_reg_data_i[15:8];
                     pa_enable       <= vgen_reg_data_i[7];
                     pa_bitmap       <= vgen_reg_data_i[6];
-                    pa_v_repeat     <= vgen_reg_data_i[5:4];
-                    pa_h_repeat     <= vgen_reg_data_i[3:2];
-                    pa_bpp          <= vgen_reg_data_i[1:0];
+                    pa_bpp          <= vgen_reg_data_i[5:4];
+                    pa_v_repeat     <= vgen_reg_data_i[3:2];
+                    pa_h_repeat     <= vgen_reg_data_i[1:0];
                 end
                 xv::AUX_UNUSED_5[3:0]: begin
                 end
@@ -184,7 +184,7 @@ always_ff @(posedge clk) begin
             xv::AUX_DISPWIDTH[3:0]:     vgen_reg_data_o <= pa_line_width;
             xv::AUX_SCROLLXY[3:0]:      vgen_reg_data_o <= { 3'b000, pa_fine_scrollx, 2'b00, pa_fine_scrolly };
             xv::AUX_FONTCTRL[3:0]:      vgen_reg_data_o <= { pa_font_bank, 2'b0, pa_font_in_vram, 1'b0, pa_font_size, pa_font_height  };
-            xv::AUX_GFXCTRL[3:0]:       vgen_reg_data_o <= { pa_colorbase, pa_enable, pa_bitmap, pa_v_repeat,  pa_h_repeat, pa_bpp };
+            xv::AUX_GFXCTRL[3:0]:       vgen_reg_data_o <= { pa_colorbase, pa_enable, pa_bitmap, pa_bpp, pa_v_repeat, pa_h_repeat };
             xv::AUX_UNUSED_5[3:0]:      vgen_reg_data_o <= 16'h0000;
             xv::AUX_UNUSED_6[3:0]:      vgen_reg_data_o <= 16'h0000;
             xv::AUX_UNUSED_7[3:0]:      vgen_reg_data_o <= 16'h0000;

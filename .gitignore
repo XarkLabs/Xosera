@@ -48,3 +48,4 @@ xvid_spi/xvid_spi
 # macOS thing
 .DS_Store
 utils/raw256to16color
+utils/pal_to_raw

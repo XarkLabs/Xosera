@@ -16,7 +16,7 @@ endif
 else
 # Linux
 CCFLAGS += -std=c++11 -Wall -Wextra  -Wno-unused-function -Wno-unused-variable -Os -I/usr/include/libftdi1
-LDLIBS += -lftdi1 -lstdc++
+LDLIBS += -lftdi1 -lstdc++ -lm
 endif
 
 xvid_spi: xvid_spi.cpp ftdi_spi.cpp ftdi_spi.h Makefile

@@ -15,6 +15,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <cmath>
 #include <vector>
 
 #include "ftdi_spi.h"
@@ -682,6 +683,86 @@ static void draw_line(const Coord & coord, int color)
     delay(1);
 }
 
+// Color conversion
+// Ref.:
+// https://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
+
+typedef struct
+{
+    double r;        // a fraction between 0 and 1
+    double g;        // a fraction between 0 and 1
+    double b;        // a fraction between 0 and 1
+} rgb;
+
+typedef struct
+{
+    double h;        // angle in degrees
+    double s;        // a fraction between 0 and 1
+    double v;        // a fraction between 0 and 1
+} hsv;
+
+rgb hsv2rgb(hsv in)
+{
+    double hh, p, q, t, ff;
+    long   i;
+    rgb    out;
+
+    if (in.s <= 0.0)
+    {        // < is bogus, just shuts up warnings
+        out.r = in.v;
+        out.g = in.v;
+        out.b = in.v;
+        return out;
+    }
+    hh = in.h;
+    if (hh >= 360.0)
+        hh = 0.0;
+    hh /= 60.0;
+    i  = (long)hh;
+    ff = hh - i;
+    p  = in.v * (1.0 - in.s);
+    q  = in.v * (1.0 - (in.s * ff));
+    t  = in.v * (1.0 - (in.s * (1.0 - ff)));
+
+    switch (i)
+    {
+        case 0:
+            out.r = in.v;
+            out.g = t;
+            out.b = p;
+            break;
+        case 1:
+            out.r = q;
+            out.g = in.v;
+            out.b = p;
+            break;
+        case 2:
+            out.r = p;
+            out.g = in.v;
+            out.b = t;
+            break;
+
+        case 3:
+            out.r = p;
+            out.g = q;
+            out.b = in.v;
+            break;
+        case 4:
+            out.r = t;
+            out.g = p;
+            out.b = in.v;
+            break;
+        case 5:
+        default:
+            out.r = in.v;
+            out.g = p;
+            out.b = q;
+            break;
+    }
+    return out;
+}
+
+
 static void test_draw_lines()
 {
     const std::vector<Coord> coords{{0, 0, 2, 4},   {0, 4, 2, 0},   {3, 4, 3, 0},      {3, 0, 5, 0},   {5, 0, 5, 4},
@@ -690,15 +771,39 @@ static void test_draw_lines()
                                     {12, 0, 14, 0}, {14, 0, 14, 2}, {14, 2, 12, 2},    {12, 2, 14, 4}, {12, 4, 12, 0},
                                     {15, 4, 16, 0}, {16, 0, 17, 4}, {15.5, 2, 16.5, 2}};
 
+
+    // Set the palette
+    double hue = 0.0f;
+    for (uint16_t i = 0; i < 256; i++)
+    {
+        xvid_setw(XVID_AUX_ADDR, AUX_COLORTBL | i);        // use WR address for palette index
+
+        if (i < 16)
+        {
+            xvid_setw(XVID_AUX_DATA, defpal[i]);        // set palette data
+        }
+        else
+        {
+            auto     rgb = hsv2rgb({hue, 1.0, 1.0});
+            uint8_t  r   = 15.0 * rgb.r;
+            uint8_t  g   = 15.0 * rgb.g;
+            uint8_t  b   = 15.0 * rgb.b;
+            uint16_t c   = (r << 8) | (g << 4) | b;
+            xvid_setw(XVID_AUX_DATA, c);        // set palette data
+        }
+
+        hue += 360.0 / 256.0;
+    }
+
     // Blue background
     xvid_setw(XVID_WR_INC, 0x0001);
     xvid_setw(XVID_WR_ADDR, 0x0000);
-    for (int i = 0; i < 80 * 480; ++i)
+    for (int i = 0; i < 320 * 240 / 2; ++i)
     {
-        xvid_setw(XVID_DATA, 0x1000);
+        xvid_setw(XVID_DATA, 0x0101);
     }
 
-    float scale_x  = 0.25;
+    float scale_x  = 4;
     float scale_y  = 5;
     float offset_x = 0;
     float offset_y = 0;
@@ -716,12 +821,18 @@ static void test_draw_lines()
         }
 
         offset_y += 5 * scale_y;
-        scale_x += 0.25;
+        scale_x += 1;
         scale_y += 1;
     }
 
-    draw_line({80, 0, 159, 479}, 2);
-    draw_line({120, 0, 120, 479}, 14);
+    double angle = 0.0;
+    for (int i = 0; i < 256; i++)
+    {
+        float x = 80.0f * std::cos(angle);
+        float y = 80.0f * std::sin(angle);
+        draw_line({240, 120, 240 + x, 120 + y}, i);
+        angle += 2.0f * M_PI / 256.0f;
+    }
 
     delay(1000);
 }

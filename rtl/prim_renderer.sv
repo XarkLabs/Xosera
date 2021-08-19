@@ -75,12 +75,12 @@ always_ff @(posedge clk) begin
     end
 
     if (drawing && ena_draw_i) begin
-        if (/*x >= 0 && y >= 0 &&*/ x < xv::VISIBLE_WIDTH / 4 && y < xv::VISIBLE_HEIGHT) begin
+        if (/*x >= 0 && y >= 0 &&*/ x < xv::VISIBLE_WIDTH / 2 && y < xv::VISIBLE_HEIGHT / 2) begin
             prim_rndr_vram_sel_o <= 1;
             prim_rndr_wr_o <= 1;
-            prim_rndr_mask_o <= 4'b0100 | (4'b0010 >> (x & 1));
-            prim_rndr_addr_o <= {4'b0, y} * (xv::VISIBLE_WIDTH / 8) + {4'b0, x} / 2;
-            prim_rndr_data_out_o <= {4'b0000, color[3:0], 4'b1111, 4'b1111};
+            prim_rndr_mask_o <= (x & 12'h001) != 12'h000 ? 4'b0011 : 4'b1100;
+            prim_rndr_addr_o <= {4'b0, y} * (xv::VISIBLE_WIDTH / 4) + {4'b0, x} / 2;
+            prim_rndr_data_out_o <= {color[7:0], color[7:0]};
         end else begin
             prim_rndr_vram_sel_o <= 0;
             prim_rndr_wr_o <= 0;

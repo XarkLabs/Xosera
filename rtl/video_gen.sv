@@ -332,7 +332,7 @@ always_ff @(posedge clk) begin
         if (mem_fetch) begin        // display data fetch window
             if (pa_h_count == 2'b00) begin  // new pixel (else repeating pixel)
                 // fetch state machine
-                case (pa_tile_x)        // VI0 [FO0]
+                case (pa_tile_x)        // VI0 [VO1/FO0]
                     3'h0: begin
                         pa_data_word0   <= vram_data_i;         // VI0: read vram data
                         pa_attr_index   <= vram_data_i;         // save for tiled use as attribute/index word
@@ -414,7 +414,9 @@ always_ff @(posedge clk) begin
                         end
                     end
                     3'h5: begin    // [FI2]
-                        pa_data_word2   <= pa_font_in_vram ? vram_data_i : fontram_data_i;  // FI2: read font data
+                        if (!pa_bitmap) begin
+                            pa_data_word2   <= pa_font_in_vram ? vram_data_i : fontram_data_i;  // FI2: read font data
+                        end
                     end
                     3'h6: begin    // [VI3/FI3] + VOp0 preload
                         if (!pa_bitmap) begin

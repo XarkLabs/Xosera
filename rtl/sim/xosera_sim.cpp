@@ -31,8 +31,8 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 6        // video frames to dump to VCD file (and then screen-shot and exit)
-#define MAX_UPLOADS      6        // maximum number of "payload" uploads
+#define MAX_TRACE_FRAMES 10        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_UPLOADS      8         // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
 vluint64_t main_time        = 0;
@@ -52,8 +52,8 @@ uint8_t      upload_buffer[128 * 1024];
 
 class BusInterface
 {
-    const int   BUS_START_TIME = 1000000;        // 2467208;        // 2nd frame
-    const float BUS_CLOCK_DIV  = 4;              // 7.7;
+    const int   BUS_START_TIME = 1000000;        // after init
+    const float BUS_CLOCK_DIV  = 5;              // min 4
 
     enum
     {
@@ -163,7 +163,7 @@ public:
         enable            = _enable;
         index             = 0;
         state             = BUS_START;
-        wait_vsync        = true;
+        wait_vsync        = false;        // true;
         data_upload       = false;
         data_upload_mode  = 0;
         data_upload_num   = 0;
@@ -235,15 +235,22 @@ public:
                 switch (state)
                 {
                     case BUS_START:
-                        printf("[@t=%lu] ", main_time);
 
                         top->bus_cs_n_i    = 1;
                         top->bus_bytesel_i = bytesel;
                         top->bus_rd_nwr_i  = 0;
                         top->bus_reg_num_i = reg_num;
                         top->bus_data_i    = data;
-                        sprintf(tempstr, "r[0x%x] %s.%3s", reg_num, reg_name[reg_num], bytesel ? "lsb*" : "msb");
-                        printf("  %-25.25s <= 0x%02x\n", tempstr, data & 0xff);
+                        if (data_upload && data_upload_index < 16)
+                        {
+                            printf("[@t=%lu] ", main_time);
+                            sprintf(tempstr, "r[0x%x] %s.%3s", reg_num, reg_name[reg_num], bytesel ? "lsb*" : "msb");
+                            printf("  %-25.25s <= 0x%02x\n", tempstr, data & 0xff);
+                            if (data_upload_index == 15)
+                            {
+                                printf("  ...\n");
+                            }
+                        }
                         break;
                     case BUS_HOLD:
                         break;
@@ -322,21 +329,37 @@ BusInterface bus;
 int          BusInterface::test_data_len   = 999;
 uint16_t     BusInterface::test_data[1024] = {
     // test data
-    REG_WAITVSYNC(),
-    REG_W(AUX_ADDR, AUX_GFXCTRL),
+    REG_WAITVSYNC(),                     // show boot screen
+    REG_WAITVSYNC(),                     // show boot screen
+    REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 1-BPP BMAP
     REG_W(AUX_DATA, 0x00C0),
     REG_W(WR_INC, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
-    REG_WAITVSYNC(),
-    REG_W(AUX_ADDR, AUX_GFXCTRL),
-    REG_W(AUX_DATA, 0x00F0),
-    REG_W(AUX_ADDR, AUX_COLORMEM),
+    REG_WAITVSYNC(),                     // show 1-BPP BMAP
+    REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 4-BPP BMAP
+    REG_W(AUX_DATA, 0x00E0),
+    REG_W(AUX_ADDR, AUX_DISPWIDTH),        // 320/2/2 wide
+    REG_W(AUX_DATA, 80),
+    REG_W(AUX_ADDR, AUX_COLORMEM),        // upload palette
     REG_UPLOAD_AUX(),
     REG_W(WR_INC, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
-    REG_WAITVSYNC(),
+    REG_WAITVSYNC(),                     // show 4-BPP BMAP
+    REG_WAITVSYNC(),                     // show 4-BPP BMAP
+    REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 8-BPP BMAP
+    REG_W(AUX_DATA, 0x00F0),
+    REG_W(AUX_ADDR, AUX_DISPWIDTH),        // 320/2 wide
+    REG_W(AUX_DATA, 160),
+    REG_W(AUX_ADDR, AUX_COLORMEM),        // upload palette
+    REG_UPLOAD_AUX(),
+    REG_WAITVSYNC(),        // show 8-BPP BMAP
+    REG_W(WR_INC, 0x0001),
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),
+    REG_WAITVSYNC(),        // show 8-BPP BMAP
+    REG_WAITVSYNC(),        // show 8-BPP BMAP
     REG_END()
     // end test data
 };

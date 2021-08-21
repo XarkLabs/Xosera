@@ -45,7 +45,7 @@ module video_gen(
 
 localparam [31:0] githash = 32'H`GITHASH;
 
-localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-11;    // memory fetch starts over a tile early
+localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-12;    // memory fetch starts over a tile early
 localparam H_MEM_END = xv::TOTAL_WIDTH-1;           // memory fetch can ends a bit early
 
 logic vg_enable;                                    // video generation enabled (else black/blank)

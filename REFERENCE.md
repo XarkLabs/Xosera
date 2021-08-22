@@ -96,6 +96,12 @@ To access these registers, write the register address to `XVID_AUX_ADDR`, then r
 (Plan B test rendering register diagram to a white PNG, not ideal, but more readable)
 <img src="./pics/wd_AUX_FONTCTRL.png">
 
+(This is a test of improved register diagrams, but not ideal on GitHub dark)
+<img src="./pics/wd_GFXMODE.svg">
+
+(Plan B test rendering register diagram to a white PNG, not ideal, but more readable)
+<img src="./pics/wd_GFXMODE2.png">
+
 TODO The above registers most likely need to be multiplexed for "plane B" control (or maybe pack both here...🤔)
 
 ###### Read-only AUX_VID Registers

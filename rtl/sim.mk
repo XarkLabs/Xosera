@@ -41,7 +41,6 @@ VIDEO_MODE ?= MODE_640x480
 # monochrome + color attribute byte
 #VRUN_TESTDATA ?= -u ../testdata/raw/space_shuttle_color_640x480.raw
 
-# add -DUSE_BPPTEST to DEFINES below for these tests:
 #4bpp
 #VRUN_TESTDATA ?= -u ../testdata/raw/color_bars_test_pal.raw -u ../testdata/raw/color_bars_test.raw
 #VRUN_TESTDATA ?= -u ../testdata/raw/escher-relativity_320x240_16_pal.raw -u ../testdata/raw/escher-relativity_320x240_16.raw
@@ -75,8 +74,7 @@ INC := $(wildcard $(SRCDIR)/*.svh)
 BUS_INTERFACE	:= 1
 
 # Verilog preprocessor definitions common to all modules
-# -DUSE_BPP4TEST to test 4-bpp
-DEFINES := -DUSE_BPPTEST -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K
 
 ifeq ($(strip $(BUS_INTERFACE)),1)
 DEFINES += -DBUS_INTERFACE
@@ -135,7 +133,6 @@ irun: sim/$(TBTOP) sim.mk
 
 # use Verilator to build native simulation executable
 sim/obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) sim.mk
-	@echo NOT rm -rf sim/obj_dir && mkdir -p sim/obj_dir
 	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(TECH_LIB) $(SRC) $(current_dir)/$(CSRC)
 	cd sim/obj_dir && make -f V$(VTOP).mk
 

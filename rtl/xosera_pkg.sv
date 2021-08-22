@@ -20,7 +20,6 @@
 `endif
 
 //`define TESTPATTERN     // init with "test pattern" instead of clear VRAM
-//`define USE_BPPTEST                // WIP test 4-bpp rendering
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;

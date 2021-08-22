@@ -6,6 +6,8 @@
 	],
 	"settings": {
 		"editor.formatOnSave": true,
+		"workbench.editor.wrapTabs": true,
+		"workbench.editor.tabSizing": "fit",
 		"editor.codeActionsOnSave": {
 			"source.fixAll.markdownlint": true
 		},

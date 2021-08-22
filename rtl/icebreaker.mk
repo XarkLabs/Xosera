@@ -7,11 +7,11 @@
 # hacked by Xark for Xosera purposes
 
 # Primary tools (official binaries available from https://github.com/YosysHQ/oss-cad-suite-build/releases/latest)
-#	Yosys
-#	nextpnr-ice40
-#	Verilator		(optional)
-#	Icarus Verilog		(optional)
-#	Built using macOS BigSur 11.2 and GNU/Linux Ubuntu 20.04 distribution
+#       Yosys
+#       nextpnr-ice40
+#       Verilator               (optional)
+#       Icarus Verilog          (optional)
+#       Built using macOS BigSur 11.5.2 and GNU/Linux Ubuntu 20.04 distribution
 
 # Version bookkeeping
 GITSHORTHASH := $(shell git rev-parse --short HEAD)
@@ -28,23 +28,23 @@ endif
 
 # Xosera video mode selection:
 # Supported modes:                           (exact) (actual)
-#	MODE_640x400	640x400@70Hz 	clock 25.175 (25.125) MHz
-#	MODE_640x480	640x480@60Hz	clock 25.175 (25.125) MHz
-#	MODE_640x480_75	640x480@75Hz	clock 31.500 (31.500) MHz
-#	MODE_640x480_85	640x480@85Hz	clock 36.000 (36.000) MHz
-#	MODE_720x400	720x400@70Hz 	clock 28.322 (28.500) MHz
-#	MODE_848x480	848x480@60Hz	clock 33.750 (33.750) MHz (16:9 480p)
-#	MODE_800x600	800x600@60Hz	clock 40.000 (39.750) MHz
-#	MODE_1024x768	1024x768@60Hz	clock 65.000 (65.250) MHz [fails timing]
-#	MODE_1280x720	1280x720@60Hz	clock 74.176 (73.500) MHz [fails timing]
+#       MODE_640x400    640x400@70Hz    clock 25.175 (25.125) MHz
+#       MODE_640x480    640x480@60Hz    clock 25.175 (25.125) MHz
+#       MODE_640x480_75 640x480@75Hz    clock 31.500 (31.500) MHz
+#       MODE_640x480_85 640x480@85Hz    clock 36.000 (36.000) MHz
+#       MODE_720x400    720x400@70Hz    clock 28.322 (28.500) MHz
+#       MODE_848x480    848x480@60Hz    clock 33.750 (33.750) MHz (16:9 480p)
+#       MODE_800x600    800x600@60Hz    clock 40.000 (39.750) MHz
+#       MODE_1024x768   1024x768@60Hz   clock 65.000 (65.250) MHz [fails timing]
+#       MODE_1280x720   1280x720@60Hz   clock 74.176 (73.500) MHz [fails timing]
 VIDEO_MODE ?= MODE_848x480
 
 # Xosera video output selection:
 # Supported video outputs:
-#   PMOD_1B2_DVI12		12-bit DVI, PMOD 1A&1B	https://1bitsquared.com/products/pmod-digital-video-interface
-#   PMOD_DIGILENT_VGA		12-bit VGA, PMOD 1A&1B	https://store.digilentinc.com/pmod-vga-video-graphics-array/
-#   PMOD_XESS_VGA		 9-bit VGA, PMOD 1A&1B	http://www.xess.com/shop/product/stickit-vga/
-#   PMOD_XESS_VGA_SINGLE	 6-bit VGA, PMOD 1B	http://www.xess.com/shop/product/stickit-vga/ (half used)
+#   PMOD_1B2_DVI12              12-bit DVI, PMOD 1A&1B  https://1bitsquared.com/products/pmod-digital-video-interface
+#   PMOD_DIGILENT_VGA           12-bit VGA, PMOD 1A&1B  https://store.digilentinc.com/pmod-vga-video-graphics-array/
+#   PMOD_XESS_VGA                9-bit VGA, PMOD 1A&1B  http://www.xess.com/shop/product/stickit-vga/
+#   PMOD_XESS_VGA_SINGLE         6-bit VGA, PMOD 1B     http://www.xess.com/shop/product/stickit-vga/ (half used)
 #
 VIDEO_OUTPUT ?= PMOD_1B2_DVI12
 
@@ -54,7 +54,7 @@ FONTFILES := $(wildcard ../fonts/*.mem)
 SRCDIR := .
 
 # log output directory
-LOGS	:= icebreaker/logs
+LOGS   := icebreaker/logs
 
 # Xosera project setup for iCEBreaker FPGA target
 TOP := xosera_iceb
@@ -83,7 +83,7 @@ ICEPROG := iceprog
 ICEMULTI := icemulti
 
 # Yosys synthesis arguments
-YOSYS_SYNTH_ARGS := -dsp -abc2 -relut -retime -top $(TOP)
+YOSYS_SYNTH_ARGS := -dsp -relut -retime -abc2 -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DICEBREAKER -DSPI_INTERFACE

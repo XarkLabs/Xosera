@@ -31,8 +31,8 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 10        // video frames to dump to VCD file (and then screen-shot and exit)
-#define MAX_UPLOADS      8         // maximum number of "payload" uploads
+#define MAX_TRACE_FRAMES 8        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_UPLOADS      8        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
 vluint64_t main_time        = 0;
@@ -42,6 +42,8 @@ volatile bool done;
 bool          sim_render = SDL_RENDER;
 bool          sim_bus    = BUS_INTERFACE;
 bool          wait_close = false;
+
+bool vsync_detect = false;
 
 int          num_uploads;
 int          next_upload;
@@ -180,7 +182,7 @@ public:
         {
             if (wait_vsync)
             {
-                if (top->xosera_main->video_gen->v_last_visible_pixel)
+                if (vsync_detect /* top->xosera_main->video_gen->v_last_visible_pixel */)
                 {
                     printf("[@t=%lu  ... VSYNC arrives]\n", main_time);
                     wait_vsync = false;
@@ -338,7 +340,7 @@ uint16_t     BusInterface::test_data[1024] = {
     REG_UPLOAD(),
     REG_WAITVSYNC(),                     // show 1-BPP BMAP
     REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 4-BPP BMAP
-    REG_W(AUX_DATA, 0x00E0),
+    REG_W(AUX_DATA, 0x00E5),
     REG_W(AUX_ADDR, AUX_DISPWIDTH),        // 320/2/2 wide
     REG_W(AUX_DATA, 80),
     REG_W(AUX_ADDR, AUX_COLORMEM),        // upload palette
@@ -347,18 +349,15 @@ uint16_t     BusInterface::test_data[1024] = {
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
     REG_WAITVSYNC(),                     // show 4-BPP BMAP
-    REG_WAITVSYNC(),                     // show 4-BPP BMAP
     REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 8-BPP BMAP
-    REG_W(AUX_DATA, 0x00F0),
+    REG_W(AUX_DATA, 0x00F5),
     REG_W(AUX_ADDR, AUX_DISPWIDTH),        // 320/2 wide
     REG_W(AUX_DATA, 160),
     REG_W(AUX_ADDR, AUX_COLORMEM),        // upload palette
     REG_UPLOAD_AUX(),
-    REG_WAITVSYNC(),        // show 8-BPP BMAP
     REG_W(WR_INC, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
-    REG_WAITVSYNC(),        // show 8-BPP BMAP
     REG_WAITVSYNC(),        // show 8-BPP BMAP
     REG_END()
     // end test data
@@ -701,8 +700,11 @@ int main(int argc, char ** argv)
 
         vga_hsync_previous = hsync;
 
+        vsync_detect = false;
+
         if (!vsync && vga_vsync_previous)
         {
+            vsync_detect = true;
             if (current_y - 1 > y_max)
                 y_max = current_y - 1;
 

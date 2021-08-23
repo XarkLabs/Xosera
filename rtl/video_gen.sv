@@ -87,7 +87,7 @@ logic [15:0]    pa_data_word3;                      // 4th fetched display data 
 logic           pa_first_buffer;                    // used to ignore first buffer to fill prefetch
 logic [63:0]    pa_pixel_shiftout;                  // 8 pixels currently shifting to scan out
 logic           pa_next_shiftout_ready;
-logic [63:0]    pa_next_shiftout;                   // 8 pixels buffer waiting for scan out
+logic [63:0]    pa_next_shiftout;                   // 8 pixel buffer waiting for scan out
 
 // video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
 typedef enum logic [1:0] {
@@ -270,15 +270,6 @@ always_comb begin
     endcase
 end
 
-// update registered signals from combinatorial "next" versions
-always_ff @(posedge clk) begin
-    h_state <= h_state_next;
-    v_state <= v_state_next;
-    h_count <= h_count_next;
-    v_count <= v_count_next;
-    mem_fetch_active <= mem_fetch_next;
-end
-
 // generate font address from index, tile y, bpp and tile size (8x8 or 8x16)
 function [15:0] calc_font_addr(
         input [9:0] tile_char,
@@ -344,12 +335,6 @@ always_ff @(posedge clk) begin
 
         // set output pixel index from pixel shift-out
         pal_index_o <= pa_pixel_shiftout[63:56];
-
-        // set other video output signals
-        bus_intr_o  <= last_visible_pixel;   // TODO general purpose interrupt
-        hsync_o     <= hsync ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
-        vsync_o     <= vsync ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
-        dv_de_o     <= dv_display_ena;
 
         if (h_scanout) begin
             // shift-in next pixel
@@ -575,6 +560,19 @@ always_ff @(posedge clk) begin
             pa_v_count      <= pa_v_repeat - pa_fine_scrolly[1:0];    // fine scroll within scaled line (v repeat)
             pa_tile_y       <= pa_fine_scrolly[5:2];    // fine scroll tile line
         end
+
+        // update registered signals from combinatorial "next" versions
+        h_state <= h_state_next;
+        v_state <= v_state_next;
+        h_count <= h_count_next;
+        v_count <= v_count_next;
+        mem_fetch_active <= mem_fetch_next;
+
+        // set other video output signals
+        bus_intr_o  <= last_visible_pixel;   // TODO general purpose interrupt
+        hsync_o     <= hsync ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
+        vsync_o     <= vsync ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
+        dv_de_o     <= dv_display_ena;
     end
 end
 

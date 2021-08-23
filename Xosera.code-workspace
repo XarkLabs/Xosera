@@ -92,6 +92,7 @@
 			"getbl",
 			"getl",
 			"gpio",
+			"hcount",
 			"hsync",
 			"icepll",
 			"icestation",

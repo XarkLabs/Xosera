@@ -45,8 +45,9 @@ module video_gen(
 
 localparam [31:0] githash = 32'H`GITHASH;
 
-localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-12;    // memory fetch starts over a tile early
+localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-64;    // memory pretch starts early
 localparam H_MEM_END = xv::TOTAL_WIDTH-1;           // memory fetch can ends a bit early
+localparam H_SCANOUT_BEGIN = xv::OFFSCREEN_WIDTH-1; // h count for line scanout (adjusted by fine_scrollx)
 
 logic vg_enable;                                    // video generation enabled (else black/blank)
 
@@ -59,7 +60,6 @@ logic  [1:0]    pa_bpp;                             // bpp code (bpp_depth_t)
 logic           pa_bitmap;                          // bitmap enable (else text mode)
 logic  [5:0]    pa_font_bank;                       // vram/fontmem font bank 0-3 (0/1 with 8x16) fontmem, or 2KB/4K
 logic           pa_font_in_vram;                    // 0=fontmem, 1=vram
-logic  [1:0]    pa_font_size;                       // size of tile data (4W, 8W, 16W, 32W)
 logic  [3:0]    pa_font_height;                     // max height of font cell
 logic  [1:0]    pa_h_repeat;                        // horizontal pixel repeat
 logic  [1:0]    pa_h_count;
@@ -77,13 +77,17 @@ logic [15:0]    pa_line_addr;                       // address of start of tile+
 logic [15:0]    pa_font_addr;                       // font tile start address (VRAM or FONTRAM)
 logic [15:0]    pa_font_next;                       // next font data address (VRAM or FONTRAM)
 
-
+// temp tile and pixel fetch buffers
 logic [15:0]    pa_attr_index;                      // tile attributes and index
 logic [15:0]    pa_data_word0;                      // 1st fetched display data buffer
 logic [15:0]    pa_data_word1;                      // 2nd fetched display data buffer
 logic [15:0]    pa_data_word2;                      // 3rd fetched display data buffer (8 BPP)
 logic [15:0]    pa_data_word3;                      // 4th fetched display data buffer (8 BPP)
-logic [63:0]    pa_pixel_shift;                     // 8 8-bpp pixels shifting to scan out
+
+logic           pa_first_buffer;                    // used to ignore first buffer to fill prefetch
+logic [63:0]    pa_pixel_shiftout;                  // 8 pixels currently shifting to scan out
+logic           pa_next_shiftout_ready;
+logic [63:0]    pa_next_shiftout;                   // 8 pixels buffer waiting for scan out
 
 // video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
 typedef enum logic [1:0] {
@@ -94,26 +98,32 @@ typedef enum logic [1:0] {
 } video_signal_st;
 
 // sync generation signals (and combinatorial logic "next" versions)
-logic [1: 0] h_state;
-logic [10: 0] h_count;
-logic [10: 0] h_count_next_state;
+logic  [1:0]    h_state;
+logic [10:0]    h_count;
+logic [10:0]    h_count_next;
+logic [10:0]    h_count_next_state;
 
-logic [1: 0] v_state;
-logic [10: 0] v_count;
-logic [10: 0] v_count_next_state;
+logic  [1:0]    v_state;
+logic [10:0]    v_count;
+logic [10:0]    v_count_next;
+logic [10:0]    v_count_next_state;
 
-logic mem_fetch;
-logic [10: 0] mem_fetch_toggle;
+logic           mem_fetch_active;                     // true when fetching display data
+logic           h_start_scanout;                      // true for on pixel when "scrolled" scanline starts outputting (can be early)
+logic           h_scanout;                            // true when 
+
+logic [10:0]    mem_fetch_hcount;   // horizontal count when mem_fetch_active toggles
+logic  [2:0]    mem_fetch_cycle;    // current cycle state for display memory fetch
 
 // sync condition indicators (combinatorial)
 logic           hsync;
 logic           vsync;
 logic           dv_display_ena;
-logic           h_last_line_pixel;
-logic           v_last_visible_pixel  /* verilator public */;
-logic           v_last_frame_pixel  /* verilator public */;
-logic           [1: 0] h_state_next;
-logic           [1: 0] v_state_next;
+logic           h_line_last_pixel;
+logic           last_visible_pixel;
+logic           last_frame_pixel;
+logic [1:0]     h_state_next;
+logic [1:0]     v_state_next;
 logic           mem_fetch_next;
 logic           h_start_line_fetch;
 
@@ -123,16 +133,15 @@ always_ff @(posedge clk) begin
         pa_enable           <= 1'b1;            // plane A starts enabled
         pa_start_addr       <= 16'h0000;
         pa_line_width       <= xv::TILES_WIDE[15:0];
-        pa_fine_scrollx     <= 5'b00000;
+        pa_fine_scrollx     <= 5'b0000;
         pa_fine_scrolly     <= 6'b000000;
         pa_font_height      <= 4'b1111;
-        pa_font_bank        <= 6'b00000;
+        pa_font_bank        <= 6'b000000;
         pa_font_in_vram     <= 1'b0;
-        pa_font_size        <= 2'b01;           // default 8x16 (8W)
         pa_bitmap           <= 1'b0;            // bitmap mode
         pa_bpp              <= xv::BPP_1_ATTR;
         pa_colorbase        <= 8'h00;
-        pa_h_repeat         <= 2'b00;
+        pa_h_repeat         <= 2'b00;           // TODO test
         pa_v_repeat         <= 2'b00;
     end else begin
         // video register write
@@ -151,7 +160,6 @@ always_ff @(posedge clk) begin
                 xv::AUX_FONTCTRL[3:0]: begin
                     pa_font_bank    <= vgen_reg_data_i[15:10];
                     pa_font_in_vram <= vgen_reg_data_i[7];
-                    pa_font_size    <= vgen_reg_data_i[5:4];
                     pa_font_height  <= vgen_reg_data_i[3:0];
                 end
                 xv::AUX_GFXCTRL[3:0]: begin
@@ -178,7 +186,7 @@ always_ff @(posedge clk) begin
             xv::AUX_DISPSTART[3:0]:     vgen_reg_data_o <= pa_start_addr;
             xv::AUX_DISPWIDTH[3:0]:     vgen_reg_data_o <= pa_line_width;
             xv::AUX_SCROLLXY[3:0]:      vgen_reg_data_o <= { 3'b000, pa_fine_scrollx, 2'b00, pa_fine_scrolly };
-            xv::AUX_FONTCTRL[3:0]:      vgen_reg_data_o <= { pa_font_bank, 2'b0, pa_font_in_vram, 1'b0, pa_font_size, pa_font_height  };
+            xv::AUX_FONTCTRL[3:0]:      vgen_reg_data_o <= { pa_font_bank, 2'b0, pa_font_in_vram, 3'b0, pa_font_height };
             xv::AUX_GFXCTRL[3:0]:       vgen_reg_data_o <= { pa_colorbase, pa_enable, pa_bitmap, pa_bpp, pa_v_repeat, pa_h_repeat };
             xv::AUX_UNUSED_5[3:0]:      vgen_reg_data_o <= 16'h0000;
             xv::AUX_UNUSED_6[3:0]:      vgen_reg_data_o <= 16'h0000;
@@ -198,43 +206,40 @@ end
 always_comb     hsync = (h_state == STATE_SYNC);
 always_comb     vsync = (v_state == STATE_SYNC);
 always_comb     dv_display_ena = vg_enable && (h_state == STATE_VISIBLE) && (v_state == STATE_VISIBLE);
-always_comb     h_last_line_pixel = (h_state_next == STATE_PRE_SYNC) && (h_state == STATE_VISIBLE);
-always_comb     v_last_frame_pixel = (v_state_next == STATE_VISIBLE) && (v_state == STATE_POST_SYNC) && h_last_line_pixel;
-always_comb     v_last_visible_pixel = (v_state_next == STATE_PRE_SYNC) && (v_state == STATE_VISIBLE) && h_last_line_pixel;
-always_comb     h_state_next = (h_count == h_count_next_state) ? h_state + 1'b1 : h_state;
-always_comb     v_state_next = (h_last_line_pixel && v_count == v_count_next_state) ? v_state + 1'b1 : v_state;
-always_comb     mem_fetch_next = (v_state == STATE_VISIBLE && h_count == mem_fetch_toggle) ? ~mem_fetch : mem_fetch;
-always_comb     h_start_line_fetch = (~mem_fetch && mem_fetch_next);
-
-logic [10: 0] h_count_next;
-logic [10: 0] v_count_next;
+always_comb     h_start_scanout = ((h_count + { 5'b00000, pa_fine_scrollx }) == H_SCANOUT_BEGIN[10:0]-1) ? mem_fetch_active : 1'b0; 
+always_comb     h_start_line_fetch = (~mem_fetch_active && mem_fetch_next);
+always_comb     h_line_last_pixel = (h_state_next == STATE_PRE_SYNC) && (h_state == STATE_VISIBLE);
+always_comb     last_visible_pixel = (v_state_next == STATE_PRE_SYNC) && (v_state == STATE_VISIBLE) && h_line_last_pixel;
+always_comb     last_frame_pixel = (v_state_next == STATE_VISIBLE) && (v_state == STATE_POST_SYNC) && h_line_last_pixel;
 
 // combinational block for video counters
 always_comb begin
     h_count_next = h_count + 1'b1;
     v_count_next = v_count;
 
-    if (h_last_line_pixel) begin
+    if (h_line_last_pixel) begin
         h_count_next = 0;
         v_count_next = v_count + 1'b1;
 
-        if (v_last_frame_pixel) begin
+        if (last_frame_pixel) begin
             v_count_next = 0;
         end
     end
 end
 
 // combinational block for video fetch start and stop
+always_comb     mem_fetch_next = (v_state == STATE_VISIBLE && h_count == mem_fetch_hcount) ? ~mem_fetch_active : mem_fetch_active;
 always_comb begin
-    // set mem_fetch next toggle for video memory access (pa_h_double subtracts an extra 16)
-    if (mem_fetch) begin
-        mem_fetch_toggle = H_MEM_END[10:0];
+    // set mem_fetch_active next toggle for video memory access
+    if (mem_fetch_active) begin
+        mem_fetch_hcount = H_MEM_END[10:0];
     end else begin
-        mem_fetch_toggle = H_MEM_BEGIN[10:0] - { 6'b0, pa_fine_scrollx };   // TODO adjust for modes
+        mem_fetch_hcount = H_MEM_BEGIN[10:0];
     end
 end
 
 // combinational block for horizontal video state
+always_comb h_state_next = (h_count == h_count_next_state) ? h_state + 1'b1 : h_state;
 always_comb begin
     // scanning horizontally left to right, offscreen pixels are on left before visible pixels
     case (h_state)
@@ -250,6 +255,7 @@ always_comb begin
 end
 
 // combinational block for vertical video state
+always_comb v_state_next = (h_line_last_pixel && v_count == v_count_next_state) ? v_state + 1'b1 : v_state;
 always_comb begin
     // scanning vertically top to bottom, offscreen lines are on bottom after visible lines
     case (v_state)
@@ -264,220 +270,287 @@ always_comb begin
     endcase
 end
 
-// generate font address from vram_data_i (assumed to be tile index to lookup) and pa_tile_y
-function [15:0] calc_font_addr;
-    input [1:0] font_size;
-    input [3:0] tile_y;
-    input [7:0] tile_char;
+// update registered signals from combinatorial "next" versions
+always_ff @(posedge clk) begin
+    h_state <= h_state_next;
+    v_state <= v_state_next;
+    h_count <= h_count_next;
+    v_count <= v_count_next;
+    mem_fetch_active <= mem_fetch_next;
+end
+
+// generate font address from index, tile y, bpp and tile size (8x8 or 8x16)
+function [15:0] calc_font_addr(
+        input [9:0] tile_char,
+        input [3:0] tile_y,
+        input [1:0] bpp,
+        input       tile_8x16
+    );
+    reg [15:0] temp_addr;
     begin
-        case (font_size)
-            2'b00:  calc_font_addr = { pa_font_bank[5:0], tile_char[7: 0], pa_tile_y[2:1] };       // 4W 1-BPP 8x8 (even/odd byte)
-            2'b01:  calc_font_addr = { pa_font_bank[5:1], tile_char[7: 0], pa_tile_y[3:1] };       // 8W 1-BPP 8x16 (even/odd byte)
-            2'b10:  calc_font_addr = { pa_font_bank[5:1], tile_char[7: 0], pa_tile_y[2:0] };       // 16W 4-BPP 8x8
-            2'b11:  calc_font_addr = { pa_font_bank[5:2], tile_char[7: 0], pa_tile_y[2:0], 1'b0 }; // 32W 8-BPP 8x8
+        case ({ bpp, tile_8x16})
+            3'b000:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 6'b0, tile_char[7: 0], pa_tile_y[2:1] };         // 4W  1-BPP 8x8 (even/odd byte)
+            3'b001:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 5'b0, tile_char[7: 0], pa_tile_y[3:1] };         // 8W  1-BPP 8x16 (even/odd byte)
+            3'b010:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 3'b0, tile_char[9: 0], pa_tile_y[2:0] };         // 8W  2-BPP 8x8
+            3'b011:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 2'b0, tile_char[9: 0], pa_tile_y[3:0] };         // 16W 2-BPP 8x16
+            3'b100:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 2'b0, tile_char[9: 0], pa_tile_y[2:0], 1'b0 };   // 16W 4-BPP 8x8
+            3'b101:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 1'b0, tile_char[9: 0], pa_tile_y[3:0], 1'b0 };   // 32W 4-BPP 8x16
+            3'b110:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 1'b0, tile_char[9: 0], pa_tile_y[2:0], 2'b0 };   // 32W 8-BPP 8x8
+            3'b111:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { tile_char[9: 0], pa_tile_y[3:0], 2'b0 };         // 64W 8-BPP 8x16
         endcase
     end
 endfunction
 
-assign pa_font_addr = calc_font_addr(pa_font_size, pa_tile_y, vram_data_i[7: 0]);   // TODO more tiles?
+// up to 1024 tile glyphs per font (256 in 1-bpp mode)
+assign pa_font_addr = calc_font_addr(vram_data_i[9: 0], pa_tile_y, pa_bpp, pa_font_height[3]);  // NOTE: uses "hot" vram data output
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        fontram_sel_o   <= 1'b0;
-        vram_sel_o      <= 1'b0;
-        vram_addr_o     <= 16'h0000;
-        pal_index_o     <= 8'b0;
-        bus_intr_o      <= 1'b0;
-        hsync_o         <= 1'b0;
-        vsync_o         <= 1'b0;
-        dv_de_o         <= 1'b0;
-        vg_enable       <= 1'b1;            // video starts disabled TODO
-        h_state         <= STATE_PRE_SYNC;
-        v_state         <= STATE_PRE_SYNC;  // check STATE_VISIBLE
-        h_count         <= 11'h000;         // horizontal counter
-        v_count         <= 11'h000;         // vertical counter
-        mem_fetch       <= 1'b0;            // true enables display memory fetch
-        pa_addr         <= 16'h0000;        // current display address during scan
-        pa_line_addr    <= 16'h0000;        // start of display line (for when tiled/repeat)
-        pa_tile_x       <= 3'b0;            // tile column
-        pa_tile_y       <= 4'b0;            // tile line
-        pa_h_count      <= 2'b00;           // horizontal pixel repeat counter
-        pa_v_count      <= 2'b00;           // vertical pixel repeat counter
-        pa_attr_index   <= 16'h0000;        // word with tile index and attributes
-        pa_data_word0   <= 16'h0000;        // buffers to queue one line of tile data
-        pa_data_word1   <= 16'h0000;
-        pa_data_word2   <= 16'h0000;
-        pa_data_word3   <= 16'h0000;
-        pa_pixel_shift  <= 64'h00000000;    // 8 4-bpp pixels to scan out
+        fontram_sel_o       <= 1'b0;
+        vram_sel_o          <= 1'b0;
+        vram_addr_o         <= 16'h0000;
+        pal_index_o         <= 8'b0;
+        bus_intr_o          <= 1'b0;
+        hsync_o             <= 1'b0;
+        vsync_o             <= 1'b0;
+        dv_de_o             <= 1'b0;
+        vg_enable           <= 1'b1;            // video starts disabled (enabled after init)
+        h_state             <= STATE_PRE_SYNC;
+        v_state             <= STATE_PRE_SYNC;  // check STATE_VISIBLE
+        h_count             <= 11'h000;         // horizontal counter
+        v_count             <= 11'h000;         // vertical counter
+        mem_fetch_active    <= 1'b0;            // true enables display memory fetch
+        mem_fetch_cycle     <= 3'b0;            // memory fetch state
+        pa_addr             <= 16'h0000;        // current display address during scan
+        pa_line_addr        <= 16'h0000;        // start of display line (for when tiled/repeat)
+        pa_tile_x           <= 3'b0;            // tile column
+        pa_tile_y           <= 4'b0;            // tile line
+        pa_h_count          <= 2'b00;           // horizontal pixel repeat counter
+        pa_v_count          <= 2'b00;           // vertical pixel repeat counter
+        pa_attr_index       <= 16'h0000;        // word with tile index and attributes
+        pa_data_word0       <= 16'h0000;        // buffers to queue one line of tile data
+        pa_data_word1       <= 16'h0000;
+        pa_data_word2       <= 16'h0000;
+        pa_data_word3       <= 16'h0000;
+        pa_first_buffer     <= 1'b0;
+        pa_next_shiftout_ready <= 1'b0;
+        pa_pixel_shiftout   <= 64'h00000000;    // 8 4-bpp pixels to scan out
+        pa_next_shiftout    <= 64'h00000000;    // 8 4-bpp pixels to scan out
     end else begin
         // default outputs
-        vram_sel_o      <= 1'b0;            // default to no VRAM access
-        fontram_sel_o   <= 1'b0;            // default to no font access
-        bus_intr_o      <= 1'b0;            // TODO one pixel clock long enough duration?
+        vram_sel_o          <= 1'b0;            // default to no VRAM access
+        fontram_sel_o       <= 1'b0;            // default to no font access
+        bus_intr_o          <= 1'b0;            // vsync interrupt strobe
 
-        // get output pixel index from pixel shift-out
-        pal_index_o <= pa_pixel_shift[63:56];
+        // set output pixel index from pixel shift-out
+        pal_index_o <= pa_pixel_shiftout[63:56];
 
-        // shift-in next pixel
-        if (pa_h_count != 2'b00) begin
-            pa_h_count              <= pa_h_count - 1'b1;
-        end else begin
-            pa_h_count              <= pa_h_repeat;
-            pa_tile_x               <= pa_tile_x + 1'b1;
+        // set other video output signals
+        bus_intr_o  <= last_visible_pixel;   // TODO general purpose interrupt
+        hsync_o     <= hsync ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
+        vsync_o     <= vsync ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
+        dv_de_o     <= dv_display_ena;
 
-            // shift to next pixel
-            pa_pixel_shift[63:0]    <= { pa_pixel_shift[55:0], 8'h00 };
+        if (h_scanout) begin
+            // shift-in next pixel
+            if (pa_h_count != 2'b00) begin
+                pa_h_count              <= pa_h_count - 1'b1;
+            end else begin
+                pa_h_count              <= pa_h_repeat;
+                pa_tile_x               <= pa_tile_x + 1'b1;
+
+                if (pa_tile_x == 3'h7) begin
+                    pa_pixel_shiftout   <= pa_next_shiftout; // next 8 pixels from buffer
+                    pa_next_shiftout_ready <= 1'b0;
+                end else begin
+    `ifndef SYNTHESIS
+                    pa_pixel_shiftout   <= { pa_pixel_shiftout[55:0], 8'hE3 };  // shift for next pixel
+    `else
+                    pa_pixel_shiftout   <= { pa_pixel_shiftout[55:0], 8'h00 };  // shift for next pixel
+    `endif
+                end
+            end
         end
 
-        if (mem_fetch) begin        // display data fetch window
-            if (pa_h_count == 2'b00) begin  // new pixel (else repeating pixel)
-                // fetch state machine
-                case (pa_tile_x)        // VI0 [VO1/FO0]
-                    3'h0: begin
-                        pa_data_word0   <= vram_data_i;         // VI0: read vram data
-                        pa_attr_index   <= vram_data_i;         // save for tiled use as attribute/index word
-
-                        if (!pa_bitmap) begin
-                            vram_sel_o      <= pa_font_in_vram & pa_enable;    // FO0: select either vram
-                            fontram_sel_o   <= ~pa_font_in_vram & pa_enable;   // FO0: or select fontram
-                            vram_addr_o     <= pa_font_addr;
-                            fontram_addr_o  <= pa_font_addr[11:0];
-                            pa_font_next    <= pa_font_addr + 1'b1;
-                        end else begin
-                            if (pa_bpp != xv::BPP_1_ATTR) begin
-                                pa_attr_index[15:8] <= pa_colorbase;     // default attribute color
-                            end
-                            if (pa_bpp == xv::BPP_4 || pa_bpp == xv::BPP_8) begin
-                                vram_sel_o      <= pa_enable;           // VO1: select vram
-                                vram_addr_o     <= pa_addr;             // put display address on vram bus
-                                pa_addr         <= pa_addr + 1'b1;      // increment display address
-                            end
-                        end
-                    end
-                    3'h1: begin    // idle cycle
-                    end
-                    3'h2: begin    // [VI1/FI0] [FO1]
-                        pa_data_word1   <= vram_data_i;         // VI1: read vram data
-
-                        if (!pa_bitmap) begin
-                            pa_data_word0   <= pa_font_in_vram ? vram_data_i : fontram_data_i;  // FI0: read font data
-
-                            if (pa_bpp == xv::BPP_4 || pa_bpp == xv::BPP_8) begin
-                                vram_sel_o      <= pa_font_in_vram & pa_enable;    // FO1: select either vram
-                                fontram_sel_o   <= ~pa_font_in_vram & pa_enable;   // FO1: or select fontram
-                                vram_addr_o     <= pa_font_addr;
-                                fontram_addr_o  <= pa_font_addr[11:0];
-                                pa_font_next    <= pa_font_addr + 1'b1;
-                            end
-                        end else begin
-                            if (pa_bpp == xv::BPP_8) begin
-                                vram_sel_o      <= pa_enable;           // VO2: select vram
-                                vram_addr_o     <= pa_addr;             // put display address on vram bus
-                                pa_addr         <= pa_addr + 1'b1;      // increment display address
-                            end
-                        end
-                    end
-                    3'h3: begin    //           [FO2]
-                            if (!pa_bitmap) begin
-                                if (pa_bpp == xv::BPP_8) begin
-                                    vram_sel_o      <= pa_font_in_vram & pa_enable;    // FO2: select either vram
-                                    fontram_sel_o   <= ~pa_font_in_vram & pa_enable;   // FO2: or select fontram
-                                    vram_addr_o     <= pa_font_addr;
-                                    fontram_addr_o  <= pa_font_addr[11:0];
-                                    pa_font_next    <= pa_font_addr + 1'b1;
-                                end
-                                // get even/odd font byte for 1 BPP
-                                if (pa_bpp == xv::BPP_1_ATTR && !pa_tile_y[0]) begin
-                                    pa_data_word0[7:0]  <= pa_data_word0[15:8];
-                                end
-                            end
-                    end
-                    3'h4: begin    // [VI2/FI1] [VO3/FO3]
-                        pa_data_word2   <= vram_data_i;         // VI2: read vram data
-
-                        if (!pa_bitmap) begin
-                            pa_data_word1   <= pa_font_in_vram ? vram_data_i : fontram_data_i;  // FI1: read font data
-
-                            if (pa_bpp == xv::BPP_4 || pa_bpp == xv::BPP_8) begin
-                                vram_sel_o      <= pa_font_in_vram & pa_enable;    // FO3: select either vram
-                                fontram_sel_o   <= ~pa_font_in_vram & pa_enable;   // FO3: or select fontram
-                                vram_addr_o     <= pa_font_addr;
-                                fontram_addr_o  <= pa_font_addr[11:0];
-                                pa_font_next    <= pa_font_addr + 1'b1;
-                            end
-                        end else begin
-                            if (pa_bpp == xv::BPP_8) begin
-                                vram_sel_o      <= pa_enable;           // VO2: select vram
-                                vram_addr_o     <= pa_addr;             // put display address on vram bus
-                                pa_addr         <= pa_addr + 1'b1;      // increment display address
-                            end
-                        end
-                    end
-                    3'h5: begin    // [FI2]
-                        if (!pa_bitmap) begin
-                            pa_data_word2   <= pa_font_in_vram ? vram_data_i : fontram_data_i;  // FI2: read font data
-                        end
-                    end
-                    3'h6: begin    // [VI3/FI3] + VOp0 preload
+        // fetch display data if fetch active and not going to overrun existing shiftout (in state 2)
+        if (mem_fetch_active && (!pa_next_shiftout_ready || mem_fetch_cycle != 3'h1)) begin
+            mem_fetch_cycle <=  mem_fetch_cycle + 1'b1;
+            // fetch state machine
+            case (mem_fetch_cycle)
+                3'h0: begin                 // [VI3/FI3] + VOp0 preload
+                    if (pa_bpp == xv::BPP_8) begin
                         if (!pa_bitmap) begin
                             pa_data_word3   <= pa_font_in_vram ? vram_data_i : fontram_data_i;  // FI3: read font data
                         end else begin
                             pa_data_word3   <= vram_data_i;         // VI3: read vram data
                         end
+                    end
 
-                        vram_sel_o      <= pa_enable;           // VO0: select vram if enabled
-                        vram_addr_o     <= pa_addr;             // put display address on vram bus
-                        pa_addr         <= pa_addr + 1'b1;      // increment display address
+                    vram_sel_o      <= pa_enable;           // VO0: select vram if enabled
+                    vram_addr_o     <= pa_addr;             // put display address on vram bus
+                    pa_addr         <= pa_addr + 1'b1;      // increment display address
+                end
+                3'h1: begin    // expand next 8 pixels into pixel_shift
+                    pa_next_shiftout_ready <= !pa_first_buffer; // set buffer ready (unless first buffer)
+                    case (pa_bpp)
+                    xv::BPP_1_ATTR: // expand to 8-bits using attrib (defaults to colorbase when no attrib byte)
+                        pa_next_shiftout  <= {
+                            pa_colorbase[7:4], pa_data_word0[7] ? pa_attr_index[11:8] : pa_attr_index[15:12],
+                            pa_colorbase[7:4], pa_data_word0[6] ? pa_attr_index[11:8] : pa_attr_index[15:12],
+                            pa_colorbase[7:4], pa_data_word0[5] ? pa_attr_index[11:8] : pa_attr_index[15:12],
+                            pa_colorbase[7:4], pa_data_word0[4] ? pa_attr_index[11:8] : pa_attr_index[15:12],
+                            pa_colorbase[7:4], pa_data_word0[3] ? pa_attr_index[11:8] : pa_attr_index[15:12],
+                            pa_colorbase[7:4], pa_data_word0[2] ? pa_attr_index[11:8] : pa_attr_index[15:12],
+                            pa_colorbase[7:4], pa_data_word0[1] ? pa_attr_index[11:8] : pa_attr_index[15:12],
+                            pa_colorbase[7:4], pa_data_word0[0] ? pa_attr_index[11:8] : pa_attr_index[15:12] };
+                    xv::BPP_2:
+                        pa_next_shiftout  <= {
+                            pa_attr_index[15:10], pa_data_word0[15:14],
+                            pa_attr_index[15:10], pa_data_word0[13:12],
+                            pa_attr_index[15:10], pa_data_word0[11:10],
+                            pa_attr_index[15:10], pa_data_word0[ 9: 8],
+                            pa_attr_index[15:10], pa_data_word0[ 7: 6],
+                            pa_attr_index[15:10], pa_data_word0[ 5: 4],
+                            pa_attr_index[15:10], pa_data_word0[ 3: 2],
+                            pa_attr_index[15:10], pa_data_word0[ 1: 0] };
+                    xv::BPP_4:
+                        pa_next_shiftout  <= {
+                            pa_attr_index[15:12], pa_data_word0[15:12],
+                            pa_attr_index[15:12], pa_data_word0[11: 8],
+                            pa_attr_index[15:12], pa_data_word0[ 7: 4],
+                            pa_attr_index[15:12], pa_data_word0[ 3: 0],
+                            pa_attr_index[15:12], pa_data_word1[15:12],
+                            pa_attr_index[15:12], pa_data_word1[11: 8],
+                            pa_attr_index[15:12], pa_data_word1[ 7: 4],
+                            pa_attr_index[15:12], pa_data_word1[ 3: 0] };
+                    xv::BPP_8:
+                        pa_next_shiftout  <= { pa_data_word0, pa_data_word1, pa_data_word2, pa_data_word3 };
+                    endcase
+                end
+                3'h2: begin
+                    pa_data_word0   <= vram_data_i;         // VI0: read vram data
+                    pa_attr_index   <= vram_data_i;         // save for tiled use as attribute/index word
+
+                    if (!pa_bitmap) begin
+                        vram_sel_o      <= pa_font_in_vram & pa_enable;    // FO0: select either vram
+                        fontram_sel_o   <= ~pa_font_in_vram & pa_enable;   // FO0: or select fontram
+                        vram_addr_o     <= pa_font_addr;
+                        fontram_addr_o  <= pa_font_addr[11:0];
+                        pa_font_next    <= pa_font_addr + 1'b1;
+                    end else begin
+                        if (pa_bpp != xv::BPP_1_ATTR) begin
+                            pa_attr_index[15:8] <= pa_colorbase;     // default attribute color
+                        end
+                        if (pa_bpp == xv::BPP_4 || pa_bpp == xv::BPP_8) begin
+                            vram_sel_o      <= pa_enable;           // VO1: select vram
+                            vram_addr_o     <= pa_addr;             // put display address on vram bus
+                            pa_addr         <= pa_addr + 1'b1;      // increment display address
+                        end
                     end
-                    3'h7: begin    // load next 8 pixels into pixel_shift
-                        case (pa_bpp)
-                        xv::BPP_1_ATTR: // expand to 8-bits using attrib (defaults to colorbase when no attrib byte)
-                            pa_pixel_shift  <= {
-                                pa_colorbase[7:4], pa_data_word0[7] ? pa_attr_index[11:8] : pa_attr_index[15:12],
-                                pa_colorbase[7:4], pa_data_word0[6] ? pa_attr_index[11:8] : pa_attr_index[15:12],
-                                pa_colorbase[7:4], pa_data_word0[5] ? pa_attr_index[11:8] : pa_attr_index[15:12],
-                                pa_colorbase[7:4], pa_data_word0[4] ? pa_attr_index[11:8] : pa_attr_index[15:12],
-                                pa_colorbase[7:4], pa_data_word0[3] ? pa_attr_index[11:8] : pa_attr_index[15:12],
-                                pa_colorbase[7:4], pa_data_word0[2] ? pa_attr_index[11:8] : pa_attr_index[15:12],
-                                pa_colorbase[7:4], pa_data_word0[1] ? pa_attr_index[11:8] : pa_attr_index[15:12],
-                                pa_colorbase[7:4], pa_data_word0[0] ? pa_attr_index[11:8] : pa_attr_index[15:12] };
-                        xv::BPP_2:
-                            pa_pixel_shift  <= {
-                                pa_attr_index[15:10], pa_data_word0[15:14],
-                                pa_attr_index[15:10], pa_data_word0[13:12],
-                                pa_attr_index[15:10], pa_data_word0[11:10],
-                                pa_attr_index[15:10], pa_data_word0[ 9: 8],
-                                pa_attr_index[15:10], pa_data_word0[ 7: 6],
-                                pa_attr_index[15:10], pa_data_word0[ 5: 4],
-                                pa_attr_index[15:10], pa_data_word0[ 3: 2],
-                                pa_attr_index[15:10], pa_data_word0[ 1: 0] };
-                        xv::BPP_4:
-                            pa_pixel_shift  <= {
-                                pa_attr_index[15:12], pa_data_word0[15:12],
-                                pa_attr_index[15:12], pa_data_word0[11: 8],
-                                pa_attr_index[15:12], pa_data_word0[ 7: 4],
-                                pa_attr_index[15:12], pa_data_word0[ 3: 0],
-                                pa_attr_index[15:12], pa_data_word1[15:12],
-                                pa_attr_index[15:12], pa_data_word1[11: 8],
-                                pa_attr_index[15:12], pa_data_word1[ 7: 4],
-                                pa_attr_index[15:12], pa_data_word1[ 3: 0] };
-                        xv::BPP_8:
-                            pa_pixel_shift  <= { pa_data_word0, pa_data_word1, pa_data_word2, pa_data_word3 };
-                        endcase
+                end
+                3'h3: begin    // idle cycle
+                end
+                3'h4: begin    // [VI1/FI0] [FO1]
+                    pa_data_word1   <= vram_data_i;         // VI1: read vram data
+
+                    if (!pa_bitmap) begin
+                        pa_data_word0   <= pa_font_in_vram ? vram_data_i : fontram_data_i;  // FI0: read font data
+
+                        if (pa_bpp == xv::BPP_4 || pa_bpp == xv::BPP_8) begin
+                            vram_sel_o      <= pa_font_in_vram & pa_enable;    // FO1: select either vram
+                            fontram_sel_o   <= ~pa_font_in_vram & pa_enable;   // FO1: or select fontram
+                            vram_addr_o     <= pa_font_addr;
+                            fontram_addr_o  <= pa_font_addr[11:0];
+                            pa_font_next    <= pa_font_addr + 1'b1;
+                        end
+                    end else begin
+                        if (pa_bpp == xv::BPP_8) begin
+                            vram_sel_o      <= pa_enable;           // VO2: select vram
+                            vram_addr_o     <= pa_addr;             // put display address on vram bus
+                            pa_addr         <= pa_addr + 1'b1;      // increment display address
+                        end
                     end
-                endcase
-            end
+                end
+                3'h5: begin    //           [FO2]
+                        if (!pa_bitmap) begin
+                            if (pa_bpp == xv::BPP_8) begin
+                                vram_sel_o      <= pa_font_in_vram & pa_enable;    // FO2: select either vram
+                                fontram_sel_o   <= ~pa_font_in_vram & pa_enable;   // FO2: or select fontram
+                                vram_addr_o     <= pa_font_addr;
+                                fontram_addr_o  <= pa_font_addr[11:0];
+                                pa_font_next    <= pa_font_addr + 1'b1;
+                            end
+                            // get even/odd font byte for 1 BPP
+                            if (pa_bpp == xv::BPP_1_ATTR && !pa_tile_y[0]) begin
+                                pa_data_word0[7:0]  <= pa_data_word0[15:8];
+                            end
+                        end
+                end
+                3'h6: begin    // [VI2/FI1] [VO3/FO3]
+                    if (pa_bpp == xv::BPP_8) begin
+                        pa_data_word2   <= vram_data_i;         // VI2: read vram data
+                    end
+
+                    if (!pa_bitmap) begin
+                        pa_data_word1   <= pa_font_in_vram ? vram_data_i : fontram_data_i;  // FI1: read font data
+
+                        if (pa_bpp == xv::BPP_4 || pa_bpp == xv::BPP_8) begin
+                            vram_sel_o      <= pa_font_in_vram & pa_enable;    // FO3: select either vram
+                            fontram_sel_o   <= ~pa_font_in_vram & pa_enable;   // FO3: or select fontram
+                            vram_addr_o     <= pa_font_addr;
+                            fontram_addr_o  <= pa_font_addr[11:0];
+                            pa_font_next    <= pa_font_addr + 1'b1;
+                        end
+                    end else begin
+                        if (pa_bpp == xv::BPP_8) begin
+                            vram_sel_o      <= pa_enable;           // VO2: select vram
+                            vram_addr_o     <= pa_addr;             // put display address on vram bus
+                            pa_addr         <= pa_addr + 1'b1;      // increment display address
+                        end
+                    end
+                end
+                3'h7: begin    // [FI2]
+                    pa_first_buffer <= 1'b0;
+                    if (pa_bpp == xv::BPP_8) begin
+                        if (!pa_bitmap) begin
+                            pa_data_word2   <= pa_font_in_vram ? vram_data_i : fontram_data_i;  // FI2: read font data
+                        end
+                    end
+                end
+            endcase
         end
 
-        // start of line
+        // start of line display fetch
         if (h_start_line_fetch) begin       // on line fetch start signal
-            pa_tile_x           <= 3'h6;        // reset on pa_tile_x cycle (to start tile line at proper pixel)
-            pa_h_count          <= pa_fine_scrollx[1:0];
+            mem_fetch_cycle     <= 3'h0;    // reset fetch cycle state
+            pa_first_buffer     <= 1'b1;    // set first buffer flag (used to fill prefetch)
+            pa_next_shiftout_ready <= 1'b0;
+
+`ifndef SYNTHESIS
+            // trash buffers to help spot stale data
+            pa_data_word0   <= 16'h0BAD;
+            pa_data_word1   <= 16'h1BAD;
+            pa_data_word2   <= 16'h2BAD;
+            pa_data_word3   <= 16'h3BAD;
+            pa_attr_index   <= 16'hE33F;
+            pa_pixel_shiftout   <= 64'he3e3e3e3e3e3e3e3;
+            pa_next_shiftout    <= 64'he3e3e3e3e3e3e3e3;
+`endif
+        end
+
+        // when "scrolled" scanline starts outputting (before display if scrolled)
+        if (h_start_scanout) begin
+            h_scanout           <= 1'b1;
+            pa_tile_x           <= 3'h0;
+            pa_h_count          <= pa_h_repeat;
+            pa_pixel_shiftout   <= pa_next_shiftout; // next 8 pixels from buffer
+            pa_next_shiftout_ready <= 1'b0;
         end
 
         // end of line
-        if (h_last_line_pixel) begin
-            pa_addr     <= pa_line_addr;                    // text addr back to line start
+        if (h_line_last_pixel) begin
+            h_scanout   <= 1'b0;
+            pa_addr     <= pa_line_addr;                    // addr back to line start (for more tile, or v repeat)
             if (pa_v_count != 2'b00) begin                  // is line repeating
                 pa_v_count  <= pa_v_count - 1'b1;               // keep decrementing
             end else begin
@@ -493,27 +566,15 @@ always_ff @(posedge clk) begin
             end
         end
 
-        // end of frame
-        if (v_last_frame_pixel) begin                   // if last pixel of frame
-            vg_enable       <= enable_i;                // enable/disable text generation
-            pa_v_count      <= pa_fine_scrolly[1:0];
-            pa_tile_y       <= pa_fine_scrolly[5:2];    // fine scroll text line
-            pa_addr         <= pa_start_addr;           // reset to start of text data
-            pa_line_addr    <= pa_start_addr;           // reset to start of text data
+        // end of frame / before next frame
+        if (last_frame_pixel) begin                   // if last pixel of frame
+            vg_enable       <= enable_i;                // enable/disable video generation
+            pa_addr         <= pa_start_addr;           // set start of display data
+            pa_line_addr    <= pa_start_addr;           // set line to start of display data
+
+            pa_v_count      <= pa_v_repeat - pa_fine_scrolly[1:0];    // fine scroll within scaled line (v repeat)
+            pa_tile_y       <= pa_fine_scrolly[5:2];    // fine scroll tile line
         end
-
-        // update registered signals from combinatorial "next" versions
-        h_state <= h_state_next;
-        v_state <= v_state_next;
-        h_count <= h_count_next;
-        v_count <= v_count_next;
-        mem_fetch <= mem_fetch_next;
-
-        // set video output signals (color already set)
-        bus_intr_o  <= v_last_visible_pixel;   // TODO general purpose interrupt
-        hsync_o     <= hsync ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
-        vsync_o     <= vsync ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
-        dv_de_o     <= dv_display_ena;
     end
 end
 

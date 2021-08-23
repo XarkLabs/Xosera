@@ -16,7 +16,6 @@
 #include "verilated.h"
 
 #include "Vxosera_main.h"
-#include "Vxosera_main_video_gen.h"
 #include "Vxosera_main_vram.h"
 #include "Vxosera_main_xosera_main.h"
 
@@ -31,7 +30,7 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 8        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 7        // video frames to dump to VCD file (and then screen-shot and exit)
 #define MAX_UPLOADS      8        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
@@ -182,7 +181,7 @@ public:
         {
             if (wait_vsync)
             {
-                if (vsync_detect /* top->xosera_main->video_gen->v_last_visible_pixel */)
+                if (vsync_detect)
                 {
                     printf("[@t=%lu  ... VSYNC arrives]\n", main_time);
                     wait_vsync = false;
@@ -331,6 +330,7 @@ BusInterface bus;
 int          BusInterface::test_data_len   = 999;
 uint16_t     BusInterface::test_data[1024] = {
     // test data
+    REG_WAITVSYNC(),                     // show boot screen
     REG_WAITVSYNC(),                     // show boot screen
     REG_WAITVSYNC(),                     // show boot screen
     REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 1-BPP BMAP

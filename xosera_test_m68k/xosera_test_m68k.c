@@ -25,8 +25,6 @@
 #include <machine.h>
 #include <sdfat.h>
 
-//#define USE_BPPTEST        // for bpp test gateware
-
 #define DELAY_TIME 5000        // human speed
 //#define DELAY_TIME 1000        // impatient human speed
 //#define DELAY_TIME 100        // machine speed
@@ -545,7 +543,7 @@ void     xosera_test()
         {
             dprintf("No SD card support.\n");
         }
-#if defined(USE_BPPTEST)        // 4/8 bpp test
+        // 4/8 bpp test
         if (use_sd)
         {
             xv_reg_setw(gfxctrl, 0x0000);

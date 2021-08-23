@@ -1063,6 +1063,12 @@ int main(int argc, char ** argv)
 
     reboot_Xosera(xosera_config);
 
+    // mono bitmap mode
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x00C0);
+    test_mono_bitmap("space_shuttle_color_small.raw");
+    delay(5000);        // let the stunning boot logo display. :)
+
     // text mode
     xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
     xvid_setw(XVID_AUX_DATA, 0x0000);

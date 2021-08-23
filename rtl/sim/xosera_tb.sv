@@ -233,7 +233,7 @@ always begin
     if (xosera.blitter.blit_state == xosera.blitter.IDLE) begin
 
 `ifdef LOAD_MONOBM
-        while (xosera.video_gen.v_last_frame_pixel != 1'b1) begin
+        while (xosera.video_gen.last_frame_pixel != 1'b1) begin
             # 1ns;
         end
 
@@ -381,7 +381,7 @@ always begin
 end
 
 always @(posedge clk) begin
-    if (xosera.video_gen.v_last_frame_pixel == 1'b1) begin
+    if (xosera.video_gen.last_frame_pixel == 1'b1) begin
         frame <= frame + 1;
         $display("Finished rendering frame #%1d", frame);
 

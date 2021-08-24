@@ -86,6 +86,7 @@ logic [15:0]    pa_data_word3;                      // 4th fetched display data 
 
 logic           pa_first_buffer;                    // used to ignore first buffer to fill prefetch
 logic [63:0]    pa_pixel_shiftout;                  // 8 pixels currently shifting to scan out
+logic           pa_next_shiftout_hrev;              // horizontal reverse flag when copying
 logic           pa_next_shiftout_ready;
 logic [63:0]    pa_next_shiftout;                   // 8 pixel buffer waiting for scan out
 
@@ -274,26 +275,28 @@ end
 function [15:0] calc_font_addr(
         input [9:0] tile_char,
         input [3:0] tile_y,
+        input [5:0] fontbank,
         input [1:0] bpp,
         input       tile_8x16
     );
     reg [15:0] temp_addr;
     begin
         case ({ bpp, tile_8x16})
-            3'b000:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 6'b0, tile_char[7: 0], pa_tile_y[2:1] };         // 4W  1-BPP 8x8 (even/odd byte)
-            3'b001:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 5'b0, tile_char[7: 0], pa_tile_y[3:1] };         // 8W  1-BPP 8x16 (even/odd byte)
-            3'b010:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 3'b0, tile_char[9: 0], pa_tile_y[2:0] };         // 8W  2-BPP 8x8
-            3'b011:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 2'b0, tile_char[9: 0], pa_tile_y[3:0] };         // 16W 2-BPP 8x16
-            3'b100:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 2'b0, tile_char[9: 0], pa_tile_y[2:0], 1'b0 };   // 16W 4-BPP 8x8
-            3'b101:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 1'b0, tile_char[9: 0], pa_tile_y[3:0], 1'b0 };   // 32W 4-BPP 8x16
-            3'b110:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { 1'b0, tile_char[9: 0], pa_tile_y[2:0], 2'b0 };   // 32W 8-BPP 8x8
-            3'b111:  calc_font_addr = { pa_font_bank[5:0], 10'b0 } | { tile_char[9: 0], pa_tile_y[3:0], 2'b0 };         // 64W 8-BPP 8x16
+            3'b000:  calc_font_addr = { fontbank, 10'b0 } | { 6'b0, tile_char[7: 0], tile_y[2:1] };         // 4W  1-BPP 8x8 (even/odd byte)
+            3'b001:  calc_font_addr = { fontbank, 10'b0 } | { 5'b0, tile_char[7: 0], tile_y[3:1] };         // 8W  1-BPP 8x16 (even/odd byte)
+            3'b010:  calc_font_addr = { fontbank, 10'b0 } | { 3'b0, tile_char[9: 0], tile_y[2:0] };         // 8W  2-BPP 8x8
+            3'b011:  calc_font_addr = { fontbank, 10'b0 } | { 2'b0, tile_char[9: 0], tile_y[3:0] };         // 16W 2-BPP 8x16
+            3'b100:  calc_font_addr = { fontbank, 10'b0 } | { 2'b0, tile_char[9: 0], tile_y[2:0], 1'b0 };   // 16W 4-BPP 8x8
+            3'b101:  calc_font_addr = { fontbank, 10'b0 } | { 1'b0, tile_char[9: 0], tile_y[3:0], 1'b0 };   // 32W 4-BPP 8x16
+            3'b110:  calc_font_addr = { fontbank, 10'b0 } | { 1'b0, tile_char[9: 0], tile_y[2:0], 2'b0 };   // 32W 8-BPP 8x8
+            3'b111:  calc_font_addr = { fontbank, 10'b0 } | { tile_char[9: 0], tile_y[3:0], 2'b0 };         // 64W 8-BPP 8x16
         endcase
     end
 endfunction
 
 // up to 1024 tile glyphs per font (256 in 1-bpp mode)
-assign pa_font_addr = calc_font_addr(vram_data_i[9: 0], pa_tile_y, pa_bpp, pa_font_height[3]);  // NOTE: uses "hot" vram data output
+assign pa_font_addr = calc_font_addr(vram_data_i[9: 0], (vram_data_i[11] && (pa_bpp != xv::BPP_1_ATTR)) ? pa_font_height - pa_tile_y : pa_tile_y,
+                                     pa_font_bank, pa_bpp, pa_font_height[3]);  // NOTE: uses "hot" vram data output
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -325,6 +328,7 @@ always_ff @(posedge clk) begin
         pa_data_word3       <= 16'h0000;
         pa_first_buffer     <= 1'b0;
         pa_next_shiftout_ready <= 1'b0;
+        pa_next_shiftout_hrev <= 1'b0;
         pa_pixel_shiftout   <= 64'h00000000;    // 8 4-bpp pixels to scan out
         pa_next_shiftout    <= 64'h00000000;    // 8 4-bpp pixels to scan out
     end else begin
@@ -345,8 +349,22 @@ always_ff @(posedge clk) begin
                 pa_tile_x               <= pa_tile_x + 1'b1;
 
                 if (pa_tile_x == 3'h7) begin
-                    pa_pixel_shiftout   <= pa_next_shiftout; // next 8 pixels from buffer
                     pa_next_shiftout_ready <= 1'b0;
+                    if (pa_next_shiftout_hrev) begin
+                         // next 8 pixels from buffer copied reversed
+                        pa_pixel_shiftout   <= {
+                            pa_next_shiftout[7:0],
+                            pa_next_shiftout[15:8],
+                            pa_next_shiftout[23:16],
+                            pa_next_shiftout[31:24],
+                            pa_next_shiftout[39:32],
+                            pa_next_shiftout[47:40],
+                            pa_next_shiftout[55:48],
+                            pa_next_shiftout[63:56]
+                        };
+                    end else begin
+                        pa_pixel_shiftout   <= pa_next_shiftout; // next 8 pixels from buffer
+                    end
                 end else begin
     `ifndef SYNTHESIS
                     pa_pixel_shiftout   <= { pa_pixel_shiftout[55:0], 8'hE3 };  // shift for next pixel
@@ -377,6 +395,7 @@ always_ff @(posedge clk) begin
                 end
                 3'h1: begin    // expand next 8 pixels into pixel_shift
                     pa_next_shiftout_ready <= !pa_first_buffer; // set buffer ready (unless first buffer)
+                    pa_next_shiftout_hrev <= (pa_bpp == xv::BPP_1_ATTR) ? 1'b0 : pa_attr_index[11]; // horizontal reverse flag
                     case (pa_bpp)
                     xv::BPP_1_ATTR: // expand to 8-bits using attrib (defaults to colorbase when no attrib byte)
                         pa_next_shiftout  <= {

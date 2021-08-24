@@ -486,7 +486,7 @@ void     xosera_test()
 
     dprintf("\nxosera_init(1)...");
     // wait for monitor to unblank
-    bool success = xosera_init(1);
+    bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xv_reg_getw(vidwidth), xv_reg_getw(vidheight));
 
     if (delay_check(4000))
@@ -546,81 +546,71 @@ void     xosera_test()
         // 4/8 bpp test
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0000);
+            xv_reg_setw(gfxctrl, 0x00F5);        // enable + bitmap + 8-bpp + Hx2 + Vx2
+            xv_reg_setw(dispwidth, 160);
+
             load_sd_palette("/xosera_r1_pal.raw");
             load_sd_bitmap("/xosera_r1.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0000);
+            xv_reg_setw(gfxctrl, 0x0080);
         }
 
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0000);
+            xv_reg_setw(gfxctrl, 0x00E5);        // enable + bitmap + 4-bpp + Hx2 + Vx2
             load_sd_palette("/ST_KingTut_Dpaint_16_pal.raw");
             load_sd_bitmap("/ST_KingTut_Dpaint_16.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0000);
+            xv_reg_setw(gfxctrl, 0x0080);
         }
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0000);
+            xv_reg_setw(gfxctrl, 0x00E5);        // enable + bitmap + 4-bpp + Hx2 + Vx2
             load_sd_palette("/escher-relativity_320x240_16_pal.raw");
             load_sd_bitmap("/escher-relativity_320x240_16.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0000);
+            xv_reg_setw(gfxctrl, 0x0080);
         }
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0000);
-            load_sd_palette("/color_bars_test_pal.raw");
-            load_sd_bitmap("/color_bars_test.raw");
-            if (delay_check(DELAY_TIME))
-            {
-                break;
-            }
-            xv_reg_setw(gfxctrl, 0x0000);
-        }
-#else
-        if (use_sd)
-        {
-            xv_reg_setw(gfxctrl, 0x8000);
+            xv_reg_setw(gfxctrl, 0x00C0);        // enable + bitmap + 1-bpp + Hx1 + Vx1
             load_sd_bitmap("/space_shuttle_color_small.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0000);
+            xv_reg_setw(gfxctrl, 0x0080);
         }
 
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x8000);
+            xv_reg_setw(gfxctrl, 0x00C0);        // enable + bitmap + 1-bpp + Hx1 + Vx1
             load_sd_bitmap("/mountains_mono_640x480w.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0000);
+            xv_reg_setw(gfxctrl, 0x0080);
         }
 
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x8000);
+            xv_reg_setw(gfxctrl, 0x00C0);        // enable + bitmap + 1-bpp + Hx1 + Vx1
             load_sd_bitmap("/escher-relativity_640x480w.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0000);
+            xv_reg_setw(gfxctrl, 0x0080);
         }
 
         test_hello();
@@ -634,9 +624,8 @@ void     xosera_test()
         {
             break;
         }
-#endif
     }
-    xv_reg_setw(gfxctrl, 0x0000);
+    xv_reg_setw(gfxctrl, 0x0080);
 
     while (checkchar())
     {

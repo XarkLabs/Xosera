@@ -45,9 +45,9 @@ module video_gen(
 
 localparam [31:0] githash = 32'H`GITHASH;
 
-localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-64;    // memory pretch starts early
-localparam H_MEM_END = xv::TOTAL_WIDTH-1;           // memory fetch can ends a bit early
-localparam H_SCANOUT_BEGIN = xv::OFFSCREEN_WIDTH-1; // h count for line scanout (adjusted by fine_scrollx)
+localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-64;    // memory prefetch starts early
+localparam H_MEM_END = xv::TOTAL_WIDTH-8;           // memory fetch can end a bit early
+localparam H_SCANOUT_BEGIN = xv::OFFSCREEN_WIDTH-2; // h count position to start line scanout
 
 logic vg_enable;                                    // video generation enabled (else black/blank)
 
@@ -62,9 +62,9 @@ logic  [5:0]    pa_font_bank;                       // vram/fontmem font bank 0-
 logic           pa_font_in_vram;                    // 0=fontmem, 1=vram
 logic  [3:0]    pa_font_height;                     // max height of font cell
 logic  [1:0]    pa_h_repeat;                        // horizontal pixel repeat
-logic  [1:0]    pa_h_count;
+logic  [1:0]    pa_h_count;                         // current horizontal repeat countdown
 logic  [1:0]    pa_v_repeat;                        // vertical pixel repeat
-logic  [1:0]    pa_v_count;
+logic  [1:0]    pa_v_count;                         // current vertical repeat countdown
 logic  [4:0]    pa_fine_scrollx;                    // X fine scroll (8 pixel * 4 for repeat)
 logic  [5:0]    pa_fine_scrolly;                    // Y fine scroll (16 lines * 4 for repeat)
 logic  [2:0]    pa_tile_x;                          // current column of font cell
@@ -111,6 +111,7 @@ logic [10:0]    v_count_next_state;
 
 logic           mem_fetch_active;                     // true when fetching display data
 logic           h_start_scanout;                      // true for on pixel when "scrolled" scanline starts outputting (can be early)
+logic [10:0]    h_scanout_hcount;
 logic           h_scanout;                            // true when 
 
 logic [10:0]    mem_fetch_hcount;   // horizontal count when mem_fetch_active toggles
@@ -142,7 +143,7 @@ always_ff @(posedge clk) begin
         pa_bitmap           <= 1'b0;            // bitmap mode
         pa_bpp              <= xv::BPP_1_ATTR;
         pa_colorbase        <= 8'h00;
-        pa_h_repeat         <= 2'b00;           // TODO test
+        pa_h_repeat         <= 2'b00;
         pa_v_repeat         <= 2'b00;
     end else begin
         // video register write
@@ -207,7 +208,7 @@ end
 always_comb     hsync = (h_state == STATE_SYNC);
 always_comb     vsync = (v_state == STATE_SYNC);
 always_comb     dv_display_ena = vg_enable && (h_state == STATE_VISIBLE) && (v_state == STATE_VISIBLE);
-always_comb     h_start_scanout = ((h_count + { 5'b00000, pa_fine_scrollx }) == H_SCANOUT_BEGIN[10:0]-1) ? mem_fetch_active : 1'b0; 
+always_comb     h_start_scanout = (h_count == h_scanout_hcount) ? mem_fetch_active : 1'b0; 
 always_comb     h_start_line_fetch = (~mem_fetch_active && mem_fetch_next);
 always_comb     h_line_last_pixel = (h_state_next == STATE_PRE_SYNC) && (h_state == STATE_VISIBLE);
 always_comb     last_visible_pixel = (v_state_next == STATE_PRE_SYNC) && (v_state == STATE_VISIBLE) && h_line_last_pixel;
@@ -529,6 +530,7 @@ always_ff @(posedge clk) begin
             mem_fetch_cycle     <= 3'h0;    // reset fetch cycle state
             pa_first_buffer     <= 1'b1;    // set first buffer flag (used to fill prefetch)
             pa_next_shiftout_ready <= 1'b0;
+            h_scanout_hcount    <= H_SCANOUT_BEGIN[10:0] - { 5'b00000, pa_fine_scrollx };
 
 `ifndef SYNTHESIS
             // trash buffers to help spot stale data

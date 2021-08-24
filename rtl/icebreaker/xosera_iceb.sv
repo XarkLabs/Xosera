@@ -82,7 +82,12 @@ logic       spi_cs_n;                   // SPI CS for FPGA from controller
 `endif
 
 logic       spi_reset   = 1'b0;         // SPI "soft" reset (if SPI_INTERFACE)
-assign      nreset      = BTN_N;        // active LOW reset button
+
+
+// NOTE: For some reason, this "nreset" button is expensive and causing fmax fail, so disabled
+// (If you miss this, I am sure there is a cheap way to add it back...)
+// assign      nreset      = BTN_N;        // active LOW reset button
+assign nreset = 1'b1;
 
 // split tri-state data lines into in/out signals for inside FPGA
 logic bus_out_ena;

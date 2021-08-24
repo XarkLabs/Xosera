@@ -390,7 +390,7 @@ always_ff @(posedge clk) begin
                         end
                     end
 
-                    vram_sel_o      <= pa_enable;           // VO0: select vram if enabled
+                    vram_sel_o      <= 1'b1;                // VO0: select vram
                     vram_addr_o     <= pa_addr;             // put display address on vram bus
                     pa_addr         <= pa_addr + 1'b1;      // increment display address
                 end
@@ -437,8 +437,8 @@ always_ff @(posedge clk) begin
                     pa_attr_index   <= vram_data_i;         // save for tiled use as attribute/index word
 
                     if (!pa_bitmap) begin
-                        vram_sel_o      <= pa_font_in_vram & pa_enable;    // FO0: select either vram
-                        fontram_sel_o   <= ~pa_font_in_vram & pa_enable;   // FO0: or select fontram
+                        vram_sel_o      <= pa_font_in_vram;         // FO0: select either vram
+                        fontram_sel_o   <= ~pa_font_in_vram;        // FO0: or select fontram
                         vram_addr_o     <= pa_font_addr;
                         fontram_addr_o  <= pa_font_addr[11:0];
                         pa_font_next    <= pa_font_addr + 1'b1;
@@ -447,7 +447,7 @@ always_ff @(posedge clk) begin
                             pa_attr_index[15:8] <= pa_colorbase;     // default attribute color
                         end
                         if (pa_bpp == xv::BPP_4 || pa_bpp == xv::BPP_8) begin
-                            vram_sel_o      <= pa_enable;           // VO1: select vram
+                            vram_sel_o      <= 1'b1;                // VO1: select vram
                             vram_addr_o     <= pa_addr;             // put display address on vram bus
                             pa_addr         <= pa_addr + 1'b1;      // increment display address
                         end
@@ -462,15 +462,15 @@ always_ff @(posedge clk) begin
                         pa_data_word0   <= pa_font_in_vram ? vram_data_i : fontram_data_i;  // FI0: read font data
 
                         if (pa_bpp == xv::BPP_4 || pa_bpp == xv::BPP_8) begin
-                            vram_sel_o      <= pa_font_in_vram & pa_enable;    // FO1: select either vram
-                            fontram_sel_o   <= ~pa_font_in_vram & pa_enable;   // FO1: or select fontram
+                            vram_sel_o      <= pa_font_in_vram;    // FO1: select either vram
+                            fontram_sel_o   <= ~pa_font_in_vram;   // FO1: or select fontram
                             vram_addr_o     <= pa_font_addr;
                             fontram_addr_o  <= pa_font_addr[11:0];
                             pa_font_next    <= pa_font_addr + 1'b1;
                         end
                     end else begin
                         if (pa_bpp == xv::BPP_8) begin
-                            vram_sel_o      <= pa_enable;           // VO2: select vram
+                            vram_sel_o      <= 1'b1;                // VO2: select vram
                             vram_addr_o     <= pa_addr;             // put display address on vram bus
                             pa_addr         <= pa_addr + 1'b1;      // increment display address
                         end
@@ -479,8 +479,8 @@ always_ff @(posedge clk) begin
                 3'h5: begin    //           [FO2]
                         if (!pa_bitmap) begin
                             if (pa_bpp == xv::BPP_8) begin
-                                vram_sel_o      <= pa_font_in_vram & pa_enable;    // FO2: select either vram
-                                fontram_sel_o   <= ~pa_font_in_vram & pa_enable;   // FO2: or select fontram
+                                vram_sel_o      <= pa_font_in_vram;     // FO2: select either vram
+                                fontram_sel_o   <= ~pa_font_in_vram;    // FO2: or select fontram
                                 vram_addr_o     <= pa_font_addr;
                                 fontram_addr_o  <= pa_font_addr[11:0];
                                 pa_font_next    <= pa_font_addr + 1'b1;
@@ -500,15 +500,15 @@ always_ff @(posedge clk) begin
                         pa_data_word1   <= pa_font_in_vram ? vram_data_i : fontram_data_i;  // FI1: read font data
 
                         if (pa_bpp == xv::BPP_4 || pa_bpp == xv::BPP_8) begin
-                            vram_sel_o      <= pa_font_in_vram & pa_enable;    // FO3: select either vram
-                            fontram_sel_o   <= ~pa_font_in_vram & pa_enable;   // FO3: or select fontram
+                            vram_sel_o      <= pa_font_in_vram;    // FO3: select either vram
+                            fontram_sel_o   <= ~pa_font_in_vram;   // FO3: or select fontram
                             vram_addr_o     <= pa_font_addr;
                             fontram_addr_o  <= pa_font_addr[11:0];
                             pa_font_next    <= pa_font_addr + 1'b1;
                         end
                     end else begin
                         if (pa_bpp == xv::BPP_8) begin
-                            vram_sel_o      <= pa_enable;           // VO2: select vram
+                            vram_sel_o      <= 1'b1;                // VO2: select vram
                             vram_addr_o     <= pa_addr;             // put display address on vram bus
                             pa_addr         <= pa_addr + 1'b1;      // increment display address
                         end
@@ -587,7 +587,7 @@ always_ff @(posedge clk) begin
         v_state <= v_state_next;
         h_count <= h_count_next;
         v_count <= v_count_next;
-        mem_fetch_active <= mem_fetch_next;
+        mem_fetch_active <= mem_fetch_next & pa_enable;
 
         // set other video output signals
         bus_intr_o  <= last_visible_pixel;   // TODO general purpose interrupt

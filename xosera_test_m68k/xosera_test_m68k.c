@@ -561,6 +561,8 @@ void     xosera_test()
         if (use_sd)
         {
             xv_reg_setw(gfxctrl, 0x00E5);        // enable + bitmap + 4-bpp + Hx2 + Vx2
+            xv_reg_setw(dispwidth, 80);
+
             load_sd_palette("/ST_KingTut_Dpaint_16_pal.raw");
             load_sd_bitmap("/ST_KingTut_Dpaint_16.raw");
             if (delay_check(DELAY_TIME))
@@ -572,6 +574,8 @@ void     xosera_test()
         if (use_sd)
         {
             xv_reg_setw(gfxctrl, 0x00E5);        // enable + bitmap + 4-bpp + Hx2 + Vx2
+            xv_reg_setw(dispwidth, 80);
+
             load_sd_palette("/escher-relativity_320x240_16_pal.raw");
             load_sd_bitmap("/escher-relativity_320x240_16.raw");
             if (delay_check(DELAY_TIME))
@@ -583,6 +587,8 @@ void     xosera_test()
         if (use_sd)
         {
             xv_reg_setw(gfxctrl, 0x00C0);        // enable + bitmap + 1-bpp + Hx1 + Vx1
+            xv_reg_setw(dispwidth, 80);
+
             load_sd_bitmap("/space_shuttle_color_small.raw");
             if (delay_check(DELAY_TIME))
             {
@@ -594,6 +600,8 @@ void     xosera_test()
         if (use_sd)
         {
             xv_reg_setw(gfxctrl, 0x00C0);        // enable + bitmap + 1-bpp + Hx1 + Vx1
+            xv_reg_setw(dispwidth, 80);
+
             load_sd_bitmap("/mountains_mono_640x480w.raw");
             if (delay_check(DELAY_TIME))
             {
@@ -605,6 +613,8 @@ void     xosera_test()
         if (use_sd)
         {
             xv_reg_setw(gfxctrl, 0x00C0);        // enable + bitmap + 1-bpp + Hx1 + Vx1
+            xv_reg_setw(dispwidth, 80);
+
             load_sd_bitmap("/escher-relativity_640x480w.raw");
             if (delay_check(DELAY_TIME))
             {

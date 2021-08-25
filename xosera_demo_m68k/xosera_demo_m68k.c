@@ -367,7 +367,7 @@ void test_hello()
 
 void test_mono_bitmap()
 {
-    xv_reg_setw(gfxctrl, 0x8000);
+    xv_reg_setw(gfxctrl, 0x0040);
 }
 
 

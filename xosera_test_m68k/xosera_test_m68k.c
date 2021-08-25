@@ -546,7 +546,7 @@ void     xosera_test()
         // 4/8 bpp test
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x00F5);        // enable + bitmap + 8-bpp + Hx2 + Vx2
+            xv_reg_setw(gfxctrl, 0x0075);        // bitmap + 8-bpp + Hx2 + Vx2
             xv_reg_setw(dispwidth, 160);
 
             load_sd_palette("/xosera_r1_pal.raw");
@@ -555,12 +555,12 @@ void     xosera_test()
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0080);
+            xv_reg_setw(gfxctrl, 0x0000);
         }
 
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x00E5);        // enable + bitmap + 4-bpp + Hx2 + Vx2
+            xv_reg_setw(gfxctrl, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
             xv_reg_setw(dispwidth, 80);
 
             load_sd_palette("/ST_KingTut_Dpaint_16_pal.raw");
@@ -569,11 +569,11 @@ void     xosera_test()
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0080);
+            xv_reg_setw(gfxctrl, 0x0000);
         }
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x00E5);        // enable + bitmap + 4-bpp + Hx2 + Vx2
+            xv_reg_setw(gfxctrl, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
             xv_reg_setw(dispwidth, 80);
 
             load_sd_palette("/escher-relativity_320x240_16_pal.raw");
@@ -582,11 +582,11 @@ void     xosera_test()
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0080);
+            xv_reg_setw(gfxctrl, 0x0000);
         }
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x00C0);        // enable + bitmap + 1-bpp + Hx1 + Vx1
+            xv_reg_setw(gfxctrl, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
             xv_reg_setw(dispwidth, 80);
 
             load_sd_bitmap("/space_shuttle_color_small.raw");
@@ -594,12 +594,12 @@ void     xosera_test()
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0080);
+            xv_reg_setw(gfxctrl, 0x0000);
         }
 
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x00C0);        // enable + bitmap + 1-bpp + Hx1 + Vx1
+            xv_reg_setw(gfxctrl, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
             xv_reg_setw(dispwidth, 80);
 
             load_sd_bitmap("/mountains_mono_640x480w.raw");
@@ -607,12 +607,12 @@ void     xosera_test()
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0080);
+            xv_reg_setw(gfxctrl, 0x0000);
         }
 
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x00C0);        // enable + bitmap + 1-bpp + Hx1 + Vx1
+            xv_reg_setw(gfxctrl, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
             xv_reg_setw(dispwidth, 80);
 
             load_sd_bitmap("/escher-relativity_640x480w.raw");
@@ -620,7 +620,7 @@ void     xosera_test()
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0080);
+            xv_reg_setw(gfxctrl, 0x0000);
         }
 
         test_hello();
@@ -635,7 +635,7 @@ void     xosera_test()
             break;
         }
     }
-    xv_reg_setw(gfxctrl, 0x0080);
+    xv_reg_setw(gfxctrl, 0x0000);
 
     while (checkchar())
     {

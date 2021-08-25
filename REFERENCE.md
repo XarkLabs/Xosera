@@ -84,9 +84,9 @@ To access these registers, write the register address to `XVID_AUX_ADDR`, then r
 | 0x0   | `AUX_DISPSTART`       |R/W| [15:0] starting VRAM address for display (wraps at 0xffff)                          |
 | 0x1   | `AUX_DISPWIDTH`       |R/W| [15:0] words per display line                                                       |
 | 0x2   | `AUX_SCROLLXY`        |R/W| [11:8] H pixel scroll, [4:0] V pixel scroll                                         |
-| 0x3   | `AUX_FONTCTRL`        |R/W| [15:11] font addr bank ([11]=0 for x16 font),[8] 0=FONTMEM/1=VRAM, [3:0] font height-1 |
-| 0x4   | `AUX_GFXCTRL`         |R/W| [15] bitmap mode [1] V pixel double, [0] H pixel double                             |
-| 0x5   | `AUX_UNUSED5`         |R/W|                                                                                     |
+| 0x3   | `AUX_FONTCTRL`        |R/W| [15:10] font addr bank,[7] 0=fontRAM/1=VRAM, [3:0] font height-1 (stored x8 or x16) |
+| 0x4   | `AUX_GFXCTRL`         |R/W| [15:8] colorbase [7] disable video, [6] bitmap mode [5:4] bpp, [3:2] H repeat, [1:0] V repeat |
+| 0x5   | `AUX_LINESTART`       |R/W| [15:0] VRAM address for next display line (reset to `DISPSTART` at start of frame)  |
 | 0x6   | `AUX_UNUSED6`         |R/W|                                                                                     |
 | 0x7   | `AUX_UNUSED7`         |R/W|                                                                                     |
 

@@ -62,8 +62,8 @@ typedef enum logic [15:0]{
     AUX_DISPWIDTH   = AUX_VID | 16'h0001,        // display width in words
     AUX_SCROLLXY    = AUX_VID | 16'h0002,        // [10:8] H fine scroll, [3:0] V fine scroll
     AUX_FONTCTRL    = AUX_VID | 16'h0003,        // [15:11] 1KW/2KW font bank,[8] bram/vram [3:0] font height
-    AUX_GFXCTRL     = AUX_VID | 16'h0004,        // [15] bitmap mode [1] V pixel double, [0] H pixel double
-    AUX_UNUSED_5    = AUX_VID | 16'h0005,
+    AUX_GFXCTRL     = AUX_VID | 16'h0004,        // [15:8] colorbase [7] disable, [6] bitmap [5:4] bpp, [3:2] H repeat, [1:0] V repeat
+    AUX_LINESTART   = AUX_VID | 16'h0005,
     AUX_UNUSED_6    = AUX_VID | 16'h0006,
     AUX_UNUSED_7    = AUX_VID | 16'h0007
 } aux_vid_w_t;

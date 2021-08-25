@@ -48,15 +48,15 @@ enum
     AUX_AUD      = 0xC000,        // 0xC000-0xC??? TODO (audio registers)
 
     // AUX register access using AUX_ADDR/AUX_DATA
-    AUX_DISPSTART   = AUX_VID | 0x0000,        // display start address
-    AUX_DISPWIDTH   = AUX_VID | 0x0001,        // tile line width (usually WIDTH/8)
-    AUX_SCROLLXY    = AUX_VID | 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
-    AUX_FONTCTRL    = AUX_VID | 0x0003,        // [9:8] 2KB font bank, [3:0] font height
-    AUX_GFXCTRL     = AUX_VID | 0x0004,        // [0] h pix double
-    AUX_UNUSED5     = AUX_VID | 0x0005,
-    AUX_UNUSED6     = AUX_VID | 0x0006,
-    AUX_UNUSED7     = AUX_VID | 0x0007,
-    AUX_R_WIDTH     = AUX_VID | 0x0008,        // display resolution width
+    AUX_DISPSTART = AUX_VID | 0x0000,        // display start address
+    AUX_DISPWIDTH = AUX_VID | 0x0001,        // tile line width (usually WIDTH/8)
+    AUX_SCROLLXY  = AUX_VID | 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
+    AUX_FONTCTRL  = AUX_VID | 0x0003,        // [9:8] 2KB font bank, [3:0] font height
+    AUX_GFXCTRL = AUX_VID | 0x0004,        // [15:8] colorbase [7] disable, [6] bitmap [5:4] bpp, [3:2] Hrep, [1:0] Vrep
+    AUX_UNUSED5 = AUX_VID | 0x0005,
+    AUX_UNUSED6 = AUX_VID | 0x0006,
+    AUX_UNUSED7 = AUX_VID | 0x0007,
+    AUX_R_WIDTH = AUX_VID | 0x0008,            // display resolution width
     AUX_R_HEIGHT    = AUX_VID | 0x0009,        // display resolution height
     AUX_R_FEATURES  = AUX_VID | 0x000A,        // [15] = 1 (test)
     AUX_R_SCANLINE  = AUX_VID | 0x000B,        // [15] V blank, [14:11] zero [10:0] V line
@@ -792,7 +792,7 @@ void draw_buddy()
 {
     xvid_setw(XVID_AUX_ADDR, AUX_FONTCTRL);        // A_font_ctrl
     //    xvid_setw(XVID_AUX_DATA, 0x0207);              // 2nd font in bank 2, 8 high
-    xvid_setw(XVID_AUX_DATA, 0x4107);        // 2nd font in VRAM @ 0x4000, 8 high
+    xvid_setw(XVID_AUX_DATA, 0x4087);        // 2nd font in VRAM @ 0x4000, 8 high
     rows <<= 1;
 
     xcls(0xff);
@@ -816,11 +816,11 @@ void draw_buddy()
     }
 
     delay(2000);
-    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);        // use WR address for palette index
-    xvid_setw(XVID_AUX_DATA, 0x0003);             // set palette data
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x0005);
     delay(2000);
-    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);        // use WR address for palette index
-    xvid_setw(XVID_AUX_DATA, 0x0000);             // set palette data
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x0000);
     delay(2000);
     xvid_setw(XVID_AUX_ADDR, AUX_FONTCTRL);        // A_font_ctrl
     xvid_setw(XVID_AUX_DATA, 0x000F);              // back to 1st font in bank 0, 16 high
@@ -831,20 +831,20 @@ void test_smoothscroll()
 {
     xcls();
     xprint_rainbow(1, blurb);
-    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);        // use WR address for palette index
-    xvid_setw(XVID_AUX_DATA, 0x0000);             // set palette data
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x0000);
     delay(2000);
-    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);        // use WR address for palette index
-    xvid_setw(XVID_AUX_DATA, 0x0001);             // set palette data
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x0001);
     delay(2000);
-    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);        // use WR address for palette index
-    xvid_setw(XVID_AUX_DATA, 0x0002);             // set palette data
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x0004);
     delay(2000);
-    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);        // use WR address for palette index
-    xvid_setw(XVID_AUX_DATA, 0x0003);             // set palette data
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x0005);
     delay(2000);
-    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);        // use WR address for palette index
-    xvid_setw(XVID_AUX_DATA, 0x0000);             // set palette data
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x0000);
     delay(2000);
 
     for (int r = 0; r < 2; r++)
@@ -926,8 +926,8 @@ void test_smoothscroll()
         }
     }
 
-    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);        // use WR address for palette index
-    xvid_setw(XVID_AUX_DATA, 0x0001);             // set palette data
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x0001);
 
     for (int r = 0; r < 2; r++)
     {
@@ -949,8 +949,8 @@ void test_smoothscroll()
         }
     }
 
-    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);        // use WR address for palette index
-    xvid_setw(XVID_AUX_DATA, 0x0003);             // set palette data
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x0005);
 
     for (int r = 0; r < 2; r++)
     {
@@ -1065,7 +1065,7 @@ int main(int argc, char ** argv)
 
     // mono bitmap mode
     xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
-    xvid_setw(XVID_AUX_DATA, 0x00C0);
+    xvid_setw(XVID_AUX_DATA, 0x0040);
     test_mono_bitmap("space_shuttle_color_small.raw");
     delay(5000);        // let the stunning boot logo display. :)
 
@@ -1135,7 +1135,7 @@ int main(int argc, char ** argv)
 
     // mono bitmap mode
     xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
-    xvid_setw(XVID_AUX_DATA, 0x8000);
+    xvid_setw(XVID_AUX_DATA, 0x0040);
     test_mono_bitmap("space_shuttle_color_small.raw");
 
     host_spi_close();

@@ -52,9 +52,10 @@ localparam H_SCANOUT_BEGIN = xv::OFFSCREEN_WIDTH-2; // h count position to start
 logic vg_enable;                                    // video generation enabled (else black/blank)
 
 // video generation signals
-logic           pa_enable;                          // enable plane A
-logic [15:0]    pa_start_addr;                      // text start address (word address)
-logic [15:0]    pa_line_width;                      // words per disply line
+logic           pa_disable;                         // disable plane A
+logic [15:0]    pa_start_addr;                      // display data start address (word address)
+logic [15:0]    pa_line_width;                      // words per disply line (added to line_addr each line)
+logic [15:0]    pa_line_start;                      // display data start address for next line (word address)
 logic  [7:0]    pa_colorbase;                       // colorbase for plane data (upper color bits)
 logic  [1:0]    pa_bpp;                             // bpp code (bpp_depth_t)
 logic           pa_bitmap;                          // bitmap enable (else text mode)
@@ -70,10 +71,10 @@ logic  [5:0]    pa_fine_scrolly;                    // Y fine scroll (16 lines *
 logic  [2:0]    pa_tile_x;                          // current column of font cell
 logic  [3:0]    pa_tile_y;                          // current line of font cell
 
-
-// temp signals
+// internal signals
+logic           pa_line_start_set;
+logic [15:0]    pa_line_addr;                       // address of next line display data start
 logic [15:0]    pa_addr;                            // address to fetch tile+color attribute
-logic [15:0]    pa_line_addr;                       // address of start of tile+color attribute line
 logic [15:0]    pa_font_addr;                       // font tile start address (VRAM or FONTRAM)
 logic [15:0]    pa_font_next;                       // next font data address (VRAM or FONTRAM)
 
@@ -132,9 +133,11 @@ logic           h_start_line_fetch;
 // video config registers read/write
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        pa_enable           <= 1'b1;            // plane A starts enabled
+        pa_disable          <= 1'b0;            // plane A starts enabled
         pa_start_addr       <= 16'h0000;
         pa_line_width       <= xv::TILES_WIDE[15:0];
+        pa_line_start_set   <= 1'b0;            // indicates user line address set
+        pa_line_start       <= 16'h0000;        // user start of next display line
         pa_fine_scrollx     <= 5'b0000;
         pa_fine_scrolly     <= 6'b000000;
         pa_font_height      <= 4'b1111;
@@ -146,6 +149,7 @@ always_ff @(posedge clk) begin
         pa_h_repeat         <= 2'b00;
         pa_v_repeat         <= 2'b00;
     end else begin
+        pa_line_start_set <= 1'b0;
         // video register write
         if (vgen_reg_wr_i) begin
             case (vgen_reg_num_i[3:0])
@@ -166,13 +170,15 @@ always_ff @(posedge clk) begin
                 end
                 xv::AUX_GFXCTRL[3:0]: begin
                     pa_colorbase    <= vgen_reg_data_i[15:8];
-                    pa_enable       <= vgen_reg_data_i[7];
+                    pa_disable      <= vgen_reg_data_i[7];
                     pa_bitmap       <= vgen_reg_data_i[6];
                     pa_bpp          <= vgen_reg_data_i[5:4];
                     pa_v_repeat     <= vgen_reg_data_i[3:2];
                     pa_h_repeat     <= vgen_reg_data_i[1:0];
                 end
-                xv::AUX_UNUSED_5[3:0]: begin
+                xv::AUX_LINESTART[3:0]: begin
+                    pa_line_start_set <= 1'b1;
+                    pa_line_start   <= vgen_reg_data_i;
                 end
                 xv::AUX_UNUSED_6[3:0]: begin
                 end
@@ -189,8 +195,8 @@ always_ff @(posedge clk) begin
             xv::AUX_DISPWIDTH[3:0]:     vgen_reg_data_o <= pa_line_width;
             xv::AUX_SCROLLXY[3:0]:      vgen_reg_data_o <= { 3'b000, pa_fine_scrollx, 2'b00, pa_fine_scrolly };
             xv::AUX_FONTCTRL[3:0]:      vgen_reg_data_o <= { pa_font_bank, 2'b0, pa_font_in_vram, 3'b0, pa_font_height };
-            xv::AUX_GFXCTRL[3:0]:       vgen_reg_data_o <= { pa_colorbase, pa_enable, pa_bitmap, pa_bpp, pa_v_repeat, pa_h_repeat };
-            xv::AUX_UNUSED_5[3:0]:      vgen_reg_data_o <= 16'h0000;
+            xv::AUX_GFXCTRL[3:0]:       vgen_reg_data_o <= { pa_colorbase, pa_disable, pa_bitmap, pa_bpp, pa_v_repeat, pa_h_repeat };
+            xv::AUX_LINESTART[3:0]:     vgen_reg_data_o <= 16'h0000;
             xv::AUX_UNUSED_6[3:0]:      vgen_reg_data_o <= 16'h0000;
             xv::AUX_UNUSED_7[3:0]:      vgen_reg_data_o <= 16'h0000;
             xv::AUX_R_WIDTH[3:0]:       vgen_reg_data_o <= {4'h0, xv::VISIBLE_WIDTH[11:0]};
@@ -309,7 +315,7 @@ always_ff @(posedge clk) begin
         hsync_o             <= 1'b0;
         vsync_o             <= 1'b0;
         dv_de_o             <= 1'b0;
-        vg_enable           <= 1'b1;            // video starts disabled (enabled after init)
+        vg_enable           <= 1'b0;            // video starts disabled (enabled after init)
         h_state             <= STATE_PRE_SYNC;
         v_state             <= STATE_PRE_SYNC;  // check STATE_VISIBLE
         h_count             <= 11'h000;         // horizontal counter
@@ -317,7 +323,6 @@ always_ff @(posedge clk) begin
         mem_fetch_active    <= 1'b0;            // true enables display memory fetch
         mem_fetch_cycle     <= 3'b0;            // memory fetch state
         pa_addr             <= 16'h0000;        // current display address during scan
-        pa_line_addr        <= 16'h0000;        // start of display line (for when tiled/repeat)
         pa_tile_x           <= 3'b0;            // tile column
         pa_tile_y           <= 4'b0;            // tile line
         pa_h_count          <= 2'b00;           // horizontal pixel repeat counter
@@ -582,12 +587,17 @@ always_ff @(posedge clk) begin
             pa_tile_y       <= pa_fine_scrolly[5:2];    // fine scroll tile line
         end
 
+        // use new line start if set
+        if (pa_line_start_set) begin
+            pa_line_addr    <= pa_line_start;
+        end
+
         // update registered signals from combinatorial "next" versions
         h_state <= h_state_next;
         v_state <= v_state_next;
         h_count <= h_count_next;
         v_count <= v_count_next;
-        mem_fetch_active <= mem_fetch_next & pa_enable;
+        mem_fetch_active <= mem_fetch_next & ~pa_disable;
 
         // set other video output signals
         bus_intr_o  <= last_visible_pixel;   // TODO general purpose interrupt

@@ -226,7 +226,7 @@ void     xosera_mode_test()
 
     while (true)
     {
-        xv_reg_setw(gfxctrl, 0x0080);
+        xv_reg_setw(gfxctrl, 0x0000);
         xcls();
         dprintf("*** Xosera_gfx_test iteration: %d\n", test_count++);
         rosco_m68k_CPUMHz();
@@ -245,7 +245,8 @@ void     xosera_mode_test()
         dprintf(" dispstart:0x%04x dispwidth:0x%04x\n", dispstart, dispwidth);
         dprintf("  scrollxy:0x%04x   gfxctrl:0x%04x\n", scrollxy, gfxctrl);
 
-        xv_reg_setw(gfxctrl, 0x00F5);
+        xv_reg_setw(gfxctrl, 0x0000);
+
         if (delay_check(4000))
         {
             break;

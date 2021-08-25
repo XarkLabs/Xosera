@@ -240,7 +240,7 @@ always begin
         #(M68K_PERIOD * 2)  xvid_setw(XVID_WR_INC, test_inc);
         #(M68K_PERIOD * 2)  xvid_setw(XVID_WR_ADDR, 16'h0000);
         #(M68K_PERIOD * 2)  xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
-        #(M68K_PERIOD * 2)  xvid_setw(XVID_AUX_DATA, 16'h8000);
+        #(M68K_PERIOD * 2)  xvid_setw(XVID_AUX_DATA, 16'h0040);
 
         inject_file("sim/mountains_mono_640x480w.raw", XVID_DATA);  // pump binary file into DATA
 

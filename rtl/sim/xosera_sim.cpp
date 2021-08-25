@@ -83,16 +83,16 @@ class BusInterface
 
     enum
     {
-        AUX_DISPSTART   = 0x0000,        // display start address
-        AUX_DISPWIDTH   = 0x0001,        // display width in words
-        AUX_SCROLLXY    = 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
-        AUX_FONTCTRL    = 0x0003,        // [15:11] 1KW/2KW font bank,[8] bram/vram [3:0] font height
-        AUX_GFXCTRL     = 0x0004,        // [0] h pix double
-        AUX_UNUSED_5    = 0x0005,
-        AUX_UNUSED_6    = 0x0006,
-        AUX_UNUSED_7    = 0x0007,
-        AUX_R_WIDTH     = 0x0008,        // display resolution width
-        AUX_R_HEIGHT    = 0x0009,        // display resolution height
+        AUX_DISPSTART = 0x0000,        // display start address
+        AUX_DISPWIDTH = 0x0001,        // display width in words
+        AUX_SCROLLXY  = 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
+        AUX_FONTCTRL  = 0x0003,        // [15:11] 1KW/2KW font bank,[8] bram/vram [3:0] font height
+        AUX_GFXCTRL   = 0x0004,        // [15:8] colorbase [7] disable, [6] bitmap [5:4] bpp, [3:2] H rept, [1:0] V rept
+        AUX_UNUSED_5  = 0x0005,
+        AUX_UNUSED_6  = 0x0006,
+        AUX_UNUSED_7  = 0x0007,
+        AUX_R_WIDTH   = 0x0008,          // display resolution width
+        AUX_R_HEIGHT  = 0x0009,          // display resolution height
         AUX_R_FEATURES  = 0x000A,        // [15] = 1 (test)
         AUX_R_SCANLINE  = 0x000B,        // [15] V blank, [14] H blank, [13:11] zero [10:0] V line
         AUX_R_GITHASH_H = 0x000C,
@@ -334,13 +334,13 @@ uint16_t     BusInterface::test_data[1024] = {
     REG_WAITVSYNC(),                     // show boot screen
     REG_WAITVSYNC(),                     // show boot screen
     REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 1-BPP BMAP
-    REG_W(AUX_DATA, 0x00C0),
+    REG_W(AUX_DATA, 0x0040),
     REG_W(WR_INC, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
     REG_WAITVSYNC(),                     // show 1-BPP BMAP
     REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 4-BPP BMAP
-    REG_W(AUX_DATA, 0x00E5),
+    REG_W(AUX_DATA, 0x0065),
     REG_W(AUX_ADDR, AUX_DISPWIDTH),        // 320/2/2 wide
     REG_W(AUX_DATA, 80),
     REG_W(AUX_ADDR, AUX_COLORMEM),        // upload palette
@@ -350,7 +350,7 @@ uint16_t     BusInterface::test_data[1024] = {
     REG_UPLOAD(),
     REG_WAITVSYNC(),                     // show 4-BPP BMAP
     REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 8-BPP BMAP
-    REG_W(AUX_DATA, 0x00F5),
+    REG_W(AUX_DATA, 0x0075),
     REG_W(AUX_ADDR, AUX_DISPWIDTH),        // 320/2 wide
     REG_W(AUX_DATA, 160),
     REG_W(AUX_ADDR, AUX_COLORMEM),        // upload palette

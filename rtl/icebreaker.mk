@@ -95,7 +95,7 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
-NEXTPNR_ARGS := --placer heap --opt-timing --promote-logic
+NEXTPNR_ARGS := --randomize-seed --placer heap --opt-timing --promote-logic
 
 # defult target is make bitstream
 all: icebreaker/$(TOP)_$(VIDEO_MODE).bin icebreaker.mk

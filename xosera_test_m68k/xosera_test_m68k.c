@@ -31,6 +31,11 @@
 
 #include "xosera_api.h"
 
+extern void install_intr(void);
+extern void remove_intr(void);
+
+extern volatile uint32_t XFrameCount;
+
 // Define rosco_m68k Xosera board base address pointer (See
 // https://github.com/rosco-m68k/hardware-projects/blob/feature/xosera/xosera/code/pld/decoder/ic3_decoder.pld#L25)
 volatile xreg_t * const xosera_ptr = (volatile xreg_t * const)0xf80060;        // rosco_m68k Xosera base
@@ -110,6 +115,8 @@ bool delay_check(int ms)
             return true;
         }
 
+#if 1
+
         int d = ms;
         if (d > 100)
         {
@@ -117,6 +124,11 @@ bool delay_check(int ms)
         }
         delay(d);
         ms -= d;
+#else
+        uint32_t z = XFrameCount;
+        while (z == XFrameCount)
+            ;
+#endif
     }
 
     return false;
@@ -503,8 +515,6 @@ static void load_sd_palette(const char * filename)
     }
 }
 
-extern void install_intr(void);
-
 uint32_t test_count;
 void     xosera_test()
 {
@@ -527,9 +537,20 @@ void     xosera_test()
     }
 
     // Hmm, interrupts cause issues (and don't work right here)
-    // dprintf("Installing interrupt handler...");
-    // install_intr();
-    // dprintf("okay.\n");
+    dprintf("Installing interrupt handler...");
+    install_intr();
+    dprintf("okay.\n");
+
+    if (delay_check(2000))
+    {
+        return;
+    }
+
+    dprintf("Setting scanline interrupt line 399...");
+
+    xv_reg_setw(lineintr, 0x818F);        // line 399
+
+    dprintf("okay.\n");
 
     while (true)
     {
@@ -674,6 +695,8 @@ void     xosera_test()
         }
     }
     xv_reg_setw(gfxctrl, 0x0000);
+
+    remove_intr();
 
     while (checkchar())
     {

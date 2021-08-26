@@ -62,7 +62,6 @@ xosera_main xosera(
                 .red_o(red),                    // pixel clock
                 .green_o(green),                // pixel clock
                 .blue_o(blue),                  // pixel clock
-                .bus_intr_o(bus_intr),          // interrupt signal
                 .vsync_o(vsync),                // vertical sync
                 .hsync_o(hsync),                // horizontal sync
                 .dv_de_o(dv_de),                // dv display enable
@@ -72,6 +71,7 @@ xosera_main xosera(
                 .bus_bytesel_i(bus_bytesel),    // 0 = high-byte, 1 = low-byte
                 .bus_data_i(bus_data_in),       // 8-bit data bus input
                 .bus_data_o(bus_data_out),      // 8-bit data bus output
+                .bus_intr_o(bus_intr),          // interrupt signal
                 .audio_l_o(audio_l),            // left audio PWM channel
                 .audio_r_o(audio_r),            // right audio PWM channel
                 .reconfig_o(reconfig),          // reconfigure FPGA

@@ -65,9 +65,9 @@ The `BLIT_CTRL` also has bits that allow Xosera "re-configure" itself.  This wil
 | `AUX_W_COLORTBL` | 0x8000-0x80FF | W/O | 16-bit [15:0] | 256 word color lookup table (0xXRGB)                            |
 | `AUX_W_AUD_`*    | 0xC000-0xFFFF |  -  |       -       | TODO TBD (audio registers?)                                     |
 
-To access the AUX region, write the AUX address to `XVID_AUX_ADDR`, then write to `XVID_VID_DATA`.
+To access the AUX region, write the AUX address to `XVID_AUX_ADDR`, then write to `XVID_AUX_DATA`.
 
-Each word written to `XVID_VID_DATA` will also automatically increment `XVID_AUX_ADDR` (this allows faster consecutive writes, like for palette or font RAM update).  Note that this is not the case when reading `XVID_AUX_ADDR` (you _must_ write `XVID_AUX_ADDR` to trigger a read).
+Each word written to `XVID_AUX_DATA` will also automatically increment `XVID_AUX_ADDR` (this allows faster consecutive writes, like for palette or font RAM update).  Note that this is not the case when reading `XVID_AUX_ADDR` (you _must_ write `XVID_AUX_ADDR` to trigger a read).
 
 TODO Make font memory read/write (perhaps with restrictions/slow read while in use)
 
@@ -75,7 +75,7 @@ TODO Make font memory read/write (perhaps with restrictions/slow read while in u
 
 This AUX region has registers that deal with video generation configuration and video status.
 
-To access these registers, write the register address to `XVID_AUX_ADDR`, then read or write register data to `XVID_VID_DATA`.  Note that some read-only registers overlap some write-only registers.
+To access these registers, write the register address to `XVID_AUX_ADDR`, then read or write register data to `XVID_AUX_DATA`.  Note that some read-only registers overlap some write-only registers.
 
 ###### Read-Write AUX_VID Registers
 

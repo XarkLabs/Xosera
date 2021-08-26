@@ -473,6 +473,8 @@ static void load_sd_palette(const char * filename)
     }
 }
 
+extern void install_intr(void);
+
 uint32_t test_count;
 void     xosera_test()
 {
@@ -493,6 +495,11 @@ void     xosera_test()
     {
         return;
     }
+
+    // Hmm, interrupts cause issues (and don't work right here)
+    // dprintf("Installing interrupt handler...");
+    // install_intr();
+    // dprintf("okay.\n");
 
     while (true)
     {

@@ -35,7 +35,8 @@ module video_gen(
     input  wire logic [15:0]     vgen_reg_data_i,    // data for internal config register
     // video signal outputs
     output      logic  [7:0]     pal_index_o,        // palette index outputs
-    output      logic            bus_intr_o,         // bus interrupt output
+    output      logic            vsync_intr_o,       // vsync bus interrupt pulse
+    output      logic            vline_intr_o,       // scan-line interrupt pulse
     output      logic            vsync_o, hsync_o,   // VGA sync outputs
     output      logic            dv_de_o,            // VGA video active signal (needed for HDMI)
     // standard signals
@@ -49,7 +50,9 @@ localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-64;    // memory prefetch starts ea
 localparam H_MEM_END = xv::TOTAL_WIDTH-8;           // memory fetch can end a bit early
 localparam H_SCANOUT_BEGIN = xv::OFFSCREEN_WIDTH-2; // h count position to start line scanout
 
-logic vg_enable;                                    // video generation enabled (else black/blank)
+logic           vg_enable;                          // video generation enabled (else blanked)
+logic           v_line_intr_ena;                    // enable scan line interrupt generation
+logic [10:0]    v_line_intr;                        // line to generate scan line interrupt at start of
 
 // video generation signals
 logic           pa_disable;                         // disable plane A
@@ -122,6 +125,7 @@ logic  [2:0]    mem_fetch_cycle;    // current cycle state for display memory fe
 logic           hsync;
 logic           vsync;
 logic           dv_display_ena;
+logic           h_line_first_pixel;
 logic           h_line_last_pixel;
 logic           last_visible_pixel;
 logic           last_frame_pixel;
@@ -133,6 +137,7 @@ logic           h_start_line_fetch;
 // video config registers read/write
 always_ff @(posedge clk) begin
     if (reset_i) begin
+        v_line_intr         <= 11'b0;
         pa_disable          <= 1'b0;            // plane A starts enabled
         pa_start_addr       <= 16'h0000;
         pa_line_width       <= xv::TILES_WIDE[15:0];
@@ -180,7 +185,9 @@ always_ff @(posedge clk) begin
                     pa_line_start_set <= 1'b1;
                     pa_line_start   <= vgen_reg_data_i;
                 end
-                xv::AUX_UNUSED_6[3:0]: begin
+                xv::AUX_LINEINTR[3:0]: begin
+                    v_line_intr_ena <= vgen_reg_data_i[15];
+                    v_line_intr     <= vgen_reg_data_i[10:0];
                 end
                 xv::AUX_UNUSED_7[3:0]: begin
                 end
@@ -197,7 +204,7 @@ always_ff @(posedge clk) begin
             xv::AUX_FONTCTRL[3:0]:      vgen_reg_data_o <= { pa_font_bank, 2'b0, pa_font_in_vram, 3'b0, pa_font_height };
             xv::AUX_GFXCTRL[3:0]:       vgen_reg_data_o <= { pa_colorbase, pa_disable, pa_bitmap, pa_bpp, pa_v_repeat, pa_h_repeat };
             xv::AUX_LINESTART[3:0]:     vgen_reg_data_o <= 16'h0000;
-            xv::AUX_UNUSED_6[3:0]:      vgen_reg_data_o <= 16'h0000;
+            xv::AUX_LINEINTR[3:0]:      vgen_reg_data_o <= { 5'b0, v_line_intr };
             xv::AUX_UNUSED_7[3:0]:      vgen_reg_data_o <= 16'h0000;
             xv::AUX_R_WIDTH[3:0]:       vgen_reg_data_o <= {4'h0, xv::VISIBLE_WIDTH[11:0]};
             xv::AUX_R_HEIGHT[3:0]:      vgen_reg_data_o <= {4'h0, xv::VISIBLE_HEIGHT[11:0]};
@@ -311,7 +318,8 @@ always_ff @(posedge clk) begin
         vram_sel_o          <= 1'b0;
         vram_addr_o         <= 16'h0000;
         pal_index_o         <= 8'b0;
-        bus_intr_o          <= 1'b0;
+        vsync_intr_o        <= 1'b0;
+        vline_intr_o        <= 1'b0;
         hsync_o             <= 1'b0;
         vsync_o             <= 1'b0;
         dv_de_o             <= 1'b0;
@@ -337,11 +345,14 @@ always_ff @(posedge clk) begin
         pa_next_shiftout_hrev <= 1'b0;
         pa_pixel_shiftout   <= 64'h00000000;    // 8 4-bpp pixels to scan out
         pa_next_shiftout    <= 64'h00000000;    // 8 4-bpp pixels to scan out
+        h_line_first_pixel  <= 1'b0;
     end else begin
         // default outputs
         vram_sel_o          <= 1'b0;            // default to no VRAM access
         fontram_sel_o       <= 1'b0;            // default to no font access
-        bus_intr_o          <= 1'b0;            // vsync interrupt strobe
+        vsync_intr_o        <= 1'b0;            // vsync interrupt strobe
+        vline_intr_o        <= 1'b0;            // vsync interrupt strobe
+        h_line_first_pixel  <= 1'b0;
 
         // set output pixel index from pixel shift-out
         pal_index_o <= pa_pixel_shiftout[63:56];
@@ -592,6 +603,17 @@ always_ff @(posedge clk) begin
             pa_line_addr    <= pa_line_start;
         end
 
+        // scan line interrupt generation TODO temp until "copper"
+        if (h_line_first_pixel && (v_count == v_line_intr)) begin
+            vline_intr_o    <=  v_line_intr_ena;
+        end
+        h_line_first_pixel <= h_line_last_pixel;    // delay last pixel to get first pixel
+        
+        // vsync interrupt generation
+        if (last_visible_pixel) begin
+            vsync_intr_o    <= 1'b1;
+        end
+
         // update registered signals from combinatorial "next" versions
         h_state <= h_state_next;
         v_state <= v_state_next;
@@ -600,7 +622,6 @@ always_ff @(posedge clk) begin
         mem_fetch_active <= mem_fetch_next & ~pa_disable;
 
         // set other video output signals
-        bus_intr_o  <= last_visible_pixel;   // TODO general purpose interrupt
         hsync_o     <= hsync ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
         vsync_o     <= vsync ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
         dv_de_o     <= dv_display_ena;

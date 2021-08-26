@@ -88,8 +88,8 @@ class BusInterface
         AUX_SCROLLXY  = 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
         AUX_FONTCTRL  = 0x0003,        // [15:11] 1KW/2KW font bank,[8] bram/vram [3:0] font height
         AUX_GFXCTRL   = 0x0004,        // [15:8] colorbase [7] disable, [6] bitmap [5:4] bpp, [3:2] H rept, [1:0] V rept
-        AUX_UNUSED_5  = 0x0005,
-        AUX_UNUSED_6  = 0x0006,
+        AUX_LINESTART = 0x0005,
+        AUX_LINEINTR  = 0x0006,
         AUX_UNUSED_7  = 0x0007,
         AUX_R_WIDTH   = 0x0008,          // display resolution width
         AUX_R_HEIGHT  = 0x0009,          // display resolution height
@@ -330,7 +330,9 @@ BusInterface bus;
 int          BusInterface::test_data_len   = 999;
 uint16_t     BusInterface::test_data[1024] = {
     // test data
-    REG_WAITVSYNC(),                     // show boot screen
+    REG_WAITVSYNC(),        // show boot screen
+    REG_W(AUX_ADDR, AUX_LINEINTR),
+    REG_W(AUX_DATA, 0x80a0),
     REG_WAITVSYNC(),                     // show boot screen
     REG_WAITVSYNC(),                     // show boot screen
     REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 1-BPP BMAP
@@ -614,6 +616,11 @@ int main(int argc, char ** argv)
         {
             printf("FPGA RECONFIG: config #0x%x\n", top->boot_select_o);
             done = true;
+        }
+
+        if (top->bus_intr_o)
+        {
+            printf("[@t=%lu FPGA INTERRUPT]\n", main_time);
         }
 
         if (frame_num > 1)

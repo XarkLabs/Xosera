@@ -18,10 +18,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#if defined(delay)        // clear out mcBusyWait
+#if defined(delay)        // clear out mcBusywait
 #undef delay
 #endif
-#define delay(x) mcDelaymsec10(x / 10);
+#define delay(x)      mcDelaymsec10(x / 10);
+#define cpu_delay(ms) mcBusywait(ms << 4);
 
 bool xosera_init(int reconfig_num);        // true if Xosera present with optional reconfig (if 0 to 3)
 bool xosera_sync();                        // true if Xosera present

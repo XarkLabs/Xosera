@@ -115,20 +115,10 @@ bool delay_check(int ms)
             return true;
         }
 
-#if 1
-
-        int d = ms;
-        if (d > 100)
-        {
-            d = 100;
-        }
-        delay(d);
-        ms -= d;
-#else
-        uint32_t z = XFrameCount;
-        while (z == XFrameCount)
+        uint32_t old_framecount = XFrameCount;
+        while (XFrameCount == old_framecount)
             ;
-#endif
+        ms -= 16;
     }
 
     return false;
@@ -531,17 +521,11 @@ void     xosera_test()
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xv_reg_getw(vidwidth), xv_reg_getw(vidheight));
 
-    if (delay_check(4000))
-    {
-        return;
-    }
-
-    // Hmm, interrupts cause issues (and don't work right here)
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");
 
-    if (delay_check(2000))
+    if (delay_check(4000))
     {
         return;
     }
@@ -551,6 +535,11 @@ void     xosera_test()
     xv_reg_setw(lineintr, 0x818F);        // line 399
 
     dprintf("okay.\n");
+
+    if (delay_check(2000))
+    {
+        return;
+    }
 
     while (true)
     {
@@ -567,20 +556,25 @@ void     xosera_test()
         uint16_t scrollxy  = xv_reg_getw(scrollxy);
         uint16_t gfxctrl   = xv_reg_getw(gfxctrl);
 
+        dprintf("XFrameCount #%08x\n", XFrameCount);
+
         dprintf("Xosera #%08x\n", githash);
         dprintf("Mode: %dx%d  Features:0x%04x\n", width, height, features);
         dprintf("dispstart:0x%04x dispwidth:0x%04x\n", dispstart, dispwidth);
         dprintf(" scrollxy:0x%04x   gfxctrl:0x%04x\n", scrollxy, gfxctrl);
 
+        dprintf("XFrameCount #%08x\n", XFrameCount);
         for (int y = 0; y < 30; y += 3)
         {
             xmsg(20, y, (y & 0xf) ? (y & 0xf) : 0xf0, ">>> Xosera rosco_m68k test utility <<<<");
         }
+        dprintf("XFrameCount #%08x\n", XFrameCount);
 
         if (delay_check(DELAY_TIME))
         {
             break;
         }
+        dprintf("XFrameCount #%08x\n", XFrameCount);
 
         if (SD_check_support())
         {

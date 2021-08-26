@@ -593,6 +593,12 @@ always_ff @(posedge clk) begin
             end
         end
 
+        // use new line start if it has been set
+        if (pa_line_start_set) begin
+            pa_line_addr    <= pa_line_start;
+            pa_tile_y       <= 4'b0;                    // reset tile_y to restart new text line
+        end
+
         // end of frame / before next frame
         if (last_frame_pixel) begin                   // if last pixel of frame
             vg_enable       <= enable_i;                // enable/disable video generation
@@ -601,11 +607,6 @@ always_ff @(posedge clk) begin
 
             pa_v_count      <= pa_v_repeat - pa_fine_scrolly[1:0];    // fine scroll within scaled line (v repeat)
             pa_tile_y       <= pa_fine_scrolly[5:2];    // fine scroll tile line
-        end
-
-        // use new line start if set
-        if (pa_line_start_set) begin
-            pa_line_addr    <= pa_line_start;
         end
 
         // scan line interrupt generation TODO temp until "copper"

@@ -143,6 +143,8 @@ always_ff @(posedge clk) begin
         pa_line_width       <= xv::TILES_WIDE[15:0];
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_line_start       <= 16'h0000;        // user start of next display line
+        v_line_intr_ena     <= 1'b0;
+        v_line_intr         <= 11'b0;
         pa_fine_scrollx     <= 5'b0000;
         pa_fine_scrolly     <= 6'b000000;
         pa_font_height      <= 4'b1111;
@@ -330,7 +332,10 @@ always_ff @(posedge clk) begin
         v_count             <= 11'h000;         // vertical counter
         mem_fetch_active    <= 1'b0;            // true enables display memory fetch
         mem_fetch_cycle     <= 3'b0;            // memory fetch state
+        h_scanout           <= 1'b0;
+        h_scanout_hcount    <= 11'b0;
         pa_addr             <= 16'h0000;        // current display address during scan
+        pa_line_addr        <= 16'h0000;
         pa_tile_x           <= 3'b0;            // tile column
         pa_tile_y           <= 4'b0;            // tile line
         pa_h_count          <= 2'b00;           // horizontal pixel repeat counter

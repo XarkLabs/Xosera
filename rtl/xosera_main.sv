@@ -137,8 +137,8 @@ assign vgen_data_in = vgen_vram_load ? vram_data_out    : vgen_vram_read;
 always_ff @(posedge clk) begin
     if (vgen_vram_load) begin
         vgen_vram_read <= vram_data_out;
-        vgen_vram_load <= 1'b0; 
     end
+    vgen_vram_load <= 1'b0; 
     if (vgen_vram_sel) begin
         vgen_vram_load <= 1'b1;
     end
@@ -148,8 +148,8 @@ end
 always_ff @(posedge clk) begin
     if (blit_vram_load) begin
         blit_vram_read <= vram_data_out;
-        blit_vram_load <= 1'b0; 
     end
+    blit_vram_load <= 1'b0; 
     if (blit_vram_sel) begin
         blit_vram_load <= ~blit_wr;
     end

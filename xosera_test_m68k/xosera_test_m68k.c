@@ -74,19 +74,19 @@ static uint32_t start_tick;
 
 void timer_start()
 {
-    uint32_t ts = _TIMER_100HZ;
+    uint32_t ts = XFrameCount;
     uint32_t t;
     // this waits for a "fresh tick" to reduce timing jitter
-    while ((t = _TIMER_100HZ) == ts)
+    while ((t = XFrameCount) == ts)
         ;
     start_tick = t;
 }
 
 uint32_t timer_stop()
 {
-    uint32_t stop_tick = _TIMER_100HZ;
+    uint32_t stop_tick = XFrameCount;
 
-    return (stop_tick - start_tick) * 10;
+    return ((stop_tick - start_tick) * 1667) / 100;
 }
 
 #if !defined(checkchar)        // newer rosco_m68k library addition, this is in case not present
@@ -521,6 +521,8 @@ void     xosera_test()
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xv_reg_getw(vidwidth), xv_reg_getw(vidheight));
 
+    rosco_m68k_CPUMHz();
+
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");
@@ -545,7 +547,6 @@ void     xosera_test()
     {
         xcls();
         dprintf("*** xosera_test_m68k iteration: %d\n", test_count++);
-        rosco_m68k_CPUMHz();
 
         uint32_t githash   = (xv_reg_getw(githash_h) << 16) | xv_reg_getw(githash_l);
         uint16_t width     = xv_reg_getw(vidwidth);

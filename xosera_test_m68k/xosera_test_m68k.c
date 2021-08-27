@@ -521,7 +521,7 @@ void     xosera_test()
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xv_reg_getw(vidwidth), xv_reg_getw(vidheight));
 
-    rosco_m68k_CPUMHz();
+    // D'oh! Uses timer    rosco_m68k_CPUMHz();
 
     dprintf("Installing interrupt handler...");
     install_intr();
@@ -547,8 +547,8 @@ void     xosera_test()
     {
         uint32_t t = XFrameCount;
         int      h = t / (60 * 60 * 60);
-        int      m = t / (60 * 60);
-        int      s = t / 60;
+        int      m = t / (60 * 60) % 60;
+        int      s = (t / 60) % 60;
         dprintf("*** xosera_test_m68k iteration: %d, running %d:%02d:%02d\n", test_count++, h, m, s);
 
         xcls();

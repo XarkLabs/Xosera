@@ -139,7 +139,10 @@ icebreaker/%_$(VIDEO_MODE).asc: icebreaker/%_$(VIDEO_MODE).json $(PIN_DEF) icebr
 	@rm -f $@
 	@mkdir -p $(LOGS)
 	@-cp $(TOP)_stats.txt $(LOGS)/$(TOP)_stats_last.txt
-	$(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
+	@echo $(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
+	@until $$($(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@) ; do \
+        	echo 'Retrying nextpnr-ice40 with new seed...' ; \
+    	done
 	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) $(SPI_INTERFACE) | tee $(TOP)_stats.txt
 	@-tabbyadm version | grep "Package" | tee -a $(TOP)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt

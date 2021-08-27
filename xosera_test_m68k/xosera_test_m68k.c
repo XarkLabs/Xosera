@@ -545,9 +545,13 @@ void     xosera_test()
 
     while (true)
     {
-        xcls();
-        dprintf("*** xosera_test_m68k iteration: %d\n", test_count++);
+        uint32_t t = XFrameCount;
+        int      h = t / (60 * 60 * 60);
+        int      m = t / (60 * 60);
+        int      s = t / 60;
+        dprintf("*** xosera_test_m68k iteration: %d, running %d:%02d:%02d\n", test_count++, h, m, s);
 
+        xcls();
         uint32_t githash   = (xv_reg_getw(githash_h) << 16) | xv_reg_getw(githash_l);
         uint16_t width     = xv_reg_getw(vidwidth);
         uint16_t height    = xv_reg_getw(vidheight);
@@ -557,25 +561,20 @@ void     xosera_test()
         uint16_t scrollxy  = xv_reg_getw(scrollxy);
         uint16_t gfxctrl   = xv_reg_getw(gfxctrl);
 
-        dprintf("XFrameCount #%08x\n", XFrameCount);
-
         dprintf("Xosera #%08x\n", githash);
         dprintf("Mode: %dx%d  Features:0x%04x\n", width, height, features);
         dprintf("dispstart:0x%04x dispwidth:0x%04x\n", dispstart, dispwidth);
         dprintf(" scrollxy:0x%04x   gfxctrl:0x%04x\n", scrollxy, gfxctrl);
 
-        dprintf("XFrameCount #%08x\n", XFrameCount);
         for (int y = 0; y < 30; y += 3)
         {
             xmsg(20, y, (y & 0xf) ? (y & 0xf) : 0xf0, ">>> Xosera rosco_m68k test utility <<<<");
         }
-        dprintf("XFrameCount #%08x\n", XFrameCount);
 
         if (delay_check(DELAY_TIME))
         {
             break;
         }
-        dprintf("XFrameCount #%08x\n", XFrameCount);
 
         if (SD_check_support())
         {

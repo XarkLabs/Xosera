@@ -83,12 +83,12 @@ To access these registers, write the register address to `XVID_AUX_ADDR`, then r
 --------| ----------------------|---| ------------------------------------------------------------------------------------|
 | 0x0   | `AUX_DISPSTART`       |R/W| [15:0] starting VRAM address for display (wraps at 0xffff)                          |
 | 0x1   | `AUX_DISPWIDTH`       |R/W| [15:0] words per display line                                                       |
-| 0x2   | `AUX_SCROLLXY`        |R/W| [11:8] H pixel scroll, [4:0] V pixel scroll                                         |
+| 0x2   | `AUX_SCROLLXY`        |R/W| [15:8] H pixel scroll, [4:0] V pixel scroll                                         |
 | 0x3   | `AUX_FONTCTRL`        |R/W| [15:10] font addr bank,[7] 0=fontRAM/1=VRAM, [3:0] font height-1 (stored x8 or x16) |
 | 0x4   | `AUX_GFXCTRL`         |R/W| [15:8] colorbase [7] disable video, [6] bitmap mode [5:4] bpp, [3:2] H repeat, [1:0] V repeat |
 | 0x5   | `AUX_LINESTART`       |R/W| [15:0] VRAM address for next display line (reset to `DISPSTART` at start of frame)  |
-| 0x6   | `AUX_UNUSED6`         |R/W|                                                                                     |
-| 0x7   | `AUX_UNUSED7`         |R/W|                                                                                     |
+| 0x6   | `AUX_LINEINTR`        |R/W| [15] scanline interrupt enable [10:0] interrupt scanline (e.g., 0-479)              |
+| 0x7   | `AUX_SCREEN_WIDTH`    |R/W| [9:0] number of physical pixels of window width (e.g. 640)                          |
 
 (This is a test of improved register diagrams, but not ideal on GitHub dark)
 <img src="./pics/wd_AUX_FONTCTRL.svg">

@@ -69,7 +69,8 @@ logic  [1:0]    pa_h_repeat;                        // horizontal pixel repeat
 logic  [1:0]    pa_h_count;                         // current horizontal repeat countdown
 logic  [1:0]    pa_v_repeat;                        // vertical pixel repeat
 logic  [1:0]    pa_v_count;                         // current vertical repeat countdown
-logic  [4:0]    pa_fine_scrollx;                    // X fine scroll (8 pixel * 4 for repeat)
+logic  [9:0]    pa_screen_width;                    // width of screen window in pixels
+logic  [7:0]    pa_fine_scrollx;                    // X fine scroll (8 pixel * 4 for repeat)
 logic  [5:0]    pa_fine_scrolly;                    // Y fine scroll (16 lines * 4 for repeat)
 logic  [2:0]    pa_tile_x;                          // current column of font cell
 logic  [3:0]    pa_tile_y;                          // current line of font cell
@@ -115,8 +116,10 @@ logic [10:0]    v_count_next_state;
 
 logic           mem_fetch_active;                     // true when fetching display data
 logic           h_start_scanout;                      // true for on pixel when "scrolled" scanline starts outputting (can be early)
+logic           h_end_scanout;
+logic           h_scanout;
 logic [10:0]    h_scanout_hcount;
-logic           h_scanout;                            // true when 
+logic [10:0]    h_scanout_end_hcount;
 
 logic [10:0]    mem_fetch_hcount;   // horizontal count when mem_fetch_active toggles
 logic  [2:0]    mem_fetch_cycle;    // current cycle state for display memory fetch
@@ -145,16 +148,17 @@ always_ff @(posedge clk) begin
         pa_line_start       <= 16'h0000;        // user start of next display line
         v_line_intr_ena     <= 1'b0;
         v_line_intr         <= 11'b0;
-        pa_fine_scrollx     <= 5'b0000;
-        pa_fine_scrolly     <= 6'b000000;
+        pa_fine_scrollx     <= 8'b0;
+        pa_fine_scrolly     <= 6'b0;
         pa_font_height      <= 4'b1111;
-        pa_font_bank        <= 6'b000000;
+        pa_font_bank        <= 6'b0;
         pa_font_in_vram     <= 1'b0;
         pa_bitmap           <= 1'b0;            // bitmap mode
         pa_bpp              <= xv::BPP_1_ATTR;
         pa_colorbase        <= 8'h00;
-        pa_h_repeat         <= 2'b00;
-        pa_v_repeat         <= 2'b00;
+        pa_screen_width     <= xv::VISIBLE_WIDTH[9:0];
+        pa_h_repeat         <= 2'b0;
+        pa_v_repeat         <= 2'b0;
     end else begin
         pa_line_start_set <= 1'b0;
         // video register write
@@ -167,7 +171,7 @@ always_ff @(posedge clk) begin
                     pa_line_width   <= vgen_reg_data_i;
                 end
                 xv::AUX_SCROLLXY[3:0]: begin
-                    pa_fine_scrollx <= vgen_reg_data_i[12:8];
+                    pa_fine_scrollx <= vgen_reg_data_i[15:8];
                     pa_fine_scrolly <= vgen_reg_data_i[5:0];
                 end
                 xv::AUX_FONTCTRL[3:0]: begin
@@ -191,7 +195,8 @@ always_ff @(posedge clk) begin
                     v_line_intr_ena <= vgen_reg_data_i[15];
                     v_line_intr     <= vgen_reg_data_i[10:0];
                 end
-                xv::AUX_UNUSED_7[3:0]: begin
+                xv::AUX_SCRN_WIDTH[3:0]: begin
+                    pa_screen_width <= vgen_reg_data_i[9:0];
                 end
                 default: begin
                 end
@@ -202,12 +207,12 @@ always_ff @(posedge clk) begin
         case (vgen_reg_num_i[3:0])
             xv::AUX_DISPSTART[3:0]:     vgen_reg_data_o <= pa_start_addr;
             xv::AUX_DISPWIDTH[3:0]:     vgen_reg_data_o <= pa_line_width;
-            xv::AUX_SCROLLXY[3:0]:      vgen_reg_data_o <= { 3'b000, pa_fine_scrollx, 2'b00, pa_fine_scrolly };
+            xv::AUX_SCROLLXY[3:0]:      vgen_reg_data_o <= { pa_fine_scrollx, 2'b00, pa_fine_scrolly };
             xv::AUX_FONTCTRL[3:0]:      vgen_reg_data_o <= { pa_font_bank, 2'b0, pa_font_in_vram, 3'b0, pa_font_height };
             xv::AUX_GFXCTRL[3:0]:       vgen_reg_data_o <= { pa_colorbase, pa_disable, pa_bitmap, pa_bpp, pa_v_repeat, pa_h_repeat };
             xv::AUX_LINESTART[3:0]:     vgen_reg_data_o <= 16'h0000;
             xv::AUX_LINEINTR[3:0]:      vgen_reg_data_o <= { 5'b0, v_line_intr };
-            xv::AUX_UNUSED_7[3:0]:      vgen_reg_data_o <= 16'h0000;
+            xv::AUX_SCRN_WIDTH[3:0]:    vgen_reg_data_o <= { 6'b0, pa_screen_width };
             xv::AUX_R_WIDTH[3:0]:       vgen_reg_data_o <= {4'h0, xv::VISIBLE_WIDTH[11:0]};
             xv::AUX_R_HEIGHT[3:0]:      vgen_reg_data_o <= {4'h0, xv::VISIBLE_HEIGHT[11:0]};
             xv::AUX_R_FEATURES[3:0]:    vgen_reg_data_o <= 16'b1000000000000001;  // TODO define feature bits
@@ -224,6 +229,7 @@ always_comb     hsync = (h_state == STATE_SYNC);
 always_comb     vsync = (v_state == STATE_SYNC);
 always_comb     dv_display_ena = vg_enable && (h_state == STATE_VISIBLE) && (v_state == STATE_VISIBLE);
 always_comb     h_start_scanout = (h_count == h_scanout_hcount) ? mem_fetch_active : 1'b0; 
+always_comb     h_end_scanout = (h_count == h_scanout_end_hcount) ? 1'b1 : 1'b0; 
 always_comb     h_start_line_fetch = (~mem_fetch_active && mem_fetch_next);
 always_comb     h_line_last_pixel = (h_state_next == STATE_PRE_SYNC) && (h_state == STATE_VISIBLE);
 always_comb     last_visible_pixel = (v_state_next == STATE_PRE_SYNC) && (v_state == STATE_VISIBLE) && h_line_last_pixel;
@@ -334,6 +340,7 @@ always_ff @(posedge clk) begin
         mem_fetch_cycle     <= 3'b0;            // memory fetch state
         h_scanout           <= 1'b0;
         h_scanout_hcount    <= 11'b0;
+        h_scanout_end_hcount<= 11'b0;
         pa_addr             <= 16'h0000;        // current display address during scan
         pa_line_addr        <= 16'h0000;
         pa_tile_x           <= 3'b0;            // tile column
@@ -548,10 +555,11 @@ always_ff @(posedge clk) begin
 
         // start of line display fetch
         if (h_start_line_fetch) begin       // on line fetch start signal
-            mem_fetch_cycle     <= 3'h0;    // reset fetch cycle state
-            pa_first_buffer     <= 1'b1;    // set first buffer flag (used to fill prefetch)
-            pa_next_shiftout_ready <= 1'b0;
-            h_scanout_hcount    <= H_SCANOUT_BEGIN[10:0] - { 5'b00000, pa_fine_scrollx };
+            mem_fetch_cycle         <= 3'h0;    // reset fetch cycle state
+            pa_first_buffer         <= 1'b1;    // set first buffer flag (used to fill prefetch)
+            pa_next_shiftout_ready  <= 1'b0;
+            h_scanout_hcount        <= H_SCANOUT_BEGIN[10:0] + { { 2{pa_fine_scrollx[7]} }, pa_fine_scrollx };
+            h_scanout_end_hcount    <= H_SCANOUT_BEGIN[10:0] + { pa_screen_width[9], pa_screen_width };
 
 `ifndef SYNTHESIS
             // trash buffers to help spot stale data
@@ -563,6 +571,7 @@ always_ff @(posedge clk) begin
             pa_pixel_shiftout   <= 64'he3e3e3e3e3e3e3e3;
             pa_next_shiftout    <= 64'he3e3e3e3e3e3e3e3;
 `endif
+            pa_pixel_shiftout[63:56]    <= pa_colorbase;
         end
 
         // when "scrolled" scanline starts outputting (before display if scrolled)
@@ -572,6 +581,11 @@ always_ff @(posedge clk) begin
             pa_h_count          <= pa_h_repeat;
             pa_pixel_shiftout   <= pa_next_shiftout; // next 8 pixels from buffer
             pa_next_shiftout_ready <= 1'b0;
+        end
+
+        if (h_end_scanout) begin
+            h_scanout                   <= 1'b0;
+            pa_pixel_shiftout[63:56]    <= pa_colorbase;
         end
 
         // end of line

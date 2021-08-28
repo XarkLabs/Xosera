@@ -28,6 +28,8 @@ logic [15: 0] bram[0 : 255];
 
 initial begin
 
+`ifdef  OLDPALETTE
+
         bram[0]    = 16'h0000;                      // black
         bram[1]    = 16'h000A;                      // blue
         bram[2]    = 16'h00A0;                      // green
@@ -48,6 +50,9 @@ initial begin
         for (i = 16; i < 256; i = i + 1) begin      // TODO full default palette
             bram[i] = 16'h0555;
         end
+`else
+        $readmemh("def_palette.mem", bram, 0);
+`endif
 end
 
 // infer BRAM block

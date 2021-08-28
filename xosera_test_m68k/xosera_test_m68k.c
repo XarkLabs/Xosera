@@ -25,19 +25,44 @@
 #include <machine.h>
 #include <sdfat.h>
 
-//#define USE_BPPTEST        // for bpp test gateware
-
 #define DELAY_TIME 5000        // human speed
 //#define DELAY_TIME 1000        // impatient human speed
 //#define DELAY_TIME 100        // machine speed
 
 #include "xosera_api.h"
 
+extern void install_intr(void);
+extern void remove_intr(void);
+
+extern volatile uint32_t XFrameCount;
+
 // Define rosco_m68k Xosera board base address pointer (See
 // https://github.com/rosco-m68k/hardware-projects/blob/feature/xosera/xosera/code/pld/decoder/ic3_decoder.pld#L25)
 volatile xreg_t * const xosera_ptr = (volatile xreg_t * const)0xf80060;        // rosco_m68k Xosera base
 
 bool use_sd;
+
+// Xosera default palette
+uint16_t def_palette[256] = {
+    0x0000, 0x000a, 0x00a0, 0x00aa, 0x0a00, 0x0a0a, 0x0aa0, 0x0aaa, 0x0555, 0x055f, 0x05f5, 0x05ff, 0x0f55, 0x0f5f,
+    0x0ff5, 0x0fff, 0x0213, 0x0435, 0x0546, 0x0768, 0x098a, 0x0bac, 0x0dce, 0x0313, 0x0425, 0x0636, 0x0858, 0x0a7a,
+    0x0c8c, 0x0eae, 0x0413, 0x0524, 0x0635, 0x0746, 0x0857, 0x0a68, 0x0b79, 0x0500, 0x0801, 0x0a33, 0x0d55, 0x0f78,
+    0x0fab, 0x0fde, 0x0534, 0x0756, 0x0867, 0x0a89, 0x0b9a, 0x0dbc, 0x0ecd, 0x0200, 0x0311, 0x0533, 0x0744, 0x0966,
+    0x0b88, 0x0daa, 0x0421, 0x0532, 0x0643, 0x0754, 0x0864, 0x0a75, 0x0b86, 0x0310, 0x0630, 0x0850, 0x0a70, 0x0da3,
+    0x0fd5, 0x0ff7, 0x0210, 0x0432, 0x0654, 0x0876, 0x0a98, 0x0cba, 0x0edc, 0x0321, 0x0431, 0x0541, 0x0763, 0x0985,
+    0x0ba7, 0x0dc9, 0x0331, 0x0441, 0x0551, 0x0662, 0x0773, 0x0884, 0x0995, 0x0030, 0x0250, 0x0470, 0x06a0, 0x08c0,
+    0x0bf3, 0x0ef5, 0x0442, 0x0664, 0x0775, 0x0997, 0x0aa8, 0x0cca, 0x0ddb, 0x0010, 0x0231, 0x0341, 0x0562, 0x0673,
+    0x0895, 0x0ab7, 0x0130, 0x0241, 0x0351, 0x0462, 0x0573, 0x0694, 0x07a5, 0x0040, 0x0060, 0x0180, 0x03b2, 0x05e5,
+    0x08f7, 0x0af9, 0x0120, 0x0342, 0x0453, 0x0675, 0x0897, 0x0ab9, 0x0dec, 0x0020, 0x0141, 0x0363, 0x0474, 0x0696,
+    0x08b8, 0x0ad9, 0x0031, 0x0142, 0x0253, 0x0364, 0x0486, 0x0597, 0x06a8, 0x0033, 0x0054, 0x0077, 0x02a9, 0x04cc,
+    0x07ff, 0x09ff, 0x0354, 0x0465, 0x0576, 0x0798, 0x08a9, 0x0acb, 0x0ced, 0x0011, 0x0022, 0x0244, 0x0366, 0x0588,
+    0x0699, 0x08bb, 0x0035, 0x0146, 0x0257, 0x0368, 0x0479, 0x058a, 0x069b, 0x0018, 0x003b, 0x035d, 0x047f, 0x07af,
+    0x09ce, 0x0cff, 0x0123, 0x0234, 0x0456, 0x0678, 0x089a, 0x0abc, 0x0cde, 0x0013, 0x0236, 0x0347, 0x0569, 0x078b,
+    0x09ad, 0x0bcf, 0x0226, 0x0337, 0x0448, 0x0559, 0x066a, 0x077c, 0x088d, 0x0209, 0x041c, 0x063f, 0x085f, 0x0b7f,
+    0x0eaf, 0x0fdf, 0x0446, 0x0557, 0x0779, 0x088a, 0x0aac, 0x0bbd, 0x0ddf, 0x0103, 0x0215, 0x0437, 0x0548, 0x076a,
+    0x098d, 0x0baf, 0x0315, 0x0426, 0x0537, 0x0648, 0x085a, 0x096b, 0x0a7c, 0x0405, 0x0708, 0x092a, 0x0c4d, 0x0f6f,
+    0x0f9f, 0x0fbf, 0x0000, 0x0111, 0x0222, 0x0333, 0x0444, 0x0555, 0x0666, 0x0777, 0x0888, 0x0999, 0x0aaa, 0x0bbb,
+    0x0ccc, 0x0ddd, 0x0eee, 0x0fff};
 
 // dummy global variable
 uint32_t global;        // this is used to prevent the compiler from optimizing out tests
@@ -49,19 +74,19 @@ static uint32_t start_tick;
 
 void timer_start()
 {
-    uint32_t ts = _TIMER_100HZ;
+    uint32_t ts = XFrameCount;
     uint32_t t;
     // this waits for a "fresh tick" to reduce timing jitter
-    while ((t = _TIMER_100HZ) == ts)
+    while ((t = XFrameCount) == ts)
         ;
     start_tick = t;
 }
 
 uint32_t timer_stop()
 {
-    uint32_t stop_tick = _TIMER_100HZ;
+    uint32_t stop_tick = XFrameCount;
 
-    return (stop_tick - start_tick) * 10;
+    return ((stop_tick - start_tick) * 1667) / 100;
 }
 
 #if !defined(checkchar)        // newer rosco_m68k library addition, this is in case not present
@@ -90,13 +115,10 @@ bool delay_check(int ms)
             return true;
         }
 
-        int d = ms;
-        if (d > 100)
-        {
-            d = 100;
-        }
-        delay(d);
-        ms -= d;
+        uint32_t old_framecount = XFrameCount;
+        while (XFrameCount == old_framecount)
+            ;
+        ms -= 16;
     }
 
     return false;
@@ -149,11 +171,10 @@ static void get_textmode_settings()
 {
     //    int mode = 0;               // xv_reg_getw(gfxctrl);
     //    bool v_dbl     = mode & 2;
-    int tile_size = 16;         //((xv_reg_getw(fontctrl) & 0xf) + 1) << (v_dbl ? 1 : 0);
-    screen_addr   = 0;          // xv_reg_getw(dispstart);
-    text_columns  = 106;        // xv_reg_getw(dispwidth);
-    //    text_rows      = (xv_reg_getw(vidheight) + (tile_size - 1)) / tile_size;
-    text_rows = 480 / tile_size;
+    int tile_size = 16;        //((xv_reg_getw(fontctrl) & 0xf) + 1) << (v_dbl ? 1 : 0);
+    screen_addr   = 0;         // xv_reg_getw(dispstart);
+    text_columns  = xv_reg_getw(dispwidth);
+    text_rows     = (xv_reg_getw(vidheight) + (tile_size - 1)) / tile_size;
 }
 
 static void xcls()
@@ -177,6 +198,15 @@ static void xmsg(int x, int y, int color, const char * msg)
     while ((c = *msg++) != '\0')
     {
         xv_setbl(data, c);
+    }
+}
+
+void restore_palette()
+{
+    xv_setw(aux_addr, XV_AUX_COLORMEM);
+    for (int i = 0; i < 256; i++)
+    {
+        xv_setw(aux_data, def_palette[i]);
     }
 }
 
@@ -488,20 +518,40 @@ void     xosera_test()
 
     dprintf("\nxosera_init(1)...");
     // wait for monitor to unblank
-    bool success = xosera_init(1);
+    bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xv_reg_getw(vidwidth), xv_reg_getw(vidheight));
+
+    // D'oh! Uses timer    rosco_m68k_CPUMHz();
+
+    dprintf("Installing interrupt handler...");
+    install_intr();
+    dprintf("okay.\n");
 
     if (delay_check(4000))
     {
         return;
     }
 
+    dprintf("Setting scanline interrupt line 399...");
+
+    xv_reg_setw(lineintr, 0x818F);        // line 399
+
+    dprintf("okay.\n");
+
+    if (delay_check(2000))
+    {
+        return;
+    }
+
     while (true)
     {
-        xcls();
-        dprintf("*** xosera_test_m68k iteration: %d\n", test_count++);
-        rosco_m68k_CPUMHz();
+        uint32_t t = XFrameCount;
+        int      h = t / (60 * 60 * 60);
+        int      m = t / (60 * 60) % 60;
+        int      s = (t / 60) % 60;
+        dprintf("*** xosera_test_m68k iteration: %d, running %d:%02d:%02d\n", test_count++, h, m, s);
 
+        xcls();
         uint32_t githash   = (xv_reg_getw(githash_h) << 16) | xv_reg_getw(githash_l);
         uint16_t width     = xv_reg_getw(vidwidth);
         uint16_t height    = xv_reg_getw(vidheight);
@@ -545,10 +595,12 @@ void     xosera_test()
         {
             dprintf("No SD card support.\n");
         }
-#if defined(USE_BPPTEST)        // 4/8 bpp test
+        // 4/8 bpp test
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0000);
+            xv_reg_setw(gfxctrl, 0x0075);        // bitmap + 8-bpp + Hx2 + Vx2
+            xv_reg_setw(dispwidth, 160);
+
             load_sd_palette("/xosera_r1_pal.raw");
             load_sd_bitmap("/xosera_r1.raw");
             if (delay_check(DELAY_TIME))
@@ -560,7 +612,9 @@ void     xosera_test()
 
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0000);
+            xv_reg_setw(gfxctrl, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
+            xv_reg_setw(dispwidth, 80);
+
             load_sd_palette("/ST_KingTut_Dpaint_16_pal.raw");
             load_sd_bitmap("/ST_KingTut_Dpaint_16.raw");
             if (delay_check(DELAY_TIME))
@@ -571,7 +625,9 @@ void     xosera_test()
         }
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0000);
+            xv_reg_setw(gfxctrl, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
+            xv_reg_setw(dispwidth, 80);
+
             load_sd_palette("/escher-relativity_320x240_16_pal.raw");
             load_sd_bitmap("/escher-relativity_320x240_16.raw");
             if (delay_check(DELAY_TIME))
@@ -580,21 +636,12 @@ void     xosera_test()
             }
             xv_reg_setw(gfxctrl, 0x0000);
         }
+        restore_palette();
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0000);
-            load_sd_palette("/color_bars_test_pal.raw");
-            load_sd_bitmap("/color_bars_test.raw");
-            if (delay_check(DELAY_TIME))
-            {
-                break;
-            }
-            xv_reg_setw(gfxctrl, 0x0000);
-        }
-#else
-        if (use_sd)
-        {
-            xv_reg_setw(gfxctrl, 0x8000);
+            xv_reg_setw(gfxctrl, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
+            xv_reg_setw(dispwidth, 80);
+
             load_sd_bitmap("/space_shuttle_color_small.raw");
             if (delay_check(DELAY_TIME))
             {
@@ -605,7 +652,9 @@ void     xosera_test()
 
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x8000);
+            xv_reg_setw(gfxctrl, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
+            xv_reg_setw(dispwidth, 80);
+
             load_sd_bitmap("/mountains_mono_640x480w.raw");
             if (delay_check(DELAY_TIME))
             {
@@ -616,7 +665,9 @@ void     xosera_test()
 
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x8000);
+            xv_reg_setw(gfxctrl, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
+            xv_reg_setw(dispwidth, 80);
+
             load_sd_bitmap("/escher-relativity_640x480w.raw");
             if (delay_check(DELAY_TIME))
             {
@@ -636,9 +687,10 @@ void     xosera_test()
         {
             break;
         }
-#endif
     }
     xv_reg_setw(gfxctrl, 0x0000);
+
+    remove_intr();
 
     while (checkchar())
     {

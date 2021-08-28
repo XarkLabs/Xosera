@@ -113,7 +113,8 @@ logic [15:0]    fontram_data_out    /* verilator public */;
 logic  [7:0]    pal_index       /* verilator public */;
 logic [15:0]    pal_lookup      /* verilator public */;
 
-logic           bus_intr_1;
+logic           vgen_vsync_intr_1;
+logic           vgen_vline_intr_1;
 logic           vsync_1;
 logic           hsync_1;
 logic           dv_de_1;
@@ -136,8 +137,8 @@ assign vgen_data_in = vgen_vram_load ? vram_data_out    : vgen_vram_read;
 always_ff @(posedge clk) begin
     if (vgen_vram_load) begin
         vgen_vram_read <= vram_data_out;
-        vgen_vram_load <= 1'b0; 
     end
+    vgen_vram_load <= 1'b0; 
     if (vgen_vram_sel) begin
         vgen_vram_load <= 1'b1;
     end
@@ -147,8 +148,8 @@ end
 always_ff @(posedge clk) begin
     if (blit_vram_load) begin
         blit_vram_read <= vram_data_out;
-        blit_vram_load <= 1'b0; 
     end
+    blit_vram_load <= 1'b0; 
     if (blit_vram_sel) begin
         blit_vram_load <= ~blit_wr;
     end
@@ -194,7 +195,8 @@ video_gen video_gen(
     .vgen_reg_data_o(vgen_reg_data_out),
     .vgen_reg_data_i(blit_data_out),
     .pal_index_o(pal_index),
-    .bus_intr_o(bus_intr_1),
+    .vsync_intr_o(vgen_vsync_intr_1),
+    .vline_intr_o(vgen_vline_intr_1),
     .hsync_o(hsync_1),
     .vsync_o(vsync_1),
     .dv_de_o(dv_de_1)
@@ -236,7 +238,7 @@ paletteram paletteram(
 
 // palette RAM lookup (delays video 1 cycle for BRAM)
 always_ff @(posedge clk) begin
-    bus_intr_o  <= bus_intr_1;
+    bus_intr_o  <= (vgen_vsync_intr_1 | vgen_vline_intr_1);
     vsync_o     <= vsync_1;
     hsync_o     <= hsync_1;
     dv_de_o     <= dv_de_1;

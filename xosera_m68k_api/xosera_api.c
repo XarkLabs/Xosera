@@ -32,7 +32,7 @@ bool xosera_init(int reconfig_num)
         {
             break;
         }
-        delay(10);
+        cpu_delay(10);
     }
 
     // done if configuration if not valid (0 to 3)
@@ -41,7 +41,7 @@ bool xosera_init(int reconfig_num)
         xv_setw(const_val, 0xb007);
         // set magic "Intel" constant OR'd with config number to make Xosera faint and reconfigure
         xv_setw(blit_ctrl, 0x8080 | (reconfig_num << 8));        // reboot FPGA to config_num
-        delay(20);
+        cpu_delay(20);
         if (xv_getw(const_val) == 0xb007)
         {
             printf("(reconfig failed)");
@@ -49,7 +49,7 @@ bool xosera_init(int reconfig_num)
         // wait for Xosera to regain consciousness (takes ~80 milliseconds)
         for (int r = 0; r < 100; r++)
         {
-            delay(20);
+            cpu_delay(20);
             if (xosera_sync())
             {
                 break;

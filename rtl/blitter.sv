@@ -36,7 +36,7 @@ module blitter(
     );
 
 localparam [31:0] githash = 32'H`GITHASH;
-logic [14*8:1]  logostring = "Xosera v0.12 #";    // boot msg
+logic [14*8:1]  logostring = "Xosera v0.13 #";    // boot msg
 
 localparam CLEARDATA = 16'h0220;    // value VRAM cleared to on init (blue+white space) TODO: zero for final?
 

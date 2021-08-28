@@ -72,8 +72,8 @@ typedef struct _xreg
 #define XVA_scrollxy  0x2
 #define XVA_fontctrl  0x3
 #define XVA_gfxctrl   0x4
-#define XVA_unused_5  0x5
-#define XVA_unused_6  0x6
+#define XVA_linestart 0x5
+#define XVA_lineintr  0x6
 #define XVA_unused_7  0x7
 #define XVA_vidwidth  0x8
 #define XVA_vidheight 0x9

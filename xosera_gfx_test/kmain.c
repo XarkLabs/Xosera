@@ -23,10 +23,10 @@
 #include <basicio.h>
 #include <machine.h>
 
-extern void xosera_test();
+extern void xosera_mode_test();
 
 void kmain()
 {
-    delay(5000);        // wait a bit for terminal window/serial
-    xosera_test();
+    mcDelaymsec10(200);        // wait a bit for terminal window
+    xosera_mode_test();
 }

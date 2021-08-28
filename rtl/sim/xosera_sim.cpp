@@ -30,8 +30,8 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 4        // video frames to dump to VCD file (and then screen-shot and exit)
-#define MAX_UPLOADS      4        // maximum number of "payload" uploads
+#define MAX_TRACE_FRAMES 7        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_UPLOADS      8        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
 vluint64_t main_time        = 0;
@@ -42,6 +42,8 @@ bool          sim_render = SDL_RENDER;
 bool          sim_bus    = BUS_INTERFACE;
 bool          wait_close = false;
 
+bool vsync_detect = false;
+
 int          num_uploads;
 int          next_upload;
 const char * upload_name[MAX_UPLOADS];
@@ -51,8 +53,8 @@ uint8_t      upload_buffer[128 * 1024];
 
 class BusInterface
 {
-    const int   BUS_START_TIME = 2467208;        // 2nd frame
-    const float BUS_CLOCK_DIV  = 4;              // 7.7;
+    const int   BUS_START_TIME = 1000000;        // after init
+    const float BUS_CLOCK_DIV  = 5;              // min 4
 
     enum
     {
@@ -81,16 +83,16 @@ class BusInterface
 
     enum
     {
-        AUX_DISPSTART   = 0x0000,        // display start address
-        AUX_DISPWIDTH   = 0x0001,        // display width in words
-        AUX_SCROLLXY    = 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
-        AUX_FONTCTRL    = 0x0003,        // [15:11] 1KW/2KW font bank,[8] bram/vram [3:0] font height
-        AUX_GFXCTRL     = 0x0004,        // [0] h pix double
-        AUX_UNUSED_5    = 0x0005,
-        AUX_UNUSED_6    = 0x0006,
-        AUX_UNUSED_7    = 0x0007,
-        AUX_R_WIDTH     = 0x0008,        // display resolution width
-        AUX_R_HEIGHT    = 0x0009,        // display resolution height
+        AUX_DISPSTART = 0x0000,        // display start address
+        AUX_DISPWIDTH = 0x0001,        // display width in words
+        AUX_SCROLLXY  = 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
+        AUX_FONTCTRL  = 0x0003,        // [15:11] 1KW/2KW font bank,[8] bram/vram [3:0] font height
+        AUX_GFXCTRL   = 0x0004,        // [15:8] colorbase [7] disable, [6] bitmap [5:4] bpp, [3:2] H rept, [1:0] V rept
+        AUX_LINESTART = 0x0005,
+        AUX_LINEINTR  = 0x0006,
+        AUX_UNUSED_7  = 0x0007,
+        AUX_R_WIDTH   = 0x0008,          // display resolution width
+        AUX_R_HEIGHT  = 0x0009,          // display resolution height
         AUX_R_FEATURES  = 0x000A,        // [15] = 1 (test)
         AUX_R_SCANLINE  = 0x000B,        // [15] V blank, [14] H blank, [13:11] zero [10:0] V line
         AUX_R_GITHASH_H = 0x000C,
@@ -121,6 +123,7 @@ class BusInterface
     int64_t last_time;
     int     state;
     int     index;
+    bool    wait_vsync;
     bool    data_upload;
     int     data_upload_mode;
     int     data_upload_num;
@@ -161,6 +164,7 @@ public:
         enable            = _enable;
         index             = 0;
         state             = BUS_START;
+        wait_vsync        = false;        // true;
         data_upload       = false;
         data_upload_mode  = 0;
         data_upload_num   = 0;
@@ -175,19 +179,37 @@ public:
         // bus test
         if (enable && main_time >= BUS_START_TIME)
         {
+            if (wait_vsync)
+            {
+                if (vsync_detect)
+                {
+                    printf("[@t=%lu  ... VSYNC arrives]\n", main_time);
+                    wait_vsync = false;
+                }
+                return;
+            }
+
             int64_t bus_time = (main_time - BUS_START_TIME) / BUS_CLOCK_DIV;
 
             if (bus_time >= last_time)
             {
                 last_time = bus_time + 1;
 
+                // REG_END
                 if (!data_upload && test_data[index] == 0xffff)
                 {
                     enable    = false;
                     last_time = bus_time - 1;
                     return;
                 }
-                if (!data_upload && (test_data[index] & 0xfff0) == 0xfff0)
+                // REG_WAITVSYNC
+                if (!data_upload && test_data[index] == 0xfffe)
+                {
+                    printf("[@t=%lu Wait VSYNC...]\n", main_time);
+                    wait_vsync = true;
+                    index++;
+                }
+                else if (!data_upload && (test_data[index] & 0xfff0) == 0xfff0)
                 {
                     data_upload       = upload_size[data_upload_num] > 0;
                     data_upload_mode  = test_data[index] & 0xf;
@@ -214,15 +236,22 @@ public:
                 switch (state)
                 {
                     case BUS_START:
-                        printf("[@t=%lu] ", main_time);
 
                         top->bus_cs_n_i    = 1;
                         top->bus_bytesel_i = bytesel;
                         top->bus_rd_nwr_i  = 0;
                         top->bus_reg_num_i = reg_num;
                         top->bus_data_i    = data;
-                        sprintf(tempstr, "r[0x%x] %s.%3s", reg_num, reg_name[reg_num], bytesel ? "lsb*" : "msb");
-                        printf("  %-25.25s <= 0x%02x\n", tempstr, data & 0xff);
+                        if (data_upload && data_upload_index < 16)
+                        {
+                            printf("[@t=%lu] ", main_time);
+                            sprintf(tempstr, "r[0x%x] %s.%3s", reg_num, reg_name[reg_num], bytesel ? "lsb*" : "msb");
+                            printf("  %-25.25s <= 0x%02x\n", tempstr, data & 0xff);
+                            if (data_upload_index == 15)
+                            {
+                                printf("  ...\n");
+                            }
+                        }
                         break;
                     case BUS_HOLD:
                         break;
@@ -292,6 +321,7 @@ const char * BusInterface::reg_name[] = {
     ((BusInterface::XVID_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_UPLOAD()     0xfff0
 #define REG_UPLOAD_AUX() 0xfff1
+#define REG_WAITVSYNC()  0xfffe
 #define REG_END()        0xffff
 
 #define X_COLS 80
@@ -300,13 +330,37 @@ BusInterface bus;
 int          BusInterface::test_data_len   = 999;
 uint16_t     BusInterface::test_data[1024] = {
     // test data
-    REG_W(AUX_ADDR, AUX_GFXCTRL),
-    REG_W(AUX_DATA, 0x8000),
-    REG_W(AUX_ADDR, AUX_COLORMEM),
+    REG_WAITVSYNC(),        // show boot screen
+    REG_W(AUX_ADDR, AUX_LINEINTR),
+    REG_W(AUX_DATA, 0x80a0),
+    REG_WAITVSYNC(),                     // show boot screen
+    REG_WAITVSYNC(),                     // show boot screen
+    REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 1-BPP BMAP
+    REG_W(AUX_DATA, 0x0040),
+    REG_W(WR_INC, 0x0001),
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),
+    REG_WAITVSYNC(),                     // show 1-BPP BMAP
+    REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 4-BPP BMAP
+    REG_W(AUX_DATA, 0x0065),
+    REG_W(AUX_ADDR, AUX_DISPWIDTH),        // 320/2/2 wide
+    REG_W(AUX_DATA, 80),
+    REG_W(AUX_ADDR, AUX_COLORMEM),        // upload palette
     REG_UPLOAD_AUX(),
     REG_W(WR_INC, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
+    REG_WAITVSYNC(),                     // show 4-BPP BMAP
+    REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 8-BPP BMAP
+    REG_W(AUX_DATA, 0x0075),
+    REG_W(AUX_ADDR, AUX_DISPWIDTH),        // 320/2 wide
+    REG_W(AUX_DATA, 160),
+    REG_W(AUX_ADDR, AUX_COLORMEM),        // upload palette
+    REG_UPLOAD_AUX(),
+    REG_W(WR_INC, 0x0001),
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),
+    REG_WAITVSYNC(),        // show 8-BPP BMAP
     REG_END()
     // end test data
 };
@@ -564,6 +618,11 @@ int main(int argc, char ** argv)
             done = true;
         }
 
+        if (top->bus_intr_o)
+        {
+            printf("[@t=%lu FPGA INTERRUPT]\n", main_time);
+        }
+
         if (frame_num > 1)
         {
             if (top->xosera_main->blit_vram_sel && top->xosera_main->blit_wr)
@@ -648,8 +707,11 @@ int main(int argc, char ** argv)
 
         vga_hsync_previous = hsync;
 
+        vsync_detect = false;
+
         if (!vsync && vga_vsync_previous)
         {
+            vsync_detect = true;
             if (current_y - 1 > y_max)
                 y_max = current_y - 1;
 
@@ -678,15 +740,9 @@ int main(int argc, char ** argv)
                             SDL_CreateRGBSurface(0, w, h, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
                         SDL_RenderReadPixels(
                             renderer, NULL, SDL_PIXELFORMAT_ARGB8888, screen_shot->pixels, screen_shot->pitch);
-#if 0
-                        sprintf(
-                            save_name, LOGDIR "xosera_vsim_%dx%d_f%02d.bmp", VISIBLE_WIDTH, VISIBLE_HEIGHT, frame_num);
-                        SDL_SaveBMP(screen_shot, save_name);
-#else
                         sprintf(
                             save_name, LOGDIR "xosera_vsim_%dx%d_f%02d.png", VISIBLE_WIDTH, VISIBLE_HEIGHT, frame_num);
                         IMG_SavePNG(screen_shot, save_name);
-#endif
                         SDL_FreeSurface(screen_shot);
                         printf("Frame %3u saved as \"%s\" (%dx%d)\n", frame_num, save_name, w, h);
                         take_shot = false;

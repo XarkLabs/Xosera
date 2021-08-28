@@ -6,6 +6,8 @@
 	],
 	"settings": {
 		"editor.formatOnSave": true,
+		"workbench.editor.wrapTabs": true,
+		"workbench.editor.tabSizing": "fit",
 		"editor.codeActionsOnSave": {
 			"source.fixAll.markdownlint": true
 		},
@@ -90,6 +92,7 @@
 			"getbl",
 			"getl",
 			"gpio",
+			"hcount",
 			"hsync",
 			"icepll",
 			"icestation",
@@ -125,6 +128,7 @@
 			"verilator",
 			"verilog",
 			"vgen",
+			"vline",
 			"vltstd",
 			"vluint",
 			"vsim",

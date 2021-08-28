@@ -1,0 +1,22 @@
+{reg: [
+    {bits: 2, name: "V repeat", type: 6, attr: ['00 1x', '01 2x', '10 3x', '11 4x'
+      ]
+    },
+    {bits: 2, name: "H repeat", type: 6, attr: ['00 1x', '01 2x', '10 3x', '11 4x'
+      ]
+    },
+    {bits: 2, name: "bpp", type: 3, attr: ['00 1-bpp', '01 2-bpp', '10 4-bpp', '11 8-bpp'
+      ]
+    },
+    {bits: 1, name: "bitmap", type: 5, attr: ['0 tiled', '1 bitmap'
+      ]
+    },
+    {bits: 1, name: "enable", type: 2, attr: ['0 blank', '1 on'
+      ]
+    },
+    {bits: 8, name: "colorbase", type: 4, attr: ['upper bits for color index', '(when less than 8-bpp)'
+      ]
+    },
+  ], config: { bits: 16
+  }
+}

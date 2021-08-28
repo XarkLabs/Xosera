@@ -62,7 +62,6 @@ xosera_main xosera(
                 .red_o(red),                    // pixel clock
                 .green_o(green),                // pixel clock
                 .blue_o(blue),                  // pixel clock
-                .bus_intr_o(bus_intr),          // interrupt signal
                 .vsync_o(vsync),                // vertical sync
                 .hsync_o(hsync),                // horizontal sync
                 .dv_de_o(dv_de),                // dv display enable
@@ -72,6 +71,7 @@ xosera_main xosera(
                 .bus_bytesel_i(bus_bytesel),    // 0 = high-byte, 1 = low-byte
                 .bus_data_i(bus_data_in),       // 8-bit data bus input
                 .bus_data_o(bus_data_out),      // 8-bit data bus output
+                .bus_intr_o(bus_intr),          // interrupt signal
                 .audio_l_o(audio_l),            // left audio PWM channel
                 .audio_r_o(audio_r),            // right audio PWM channel
                 .reconfig_o(reconfig),          // reconfigure FPGA
@@ -233,14 +233,14 @@ always begin
     if (xosera.blitter.blit_state == xosera.blitter.IDLE) begin
 
 `ifdef LOAD_MONOBM
-        while (xosera.video_gen.v_last_frame_pixel != 1'b1) begin
+        while (xosera.video_gen.last_frame_pixel != 1'b1) begin
             # 1ns;
         end
 
         #(M68K_PERIOD * 2)  xvid_setw(XVID_WR_INC, test_inc);
         #(M68K_PERIOD * 2)  xvid_setw(XVID_WR_ADDR, 16'h0000);
         #(M68K_PERIOD * 2)  xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
-        #(M68K_PERIOD * 2)  xvid_setw(XVID_AUX_DATA, 16'h8000);
+        #(M68K_PERIOD * 2)  xvid_setw(XVID_AUX_DATA, 16'h0040);
 
         inject_file("sim/mountains_mono_640x480w.raw", XVID_DATA);  // pump binary file into DATA
 
@@ -381,7 +381,7 @@ always begin
 end
 
 always @(posedge clk) begin
-    if (xosera.video_gen.v_last_frame_pixel == 1'b1) begin
+    if (xosera.video_gen.last_frame_pixel == 1'b1) begin
         frame <= frame + 1;
         $display("Finished rendering frame #%1d", frame);
 

@@ -13,7 +13,7 @@ char * out_file = nullptr;
 char    line[4096];
 uint8_t out_buffer[128 * 1024];
 
-bool round = false;
+bool round_up = false;
 
 int main(int argc, char ** argv)
 {
@@ -25,7 +25,7 @@ int main(int argc, char ** argv)
         {
             if (strcmp("-r", argv[a]) == 0)
             {
-                round = true;
+                round_up = true;
             }
             else
             {
@@ -61,7 +61,7 @@ int main(int argc, char ** argv)
 
     printf("Input gpl file     : \"%s\"\n", in_file);
     printf("Output raw pal file : \"%s\"\n", out_file);
-    if (round)
+    if (round_up)
     {
         printf("[Rounding color values to 4-bit]\n");
     }

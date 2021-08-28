@@ -6,10 +6,13 @@ SDL_CFLAGS	:= $(shell sdl2-config --cflags)
 
 CFLAGS		:= -Os -std=c++14 -Wall -Wextra -Werror $(SDL_CFLAGS)
 
-all: image_to_mem image_to_monobitmap raw256to16color pal_to_raw
+all: image_to_mem image_pal image_to_monobitmap raw256to16color pal_to_raw
 
 image_to_mem: Makefile image_to_mem.cpp
 	$(CXX) $(CFLAGS) image_to_mem.cpp -o image_to_mem $(LDFLAGS) 
+
+image_pal: Makefile image_pal.cpp
+	$(CXX) $(CFLAGS) image_pal.cpp -o image_pal $(LDFLAGS) 
 
 image_to_monobitmap: Makefile image_to_monobitmap.cpp
 	$(CXX) $(CFLAGS) image_to_monobitmap.cpp -o image_to_monobitmap $(LDFLAGS) 
@@ -22,6 +25,6 @@ pal_to_raw: Makefile pal_to_raw.cpp
 	$(CXX) $(CFLAGS) pal_to_raw.cpp -o pal_to_raw $(LDFLAGS) 
 
 clean:
-	rm -f image_to_mem image_to_monobitmap raw256to16color pal_to_raw
+	rm -f image_to_mem image_pal image_to_monobitmap raw256to16color pal_to_raw
 
 .PHONY: all clean

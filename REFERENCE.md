@@ -65,9 +65,9 @@ The `BLIT_CTRL` also has bits that allow Xosera "re-configure" itself.  This wil
 | `AUX_W_COLORTBL` | 0x8000-0x80FF | W/O | 16-bit [15:0] | 256 word color lookup table (0xXRGB)                            |
 | `AUX_W_AUD_`*    | 0xC000-0xFFFF |  -  |       -       | TODO TBD (audio registers?)                                     |
 
-To access the AUX region, write the AUX address to `XVID_AUX_ADDR`, then write to `XVID_VID_DATA`.
+To access the AUX region, write the AUX address to `XVID_AUX_ADDR`, then write to `XVID_AUX_DATA`.
 
-Each word written to `XVID_VID_DATA` will also automatically increment `XVID_AUX_ADDR` (this allows faster consecutive writes, like for palette or font RAM update).  Note that this is not the case when reading `XVID_AUX_ADDR` (you _must_ write `XVID_AUX_ADDR` to trigger a read).
+Each word written to `XVID_AUX_DATA` will also automatically increment `XVID_AUX_ADDR` (this allows faster consecutive writes, like for palette or font RAM update).  Note that this is not the case when reading `XVID_AUX_ADDR` (you _must_ write `XVID_AUX_ADDR` to trigger a read).
 
 TODO Make font memory read/write (perhaps with restrictions/slow read while in use)
 
@@ -75,7 +75,7 @@ TODO Make font memory read/write (perhaps with restrictions/slow read while in u
 
 This AUX region has registers that deal with video generation configuration and video status.
 
-To access these registers, write the register address to `XVID_AUX_ADDR`, then read or write register data to `XVID_VID_DATA`.  Note that some read-only registers overlap some write-only registers.
+To access these registers, write the register address to `XVID_AUX_ADDR`, then read or write register data to `XVID_AUX_DATA`.  Note that some read-only registers overlap some write-only registers.
 
 ###### Read-Write AUX_VID Registers
 
@@ -83,18 +83,24 @@ To access these registers, write the register address to `XVID_AUX_ADDR`, then r
 --------| ----------------------|---| ------------------------------------------------------------------------------------|
 | 0x0   | `AUX_DISPSTART`       |R/W| [15:0] starting VRAM address for display (wraps at 0xffff)                          |
 | 0x1   | `AUX_DISPWIDTH`       |R/W| [15:0] words per display line                                                       |
-| 0x2   | `AUX_SCROLLXY`        |R/W| [11:8] H pixel scroll, [4:0] V pixel scroll                                         |
-| 0x3   | `AUX_FONTCTRL`        |R/W| [15:11] font addr bank ([11]=0 for x16 font),[8] 0=FONTMEM/1=VRAM, [3:0] font height-1 |
-| 0x4   | `AUX_GFXCTRL`         |R/W| [15] bitmap mode [1] V pixel double, [0] H pixel double                             |
-| 0x5   | `AUX_UNUSED5`         |R/W|                                                                                     |
-| 0x6   | `AUX_UNUSED6`         |R/W|                                                                                     |
-| 0x7   | `AUX_UNUSED7`         |R/W|                                                                                     |
+| 0x2   | `AUX_SCROLLXY`        |R/W| [15:8] H pixel scroll, [4:0] V pixel scroll                                         |
+| 0x3   | `AUX_FONTCTRL`        |R/W| [15:10] font addr bank,[7] 0=fontRAM/1=VRAM, [3:0] font height-1 (stored x8 or x16) |
+| 0x4   | `AUX_GFXCTRL`         |R/W| [15:8] colorbase [7] disable video, [6] bitmap mode [5:4] bpp, [3:2] H repeat, [1:0] V repeat |
+| 0x5   | `AUX_LINESTART`       |R/W| [15:0] VRAM address for next display line (reset to `DISPSTART` at start of frame)  |
+| 0x6   | `AUX_LINEINTR`        |R/W| [15] scanline interrupt enable [10:0] interrupt scanline (e.g., 0-479)              |
+| 0x7   | `AUX_SCREEN_WIDTH`    |R/W| [9:0] number of physical pixels of window width (e.g. 640)                          |
 
 (This is a test of improved register diagrams, but not ideal on GitHub dark)
 <img src="./pics/wd_AUX_FONTCTRL.svg">
 
 (Plan B test rendering register diagram to a white PNG, not ideal, but more readable)
 <img src="./pics/wd_AUX_FONTCTRL.png">
+
+(This is a test of improved register diagrams, but not ideal on GitHub dark)
+<img src="./pics/wd_GFXMODE.svg">
+
+(Plan B test rendering register diagram to a white PNG, not ideal, but more readable)
+<img src="./pics/wd_GFXMODE2.png">
 
 TODO The above registers most likely need to be multiplexed for "plane B" control (or maybe pack both here...🤔)
 

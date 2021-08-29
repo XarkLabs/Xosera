@@ -59,7 +59,8 @@ instructions.
 | 0xD   | `RW_ADDR`    | R /W+ | read/write address for VRAM access from `RW_DATA`/`RW_DATA_2`             |
 | 0xE   | `RW_DATA`    | R+/W+ | read/write VRAM word at `RW_ADDR` (and add `RW_INCR`)                     |
 | 0xF   | `RW_DATA_2`  | R+/W+ | 2nd `RW_DATA`(to allow for 32-bit read/write access)                      |
- (`R+` or `W+` indicates that reading or writing this register has additional "side effects")
+ 
+(`R+` or `W+` indicates that reading or writing this register has additional "side effects")
 
 ### Xosera Main Register Details
 

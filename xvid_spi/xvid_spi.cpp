@@ -772,6 +772,14 @@ static void test_draw_lines()
                                     {15, 4, 16, 0}, {16, 0, 17, 4}, {15.5, 2, 16.5, 2}};
 
 
+    // 8-bpp tiled mode (320x240)
+    xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
+    xvid_setw(XVID_AUX_DATA, 0x0075);
+    xvid_setw(XVID_AUX_ADDR, AUX_DISPSTART);        // start addr
+    xvid_setw(XVID_AUX_DATA, 0x0000);
+    xvid_setw(XVID_AUX_ADDR, AUX_DISPWIDTH);        // display width in words
+    xvid_setw(XVID_AUX_DATA, 160);
+
     // Set the palette
     double hue = 0.0f;
     for (uint16_t i = 0; i < 256; i++)
@@ -1316,6 +1324,8 @@ int main(int argc, char ** argv)
     xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
     xvid_setw(XVID_AUX_DATA, 0x0040);
     test_mono_bitmap("space_shuttle_color_small.raw");
+
+    test_draw_lines();
 
     host_spi_close();
 

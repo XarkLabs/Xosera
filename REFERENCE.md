@@ -65,6 +65,7 @@ instructions.
 ## Xosera Main Register Details
 
 **0x0 `XR_ADDR` (R/W+) - eXtended Register Address**
+
 - **Extended register or memory address for data accessed via `XR_DATA`**  
 <img src="./pics/wd_XR_ADDR.svg">  
 Specifies the XR register or address to be accessed via `XR_DATA`.
@@ -73,101 +74,116 @@ memory word address within the region (see below for details of XR registers and
 When `XR_ADDR` is written, the register/address specified will be read and made available for reading at `XR_DATA`
 (`XR_ADDR` needs to be written each time before reading `XR_DATA` or the previously read value will be returned).
 After a word is written to `XR_DATA`, the lower 12-bits of `XR_ADDR` will be auto-incremented by 1 which
-allows writing to contiguous registers or memory by repeatedly writing to `XR_DATA`.
-<br>
+allows writing to contiguous registers or memory by repeatedly writing to `XR_DATA`.  
+
 **0x1 `XR_DATA` (R/W+) - eXtended Register Data**
+
 - **Read or write extended register or memory addressed by `XR_ADDR` register.**  
 <img src="./pics/wd_XR_DATA.svg">  
 Allows read/write access to the XR register or memory using address contained in `XR_ADDR` register.  
 When `XR_ADDR` is written, the XR register or address specified will be read will be available for reading at `XR_DATA`
 (`XR_ADDR` needs to be set each time before reading `XR_DATA` or the previously read value will be returned).  
 After a word is written to `XR_DATA`, the lower 12-bits of `XR_ADDR` will be auto-incremented by 1 which
-allows writing to contiguous XR registers or memory by repeatedly writing to `XR_DATA`.
-<br>
+allows writing to contiguous XR registers or memory by repeatedly writing to `XR_DATA`.  
+
 **0x2 `RD_INCR` (R/W) - increment value for `RD_ADDR` when `XDATA`/`XDATA_2` is read from**  
+
 - **Read or write twos-complement value added to `RD_ADDR` when `XDATA` or `XDATA_2` is read from**  
 <img src="./pics/wd_RD_INCR.svg">  
 Allows quickly reading Xosera VRAM from `XDATA`/`XDATA_2` when using a fixed increment.  
-Added to `RD_ADDR` when `XDATA` or `XDATA_2` is read from (twos complement, so value can be negative).
-<br>
+Added to `RD_ADDR` when `XDATA` or `XDATA_2` is read from (twos complement, so value can be negative).  
+
 **0x3 `RD_ADDR` (R/W+) - VRAM read address for `XDATA`/`XDATA_2`**  
+
 - Read or write VRAM address that will be read when `XDATA` or `XDATA_2` is read from.  
 <img src="./pics/wd_RD_ADDR.svg">  
 Specifies VRAM address used when reading from VRAM via `XDATA`/`XDATA_2`.  
 When `RD_ADDR` is written (or incremented by `RD_INCR`) the corresponding word in VRAM is read and made
-available for reading at `X_DATA` or `XDATA_2`.
-<br>
+available for reading at `X_DATA` or `XDATA_2`.  
+
 **0x4 `WR_INCR` (R/W) - increment value for `WR_ADDR` when `XDATA`/`XDATA_2` is written to**  
+
 - Read or write twos-complement value added to `WR_ADDR` when `XDATA` or `XDATA_2` is written to.
 <img src="./pics/wd_WR_INCR.svg">  
 Allows quickly writing to Xosera VRAM via `XDATA`/`XDATA_2` when using a fixed increment.  
-Added to `WR_ADDR` when `XDATA` or `XDATA_2` is written to (twos complement, so value can be negative).
-<br>
+Added to `WR_ADDR` when `XDATA` or `XDATA_2` is written to (twos complement, so value can be negative).  
+
 **0x5 `WR_ADDR` (R/W) - VRAM write address for `XDATA`/`XDATA_2`**  
+
 - read/write VRAM address written when `XDATA` or `XDATA_2` is written to.  
 <img src="./pics/wd_WR_ADDR.svg">  
-Specifies VRAM address used when writing to VRAM via `XDATA`/`XDATA_2`.
-<br>
+Specifies VRAM address used when writing to VRAM via `XDATA`/`XDATA_2`.  
+
 **0x6 `XDATA` (R+/W+) - VRAM memory value to read/write at VRAM address `RD_ADDR`/`WR_ADDR`, respectively**  
+
 - Read or write VRAM value from VRAM at `RD_ADDR`/`WR_ADDR` and add `RD_INCR`/`WR_INCR` to `RD_ADDR`/`WR_ADDR`, respectively.  
 <img src="./pics/wd_XDATA.svg">  
 When `XDATA` is read data from VRAM at `RD_ADDR` is returned and `RD_INCR` is added to `RD_ADDR` and pre-reading the new VRAM address begins.  
 When `XDATA` is written, begins writing value to VRAM at `WR_ADDR` and `WR_INCR` is added to `WR_ADDR`.  
 
 **0x7 `XDATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address `RD_ADDR`/`WR_ADDR`, respectively**  
+
 - Read or write VRAM value from VRAM at `RD_ADDR`/`WR_ADDR` and add `RD_INCR`/`WR_INCR` to `RD_ADDR`/`WR_ADDR`, respectively.  
 <img src="./pics/wd_XDATA.svg">  
 When `XDATA_2` is read data from VRAM at `RD_ADDR` is returned and `RD_INCR` is added to `RD_ADDR` and pre-reading the new VRAM address begins.  
 When `XDATA_2` is written, begins writing value to VRAM at `WR_ADDR` and adds `WR_INCR` to `WR_ADDR`.  
-NOTE: This register is identical to `XDATA` to allow for 32-bit "long" MOVEP.L transfers to/from `XDATA` for additional speed (however, it does have its own nibble write mask).
-<br>
+NOTE: This register is identical to `XDATA` to allow for 32-bit "long" MOVEP.L transfers to/from `XDATA` for additional speed (however, it does have its own nibble write mask).  
+
 **0x8 `XSYS_CTRL` (R/W+) - draw busy status, reconfigure, interrupt control and write masking control [TODO]**  
+
 - Read draw busy, write to reboot FPGA or read/write interrupt control/status and `XDATA` nibble write mask.  
 <img src="./pics/wd_XSYS_CTRL.svg">  
 When `XSYS_CTRL` is read:  
 &emsp;[15] is draw busy, [11] is interrupt enable, [10-8] is interupt source, [7-0] is `XDATA`/`XDATA_2` nibble write mask.  
 When `XSYS_CTRL` is written:  
 &emsp;[14] set to reboot FPGA to [13-12] config, [11] set interrupt enable, [10-8] set also _generates_ interrupt, [7-0] set nibble mask.  
-NOTE: An interrupt is only generated if an interrupt source is read as 0 then written as 1 (to avoid accidentally generating interrupts).  An interrupt source is only cleared if it is read as 1 and then written as 0 (to avoid accidentally clearing interrupts).
-<br>
+NOTE: An interrupt is only generated if an interrupt source is read as 0 then written as 1 (to avoid accidentally generating interrupts).  An interrupt source is only cleared if it is read as 1 and then written as 0 (to avoid accidentally clearing interrupts).  
+
 **0x9 `XSYS_TIMER` (RO) - 1/10<sup>th</sup> of millisecond timer (0 - 6553.5 ms)**
+
 - read-only 16-bit timer, increments every 1/10<sup>th</sup> of a millisecond**  
 <img src="./pics/wd_XSYS_TIMER.svg">  
-Can be used for fairly accurate timing.  When value wraps, internal fractional value is maintined (so as accurate as FPGA PLL clock).
-<br>
+Can be used for fairly accurate timing.  When value wraps, internal fractional value is maintined (so as accurate as FPGA PLL clock).  
+
 **0xA `UNUSED_A` (R/W) - unused register 0xA**  
-- unused direct register 0xA
-<br>
+
+- unused direct register 0xA  
+
 **0xB `UNUSED_B` (R/W) - unused register 0xB**  
-- unused direct register 0xB
-<br>
+
+- unused direct register 0xB  
+
 **0xC `RW_INCR` (R/W) - increment value for `RW_ADDR` when `RW_DATA`/`RW_DATA_2` is read or written**  
+
 - read/write twos-complement value added to `RW_ADDR` when `RW_DATA` or `RW_DATA_2` is read from or written to.  
 <img src="./pics/wd_RW_INCR.svg">  
 Allows quickly reading/writing Xosera VRAM from `RW_DATA`/`RW_DATA_2` when using a fixed `RW_ADDR` increment.  
-Added to `RW_ADDR` when `RW_DATA` or `RW_DATA_2` is read from (twos complement so value can be negative).
-<br>
+Added to `RW_ADDR` when `RW_DATA` or `RW_DATA_2` is read from (twos complement so value can be negative).  
+
 **0xD `RW_ADDR` (R/W+) - VRAM read/write address for accessed at `RW_DATA`/`RW_DATA_2`**  
+
 - read/write VRAM address read when `RW_DATA` or `RW_DATA_2` is read from or written to.  
 <img src="./pics/wd_RW_ADDR.svg">  
 Specifies VRAM address used when reading or writing from VRAM via `RW_DATA`/`RW_DATA_2`.  
 When `RW_ADDR` is written (or incremented by `RW_INCR`) the corresponding word in VRAM is read and made available for reading at `WR_DATA` or `WR_DATA_2`.  
 Since this read always happens (even when only intending to write), prefer using RW_ADDR for
-reading (but fairly small VRAM access overhead).
-<br>
+reading (but fairly small VRAM access overhead).  
+
 **0xE `RW_DATA` (R+/W+) - VRAM memory value to read/write at VRAM address `RW_ADDR`**  
+
 - read or write VRAM value in VRAM at `RW_ADDR` and add `RW_INCR` to `RW_ADDR`.  
 <img src="./pics/wd_RW_DATA.svg">  
 When `RW_DATA` is read, returns data from VRAM at `RW_ADDR`, adds `RW_INCR` to `RW_ADDR` and begins reading new VRAM value.  
-When `RW_DATA` is written, begins writing value to VRAM at `RW_ADDR` and adds `RW_INCR` to `RW_ADDR` and begins reading new VRAM value.
-<br>
+When `RW_DATA` is written, begins writing value to VRAM at `RW_ADDR` and adds `RW_INCR` to `RW_ADDR` and begins reading new VRAM value.  
+
 **0xF `RW_DATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address `RW_ADDR`**  
+
 - read or write VRAM value in VRAM at `RW_ADDR` and add `RW_INCR` to `RW_ADDR`.  
 <img src="./pics/wd_RW_DATA.svg">  
 When `RW_DATA_2` is read, returns data from VRAM at `RW_ADDR`, adds `RW_INCR` to `RW_ADDR` and begins reading new VRAM value.  
 When `RW_DATA_2` is written, begins writing value to VRAM at `RW_ADDR` and adds `RW_INCR` to `RW_ADDR` and begins reading new VRAM value.  
-NOTE: This register is identical to `RW_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from `RW_DATA` for additional speed.
-<br>
+NOTE: This register is identical to `RW_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from `RW_DATA` for additional speed.  
+
 {NOTE below here still needs more updating}
 
 ### Xosera Extended Register/Memory Summary

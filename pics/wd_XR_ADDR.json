@@ -1,0 +1,44 @@
+{
+    "reg": [
+        {
+            "bits": 12,
+            "name": "register number / 12-bit XR address",
+            "type": 4,
+            "attr": [
+                "video / copper registers (0000-000F)",
+                "read-only info registers (0010-001F)",
+                "playfield-A registers (0020-002F)",
+                "playfield-B registers (0030-003F)",
+                "2D blit registers [TODO] (0040-004F)",
+                "poly draw registers [TODO] (0050-005F)",
+                "playfield-B registers (0030-003F)",
+                "font memory (write-only 4000-8FFF)",
+                "color memory (write-only 8000-80FF)",
+                "copper memory (write-only C000-C???)"
+            ]
+        },
+        {
+            "bits": 2,
+            "type": 1
+        },
+        {
+            "bits": 2,
+            "name": "XR region",
+            "type": 5,
+            "attr": [
+                "00 =",
+                "00 =",
+                "00 =",
+                "00 =",
+                "00 =",
+                "00 =",
+                "01 =",
+                "10 =",
+                "11 ="
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

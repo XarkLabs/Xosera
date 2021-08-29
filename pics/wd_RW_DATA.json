@@ -1,0 +1,12 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "16-bit word to read or write from RW_ADDR",
+            "type": 4
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

@@ -1,69 +1,166 @@
 # Xosera - Xark's Open Source Embedded Retro Adapter
 
+Xosera is a Verilog design currently for iCE40UltraPlus5K FPGA that implements an "Embedded Retro Adapter"
+designed primarily for the rosco_m68K series of retro computers (but adaptable to others).  It provides
+color video text and graphics generation similar to late 80s 68K era home computers (along with other
+capabilities).
+
+This document is meant to provide the low-level reference information to operate it (and ideally
+matches the actual Verilog implementation). Please mention it if you spot a discrepency.
+
+**Section Index:**
+
+- [Xosera - Xark's Open Source Embedded Retro Adapter](#xosera---xarks-open-source-embedded-retro-adapter)
+  - [Xosera Reference Information](#xosera-reference-information)
+    - [Xosera Main Register Summary (16-bit directly accessible)](#xosera-main-register-summary-16-bit-directly-accessible)
+    - [Xosera Main Register Details](#xosera-main-register-details)
+    - [Xosera Extended Register/Memory Summary](#xosera-extended-registermemory-summary)
+    - [Xosera AUX_VID Registers](#xosera-aux_vid-registers)
+          - [Read-Write AUX_VID Registers](#read-write-aux_vid-registers)
+          - [Read-only AUX_VID Registers](#read-only-aux_vid-registers)
+    - [Xosera Video Modes](#xosera-video-modes)
+
 ## Xosera Reference Information
 
-Xosera has 16 16-bit bus accessable registers that are used to control its operation.  The even
-and odd bytes in the word can be accessed independently.
+Xosera has 16 main 16-bit directly accessable bus registers that are used to control its operation.
+The even and odd bytes of each 16-bit word are accessed independently (Xosera uses an 8-bit data bus
+and "bytesel" signal).  It uses 68000 big-endian convention, so "even" addressed bytes contain the
+most significant 8-bits and the "odd" addresses contains the least significant 8-bits of the complete
+16-bit value. When writing values, typically the upper 8-bits are saved until the lower 8-bits are written
+and then the entire 16-bit value is stored.  For this reason typically you should update the first (even or
+high-byte) byte before the second (odd or low-byte) byte or update both with a MOVEP.W write.
 
 Xosera's 128KB of VRAM is organized as 64K x 16-bit words, so a full VRAM address is 16-bits (and an
-individual byte is not directly accessible, only 16-bit words).
+individual byte is not directly accessible, only 16-bit words). [TODO: nibble masking writes is possible,
+but currently not wired up]
 
-### Xosera Video Modes
+In addition to the main registers and VRAM, there is an additional extended register / memory bus that provides
+access to many more control registers for system control, video configuration, drawing engines and display
+co-processor as well as additional memory regions for tile definitions, color look-up and display coprocessor
+instructions.
 
-Xosera always outputs a fixed video resolution (either 640x480 or 848x480 widescreen at 60 Hz, and can be re-configured at run-time),
-but it uses several different video generation modes and options to control how the display is generated.
+### Xosera Main Register Summary (16-bit directly accessible)
 
-| Mode  | Tile size | 640x480 (4:3)                | 848x480 (16:9)                  | Colors                                                |
---------|-----------|------------------------------|---------------------------------|------------------------------------------------------ |
-| Text  | 8x16      | 80x30 tiles<br /> 2400 words | 106 x 30 tiles<br /> 3180 words | 2 from 16 color palette per tile using attribute byte |
-| Text  | 8x8       | 80x60 tiles<br /> 4800 words | 106 x 60 tiles<br /> 6360 words | 2 from 16 color palette per tile using attribute byte |
+| Reg # | Reg Name     | R+/W+ | Description                                                               |
+| ----- | ------------ | ----- | ------------------------------------------------------------------------- |
+| 0x0   | `XR_ADDR`    | R /W+ | XR register number/address for `XR_DATA` read/write access                |
+| 0x1   | `XR_DATA`    | R /W+ | read/write XR register/memory at `XR_ADDR` (`XR_ADDR` incr. on write)     |
+| 0x2   | `RD_INCR`    | R /W  | increment value for `RD_ADDR` read from `XDATA`/`XDATA_2`                 |
+| 0x3   | `RD_ADDR`    | R /W+ | VRAM address for reading from VRAM when `XDATA`/`XDATA_2` is read         |
+| 0x4   | `WR_INCR`    | W /W  | increment value for `WR_ADDR` on write to `XDATA`/`XDATA_2`               |
+| 0x5   | `WR_ADDR`    | R /W  | VRAM address for writing to VRAM when `XDATA`/`XDATA_2` is written        |
+| 0x6   | `XDATA`      | R+/W+ | read/write VRAM word at `RD_ADDR`/`WR_ADDR` (and add `RD_INCR`/`WR_INCR`) |
+| 0x7   | `XDATA_2`    | R+/W+ | 2nd `XVID_DATA`(to allow for 32-bit read/write access)                    |
+| 0x8   | `XSYS_CTRL`  | R /W+ | busy status, FPGA reconfig, interrupt status/control, write masking       |
+| 0x9   | `XSYS_TIMER` | R /W+ | read 1/10<sup>th</sup> millisecond timer/write resets timer [TODO]        |
+| 0xA   | `UNUSED_A`   | R /W  | unused direct register 0xA [TODO]                                         |
+| 0xB   | `UNUSED_B`   | R /W  | unused direct register 0xB [TODO]                                         |
+| 0xC   | `RW_INCR`    | R /W  | `RW_ADDR` increment value on read/write of `RW_DATA`/`RW_DATA_2`          |
+| 0xD   | `RW_ADDR`    | R /W+ | read/write address for VRAM access from `RW_DATA`/`RW_DATA_2`             |
+| 0xE   | `RW_DATA`    | R+/W+ | read/write VRAM word at `RW_ADDR` (and add `RW_INCR`)                     |
+| 0xF   | `RW_DATA_2`  | R+/W+ | 2nd `RW_DATA`(to allow for 32-bit read/write access)                      |
+ (`R+` or `W+` indicates that reading or writing this register has additional "side effects")
 
-Tile size can be 8x16 (4KB) or 8x8 (2KB) as stored, but can be truncated vertically when displayed (e.g., for 8x10).
-There is 8KB font memory in 4 2KB banks (e.g. 2 8x16 fonts, or 1 8x16 font and 2 8x8 fonts).
+### Xosera Main Register Details
 
-Font/tile memory is writable in AUX address space (but not readable).
-(Graphics modes coming soon...)
+0x0 `XR_ADDR` (R/W+) - eXtended Register Address
+: read/write extended register or memory address (with value accessed via read/write of `XR_DATA` register).
+<br><img src="./pics/wd_XR_ADDR.svg"><br>Specifies the XR register or address to be accessed via `XR_DATA`.
+The upper 2 bits select XR registers or memory region and the lower 12 bits select the register number or
+memory word address within the region (see below for details of XR registers and memory).
+When `XR_ADDR` is written, the register/address specified will be read and made available for reading at `XR_DATA`
+(`XR_ADDR` needs to be written each time before reading `XR_DATA` or the previously read value will be returned).
+After a word is written to `XR_DATA`, the lower 12-bits of `XR_ADDR` will be auto-incremented by 1 which
+allows writing to contiguous registers or memory by repeatedly writing to `XR_DATA`.
 
-### Xosera 16-bit Registers
+0x1 `XR_DATA` (R/W+) - eXtended Register Data
+: read/write extended register or memory data value from address in `XR_ADDR` register.
+<br><img src="./pics/wd_XR_DATA.svg"><br>Allows read/write access to the XR register or memory addressed by `XR_ADDR`.
+When `XR_ADDR` is set, the register/address specified will be read and made available for reading at `XR_DATA`
+(`XR_ADDR` needs to be set each time before reading `XR_DATA` or the same value will be returned).
+After a word is written to `XR_DATA`, the lower 12-bits of `XR_ADDR` will be auto-incremented by 1 which
+allows writing to contiguous registers or memory by repeatedly writing to `XR_DATA`.
 
-| Reg # | Name             | R/W/+ | Description                                                      |
---------| -----------------|-------| ---------------------------------------------------------------- |
-| 0x0   | `XVID_AUX_ADDR`  | R/W   | AUX address for `AUX_DATA` read/write, set notes below
-| 0x1   | `XVID_CONST`     | R/W   | set constant value (e.g. for VRAM fill) TODO
-| 0x2   | `XVID_RD_ADDR`   | R/W   | set read address for reading from VRAM [Note 1]
-| 0x3   | `XVID_WR_ADDR`   | R/W   | set write address for writing to VRAM
-| 0x4   | `XVID_DATA`      | R/W/+ | read/write VRAM word at `RD`/`WR_ADDR` then add `RD`/`WR_INC`[Note X]
-| 0x5   | `XVID_DATA_2`    | R/W/+ | 2nd`XVID_DATA`(to allow for 32-bit read/write) [Note X]
-| 0x6   | `XVID_AUX_DATA`  | R/W/+ | read/write AUX word at `AUX_ADDR` [Note X]
-| 0x7   | `XVID_COUNT`     | R/W/+ | write blitter count and start operation or read blitter status
-| 0x8   | `XVID_RD_INC`    | W/O   | `RD_ADDR` increment per word read
-| 0x9   | `XVID_WR_INC`    | W/O   | `WR_ADDR` increment per word write
-| 0xA   | `XVID_WR_MOD`    | W/O   | `WR_ADDR` increment every `WIDTH` words read (in 2D mode)
-| 0xB   | `XVID_RD_MOD`    | W/O   | `RD_ADDR` increment every `WIDTH` words write (in 2D mode)
-| 0xC   | `XVID_WIDTH`     | W/O   | width in words for 2D rectangular blit
-| 0xD   | `XVID_BLIT_CTRL` | W/O   | set blitter options see below
-| 0xE   | `XVID_UNUSED_E`  |  --   | TODO TBD
-| 0xF   | `XVID_UNUSED_F`  |  --   | TODO TBD
+0x2 `RD_INCR` (R/W) - increment value for `RD_ADDR` when `XDATA`/`XDATA_2` is read
+: read/write twos-complement value added to `RD_ADDR` when `XDATA` or `XDATA_2` is read from.
+<br><img src="./pics/wd_RD_INCR.svg"><br>Allows quickly reading Xosera VRAM from `XDATA`/`XDATA_2` when using a fixed `RD_ADDR` increment.
+Added to `RD_ADDR` when `XDATA` or `XDATA_2` is read from (twos complement so value can be negative).
 
-Registers 0x0 - 0x3 are fully read/write and have no "side effects" (except writing `RD_ADDR` will cause that address to be read from VRAM). Either byte can be written to in any order (the word at `VRAM[RD_ADDR]` will be read only when the odd byte/LSB of `RD_ADDR` is written, that word can be accessed via `XVID_DATA`/`2`).
-Registers 0x4 - 0x7 have various special actions when read/written (e.g., write VRAM, read status or start blitter and AUX register effects).  The special actions only occur when the odd_byte/LSB is written.
-Registers 0x8 - 0xF are write-only (reading them will alias other registers).
+0x3 `RD_ADDR` (R/W+) - VRAM read address for `XDATA`/`XDATA_2`
+: read/write VRAM address read when `XDATA` or `XDATA_2` is read from.
+<br><img src="./pics/wd_RD_ADDR.svg"><br>Specifies VRAM address used when reading from VRAM via `XDATA`/`XDATA_2`.
+When `RD_ADDR` is written (or incremented by `RD_INCR`) the corresponding word in VRAM is read and made
+available for reading at `X_DATA` or `XDATA_2`.
 
-Since the registers are 16-bit words (with no individual byte access) and bus access is 8-bit, the even byte/MSB is saved upon write until the odd byte/LSB is written.  For registers 0-3 each byte of the register is updated when written. `DATA`/`DATA_2` share common odd byte/MSB storage that is be preserved.  All the other registers share even byte/MSB storage which is zeroed after the odd byte/LSB is written to and the entire word is updated atomically.
+0x4 `WR_INCR` (R/W) - increment value for `WR_ADDR` when `XDATA`/`XDATA_2` is written
+: read/write twos-complement value added to `WR_ADDR` when `XDATA` or `XDATA_2` is written from.
+<br><img src="./pics/wd_WR_INCR.svg"><br>Allows quickly writing to Xosera VRAM via `XDATA`/`XDATA_2` when using a fixed `WR_ADDR` increment.
+Added to `WR_ADDR` when `XDATA` or `XDATA_2` is written to (twos complement so value can be negative).
 
-TODO `BLIT_CTRL`[0] enables 2-D blit mode (where `WIDTH` and `RD`/`WR_MOD` are used to blit rectangular areas)
-TODO `BLIT_CTRL`[1] enables blit using `CONST` data value as source instead of reading VRAM.
+0x5 `WR_ADDR` (R/W) - VRAM write address for `XDATA`/`XDATA_2`
+: read/write VRAM address written when `XDATA` or `XDATA_2` is written to.
+<br><img src="./pics/wd_WR_ADDR.svg"><br>Specifies VRAM address used when writing to VRAM via `XDATA`/`XDATA_2`.
 
-The `BLIT_CTRL` also has bits that allow Xosera "re-configure" itself.  This will cause the FPGA to reload a configuration from flash memory (4 are selectable). Write the value 0x8x80 to `XVID_VID_CTRL` and Xosera FPGA will reconfigure itself, like at power on (VRAM will be clear and AUX memory will be reloaded).  Bits [9:8] will select the firmware to reconfigure to (normally, 0 for 640x480 mode, 1 for 848x480 mode with the other configs user defined).  The FPGA takes about 80-100 milliseconds to reconfigure and initialize (you can repeatedly write to a register (e.g., `XVID_CONST`) and wait until it reads back to know the FPGA has finished reconfiguring).
+0x6 `XDATA` (R+/W+) - VRAM memory value to read/write at VRAM address `RD_ADDR`/`WR_ADDR`, respectively
+: read/write VRAM value from VRAM at `RD_ADDR`/`WR_ADDR` and add `RD_INCR`/`WR_INCR` to `RD_ADDR`/`WR_ADDR`, respectively.
+<br><img src="./pics/wd_XDATA.svg"><br>When `XDATA` is read, returns data read from VRAM at `RD_ADDR`, adds `RD_INCR` to `RD_ADDR` and begins reading new value.
+When `XDATA` is written, begins writing value to VRAM at `WR_ADDR` and adds `WR_INCR` to `WR_ADDR`.
 
-### AUX Memory Areas
+0x7 `XDATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address `RD_ADDR`/`WR_ADDR`, respectively
+: read/write VRAM value from VRAM at `RD_ADDR`/`WR_ADDR` and add `RD_INCR`/`WR_INCR` to `RD_ADDR`/`WR_ADDR`, respectively.
+<br><img src="./pics/wd_XDATA.svg"><br>When `XDATA_2` is read, returns data from VRAM at `RD_ADDR`, adds `RD_INCR` to `RD_ADDR` and begins reading new VRAM value.
+When `XDATA_2` is written, begins writing value to VRAM at `WR_ADDR` and adds `WR_INCR` to `WR_ADDR`.
+NOTE: This register is identical to `XDATA` to allow for 32-bit "long" MOVEP.L transfers to/from `XDATA` for additional speed.
 
-| Name             | Address Range | R/W| Width          | Description                                                     |
-|------------------| --------------|-----|---------------|-----------------------------------------------------------------|
-| `AUX_VID_`*      | 0x0000-0x3FFF | R/W*| 16-bit [15:0] | AUX_VID register area, see below                                |
-| `AUX_W_FONT`     | 0x4000-0x4FFF | W/O | 16-bit [15:0] | 8KB font/tile memory (4K words, high byte first for 8-bit font) |
-| `AUX_W_COLORTBL` | 0x8000-0x80FF | W/O | 16-bit [15:0] | 256 word color lookup table (0xXRGB)                            |
-| `AUX_W_AUD_`*    | 0xC000-0xFFFF |  -  |       -       | TODO TBD (audio registers?)                                     |
+0x8 `XSYS_CTRL` (R/W+) - draw busy status, reconfigure, interrupt control and write masking control [TODO]
+: read draw busy, write to reboot FPGA or read/write interrupt control/status and `XDATA` nibble write mask.
+<br><img src="./pics/wd_XSYS_CTRL.svg"><br>When `XSYS_CTRL` is read:<br>&emsp;[15] is draw busy, [11] is interrupt enable, [10-8] is interupt source, [7-0] is `XDATA`/`XDATA_2` nibble write mask.
+When `XSYS_CTRL` is written:<br>&emsp;[14] set to reboot FPGA to [13-12] config, [11] set interrupt enable, [10-8] set also _generates_ interrupt, [7-0] set nibble mask.
+
+0x9 `XSYS_TIMER` (RO) - 1/10<sup>th</sup> of millisecond timer (0 - 6553.5 ms)
+: read-only 16-bit timer, increments every 1/10<sup>th</sup> of a millisecond
+<br><img src="./pics/wd_XSYS_TIMER.svg"><br>Can be used for fairly accurate timing.  When value wraps, internal fractional value is maintined (so as accurate
+as FPGA PLL clock).
+
+0xA `UNUSED_A` (R/W) - unused register 0xA
+: unused direct register 0xA
+
+0xB `UNUSED_B` (R/W) - unused register 0xB
+: unused direct register 0xB
+
+0xC `RW_INCR` (R/W) - increment value for `RW_ADDR` when `RW_DATA`/`RW_DATA_2` is read or written
+: read/write twos-complement value added to `RW_ADDR` when `RW_DATA` or `RW_DATA_2` is read from or written to.
+<br><img src="./pics/wd_RW_INCR.svg"><br>Allows quickly reading/writing Xosera VRAM from `RW_DATA`/`RW_DATA_2` when using a fixed `RW_ADDR` increment.
+Added to `RW_ADDR` when `RW_DATA` or `RW_DATA_2` is read from (twos complement so value can be negative).
+
+0xD `RW_ADDR` (R/W+) - VRAM read/write address for accessed at `RW_DATA`/`RW_DATA_2`
+: read/write VRAM address read when `RW_DATA` or `RW_DATA_2` is read from or written to.
+<br><img src="./pics/wd_RW_ADDR.svg"><br>Specifies VRAM address used when reading or writing from VRAM via `RW_DATA`/`RW_DATA_2`.
+When `RW_ADDR` is written (or incremented by `RW_INCR`) the corresponding word in VRAM is read and made
+available for reading at `WR_DATA` or `WR_DATA_2`.  Since this read always happens (even when only intending to write), prefer RW_ADDR for
+reading (but minor overhead).
+
+0xE `RW_DATA` (R+/W+) - VRAM memory value to read/write at VRAM address `RW_ADDR`
+: read or write VRAM value in VRAM at `RW_ADDR` and add `RW_INCR` to `RW_ADDR`
+<br><img src="./pics/wd_RW_DATA.svg"><br>When `RW_DATA` is read, returns data from VRAM at `RW_ADDR`, adds `RW_INCR` to `RW_ADDR` and begins reading new VRAM value.
+When `RW_DATA` is written, begins writing value to VRAM at `RW_ADDR` and adds `RW_INCR` to `RW_ADDR` and begins reading new VRAM value.
+
+0xF `RW_DATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address `RW_ADDR`
+: read or write VRAM value in VRAM at `RW_ADDR` and add `RW_INCR` to `RW_ADDR`
+<br><img src="./pics/wd_RW_DATA.svg"><br>When `RW_DATA_2` is read, returns data from VRAM at `RW_ADDR`, adds `RW_INCR` to `RW_ADDR` and begins reading new VRAM value.
+When `RW_DATA_2` is written, begins writing value to VRAM at `RW_ADDR` and adds `RW_INCR` to `RW_ADDR` and begins reading new VRAM value.
+NOTE: This register is identical to `RW_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from `RW_DATA` for additional speed.
+
+{NOTE below here still needs more updating}
+
+### Xosera Extended Register/Memory Summary
+
+| Name             | Address Range | R/W  | Description                                                     |
+| ---------------- | ------------- | ---- | --------------------------------------------------------------- |
+| `AUX_VID_`*      | 0x0000-0x3FFF | R/W* | AUX_VID register area, see below                                |
+| `AUX_W_FONT`     | 0x4000-0x4FFF | W/O  | 8KB font/tile memory (4K words, high byte first for 8-bit font) |
+| `AUX_W_COLORTBL` | 0x8000-0x80FF | W/O  | 256 word color lookup table (0xXRGB)                            |
+| `AUX_W_COPPER`*  | 0xC000-0x?FFF | W/O  | TODO TBD (audio registers?)                                     |
 
 To access the AUX region, write the AUX address to `XVID_AUX_ADDR`, then write to `XVID_AUX_DATA`.
 
@@ -79,40 +176,42 @@ To access these registers, write the register address to `XVID_AUX_ADDR`, then r
 
 ###### Read-Write AUX_VID Registers
 
-| Reg # | Name                  |R/W| Description                                                                         |
---------| ----------------------|---| ------------------------------------------------------------------------------------|
-| 0x0   | `AUX_DISPSTART`       |R/W| [15:0] starting VRAM address for display (wraps at 0xffff)                          |
-| 0x1   | `AUX_DISPWIDTH`       |R/W| [15:0] words per display line                                                       |
-| 0x2   | `AUX_SCROLLXY`        |R/W| [15:8] H pixel scroll, [4:0] V pixel scroll                                         |
-| 0x3   | `AUX_FONTCTRL`        |R/W| [15:10] font addr bank,[7] 0=fontRAM/1=VRAM, [3:0] font height-1 (stored x8 or x16) |
-| 0x4   | `AUX_GFXCTRL`         |R/W| [15:8] colorbase [7] disable video, [6] bitmap mode [5:4] bpp, [3:2] H repeat, [1:0] V repeat |
-| 0x5   | `AUX_LINESTART`       |R/W| [15:0] VRAM address for next display line (reset to `DISPSTART` at start of frame)  |
-| 0x6   | `AUX_LINEINTR`        |R/W| [15] scanline interrupt enable [10:0] interrupt scanline (e.g., 0-479)              |
-| 0x7   | `AUX_SCREEN_WIDTH`    |R/W| [9:0] number of physical pixels of window width (e.g. 640)                          |
-
-(This is a test of improved register diagrams, but not ideal on GitHub dark)
-<img src="./pics/wd_AUX_FONTCTRL.svg">
-
-(Plan B test rendering register diagram to a white PNG, not ideal, but more readable)
-<img src="./pics/wd_AUX_FONTCTRL.png">
-
-(This is a test of improved register diagrams, but not ideal on GitHub dark)
-<img src="./pics/wd_GFXMODE.svg">
-
-(Plan B test rendering register diagram to a white PNG, not ideal, but more readable)
-<img src="./pics/wd_GFXMODE2.png">
-
-TODO The above registers most likely need to be multiplexed for "plane B" control (or maybe pack both here...🤔)
+| Reg # | Name               | R/W | Description                                                                                   |
+| ----- | ------------------ | --- | --------------------------------------------------------------------------------------------- |
+| 0x0   | `AUX_DISPSTART`    | R/W | [15:0] starting VRAM address for display (wraps at 0xffff)                                    |
+| 0x1   | `AUX_DISPWIDTH`    | R/W | [15:0] words per display line                                                                 |
+| 0x2   | `AUX_SCROLLXY`     | R/W | [15:8] H pixel scroll, [4:0] V pixel scroll                                                   |
+| 0x3   | `AUX_FONTCTRL`     | R/W | [15:10] font addr bank,[7] 0=fontRAM/1=VRAM, [3:0] font height-1 (stored x8 or x16)           |
+| 0x4   | `AUX_GFXCTRL`      | R/W | [15:8] colorbase [7] disable video, [6] bitmap mode [5:4] bpp, [3:2] H repeat, [1:0] V repeat |
+| 0x5   | `AUX_LINESTART`    | R/W | [15:0] VRAM address for next display line (reset to `DISPSTART` at start of frame)            |
+| 0x6   | `AUX_LINEINTR`     | R/W | [15] scanline interrupt enable [10:0] interrupt scanline (e.g., 0-479)                        |
+| 0x7   | `AUX_SCREEN_WIDTH` | R/W | [9:0] number of physical pixels of window width (e.g. 640)                                    |
 
 ###### Read-only AUX_VID Registers
 
-| Reg # | Name                  |R/W| Description                                                                         |
---------| ----------------------|---| ------------------------------------------------------------------------------------|
-| 0x8   | `AUX_R_WIDTH`         |R/O| [15:0] configured display resolution width (e.g., 640 or 848)                       |
-| 0x9   | `AUX_R_HEIGHT`        |R/O| [15:0] configured display resolution height (e.g. 480)                              |
-| 0xA   | `AUX_R_FEATURES`      |R/O| [15:0] configured features [bits TBD]                                               |
-| 0xB   | `AUX_R_SCANLINE`      |R/O| [15] in V blank (non-visible), [14] in H blank [10:0] V scanline (< HEIGHT visible) |
-| 0xC   | `AUX_R_GITHASH_H`     |R/O| [15:0] high 16-bits of 32-bit Git hash build identifier                             |
-| 0xD   | `AUX_R_GITHASH_L`     |R/O| [15:0] low 16-bits of 32-bit Git hash build identifier                              |
-| 0xE   | `AUX_R_UNUSED_E`      |R/O|                                                                                     |
-| 0xF   | `AUX_R_UNUSED_F`      |R/O|                                                                                     |
+| Reg # | Name              | R/W | Description                                                                         |
+| ----- | ----------------- | --- | ----------------------------------------------------------------------------------- |
+| 0x8   | `AUX_R_WIDTH`     | R/O | [15:0] configured display resolution width (e.g., 640 or 848)                       |
+| 0x9   | `AUX_R_HEIGHT`    | R/O | [15:0] configured display resolution height (e.g. 480)                              |
+| 0xA   | `AUX_R_FEATURES`  | R/O | [15:0] configured features [bits TBD]                                               |
+| 0xB   | `AUX_R_SCANLINE`  | R/O | [15] in V blank (non-visible), [14] in H blank [10:0] V scanline (< HEIGHT visible) |
+| 0xC   | `AUX_R_GITHASH_H` | R/O | [15:0] high 16-bits of 32-bit Git hash build identifier                             |
+| 0xD   | `AUX_R_GITHASH_L` | R/O | [15:0] low 16-bits of 32-bit Git hash build identifier                              |
+| 0xE   | `AUX_R_UNUSED_E`  | R/O |                                                                                     |
+| 0xF   | `AUX_R_UNUSED_F`  | R/O |                                                                                     |
+
+### Xosera Video Modes
+
+Xosera always outputs a fixed video resolution (either 640x480 or 848x480 widescreen at 60 Hz, and can be re-configured at run-time),
+but it uses several different video generation modes and options to control how the display is generated.
+
+| Mode | Tile size | 640x480 (4:3)                | 848x480 (16:9)                  | Colors                                                |
+| ---- | --------- | ---------------------------- | ------------------------------- | ----------------------------------------------------- |
+| Text | 8x16      | 80x30 tiles<br /> 2400 words | 106 x 30 tiles<br /> 3180 words | 2 from 16 color palette per tile using attribute byte |
+| Text | 8x8       | 80x60 tiles<br /> 4800 words | 106 x 60 tiles<br /> 6360 words | 2 from 16 color palette per tile using attribute byte |
+
+Tile size can be 8x16 (4KB) or 8x8 (2KB) as stored, but can be truncated vertically when displayed (e.g., for 8x10).
+There is 8KB font memory in 4 2KB banks (e.g. 2 8x16 fonts, or 1 8x16 font and 2 8x8 fonts).
+
+Font/tile memory is writable in AUX address space (but not readable).
+(Graphics modes coming soon...)

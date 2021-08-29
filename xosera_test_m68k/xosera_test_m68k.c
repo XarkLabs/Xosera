@@ -60,6 +60,19 @@ uint16_t def_colors[256] = {
     0x0f9f, 0x0fbf, 0x0000, 0x0111, 0x0222, 0x0333, 0x0444, 0x0555, 0x0666, 0x0777, 0x0888, 0x0999, 0x0aaa, 0x0bbb,
     0x0ccc, 0x0ddd, 0x0eee, 0x0fff};
 
+#ifdef COPPER
+// Copper list
+const uint8_t  copper_list_len = 12;
+const uint16_t copper_list[] = {
+    0xb000, 0x0f00,             // movep 0, 0x0F00          ; Make color 0 red
+    0x0140, 0x0002,             // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000, 0x00f0,             // movep 0, 0x00F0          ; Make color 0 green
+    0x0280, 0x0002,             // wait  0, 320, 0b000010   ; Wait for line 320, ignore X position
+    0xb000, 0x000f,             // movep 0, 0x000F          ; Make color 0 blue
+    0x0000, 0x0003              // wait  0, 0, 0b000011     ; Wait for next frame
+};
+#endif
+
 // dummy global variable
 uint32_t global;        // this is used to prevent the compiler from optimizing out tests
 
@@ -530,6 +543,22 @@ void     xosera_test()
     while (XFrameCount == t)
         ;
     printf("okay. Vsync interrupt detected.\n\n");
+
+#ifdef COPPER
+    dprintf("Loading copper list...");
+    
+    xv_setw(aux_addr, XV_AUX_COPPERMEM);
+
+    for (uint8_t i = 0; i < copper_list_len; i++) {
+        xv_setw(aux_data, copper_list[i]);
+    }
+
+    dprintf(" and enabling copper...");
+
+    xv_reg_setw(coppctrl, 0x8000);
+
+    dprintf("okay\n");
+#endif
 
     if (delay_check(4000))
     {

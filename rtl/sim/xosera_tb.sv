@@ -237,6 +237,12 @@ always begin
 
     if (xosera.blitter.blit_state == xosera.blitter.IDLE) begin
 
+        // TODO hacked in copper enable
+        #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, XR_COPP_CTRL);
+        #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h8000);
+        // TODO end
+        
+        
 `ifdef LOAD_MONOBM
         while (xosera.video_gen.last_frame_pixel != 1'b1) begin
             # 1ns;

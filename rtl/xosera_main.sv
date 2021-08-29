@@ -55,7 +55,7 @@ module xosera_main(
        );
 
 logic        blit_vram_sel  /* verilator public */;     // blitter VRAM select
-logic        blit_xr_sel   /* verilator public */;      // blitter XR select
+logic        blit_xr_sel    /* verilator public */;     // blitter XR select
 logic        blit_wr        /* verilator public */;     // blitter VRAM/XR write
 logic  [3:0] blit_mask      /* verilator public */;     // 4 nibble write masks for vram
 
@@ -88,6 +88,55 @@ assign  blit_vgen_reg_wr    = blit_vgen_reg_sel && blit_wr;
 assign  blit_tilemem_wr     = blit_tilemem_sel && blit_wr;
 assign  blit_colormem_wr    = blit_colormem_sel && blit_wr;
 assign  blit_spritemem_wr   = blit_spritemem_sel && blit_wr;
+assign  blit_coppermem_wr   = blit_coppermem_sel && blit_wr;
+
+// Copper
+logic [11:0] copp_wr_addr;
+logic [15:0] copp_data_out;
+
+logic        copp_coppermem_wr;
+logic        copp_colormem_wr;
+logic        copp_tilemem_wr;
+logic        copp_vgen_reg_wr;
+
+logic        coppermem_wr_in;
+logic [10:0] coppermem_wr_addr_in;
+logic [15:0] coppermem_wr_data_in;
+
+logic        colormem_wr_in;
+logic  [7:0] colormem_wr_addr_in;
+logic [15:0] colormem_wr_data_in;
+
+logic        tilemem_wr_in;
+logic [11:0] tilemem_wr_addr_in;
+logic [15:0] tilemem_wr_data_in;
+
+logic        xr_reg_wr_in;
+logic [4:0]  xr_reg_wr_addr_in;
+logic [15:0] xr_reg_wr_data_in;
+
+assign coppermem_wr_in          = blit_coppermem_wr  || copp_coppermem_wr;
+assign coppermem_wr_addr_in     = blit_coppermem_wr   ? blit_addr[10:0] : copp_wr_addr[10:0]; 
+assign coppermem_wr_data_in     = blit_coppermem_wr   ? blit_data_out   : copp_data_out;
+
+assign colormem_wr_in           = blit_colormem_wr || copp_colormem_wr;
+assign colormem_wr_addr_in      = blit_colormem_wr  ? blit_addr[7:0]  : copp_wr_addr[7:0]; 
+assign colormem_wr_data_in      = blit_colormem_wr  ? blit_data_out   : copp_data_out;
+
+assign tilemem_wr_in            = blit_tilemem_wr    || copp_tilemem_wr;
+assign tilemem_wr_addr_in       = blit_tilemem_wr     ? blit_addr[11:0]  : copp_wr_addr[11:0]; 
+assign tilemem_wr_data_in       = blit_tilemem_wr     ? blit_data_out    : copp_data_out;
+
+assign xr_reg_wr_in             = blit_vgen_reg_wr   || copp_vgen_reg_wr;
+assign xr_reg_wr_addr_in        = blit_vgen_reg_wr    ? blit_addr[4:0]   : copp_wr_addr[4:0];
+assign xr_reg_wr_data_in        = blit_vgen_reg_wr    ? blit_data_out    : copp_data_out;
+
+logic [10:0]    copper_pc;
+logic           coppermem_rd_en;
+logic [15:0]    coppermem_rd_data_out;
+//logic [15:0]    copp_reg_data_out;
+logic [10:0]    video_h_count;
+logic [10:0]    video_v_count;
 
 //  16x64K (128KB) video memory
 logic        vram_sel       /* verilator public */;
@@ -124,6 +173,7 @@ logic [15:0]    spritemem_data_out  /* verilator public */;
 logic  [7:0]    color_index         /* verilator public */;
 logic [15:0]    pal_lookup          /* verilator public */;
 
+logic           vgen_in_vblank;
 logic           vsync_1;
 logic           hsync_1;
 logic           dv_de_1;
@@ -139,7 +189,7 @@ assign vram_addr    = vgen_vram_sel ? vgen_vram_addr    : blit_addr;
 assign vram_data_in = blit_data_out;
 assign blit_data_in = blit_vram_load ? vram_data_out    : blit_vram_read;
 assign vgen_data_in = vgen_vram_load ? vram_data_out    : vgen_vram_read;
- 
+
 // save vgen value read from vram
 always_ff @(posedge clk) begin
     if (vgen_vram_load) begin
@@ -190,9 +240,9 @@ blitter blitter(
 
 //  video generation
 video_gen video_gen(
-    .vgen_reg_wr_i(blit_vgen_reg_wr),
-    .vgen_reg_num_i(blit_addr[4:0]),
-    .vgen_reg_data_i(blit_data_out),
+    .vgen_reg_wr_i(xr_reg_wr_in),
+    .vgen_reg_num_i(xr_reg_wr_addr_in),
+    .vgen_reg_data_i(xr_reg_wr_data_in),
     .vgen_reg_data_o(vgen_reg_data_out),
     .intr_status_i(intr_status),        // status read from VID_CTRL
     .intr_signal_o(intr_signal),        // signaled by write to VID_CTRL
@@ -209,6 +259,9 @@ video_gen video_gen(
     .hsync_o(hsync_1),
     .vsync_o(vsync_1),
     .dv_de_o(dv_de_1),
+    .h_count_o(video_h_count),
+    .v_count_o(video_v_count),
+    .in_vblank_o(vgen_in_vblank),
     .reset_i(reset_i),
     .clk(clk)
 );
@@ -230,9 +283,9 @@ colormem colormem(
     .rd_address_i(color_index),
     .rd_data_o(pal_lookup),
     .wr_clk(clk),
-    .wr_en_i(blit_colormem_wr),
-    .wr_address_i(blit_addr[7:0]),
-    .wr_data_i(blit_data_out)
+    .wr_en_i(colormem_wr_in),
+    .wr_address_i(colormem_wr_addr_in),
+    .wr_data_i(colormem_wr_data_in)
 );
 
 //  16-bit x 4KB tile memory
@@ -242,9 +295,9 @@ tilemem tilemem(
     .rd_address_i(tilemem_addr),
     .rd_data_o(tilemem_data_out),
     .wr_clk(clk),
-    .wr_en_i(blit_tilemem_wr),
-    .wr_address_i(blit_addr[11:0]),
-    .wr_data_i(blit_data_out)
+    .wr_en_i(tilemem_wr_in),
+    .wr_address_i(tilemem_wr_addr_in),
+    .wr_data_i(tilemem_wr_data_in)
 );
 
 // cursor sprite RAM
@@ -257,6 +310,43 @@ spritemem spritemem(
     .wr_en_i(blit_spritemem_wr),
     .wr_address_i(blit_addr[7:0]),
     .wr_data_i(blit_data_out)
+);
+
+// Copper
+copper copper(
+    .clk(clk),
+    .reset_i(reset_i),
+    .vblank_i(vgen_in_vblank),
+    .ram_wr_addr_o(copp_wr_addr),
+    .ram_wr_data_o(copp_data_out),
+    .coppermem_rd_addr_o(copper_pc),
+    .coppermem_rd_en_o(coppermem_rd_en),
+    .coppermem_rd_data_i(coppermem_rd_data_out),
+    .coppermem_wr_en_o(copp_coppermem_wr),
+    .colormem_wr_en_o(copp_colormem_wr),
+    .tilemem_wr_en_o(copp_tilemem_wr),
+    .vgen_reg_wr_en_o(copp_vgen_reg_wr),
+    .blit_xr_reg_sel_i(blit_vgen_reg_sel),
+    .blit_tilemem_sel_i(blit_tilemem_sel),
+    .blit_colormem_sel_i(blit_colormem_sel),
+    .blit_coppermem_sel_i(blit_coppermem_sel),
+    .copp_reg_wr_i(blit_vgen_reg_wr),
+    .copp_reg_num_i(blit_addr[3:0]),
+    .copp_reg_data_i(blit_data_out),
+    .h_count_i(video_h_count),
+    .v_count_i(video_v_count)
+);
+
+// Copper RAM
+coppermem coppermem(
+    .clk(clk),
+    .rd_en_i(coppermem_rd_en),
+    .rd_address_i(copper_pc),
+    .rd_data_o(coppermem_rd_data_out),
+    .wr_clk(clk),
+    .wr_en_i(coppermem_wr_in),
+    .wr_address_i(coppermem_wr_addr_in),
+    .wr_data_i(coppermem_wr_data_in)
 );
 
 // color RAM lookup (delays video 1 cycle for BRAM)

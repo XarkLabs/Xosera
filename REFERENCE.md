@@ -181,9 +181,9 @@ NOTE: This register is identical to `RW_DATA` to allow for 32-bit "long" MOVEP.L
 | --------------- | --------------- | --- | --------------------------------------- |
 | XR_REGS         | 0x0000-0x0FFF   | R/W | See below for XR register details       |
 | XR_COLOR_MEM    | 0x8000-0x80FF   | W/O | 256 x 16-bit color lookup memory (XRGB) |
-| XR_TILE_MEM     | 0xA000-0xAFFF   | W/O | 4096 x 16-bit tile glyph storage memory |
-| XR_COPPER_MEM   | 0xC000-0xC3FF   | W/O | 2048 x 16-bit copper program memory     |
-| (unused region) | 0xE000-0xEFFF   | -/- | (unused region)                         |
+| XR_TILE_MEM     | 0x9000-0x9FFF   | W/O | 4096 x 16-bit tile glyph storage memory |
+| XR_COPPER_MEM   | 0xA000-0xA7FF   | W/O | 2048 x 16-bit copper program memory     |
+| (unused region) | 0xB000-0xFFFF   | -/- | (unused region)                         |
 
 To access an XR register or XR memory address, write the XR register number or address to `XR_ADDR`, then read or write to `XR_DATA` (note that currently only XR registers can be read, not XR memory).  
 Each word written to `XR_DATA` will also automatically increment `XR_ADDR` to allows faster consecutive updates (like for color or tile RAM update).  

@@ -18,10 +18,10 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
     - [Xosera XR Registers](#xosera-xr-registers)
       - [Video Config and Copper XR Register Summary](#video-config-and-copper-xr-register-summary)
       - [Video Config and Copper XR Register Details](#video-config-and-copper-xr-register-details)
-      - [Playfield A & B Control XR Registers Summary](#playfield-a--b-control-xr-registers-summary)
-      - [2D Blitter Engine XR Registers Summary](#2d-blitter-engine-xr-registers-summary)
-      - [Polygon / Line Draw Engine XR Registers Summary](#polygon--line-draw-engine-xr-registers-summary)
-    - [Xosera Video Modes](#xosera-video-modes)
+      - [Playfield A & B Control XR Register Summary](#playfield-a--b-control-xr-register-summary)
+      - [Playfield A & B Control XR Register Details](#playfield-a--b-control-xr-register-details)
+      - [2D Blitter Engine XR Register Summary](#2d-blitter-engine-xr-register-summary)
+      - [Polygon / Line Draw Engine XR Register Summary](#polygon--line-draw-engine-xr-register-summary)
 
 ## Xosera Reference Information
 
@@ -195,7 +195,6 @@ TODO: Investigate a way to read color, tile or copper memory (perhaps not during
 
 This XR registers are used to control of most Xosera operation other than CPU VRAM access and a few miscellaneous functions accessed via the main registers.  
 To access these registers, write the register address to `XR_ADDR` (with bit [15] zero), then read or write register data to `XR_DATA` (and when _writing only_, the low 12-bits of `XR_ADDR` will be auto-incremented for each word written).
- continue here...
 
 #### Video Config and Copper XR Register Summary
 
@@ -225,9 +224,10 @@ To access these registers, write the register address to `XR_ADDR` (with bit [15
 **0x00 `XR_VID_CTRL` (R/W) - display control and border color**  
 <img src="./pics/wd_XR_VID_CTRL.svg">  
 **Extended register or memory address for data accessed via `XR_DATA`**  
-TODO: write this up
 
-#### Playfield A & B Control XR Registers Summary
+TODO: write these up
+
+#### Playfield A & B Control XR Register Summary
 
 | Reg # | Name              | R/W | Description                                                  |
 | ----- | ----------------- | --- | ------------------------------------------------------------ |
@@ -248,7 +248,21 @@ TODO: write this up
 | 0x1E  | `XR_PB_UNUSED_1E` | R/W |                                                              |
 | 0x1F  | `XR_PB_UNUSED_1F` | R/W |                                                              |
 
-#### 2D Blitter Engine XR Registers Summary
+#### Playfield A & B Control XR Register Details
+
+**0x10 `XR_PA_GFX_CTRL` (R/W) - playfield A graphics control**  
+<img src="./pics/wd_XR_GFX_CTRL.svg">  
+**playfield A graphics control**  
+Describe stuff here.
+
+**0x11 `XR_PA_TILE_CTRL` (R/W) - playfield A tile control**  
+<img src="./pics/wd_XR_TILE_CTRL.svg">  
+**playfield A tile control**  
+Describe stuff here.
+
+TODO: write these up properly
+
+#### 2D Blitter Engine XR Register Summary
 
 | Reg # | Name  | R/W | Description |
 | ----- | ----- | --- | ----------- |
@@ -269,7 +283,7 @@ TODO: write this up
 | 0x2E  | [TBD] | R/W |             |
 | 0x2F  | [TBD] | R/W |             |
 
-#### Polygon / Line Draw Engine XR Registers Summary
+#### Polygon / Line Draw Engine XR Register Summary
 
 | Reg # | Name  | R/W | Description |
 | ----- | ----- | --- | ----------- |
@@ -289,19 +303,3 @@ TODO: write this up
 | 0x3D  | [TBD] | R/W |             |
 | 0x3E  | [TBD] | R/W |             |
 | 0x3F  | [TBD] | R/W |             |
-
-### Xosera Video Modes
-
-Xosera always outputs a fixed video resolution (either 640x480 or 848x480 widescreen at 60 Hz, and can be re-configured at run-time),
-but it uses several different video generation modes and options to control how the display is generated.
-
-| Mode | Tile size | 640x480 (4:3)                | 848x480 (16:9)                  | Colors                                                |
-| ---- | --------- | ---------------------------- | ------------------------------- | ----------------------------------------------------- |
-| Text | 8x16      | 80x30 tiles<br /> 2400 words | 106 x 30 tiles<br /> 3180 words | 2 from 16 color palette per tile using attribute byte |
-| Text | 8x8       | 80x60 tiles<br /> 4800 words | 106 x 60 tiles<br /> 6360 words | 2 from 16 color palette per tile using attribute byte |
-
-Tile size can be 8x16 (4KB) or 8x8 (2KB) as stored, but can be truncated vertically when displayed (e.g., for 8x10).
-There is 8KB font memory in 4 2KB banks (e.g. 2 8x16 fonts, or 1 8x16 font and 2 8x8 fonts).
-
-Font/tile memory is writable in AUX address space (but not readable).
-(Graphics modes coming soon...)

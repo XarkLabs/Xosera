@@ -4,12 +4,12 @@
     },
     {bits: 4, type: 1
     },
-    {bits: 1, name: "mem", type: 4, attr: ['0 tile RAM', '1 VRAM'
+    {bits: 1, name: "mem", type: 5, attr: ['0 tile RAM', '1 VRAM'
       ]
     },
     {bits: 2, type: 1
     },
-    {bits: 5, name: "tile base address", type: 4, attr: ['(1K word boundary 8x8)', '(2K word boundry 8x16)'
+    {bits: 5, name: "tile base address", type: 6, attr: ['(1K word boundary 8x8)', '(2K word boundry 8x16)'
       ]
     },
   ], config: { bits: 16

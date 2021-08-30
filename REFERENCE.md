@@ -14,10 +14,13 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
   - [Xosera Reference Information](#xosera-reference-information)
     - [Xosera Main Register Summary (16-bit directly accessible)](#xosera-main-register-summary-16-bit-directly-accessible)
   - [Xosera Main Register Details](#xosera-main-register-details)
-    - [Xosera Extended Register/Memory Summary](#xosera-extended-registermemory-summary)
-    - [Xosera AUX_VID Registers](#xosera-aux_vid-registers)
-          - [Read-Write AUX_VID Registers](#read-write-aux_vid-registers)
-          - [Read-only AUX_VID Registers](#read-only-aux_vid-registers)
+    - [Xosera Extended Register / Extended Memory Region Summary](#xosera-extended-register--extended-memory-region-summary)
+    - [Xosera XR Registers](#xosera-xr-registers)
+      - [Video Config and Copper XR Register Summary](#video-config-and-copper-xr-register-summary)
+      - [Video Config and Copper XR Register Details](#video-config-and-copper-xr-register-details)
+      - [Playfield A & B Control XR Registers Summary](#playfield-a--b-control-xr-registers-summary)
+      - [2D Blitter Engine XR Registers Summary](#2d-blitter-engine-xr-registers-summary)
+      - [Polygon / Line Draw Engine XR Registers Summary](#polygon--line-draw-engine-xr-registers-summary)
     - [Xosera Video Modes](#xosera-video-modes)
 
 ## Xosera Reference Information
@@ -41,13 +44,13 @@ instructions.
 
 ### Xosera Main Register Summary (16-bit directly accessible)
 
-| Reg # | Reg Name     | R+/W+ | Description                                                               |
+| Reg # | Reg Name     | R /W  | Description                                                               |
 | ----- | ------------ | ----- | ------------------------------------------------------------------------- |
 | 0x0   | `XR_ADDR`    | R /W+ | XR register number/address for `XR_DATA` read/write access                |
 | 0x1   | `XR_DATA`    | R /W+ | read/write XR register/memory at `XR_ADDR` (`XR_ADDR` incr. on write)     |
 | 0x2   | `RD_INCR`    | R /W  | increment value for `RD_ADDR` read from `XDATA`/`XDATA_2`                 |
 | 0x3   | `RD_ADDR`    | R /W+ | VRAM address for reading from VRAM when `XDATA`/`XDATA_2` is read         |
-| 0x4   | `WR_INCR`    | W /W  | increment value for `WR_ADDR` on write to `XDATA`/`XDATA_2`               |
+| 0x4   | `WR_INCR`    | R /W  | increment value for `WR_ADDR` on write to `XDATA`/`XDATA_2`               |
 | 0x5   | `WR_ADDR`    | R /W  | VRAM address for writing to VRAM when `XDATA`/`XDATA_2` is written        |
 | 0x6   | `XDATA`      | R+/W+ | read/write VRAM word at `RD_ADDR`/`WR_ADDR` (and add `RD_INCR`/`WR_INCR`) |
 | 0x7   | `XDATA_2`    | R+/W+ | 2nd `XVID_DATA`(to allow for 32-bit read/write access)                    |
@@ -60,11 +63,11 @@ instructions.
 | 0xE   | `RW_DATA`    | R+/W+ | read/write VRAM word at `RW_ADDR` (and add `RW_INCR`)                     |
 | 0xF   | `RW_DATA_2`  | R+/W+ | 2nd `RW_DATA`(to allow for 32-bit read/write access)                      |
 
-(`R+` or `W+` indicates that reading or writing this register has additional "side effects")
+(`R+` or `W+` indicates that reading or writing this register has additional "side effects", respectively)
 
 ## Xosera Main Register Details
 
-**0x0 `XR_ADDR` (R/W+) - eXtended Register Address**
+**0x0 `XR_ADDR` (R/W+) - eXtended Register / eXtended Region Address**
 <img src="./pics/wd_XR_ADDR.svg">  
 **Extended register or memory address for data accessed via `XR_DATA`**  
 Specifies the XR register or address to be accessed via `XR_DATA`.
@@ -74,8 +77,12 @@ When `XR_ADDR` is written, the register/address specified will be read and made 
 (`XR_ADDR` needs to be written each time before reading `XR_DATA` or the previously read value will be returned).
 After a word is written to `XR_DATA`, the lower 12-bits of `XR_ADDR` will be auto-incremented by 1 which
 allows writing to contiguous registers or memory by repeatedly writing to `XR_DATA`.  
+The register mapping with `XR_DATA` following `XR_ADDR` allows for M68K code similar to the following to set an
+XR register to an immediate value:  
+&emsp;&emsp;`MOVE.L #$rrXXXX,D0`  
+&emsp;&emsp;`MOVEP.L D0,XR_ADDR(A1)`
 
-**0x1 `XR_DATA` (R/W+) - eXtended Register Data**
+**0x1 `XR_DATA` (R/W+) - eXtended Register / eXtended Region Data**
 <img src="./pics/wd_XR_DATA.svg">  
 **Read or write extended register or memory addressed by `XR_ADDR` register.**  
 Allows read/write access to the XR register or memory using address contained in `XR_ADDR` register.  
@@ -92,7 +99,7 @@ Added to `RD_ADDR` when `XDATA` or `XDATA_2` is read from (twos complement, so v
 
 **0x3 `RD_ADDR` (R/W+) - VRAM read address for `XDATA`/`XDATA_2`**  
 <img src="./pics/wd_RD_ADDR.svg">  
-Read or write VRAM address that will be read when `XDATA` or `XDATA_2` is read from.  
+**Read or write VRAM address that will be read when `XDATA` or `XDATA_2` is read from.**  
 Specifies VRAM address used when reading from VRAM via `XDATA`/`XDATA_2`.  
 When `RD_ADDR` is written (or incremented by `RD_INCR`) the corresponding word in VRAM is read and made
 available for reading at `X_DATA` or `XDATA_2`.  
@@ -168,54 +175,120 @@ When `RW_DATA_2` is read, returns data from VRAM at `RW_ADDR`, adds `RW_INCR` to
 When `RW_DATA_2` is written, begins writing value to VRAM at `RW_ADDR` and adds `RW_INCR` to `RW_ADDR` and begins reading new VRAM value.  
 NOTE: This register is identical to `RW_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from `RW_DATA` for additional speed.  
 
-{NOTE below here still needs more updating}
+### Xosera Extended Register / Extended Memory Region Summary
 
-### Xosera Extended Register/Memory Summary
+| XR Region Name  | XR Region Range | R/W | Description                             |
+| --------------- | --------------- | --- | --------------------------------------- |
+| XR_REGS         | 0x0000-0x0FFF   | R/W | See below for XR register details       |
+| XR_COLOR_MEM    | 0x8000-0x80FF   | W/O | 256 x 16-bit color lookup memory (XRGB) |
+| XR_TILE_MEM     | 0xA000-0xAFFF   | W/O | 4096 x 16-bit tile glyph storage memory |
+| XR_COPPER_MEM   | 0xC000-0xC3FF   | W/O | 2048 x 16-bit copper program memory     |
+| (unused region) | 0xE000-0xEFFF   | -/- | (unused region)                         |
 
-| Name             | Address Range | R/W  | Description                                                     |
-| ---------------- | ------------- | ---- | --------------------------------------------------------------- |
-| `AUX_VID_`*      | 0x0000-0x3FFF | R/W* | AUX_VID register area, see below                                |
-| `AUX_W_FONT`     | 0x4000-0x4FFF | W/O  | 8KB font/tile memory (4K words, high byte first for 8-bit font) |
-| `AUX_W_COLORTBL` | 0x8000-0x80FF | W/O  | 256 word color lookup table (0xXRGB)                            |
-| `AUX_W_COPPER`*  | 0xC000-0x?FFF | W/O  | TODO TBD (audio registers?)                                     |
+To access an XR register or XR memory address, write the XR register number or address to `XR_ADDR`, then read or write to `XR_DATA` (note that currently only XR registers can be read, not XR memory).  
+Each word written to `XR_DATA` will also automatically increment `XR_ADDR` to allows faster consecutive updates (like for color or tile RAM update).  
+Note that this is not the case when reading from `XR_DATA`, you _must_ write to `XR_ADDR` in order to trigger a read (or previously read value will remain).
 
-To access the AUX region, write the AUX address to `XVID_AUX_ADDR`, then write to `XVID_AUX_DATA`.
+TODO: Investigate a way to read color, tile or copper memory (perhaps not during display time)
 
-Each word written to `XVID_AUX_DATA` will also automatically increment `XVID_AUX_ADDR` (this allows faster consecutive writes, like for palette or font RAM update).  Note that this is not the case when reading `XVID_AUX_ADDR` (you _must_ write `XVID_AUX_ADDR` to trigger a read).
+### Xosera XR Registers
 
-TODO Make font memory read/write (perhaps with restrictions/slow read while in use)
+This XR registers are used to control of most Xosera operation other than CPU VRAM access and a few miscellaneous functions accessed via the main registers.  
+To access these registers, write the register address to `XR_ADDR` (with bit [15] zero), then read or write register data to `XR_DATA` (and when _writing only_, the low 12-bits of `XR_ADDR` will be auto-incremented for each word written).
+ continue here...
 
-### Xosera AUX_VID Registers
+#### Video Config and Copper XR Register Summary
 
-This AUX region has registers that deal with video generation configuration and video status.
+| Reg # | Reg Name        | R /W | Description                                                        |
+| ----- | --------------- | ---- | ------------------------------------------------------------------ |
+| 0x00  | `XR_VID_CTRL`   | R /W | display control and border color index                             |
+| 0x01  | `XR_VID_TOP`    | R /W | top line of active display window (typically 0)                    |
+| 0x02  | `XR_VID_BOTTOM` | R /W | bottom line of active display window (typically 479)               |
+| 0x03  | `XR_VID_LEFT`   | R /W | left edge of active display window (typically 0)                   |
+| 0x04  | `XR_VID_RIGHT`  | R /W | right edge of active display window (typically 639 or 847)         |
+| 0x05  | `XR_SCANLINE`   | RO   | [15] in V blank (non-visible), [14] in H blank [10:0] V scanline   |
+| 0x06  | `XR_COPP_CTRL`  | R /W | display synchronized coprocessor [TODO]                            |
+| 0x07  | `XR_UNUSED_07`  | - /- |                                                                    |
+| 0x08  | `XR_FEATURES`   | RO   | Xosera feature and version bits [TODO]                             |
+| 0x09  | `XR_WIDTH`      | RO   | native pixel width of current monitor display mode                 |
+| 0x0A  | `XR_HEIGHT`     | RO   | native pixel height of current monitor display mode                |
+| 0x0B  | `XR_FREQ`       | RO   | update frequency of current monitor display mode (XX.YY Hz in BCD) |
+| 0x0C  | `XR_GITHASH_H`  | RO   | [15:0] high 16-bits of 32-bit Git hash build identifier            |
+| 0x0D  | `XR_GITHASH_L`  | RO   | [15:0] low 16-bits of 32-bit Git hash build identifier             |
+| 0x0E  | `XR_UNUSED_0E`  | RO   |                                                                    |
+| 0x0F  | `XR_UNUSED_0F`  | RO   |                                                                    |
 
-To access these registers, write the register address to `XVID_AUX_ADDR`, then read or write register data to `XVID_AUX_DATA`.  Note that some read-only registers overlap some write-only registers.
+(`R+` or `W+` indicates that reading or writing this register has additional "side effects", respectively)
 
-###### Read-Write AUX_VID Registers
+#### Video Config and Copper XR Register Details
 
-| Reg # | Name               | R/W | Description                                                                                   |
-| ----- | ------------------ | --- | --------------------------------------------------------------------------------------------- |
-| 0x0   | `AUX_DISPSTART`    | R/W | [15:0] starting VRAM address for display (wraps at 0xffff)                                    |
-| 0x1   | `AUX_DISPWIDTH`    | R/W | [15:0] words per display line                                                                 |
-| 0x2   | `AUX_SCROLLXY`     | R/W | [15:8] H pixel scroll, [4:0] V pixel scroll                                                   |
-| 0x3   | `AUX_FONTCTRL`     | R/W | [15:10] font addr bank,[7] 0=fontRAM/1=VRAM, [3:0] font height-1 (stored x8 or x16)           |
-| 0x4   | `AUX_GFXCTRL`      | R/W | [15:8] colorbase [7] disable video, [6] bitmap mode [5:4] bpp, [3:2] H repeat, [1:0] V repeat |
-| 0x5   | `AUX_LINESTART`    | R/W | [15:0] VRAM address for next display line (reset to `DISPSTART` at start of frame)            |
-| 0x6   | `AUX_LINEINTR`     | R/W | [15] scanline interrupt enable [10:0] interrupt scanline (e.g., 0-479)                        |
-| 0x7   | `AUX_SCREEN_WIDTH` | R/W | [9:0] number of physical pixels of window width (e.g. 640)                                    |
+**0x00 `XR_VID_CTRL` (R/W) - display control and border color**  
+<img src="./pics/wd_XR_VID_CTRL.svg">  
+**Extended register or memory address for data accessed via `XR_DATA`**  
+TODO: write this up
 
-###### Read-only AUX_VID Registers
+#### Playfield A & B Control XR Registers Summary
 
-| Reg # | Name              | R/W | Description                                                                         |
-| ----- | ----------------- | --- | ----------------------------------------------------------------------------------- |
-| 0x8   | `AUX_R_WIDTH`     | R/O | [15:0] configured display resolution width (e.g., 640 or 848)                       |
-| 0x9   | `AUX_R_HEIGHT`    | R/O | [15:0] configured display resolution height (e.g. 480)                              |
-| 0xA   | `AUX_R_FEATURES`  | R/O | [15:0] configured features [bits TBD]                                               |
-| 0xB   | `AUX_R_SCANLINE`  | R/O | [15] in V blank (non-visible), [14] in H blank [10:0] V scanline (< HEIGHT visible) |
-| 0xC   | `AUX_R_GITHASH_H` | R/O | [15:0] high 16-bits of 32-bit Git hash build identifier                             |
-| 0xD   | `AUX_R_GITHASH_L` | R/O | [15:0] low 16-bits of 32-bit Git hash build identifier                              |
-| 0xE   | `AUX_R_UNUSED_E`  | R/O |                                                                                     |
-| 0xF   | `AUX_R_UNUSED_F`  | R/O |                                                                                     |
+| Reg # | Name              | R/W | Description                                                  |
+| ----- | ----------------- | --- | ------------------------------------------------------------ |
+| 0x10  | `XR_PA_GFX_CTRL`  | R/W | playfield A graphics control                                 |
+| 0x11  | `XR_PA_TILE_CTRL` | R/W | playfield A tile control                                     |
+| 0x12  | `XR_PA_ADDR`      | R/W | playfield A display VRAM start address                       |
+| 0x13  | `XR_PA_WIDTH`     | R/W | playfield A display line width in words                      |
+| 0x14  | `XR_PA_SCROLLHV`  | R/W | playfield A horizontal and vertical fine scroll              |
+| 0x15  | `XR_PA_LINE_ADDR` | R/W | playfield A scanline start address (loaded at start of line) |
+| 0x16  | `XR_PA_UNUSED_16` | R/W |                                                              |
+| 0x17  | `XR_PA_UNUSED_17` | R/W |                                                              |
+| 0x18  | `XR_PB_GFX_CTRL`  | R/W | playfield B graphics control                                 |
+| 0x19  | `XR_PB_TILE_CTRL` | R/W | playfield B tile control                                     |
+| 0x1A  | `XR_PB_ADDR`      | R/W | playfield B display VRAM start address                       |
+| 0x1B  | `XR_PB_WIDTH`     | R/W | playfield B display line width in words                      |
+| 0x1C  | `XR_PB_SCROLLXY`  | R/W | playfield B horizontal and vertical fine scroll              |
+| 0x1D  | `XR_PB_LINE_ADDR` | R/W | playfield B scanline start address (loaded at start of line) |
+| 0x1E  | `XR_PB_UNUSED_1E` | R/W |                                                              |
+| 0x1F  | `XR_PB_UNUSED_1F` | R/W |                                                              |
+
+#### 2D Blitter Engine XR Registers Summary
+
+| Reg # | Name  | R/W | Description |
+| ----- | ----- | --- | ----------- |
+| 0x20  | [TBD] | R/W |             |
+| 0x21  | [TBD] | R/W |             |
+| 0x22  | [TBD] | R/W |             |
+| 0x23  | [TBD] | R/W |             |
+| 0x24  | [TBD] | R/W |             |
+| 0x25  | [TBD] | R/W |             |
+| 0x26  | [TBD] | R/W |             |
+| 0x27  | [TBD] | R/W |             |
+| 0x28  | [TBD] | R/W |             |
+| 0x29  | [TBD] | R/W |             |
+| 0x2A  | [TBD] | R/W |             |
+| 0x2B  | [TBD] | R/W |             |
+| 0x2C  | [TBD] | R/W |             |
+| 0x2D  | [TBD] | R/W |             |
+| 0x2E  | [TBD] | R/W |             |
+| 0x2F  | [TBD] | R/W |             |
+
+#### Polygon / Line Draw Engine XR Registers Summary
+
+| Reg # | Name  | R/W | Description |
+| ----- | ----- | --- | ----------- |
+| 0x30  | [TBD] | R/W |             |
+| 0x31  | [TBD] | R/W |             |
+| 0x32  | [TBD] | R/W |             |
+| 0x33  | [TBD] | R/W |             |
+| 0x34  | [TBD] | R/W |             |
+| 0x35  | [TBD] | R/W |             |
+| 0x36  | [TBD] | R/W |             |
+| 0x37  | [TBD] | R/W |             |
+| 0x38  | [TBD] | R/W |             |
+| 0x39  | [TBD] | R/W |             |
+| 0x3A  | [TBD] | R/W |             |
+| 0x3B  | [TBD] | R/W |             |
+| 0x3C  | [TBD] | R/W |             |
+| 0x3D  | [TBD] | R/W |             |
+| 0x3E  | [TBD] | R/W |             |
+| 0x3F  | [TBD] | R/W |             |
 
 ### Xosera Video Modes
 

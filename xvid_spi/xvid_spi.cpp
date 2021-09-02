@@ -772,7 +772,7 @@ static void test_draw_lines()
                                     {15, 4, 16, 0}, {16, 0, 17, 4}, {15.5, 2, 16.5, 2}};
 
 
-    // 8-bpp tiled mode (320x240)
+    // 8-bpp bitmap mode (320x240)
     xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
     xvid_setw(XVID_AUX_DATA, 0x0075);
     xvid_setw(XVID_AUX_ADDR, AUX_DISPSTART);        // start addr

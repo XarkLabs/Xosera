@@ -36,7 +36,7 @@
 #define XM_DATA_2    0x1C        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
 #define XM_SYS_CTRL  0x20        // (R /W+) busy status, FPGA reconfig, interrupt status/control, write masking
 #define XM_TIMER     0x24        // (RO   ) read 1/10th millisecond timer [TODO]
-#define XM_UNUSED_A  0x28        // (R /W ) unused direct register 0xA [TODO]
+#define XM_WR_PR_CMD 0x28        // (R /W ) write primitive renderer command
 #define XM_UNUSED_B  0x2C        // (R /W ) unused direct register 0xB [TODO]
 #define XM_RW_INCR   0x30        // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
 #define XM_RW_ADDR   0x34        // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
@@ -125,3 +125,11 @@
 #define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 26, 16) | ((uint16)(val16)))
 
 // TODO blit and polydraw
+
+// Primitive renderer commands
+#define PR_COORDX1 0x0000
+#define PR_COORDY1 0x1000
+#define PR_COORDX2 0x2000
+#define PR_COORDY2 0x3000
+#define PR_COLOR   0x4000
+#define PR_EXECUTE 0xF000

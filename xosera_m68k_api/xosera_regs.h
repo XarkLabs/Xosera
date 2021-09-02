@@ -88,9 +88,9 @@ typedef struct _xreg
 extern volatile xreg_t * const xosera_ptr;
 
 // set high byte of xosera_reg xr to 8-bit byte bh
-#define xv_setbh(xr, bh) (xosera_ptr[XVR_##xr >> 2].b.h = (bh))
+#define xv_setbh(xr, bh) (xosera_ptr[XVR_##xr >> 2].b.h = (uint8_t)(bh))
 // set low byte of xosera_reg xr to 8-bit byte bl
-#define xv_setbl(xr, bl) (xosera_ptr[XVR_##xr >> 2].b.l = (bl))
+#define xv_setbl(xr, bl) (xosera_ptr[XVR_##xr >> 2].b.l = (uint8_t)(bl))
 // set xosera_reg xr to 16-bit word wv
 #define xv_setw(xr, wv)                                                                                                \
     __asm__ __volatile__("movep.w %[src]," XVR_XSTR(XVR_##xr) "(%[ptr])"                                               \

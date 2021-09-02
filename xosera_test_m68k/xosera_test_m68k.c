@@ -171,10 +171,10 @@ static void get_textmode_settings()
 {
     //    int mode = 0;               // xv_reg_getw(gfxctrl);
     //    bool v_dbl     = mode & 2;
-    int tile_size = 16;        //((xv_reg_getw(fontctrl) & 0xf) + 1) << (v_dbl ? 1 : 0);
-    screen_addr   = 0;         // xv_reg_getw(dispstart);
-    text_columns  = xv_reg_getw(dispwidth);
-    text_rows     = (xv_reg_getw(vidheight) + (tile_size - 1)) / tile_size;
+    uint16_t tile_size = 16;        //((xv_reg_getw(fontctrl) & 0xf) + 1) << (v_dbl ? 1 : 0);
+    screen_addr        = 0;         // xv_reg_getw(dispstart);
+    text_columns       = (uint8_t)xv_reg_getw(dispwidth);
+    text_rows          = (uint8_t)(xv_reg_getw(vidheight) + (tile_size - 1) / tile_size);
 }
 
 static void xcls()
@@ -272,12 +272,12 @@ void test_vram_speed()
     xv_setw(rd_inc, 1);
     xv_setw(rd_addr, 0x0000);
 
-    int vram_write = 0;
-    int vram_read  = 0;
-    int main_write = 0;
-    int main_read  = 0;
+    uint32_t vram_write = 0;
+    uint32_t vram_read  = 0;
+    uint32_t main_write = 0;
+    uint32_t main_read  = 0;
 
-    int reps = 16;        // just a few flashes for write test
+    uint16_t reps = 16;        // just a few flashes for write test
     xmsg(0, 0, 0x02, "VRAM write     ");
     dprintf("VRAM write x %d\n", reps);
     uint32_t v = ((0x0f00 | 'G') << 16) | (0xf000 | 'o');
@@ -397,14 +397,14 @@ void test_vram_speed()
 
     dprintf("MOVEP.L VRAM write      128KB x 16 (2MB)    %d ms (%d KB/sec)\n",
             vram_write,
-            (1000 * 128 * reps) / vram_write);
+            (1000U * 128 * reps) / vram_write);
     dprintf(
-        "MOVEP.L VRAM read       128KB x 16 (2MB)    %d ms (%d KB/sec)\n", vram_read, (1000 * 128 * reps) / vram_read);
-    dprintf("MOVE.L  main RAM write  128KB x 16 (2MB)    %d ms (%d KB/sec)\n",
+        "MOVEP.L VRAM read       128KB x 16 (2MB)    %u ms (%u KB/sec)\n", vram_read, (1000U * 128 * reps) / vram_read);
+    dprintf("MOVE.L  main RAM write  128KB x 16 (2MB)    %u ms (%u KB/sec)\n",
             main_write,
-            (1000 * 128 * reps) / main_write);
+            (1000U * 128 * reps) / main_write);
     dprintf(
-        "MOVE.L  main RAM read   128KB x 16 (2MB)    %d ms (%d KB/sec)\n", main_read, (1000 * 128 * reps) / main_read);
+        "MOVE.L  main RAM read   128KB x 16 (2MB)    %u ms (%u KB/sec)\n", main_read, (1000U * 128 * reps) / main_read);
 }
 
 uint16_t rosco_m68k_CPUMHz()
@@ -423,14 +423,14 @@ uint16_t rosco_m68k_CPUMHz()
         : [count] "=d"(count), [tv] "=&d"(tv)
         :
         :);
-    uint16_t MHz = ((count * 26) + 500) / 1000;
+    uint16_t MHz = (uint16_t)(((count * 26U) + 500U) / 1000U);
     dprintf("rosco_m68k: m68k CPU speed %d.%d MHz (%d.%d BogoMIPS)\n",
             MHz / 10,
             MHz % 10,
             count * 3 / 10000,
             ((count * 3) % 10000) / 10);
 
-    return (MHz + 5) / 10;
+    return (uint16_t)((MHz + 5U) / 10U);
 }
 
 static void load_sd_bitmap(const char * filename)
@@ -532,9 +532,9 @@ void     xosera_test()
         return;
     }
 
-    dprintf("Setting scanline interrupt line 399...");
+    dprintf("Setting scanline interrupt line 400...");
 
-    xv_reg_setw(lineintr, 0x818F);        // line 399
+    xv_reg_setw(lineintr, 0x8190);        // line 400
 
     dprintf("okay.\n");
 
@@ -546,13 +546,13 @@ void     xosera_test()
     while (true)
     {
         uint32_t t = XFrameCount;
-        int      h = t / (60 * 60 * 60);
-        int      m = t / (60 * 60) % 60;
-        int      s = (t / 60) % 60;
-        dprintf("*** xosera_test_m68k iteration: %d, running %d:%02d:%02d\n", test_count++, h, m, s);
+        uint32_t h = t / (60 * 60 * 60);
+        uint32_t m = t / (60 * 60) % 60;
+        uint32_t s = (t / 60) % 60;
+        dprintf("*** xosera_test_m68k iteration: %u, running %u:%02u:%02u\n", test_count++, h, m, s);
 
         xcls();
-        uint32_t githash   = (xv_reg_getw(githash_h) << 16) | xv_reg_getw(githash_l);
+        uint32_t githash   = ((uint32_t)xv_reg_getw(githash_h) << 16) | (uint32_t)xv_reg_getw(githash_l);
         uint16_t width     = xv_reg_getw(vidwidth);
         uint16_t height    = xv_reg_getw(vidheight);
         uint16_t features  = xv_reg_getw(features);

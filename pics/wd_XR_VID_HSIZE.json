@@ -1,0 +1,16 @@
+{
+    "reg": [
+        {
+            "bits": 10,
+            "name": "monitor mode horizontal resolution",
+            "type": 4
+        },
+        {
+            "bits": 8,
+            "type": 1
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

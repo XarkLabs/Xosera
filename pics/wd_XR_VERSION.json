@@ -1,0 +1,22 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "Xosera decimal version code (x.xx)",
+            "type": 4,
+            "attr": [
+                "(Example 0x8E = 142 = version 1.42)"
+            ]
+        },
+        {
+            "bits": 8,
+            "type": 1,
+            "attr": [
+                "(optional feature bits TBD)"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

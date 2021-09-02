@@ -9,22 +9,14 @@
             ]
         },
         {
-            "bits": 3,
-            "name": "interrupt source",
-            "type": 7,
-            "attr": [
-                "[10] vsync intr",
-                "[9] copper intr",
-                "[8] draw done intr"
-            ]
-        },
-        {
-            "bits": 1,
-            "name": "intr. en",
+            "bits": 4,
+            "name": "intrrupt enable",
             "type": 5,
             "attr": [
-                "0 = off",
-                "1 = on"
+                "[11] = vsync",
+                "[10] = copper",
+                "[09] = draw done",
+                "[08] = audio"
             ]
         },
         {

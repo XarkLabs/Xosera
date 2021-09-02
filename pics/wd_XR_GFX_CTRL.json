@@ -5,10 +5,10 @@
             "name": "V repeat",
             "type": 6,
             "attr": [
-                "00=1x",
-                "01=2x",
-                "10=3x",
-                "11=4x"
+                "00=1x tall",
+                "01=2x tall",
+                "10=3x tall",
+                "11=4x tall"
             ]
         },
         {
@@ -16,15 +16,15 @@
             "name": "H repeat",
             "type": 6,
             "attr": [
-                "00=1x",
-                "01=2x",
-                "10=3x",
-                "11=4x"
+                "00=1x wide",
+                "01=2x wide",
+                "10=3x wide",
+                "11=4x wide"
             ]
         },
         {
             "bits": 2,
-            "name": "bpp",
+            "name": "bits-per-pixel",
             "type": 3,
             "attr": [
                 "00=1-bpp",
@@ -44,7 +44,7 @@
         },
         {
             "bits": 1,
-            "name": "display",
+            "name": "blank",
             "type": 2,
             "attr": [
                 "0=on",

@@ -242,13 +242,14 @@ always_ff @(posedge clk) begin
     vsync_o     <= vsync_1;
     hsync_o     <= hsync_1;
     dv_de_o     <= dv_de_1;
-    red_o       <= 4'h0;
-    green_o     <= 4'h0;
-    blue_o      <= 4'h0;
     if (dv_de_1) begin
         red_o       <= pal_lookup[11:8];
         green_o     <= pal_lookup[7:4];
         blue_o      <= pal_lookup[3:0];
+    end else begin
+        red_o       <= 4'h0;
+        green_o     <= 4'h0;
+        blue_o      <= 4'h0;
     end
 end
 

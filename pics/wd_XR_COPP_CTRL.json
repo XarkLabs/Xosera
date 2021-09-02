@@ -1,7 +1,7 @@
 {
     "reg": [
         {
-            "bits": 12,
+            "bits": 11,
             "name": "copper start address (in copper XR memory region)",
             "type": 4,
             "attr": [
@@ -9,7 +9,7 @@
             ]
         },
         {
-            "bits": 3,
+            "bits": 4,
             "type": 1
         },
         {
@@ -18,7 +18,7 @@
             "type": 5,
             "attr": [
                 "0 = off",
-                "1 = run",
+                "1 = run"
             ]
         }
     ],

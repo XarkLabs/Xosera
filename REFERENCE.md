@@ -259,8 +259,8 @@ Decimal coded version (x.xx) and optional feature bits (0 for undefined/not pres
 
 **0x09 `XR_GITHASH_H` (RO) - Xosera Git hash identifier (high 16-bits)**  
 <img src="./pics/wd_XR_GITHASH_H.svg">  
-High 16-bits of Git short hash identifer. Can be used to help identify exact repository version.  Upper nibble will be "D" when
-local modifications have been made. Read-only.
+High 16-bits of Git short hash identifer. Can be used to help identify exact repository version.  
+Upper nibble will be 0xD when local modifications have been made. Read-only.
 
 **0x0A `XR_GITHASH_L` (RO) - Xosera Git hash identifier (low 16-bits)**  
 <img src="./pics/wd_XR_GITHASH_L.svg">  
@@ -313,8 +313,8 @@ Unused XR register 0x0F
 **playfield A/B graphics control**  
 colorbase is used for any color index bits not in source pixel (e.g., the upper 4-bits of 4-bit pixel).  
 blank is used to blank the display (solid colorbase color).  
-bitmap 0 for tiled character graphics (see `XR_Px_TILE_CTRL`) with display word with attribute and tile index.  
-bitmap 1 for bitmapped mode (1-bpp mode uses a 4-bit fore/back color attribute in upper 8-bits of each word).  
+bitmap 0 for tiled character graphics (see `XR_Px_TILE_CTRL`) using display word with attribute and tile index.  
+bitmap 1 for bitmapped mode (1-bpp mode uses a 4-bit fore/back color attributes in upper 8-bits of each word).  
 bpp selects bits-per-pixel or the number of color index bits per pixel (see "Graphics Modes" [TODO]).  
 H repeat selects the number of native pixels wide an Xosera pixel will be (1-4).  
 V repeat selects the number of native pixels tall an Xosera pixel will be (1-4).  
@@ -323,9 +323,11 @@ V repeat selects the number of native pixels tall an Xosera pixel will be (1-4).
 **0x19 `XR_PB_TILE_CTRL` (R/W) - playfield B (background) tile control**  
 <img src="./pics/wd_XR_TILE_CTRL.svg">  
 **playfield A/B tile control**  
-Describe stuff here.
+tile base address selects the upper bits of tile storage memory on 1KW boundaries.  
+mem selects tile XR memory region or VRAM address (only 4KW of tile XR memory, upper bits ignored).  
+tile height selects the height for tiles-1 from (0-15 for up to 8x16).  Tiles are stored as either 8 or 16 lines high.  Tile lines past height are truncated when displayed (e.g., tile height of 11 would display 8x12 of 8x16 tile).  
 
-TODO: write these up properly
+TODO: Describe more stuff here.
 
 #### 2D Blitter Engine XR Register Summary
 

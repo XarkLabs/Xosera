@@ -294,14 +294,13 @@ always_comb begin
 end
 
 // generate font address from index, tile y, bpp and tile size (8x8 or 8x16)
-function [15:0] calc_font_addr(
+function automatic [15:0] calc_font_addr(
         input [9:0] tile_char,
         input [3:0] tile_y,
         input [5:0] fontbank,
         input [1:0] bpp,
         input       tile_8x16
     );
-    reg [15:0] temp_addr;
     begin
         case ({ bpp, tile_8x16})
             3'b000:  calc_font_addr = { fontbank, 10'b0 } | { 6'b0, tile_char[7: 0], tile_y[2:1] };         // 4W  1-BPP 8x8 (even/odd byte)

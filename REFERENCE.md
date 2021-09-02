@@ -320,12 +320,12 @@ H repeat selects the number of native pixels wide an Xosera pixel will be (1-4).
 V repeat selects the number of native pixels tall an Xosera pixel will be (1-4).  
 
 **0x11 `XR_PA_TILE_CTRL` (R/W) - playfield A (foreground) tile control**  
-**0x19 `XR_PB_TILE_CTRL` (R/W) - playfield B (background) tile control**  
+**0x19 `XR_PB_TILE_CTRL` (R/W) - playfield B (background) tile control**
 <img src="./pics/wd_XR_TILE_CTRL.svg">  
 **playfield A/B tile control**  
 tile base address selects the upper bits of tile storage memory on 1KW boundaries.  
 mem selects tile XR memory region or VRAM address (only 4KW of tile XR memory, upper bits ignored).  
-tile height selects the height for tiles-1 from (0-15 for up to 8x16).  Tiles are stored as either 8 or 16 lines high.  Tile lines past height are truncated when displayed (e.g., tile height of 11 would display 8x12 of 8x16 tile).  
+tile height selects the tile height-1 from (0-15 for up to 8x16).  Tiles are stored as either 8 or 16 lines high.  Tile lines past height are truncated when displayed (e.g., tile height of 11 would display 8x12 of 8x16 tile).  
 
 TODO: Describe more stuff here.
 

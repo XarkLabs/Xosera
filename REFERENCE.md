@@ -61,7 +61,7 @@ instructions.
 | 0x7   | `XM_DATA_2`    | R+/W+ | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
 | 0x8   | `XM_SYS_CTRL`  | R /W+ | busy status, FPGA reconfig, interrupt status/control, write masking                   |
 | 0x9   | `XM_TIMER`     | RO    | read 1/10<sup>th</sup> millisecond timer [TODO]                                       |
-| 0xA   | `XM_UNUSED_A`  | R /W  | unused direct register 0xA [TODO]                                                     |
+| 0xA   | `XM_WR_PR_CMD` | R /W  | send a command to the primitive renderer (see section Primitive Renderer)             |
 | 0xB   | `XM_UNUSED_B`  | R /W  | unused direct register 0xB [TODO]                                                     |
 | 0xC   | `XM_RW_INCR`   | R /W  | `XM_RW_ADDR` increment value on read/write of `XM_RW_DATA`/`XM_RW_DATA_2`             |
 | 0xD   | `XM_RW_ADDR`   | R /W+ | read/write address for VRAM access from `XM_RW_DATA`/`XM_RW_DATA_2`                   |
@@ -586,13 +586,14 @@ for direct embedding into C code.
 
 ### Pritive Renderer Commands
 
-| 0xA   | `XM_WR_PR_CMD` | W/O   | send a command to the primitive renderer (see section Primitive Renderer)
-
 To render a primitive, a sequence of commands must be written to the `XVID_WR_PR_CMD` register. Each command is 16-bit
 therefore the MSB must be sent before the LSB. The command will be accepted by the primitive renderer when the LSB is
 received. The renderer will draw the primitive after receiving the `PR_EXECUTE` command.
 
-In order to reduce the number of bus accesses, parameters such as coordinates or color are optional in the sequence of commands. If not sent, the last value of the given parameter received by the primitive renderer will be used.
+The status can be retrieved by reading the `XVID_WR_PR_CMD` register. The bit 15 of the status is the busy bit.
+Before sending an execute command, the user must check if this bit is cleared.
+
+To reduce the number of bus accesses, parameters such as coordinates or color are optional in the sequence of commands. If not sent, the last value of the given parameter received by the primitive renderer will be used.
 
 #### Draw Line
 

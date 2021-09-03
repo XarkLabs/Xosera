@@ -184,13 +184,17 @@ typedef struct
 
 static void draw_line(Coord coord, int color)
 {
-    xv_setw(wr_pr_cmd, PR_COORDX1 | (int)(coord.x1));
-    xv_setw(wr_pr_cmd, PR_COORDY1 | (int)(coord.y1));
-    xv_setw(wr_pr_cmd, PR_COORDX2 | (int)(coord.x2));
-    xv_setw(wr_pr_cmd, PR_COORDY2 | (int)(coord.y2));
+    uint8_t busy;
+    do {
+        busy = xv_getbh(wr_pr_cmd);
+    } while(busy & 0x80);
+
+    xv_setw(wr_pr_cmd, PR_COORDX1 | ((int)(coord.x1) & 0x0FFF));
+    xv_setw(wr_pr_cmd, PR_COORDY1 | ((int)(coord.y1) & 0x0FFF));
+    xv_setw(wr_pr_cmd, PR_COORDX2 | ((int)(coord.x2) & 0x0FFF));
+    xv_setw(wr_pr_cmd, PR_COORDY2 | ((int)(coord.y2) & 0x0FFF));
     xv_setw(wr_pr_cmd, PR_COLOR | color);
     xv_setw(wr_pr_cmd, PR_EXECUTE);
-    mcDelaymsec10(5);
 }
 
 // Color conversion
@@ -273,27 +277,9 @@ RGB hsv2rgb(HSV in)
 }
 
 
-void xosera_demo()
+void set_palette(double hue_offset)
 {
-    const Coord coords[] = {{0, 0, 2, 4},   {0, 4, 2, 0},   {3, 4, 3, 0},      {3, 0, 5, 0},   {5, 0, 5, 4},
-                                    {5, 4, 3, 4},   {8, 0, 6, 0},   {6, 0, 6, 2},      {6, 2, 8, 2},   {8, 2, 8, 4},
-                                    {8, 4, 6, 4},   {9, 0, 11, 0},  {9, 0, 9, 4},      {9, 2, 11, 2},  {9, 4, 11, 4},
-                                    {12, 0, 14, 0}, {14, 0, 14, 2}, {14, 2, 12, 2},    {12, 2, 14, 4}, {12, 4, 12, 0},
-                                    {15, 4, 16, 0}, {16, 0, 17, 4}, {15.5, 2, 16.5, 2}};
-
-    while(!xosera_sync());
-
-    //xcolor(0x02);
-    //xcls();
-    //xprintf("Xosera Primitive Renderer Demo\n");
-    //mcDelaymsec10(200);
-
-    xv_reg_setw(gfxctrl, 0x0075);
-    xv_reg_setw(dispstart, 0x0000);
-    xv_reg_setw(dispwidth, 160);
-
-    // Set the palette
-    double hue = 0.0f;
+    double hue = hue_offset;
     for (uint16_t i = 0; i < 256; i++)
     {
         xv_setw(aux_addr, XV_AUX_COLORMEM | i);
@@ -304,7 +290,7 @@ void xosera_demo()
         }
         else
         {
-            HSV      hsv = {hue, 1.0, 1.0};
+            HSV      hsv = {hue, 1.0, 0.5};
             RGB      rgb = hsv2rgb(hsv);
             uint8_t  r   = 15.0 * rgb.r;
             uint8_t  g   = 15.0 * rgb.g;
@@ -315,7 +301,26 @@ void xosera_demo()
 
         hue += 360.0 / 256.0;
     }
+}
 
+void xosera_demo()
+{
+    const Coord coords[] = {{0, 0, 2, 4},   {0, 4, 2, 0},   {3, 4, 3, 0},      {3, 0, 5, 0},   {5, 0, 5, 4},
+                                    {5, 4, 3, 4},   {8, 0, 6, 0},   {6, 0, 6, 2},      {6, 2, 8, 2},   {8, 2, 8, 4},
+                                    {8, 4, 6, 4},   {9, 0, 11, 0},  {9, 0, 9, 4},      {9, 2, 11, 2},  {9, 4, 11, 4},
+                                    {12, 0, 14, 0}, {14, 0, 14, 2}, {14, 2, 12, 2},    {12, 2, 14, 4}, {12, 4, 12, 0},
+                                    {15, 4, 16, 0}, {16, 0, 17, 4}, {15.5, 2, 16.5, 2}};
+
+    while(!xosera_sync());
+
+    xcolor(0x02);
+    xcls();
+    xprintf("Xosera Primitive Renderer Demo\n");
+    mcDelaymsec10(200);
+
+    xv_reg_setw(gfxctrl, 0x0075);
+    xv_reg_setw(dispstart, 0x0000);
+    xv_reg_setw(dispwidth, 160);
 
     // Blue background
     xv_setw(wr_inc, 0x0001);
@@ -323,6 +328,15 @@ void xosera_demo()
     for (int i = 0; i < 320 * 240 / 2; ++i)
         xv_setw(data, 0x0101);
 
+    double angle = 0.0;
+    for (int i = 0; i < 2048; i++)
+    {
+        float x = 1024.0f * cos(angle);
+        float y = 1024.0f * sin(angle);
+        Coord c = {240, 120, 240 + x, 120 + y};
+        draw_line(c, i % (256 - 16) + 16);
+        angle += 2.0f * M_PI / 2048.0f;
+    }
 
     float scale_x  = 4;
     float scale_y  = 5;
@@ -347,15 +361,13 @@ void xosera_demo()
         scale_y += 1;
     }
 
-    double angle = 0.0;
-    for (int i = 0; i < 256; i++)
+    double hue_offset = 0;
+    double hue_inc = 1.0f;
+    while(1)
     {
-        float x = 80.0f * cos(angle);
-        float y = 80.0f * sin(angle);
-        Coord c = {240, 120, 240 + x, 120 + y};
-        draw_line(c, i);
-        angle += 2.0f * M_PI / 256.0f;
+        set_palette(hue_offset);
+        hue_offset += hue_inc;
+        if (hue_offset > 180.0 || hue_offset < 0)
+            hue_inc = -hue_inc;
     }
-
-    for(;;);
 }

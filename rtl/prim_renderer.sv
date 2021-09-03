@@ -23,6 +23,8 @@ module prim_renderer(
     output      logic  [3:0]     prim_rndr_mask_o,     // primitive renderer VRAM nibble write masks
     output      logic [15:0]     prim_rndr_addr_o,     // primitive renderer VRAM addr
     output      logic [15:0]     prim_rndr_data_out_o, // primitive renderer bus VRAM data write
+
+    output      logic            busy_o,                // is busy?
     
     input  wire logic            reset_i,
     input  wire logic            clk
@@ -34,6 +36,8 @@ logic signed [11:0] x, y;
 logic         [7:0] color;
 logic drawing;
 logic done;
+
+assign busy_o = drawing;
 
 draw_line #(.CORDW(12)) draw_line (    // framebuffer coord width in bits
     .clk(clk),                         // clock
@@ -75,7 +79,7 @@ always_ff @(posedge clk) begin
     end
 
     if (drawing && ena_draw_i) begin
-        if (/*x >= 0 && y >= 0 &&*/ x < xv::VISIBLE_WIDTH / 2 && y < xv::VISIBLE_HEIGHT / 2) begin
+        if (x >= 0 && y >= 0 && x < xv::VISIBLE_WIDTH / 2 && y < xv::VISIBLE_HEIGHT / 2) begin
             prim_rndr_vram_sel_o <= 1;
             prim_rndr_wr_o <= 1;
             prim_rndr_mask_o <= (x & 12'h001) != 12'h000 ? 4'b0011 : 4'b1100;

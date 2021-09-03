@@ -192,6 +192,7 @@ logic           prim_rndr_wr           /* verilator public */;     // primitive 
 logic [15:0]    prim_rndr_addr         /* verilator public */;     // primitive renderer VRAM addr
 logic [15:0]    prim_rndr_data_out     /* verilator public */;     // primitive renderer bus VRAM data write
 logic  [3:0]    prim_rndr_mask         /* verilator public */;     // primitive renderer 4 nibble write masks for vram
+logic           prim_rndr_busy;        // is primitive renderer busy?
 
 // audio generation (TODO)
 assign audio_l_o = dbug_cs_strobe;                    // TODO: audio
@@ -254,6 +255,7 @@ blitter blitter(
     .bus_ack_o(dbug_cs_strobe),         // TODO debug
     .prim_rndr_cmd_o(prim_rndr_cmd),                // received primitive renderer command
     .prim_rndr_cmd_valid_o(prim_rndr_cmd_valid),    // is command valid
+    .prim_rndr_busy_i(prim_rndr_busy),              // is primitive renderer busy
     .reset_i(reset_i)
 );
 
@@ -269,6 +271,8 @@ prim_renderer prim_renderer(
     .prim_rndr_mask_o(prim_rndr_mask),              // primitive renderer vram nibble masks
     .prim_rndr_addr_o(prim_rndr_addr),              // primitive renderer VRAM addr
     .prim_rndr_data_out_o(prim_rndr_data_out),      // primitive renderer bus VRAM data write
+
+    .busy_o(prim_rndr_busy),                        // is busy?
 
     .clk(clk),                                      // input clk
     .reset_i(reset_i)                               // reset

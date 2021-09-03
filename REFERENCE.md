@@ -206,7 +206,7 @@ To access these registers, write the register address to `XR_ADDR` (with bit [15
 | 0x03  | `XR_VID_LEFT`   | R /W | left edge of active display window (typically 0)                                        |
 | 0x04  | `XR_VID_RIGHT`  | R /W | right edge of active display window (typically 639 or 847)                              |
 | 0x05  | `XR_SCANLINE`   | RO   | [15] in V blank, [14] in H blank [10:0] V scanline                                      |
-| 0x06  | `XR_COPP_CTRL`  | R /W | display synchronized coprocessor                                                        |
+| 0x06  | `XR_COPP_CTRL`  | R /W | display synchronized coprocessor control                                                |
 | 0x07  | `XR_UNUSED_07`  | - /- |                                                                                         |
 | 0x08  | `XR_VERSION`    | RO   | Xosera optional feature bits [15:8] and version code [7:0] [TODO]                       |
 | 0x09  | `XR_GITHASH_H`  | RO   | [15:0] high 16-bits of 32-bit Git hash build identifier                                 |
@@ -224,7 +224,7 @@ To access these registers, write the register address to `XR_ADDR` (with bit [15
 **0x00 `XR_VID_CTRL` (R/W) - video display enable and border color**  
 <img src="./pics/wd_XR_VID_CTRL.svg">  
 Pixels outside video window (`VID_TOP`, `VID_BOTTOM`, `VID_LEFT`, `VID_RIGHT`) will use border color index.  
-All pixels will be black if video is off.
+blank set to 1 will show all pixels as black.
 
 **0x01 `XR_VID_TOP` (R/W) - video display window top line**  
 <img src="./pics/wd_XR_VID_TOP.svg">  

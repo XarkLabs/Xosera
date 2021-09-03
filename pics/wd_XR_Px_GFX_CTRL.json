@@ -59,7 +59,7 @@
                 "upper bits for color index",
                 "(when less than 8-bpp)"
             ]
-        },
+        }
     ],
     "config": {
         "bits": 16

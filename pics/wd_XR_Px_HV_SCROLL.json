@@ -1,0 +1,31 @@
+{
+    "reg": [
+        {
+            "bits": 6,
+            "name": "vertical fine scroll",
+            "type": 4,
+            "attr": [
+                "(0-63 scanlines clipped from top edge)"
+            ]
+        },
+        {
+            "bits": 2,
+            "type": 1
+        },
+        {
+            "bits": 5,
+            "name": "horizontal fine scroll",
+            "type": 4,
+            "attr": [
+                "(0-31 native pixels clipped from left edge)"
+            ]
+        },
+        {
+            "bits": 3,
+            "type": 1
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

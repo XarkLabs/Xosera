@@ -15,8 +15,8 @@
             "attr": [
                 "[11] = vsync",
                 "[10] = copper",
-                "[09] = draw done",
-                "[08] = audio"
+                "[9] = draw done",
+                "[8] = audio"
             ]
         },
         {

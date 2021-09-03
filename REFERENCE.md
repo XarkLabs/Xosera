@@ -132,7 +132,7 @@ NOTE: This register is identical to `XDATA` to allow for 32-bit "long" MOVEP.L t
 <img src="./pics/wd_XSYS_CTRL.svg">  
 **Read draw busy, write to reboot FPGA or read/write interrupt control/status and `XDATA` nibble write mask.**  
 When `XSYS_CTRL` is read:  
-&emsp;[15] is draw busy, [11] is interrupt enable, [10-8] is interupt source, [7-0] is `XDATA`/`XDATA_2` nibble write mask.  
+&emsp;[15] is draw busy, [11:8] are interrupt enables, [7-0] is `XDATA`/`XDATA_2` nibble write mask.  
 When `XSYS_CTRL` is written:  
 &emsp;[14] set to reboot FPGA to [13-12] config, [11] set interrupt enable, [10-8] set also _generates_ interrupt, [7-0] set nibble mask.  
 NOTE: An interrupt is only generated if an interrupt source is read as 0 then written as 1 (to avoid accidentally generating interrupts).  An interrupt source is only cleared if it is read as 1 and then written as 0 (to avoid accidentally clearing interrupts).  
@@ -290,16 +290,16 @@ Unused XR register 0x0F
 | ----- | ----------------- | --- | ------------------------------------------------------------ |
 | 0x10  | `XR_PA_GFX_CTRL`  | R/W | playfield A graphics control                                 |
 | 0x11  | `XR_PA_TILE_CTRL` | R/W | playfield A tile control                                     |
-| 0x12  | `XR_PA_ADDR`      | R/W | playfield A display VRAM start address                       |
-| 0x13  | `XR_PA_WIDTH`     | R/W | playfield A display line width in words                      |
+| 0x12  | `XR_PA_DISP_ADDR` | R/W | playfield A display VRAM start address                       |
+| 0x13  | `XR_PA_LINE_LEN`  | R/W | playfield A display line width in words                      |
 | 0x14  | `XR_PA_HV_SCROLL` | R/W | playfield A horizontal and vertical fine scroll              |
 | 0x15  | `XR_PA_LINE_ADDR` | R/W | playfield A scanline start address (loaded at start of line) |
 | 0x16  | `XR_PA_UNUSED_16` | R/W |                                                              |
 | 0x17  | `XR_PA_UNUSED_17` | R/W |                                                              |
 | 0x18  | `XR_PB_GFX_CTRL`  | R/W | playfield B graphics control                                 |
 | 0x19  | `XR_PB_TILE_CTRL` | R/W | playfield B tile control                                     |
-| 0x1A  | `XR_PB_ADDR`      | R/W | playfield B display VRAM start address                       |
-| 0x1B  | `XR_PB_WIDTH`     | R/W | playfield B display line width in words                      |
+| 0x1A  | `XR_PB_DISP_ADDR` | R/W | playfield B display VRAM start address                       |
+| 0x1B  | `XR_PB_LINE_LEN`  | R/W | playfield B display line width in words                      |
 | 0x1C  | `XR_PB_HV_SCROLL` | R/W | playfield B horizontal and vertical fine scroll              |
 | 0x1D  | `XR_PB_LINE_ADDR` | R/W | playfield B scanline start address (loaded at start of line) |
 | 0x1E  | `XR_PB_UNUSED_1E` | R/W |                                                              |
@@ -309,7 +309,7 @@ Unused XR register 0x0F
 
 **0x10 `XR_PA_GFX_CTRL` (R/W) - playfield A (foreground) graphics control**  
 **0x18 `XR_PB_GFX_CTRL` (R/W) - playfield B (background) graphics control**  
-<img src="./pics/wd_XR_GFX_CTRL.svg">  
+<img src="./pics/wd_XR_Px_GFX_CTRL.svg">  
 **playfield A/B graphics control**  
 colorbase is used for any color index bits not in source pixel (e.g., the upper 4-bits of 4-bit pixel).  
 blank is used to blank the display (solid colorbase color).  
@@ -321,13 +321,46 @@ V repeat selects the number of native pixels tall an Xosera pixel will be (1-4).
 
 **0x11 `XR_PA_TILE_CTRL` (R/W) - playfield A (foreground) tile control**  
 **0x19 `XR_PB_TILE_CTRL` (R/W) - playfield B (background) tile control**
-<img src="./pics/wd_XR_TILE_CTRL.svg">  
+<img src="./pics/wd_XR_Px_TILE_CTRL.svg">  
 **playfield A/B tile control**  
 tile base address selects the upper bits of tile storage memory on 1KW boundaries.  
 mem selects tile XR memory region or VRAM address (only 4KW of tile XR memory, upper bits ignored).  
 tile height selects the tile height-1 from (0-15 for up to 8x16).  Tiles are stored as either 8 or 16 lines high.  Tile lines past height are truncated when displayed (e.g., tile height of 11 would display 8x12 of 8x16 tile).  
 
-TODO: Describe more stuff here.
+**0x12 `XR_PA_DISP_ADDR` (R/W) - playfield A (foreground) display VRAM start address**  
+**0x1A `XR_PB_DISP_ADDR` (R/W) - playfield B (background) display VRAM start address**
+<img src="./pics/wd_XR_Px_DISP_ADDR.svg">  
+**playfield A/B display start address**  
+Address in VRAM for start of playfield display (tiled or bitmap).
+
+**0x13 `XR_PA_LINE_LEN` (R/W) - playfield A (foreground) display line word length**  
+**0x1B `XR_PB_LINE_LEN` (R/W) - playfield B (background) display line word length**  
+<img src="./pics/wd_XR_Px_LINE_LEN.svg">  
+**playfield A/B display line word length**  
+Length in words for each display line (i.e., the amount added to line start address for the start of the next line - not the width of the display).  
+Twos complement, so negative values are okay (for reverse scan line order in memory).
+
+**0x14 `XR_PA_HV_SCROLL` (R/W) - playfield A (foreground) horizontal and vertical fine scroll**  
+**0x1C `XR_PB_HV_SCROLL` (R/W) - playfield B (background) horizontal and vertical fine scroll**  
+<img src="./pics/wd_XR_Px_HV_SCROLL.svg">  
+**playfield A/B  horizontal and vertical fine scroll**  
+horizontal fine scroll should be constrained to the scaled width of 8 pixels or 1 tile (e.g., HSCALE 1x = 0-7, 2x = 0-15, 3x = 0-23 and 4x = 0-31).  
+vertical fine scroll should be constrained to the scaled height of a tile or (one less than the tile-height times VSCALE).  
+(But hey, we will see what happens, it might be fine...)
+
+**0x15 `XR_PA_LINE_ADDR` (WO) - playfield A (foreground) display VRAM line address**  
+**0x1D `XR_PB_LINE_ADDR` (WO) - playfield B (background) display VRAM line address**
+<img src="./pics/wd_XR_Px_LINE_ADDR.svg">  
+**playfield A/B display line address**  
+Address in VRAM for start of next scanline (tiled or bitmap). This is generally used to allow the copper to change the display address per scanline. Write-only.
+
+**0x16 `XR_PA_UNUSED_16` (-/-) - unused XR PA register 0x16**  
+**0x1E `XR_PB_UNUSED_1E` (-/-) - unused XR PB register 0x1E**  
+Unused XR playfield registers 0x16, 0x1E  
+
+**0x17 `XR_PA_UNUSED_17` (-/-) - unused XR PA register 0x17**  
+**0x1F `XR_PB_UNUSED_1F` (-/-) - unused XR PB register 0x1F**  
+Unused XR playfield registers 0x17, 0x1F  
 
 #### 2D Blitter Engine XR Register Summary
 

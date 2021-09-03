@@ -1,0 +1,12 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "display VRAM start address",
+            "type": 4
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

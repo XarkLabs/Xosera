@@ -1,24 +1,35 @@
 {
     "reg": [
         {
-            "bits": 7,
-            "type": 1
-        },
-        {
-            "bits": 1,
-            "name": "video",
-            "type": 4,
-            "attr": [
-                "0=off",
-                "1=on"
-            ]
-        },
-        {
             "bits": 8,
             "name": "border color index",
             "type": 2,
             "attr": [
                 "color index of border area / outside playfield"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "interrupt status/signal",
+            "type": 5,
+            "attr": [
+                "[11] = vsync",
+                "[10] = copper",
+                "[9] = draw done",
+                "[8] = audio"
+            ]
+        },
+        {
+            "bits": 3,
+            "type": 1
+        },
+        {
+            "bits": 1,
+            "name": "blank",
+            "type": 4,
+            "attr": [
+                "0=on",
+                "1=blank"
             ]
         }
     ],

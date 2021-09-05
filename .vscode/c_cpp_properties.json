@@ -1,0 +1,31 @@
+{
+    "configurations": [
+        {
+            "name": "rosco_m68k",
+            "includePath": [
+                "${default}",
+                "${workspaceFolder}/xosera_m68k_api"
+            ],
+            "defines": [
+                "ROSCO_M68K"
+            ],
+            "macFrameworkPath": [],
+            "compilerPath": "/usr/local/bin/m68k-elf-gcc",
+            "cStandard": "gnu99",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "macos-gcc-arm64",
+            "compilerArgs": [
+                "-std=c11",
+                "-Wall",
+                "-Wextra",
+                "-Wno-unused-function",
+                "-pedantic",
+                "-I/Users/kenj/Dev/Rosco_Dev/rosco_m68k/code/software/libs/build/include",
+                "-mcpu=68010",
+                "-march=68010",
+                "-mtune=68010"
+            ]
+        }
+    ],
+    "version": 4
+}

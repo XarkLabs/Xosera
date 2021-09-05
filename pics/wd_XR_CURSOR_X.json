@@ -1,0 +1,16 @@
+{
+    "reg": [
+        {
+            "bits": 11,
+            "name": "sprite cursor X position",
+            "type": 4
+        },
+        {
+            "bits": 5,
+            "type": 1
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

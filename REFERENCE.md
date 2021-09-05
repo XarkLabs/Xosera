@@ -148,47 +148,47 @@ Unused direct register 0xA
 **0xB `XM_UNUSED_B` (R/W) - unused register 0xB**  
 Unused direct register 0xB  
 
-**0xC `XM_RW_INCR` (R/W) - increment value for `XM_RW_ADDR` when `XM_RW_DATA``/`XM_RW_DATA_2``is read or written**
+**0xC `XM_RW_INCR` (R/W) - increment value for `XM_RW_ADDR` when `XM_RW_DATA`/`XM_RW_DATA_2`is read or written**
 <img src="./pics/wd_RW_INCR.svg">  
-**Read or write twos-complement value added to `XM_RW_ADDR` when `XM_RW_DATA`` or `XM_RW_DATA_2`` is read from or written to.**  
-Allows quickly reading/writing Xosera VRAM from`XM_RW_DATA``/`XM_RW_DATA_2`` when using a fixed `XM_RW_ADDR` increment.  
-Added to `XM_RW_ADDR` when `XM_RW_DATA`` or`XM_RW_DATA_2`` is read from (twos complement so value can be negative).  
+**Read or write twos-complement value added to`XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2`is read from or written to.**
+Allows quickly reading/writing Xosera VRAM from`XM_RW_DATA`/`XM_RW_DATA_2` when using a fixed `XM_RW_ADDR` increment.  
+Added to `XM_RW_ADDR` when `XM_RW_DATA` or`XM_RW_DATA_2` is read from (twos complement so value can be negative).  
 
-**0xD `XM_RW_ADDR` (R/W+) - VRAM read/write address for accessed at `XM_RW_DATA``/`XM_RW_DATA_2``**  
+**0xD `XM_RW_ADDR` (R/W+) - VRAM read/write address for accessed at `XM_RW_DATA`/`XM_RW_DATA_2`**  
 <img src="./pics/wd_RW_ADDR.svg">  
-**Read or write VRAM address read when `XM_RW_DATA`` or `XM_RW_DATA_2`` is read from or written to.**  
-Specifies VRAM address used when reading or writing from VRAM via`XM_RW_DATA``/`XM_RW_DATA_2``.  
+**Read or write VRAM address read when`XM_RW_DATA` or `XM_RW_DATA_2`is read from or written to.**
+Specifies VRAM address used when reading or writing from VRAM via`XM_RW_DATA`/`XM_RW_DATA_2`.  
 When `XM_RW_ADDR` is written (or incremented by `XM_RW_INCR`) the corresponding word in VRAM is read and made available for reading at `WR_DATA` or `WR_DATA_2`.  
 Since this read always happens (even when only intending to write), prefer using RW_ADDR for
 reading (but fairly small VRAM access overhead).  
 
-**0xE `XM_RW_DATA`` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**  
+**0xE `XM_RW_DATA` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**  
 <img src="./pics/wd_RW_DATA.svg">  
 **Read or write VRAM value in VRAM at`XM_RW_ADDR` and add `XM_RW_INCR` to `XM_RW_ADDR`.**  
-When`XM_RW_DATA``is read, returns data from VRAM at `XM_RW_ADDR`, adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM value.
-When `XM_RW_DATA`` is written, begins writing value to VRAM at `XM_RW_ADDR` and adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM value.  
+When`XM_RW_DATA`is read, returns data from VRAM at `XM_RW_ADDR`, adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM value.
+When `XM_RW_DATA` is written, begins writing value to VRAM at `XM_RW_ADDR` and adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM value.  
 
-**0xF `XM_RW_DATA_2`` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**  
+**0xF `XM_RW_DATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**  
 <img src="./pics/wd_RW_DATA.svg">  
 **Read or write VRAM value in VRAM at`XM_RW_ADDR` and add `XM_RW_INCR` to `XM_RW_ADDR`.**  
-When`XM_RW_DATA_2``is read, returns data from VRAM at `XM_RW_ADDR`, adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM value.
-When `XM_RW_DATA_2`` is written, begins writing value to VRAM at `XM_RW_ADDR` and adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM value.  
-NOTE: This register is identical to `XM_RW_DATA`` to allow for 32-bit "long" MOVEP.L transfers to/from`XM_RW_DATA`` for additional speed.  
+When`XM_RW_DATA_2`is read, returns data from VRAM at `XM_RW_ADDR`, adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM value.
+When `XM_RW_DATA_2` is written, begins writing value to VRAM at `XM_RW_ADDR` and adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM value.  
+NOTE: This register is identical to `XM_RW_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from`XM_RW_DATA` for additional speed.  
 
 ### Xosera Extended Register / Extended Memory Region Summary
 
-| XR Region Name   | XR Region Range | R/W | Description                             |
-| ---------------- | --------------- | --- | --------------------------------------- |
-| XR_CONFIG_REGS   | 0x0000-0x000F   | R/W | config XR registers                     |
-| XR_VIDEO_PA_REGS | 0x0010-0x0017   | R/W | playfield A XR registers                |
-| XR_VIDEO_PB_REGS | 0x0018-0x001F   | R/W | playfield B XR registers                |
-| XR_BLIT_REGS     | 0x0020-0x002F   | R/W | 2D-blit XR registers                    |
-| XR_DRAW_REGS     | 0x0030-0x003F   | R/W | line/poly draw XR registers             |
-| XR_COLOR_MEM     | 0x8000-0x80FF   | WO  | 256 x 16-bit color lookup memory (XRGB) |
-| XR_TILE_MEM      | 0x9000-0x9FFF   | WO  | 4096 x 16-bit tile glyph storage memory |
-| XR_COPPER_MEM    | 0xA000-0xA7FF   | WO  | 2048 x 16-bit copper program memory     |
-| XR_SPRITE_MEM    | 0xB000-0xB0FF   | -/- | 256 x 16-bit sprite/cursor memory       |
-| (unused region)  | 0xC000-0xFFFF   | -/- | (unused region)                         |
+| XR Region Name  | XR Region Range | R/W | Description                             |
+| --------------- | --------------- | --- | --------------------------------------- |
+| XR_CONFIG_REGS  | 0x0000-0x000F   | R/W | config XR registers                     |
+| XR_PA_REGS      | 0x0010-0x0017   | R/W | playfield A XR registers                |
+| XR_PB_REGS      | 0x0018-0x001F   | R/W | playfield B XR registers                |
+| XR_BLIT_REGS    | 0x0020-0x002F   | R/W | 2D-blit XR registers                    |
+| XR_DRAW_REGS    | 0x0030-0x003F   | R/W | line/poly draw XR registers             |
+| XR_COLOR_MEM    | 0x8000-0x80FF   | WO  | 256 x 16-bit color lookup memory (XRGB) |
+| XR_TILE_MEM     | 0x9000-0x9FFF   | WO  | 4096 x 16-bit tile glyph storage memory |
+| XR_COPPER_MEM   | 0xA000-0xA7FF   | WO  | 2048 x 16-bit copper program memory     |
+| XR_SPRITE_MEM   | 0xB000-0xB0FF   | -/- | 256 x 16-bit sprite/cursor memory       |
+| (unused region) | 0xC000-0xFFFF   | -/- | (unused region)                         |
 
 To access an XR register or XR memory address, write the XR register number or address to `XM_XR_DATA`, then read or write to `XM_XR_DATA` (note that currently only XR registers can be read, not XR memory).  
 Each word written to `XM_XR_DATA` will also automatically increment `XM_XR_DATA` to allows faster consecutive updates (like for color or tile RAM update).  
@@ -206,21 +206,21 @@ To access these registers, write the register address to `XM_XR_DATA` (with bit 
 | Reg # | Reg Name        | R /W | Description                                                                             |
 | ----- | --------------- | ---- | --------------------------------------------------------------------------------------- |
 | 0x00  | `XR_VID_CTRL`   | R /W | display control and border color index                                                  |
-| 0x01  | `XR_VID_TOP`    | R /W | top line of active display window (typically 0)                                         |
-| 0x02  | `XR_VID_BOTTOM` | R /W | bottom line of active display window (typically 479)                                    |
-| 0x03  | `XR_VID_LEFT`   | R /W | left edge of active display window (typically 0)                                        |
-| 0x04  | `XR_VID_RIGHT`  | R /W | right edge of active display window (typically 639 or 847)                              |
-| 0x05  | `XR_SCANLINE`   | RO   | [15] in V blank, [14] in H blank [10:0] V scanline                                      |
-| 0x06  | `XR_COPP_CTRL`  | R /W | display synchronized coprocessor control                                                |
-| 0x07  | `XR_UNUSED_07`  | - /- |                                                                                         |
-| 0x08  | `XR_VERSION`    | RO   | Xosera optional feature bits [15:8] and version code [7:0] [TODO]                       |
-| 0x09  | `XR_GITHASH_H`  | RO   | [15:0] high 16-bits of 32-bit Git hash build identifier                                 |
-| 0x0A  | `XR_GITHASH_L`  | RO   | [15:0] low 16-bits of 32-bit Git hash build identifier                                  |
-| 0x0B  | `XR_VID_HSIZE`  | RO   | native pixel width of monitor mode (e.g. 640/848)                                       |
-| 0x0C  | `XR_VID_VSIZE`  | RO   | native pixel height of monitor mode (e.g. 480)                                          |
-| 0x0D  | `XR_VID_VFREQ`  | RO   | update frequency of monitor mode in BCD 1/100<sup>th</sup> Hz (e.g., 0x5997 = 59.97 Hz) |
-| 0x0E  | `XR_UNUSED_0E`  | RO   |                                                                                         |
-| 0x0F  | `XR_UNUSED_0F`  | RO   |                                                                                         |
+| 0x01  | `XR_COPP_CTRL`  | R /W | display synchronized coprocessor control                                                |
+| 0x02  | `XR_CURSOR_X`   | R /W | sprite cursor X position                                                                |
+| 0x03  | `XR_CURSOR_Y`   | R /W | sprite cursor Y position                                                                |
+| 0x04  | `XR_VID_TOP`    | R /W | top line of active display window (typically 0)                                         |
+| 0x05  | `XR_VID_BOTTOM` | R /W | bottom line of active display window (typically 479)                                    |
+| 0x06  | `XR_VID_LEFT`   | R /W | left edge of active display window (typically 0)                                        |
+| 0x07  | `XR_VID_RIGHT`  | R /W | right edge of active display window (typically 639 or 847)                              |
+| 0x08  | `XR_SCANLINE`   | RO   | [15] in V blank, [14] in H blank [10:0] V scanline                                      |
+| 0x09  | `XR_UNUSED_09`  | RO   |                                                                                         |
+| 0x0A  | `XR_VERSION`    | RO   | Xosera optional feature bits [15:8] and version code [7:0] [TODO]                       |
+| 0x0B  | `XR_GITHASH_H`  | RO   | [15:0] high 16-bits of 32-bit Git hash build identifier                                 |
+| 0x0C  | `XR_GITHASH_L`  | RO   | [15:0] low 16-bits of 32-bit Git hash build identifier                                  |
+| 0x0D  | `XR_VID_HSIZE`  | RO   | native pixel width of monitor mode (e.g. 640/848)                                       |
+| 0x0E  | `XR_VID_VSIZE`  | RO   | native pixel height of monitor mode (e.g. 480)                                          |
+| 0x0F  | `XR_VID_VFREQ`  | RO   | update frequency of monitor mode in BCD 1/100<sup>th</sup> Hz (e.g., 0x5997 = 59.97 Hz) |
 
 (`R+` or `W+` indicates that reading or writing this register has additional "side effects", respectively)
 
@@ -229,65 +229,67 @@ To access these registers, write the register address to `XM_XR_DATA` (with bit 
 **0x00 `XR_VID_CTRL` (R/W) - video display enable and border color**  
 <img src="./pics/wd_XR_VID_CTRL.svg">  
 Pixels outside video window (`VID_TOP`, `VID_BOTTOM`, `VID_LEFT`, `VID_RIGHT`) will use border color index.  
-blank set to 1 will show all pixels as black.
+blank set to 1 will show all pixels from both planes as black.
 
-**0x01 `XR_VID_TOP` (R/W) - video display window top line**  
-<img src="./pics/wd_XR_VID_TOP.svg">  
-Defines top-most line of video display window (normally 0 for full-screen).
-
-**0x02 `XR_VID_BOTTOM` (R/W) - video display window bottom line**  
-<img src="./pics/wd_XR_VID_BOTTOM.svg">  
-Defines bottom-most line of video display window (normally 479 for full-screen).
-
-**0x03 `XR_VID_LEFT` (R/W) - video display window left edge**  
-<img src="./pics/wd_XR_VID_LEFT.svg">  
-Defines left-most native pixel of video display window (normally 0 for full-screen).
-
-**0x04 `XR_VID_RIGHT` (R/W) - video display window right edge**  
-<img src="./pics/wd_XR_VID_RIGHT.svg">  
-Defines right-most native pixel of video display window (normally 639 or 847 for 4:3 or 16:9 full-screen, respectively).
-
-**0x05 `XR_SCANLINE` (RO) - current video display scan line and blanking status**  
-<img src="./pics/wd_XR_SCANLINE.svg">  
-Continuously updated with the scanline and blanking status during display scanning. Read-only.
-
-**0x06 `XR_COPP_CTRL` (R/W) - copper start address and enable**  
+**0x01 `XR_COPP_CTRL` (R/W) - copper start address and enable**  
 <img src="./pics/wd_XR_COPP_CTRL.svg">  
 Display synchronized co-processor enable and starting PC address for each video frame within copper XR memory region.
 
-**0x07 `XR_UNUSED_07` (-/-) - unused XR register 0x07**  
-Unused XR register 0x07  
+**0x02 `XR_CURSOR_X` (R/W) - sprite cursor X position**  
+<img src="./pics/wd_XR_CURSOR_X.svg">  
+Sprite cursor X native pixel position (left-edge).  Can be fully or partially offscreen.
 
-**0x08 `XR_VERSION` (RO) - Xosera version and optional feature bits**  
+**0x03 `XR_CURSOR_Y` (R/W) - sprite cursor Y position**  
+<img src="./pics/wd_XR_CURSOR_Y.svg">  
+Sprite cursor Y native pixel position (top-edge).  Can be fully or partially offscreen.
+
+**0x04 `XR_VID_TOP` (R/W) - video display window top line**  
+<img src="./pics/wd_XR_VID_TOP.svg">  
+Defines top-most line of video display window (normally 0 for full-screen).
+
+**0x05 `XR_VID_BOTTOM` (R/W) - video display window bottom line**  
+<img src="./pics/wd_XR_VID_BOTTOM.svg">  
+Defines bottom-most line of video display window (normally 479 for full-screen).
+
+**0x06 `XR_VID_LEFT` (R/W) - video display window left edge**  
+<img src="./pics/wd_XR_VID_LEFT.svg">  
+Defines left-most native pixel of video display window (normally 0 for full-screen).
+
+**0x07 `XR_VID_RIGHT` (R/W) - video display window right edge**  
+<img src="./pics/wd_XR_VID_RIGHT.svg">  
+Defines right-most native pixel of video display window (normally 639 or 847 for 4:3 or 16:9 full-screen, respectively).
+
+**0x08 `XR_SCANLINE` (RO) - current video display scan line and blanking status**  
+<img src="./pics/wd_XR_SCANLINE.svg">  
+Continuously updated with the scanline and blanking status during display scanning. Read-only.
+
+**0x09 `XR_UNUSED_09` (RO) - unused XR register 0x09**  
+Unused XR register 0x09  
+
+**0x0A `XR_VERSION` (RO) - Xosera version and optional feature bits**  
 <img src="./pics/wd_XR_VERSION.svg">  
 Decimal coded version (x.xx) and optional feature bits (0 for undefined/not present). Read-only.
 
-**0x09 `XR_GITHASH_H` (RO) - Xosera Git hash identifier (high 16-bits)**  
+**0x0B `XR_GITHASH_H` (RO) - Xosera Git hash identifier (high 16-bits)**  
 <img src="./pics/wd_XR_GITHASH_H.svg">  
 High 16-bits of Git short hash identifer. Can be used to help identify exact repository version.  
 Upper nibble will be 0xD when local modifications have been made. Read-only.
 
-**0x0A `XR_GITHASH_L` (RO) - Xosera Git hash identifier (low 16-bits)**  
+**0x0C `XR_GITHASH_L` (RO) - Xosera Git hash identifier (low 16-bits)**  
 <img src="./pics/wd_XR_GITHASH_L.svg">  
 Low 16-bits of Git short hash identifer. Can be used to help identify exact repository version. Read-only.
 
-**0x0B `XR_VID_HSIZE` (RO) - monitor display mode native horizontal resolution**  
+**0x0D `XR_VID_HSIZE` (RO) - monitor display mode native horizontal resolution**  
 <img src="./pics/wd_XR_VID_HSIZE.svg">  
 Monitor display mode native horizontal resolution (e.g., 640 for 4:3 or 848 for 16:9). Read-only.
 
-**0x0C `XR_VID_VSIZE` (RO) - monitor display mode native vertical resolution**  
+**0x0E `XR_VID_VSIZE` (RO) - monitor display mode native vertical resolution**  
 <img src="./pics/wd_XR_VID_VSIZE.svg">  
 Monitor display mode native vertical resolution (e.g., 480). Read-only.
 
-**0x0D `XR_VID_VFREQ` (RO) - monitor display mode update frequency in BCD 1/100<sup>th</sup> Hz**  
+**0x0F `XR_VID_VFREQ` (RO) - monitor display mode update frequency in BCD 1/100<sup>th</sup> Hz**  
 <img src="./pics/wd_XR_VID_VFREQ.svg">  
 Monitor display mode update frequency in BCD 1/100<sup>th</sup> Hz (e.g., 0x5997 = 59.97 Hz). Read-only.
-
-**0x0E `XR_UNUSED_0E` (-/-) - unused XR register 0x0E**  
-Unused XR register 0x0E  
-
-**0x0F `XR_UNUSED_0F` (-/-) - unused XR register 0x0F**  
-Unused XR register 0x0F  
 
 #### Playfield A & B Control XR Registers Summary
 

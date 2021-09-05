@@ -9,7 +9,7 @@ $(error Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m
 endif
 XOSERA_M68K_API?=../xosera_m68k_api
 
-EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer
+EXTRA_CFLAGS?=-g -Os -fomit-frame-pointer
 #EXTRA_VASMFLAGS?=-showopt
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
 SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib

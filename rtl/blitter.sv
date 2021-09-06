@@ -175,9 +175,15 @@ function [7:0] hex_digit(
 endfunction
 
 always_ff @(posedge clk) begin
-    ms_timer_frac <= ms_timer_frac + 1'b1;
-    if (ms_timer_frac == 12'(xv::PCLK_HZ / 10000)) begin
-        ms_timer <= ms_timer + 1;
+    if (reset_i) begin
+        ms_timer <= 16'h0000;
+        ms_timer_frac <= 12'h000;
+    end else begin
+        ms_timer_frac <= ms_timer_frac + 1'b1;
+        if (ms_timer_frac == 12'(xv::PCLK_HZ / 10000)) begin
+            ms_timer_frac   <= 12'h000;
+            ms_timer        <= ms_timer + 1;
+        end
     end
 end
 

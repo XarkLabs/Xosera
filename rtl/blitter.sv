@@ -12,31 +12,31 @@
 `include "xosera_pkg.sv"
 
 module blitter(
-    input  wire logic            bus_cs_n_i,         // register select strobe
-    input  wire logic            bus_rd_nwr_i,       // 0 = write, 1 = read
-    input  wire logic  [3:0]     bus_reg_num_i,      // register number
-    input  wire logic            bus_bytesel_i,      // 0=even byte, 1=odd byte
-    input  wire logic  [7:0]     bus_data_i,         // 8-bit data bus input
-    output      logic  [7:0]     bus_data_o,         // 8-bit data bus output
-    input  wire logic            vgen_sel_i,         // 0 = blitter, 1=video generation
-    output      logic            vgen_ena_o,         // 0 = video blank, 1 = video on
-    output      logic            blit_vram_sel_o,    // VRAM select
-    output      logic            blit_aux_sel_o,     // AUX select
-    output      logic            blit_wr_o,          // VRAM/AUX read/write
-    output      logic  [3:0]     blit_mask_o,        // VRAM nibble write masks
-    output      logic [15:0]     blit_addr_o,        // VRAM/AUX address
-    input  wire logic [15:0]     blit_data_i,        // VRAM read data
-    output      logic [15:0]     blit_data_o,        // VRAM/AUX write data
-    input  wire logic [15:0]     aux_data_i,         // AUX read data
-    output      logic            reconfig_o,         // reconfigure iCE40 from flash
-    output      logic  [1:0]     boot_select_o,      // reconfigure congigureation number (0-3)
-    output      logic            bus_ack_o,          // TODO ACK strobe for debug
+    input  wire logic            bus_cs_n_i,        // register select strobe
+    input  wire logic            bus_rd_nwr_i,      // 0 = write, 1 = read
+    input  wire logic  [3:0]     bus_reg_num_i,     // register number
+    input  wire logic            bus_bytesel_i,     // 0=even byte, 1=odd byte
+    input  wire logic  [7:0]     bus_data_i,        // 8-bit data bus input
+    output      logic  [7:0]     bus_data_o,        // 8-bit data bus output
+    input  wire logic            vgen_sel_i,        // 0 = blitter, 1=video generation
+    output      logic            vgen_ena_o,        // 0 = video blank, 1 = video on
+    output      logic            blit_vram_sel_o,   // VRAM select
+    output      logic            blit_xr_sel_o,     // XR select
+    output      logic            blit_wr_o,         // VRAM/XR read/write
+    output      logic  [3:0]     blit_mask_o,       // VRAM nibble write masks
+    output      logic [15:0]     blit_addr_o,       // VRAM/XR address
+    input  wire logic [15:0]     blit_data_i,       // VRAM read data
+    output      logic [15:0]     blit_data_o,       // VRAM/XR write data
+    input  wire logic [15:0]     xr_data_i,         // XR read data
+    output      logic            reconfig_o,        // reconfigure iCE40 from flash
+    output      logic  [1:0]     boot_select_o,     // reconfigure congigureation number (0-3)
+    output      logic            bus_ack_o,         // TODO ACK strobe for debug
     input  wire logic            reset_i,
     input  wire logic            clk
     );
 
 localparam [31:0] githash = 32'H`GITHASH;
-logic [14*8:1]  logostring = "Xosera v0.13 #";    // boot msg
+logic [14*8:1]  logostring = "Xosera v0.20 #";    // boot msg
 
 localparam CLEARDATA = 16'h0220;    // value VRAM cleared to on init (blue+white space) TODO: zero for final?
 
@@ -49,48 +49,59 @@ typedef enum logic [4:0] {
 blit_state_t    blit_state;
 
 // read/write storage for first 4 blitter registers
-logic [15:0]    reg_aux_addr;           // ctrl reg/font/palette address
-logic [15:0]    reg_const;              // blitter constant data
+logic [15:0]    reg_xr_addr;           // XR read/write address (XR_ADDR)
+logic [15:0]    xr_rd_data;             // word read from XR
+logic           xr_rd;                  // flag for xr read outstanding
+logic           xr_rd_ack;              // flag for xr read acknowledged 
+logic [15:0]    reg_rd_incr;            // VRAM read increment
 logic [15:0]    reg_rd_addr;            // VRAM read address
-logic [15:0]    reg_wr_addr;            // VRAM write address
-
-// write only storage for the rest
-logic [16:0]    reg_count;             // (extra bit for underflow/flag)
-logic [15:0]    reg_rd_inc;
-logic [15:0]    reg_wr_inc;
-logic [15:0]    reg_rd_mod;
-logic [15:0]    reg_wr_mod;
-logic [15:0]    reg_width;
-logic           blit_2d;
-logic           blit_const;
-
-logic [16:0]    width_counter;          // blit count (extra bit for underflow/done)
-logic [15:0]    blit_rd_addr;           // TODO VRAM read address
-logic [15:0]    blit_wr_addr;           // TODO VRAM write address
-logic           blit_busy;
-assign          blit_busy = ~reg_count[16]; // when reg_count underflows, high bit will be set
-logic           blit_line_end;
-assign          blit_line_end = width_counter[16];  // when width_counter underflows, high bit will be set
-
 logic [15:0]    vram_rd_data;           // word read from VRAM (for RD_ADDR)
-logic           blit_vram_rd;
-logic           blit_vram_rd_ack;
+logic           vram_rd;                // flag for VRAM read outstanding
+logic           vram_rd_ack;            // flag for VRAM read acknowledged 
+logic [15:0]    reg_wr_incr;            // VRAM write increment
+logic [15:0]    reg_wr_addr;            // VRAM write address
+logic [15:0]    reg_rw_incr;            // VRAM read/write increment
+logic [15:0]    reg_rw_addr;            // VRAM read/write address
+logic [15:0]    vram_rw_data;           // word read from VRAM (for RW_ADDR)
+logic           vram_rw_rd;             // flag for VRAM RW read outstanding
+logic           vram_rw_wr;             // flag for VRAM RW write outstanding
+logic           vram_rw_ack;            // flag for VRAM RW read acknowledged 
 
-logic [15:0]    aux_rd_data;
-logic           blit_aux_rd;
-logic           blit_aux_rd_ack;
-
-logic  [7:0]    reg_data_even;           // word written to even byte of XVID_DATA/XVID_DATA_2
-logic  [7:0]    reg_other_even;          // other even byte (zeroed each write)
-logic  [3:0]    reg_other_reg;           // register associated with reg_other_even
-logic  [7:0]    reg_even_byte;
+// internal storage
 logic  [3:0]    bus_reg_num;            // bus register on bus
+
+logic  [7:0]    reg_xr_data_even;       // byte written to even byte of XR_DATA
+logic  [7:0]    reg_data_even;          // byte written to even byte of XM_DATA/XM_DATA_2
+
+logic  [3:0]    reg_other_reg;          // register associated with reg_other_even
+logic  [7:0]    reg_other_even;         // even byte storage (until odd byte)
+logic  [7:0]    reg_even_byte;          // either reg_other_even or zero if different register
 assign          reg_even_byte = (reg_other_reg == bus_reg_num) ? reg_other_even : 8'h00;
 
 logic           bus_write_strobe;       // strobe when a word of data written
 logic           bus_read_strobe;        // strobe when a word of data read
 logic           bus_bytesel;            // msb/lsb on bus
 logic  [7:0]    bus_data_byte;          // data byte from bus
+
+// write only storage for the rest
+logic [16:0]    blit_count;             // (extra bit for underflow/flag)
+// TODO logic [15:0]    reg_rd_mod;
+// TODO logic [15:0]    reg_wr_mod;
+// TODO logic [15:0]    reg_width;
+// TODO logic           blit_2d;
+// TODO logic           blit_const;
+
+// TODO logic [16:0]    width_counter;          // blit count (extra bit for underflow/done)
+// TODO logic [15:0]    blit_rd_addr;           // TODO VRAM read address
+// TODO logic [15:0]    blit_wr_addr;           // TODO VRAM write address
+logic           blit_busy;
+assign          blit_busy = ~blit_count[16]; // when blit_count underflows, high bit will be set
+// TODO logic           blit_line_end;
+// TODO assign          blit_line_end = width_counter[16];  // when width_counter underflows, high bit will be set
+
+logic [15:0] ms_timer;      // TODO
+logic [3:0] intr_enable;      // TODO
+logic [7:0] wr_nibmask;      // TODO
 
 assign bus_ack_o = (bus_write_strobe | bus_read_strobe);    // TODO: debug
 
@@ -118,25 +129,31 @@ function [7:0] reg_read(
     input logic         b_sel,
     input logic [3:0]   r_sel
     );
-    // NOTE: ignores register bit 3 on reads
-    if (r_sel[2] == 1'b0) begin
-        // first 4 registers directly readable
-        case (r_sel[1:0])
-            xv::XVID_AUX_ADDR[1:0]: reg_read = (~b_sel) ? reg_aux_addr[15:8] : reg_aux_addr[7:0];
-            xv::XVID_CONST[1:0]:    reg_read = (~b_sel) ? reg_const[15:8]    : reg_const[7:0];
-            xv::XVID_RD_ADDR[1:0]:  reg_read = (~b_sel) ? reg_rd_addr[15:8]  : reg_rd_addr[7:0];
-            xv::XVID_WR_ADDR[1:0]:  reg_read = (~b_sel) ? reg_wr_addr[15:8]  : reg_wr_addr[7:0];
-        endcase
-    end
-    else begin
-        // the other 4 read registers are "synthetic"
-        case (r_sel[1:0])
-            xv::XVID_DATA[1:0],
-            xv::XVID_DATA_2[1:0]:   reg_read = (~b_sel) ? vram_rd_data[15:8] : vram_rd_data[7:0];
-            xv::XVID_AUX_DATA[1:0]: reg_read = (~b_sel) ? aux_rd_data[15:8]  : aux_rd_data[7:0];
-            xv::XVID_COUNT[1:0]:    reg_read = { blit_busy, 7'b0 };
-        endcase
-    end
+    case (r_sel)
+        xv::XM_XR_ADDR[3:0]:    reg_read = !b_sel ? reg_xr_addr[15:8]   : reg_xr_addr[7:0];
+        xv::XM_XR_DATA[3:0]:    reg_read = !b_sel ? xr_rd_data[15:8]    : xr_rd_data[7:0];
+
+        xv::XM_RD_INCR[3:0]:    reg_read = !b_sel ? reg_rd_incr[15:8]   : reg_rd_incr[7:0];
+        xv::XM_RD_ADDR[3:0]:    reg_read = !b_sel ? reg_rd_addr[15:8]   : reg_rd_addr[7:0];
+
+        xv::XM_WR_INCR[3:0]:    reg_read = !b_sel ? reg_wr_incr[15:8]   : reg_wr_incr[7:0];
+        xv::XM_WR_ADDR[3:0]:    reg_read = !b_sel ? reg_wr_addr[15:8]   : reg_wr_addr[7:0];
+
+        xv::XM_DATA[3:0],
+        xv::XM_DATA_2[3:0]:     reg_read = !b_sel ? vram_rd_data[15:8]  : vram_rd_data[7:0];
+
+        xv::XM_SYS_CTRL[3:0]:   reg_read = !b_sel ? { blit_busy, 3'b0, intr_enable } : wr_nibmask;
+        xv::XM_TIMER[3:0]:      reg_read = !b_sel ? ms_timer[15:8]      : ms_timer[7:0];
+
+        xv::XM_UNUSED_A[3:0]:   reg_read = 8'h00;
+        xv::XM_UNUSED_B[3:0]:   reg_read = 8'h00;
+
+        xv::XM_RW_INCR[3:0]:    reg_read = !b_sel ? reg_wr_incr[15:8]   : reg_rw_incr[7:0];
+        xv::XM_RW_ADDR[3:0]:    reg_read = !b_sel ? reg_rw_addr[15:8]   : reg_rw_addr[7:0];
+
+        xv::XM_RW_DATA[3:0],
+        xv::XM_RW_DATA_2[3:0]:  reg_read = !b_sel ? vram_rw_data[15:8]  : vram_rw_data[7:0];
+    endcase
 endfunction
 
 function [7:0] hex_digit(
@@ -158,12 +175,12 @@ always_ff @(posedge clk) begin
         reconfig_o          <= 1'b0;
         boot_select_o       <= 2'b00;
         vgen_ena_o          <= 1'b0;
-        blit_vram_rd        <= 1'b0;
-        blit_vram_rd_ack    <= 1'b0;
-        blit_aux_rd         <= 1'b0;
-        blit_aux_rd_ack     <= 1'b0;
+        vram_rd        <= 1'b0;
+        vram_rd_ack    <= 1'b0;
+        xr_rd         <= 1'b0;
+        xr_rd_ack     <= 1'b0;
         blit_vram_sel_o     <= 1'b0;
-        blit_aux_sel_o      <= 1'b0;
+        blit_xr_sel_o      <= 1'b0;
         blit_wr_o           <= 1'b0;
         // addr/data out
         blit_addr_o         <= 16'h0000;
@@ -171,182 +188,192 @@ always_ff @(posedge clk) begin
 
         // internal blitter state
         blit_state          <= INIT;
-        blit_2d             <= 1'b0;
-        blit_const          <= 1'b0;
-        width_counter       <= 17'h00000;   // 16th bit is set on underflow
-        blit_rd_addr        <= 16'h0000;    // TODO
-        blit_wr_addr        <= 16'h0000;
+// TODO         blit_2d             <= 1'b0;
+// TODO         blit_const          <= 1'b0;
+// TODO         width_counter       <= 17'h00000;   // 16th bit is set on underflow
+// TODO        blit_rd_addr        <= 16'h0000;
+// TODO        blit_wr_addr        <= 16'h0000;
 
         // xosera registers
-        reg_aux_addr        <= 16'h0000;
-        reg_const           <= 16'h0000;
+        reg_xr_addr        <= 16'h0000;
         reg_rd_addr         <= 16'h0000;
         reg_wr_addr         <= 16'h0000;
-        reg_rd_inc          <= 16'h0000;
-        reg_wr_inc          <= 16'h0000;
-        reg_rd_mod          <= 16'h0000;
-        reg_wr_mod          <= 16'h0000;
-        reg_width           <= 16'h0000;
-        reg_count           <= 17'h10000;   // 16th bit is set on underfow
+        reg_rd_incr          <= 16'h0000;
+        reg_wr_incr          <= 16'h0000;
+// TODO         reg_rd_mod          <= 16'h0000;
+// TODO         reg_wr_mod          <= 16'h0000;
+// TODO         reg_width           <= 16'h0000;
+        blit_count           <= 17'h10000;   // 16th bit is set on underfow
         reg_data_even       <= 8'h00;
         reg_other_even      <= 8'h00;
         reg_other_reg       <= 4'h0;
 
     end
     else begin
-        // if a read ack is pending, save value from vram/aux
-        if (blit_vram_rd_ack) begin
+        // if a rd read ack is pending, save value from vram
+        if (vram_rd_ack) begin
             vram_rd_data    <= blit_data_i;
         end
-        blit_vram_rd_ack <= 1'b0;
+        vram_rd_ack <= 1'b0;
 
-        if (blit_aux_rd_ack) begin
-            aux_rd_data     <= aux_data_i;
+        // if a rw read ack is pending, save value from vram
+        if (vram_rw_ack) begin
+            vram_rw_data     <= blit_data_i;
         end
-        blit_aux_rd_ack <= 1'b0;
+        vram_rw_ack <= 1'b0;
+
+        // if a xr read ack is pending, save value from xr data
+        if (xr_rd_ack) begin
+            xr_rd_data     <= xr_data_i;
+        end
+        xr_rd_ack <= 1'b0;
 
         if (!vgen_sel_i) begin
-            blit_vram_rd_ack    <= blit_vram_rd;    // ack is one cycle after read with blitter access
-            blit_aux_rd_ack     <= blit_aux_rd;     // ack is one cycle after read with aux access
+            vram_rd_ack <= vram_rd;     // ack is one cycle after read with blitter access
+            vram_rw_ack <= vram_rw_rd;  // ack is one cycle after read with blitter access
+            xr_rd_ack   <= xr_rd;       // ack is one cycle after read with aux access
 
-            // if we did a read, increment read addr
-            if (blit_vram_rd) begin
-                reg_rd_addr  <= reg_rd_addr + reg_rd_inc;   //(blit_line_end ? reg_rd_mod : reg_rd_inc);
+            // if we did a rd read, increment read addr
+            if (vram_rd) begin
+                reg_rd_addr  <= reg_rd_addr + reg_rd_incr;
             end
 
-            // if we did a write, increment write addr
-            if (blit_vram_sel_o && blit_wr_o) begin
-                reg_wr_addr  <= reg_wr_addr + reg_wr_inc;   // (blit_line_end ? reg_wr_mod : reg_wr_inc);
+            // if we did a rw read, increment read addr
+            if (vram_rw_rd) begin
+                reg_rw_addr  <= reg_rw_addr + reg_rw_incr;
+            end
 
-                // if width counter exhausted, reload width else decrement
-                if (blit_line_end) begin
-                    width_counter <= { 1'b0, reg_width };
-                end
-                else begin
-                    width_counter <= width_counter - 1'b1;
-                    // if not 2-D blit, prevent blit_end_line (bit 16 of width_counter)
-                    if (!blit_2d) begin
-                        width_counter[16] <= 1'b0;
-                    end
-                end
+            // if we did a wr write, increment wr addr
+            if (blit_vram_sel_o && blit_wr_o && !vram_rw_wr) begin
+                reg_wr_addr  <= reg_wr_addr + reg_wr_incr;
 
                 // decrement count register if blitter busy
                 if (blit_busy) begin
-                    reg_count    <= reg_count - 1'b1;
+                    blit_count    <= blit_count - 1'b1;
                 end
             end
 
-            // if aux write auto increment
-            if (blit_aux_sel_o && blit_wr_o) begin
-                reg_aux_addr  <= reg_aux_addr + 1'b1;
+            // if we did a rw write, increment rw addr
+            if (vram_rw_wr) begin
+                reg_wr_addr  <= reg_wr_addr + reg_wr_incr;
+            end
+  
+            // if xr write auto increment
+            if (blit_xr_sel_o && blit_wr_o) begin
+                reg_xr_addr  <= reg_xr_addr + 1'b1;
             end
 
-            blit_vram_rd    <= 1'b0;
-            blit_aux_rd     <= 1'b0;
+            blit_addr_o     <= reg_wr_addr;     // assume VRAM write output address
             blit_vram_sel_o <= 1'b0;            // clear vram select
-            blit_aux_sel_o  <= 1'b0;            // clear aux select
+            blit_xr_sel_o   <= 1'b0;            // clear xr select
             blit_wr_o       <= 1'b0;            // clear write
-            blit_addr_o     <= reg_wr_addr;    // assume VRAM write output address // TODO is this a good idea?
+            xr_rd           <= 1'b0;            // clear pending xr read
+            vram_rd         <= 1'b0;            // clear pending rd read
+            vram_rw_rd      <= 1'b0;            // clear pending rw read
+            vram_rw_wr      <= 1'b0;            // clear rw write
         end
 
         if (bus_write_strobe) begin
-            if (!bus_bytesel) begin
-                // special storage for certain registers
+            if (!bus_bytesel) begin // even byte write (saved specially for certain registers)
                 case (bus_reg_num)
-                    xv::XVID_AUX_ADDR: begin
-                        reg_aux_addr[15:8]  <= bus_data_byte;
-                    end
-                    xv::XVID_CONST: begin
-                        reg_const[15:8]     <= bus_data_byte;
-                    end
-                    xv::XVID_RD_ADDR: begin
+                    xv::XM_XR_ADDR:
+                        reg_xr_addr[15:8]   <= bus_data_byte;
+                    xv::XM_RD_ADDR:
                         reg_rd_addr[15:8]   <= bus_data_byte;
-                    end
-                    xv::XVID_WR_ADDR: begin
+                    xv::XM_WR_ADDR:
                         reg_wr_addr[15:8]   <= bus_data_byte;
-                    end
-                    xv::XVID_DATA,
-                    xv::XVID_DATA_2: begin
+                    xv::XM_XR_DATA:
+                        reg_xr_data_even    <= bus_data_byte;   // data reg even byte storage
+                    xv::XM_DATA,
+                    xv::XM_DATA_2,
+                    xv::XM_RW_DATA,
+                    xv::XM_RW_DATA_2:
                         reg_data_even       <= bus_data_byte;   // data reg even byte storage
-                    end
                     default: begin
                         reg_other_even      <= bus_data_byte;   // generic even byte storage
                         reg_other_reg       <= bus_reg_num;
                     end
                 endcase
             end
-            else begin
+            else begin              // odd byte write (actives action)
                 case (bus_reg_num)
-                    xv::XVID_AUX_ADDR: begin
-                        reg_aux_addr[7:0]   <= bus_data_byte;
-                        blit_addr_o         <= { reg_aux_addr[15:8], bus_data_byte };      // output read address
-                        blit_aux_sel_o     <= 1'b1;            // select AUX
-                        blit_aux_rd        <= 1'b1;            // remember pending aux read request
+                    xv::XM_XR_ADDR: begin
+                        reg_xr_addr[7:0]    <= bus_data_byte;
+                        blit_addr_o         <= { reg_xr_addr[15:8], bus_data_byte };      // output read address
+                        blit_xr_sel_o       <= 1'b1;            // select XR
+                        xr_rd               <= 1'b1;            // remember pending aux read request
                     end
-                    xv::XVID_CONST: begin
-                        reg_const[7:0]      <= bus_data_byte;
+                    xv::XM_XR_DATA: begin
+                        blit_addr_o         <= reg_xr_addr;
+                        blit_data_o         <= { reg_even_byte, bus_data_byte };
+                        blit_xr_sel_o       <= 1'b1;
+                        blit_wr_o           <= 1'b1;
                     end
-                    xv::XVID_RD_ADDR: begin
+                    xv::XM_RD_INCR: begin
+                        reg_rd_incr         <= { reg_even_byte, bus_data_byte };
+                    end
+                    xv::XM_RD_ADDR: begin
                         reg_rd_addr[7:0]    <= bus_data_byte;
                         blit_addr_o         <= { reg_rd_addr[15:8], bus_data_byte };      // output read address
                         blit_vram_sel_o     <= 1'b1;            // select VRAM
-                        blit_vram_rd        <= 1'b1;            // remember pending vramread request
+                        vram_rd             <= 1'b1;            // remember pending vramread request
                     end
-                    xv::XVID_WR_ADDR: begin
+                    xv::XM_WR_INCR: begin
+                        reg_wr_incr         <= { reg_even_byte, bus_data_byte };
+                    end
+                    xv::XM_WR_ADDR: begin
                         reg_wr_addr[7:0]    <= bus_data_byte;
                     end
-                    xv::XVID_DATA,
-                    xv::XVID_DATA_2: begin
+                    xv::XM_DATA,
+                    xv::XM_DATA_2: begin
                         blit_addr_o         <= reg_wr_addr;    // output write address
                         blit_data_o         <= { reg_data_even, bus_data_byte };      // output write data
                         blit_vram_sel_o     <= 1'b1;            // select VRAM
                         blit_wr_o           <= 1'b1;            // write
                     end
-                    xv::XVID_AUX_DATA: begin
-                        blit_addr_o         <= reg_aux_addr;
-                        blit_data_o         <= { reg_even_byte, bus_data_byte };
-                        blit_aux_sel_o      <= 1'b1;
-                        blit_wr_o           <= 1'b1;
+                    xv::XM_SYS_CTRL: begin
+                        reconfig_o          <= reg_even_byte[6];
+                        boot_select_o       <= reg_even_byte[5:4];
+                        intr_enable         <= reg_even_byte[3:0];
+                        wr_nibmask          <= bus_data_byte;
                     end
-                    xv::XVID_COUNT: begin
-                        reg_count           <= { 1'b0, reg_even_byte, bus_data_byte };    // TODO async operations
-                        width_counter       <=  { 1'b0, reg_width };
+                    xv::XM_TIMER: begin
+                        // NOTE: want to rely on timer, so no reset...what could this do?
                     end
-                    xv::XVID_RD_INC: begin
-                        reg_rd_inc          <= { reg_even_byte, bus_data_byte };
+                    xv::XM_UNUSED_A: begin
                     end
-                    xv::XVID_WR_INC: begin
-                        reg_wr_inc          <= { reg_even_byte, bus_data_byte };
+                    xv::XM_UNUSED_B: begin
                     end
-                    xv::XVID_RD_MOD: begin
-                        reg_rd_mod          <= { reg_even_byte, bus_data_byte };
+                    xv::XM_RW_ADDR: begin
+                        reg_rw_addr[7:0]    <= bus_data_byte;
+                        blit_addr_o         <= { reg_rw_addr[15:8], bus_data_byte };      // output read address
+                        blit_vram_sel_o     <= 1'b1;            // select VRAM
+                        vram_rd             <= 1'b1;            // remember pending vramread request
+                        vram_rw_rd          <= 1'b1;            // remember rw read
                     end
-                    xv::XVID_WR_MOD: begin
-                        reg_wr_mod          <= { reg_even_byte, bus_data_byte };
-                    end
-                    xv::XVID_WIDTH: begin
-                        reg_width           <= { reg_even_byte, bus_data_byte };
-                    end
-                    xv::XVID_BLIT_CTRL: begin
-                        blit_2d             <= bus_data_byte[0];
-                        blit_const          <= bus_data_byte[1];
-                        reconfig_o          <= reg_even_byte[7:6] == 2'b10 && bus_data_byte[7:6] == 2'b10;
-                        boot_select_o       <= reg_even_byte[1:0];
-                    end
-                    xv::XVID_UNUSED_E: begin
-                    end
-                    xv::XVID_UNUSED_F: begin
+                    xv::XM_RW_ADDR: begin
+                        blit_addr_o         <= reg_rw_addr;    // output write address
+                        blit_data_o         <= { reg_data_even, bus_data_byte };      // output write data
+                        blit_vram_sel_o     <= 1'b1;            // select VRAM
+                        blit_wr_o           <= 1'b1;            // write
+                        vram_rw_wr          <= 1'b1;            // remember rw write
                     end
                 endcase
             end // bus_bytesel
         end // bus_write_strobe
 
         if (bus_read_strobe & bus_bytesel) begin
-            if (bus_reg_num == xv::XVID_DATA || bus_reg_num == xv::XVID_DATA_2) begin
-                // if we did a read, increment read addr
+            // if read from data then pre-read next vram rd address
+            if (bus_reg_num == xv::XM_DATA || bus_reg_num == xv::XM_DATA_2) begin
                 blit_addr_o         <= reg_rd_addr;      // output read address
                 blit_vram_sel_o     <= 1'b1;            // select VRAM
-                blit_vram_rd        <= 1'b1;            // remember pending vramread request
+                vram_rd             <= 1'b1;            // remember pending vramread request
+            end
+            // if read from rw_data then pre-read next vram rw address
+            if (bus_reg_num == xv::XM_RW_DATA || bus_reg_num == xv::XM_RW_DATA_2) begin
+                blit_addr_o         <= reg_rw_addr;      // output read address
+                blit_vram_sel_o     <= 1'b1;            // select VRAM
+                vram_rw_rd          <= 1'b1;            // remember pending vramread request
             end
         end
 
@@ -364,11 +391,11 @@ always_ff @(posedge clk) begin
 `endif
                 blit_addr_o     <= 16'h0000;
 `ifdef SYNTHESIS
-                reg_count       <= 17'h0FFFF;
+                blit_count       <= 17'h0FFFF;
 `else
-                reg_count       <= 17'h00FFF;        // smaller clear for simulation
+                blit_count       <= 17'h00FFF;        // smaller clear for simulation
 `endif
-                reg_wr_inc      <= 16'h0001;
+                reg_wr_incr      <= 16'h0001;
                 blit_state      <= CLEAR;
             end
             CLEAR: begin

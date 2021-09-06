@@ -26,59 +26,78 @@ package xv;
 // Xosera directly addressable registers (16 x 16-bit word)
 typedef enum logic [3:0]{
     // register 16-bit read/write (no side effects)
-    XVID_AUX_ADDR   = 4'h0,        // reg 0: set AUX bus read/write address (see below)
-    XVID_CONST      = 4'h1,        // reg 1: TODO CPU data (instead of read from VRAM)
-    XVID_RD_ADDR    = 4'h2,        // reg 2: address to read from VRAM
-    XVID_WR_ADDR    = 4'h3,        // reg 3: address to write from VRAM
+    XM_XR_ADDR      = 4'h0,        // (R /W+) XR register number/address for XM_XR_DATA read/write access
+    XM_XR_DATA      = 4'h1,        // (R /W+) read/write XR register/memory at XM_XR_ADDR (XM_XR_ADDR incr. on write)
+    XM_RD_INCR      = 4'h2,        // (R /W ) increment value for XM_RD_ADDR read from XM_DATA/XM_DATA_2
+    XM_RD_ADDR      = 4'h3,        // (R /W+) VRAM address for reading from VRAM when XM_DATA/XM_DATA_2 is read
+    XM_WR_INCR      = 4'h4,        // (R /W ) increment value for XM_WR_ADDR on write to XM_DATA/XM_DATA_2
+    XM_WR_ADDR      = 4'h5,        // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
+    XM_DATA         = 4'h6,        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR (and add XM_RD_INCR/XM_WR_INCR)
+    XM_DATA_2       = 4'h7,        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
+    XM_SYS_CTRL     = 4'h8,        // (R /W+) busy status, FPGA reconfig, interrupt status/control, write masking
+    XM_TIMER        = 4'h9,        // (RO   ) read 1/10th millisecond timer [TODO]
+    XM_UNUSED_A     = 4'hA,        // (R /W ) unused direct register 0xA [TODO]
+    XM_UNUSED_B     = 4'hB,        // (R /W ) unused direct register 0xB [TODO]
+    XM_RW_INCR      = 4'hC,        // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
+    XM_RW_ADDR      = 4'hD,        // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
+    XM_RW_DATA      = 4'hE,        // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
+    XM_RW_DATA_2    = 4'hF         // (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
+} xm_register_t;
 
-    // special registers (special read value, odd byte write triggers effect)
-    XVID_DATA       = 4'h4,        // reg 4: read/write word from/to VRAM RD/WR
-    XVID_DATA_2     = 4'h5,        // reg 5: read/write word from/to VRAM RD/WR (for 32-bit)
-    XVID_AUX_DATA   = 4'h6,        // reg 6: aux data (font/audio)
-    XVID_COUNT      = 4'h7,        // reg 7: TODO blitter "repeat" count/trigger
-
-    // write only, 16-bit
-    XVID_RD_INC     = 4'h8,        // reg 8: read addr increment value
-    XVID_WR_INC     = 4'h9,        // reg 9: write addr increment value
-    XVID_WR_MOD     = 4'hA,        // reg A: TODO write modulo width for 2D blit
-    XVID_RD_MOD     = 4'hB,        // reg B: TODO read modulo width for 2D blit
-    XVID_WIDTH      = 4'hC,        // reg C: TODO width for 2D blit
-    XVID_BLIT_CTRL  = 4'hD,        // reg D: TODO
-    XVID_UNUSED_E   = 4'hE,        // reg E: TODO
-    XVID_UNUSED_F   = 4'hF         // reg F: TODO
-} register_t;
-
-// AUX memory areas
+// XR register / memory regions
 typedef enum logic [15:0]{
-    AUX_VID         = 16'h0000,        // 0x0000-0x000F 16 word video registers (see below)
-    AUX_FONTMEM     = 16'h4000,        // 0x4000-0x5FFF 8K byte font memory (even byte [15:8] ignored)
-    AUX_COLORMEM    = 16'h8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
-    AUX_OTHERMEM    = 16'hC000         // 0xC000-0x??? TODO (audio registers)
-} aux_mem_area_t;
+    // XR Register Regions
+    XR_CONFIG_REGS   = 16'h0000,    // 0x0000-0x000F 16 config/copper registers
+    XR_PA_REGS       = 16'h0010,    // 0x0000-0x0017 8 playfield A video registers
+    XR_PB_REGS       = 16'h0018,    // 0x0000-0x000F 8 playfield B video registers
+    XR_BLIT_REGS     = 16'h0020,    // 0x0000-0x000F 16 blit registers [TBD]
+    XR_POLYDRAW_REGS = 16'h0030,    // 0x0000-0x000F 16 line/polygon draw registers [TBD]
+    // XR Memory Regions
+    XR_COLOR_MEM    = 16'h8000,     // 0x8000-0x80FF 256 16-bit word color lookup table (0xXRGB)
+    XR_TILE_MEM     = 16'h9000,     // 0x9000-0x9FFF 4K 16-bit words of tile/font memory
+    XR_COPPER_MEM   = 16'hA000,     // 0xA000-0xA7FF 2K 16-bit words copper program memory
+    XR_SPRITE_MEM   = 16'hB000,     // 0xB000-0xB0FF 256 16-bit word sprite/cursor memory
+    XR_UNUSED_MEM   = 16'hC000      // 0xC000-0xFFFF (currently unused)
+} xr_region_t;
 
-// AUX_VID read-write registers (write address to AUX_ADDR first then read/write AUX_DATA)
+// XR read-write registers/memory regions
 typedef enum logic [15:0]{
-    AUX_DISPSTART   = AUX_VID | 16'h0000,        // display start address
-    AUX_DISPWIDTH   = AUX_VID | 16'h0001,        // display width in words
-    AUX_SCROLLXY    = AUX_VID | 16'h0002,        // [10:8] H fine scroll, [3:0] V fine scroll
-    AUX_FONTCTRL    = AUX_VID | 16'h0003,        // [15:11] 1KW/2KW font bank,[8] bram/vram [3:0] font height
-    AUX_GFXCTRL     = AUX_VID | 16'h0004,        // [15:8] colorbase [7] disable, [6] bitmap [5:4] bpp, [3:2] H repeat, [1:0] V repeat
-    AUX_LINESTART   = AUX_VID | 16'h0005,
-    AUX_LINEINTR    = AUX_VID | 16'h0006,
-    AUX_SCRN_WIDTH  = AUX_VID | 16'h0007
-} aux_vid_w_t;
-
-// AUX_VID read-only registers (write address to AUX_ADDR first to update AUX_DATA read value)
-typedef enum logic [15:0]{
-    AUX_R_WIDTH     = AUX_VID | 16'h0008,        // display resolution width
-    AUX_R_HEIGHT    = AUX_VID | 16'h0009,        // display resolution height
-    AUX_R_FEATURES  = AUX_VID | 16'h000A,        // [15] = 1 (test)
-    AUX_R_SCANLINE  = AUX_VID | 16'h000B,        // [15] V blank, [14] H blank, [13:11] zero [10:0] V line
-    AUX_R_GITHASH_H = AUX_VID | 16'h000C,
-    AUX_R_GITHASH_L = AUX_VID | 16'h000D,
-    AUX_R_UNUSED_E  = AUX_VID | 16'h000E,
-    AUX_R_UNUSED_F  = AUX_VID | 16'h000F
-} aux_vid_r_t;
+    // Video Config / Copper XR Registers
+    XR_VID_CTRL     = 16'h0000,     // (R /W) display control and border color index
+    XR_COPP_CTRL    = 16'h0001,     // (R /W) display synchronized coprocessor control
+    XR_CURSOR_X     = 16'h0002,     // (R /W) sprite cursor X position
+    XR_CURSOR_Y     = 16'h0003,     // (R /W) sprite cursor Y position
+    XR_VID_TOP      = 16'h0004,     // (R /W) top line of active display window (typically 0)
+    XR_VID_BOTTOM   = 16'h0005,     // (R /W) bottom line of active display window (typically 479)
+    XR_VID_LEFT     = 16'h0006,     // (R /W) left edge of active display window (typically 0)
+    XR_VID_RIGHT    = 16'h0007,     // (R /W) right edge of active display window (typically 639 or 847)
+    XR_SCANLINE     = 16'h0008,     // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
+    XR_UNUSED_09    = 16'h0009,     // (RO  )
+    XR_VERSION      = 16'h0009,     // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
+    XR_GITHASH_H    = 16'h000A,     // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
+    XR_GITHASH_L    = 16'h000B,     // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
+    XR_VID_HSIZE    = 16'h000C,     // (RO  ) native pixel width of monitor mode (e.g. 640/848)
+    XR_VID_VSIZE    = 16'h000D,     // (RO  ) native pixel height of monitor mode (e.g. 480)
+    XR_VID_VFREQ    = 16'h000E,     // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+    // Playfield A Control XR Registers
+    XR_PA_GFX_CTRL  = 16'h0010,     // (R /W) playfield A graphics control
+    XR_PA_TILE_CTRL = 16'h0011,     // (R /W) playfield A tile control
+    XR_PA_DISP_ADDR = 16'h0012,     // (R /W) playfield A display VRAM start address
+    XR_PA_LINE_LEN  = 16'h0013,     // (R /W) playfield A display line width in words
+    XR_PA_HV_SCROLL = 16'h0014,     // (R /W) playfield A horizontal and vertical fine scroll
+    XR_PA_LINE_ADDR = 16'h0015,     // (R /W) playfield A scanline start address (loaded at start of line)
+    XR_PA_UNUSED_16 = 16'h0016,     //
+    XR_PA_UNUSED_17 = 16'h0017,     //
+    // Playfield B Control XR Registers
+    XR_PB_GFX_CTRL  = 16'h0018,     // (R /W) playfield B graphics control
+    XR_PB_TILE_CTRL = 16'h0019,     // (R /W) playfield B tile control
+    XR_PB_DISP_ADDR = 16'h001A,     // (R /W) playfield B display VRAM start address
+    XR_PB_LINE_LEN  = 16'h001B,     // (R /W) playfield B display line width in words
+    XR_PB_HV_SCROLL = 16'h001C,     // (R /W) playfield B horizontal and vertical fine scroll
+    XR_PB_LINE_ADDR = 16'h001D,     // (R /W) playfield B scanline start address (loaded at start of line)
+    XR_PB_UNUSED_1E = 16'h001E,     //
+    XR_PB_UNUSED_1F = 16'h001F      //
+} xr_register_t;
 
 typedef enum logic [1:0] {
     BPP_1_ATTR      = 2'b00,

@@ -406,6 +406,7 @@ void test_vram_speed()
         "MOVE.L  main RAM read   128KB x 16 (2MB)    %u ms (%u KB/sec)\n", main_read, (1000U * 128 * reps) / main_read);
 }
 
+#if 0        // TODO: needs recalibrating for VSync timer
 uint16_t rosco_m68k_CPUMHz()
 {
     uint32_t count;
@@ -431,6 +432,7 @@ uint16_t rosco_m68k_CPUMHz()
 
     return (uint16_t)((MHz + 5U) / 10U);
 }
+#endif
 
 static void load_sd_bitmap(const char * filename)
 {
@@ -445,7 +447,7 @@ static void load_sd_bitmap(const char * filename)
         while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
         {
             /* period every 4KiB, does not noticeably affect speed */
-            if (!(vaddr % 0x7))
+            if (!(vaddr & 0x7))
             {
                 dprintf(".");
             }
@@ -481,7 +483,7 @@ static void load_sd_palette(const char * filename)
         while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
         {
             /* period every 4KiB, does not noticeably affect speed */
-            if (!(vaddr % 0x7))
+            if (!(vaddr & 0x7))
             {
                 dprintf(".");
             }

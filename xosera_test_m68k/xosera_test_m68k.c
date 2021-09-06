@@ -447,7 +447,7 @@ static void load_sd_bitmap(const char * filename)
         while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
         {
             /* period every 4KiB, does not noticeably affect speed */
-            if (!(vaddr & 0x7))
+            if ((vaddr & 0xf) == 0)
             {
                 dprintf(".");
             }
@@ -555,8 +555,8 @@ void     xosera_test()
 
         dprintf(
             "Xosera v%1x.%02x #%08x Features:0x%02x\n", (version >> 8) & 0xf, (version & 0xff), githash, version >> 8);
-        dprintf("Monitor Mode: %dx%d @%2x.%02xHz\n", monwidth, monheight, monfreq >> 8, monfreq & 0xff);
-        dprintf("\nPlayfield A:\n:");
+        dprintf("Monitor Mode: %dx%d@%2x.%02xHz\n", monwidth, monheight, monfreq >> 8, monfreq & 0xff);
+        dprintf("\nPlayfield A:\n");
         dprintf("PA_GFX_CTRL : 0x%04x PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
         dprintf("PA_DISP_ADDR: 0x%04x PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
         dprintf("PA_HV_SCROLL: 0x%04x\n", hvscroll);

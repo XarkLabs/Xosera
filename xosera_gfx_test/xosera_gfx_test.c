@@ -33,7 +33,7 @@
 
 // Define rosco_m68k Xosera board base address pointer (See
 // https://github.com/rosco-m68k/hardware-projects/blob/feature/xosera/xosera/code/pld/decoder/ic3_decoder.pld#L25)
-volatile xreg_t * const xosera_ptr = (volatile xreg_t * const)0xf80060;        // rosco_m68k Xosera base
+volatile xmreg_t * const xosera_ptr = (volatile xmreg_t * const)0xf80060;        // rosco_m68k Xosera base
 
 bool use_sd;
 

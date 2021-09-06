@@ -31,7 +31,6 @@
 			"CDONE",
 			"chmod",
 			"CIPO",
-			"COLORTBL",
 			"combinational",
 			"CONSTVAL",
 			"COPI",
@@ -44,6 +43,9 @@
 			"default",
 			"DISP",
 			"DISPWIDTH",
+			"DIVF",
+			"DIVQ",
+			"DIVR",
 			"dout",
 			"DSPI",
 			"dumpfile",
@@ -51,7 +53,6 @@
 			"endcase",
 			"endmodule",
 			"FMAX",
-			"fontram",
 			"FTDI",
 			"getbh",
 			"getbl",
@@ -63,6 +64,8 @@
 			"Hackaday",
 			"hcount",
 			"HFOSC",
+			"hscroll",
+			"HSIZE",
 			"hsync",
 			"icepll",
 			"icestation",
@@ -131,7 +134,9 @@
 			"vltstd",
 			"vluint",
 			"VRAM",
+			"vscroll",
 			"vsim",
+			"VSIZE",
 			"vsync",
 			"Vxosera",
 			"WARMBOOT",
@@ -156,7 +161,7 @@
 		"cSpell.diagnosticLevel": "Hint",
 		"terminal.integrated.fontSize": 10,
 		"workbench.editor.enablePreview": false,
-		"verilog.linting.verilator.arguments": "--sv --language 1800-2012 -Irtl -I.. -Wall -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY",
+		"verilog.linting.verilator.arguments": "--sv --language 1800-2012 -Irtl -I.. -Wall -Wno-DECLFILENAME -Wno-STMTDLY", //  -Wno-UNUSED -Wno-VARHIDDEN -Wno-PINCONNECTEMPTY 
 		"verilog.linting.linter": "verilator",
 		"todo-tree.highlights.defaultHighlight": {
 			"icon": "alert",
@@ -195,15 +200,6 @@
 			"chrono": "c",
 			"queue": "c",
 			"random": "c"
-		},
-		"C_Cpp.default.includePath": [
-			"${default}",
-			"/home/kenj/oss-cad-suite/share/verilator/include",
-			"/home/kenj/oss-cad-suite/share/verilator/include/vltstd",
-			"/usr/include/SDL2",
-			"/opt/homebrew/include/SDL2/",
-			"${workspaceFolder}/rtl/sim",
-			"${workspaceFolder}/rtl/sim/obj_dir"
-		]
+		}
 	}
 }

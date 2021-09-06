@@ -19,6 +19,8 @@
 `define GITHASH d0000000            // unknown Git hash (assumed dirty)
 `endif
 
+`define VERSION 020                 // BCD version code (x.xx)
+
 //`define TESTPATTERN     // init with "test pattern" instead of clear VRAM
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
@@ -73,12 +75,12 @@ typedef enum logic [15:0]{
     XR_VID_RIGHT    = 16'h0007,     // (R /W) right edge of active display window (typically 639 or 847)
     XR_SCANLINE     = 16'h0008,     // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
     XR_UNUSED_09    = 16'h0009,     // (RO  )
-    XR_VERSION      = 16'h0009,     // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
-    XR_GITHASH_H    = 16'h000A,     // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
-    XR_GITHASH_L    = 16'h000B,     // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
-    XR_VID_HSIZE    = 16'h000C,     // (RO  ) native pixel width of monitor mode (e.g. 640/848)
-    XR_VID_VSIZE    = 16'h000D,     // (RO  ) native pixel height of monitor mode (e.g. 480)
-    XR_VID_VFREQ    = 16'h000E,     // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+    XR_VERSION      = 16'h000A,     // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
+    XR_GITHASH_H    = 16'h000B,     // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
+    XR_GITHASH_L    = 16'h000C,     // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
+    XR_VID_HSIZE    = 16'h000D,     // (RO  ) native pixel width of monitor mode (e.g. 640/848)
+    XR_VID_VSIZE    = 16'h000E,     // (RO  ) native pixel height of monitor mode (e.g. 480)
+    XR_VID_VFREQ    = 16'h000F,     // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
     // Playfield A Control XR Registers
     XR_PA_GFX_CTRL  = 16'h0010,     // (R /W) playfield A graphics control
     XR_PA_TILE_CTRL = 16'h0011,     // (R /W) playfield A tile control
@@ -123,6 +125,7 @@ typedef enum logic [1:0] {
 `ifdef    MODE_640x400
 // VGA mode 640x400 @ 70Hz (pixel clock 25.175Mhz)
 localparam PIXEL_FREQ        = 25_175_000;  // pixel clock in Hz
+localparam REFRESH_FREQ      = 16'h7000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
 localparam VISIBLE_HEIGHT    = 400;         // vertical active lines
 localparam H_FRONT_PORCH     = 16;          // H pre-sync (front porch) pixels
@@ -137,6 +140,7 @@ localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 `elsif    MODE_640x400_85
 // VGA mode 640x400 @ 85Hz (pixel clock 31.500Mhz)
 localparam PIXEL_FREQ        = 31_500_000;  // pixel clock in Hz
+localparam REFRESH_FREQ      = 16'h8500;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
 localparam VISIBLE_HEIGHT    = 400;         // vertical active lines
 localparam H_FRONT_PORCH     = 32;          // H pre-sync (front porch) pixels
@@ -151,6 +155,7 @@ localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 `elsif    MODE_640x480
 // VGA mode 640x480 @ 60Hz (pixel clock 25.175Mhz)
 localparam PIXEL_FREQ        = 25_175_000;  // pixel clock in Hz
+localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
 localparam VISIBLE_HEIGHT    = 480;         // vertical active lines
 localparam H_FRONT_PORCH     = 16;          // H pre-sync (front porch) pixels
@@ -165,6 +170,7 @@ localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 `elsif    MODE_640x480_75
 // VGA mode 640x480 @ 75Hz (pixel clock 31.500Mhz)
 localparam PIXEL_FREQ        = 31_500_000;  // pixel clock in Hz
+localparam REFRESH_FREQ      = 16'h7500;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
 localparam VISIBLE_HEIGHT    = 480;         // vertical active lines
 localparam H_FRONT_PORCH     = 16;          // H pre-sync (front porch) pixels
@@ -179,6 +185,7 @@ localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 `elsif    MODE_640x480_85
 // VGA mode 640x480 @ 85Hz (pixel clock 36.000Mhz)
 localparam PIXEL_FREQ        = 36_000_000;  // pixel clock in Hz
+localparam REFRESH_FREQ      = 16'h8500;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
 localparam VISIBLE_HEIGHT    = 480;         // vertical active lines
 localparam H_FRONT_PORCH     = 56;          // H pre-sync (front porch) pixels
@@ -193,6 +200,7 @@ localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 `elsif    MODE_720x400
 // VGA mode 720x400 @ 70Hz (pixel clock 28.322Mhz)
 localparam PIXEL_FREQ        = 28_322_000;  // pixel clock in Hz
+localparam REFRESH_FREQ      = 16'h7000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 720;         // horizontal active pixels
 localparam VISIBLE_HEIGHT    = 400;         // vertical active lines
 localparam H_FRONT_PORCH     = 18;          // H pre-sync (front porch) pixels
@@ -207,6 +215,7 @@ localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 `elsif    MODE_848x480
 // VGA mode 848x480 @ 60Hz (pixel clock 33.750Mhz)
 localparam PIXEL_FREQ        = 33_750_000;  // pixel clock in Hz
+localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 848;         // horizontal active pixels
 localparam VISIBLE_HEIGHT    = 480;         // vertical active lines
 localparam H_FRONT_PORCH     = 16;          // H pre-sync (front porch) pixels
@@ -221,6 +230,7 @@ localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 `elsif    MODE_800x600
 // VGA mode 800x600 @ 60Hz (pixel clock 40.000Mhz)
 localparam PIXEL_FREQ        = 40_000_000;  // pixel clock in Hz
+localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 800;         // horizontal active pixels
 localparam VISIBLE_HEIGHT    = 600;         // vertical active lines
 localparam H_FRONT_PORCH     = 40;          // H pre-sync (front porch) pixels
@@ -235,6 +245,7 @@ localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 `elsif    MODE_1024x768
 // VGA mode 1024x768 @ 60Hz (pixel clock 65.000Mhz)
 localparam PIXEL_FREQ        = 65_000_000;  // pixel clock in Hz
+localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 1024;        // horizontal active pixels
 localparam VISIBLE_HEIGHT    = 768;         // vertical active lines
 localparam H_FRONT_PORCH     = 24;          // H pre-sync (front porch) pixels
@@ -249,6 +260,7 @@ localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 `elsif    MODE_1280x720
 // VGA mode 1280x720 @ 60Hz (pixel clock 74.250Mhz)
 localparam PIXEL_FREQ        = 74_250_000;  // pixel clock in Hz
+localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 1280;        // horizontal active pixels
 localparam VISIBLE_HEIGHT    = 720;         // vertical active lines
 localparam H_FRONT_PORCH     = 110;         // H pre-sync (front porch) pixels
@@ -282,46 +294,58 @@ localparam cs_DISABLED       = 1'b1;
 `ifdef ICE40UP5K    // iCE40UltraPlus5K specific
 // Lattice/SiliconBlue PLL "magic numbers" to derive pixel clock from 12Mhz oscillator (from "icepll" utility)
 `ifdef    MODE_640x400  // 25.175 MHz (requested), 25.125 MHz (achieved)
+localparam PCLK_HZ     =    25_125_000;
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b1000010;     // DIVF = 66
 localparam PLL_DIVQ    =    3'b101;         // DIVQ =  5
 `elsif    MODE_640x400_85 // 31.500 MHz (requested), 31.500 MHz (achieved)
+localparam PCLK_HZ     =    31_500_000;
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b1010011;     // DIVF = 83
 localparam PLL_DIVQ    =    3'b101;         // DIVQ =  5
 `elsif    MODE_640x480  // 25.175 MHz (requested), 25.125 MHz (achieved)
+localparam PCLK_HZ     =    25_125_000;
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b1000010;     // DIVF = 66
 localparam PLL_DIVQ    =    3'b101;         // DIVQ =  5
 `elsif    MODE_640x480_75 // 31.500 MHz (requested), 31.500 MHz (achieved)
+localparam PCLK_HZ     =    31_500_000;
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b1010011;     // DIVF = 83
 localparam PLL_DIVQ    =    3'b101;         // DIVQ =  5
 `elsif    MODE_640x480_85 // 36.000 MHz (requested), 36.000 MHz (achieved)
+localparam PCLK_HZ     =    36_000_000;
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b0101111;     // DIVF = 47
 localparam PLL_DIVQ    =    3'b100;         // DIVQ =  4
 `elsif    MODE_720x400  // 28.322 MHz (requested), 28.500 MHz (achieved)
+localparam PCLK_HZ     =    28_500_000;
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b1001011;     // DIVF = 75
 localparam PLL_DIVQ    =    3'b101;         // DIVQ =  5
 `elsif    MODE_848x480  // 33.750 MHz (requested), 33.750 MHz (achieved)
+localparam PCLK_HZ     =    33_750_000;
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b0101100;     // DIVF = 44
 localparam PLL_DIVQ    =    3'b100;         // DIVQ =  4
 `elsif    MODE_800x600  // 40.000 MHz (requested), 39.750 MHz (achieved) [tight timing]
+localparam PCLK_HZ     =    39_750_000;
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b0110100;     // DIVF = 52
 localparam PLL_DIVQ    =    3'b100;         // DIVQ =  4
 `elsif MODE_1024x768    // 65.000 MHz (requested), 65.250 MHz (achieved) [fails timing]
+localparam PCLK_HZ     =    65_250_000;
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b1010110;     // DIVF = 86
 localparam PLL_DIVQ    =    3'b100;         // DIVQ =  4
 `elsif MODE_1280x720    // 74.176 MHz (requested), 73.500 MHz (achieved) [fails timing]
+localparam PCLK_HZ     =    73_500_000;
 localparam PLL_DIVR    =    4'b0000;        // DIVR =  0
 localparam PLL_DIVF    =    7'b0110000;     // DIVF = 48
 localparam PLL_DIVQ    =    3'b011;         // DIVQ =  3
 `endif
+`else
+localparam PCLK_HZ     =    25_125_000;
 `endif
 
 endpackage

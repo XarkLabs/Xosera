@@ -1,4 +1,4 @@
-// fontram.sv
+// tilemem.sv
 //
 // vim: set et ts=4 sw=4
 //
@@ -25,7 +25,7 @@
 // `define FONT_FILE_3
 // `define FONT_ADDR_3
 
-module fontram(
+module tilemem(
     input  wire logic         clk,
     input  wire logic         rd_en_i,
     input  wire logic [11:0]  rd_address_i,

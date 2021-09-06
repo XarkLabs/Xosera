@@ -42,8 +42,8 @@ extern volatile uint32_t XFrameCount;
 
 bool use_sd;
 
-// Xosera default palette
-uint16_t def_palette[256] = {
+// Xosera default color palette
+uint16_t def_colors[256] = {
     0x0000, 0x000a, 0x00a0, 0x00aa, 0x0a00, 0x0a0a, 0x0aa0, 0x0aaa, 0x0555, 0x055f, 0x05f5, 0x05ff, 0x0f55, 0x0f5f,
     0x0ff5, 0x0fff, 0x0213, 0x0435, 0x0546, 0x0768, 0x098a, 0x0bac, 0x0dce, 0x0313, 0x0425, 0x0636, 0x0858, 0x0a7a,
     0x0c8c, 0x0eae, 0x0413, 0x0524, 0x0635, 0x0746, 0x0857, 0x0a68, 0x0b79, 0x0500, 0x0801, 0x0a33, 0x0d55, 0x0f78,
@@ -200,12 +200,12 @@ static void xmsg(int x, int y, int color, const char * msg)
     }
 }
 
-void restore_palette()
+void restore_colors()
 {
     xm_setw(XR_ADDR, XR_COLOR_MEM);
     for (int i = 0; i < 256; i++)
     {
-        xm_setw(XR_DATA, def_palette[i]);
+        xm_setw(XR_DATA, def_colors[i]);
     }
 }
 
@@ -470,7 +470,7 @@ static void load_sd_bitmap(const char * filename)
     }
 }
 
-static void load_sd_palette(const char * filename)
+static void load_sd_colors(const char * filename)
 {
     dprintf("Loading colormap: \"%s\"", filename);
     void * file = fl_fopen(filename, "r");
@@ -553,11 +553,8 @@ void     xosera_test()
         uint16_t linelen  = xreg_getw(PA_LINE_LEN);
         uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
 
-        dprintf("Xosera v%d.%02d #%08x Features:0x%02x\n",
-                (version & 0xff) / 100,
-                (version & 0xff) % 100,
-                githash,
-                version >> 8);
+        dprintf(
+            "Xosera v%1x.%02x #%08x Features:0x%02x\n", (version >> 8) & 0xf, (version & 0xff), githash, version >> 8);
         dprintf("Monitor Mode: %dx%d @%2x.%02xHz\n", monwidth, monheight, monfreq >> 8, monfreq & 0xff);
         dprintf("\nPlayfield A:\n:");
         dprintf("PA_GFX_CTRL : 0x%04x PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
@@ -599,7 +596,7 @@ void     xosera_test()
             xreg_setw(PA_GFX_CTRL, 0x0075);        // bitmap + 8-bpp + Hx2 + Vx2
             xreg_setw(PA_LINE_LEN, 160);
 
-            load_sd_palette("/xosera_r1_pal.raw");
+            load_sd_colors("/xosera_r1_pal.raw");
             load_sd_bitmap("/xosera_r1.raw");
             if (delay_check(DELAY_TIME))
             {
@@ -613,7 +610,7 @@ void     xosera_test()
             xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
             xreg_setw(PA_LINE_LEN, 80);
 
-            load_sd_palette("/ST_KingTut_Dpaint_16_pal.raw");
+            load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw");
             load_sd_bitmap("/ST_KingTut_Dpaint_16.raw");
             if (delay_check(DELAY_TIME))
             {
@@ -626,7 +623,7 @@ void     xosera_test()
             xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
             xreg_setw(PA_LINE_LEN, 80);
 
-            load_sd_palette("/escher-relativity_320x240_16_pal.raw");
+            load_sd_colors("/escher-relativity_320x240_16_pal.raw");
             load_sd_bitmap("/escher-relativity_320x240_16.raw");
             if (delay_check(DELAY_TIME))
             {
@@ -634,7 +631,7 @@ void     xosera_test()
             }
             xreg_setw(PA_GFX_CTRL, 0x0000);
         }
-        restore_palette();
+        restore_colors();
         if (use_sd)
         {
             xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1

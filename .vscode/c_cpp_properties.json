@@ -1,6 +1,29 @@
 {
     "configurations": [
         {
+            "name": "macos",
+            "includePath": [
+                "${default}",
+                "/Users/kenj/Dev/oss-cad-suite/share/verilator/include",
+                "/Users/kenj/Dev/oss-cad-suite/share/verilator/include/vltstd/",
+                "/opt/homebrew/include/SDL2",
+                "${workspaceFolder}/rtl/sim/obj_dir"
+            ],
+            "defines": [],
+            "macFrameworkPath": [],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "macos-clang-arm64",
+            "compilerArgs": [
+                "-std=c11",
+                "-Wall",
+                "-Wextra",
+                "-pedantic",
+                "-Wno-unused-function"
+            ]
+        },
+        {
             "name": "rosco_m68k",
             "includePath": [
                 "${default}",

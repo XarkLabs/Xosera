@@ -55,7 +55,6 @@ logic [15:0] test_data0;
 logic [15:0] test_data1;
 logic [15:0] test_data2;
 logic [15:0] test_data3;
-logic [15:0] readword;
 
 xosera_main xosera(
                 .clk(clk),
@@ -174,8 +173,10 @@ task inject_file(
 
     while (!$feof(fd)) begin
         r = $fread(tempbyte, fd);
+        if (r != 1) $display("read error");
         #(M68K_PERIOD * 2)  write_reg(1'b0, r_num, tempbyte);
         r = $fread(tempbyte, fd);
+        if (r != 1) $display("read error");
         #(M68K_PERIOD * 2)  write_reg(1'b1, r_num, tempbyte);
     end
 
@@ -237,112 +238,112 @@ always begin
             # 1ns;
         end
 
-        #(M68K_PERIOD * 2)  xvid_setw(XVID_WR_INC, test_inc);
-        #(M68K_PERIOD * 2)  xvid_setw(XVID_WR_ADDR, 16'h0000);
-        #(M68K_PERIOD * 2)  xvid_setw(XVID_AUX_ADDR, AUX_GFXCTRL);
-        #(M68K_PERIOD * 2)  xvid_setw(XVID_AUX_DATA, 16'h0040);
+        #(M68K_PERIOD * 2)  xvid_setw(XM_WR_INCR, test_inc);
+        #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0000);
+        #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, XR_PA_GFX_CTRL);
+        #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h0040);
 
-        inject_file("sim/mountains_mono_640x480w.raw", XVID_DATA);  // pump binary file into DATA
+        inject_file("sim/mountains_mono_640x480w.raw", XM_DATA);  // pump binary file into DATA
 
         # 1000ms;
 
 `endif
 `ifdef ZZZUNDEF // read test
         # 10ms;
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_ADDR, test_addr[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_ADDR, test_addr[7:0]);
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_ADDR, test_addr[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_ADDR, test_addr[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_INC, test_inc[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_INC, test_inc[7:0]);
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_INCR, test_inc[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_INCR, test_inc[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_DATA, test_data0[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_DATA, test_data0[7:0]);
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, test_data0[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, test_data0[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_DATA, test_data1[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_DATA, test_data1[7:0]);
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, test_data1[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, test_data1[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_DATA, test_data2[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_DATA, test_data2[7:0]);
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, test_data2[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, test_data2[7:0]);
 
         #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_RD_INC, test_inc[15:8]);
         #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_RD_INC, test_inc[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_RD_ADDR, test_addr[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_RD_ADDR, test_addr[7:0]);
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_RD_ADDR, test_addr[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_RD_ADDR, test_addr[7:0]);
 
-        #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_DATA, readword[15:8]);
-        #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_DATA, readword[7:0]);
+        #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
+        #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
         $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
-        #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_DATA, readword[15:8]);
-        #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_DATA, readword[7:0]);
+        #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
+        #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
         $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
-        #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_DATA, readword[15:8]);
-        #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_DATA, readword[7:0]);
+        #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
+        #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
         $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_WR_ADDR, test_addr2[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_WR_ADDR, test_addr2[7:0]);
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_ADDR, test_addr2[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_ADDR, test_addr2[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_DATA, test_data2[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_DATA, test_data2[7:0]);
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, test_data2[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, test_data2[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_RD_ADDR, test_addr2[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_RD_ADDR, test_addr2[7:0]);
+        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_RD_ADDR, test_addr2[15:8]);
+        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_RD_ADDR, test_addr2[7:0]);
 
         #(M68K_PERIOD * 4);
 
-        #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_DATA, readword[15:8]);
-        #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_DATA, readword[7:0]);
+        #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
+        #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
         $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
 `endif
 
 `ifdef ZZZUNDEF // some other test...
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_AUX_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h00);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_AUX_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_AUX_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
     $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_AUX_ADDR, 8'h01);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h01);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_AUX_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_AUX_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
     $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_AUX_ADDR, 8'h02);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h02);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_AUX_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_AUX_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
     $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
     #(1ms) ;
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_AUX_ADDR, 8'h03);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h03);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_AUX_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_AUX_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
     $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_AUX_ADDR, 8'h03);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h03);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_AUX_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_AUX_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
     $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
     #(1500us) ;
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_AUX_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_AUX_ADDR, 8'h03);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h03);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XVID_AUX_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XVID_AUX_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
     $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
 
 `endif

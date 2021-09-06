@@ -19,7 +19,6 @@ module blitter(
     input  wire logic  [7:0]     bus_data_i,        // 8-bit data bus input
     output      logic  [7:0]     bus_data_o,        // 8-bit data bus output
     input  wire logic            vgen_sel_i,        // 0 = blitter, 1=video generation
-    output      logic            vgen_ena_o,        // 0 = video blank, 1 = video on
     output      logic            blit_vram_sel_o,   // VRAM select
     output      logic            blit_xr_sel_o,     // XR select
     output      logic            blit_wr_o,         // VRAM/XR read/write
@@ -30,18 +29,22 @@ module blitter(
     input  wire logic [15:0]     xr_data_i,         // XR read data
     output      logic            reconfig_o,        // reconfigure iCE40 from flash
     output      logic  [1:0]     boot_select_o,     // reconfigure congigureation number (0-3)
+    output      logic  [3:0]     intr_mask_o,       // enabled interrupts
     output      logic            bus_ack_o,         // TODO ACK strobe for debug
     input  wire logic            reset_i,
     input  wire logic            clk
     );
 
 localparam [31:0] githash = 32'H`GITHASH;
-logic [14*8:1]  logostring = "Xosera v0.20 #";    // boot msg
+localparam [11:0] version = 12'H`VERSION;
+
+logic [8*8:1]  logostring = "Xosera v";    // boot msg
 
 localparam CLEARDATA = 16'h0220;    // value VRAM cleared to on init (blue+white space) TODO: zero for final?
 
 typedef enum logic [4:0] {
-    INIT, CLEAR, LOGO_1, LOGO_2, LOGO_3, LOGO_4, LOGO_5, LOGO_6, LOGO_7, LOGO_8, LOGO_9, LOGO_10, LOGO_11, LOGO_12, LOGO_13, LOGO_14,
+    INIT, CLEAR, LOGO_1, LOGO_2, LOGO_3, LOGO_4, LOGO_5, LOGO_6, LOGO_7, LOGO_8,
+    LOGO_V0, LOGO_V1, LOGO_V2, LOGO_V3, LOGO_V4, LOGO_V5,
     LOGO_H0, LOGO_H1, LOGO_H2, LOGO_H3, LOGO_H4, LOGO_H5, LOGO_H6, LOGO_H7, LOGO_END,
     IDLE
 } blit_state_t;
@@ -100,10 +103,14 @@ assign          blit_busy = ~blit_count[16]; // when blit_count underflows, high
 // TODO assign          blit_line_end = width_counter[16];  // when width_counter underflows, high bit will be set
 
 logic [15:0] ms_timer;      // TODO
-logic [3:0] intr_enable;      // TODO
+logic [11:0] ms_timer_frac;  // TODO
 logic [7:0] wr_nibmask;      // TODO
 
+logic [3:0] intr_enable;
+assign intr_mask_o = intr_enable;
+
 assign bus_ack_o = (bus_write_strobe | bus_read_strobe);    // TODO: debug
+
 
 // bus_interface handles signal synchronization, CS and register writes to Xosera
 bus_interface bus(
@@ -148,7 +155,7 @@ function [7:0] reg_read(
         xv::XM_UNUSED_A[3:0]:   reg_read = 8'h00;
         xv::XM_UNUSED_B[3:0]:   reg_read = 8'h00;
 
-        xv::XM_RW_INCR[3:0]:    reg_read = !b_sel ? reg_wr_incr[15:8]   : reg_rw_incr[7:0];
+        xv::XM_RW_INCR[3:0]:    reg_read = !b_sel ? reg_rw_incr[15:8]   : reg_rw_incr[7:0];
         xv::XM_RW_ADDR[3:0]:    reg_read = !b_sel ? reg_rw_addr[15:8]   : reg_rw_addr[7:0];
 
         xv::XM_RW_DATA[3:0],
@@ -167,47 +174,55 @@ function [7:0] hex_digit(
     end
 endfunction
 
+always_ff @(posedge clk) begin
+    ms_timer_frac <= ms_timer_frac + 1'b1;
+    if (ms_timer_frac == 12'(xv::PCLK_HZ / 10000)) begin
+        ms_timer <= ms_timer + 1;
+    end
+end
+
 assign blit_mask_o = { blit_wr_o, blit_wr_o,  blit_wr_o, blit_wr_o };   // TODO replace blit_wr with just mask (non-zero for write)
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
         // control signals
-        reconfig_o          <= 1'b0;
-        boot_select_o       <= 2'b00;
-        vgen_ena_o          <= 1'b0;
-        vram_rd        <= 1'b0;
-        vram_rd_ack    <= 1'b0;
-        xr_rd         <= 1'b0;
-        xr_rd_ack     <= 1'b0;
-        blit_vram_sel_o     <= 1'b0;
-        blit_xr_sel_o      <= 1'b0;
-        blit_wr_o           <= 1'b0;
+        reconfig_o      <= 1'b0;
+        boot_select_o   <= 2'b00;
+        intr_enable     <= 4'b1000;
+        vram_rd         <= 1'b0;
+        vram_rd_ack     <= 1'b0;
+        xr_rd           <= 1'b0;
+        xr_rd_ack       <= 1'b0;
+        blit_vram_sel_o <= 1'b0;
+        blit_xr_sel_o   <= 1'b0;
+        blit_wr_o       <= 1'b0;
         // addr/data out
-        blit_addr_o         <= 16'h0000;
-        blit_data_o         <= 16'h0000;
+        blit_addr_o     <= 16'h0000;
+        blit_data_o     <= 16'h0000;
 
         // internal blitter state
-        blit_state          <= INIT;
+        blit_state      <= INIT;
 // TODO         blit_2d             <= 1'b0;
 // TODO         blit_const          <= 1'b0;
 // TODO         width_counter       <= 17'h00000;   // 16th bit is set on underflow
-// TODO        blit_rd_addr        <= 16'h0000;
-// TODO        blit_wr_addr        <= 16'h0000;
-
-        // xosera registers
-        reg_xr_addr        <= 16'h0000;
-        reg_rd_addr         <= 16'h0000;
-        reg_wr_addr         <= 16'h0000;
-        reg_rd_incr          <= 16'h0000;
-        reg_wr_incr          <= 16'h0000;
+// TODO         blit_rd_addr        <= 16'h0000;
+// TODO         blit_wr_addr        <= 16'h0000;
 // TODO         reg_rd_mod          <= 16'h0000;
 // TODO         reg_wr_mod          <= 16'h0000;
 // TODO         reg_width           <= 16'h0000;
-        blit_count           <= 17'h10000;   // 16th bit is set on underfow
-        reg_data_even       <= 8'h00;
-        reg_other_even      <= 8'h00;
-        reg_other_reg       <= 4'h0;
 
+        // xosera registers
+        reg_xr_addr     <= 16'h0000;
+        reg_rd_addr     <= 16'h0000;
+        reg_rd_incr     <= 16'h0000;
+        reg_wr_addr     <= 16'h0000;
+        reg_wr_incr     <= 16'h0000;
+        reg_rw_addr     <= 16'h0000;
+        reg_rw_incr     <= 16'h0000;
+        blit_count      <= 17'h10000;   // 16th bit is set on underfow
+        reg_data_even   <= 8'h00;
+        reg_other_even  <= 8'h00;
+        reg_other_reg   <= 4'h0;
     end
     else begin
         // if a rd read ack is pending, save value from vram
@@ -305,7 +320,7 @@ always_ff @(posedge clk) begin
                     end
                     xv::XM_XR_DATA: begin
                         blit_addr_o         <= reg_xr_addr;
-                        blit_data_o         <= { reg_even_byte, bus_data_byte };
+                        blit_data_o         <= { reg_xr_data_even, bus_data_byte };
                         blit_xr_sel_o       <= 1'b1;
                         blit_wr_o           <= 1'b1;
                     end
@@ -319,7 +334,7 @@ always_ff @(posedge clk) begin
                         vram_rd             <= 1'b1;            // remember pending vramread request
                     end
                     xv::XM_WR_INCR: begin
-                        reg_wr_incr         <= { reg_even_byte, bus_data_byte };
+                        reg_rw_incr         <= { reg_even_byte, bus_data_byte };
                     end
                     xv::XM_WR_ADDR: begin
                         reg_wr_addr[7:0]    <= bus_data_byte;
@@ -351,12 +366,14 @@ always_ff @(posedge clk) begin
                         vram_rd             <= 1'b1;            // remember pending vramread request
                         vram_rw_rd          <= 1'b1;            // remember rw read
                     end
-                    xv::XM_RW_ADDR: begin
+                    xv::XM_RW_DATA: begin
                         blit_addr_o         <= reg_rw_addr;    // output write address
                         blit_data_o         <= { reg_data_even, bus_data_byte };      // output write data
                         blit_vram_sel_o     <= 1'b1;            // select VRAM
                         blit_wr_o           <= 1'b1;            // write
                         vram_rw_wr          <= 1'b1;            // remember rw write
+                    end
+                    default: begin
                     end
                 endcase
             end // bus_bytesel
@@ -429,85 +446,85 @@ always_ff @(posedge clk) begin
                 blit_wr_o           <= 1'b1;
                 blit_addr_o         <= (1 * xv::TILES_WIDE + 1);
                 reg_wr_addr         <= (1 * xv::TILES_WIDE + 2);
-                blit_data_o         <= { 8'h0F, logostring[14*8-:8] };
+                blit_data_o         <= { 8'h0F, logostring[8*8-:8] };
                 blit_state          <= LOGO_2;
             end
             LOGO_2: begin
                 blit_vram_sel_o     <= 1'b1;
                 blit_wr_o           <= 1'b1;
-                blit_data_o         <= { 8'h0e, logostring[13*8-:8] };
+                blit_data_o         <= { 8'h0e, logostring[7*8-:8] };
                 blit_state          <= LOGO_3;
             end
             LOGO_3: begin
                 blit_vram_sel_o     <= 1'b1;
                 blit_wr_o           <= 1'b1;
-                blit_data_o         <= { 8'h0c, logostring[12*8-:8] };
+                blit_data_o         <= { 8'h0c, logostring[6*8-:8] };
                 blit_state          <= LOGO_4;
             end
             LOGO_4: begin
                 blit_vram_sel_o     <= 1'b1;
                 blit_wr_o           <= 1'b1;
-                blit_data_o         <= { 8'h0b, logostring[11*8-:8] };
+                blit_data_o         <= { 8'h0b, logostring[5*8-:8] };
                 blit_state          <= LOGO_5;
             end
             LOGO_5: begin
                 blit_vram_sel_o     <= 1'b1;
                 blit_wr_o           <= 1'b1;
-                blit_data_o         <= { 8'h02, logostring[10*8-:8] };
+                blit_data_o         <= { 8'h02, logostring[4*8-:8] };
                 blit_state          <= LOGO_6;
             end
             LOGO_6: begin
                 blit_vram_sel_o     <= 1'b1;
                 blit_wr_o           <= 1'b1;
-                blit_data_o         <= { 8'h05, logostring[9*8-:8] };
+                blit_data_o         <= { 8'h05, logostring[3*8-:8] };
                 blit_state          <= LOGO_7;
             end
             LOGO_7: begin
                 blit_vram_sel_o     <= 1'b1;
                 blit_wr_o           <= 1'b1;
-                blit_data_o         <= { 8'h07, logostring[8*8-:8] };
+                blit_data_o         <= { 8'h07, logostring[2*8-:8] };
                 blit_state          <= LOGO_8;
             end
             LOGO_8: begin
                 blit_vram_sel_o     <= 1'b1;
                 blit_wr_o           <= 1'b1;
-                blit_data_o         <= { 8'h02, logostring[7*8-:8] };
-                blit_state          <= LOGO_9;
-            end
-            LOGO_9: begin
-                blit_vram_sel_o     <= 1'b1;
-                blit_wr_o           <= 1'b1;
-                blit_data_o         <= { 8'h02, logostring[6*8-:8] };
-                blit_state          <= LOGO_10;
-            end
-            LOGO_10: begin
-                blit_vram_sel_o     <= 1'b1;
-                blit_wr_o           <= 1'b1;
-                blit_data_o         <= { 8'h02, logostring[5*8-:8] };
-                blit_state          <= LOGO_11;
-            end
-            LOGO_11: begin
-                blit_vram_sel_o     <= 1'b1;
-                blit_wr_o           <= 1'b1;
-                blit_data_o         <= { 8'h02, logostring[4*8-:8] };
-                blit_state          <= LOGO_12;
-            end
-            LOGO_12: begin
-                blit_vram_sel_o     <= 1'b1;
-                blit_wr_o           <= 1'b1;
-                blit_data_o         <= { 8'h02, logostring[3*8-:8] };
-                blit_state          <= LOGO_13;
-            end
-            LOGO_13: begin
-                blit_vram_sel_o     <= 1'b1;
-                blit_wr_o           <= 1'b1;
-                blit_data_o         <= { 8'h02, logostring[2*8-:8] };
-                blit_state          <= LOGO_14;
-            end
-            LOGO_14: begin
-                blit_vram_sel_o     <= 1'b1;
-                blit_wr_o           <= 1'b1;
                 blit_data_o         <= { 8'h02, logostring[1*8-:8] };
+                blit_state          <= LOGO_V0;
+            end
+            LOGO_V0: begin
+                blit_vram_sel_o     <= 1'b1;
+                blit_wr_o           <= 1'b1;
+                blit_data_o         <= { 8'h02, hex_digit(version[3*4-1-:4]) };
+                blit_state          <= LOGO_V1;
+            end
+            LOGO_V1: begin
+                blit_vram_sel_o     <= 1'b1;
+                blit_wr_o           <= 1'b1;
+                blit_data_o         <= { 8'h02, 8'h2e };    // '.'
+                blit_state          <= LOGO_V2;
+            end
+            LOGO_V2: begin
+                blit_vram_sel_o     <= 1'b1;
+                blit_wr_o           <= 1'b1;
+                blit_data_o         <= { 8'h02, hex_digit(version[2*4-1-:4]) };
+                blit_state          <= LOGO_V3;
+            end
+            LOGO_V3: begin
+                blit_vram_sel_o     <= 1'b1;
+                blit_wr_o           <= 1'b1;
+                blit_data_o         <= { 8'h02, hex_digit(version[1*4-1-:4]) };
+                blit_state          <= LOGO_V4;
+            end
+            LOGO_V4: begin
+                blit_vram_sel_o     <= 1'b1;
+                blit_wr_o           <= 1'b1;
+                blit_data_o         <= { 8'h02, 8'h20 };    // ' '
+                blit_state          <= LOGO_V5;
+            end
+            LOGO_V5: begin
+                blit_vram_sel_o     <= 1'b1;
+                blit_wr_o           <= 1'b1;
+                blit_data_o         <= { 8'h02, 8'h23 };    // '#'
                 blit_state          <= LOGO_H0;
             end
             LOGO_H0: begin
@@ -559,7 +576,6 @@ always_ff @(posedge clk) begin
                 blit_state          <= LOGO_END;
             end
             LOGO_END: begin
-                vgen_ena_o         <= 1'b1;            // enable video after clear
                 reg_wr_addr        <= 16'h0000;
                 blit_state          <= IDLE;
             end

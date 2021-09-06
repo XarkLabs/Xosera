@@ -1,15 +1,15 @@
 {
     "reg": [
         {
-            "bits": 16,
-            "name": "Xosera decimal version code (x.xx)",
+            "bits": 12,
+            "name": "Xosera BCD version code (x.xx)",
             "type": 4,
             "attr": [
-                "(Example 0x8E = 142 = version 1.42)"
+                "(Example 0x142 = version 1.42)"
             ]
         },
         {
-            "bits": 8,
+            "bits": 4,
             "type": 1,
             "attr": [
                 "(optional feature bits TBD)"

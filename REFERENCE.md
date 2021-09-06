@@ -264,11 +264,11 @@ Defines right-most native pixel of video display window (normally 639 or 847 for
 Continuously updated with the scanline and blanking status during display scanning. Read-only.
 
 **0x09 `XR_UNUSED_09` (RO) - unused XR register 0x09**  
-Unused XR register 0x09  
+Unused XR register  0x09  
 
 **0x0A `XR_VERSION` (RO) - Xosera version and optional feature bits**  
 <img src="./pics/wd_XR_VERSION.svg">  
-Decimal coded version (x.xx) and optional feature bits (0 for undefined/not present). Read-only.
+BCD coded version (x.xx) and optional feature bits (0 for undefined/not present). Read-only.
 
 **0x0B `XR_GITHASH_H` (RO) - Xosera Git hash identifier (high 16-bits)**  
 <img src="./pics/wd_XR_GITHASH_H.svg">  
@@ -300,17 +300,17 @@ Monitor display mode update frequency in BCD 1/100<sup>th</sup> Hz (e.g., 0x5997
 | 0x12  | `XR_PA_DISP_ADDR` | R/W | playfield A display VRAM start address                       |
 | 0x13  | `XR_PA_LINE_LEN`  | R/W | playfield A display line width in words                      |
 | 0x14  | `XR_PA_HV_SCROLL` | R/W | playfield A horizontal and vertical fine scroll              |
-| 0x15  | `XR_PA_LINE_ADDR` | R/W | playfield A scanline start address (loaded at start of line) |
-| 0x16  | `XR_PA_UNUSED_16` | R/W |                                                              |
-| 0x17  | `XR_PA_UNUSED_17` | R/W |                                                              |
+| 0x15  | `XR_PA_LINE_ADDR` | WO  | playfield A scanline start address (loaded at start of line) |
+| 0x16  | `XR_PA_UNUSED_16` | -/- |                                                              |
+| 0x17  | `XR_PA_UNUSED_17` | -/- |                                                              |
 | 0x18  | `XR_PB_GFX_CTRL`  | R/W | playfield B graphics control                                 |
 | 0x19  | `XR_PB_TILE_CTRL` | R/W | playfield B tile control                                     |
 | 0x1A  | `XR_PB_DISP_ADDR` | R/W | playfield B display VRAM start address                       |
 | 0x1B  | `XR_PB_LINE_LEN`  | R/W | playfield B display line width in words                      |
 | 0x1C  | `XR_PB_HV_SCROLL` | R/W | playfield B horizontal and vertical fine scroll              |
-| 0x1D  | `XR_PB_LINE_ADDR` | R/W | playfield B scanline start address (loaded at start of line) |
-| 0x1E  | `XR_PB_UNUSED_1E` | R/W |                                                              |
-| 0x1F  | `XR_PB_UNUSED_1F` | R/W |                                                              |
+| 0x1D  | `XR_PB_LINE_ADDR` | WO  | playfield B scanline start address (loaded at start of line) |
+| 0x1E  | `XR_PB_UNUSED_1E` | -/- |                                                              |
+| 0x1F  | `XR_PB_UNUSED_1F` | -/- |                                                              |
 
 #### Playfield A & B Control XR Registers Details
 

@@ -12,7 +12,8 @@
                 "256-word color memory (write-only 8000-80FF)",
                 "4K-word tile memory (write-only 9000-9FFF)",
                 "2K-word copper memory (write-only A000-A7FF)",
-                "unused region (B000-FFFF)"
+                "256-word sprite memory (B000-B0FF)",
+                "unused (C000-FFFF)"
             ]
         },
         {

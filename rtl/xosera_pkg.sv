@@ -112,6 +112,25 @@ typedef enum logic [1:0] {
     BPP_8           = 2'b11
 } bpp_depth_t;
 
+// Primitive renderer commands
+typedef enum logic [3:0] {
+    PR_COORDX0      = 4'h0,
+    PR_COORDY0      = 4'h1,
+    PR_COORDX1      = 4'h2,
+    PR_COORDY1      = 4'h3,
+    PR_COORDX2      = 4'h4,
+    PR_COORDY2      = 4'h5,
+    PR_COLOR        = 4'h6,
+    PR_EXECUTE      = 4'hF
+} pr_cmds_t;
+
+// Primitive renderer shapes
+typedef enum logic [3:0] {
+    PR_LINE                 = 4'h0,
+    PR_FILLED_RECTANGLE     = 4'h1,
+    PR_FILLED_TRIANGLE      = 4'h2
+} pr_shapes_t;
+
 `ifdef MODE_640x400     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x400_75  // 31.500 MHz (requested), 31.500 MHz (achieved)
 `elsif MODE_640x480     // 25.175 MHz (requested), 25.125 MHz (achieved)

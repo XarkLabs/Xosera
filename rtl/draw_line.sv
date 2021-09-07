@@ -7,11 +7,10 @@
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
 
+// Based on Project F - Lines and Triangles (https://projectf.io/posts/lines-and-triangles/)
 
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
-
-`include "xosera_pkg.sv"
 
 module draw_line #(parameter CORDW=10) (          // framebuffer coord width in bits
     input  wire logic clk,                        // clock

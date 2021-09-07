@@ -1,0 +1,8 @@
+# rosco files
+**_m68k*/*.elf
+**_m68k*/*.s
+**_m68k*/*.i
+**_m68k*/*.sym
+**_m68k*/*.dis
+**_m68k*/*.map
+**_m68k*/*.lst

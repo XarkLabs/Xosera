@@ -30,12 +30,19 @@ module prim_renderer(
     input  wire logic            clk
     );
 
-logic start;
-logic signed [11:0] x0, y0, x1, y1;
+logic start_line;
+logic start_filled_rectangle;
+logic signed [11:0] x0, y0, x1, y1, x2, y2;
 logic signed [11:0] x, y;
+logic signed [11:0] x_line, y_line;
+logic signed [11:0] x_filled_rectangle, y_filled_rectangle;
 logic         [7:0] color;
 logic drawing;
+logic drawing_line;
+logic drawing_filled_rectangle;
 logic done;
+logic done_line;
+logic done_filled_rectangle;
 
 assign busy_o = drawing;
 
@@ -43,34 +50,61 @@ draw_line #(.CORDW(12)) draw_line (    // framebuffer coord width in bits
     .clk(clk),                         // clock
     .ena_draw_i(ena_draw_i),           // enable draw
     .reset_i(reset_i),                 // reset
-    .start_i(start),           // start line rendering
+    .start_i(start_line),      // start line rendering
     .x0_i(x0),                 // point 0 - horizontal position
     .y0_i(y0),                 // point 0 - vertical position
     .x1_i(x1),                 // point 1 - horizontal position
     .y1_i(y1),                 // point 1 - vertical position
-    .x_o(x),                   // horizontal drawing position
-    .y_o(y),                   // vertical drawing position
-    .drawing_o(drawing),       // line is drawing
-    .done_o(done)              // line complete (high for one tick)
+    .x_o(x_line),                   // horizontal drawing position
+    .y_o(y_line),                   // vertical drawing position
+    .drawing_o(drawing_line),       // line is drawing
+    .done_o(done_line)              // line complete (high for one tick)
     );
+
+draw_rectangle_fill #(.CORDW(12)) draw_rectangle_fill (     // framebuffer coord width in bits
+    .clk(clk),                 // clock
+    .ena_draw_i(ena_draw_i),   // enable draw
+    .reset_i(reset_i),         // reset
+    .start_i(start_filled_rectangle),   // start rectangle rendering
+    .x0_i(x0),                 // point 0 - horizontal position
+    .y0_i(y0),                 // point 0 - vertical position
+    .x1_i(x1),                 // point 1 - horizontal position
+    .y1_i(y1),                 // point 1 - vertical position
+    .x_o(x_filled_rectangle),               // horizontal drawing position
+    .y_o(y_filled_rectangle),               // vertical drawing position
+    .drawing_o(drawing_filled_rectangle),   // rectangle is drawing
+    .done_o(done_filled_rectangle)          // rectangle complete (high for one tick)
+    );
+
+assign drawing = drawing_line | drawing_filled_rectangle;
+assign done = done_line | done_filled_rectangle;
+assign x = drawing_line ? x_line : x_filled_rectangle;
+assign y = drawing_line ? y_line : y_filled_rectangle;
 
 always_ff @(posedge clk) begin
 
     if (reset_i) begin
-        start <= 0;
+        start_line <= 0;
+        start_filled_rectangle <= 0;
         prim_rndr_vram_sel_o <= 0;
         prim_rndr_wr_o <= 0;
     end
 
     if (cmd_valid_i) begin
         case(cmd_i[15:12])
-            4'h0: x0    <= cmd_i[11:0];
-            4'h1: y0    <= cmd_i[11:0];
-            4'h2: x1    <= cmd_i[11:0];
-            4'h3: y1    <= cmd_i[11:0];
-            4'h4: color <= cmd_i[7:0];
-            4'hF: begin
-                start <= 1;
+            xv::PR_COORDX0 : x0    <= cmd_i[11:0];
+            xv::PR_COORDY0 : y0    <= cmd_i[11:0];
+            xv::PR_COORDX1 : x1    <= cmd_i[11:0];
+            xv::PR_COORDY1 : y1    <= cmd_i[11:0];
+            xv::PR_COORDX2 : x2    <= cmd_i[11:0];
+            xv::PR_COORDY2 : y2    <= cmd_i[11:0];
+            xv::PR_COLOR   : color <= cmd_i[7:0];
+            xv::PR_EXECUTE: begin
+                if (cmd_i[3:0] == xv::PR_LINE) begin
+                    start_line <= 1;
+                end else if (cmd_i[3:0] == xv::PR_FILLED_RECTANGLE) begin
+                    start_filled_rectangle <= 1;
+                end
             end
             default: begin
                 // Do nothing
@@ -96,7 +130,8 @@ always_ff @(posedge clk) begin
         prim_rndr_wr_o <= 0;
     end
 
-    if (start) start <= 0;
+    if (start_line) start_line <= 0;
+    if (start_filled_rectangle) start_filled_rectangle <= 0;
 end
 
 endmodule

@@ -7,7 +7,7 @@
 ifndef ROSCO_M68K_DIR
 $(error Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
 endif
-XOSERA_M68K_API?=../xosera_m68k_api
+XOSERA_M68K_API?=../../xosera_m68k_api
 
 EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer
 #EXTRA_VASMFLAGS?=-showopt

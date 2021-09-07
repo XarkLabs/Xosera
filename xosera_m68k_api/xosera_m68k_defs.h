@@ -133,3 +133,8 @@
 #define PR_COORDY2 0x3000
 #define PR_COLOR   0x4000
 #define PR_EXECUTE 0xF000
+
+// Primitive renderer shapes
+#define PR_LINE             0x0
+#define PR_FILLED_RECTANGLE 0x1
+#define PR_FILLED_TRIANGLE  0x2

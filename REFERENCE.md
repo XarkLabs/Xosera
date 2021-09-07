@@ -584,7 +584,7 @@ A simple executable ruby script, `bin2c.rb` is also provided in that directory. 
 utility that takes assembled copper binaries and outputs them as a C array (with associated size)
 for direct embedding into C code.
 
-### Pritive Renderer Commands
+### Pritive Renderer
 
 To render a primitive, a sequence of commands must be written to the `XVID_WR_PR_CMD` register. Each command is 16-bit
 therefore the MSB must be sent before the LSB. The command will be accepted by the primitive renderer when the LSB is
@@ -595,16 +595,29 @@ Before sending an execute command, the user must check if this bit is cleared.
 
 To reduce the number of bus accesses, parameters such as coordinates or color are optional in the sequence of commands. If not sent, the last value of the given parameter received by the primitive renderer will be used.
 
-#### Draw Line
+#### Commands
 
-To draw a line, send following sequence of commands:
+The following commands are available:
 
 | Data   | Name           | Description
 ---------|----------------|------------
-| 0x0vvv | `PR_COORDX1`   | set the 12-bit X1 coordinate (optional)
-| 0x1vvv | `PR_COORDY1`   | set the 12-bit Y1 coordinate (optional)
-| 0x2vvv | `PR_COORDX2`   | set the 12-bit X2 coordinate (optional)
-| 0x3vvv | `PR_COORDY2`   | set the 12-bit Y2 coordinate (optional)
-| 0x40vv | `PR_COLOR`     | set the 8-bit color (optional)
-| 0xFxxx | `PR_EXECUTE`   | draw the primitive
+| 0x0vvv | `PR_COORDX0`   | set the 12-bit X0 coordinate (optional)
+| 0x1vvv | `PR_COORDY0`   | set the 12-bit Y0 coordinate (optional)
+| 0x2vvv | `PR_COORDX1`   | set the 12-bit X1 coordinate (optional)
+| 0x3vvv | `PR_COORDY1`   | set the 12-bit Y1 coordinate (optional)
+| 0x4vvv | `PR_COORDX2`   | set the 12-bit X2 coordinate (optional)
+| 0x5vvv | `PR_COORDY2`   | set the 12-bit Y2 coordinate (optional)
+| 0x6xvv | `PR_COLOR`     | set the 8-bit color (optional)
+| 0xFxxs | `PR_EXECUTE`   | draw the primitive (s=shape, see below)
 
+Note: x=don't care
+
+#### Shapes
+
+The following primitive shapes are available:
+
+| Data   | Name                     | Description
+---------|--------------------------|------------
+| 0x0    | `PR_LINE`                | line
+| 0x1    | `PR_FILLED_RECTANGLE`    | filled rectangle
+| 0x2    | `PR_FILLED_TRIANGLE`     | filled triangle

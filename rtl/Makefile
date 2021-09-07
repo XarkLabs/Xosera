@@ -37,7 +37,7 @@ upd:
 xosera_vga:
 	$(MAKE) -f upduino.mk clean
 	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_640x480 $(MAKE) -f upduino.mk
-	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_848x480 $(MAKE) -f upduino.mk
+	#VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_848x480 $(MAKE) -f upduino.mk
 	mv xosera_upd.bin xosera_board_vga.bin
 
 # Build combo Xosera UPduino 3.x FPGA DVI bitstream for rosco_m6k board

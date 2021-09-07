@@ -30,6 +30,7 @@ module blitter(
     output      logic            reconfig_o,        // reconfigure iCE40 from flash
     output      logic  [1:0]     boot_select_o,     // reconfigure congigureation number (0-3)
     output      logic  [3:0]     intr_mask_o,       // enabled interrupts
+    output      logic  [3:0]     intr_clear_o,      // interrupt CPU acknowledge
     output      logic            bus_ack_o,         // TODO ACK strobe for debug
     input  wire logic            reset_i,
     input  wire logic            clk
@@ -71,6 +72,7 @@ logic           vram_rw_wr;             // flag for VRAM RW write outstanding
 logic           vram_rw_ack;            // flag for VRAM RW read acknowledged 
 
 // internal storage
+logic  [3:0]    intr_mask;              // interrupt mask
 logic  [3:0]    bus_reg_num;            // bus register on bus
 
 logic  [7:0]    reg_xr_data_even;       // byte written to even byte of XR_DATA
@@ -104,13 +106,11 @@ assign          blit_busy = ~blit_count[16]; // when blit_count underflows, high
 
 logic [15:0] ms_timer;      // TODO
 logic [11:0] ms_timer_frac;  // TODO
-logic [7:0] wr_nibmask;      // TODO
+logic [3:0] wr_nibmask;      // TODO
 
-logic [3:0] intr_enable;
-assign intr_mask_o = intr_enable;
+assign intr_mask_o = intr_mask;
 
 assign bus_ack_o = (bus_write_strobe | bus_read_strobe);    // TODO: debug
-
 
 // bus_interface handles signal synchronization, CS and register writes to Xosera
 bus_interface bus(
@@ -149,11 +149,11 @@ function [7:0] reg_read(
         xv::XM_DATA[3:0],
         xv::XM_DATA_2[3:0]:     reg_read = !b_sel ? vram_rd_data[15:8]  : vram_rd_data[7:0];
 
-        xv::XM_SYS_CTRL[3:0]:   reg_read = !b_sel ? { blit_busy, 3'b0, intr_enable } : wr_nibmask;
+        xv::XM_SYS_CTRL[3:0]:   reg_read = !b_sel ? { 4'bx, wr_nibmask }: { blit_busy, 3'bx, intr_mask };
         xv::XM_TIMER[3:0]:      reg_read = !b_sel ? ms_timer[15:8]      : ms_timer[7:0];
 
-        xv::XM_UNUSED_A[3:0]:   reg_read = 8'h00;
-        xv::XM_UNUSED_B[3:0]:   reg_read = 8'h00;
+        xv::XM_UNUSED_A[3:0]:   reg_read = 8'bx;
+        xv::XM_UNUSED_B[3:0]:   reg_read = 8'bx;
 
         xv::XM_RW_INCR[3:0]:    reg_read = !b_sel ? reg_rw_incr[15:8]   : reg_rw_incr[7:0];
         xv::XM_RW_ADDR[3:0]:    reg_read = !b_sel ? reg_rw_addr[15:8]   : reg_rw_addr[7:0];
@@ -164,13 +164,13 @@ function [7:0] reg_read(
 endfunction
 
 function [7:0] hex_digit(
-    input logic[3:0]    n
+    input logic[3:0]    nib
     );
-    if (n > 9) begin
-        hex_digit = 8'h57 + { 4'h0, n };
+    if (nib > 9) begin
+        hex_digit = 8'h57 + { 4'h0, nib };
     end
     else begin
-        hex_digit = 8'h30 + { 4'h0, n };
+        hex_digit = 8'h30 + { 4'h0, nib };
     end
 endfunction
 
@@ -194,7 +194,8 @@ always_ff @(posedge clk) begin
         // control signals
         reconfig_o      <= 1'b0;
         boot_select_o   <= 2'b00;
-        intr_enable     <= 4'b1000;
+        intr_clear_o    <= 4'b0;
+        intr_mask       <= 4'b1000;
         vram_rd         <= 1'b0;
         vram_rd_ack     <= 1'b0;
         xr_rd           <= 1'b0;
@@ -231,6 +232,8 @@ always_ff @(posedge clk) begin
         reg_other_reg   <= 4'h0;
     end
     else begin
+        intr_clear_o    <= 4'b0;
+
         // if a rd read ack is pending, save value from vram
         if (vram_rd_ack) begin
             vram_rd_data    <= blit_data_i;
@@ -353,13 +356,13 @@ always_ff @(posedge clk) begin
                         blit_wr_o           <= 1'b1;            // write
                     end
                     xv::XM_SYS_CTRL: begin
-                        reconfig_o          <= reg_even_byte[6];
-                        boot_select_o       <= reg_even_byte[5:4];
-                        intr_enable         <= reg_even_byte[3:0];
-                        wr_nibmask          <= bus_data_byte;
+                        reconfig_o          <= reg_even_byte[7];
+                        boot_select_o       <= reg_even_byte[6:5];
+                        wr_nibmask          <= reg_even_byte[3:0];
+                        intr_mask           <= bus_data_byte[3:0];
                     end
                     xv::XM_TIMER: begin
-                        // NOTE: want to rely on timer, so no reset...what could this do?
+                        intr_clear_o        <= reg_even_byte[3:0];
                     end
                     xv::XM_UNUSED_A: begin
                     end

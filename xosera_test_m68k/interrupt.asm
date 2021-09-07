@@ -30,11 +30,10 @@ Xosera_intr:
                 move.l  #XM_BASEADDR,A0         ; get Xosera base addr
                 movep.w XM_XR_ADDR(A0),D1       ; save aux_addr value
 
-                move.w #XR_VID_CTRL,D0
+                move.w  #XR_VID_CTRL,D0
                 movep.w D0,XM_XR_ADDR(A0)
                 movep.w XM_XR_DATA(A0),D0       ; read intr status
-                bclr    #11,D0
-                movep.w D0,XM_XR_DATA(A0)       ; clear vsync intr
+                movep.w D0,XM_TIMER(A0)         ; clear vsync intr
 
                 move.w  #XR_COLOR_MEM+2,D0      ; set color entry #2
                 movep.w D0,XM_XR_ADDR(A0)

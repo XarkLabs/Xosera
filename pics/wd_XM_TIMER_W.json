@@ -2,10 +2,10 @@
     "reg": [
         {
             "bits": 4,
-            "name": "interrupt status/signal",
+            "name": "interrupt signal acknowledge",
             "type": 5,
             "attr": [
-                "(write 1 to generate interrupt)",
+                "(write 1 to clear interrupt)",
                 "[3] = vsync",
                 "[2] = copper",
                 "[1] = draw done",
@@ -13,16 +13,8 @@
             ]
         },
         {
-            "bits": 4,
+            "bits": 12,
             "type": 1
-        },
-        {
-            "bits": 8,
-            "name": "border color index",
-            "type": 2,
-            "attr": [
-                "color index of border area / outside playfield"
-            ]
         }
     ],
     "config": {

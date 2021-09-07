@@ -1,0 +1,24 @@
+{
+    "reg": [
+        {
+            "bits": 12,
+            "type": 1,
+        },
+        {
+            "bits": 4,
+            "name": "interrupt signal acknowledge",
+            "type": 4,
+            "attr": [
+                "(when writing)",
+                "[11] = vsync",
+                "[10] = copper",
+                "[9] = draw done",
+                "[8] = audio",
+                "(bit set resets interrupt)"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

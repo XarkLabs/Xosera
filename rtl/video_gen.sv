@@ -20,23 +20,27 @@
 `include "xosera_pkg.sv"
 
 module video_gen(
-    // control outputs
-    output      logic            tilemem_sel_o,      // tilemem access select
-    output      logic [11:0]     tilemem_addr_o,     // tile memory byte address out (8x4KB)
-    output      logic            vram_sel_o,         // vram access select
-    output      logic [15:0]     vram_addr_o,        // vram word address out (16x64KB)
-    output      logic [15:0]     vgen_reg_data_o,    // register/status data reads
-    // control inputs
-    input  wire logic [15:0]     vram_data_i,        // vram word data in
-    input  wire logic [15:0]     tilemem_data_i,     // tile memory byte data in
+    // video registers and control
     input  wire logic            vgen_reg_wr_i,      // strobe to write internal config register number
     input  wire logic  [4:0]     vgen_reg_num_i,     // internal config register number
     input  wire logic [15:0]     vgen_reg_data_i,    // data for internal config register
+    output      logic [15:0]     vgen_reg_data_o,    // register/status data reads
+    input wire  logic  [3:0]     intr_status_i,      // interrupt pending status
+    output      logic  [3:0]     intr_signal_o,      // generate interrupt signal
+    // video memories
+    output      logic            vram_sel_o,         // vram read select
+    output      logic [15:0]     vram_addr_o,        // vram word address out (16x64K)
+    input  wire logic [15:0]     vram_data_i,        // vram word data in
+    output      logic            tilemem_sel_o,      // tile mem read select
+    output      logic [11:0]     tilemem_addr_o,     // tile mem word address out (16x4K)
+    input  wire logic [15:0]     tilemem_data_i,     // tile mem word data in
+    output      logic            spritemem_sel_o,    // sprite mem read select
+    output      logic  [7:0]     spritemem_addr_o,   // sprite mem word address out (16x256)
+    input  wire logic [15:0]     spritemem_data_i,   // sprite mem word data in
     // video signal outputs
-    output      logic  [7:0]     color_index_o,      // color palette index output
-    output      logic  [3:0]     vgen_intr_o,        // vgen bus interrupt pulse
-    output      logic            vsync_o, hsync_o,   // VGA sync outputs
-    output      logic            dv_de_o,            // VGA video active signal (needed for HDMI)
+    output      logic  [7:0]     color_index_o,      // color palette index output (16x256)
+    output      logic            vsync_o, hsync_o,   // video sync outputs
+    output      logic            dv_de_o,            // video active signal (needed for HDMI)
     // standard signals
     input  wire logic            reset_i,            // system reset in
     input  wire logic            clk                 // clock (video pixel clock)
@@ -47,15 +51,14 @@ localparam [31:0] githash = 32'H`GITHASH;
 localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-64;    // memory prefetch starts early
 localparam H_MEM_END = xv::TOTAL_WIDTH-8;           // memory fetch can end a bit early
 localparam H_SCANOUT_BEGIN = xv::OFFSCREEN_WIDTH-2; // h count position to start line scanout
+localparam H_SCANOUT_END = xv::TOTAL_WIDTH; // h count position to start line scanout
 
 // video generation signals
-logic           vg_blank;                          // video generation enabled (else blanked)
 logic [7:0]     border_color;
-logic [3:0]     intr_status;                        // interrupts triggered awaiting ack
-logic [3:0]     intr_status_read;                   // interrupts status last read by CPU
-logic [3:0]     intr_status_last;                   // last cycle interrupts (signaled on 0 -> 1 transition)
 logic [10:0]    cursor_x;
 logic [10:0]    cursor_y;
+logic [10:0]    sprite_x;
+logic [10:0]    sprite_y;
 logic [10:0]    vid_top;
 logic [10:0]    vid_bottom;
 logic [10:0]    vid_left;
@@ -145,17 +148,14 @@ logic           h_start_line_fetch;
 // video config registers write
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        vgen_intr_o         <= 4'h0;
+        intr_signal_o       <= 4'b0;
         border_color        <= 8'h00;
-        intr_status         <= 4'h0;
-        intr_status_last    <= 4'h0;
-        cursor_x            <= 11'h00;
-        cursor_y            <= 11'h00;
+        cursor_x            <= 11'h180;
+        cursor_y            <= 11'h100;
         vid_top             <= 11'h0;
         vid_bottom          <= xv::VISIBLE_HEIGHT[10:0];
         vid_left            <= 11'h0;
         vid_right           <= xv::VISIBLE_WIDTH[10:0];
-        vg_blank            <= 1'b0;
         pa_blank            <= 1'b0;            // plane A starts enabled
         pa_start_addr       <= 16'h0000;
         pa_line_len         <= xv::TILES_WIDE[15:0];
@@ -172,17 +172,14 @@ always_ff @(posedge clk) begin
         pa_h_repeat         <= 2'b0;
         pa_v_repeat         <= 2'b0;
     end else begin
+        intr_signal_o       <= 4'b0;
         pa_line_start_set   <= 1'b0;
-        vgen_intr_o         <= (intr_status_last ^ intr_status) & intr_status;  // interrupt pulse on 0 -> 1
-        intr_status_last    <= intr_status;                                     // remember interrupt status
         // video register write
         if (vgen_reg_wr_i) begin
             case (vgen_reg_num_i[4:0])
                 xv::XR_VID_CTRL[4:0]: begin
-                    vg_blank        <= vgen_reg_data_i[15];
-                    // set intr_status bits, but only allow clearing bits that were set in intr_status_read
-                    intr_status     <= (intr_status | vgen_reg_data_i[11:8]) & (~intr_status_read | vgen_reg_data_i[11:8]); 
-                    border_color    <= vgen_reg_data_i[7:0];
+                    border_color    <= vgen_reg_data_i[15:8];
+                    intr_signal_o   <= vgen_reg_data_i[3:0];
                 end
                 xv::XR_COPP_CTRL[4:0]: begin
                     // TODO copper
@@ -238,7 +235,7 @@ always_ff @(posedge clk) begin
         end
         // vsync interrupt generation
         if (last_visible_pixel) begin
-            intr_status[3]  <= 1'b1;
+            intr_signal_o[3]  <= 1'b1;
         end
     end
 end
@@ -246,10 +243,7 @@ end
 // video registers read
 always_ff @(posedge clk) begin
     case (vgen_reg_num_i[4:0])
-        xv::XR_VID_CTRL[4:0]: begin
-            vgen_reg_data_o <= {vg_blank, 3'b0, intr_status, border_color };
-            intr_status_read <= intr_status;    // remember status bits CPU has seen
-        end
+        xv::XR_VID_CTRL[4:0]:       vgen_reg_data_o <= {border_color, 4'bx, intr_status_i };
         xv::XR_COPP_CTRL[4:0]:      vgen_reg_data_o <= {16'h0000 }; // TODO copper
         xv::XR_CURSOR_X[4:0]:       vgen_reg_data_o <= {5'b0, cursor_x };
         xv::XR_CURSOR_Y[4:0]:       vgen_reg_data_o <= {5'b0, cursor_y };
@@ -282,6 +276,8 @@ always_comb     h_start_line_fetch = (~mem_fetch_active && mem_fetch_next);
 always_comb     h_line_last_pixel = (h_state_next == STATE_PRE_SYNC) && (h_state == STATE_VISIBLE);
 always_comb     last_visible_pixel = (v_state_next == STATE_PRE_SYNC) && (v_state == STATE_VISIBLE) && h_line_last_pixel;
 always_comb     last_frame_pixel = (v_state_next == STATE_VISIBLE) && (v_state == STATE_POST_SYNC) && h_line_last_pixel;
+always_comb     sprite_x = h_count - cursor_x;
+always_comb     sprite_y = v_count - cursor_y;
 
 // combinational block for video counters
 always_comb begin
@@ -369,10 +365,13 @@ assign pa_tile_addr = calc_tile_addr(vram_data_i[9: 0], (vram_data_i[11] && (pa_
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        tilemem_sel_o       <= 1'b0;
         vram_sel_o          <= 1'b0;
         vram_addr_o         <= 16'h0000;
-        color_index_o         <= 8'b0;
+        tilemem_sel_o       <= 1'b0;
+        tilemem_addr_o      <= 12'h000;
+        spritemem_sel_o     <= 1'b0;
+        spritemem_addr_o    <= 8'h00;
+        color_index_o       <= 8'b0;
         hsync_o             <= 1'b0;
         vsync_o             <= 1'b0;
         dv_de_o             <= 1'b0;
@@ -405,9 +404,28 @@ always_ff @(posedge clk) begin
         // default outputs
         vram_sel_o          <= 1'b0;            // default to no VRAM access
         tilemem_sel_o       <= 1'b0;            // default to no tile access
+        spritemem_sel_o     <= 1'b0;            // default to no sprite access
 
         // set output pixel index from pixel shift-out
         color_index_o <= pa_pixel_shiftout[63:56];
+
+`ifndef BADJUJU
+        // sprite (TODO: wasteful accesses)
+        spritemem_sel_o     <= (sprite_x[1:0] == 2'b11) ? 1'b1 : 1'b0;
+        spritemem_addr_o    <= { sprite_y[4:0], sprite_x[4:2] };
+        if ((sprite_x[10:5] == 6'b0) && (sprite_y[10:5] == 6'b0)) begin
+                logic [3:0] sprite_color;
+                case (cursor_x[1:0] - h_count[1:0])
+                    2'b00: sprite_color    <= spritemem_data_i[15:12];
+                    2'b01: sprite_color    <= spritemem_data_i[11:8];
+                    2'b10: sprite_color    <= spritemem_data_i[7:4];
+                    2'b11: sprite_color    <= spritemem_data_i[3:0];
+                endcase
+                if (sprite_color != 4'b0000) begin
+                    color_index_o <= { border_color[7:4], sprite_color };
+                end
+        end
+`endif
 
         if (h_scanout) begin
             // shift-in next pixel
@@ -599,7 +617,7 @@ always_ff @(posedge clk) begin
             pa_first_buffer         <= 1'b1;    // set first buffer flag (used to fill prefetch)
             pa_next_shiftout_ready  <= 1'b0;
             h_scanout_hcount        <= H_SCANOUT_BEGIN[10:0] + { { 6{pa_fine_hscroll[4]} }, pa_fine_hscroll };
-            h_scanout_end_hcount    <= H_SCANOUT_BEGIN[10:0] + vid_right;
+            h_scanout_end_hcount    <= H_SCANOUT_END[10:0];   // TODO + vid_right;
 
 `ifndef SYNTHESIS
             // trash buffers to help spot stale data

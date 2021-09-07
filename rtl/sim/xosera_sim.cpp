@@ -232,6 +232,7 @@ public:
                     printf("[@t=%lu Wait VSYNC...]\n", main_time);
                     wait_vsync = true;
                     index++;
+                    return;
                 }
                 else if (!data_upload && (test_data[index] & 0xfff0) == 0xfff0)
                 {
@@ -246,6 +247,7 @@ public:
 
                     index++;
                 }
+                int rd_wr   = (test_data[index] & 0xC000) == 0x8000 ? 1 : 0;
                 int bytesel = (test_data[index] & 0x1000) ? 1 : 0;
                 int reg_num = (test_data[index] >> 8) & 0xf;
                 int data    = test_data[index] & 0xff;
@@ -263,7 +265,7 @@ public:
 
                         top->bus_cs_n_i    = 1;
                         top->bus_bytesel_i = bytesel;
-                        top->bus_rd_nwr_i  = 0;
+                        top->bus_rd_nwr_i  = rd_wr;
                         top->bus_reg_num_i = reg_num;
                         top->bus_data_i    = data;
                         if (data_upload && data_upload_index < 16)
@@ -280,6 +282,22 @@ public:
                     case BUS_HOLD:
                         break;
                     case BUS_STROBEOFF:
+                        if (rd_wr)
+                        {
+                            printf("[@t=%lu] Read Reg #%02x.%s => 0x%02x\n",
+                                   main_time,
+                                   reg_num,
+                                   bytesel ? "L" : "H",
+                                   top->bus_data_o);
+                        }
+                        else if (!data_upload)
+                        {
+                            printf("[@t=%lu] Write Reg #%02x.%s <= 0x%02x\n",
+                                   main_time,
+                                   reg_num,
+                                   bytesel ? "L" : "H",
+                                   top->bus_data_i);
+                        }
                         top->bus_cs_n_i = 0;
                         break;
                     case BUS_END:
@@ -336,6 +354,7 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR ",
 #define REG_B(r, v) (((BusInterface::XM_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_W(r, v)                                                                                                    \
     ((BusInterface::XM_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XM_##r) | 0x10) << 8) | ((v)&0xff)
+#define REG_RW(r)        (((BusInterface::XM_##r) | 0x80) << 8), (((BusInterface::XM_##r) | 0x90) << 8)
 #define REG_UPLOAD()     0xfff0
 #define REG_UPLOAD_AUX() 0xfff1
 #define REG_WAITVSYNC()  0xfffe
@@ -355,7 +374,10 @@ uint16_t     BusInterface::test_data[1024] = {
     REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
-    REG_WAITVSYNC(),                       // show 1-BPP BMAP
+    REG_WAITVSYNC(),        // show 1-BPP BMAP
+    REG_W(XR_ADDR, XR_VID_CTRL),
+    REG_RW(XR_DATA),
+    REG_W(TIMER, 0x0800),
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 4-BPP BMAP
     REG_W(XR_DATA, 0x0065),
     REG_W(XR_ADDR, XR_PA_LINE_LEN),        // 320/2/2 wide

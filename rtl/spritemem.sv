@@ -1,4 +1,4 @@
-// colormem.sv
+// spritemem.sv
 //
 // vim: set et ts=4 sw=4
 //
@@ -12,7 +12,7 @@
 
 `include "xosera_pkg.sv"
 
-module colormem(
+module spritemem(
            input  wire logic        clk,
            input  wire logic        rd_en_i,
            input  wire logic  [7:0] rd_address_i,
@@ -22,7 +22,7 @@ module colormem(
            input  wire logic  [7:0] wr_address_i,
            input  wire logic [15:0] wr_data_i
        );
-// infer 16x256 color BRAM
+// infer 16x256 sprite BRAM (32x32 4-bit)
 logic [15: 0] bram[0 : 255];
 
 initial begin

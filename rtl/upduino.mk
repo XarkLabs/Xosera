@@ -95,7 +95,7 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
-NEXTPNR_ARGS := --randomize-seed --placer heap --opt-timing --promote-logic
+NEXTPNR_ARGS := --randomize-seed --promote-logic --opt-timing --placer heap
 
 # defult target is make bitstream
 all: upduino/$(TOP)_$(VIDEO_MODE).bin upduino.mk

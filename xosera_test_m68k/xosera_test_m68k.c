@@ -446,8 +446,7 @@ static void load_sd_bitmap(const char * filename)
 
         while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
         {
-            /* period every 4KiB, does not noticeably affect speed */
-            if ((vaddr & 0xf) == 0)
+            if ((vaddr & 0xFFF) == 0)
             {
                 dprintf(".");
             }
@@ -482,8 +481,7 @@ static void load_sd_colors(const char * filename)
 
         while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
         {
-            /* period every 4KiB, does not noticeably affect speed */
-            if (!(vaddr & 0x7))
+            if ((vaddr & 0x7) == 0)
             {
                 dprintf(".");
             }
@@ -526,6 +524,13 @@ void     xosera_test()
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");
+
+    uint32_t t = XFrameCount;
+    dprintf("XFrameCount = %d\n", t);
+    printf("Waiting for interrupt...");
+    while (XFrameCount == t)
+        ;
+    printf("okay. Vsync interrupt detected.\n\n");
 
     if (delay_check(4000))
     {

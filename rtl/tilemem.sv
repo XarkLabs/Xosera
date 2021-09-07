@@ -35,7 +35,7 @@ module tilemem(
     input  wire logic [11:0]  wr_address_i,
     input  wire logic [15:0]  wr_data_i
 );
-// infer 8x8KB font BRAM
+// infer 16x4KB tile BRAM
 logic [15: 0] bram[0 : 4095];
 `ifndef SHOW        // yosys show command doesn't like "too long" init string
 initial begin

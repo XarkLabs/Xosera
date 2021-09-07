@@ -410,20 +410,27 @@ always_ff @(posedge clk) begin
         color_index_o <= pa_pixel_shiftout[63:56];
 
 `ifndef BADJUJU
-        // sprite (TODO: wasteful accesses)
-        spritemem_sel_o     <= (sprite_x[1:0] == 2'b11) ? 1'b1 : 1'b0;
-        spritemem_addr_o    <= { sprite_y[4:0], sprite_x[4:2] };
-        if ((sprite_x[10:5] == 6'b0) && (sprite_y[10:5] == 6'b0)) begin
-                logic [3:0] sprite_color;
-                case (cursor_x[1:0] - h_count[1:0])
-                    2'b00: sprite_color    <= spritemem_data_i[15:12];
-                    2'b01: sprite_color    <= spritemem_data_i[11:8];
-                    2'b10: sprite_color    <= spritemem_data_i[7:4];
-                    2'b11: sprite_color    <= spritemem_data_i[3:0];
-                endcase
-                if (sprite_color != 4'b0000) begin
-                    color_index_o <= { border_color[7:4], sprite_color };
-                end
+        // sprite (TODO: this is pretty crappy 😅)
+        spritemem_sel_o <= 1'b0;
+        if (sprite_y[10:5] == 6'b0) begin
+            if (sprite_x[1:0] == 2'b11) begin
+                logic [10:0] sprite_inc;
+                sprite_inc = sprite_x + 1'b1;
+                spritemem_sel_o     <= 1'b1;
+                spritemem_addr_o    <= { sprite_y[4:0], sprite_inc[4:2]};
+            end
+            if (sprite_x[10:5] == 6'b0) begin
+                    logic [3:0] sprite_color;
+                    case (sprite_x[1:0])
+                        2'b01: sprite_color    <= spritemem_data_i[15:12];
+                        2'b10: sprite_color    <= spritemem_data_i[11:8];
+                        2'b11: sprite_color    <= spritemem_data_i[7:4];
+                        2'b00: sprite_color    <= spritemem_data_i[3:0];
+                    endcase
+                    if (sprite_color != 4'b0000) begin
+                        color_index_o <= { border_color[7:4], sprite_color };
+                    end
+            end
         end
 `endif
 

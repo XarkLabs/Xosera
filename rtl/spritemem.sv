@@ -26,7 +26,7 @@ module spritemem(
 logic [15: 0] bram[0 : 255];
 
 initial begin
-    $readmemh("default_colors.mem", bram, 0);
+    $readmemh("default_sprite.mem", bram, 0);
 end
 
 // infer BRAM block

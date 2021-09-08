@@ -280,15 +280,14 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         intr_status <= 4'b0;
     end else begin
-        // if signalling an interrupt not already set in status and not masked out, generate interrupt
-        // TODO: This isn't quite right...
-        if ((intr_signal & intr_mask) != 0) begin
+        // signal a bus interrupt if not masked and not set in status and
+        if ((intr_signal & intr_mask & (~intr_status)) != 4'b0) begin
             bus_intr_o  <= 1'b1;
         end else begin
             bus_intr_o  <= 1'b0;
         end
-        // remember interrupt signal, and clear cleared interrupts
-        intr_status <= (intr_status | intr_signal) & ~intr_clear;
+        // remember interrupt signal and clear cleared interrupts
+        intr_status <= (intr_status | intr_signal) & (~intr_clear);
     end
 end
 

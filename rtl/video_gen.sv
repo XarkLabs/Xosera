@@ -423,7 +423,7 @@ always_ff @(posedge clk) begin
         // set output pixel index from pixel shift-out
         color_index_o <= pa_pixel_shiftout[63:56];
 
-/* verilator lint_off UNUSED */                      // HACKFAST
+`ifndef HACKFAST
         // sprite (TODO: this is pretty crappy 😅)
         spritemem_sel_o <= 1'b0;
         if (sprite_y[10:5] == 6'b0) begin

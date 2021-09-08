@@ -362,7 +362,7 @@ always_ff @(posedge clk) begin
                         intr_mask           <= bus_data_byte[3:0];
                     end
                     xv::XM_TIMER: begin
-                        intr_clear_o        <= reg_even_byte[3:0];
+                        intr_clear_o        <= bus_data_byte[3:0];
                     end
                     xv::XM_UNUSED_A: begin
                     end

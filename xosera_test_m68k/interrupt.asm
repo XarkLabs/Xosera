@@ -30,10 +30,14 @@ Xosera_intr:
                 move.l  #XM_BASEADDR,A0         ; get Xosera base addr
                 movep.w XM_XR_ADDR(A0),D1       ; save aux_addr value
 
-                move.w  #XR_VID_CTRL,D0
+                move.w  #XR_VID_CTRL,D0         ; XR reg VID_CTRL
                 movep.w D0,XM_XR_ADDR(A0)
-                movep.w XM_XR_DATA(A0),D0       ; read intr status
-                movep.w D0,XM_TIMER(A0)         ; clear vsync intr
+                movep.w XM_XR_DATA(A0),D0       ; read intr status [3:0]
+                movep.w D0,XM_TIMER(A0)         ; clear any interrupts in status
+
+                // NOTE: could check D0 bits for other
+                //       interrupt sources, but for now
+                //       just assume it is vsync [3]
 
                 move.w  #XR_COLOR_MEM+2,D0      ; set color entry #2
                 movep.w D0,XM_XR_ADDR(A0)

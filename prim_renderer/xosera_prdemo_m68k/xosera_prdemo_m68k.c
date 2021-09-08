@@ -33,6 +33,9 @@
 //#define DELAY_TIME 1000        // impatient human speed
 //#define DELAY_TIME 100        // machine speed
 
+#define NB_RECTS        100
+#define NB_TRIANGLES    2
+
 #include "xosera_api.h"
 
 
@@ -180,9 +183,14 @@ static void xprintf(const char * fmt, ...)
 typedef struct
 {
     float x1, y1, x2, y2;
-} Coord;
+} Coord2;
 
-static void draw_line(Coord coord, int color)
+typedef struct
+{
+    float x1, y1, x2, y2, x3, y3;
+} Coord3;
+
+static void draw_line(Coord2 coord, int color)
 {
     uint8_t busy;
     do {
@@ -197,7 +205,7 @@ static void draw_line(Coord coord, int color)
     xv_setw(wr_pr_cmd, PR_EXECUTE | PR_LINE);
 }
 
-static void draw_filled_rectangle(Coord coord, int color)
+static void draw_filled_rectangle(Coord2 coord, int color)
 {
     uint8_t busy;
     do {
@@ -210,6 +218,23 @@ static void draw_filled_rectangle(Coord coord, int color)
     xv_setw(wr_pr_cmd, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
     xv_setw(wr_pr_cmd, PR_COLOR | color);
     xv_setw(wr_pr_cmd, PR_EXECUTE | PR_FILLED_RECTANGLE);
+}
+
+static void draw_filled_triangle(Coord3 coord, int color)
+{
+    uint8_t busy;
+    do {
+        busy = xv_getbh(wr_pr_cmd);
+    } while(busy & 0x80);
+
+    xv_setw(wr_pr_cmd, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
+    xv_setw(wr_pr_cmd, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
+    xv_setw(wr_pr_cmd, PR_COORDX1 | ((int)(coord.x2) & 0x0FFF));
+    xv_setw(wr_pr_cmd, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
+    xv_setw(wr_pr_cmd, PR_COORDX2 | ((int)(coord.x3) & 0x0FFF));
+    xv_setw(wr_pr_cmd, PR_COORDY2 | ((int)(coord.y3) & 0x0FFF));
+    xv_setw(wr_pr_cmd, PR_COLOR | color);
+    xv_setw(wr_pr_cmd, PR_EXECUTE | PR_FILLED_TRIANGLE);
 }
 
 // Color conversion
@@ -329,7 +354,7 @@ void clear()
 
 void demo_lines()
 {
-    const Coord coords[] = {{0, 0, 2, 4},   {0, 4, 2, 0},   {3, 4, 3, 0},      {3, 0, 5, 0},   {5, 0, 5, 4},
+    const Coord2 coords[] = {{0, 0, 2, 4},   {0, 4, 2, 0},   {3, 4, 3, 0},      {3, 0, 5, 0},   {5, 0, 5, 4},
                                     {5, 4, 3, 4},   {8, 0, 6, 0},   {6, 0, 6, 2},      {6, 2, 8, 2},   {8, 2, 8, 4},
                                     {8, 4, 6, 4},   {9, 0, 11, 0},  {9, 0, 9, 4},      {9, 2, 11, 2},  {9, 4, 11, 4},
                                     {12, 0, 14, 0}, {14, 0, 14, 2}, {14, 2, 12, 2},    {12, 2, 14, 4}, {12, 4, 12, 0},
@@ -343,7 +368,7 @@ void demo_lines()
     {
         float x = 80.0f * cos(angle);
         float y = 80.0f * sin(angle);
-        Coord c = {240, 120, 240 + x, 120 + y};
+        Coord2 c = {240, 120, 240 + x, 120 + y};
         draw_line(c, i % (256 - 16) + 16);
         angle += 2.0f * M_PI / 256.0f;
     }
@@ -355,9 +380,9 @@ void demo_lines()
 
     for (int i = 0; i < 10; ++i)
     {
-        for (size_t j = 0; j < sizeof(coords) / sizeof(Coord); ++j)
+        for (size_t j = 0; j < sizeof(coords) / sizeof(Coord2); ++j)
         {
-            Coord coord = coords[j];
+            Coord2 coord = coords[j];
 
             coord.x1 = coord.x1 * scale_x + offset_x;
             coord.y1 = coord.y1 * scale_y + offset_y;
@@ -395,11 +420,11 @@ void srand2(unsigned int seed)
     next = seed;
 }
 
-void demo_filled_rectangles()
+void demo_filled_rectangles(int nb_iterations)
 {
-    Particle particles[100];
+    Particle particles[NB_RECTS];
 
-    for(size_t i = 0; i < 100; ++i) {
+    for(size_t i = 0; i < NB_RECTS; ++i) {
         Particle* p = &particles[i];
         p->x = rand2() % 320;
         p->y = rand2() % 240;
@@ -409,19 +434,18 @@ void demo_filled_rectangles()
         p->speed_y = rand2() % 10 - 5;
     }
 
-    //for (int i = 0; i < 1000; ++i) {
-    for (;;) {
+    for (int i = 0; i < nb_iterations; ++i) {
 
-        Coord c = {0, 0, 320, 240};
+        Coord2 c = {0, 0, 320, 240};
         draw_filled_rectangle(c, 1);
 
-        for(size_t j = 0; j < 100; ++j) {
+        for(size_t j = 0; j < NB_RECTS; ++j) {
             Particle* p = &particles[j];
-            Coord c = {p->x - p->radius, p->y - p->radius, p->x + p->radius, p->y + p->radius};
+            Coord2 c = {p->x - p->radius, p->y - p->radius, p->x + p->radius, p->y + p->radius};
             draw_filled_rectangle(c, p->color);
         }
 
-        for(size_t j = 0; j < 100; ++j) {
+        for(size_t j = 0; j < NB_RECTS; ++j) {
             Particle* p = &particles[j];
             p->x += p->speed_x;
             p->y += p->speed_y;
@@ -430,8 +454,54 @@ void demo_filled_rectangles()
             if (p->y <= 0 || p->y >= 240)
                 p->speed_y = -p->speed_y;
         }
+    }
+}
 
-        //delay(10);
+void demo_filled_triangle_single()
+{
+    Coord2 c = {0, 0, 320, 240};
+    draw_filled_rectangle(c, 1);
+
+    Coord3 c2 = {231, 120, 50, 230,  217, 55};
+    draw_filled_triangle(c2, 2);
+}
+
+void demo_filled_triangle(int nb_iterations)
+{
+    Particle particles[3*NB_TRIANGLES];
+
+    for(size_t i = 0; i < 3*NB_TRIANGLES; ++i) {
+        Particle* p = &particles[i];
+        p->x = rand2() % 320;
+        p->y = rand2() % 240;
+        p->radius = 0;
+        p->color = rand2() % 256;
+        p->speed_x = rand2() % 10 - 5;
+        p->speed_y = rand2() % 10 - 5;
+    }
+
+    for (int i = 0; i < nb_iterations; ++i) {
+
+        Coord2 c = {0, 0, 320, 240};
+        draw_filled_rectangle(c, 1);
+
+        for(size_t j = 0; j < 3*NB_TRIANGLES; j+=3) {
+            Particle* p1 = &particles[j];
+            Particle* p2 = &particles[j+1];
+            Particle* p3 = &particles[j+2];
+            Coord3 c = {p1->x, p1->y, p2->x, p2->y, p3->x, p3->y};
+            draw_filled_triangle(c, p1->color);
+        }
+
+        for(size_t j = 0; j < 3*NB_TRIANGLES; ++j) {
+            Particle* p = &particles[j];
+            p->x += p->speed_x;
+            p->y += p->speed_y;
+            if (p->x <= 0 || p->x >= 320)
+                p->speed_x = -p->speed_x;
+            if (p->y <= 0 || p->y >= 240)
+                p->speed_y = -p->speed_y;
+        }
     }
 }
 
@@ -457,7 +527,10 @@ void xosera_demo()
     demo_lines();
     delay(2000);
 
-    demo_filled_rectangles();
+    demo_filled_rectangles(500);
+
+    //demo_filled_triangle_single();
+    demo_filled_triangle(5000);
 
     while(1);
 }

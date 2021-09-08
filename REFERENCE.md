@@ -595,6 +595,8 @@ Before sending an execute command, the user must check if this bit is cleared.
 
 To reduce the number of bus accesses, parameters such as coordinates or color are optional in the sequence of commands. If not sent, the last value of the given parameter received by the primitive renderer will be used.
 
+Currently, the primitive renderer only supports 8-bpp mode with 2x H&V scale factors (mode 0x75).
+
 #### Commands
 
 The following commands are available:

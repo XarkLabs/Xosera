@@ -22,6 +22,11 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
       - [Playfield A & B Control XR Registers Details](#playfield-a--b-control-xr-registers-details)
       - [2D Blitter Engine XR Registers Summary](#2d-blitter-engine-xr-registers-summary)
       - [Polygon / Line Draw Engine XR Registers Summary](#polygon--line-draw-engine-xr-registers-summary)
+  - [Video Synchronized Co-Processor Details](#video-synchronized-co-processor-details)
+    - [Programming the Co-processor](#programming-the-co-processor)
+    - [Co-processor Instruction Set](#co-processor-instruction-set)
+      - [Notes on the MOVE variants](#notes-on-the-move-variants)
+    - [Co-processer Assembler](#co-processor-assembler)
 
 ## Xosera Reference Information
 
@@ -409,3 +414,170 @@ Unused XR playfield registers 0x17, 0x1F
 | 0x3D  | [TBD] | R/W |             |
 | 0x3E  | [TBD] | R/W |             |
 | 0x3F  | [TBD] | R/W |             |
+
+## Video Synchronized Co-Processor Details
+
+Xosera provides a dedicated video co-processor, synchronized to the pixel clock. The co-processor 
+(or "copper") can be programmed to perform video register manipulation on a frame-by-frame basis 
+in sync with the video beam. With careful programming this enables many advanced effects to be
+achieved, such as multi-resolution displays and simultaneous display of more colors than would
+otherwise be possible.
+
+Interaction with the copper involves two Xosera memory areas:
+
+* XR Register 0x01 - The **`XR_COPP_CTRL`** register
+* Xosera XR memory area **`0xA000-0xA7FF`** - The **`XR_COPPER_MEM`** area
+
+In general, programming the copper comprises loading a copper program (or 'copper list') into
+the `XR_COPPER_MEM` area, and then setting the starting PC (if necessary) and enable bit in 
+the `XR_COPP_CTRL` register.
+
+> **Note:** The PC contained in the control register is the _initial_ PC, used to initialize
+the copper at the next vertical blanking interval. It is **not** read during a frame, and 
+cannot be used to perform jumps - see instead the `JMP` instruction.
+
+### Programming the Co-processor
+
+As mentioned, copper programs (aka 'The Copper List') live in XR memory at `0xA000`. This memory 
+segment is 2K in size, and all copper instructions are 32-bits, meaning there is space for a 
+maximum of 512 instructions at any one time.
+
+When enabled, the copper will run through as much of the program as time allows within each frame.
+At the end of each frame (during the vertical blanking interval) the program is restarted at the 
+PC contained in the control register.
+
+You should **always** set up a program for the copper before you enable it. Once enabled, it is
+always running in sync with the pixel clock. There is no specific 'stop' or 'done' instruction
+(though the wait instruction can be used with both X and Y ignored as a "wait for end of frame" 
+instruction).
+
+Although illegal instructions are ignored, the undefined nature of memory at start up means that
+if the copper is enabled without a program being loaded into its memory segment, undefined
+behaviour and display corruption may result.
+
+As far as the copper is concerned, all coordinates are in native resolution (i.e. 640x480 or 
+848x480). They do not account for any pixel doubling or other settings you may have made.
+
+The copper broadly follows the Amiga copper in terms of instructions (though we may add more 
+as time progresses). There are multiple variants of the MOVE instruction that each move to a 
+different place (see next section).
+
+### Co-processor Instruction Set
+
+There are four basic copper instructions: `WAIT`, `SKIP`, `MOVE` and `JUMP`. Briefly, their function
+is:
+
+| Instruction | Description                                                                  |
+|-------------|------------------------------------------------------------------------------|
+|    `WAIT`   | Wait until the video beam reaches (or exceeds) a specified position          |
+|    `SKIP`   | Skip the next instruction if the video beam has reached a specified position |
+|    `MOVE`   | Move immediate data to a target destination                                  |
+|    `JUMP`   | Change the copper program-counter to the given immediate value               |
+
+Copper instructions take multiple pixels to execute. The timing for each instruction is
+detailed below, along with the binary format.
+
+The `MOVE` instruction is actually subdivided into four specific types of move, as detailed
+below.
+
+**`WAIT` - [0000 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]**
+
+Wait for a given screen position to be reached (or exceeded).
+
+Flags:
+* [0] = Ignore vertical position
+* [1] = Ignore horizontal position
+* [2] = Reserved
+* [3] = Reserved
+
+If both horizontal and vertical ignore flags are set, this instruction will wait
+indefinitely (until the end of the frame). This can be used as a special "wait for
+end of frame" instruction. 
+
+**`SKIP` - [0010 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]**
+
+Skip the next instruction if a given screen position has been reached.
+
+Flags:
+* [0] = Ignore vertical position
+* [1] = Ignore horizontal position
+* [2] = Reserved
+* [3] = Reserved
+
+If both horizontal and vertical ignore flags are set, this instruction will **always**
+skip the next instruction. While not especially useful in its own right, this can come
+in handy in conjunction with in-place code modification.
+
+**`JMP` - [0100 oAAA AAAA AAAA],[oooo oooo oooo oooo]**
+
+Jump to the given copper RAM address.
+
+**`MOVER` - [1001 FFFF AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+
+Move 16-bit data to XR register specified by 8-bit address.
+
+**`MOVEF` - [1010 AAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+
+Move 16-bit data to `XR_TILE_MEM` (or 'font') memory.
+
+**`MOVEP` - [1011 oooo AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+
+Move 16-bit data to `XR_COLOR_MEM` (or 'palette') memory.
+
+**`MOVEC` - [1100 oAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+
+Move 16-bit data to `XR_COPPER_MEM` memory.
+
+Key:
+
+```
+Y - Y position (11 bits)
+X - X position (11 bits)
+F - Flags
+R - Register
+A - Address
+D - Data
+o - Not used / don't care
+```
+
+#### Notes on the MOVE variants
+
+With the available `MOVE` variants, the copper can directly MOVE to the following:
+
+  * Any Xosera XR register (including the copper control register)
+  * Xosera font memory
+  * Xosera color memory
+  * Xosera copper memory
+
+The copper **cannot** directly MOVE to the following, and this is by design:
+
+  * Xosera main registers
+  * Video RAM
+  * Sprite RAM (this limitation may be removed in future).
+
+It is also possible to change the copper program that runs on a frame-by-frame basis 
+(both from copper code and m68k program code) by modifying the copper control register. The copper 
+supports jumps within the same frame with the JMP instruction.
+
+Because the copper can directly write to it's own memory segment, self-modifying code is supported 
+(by modifying copper memory from your copper code) and of course m68k program code can modify that 
+memory at will using the Xosera registers. 
+
+> **Note**: When modifying copper code from the m68k, and depending on the nature of your modifications, 
+you may need to sync with vblank to avoid display artifacts.
+
+### Co-processer Assembler
+
+Co-processor instructions will often be written programatically, or directly (in hex) within
+a higher level machine language, for loading into the copper at runtime. The instruction format
+has been specifically designed to make it easier to read and write code directly in hexadecimal.
+
+However, you may also find it useful to write copper programs in a slightly higher-level language,
+and translate these into machine instructions. For this purpose, a 
+[customasm](https://github.com/hlorenzi/customasm)-compatible assembler definition is provided 
+in the `copper/copper_asm` directory. See the `copper.casm` file along with the provided examples
+for details of use.
+
+A simple executable ruby script, `bin2c.rb` is also provided in that directory. This is a simple
+utility that takes assembled copper binaries and outputs them as a C array (with associated size)
+for direct embedding into C code.

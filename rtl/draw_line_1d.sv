@@ -14,9 +14,9 @@
 
 module draw_line_1d #(parameter CORDW=16) (        // signed coordinate width
     input  wire logic clk,                              // clock
-    input  wire logic ena_draw_i,                       // enable draw
     input  wire logic reset_i,                          // reset
     input  wire logic start_i,                          // start rectangle drawing
+    input  wire logic oe_i,                             // output enable
     input  wire logic signed [CORDW-1:0] x0_i,          // point 0
     input  wire logic signed [CORDW-1:0] x1_i,          // point 1
     output      logic signed [CORDW-1:0] x_o,           // drawing position
@@ -27,12 +27,12 @@ module draw_line_1d #(parameter CORDW=16) (        // signed coordinate width
 
     // draw state machine
     enum {IDLE, DRAW} state;
-    always_comb drawing_o = (state == DRAW && ena_draw_i);
+    always_comb drawing_o = (state == DRAW && oe_i);
 
     always_ff @(posedge clk) begin
         case (state)
             DRAW: begin
-                if (ena_draw_i) begin
+                if (oe_i) begin
                     if (x_o == x1_i) begin
                         state <= IDLE;
                         busy_o <= 0;

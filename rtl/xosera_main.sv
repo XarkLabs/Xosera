@@ -184,7 +184,7 @@ logic           hsync_1;
 logic           dv_de_1;
 
 // primitive renderer
-logic           prim_rndr_ena_draw;    // primitive renderer enable draw
+logic           prim_rndr_oe;          // primitive renderer output enable
 logic [15:0]    prim_rndr_cmd;         // received primitive renderer command
 logic           prim_rndr_cmd_valid;   // is command valid
 logic           prim_rndr_vram_sel /* verilator public */;         // primitive renderer VRAM select
@@ -206,7 +206,7 @@ assign vram_data_in    = blit_vram_sel  ? blit_data_out  : prim_rndr_data_out;
 assign blit_data_in    = blit_vram_load ? vram_data_out  : blit_vram_read;
 assign vgen_data_in    = vgen_vram_load ? vram_data_out  : vgen_vram_read;
  
-assign prim_rndr_ena_draw   = !vgen_vram_sel && !blit_vram_sel;
+assign prim_rndr_oe    = !vgen_vram_sel && !blit_vram_sel;
 
 // save vgen value read from vram
 always_ff @(posedge clk) begin
@@ -261,7 +261,7 @@ blitter blitter(
 
 // primitive renderer
 prim_renderer prim_renderer(
-    .ena_draw_i(prim_rndr_ena_draw),                // enable draw
+    .oe_i(prim_rndr_oe),                            // output enable
 
     .cmd_i(prim_rndr_cmd),                          // command
     .cmd_valid_i(prim_rndr_cmd_valid),              // is command valid?

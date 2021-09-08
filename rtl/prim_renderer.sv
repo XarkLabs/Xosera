@@ -13,16 +13,16 @@
 `include "xosera_pkg.sv"
 
 module prim_renderer(
-    input       logic            ena_draw_i,         // enable draw
+    input       logic            oe_i,                  // output enable
 
-    input  wire logic [15:0]     cmd_i,              // command
-    input  wire logic            cmd_valid_i,        // is command valid?
+    input  wire logic [15:0]     cmd_i,                 // command
+    input  wire logic            cmd_valid_i,           // is command valid?
 
-    output      logic            prim_rndr_vram_sel_o, // primitive renderer VRAM select
-    output      logic            prim_rndr_wr_o,       // primitive renderer VRAM write
-    output      logic  [3:0]     prim_rndr_mask_o,     // primitive renderer VRAM nibble write masks
-    output      logic [15:0]     prim_rndr_addr_o,     // primitive renderer VRAM addr
-    output      logic [15:0]     prim_rndr_data_out_o, // primitive renderer bus VRAM data write
+    output      logic            prim_rndr_vram_sel_o,  // primitive renderer VRAM select
+    output      logic            prim_rndr_wr_o,        // primitive renderer VRAM write
+    output      logic  [3:0]     prim_rndr_mask_o,      // primitive renderer VRAM nibble write masks
+    output      logic [15:0]     prim_rndr_addr_o,      // primitive renderer VRAM addr
+    output      logic [15:0]     prim_rndr_data_out_o,  // primitive renderer bus VRAM data write
 
     output      logic            busy_o,                // is busy?
     
@@ -40,39 +40,43 @@ logic         [7:0] color;
 logic drawing;
 logic drawing_line;
 logic drawing_filled_rectangle;
+logic busy_line;
+logic busy_filled_rectangle;
 logic done;
 logic done_line;
 logic done_filled_rectangle;
 
-assign busy_o = drawing;
+always_comb busy_o = busy_line || busy_filled_rectangle;
 
 draw_line #(.CORDW(12)) draw_line (    // framebuffer coord width in bits
     .clk(clk),                         // clock
-    .ena_draw_i(ena_draw_i),           // enable draw
     .reset_i(reset_i),                 // reset
-    .start_i(start_line),      // start line rendering
-    .x0_i(x0),                 // point 0 - horizontal position
-    .y0_i(y0),                 // point 0 - vertical position
-    .x1_i(x1),                 // point 1 - horizontal position
-    .y1_i(y1),                 // point 1 - vertical position
-    .x_o(x_line),                   // horizontal drawing position
-    .y_o(y_line),                   // vertical drawing position
-    .drawing_o(drawing_line),       // line is drawing
-    .done_o(done_line)              // line complete (high for one tick)
+    .start_i(start_line),              // start line rendering
+    .oe_i(oe_i),                       // output enable
+    .x0_i(x0),                         // point 0 - horizontal position
+    .y0_i(y0),                         // point 0 - vertical position
+    .x1_i(x1),                         // point 1 - horizontal position
+    .y1_i(y1),                         // point 1 - vertical position
+    .x_o(x_line),                      // horizontal drawing position
+    .y_o(y_line),                      // vertical drawing position
+    .drawing_o(drawing_line),          // line is drawing
+    .busy_o(busy_line),                // line drawing request in progress
+    .done_o(done_line)                 // line complete (high for one tick)
     );
 
 draw_rectangle_fill #(.CORDW(12)) draw_rectangle_fill (     // framebuffer coord width in bits
-    .clk(clk),                 // clock
-    .ena_draw_i(ena_draw_i),   // enable draw
-    .reset_i(reset_i),         // reset
-    .start_i(start_filled_rectangle),   // start rectangle rendering
-    .x0_i(x0),                 // point 0 - horizontal position
-    .y0_i(y0),                 // point 0 - vertical position
-    .x1_i(x1),                 // point 1 - horizontal position
-    .y1_i(y1),                 // point 1 - vertical position
+    .clk(clk),                              // clock
+    .reset_i(reset_i),                      // reset
+    .start_i(start_filled_rectangle),       // start rectangle rendering
+    .oe_i(oe_i),                            // output enable
+    .x0_i(x0),                              // point 0 - horizontal position
+    .y0_i(y0),                              // point 0 - vertical position
+    .x1_i(x1),                              // point 1 - horizontal position
+    .y1_i(y1),                              // point 1 - vertical position
     .x_o(x_filled_rectangle),               // horizontal drawing position
     .y_o(y_filled_rectangle),               // vertical drawing position
     .drawing_o(drawing_filled_rectangle),   // rectangle is drawing
+    .busy_o(busy_filled_rectangle),         // rectangle drawing request in progress
     .done_o(done_filled_rectangle)          // rectangle complete (high for one tick)
     );
 
@@ -112,7 +116,7 @@ always_ff @(posedge clk) begin
         endcase
     end
 
-    if (drawing && ena_draw_i) begin
+    if (drawing && oe_i) begin
         if (x >= 0 && y >= 0 && x < xv::VISIBLE_WIDTH / 2 && y < xv::VISIBLE_HEIGHT / 2) begin
             prim_rndr_vram_sel_o <= 1;
             prim_rndr_wr_o <= 1;

@@ -339,13 +339,13 @@ void demo_lines()
     clear();
 
     double angle = 0.0;
-    for (int i = 0; i < 2048; i++)
+    for (int i = 0; i < 256; i++)
     {
-        float x = 1024.0f * cos(angle);
-        float y = 1024.0f * sin(angle);
+        float x = 80.0f * cos(angle);
+        float y = 80.0f * sin(angle);
         Coord c = {240, 120, 240 + x, 120 + y};
         draw_line(c, i % (256 - 16) + 16);
-        angle += 2.0f * M_PI / 2048.0f;
+        angle += 2.0f * M_PI / 256.0f;
     }
 
     float scale_x  = 4;
@@ -454,11 +454,10 @@ void xosera_demo()
 
     set_palette(0);
 
-    //demo_lines();
-    //delay(2000);
+    demo_lines();
+    delay(2000);
 
     demo_filled_rectangles();
-    delay(2000);
 
     while(1);
 }

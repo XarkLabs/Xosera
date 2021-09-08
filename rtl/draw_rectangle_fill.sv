@@ -14,13 +14,14 @@
 
 module draw_rectangle_fill #(parameter CORDW=16) (      // signed coordinate width
     input  wire logic clk,                              // clock
-    input  wire logic ena_draw_i,                       // enable draw
     input  wire logic reset_i,                          // reset
     input  wire logic start_i,                          // start rectangle drawing
+    input  wire logic oe_i,                             // output enable
     input  wire logic signed [CORDW-1:0] x0_i, y0_i,    // vertex 0
     input  wire logic signed [CORDW-1:0] x1_i, y1_i,    // vertex 1
     output      logic signed [CORDW-1:0] x_o, y_o,      // drawing position
     output      logic drawing_o,                        // actively drawing
+    output      logic busy_o,                           // drawing request in progress
     output      logic done_o                            // drawing is complete (high for one tick)
     );
 
@@ -56,7 +57,7 @@ module draw_rectangle_fill #(parameter CORDW=16) (      // signed coordinate wid
                 if (line_done) begin
                     if (y_o == y1s) begin
                         state <= IDLE;
-                        drawing_o <= 0;
+                        busy_o <= 0;
                         done_o <= 1;
                     end else begin
                         state <= INIT;
@@ -69,7 +70,7 @@ module draw_rectangle_fill #(parameter CORDW=16) (      // signed coordinate wid
                 if (start_i) begin
                     state <= INIT;
                     line_id <= 0;
-                    drawing_o <= 1;
+                    busy_o <= 1;
                 end
             end
         endcase
@@ -78,24 +79,25 @@ module draw_rectangle_fill #(parameter CORDW=16) (      // signed coordinate wid
             state <= IDLE;
             line_id <= 0;
             line_start <= 0;
-            drawing_o <= 0;
+            busy_o <= 0;
             done_o <= 0;
         end
     end
 
-    /* verilator lint_off PINCONNECTEMPTY */    
     draw_line_1d #(.CORDW(CORDW)) draw_line_1d_inst (
         .clk(clk),
-        .ena_draw_i(ena_draw_i),
         .reset_i(reset_i),
         .start_i(line_start),
+        .oe_i(oe_i),
         .x0_i(lx0),
         .x1_i(lx1),
         .x_o(x_o),
-        .drawing_o(),
+        .drawing_o(drawing_o),
+        // verilator lint_save
+        // verilator lint_off PINCONNECTEMPTY
         .busy_o(),
+        // verilator lint_restore
         .done_o(line_done)
     );
-    /* verilator lint_on PINCONNECTEMPTY */    
 
 endmodule

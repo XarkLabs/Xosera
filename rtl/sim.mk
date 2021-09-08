@@ -12,6 +12,9 @@
 #	Verilator 4.028 2020-02-06 rev v4.026-92-g890cecc1
 #	Built on GNU/Linux using Ubuntu 20.04 distribution
 
+# This is a hack to get make to exit if command fails (even if command after pipe succeeds, e.g., tee)
+SHELL := $(shell echo $(SHELL)) -o pipefail
+
 # Version bookkeeping
 GITSHORTHASH := $(shell git rev-parse --short HEAD)
 DIRTYFILES := $(shell git status --porcelain --untracked-files=no | grep -v _stats.txt | cut -d " " -f 3-)
@@ -104,7 +107,7 @@ CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-s
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
-VERILATOR_ARGS := -I$(SRCDIR) -Mdir sim/obj_dir -Wall --trace-fst -Wno-UNUSED -Wno-VARHIDDEN -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
+VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -Mdir sim/obj_dir -Wall --trace-fst -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
 
 # Verillator C++ source driver
 CSRC := sim/xosera_sim.cpp

@@ -12,6 +12,8 @@
 `ifndef XOSERA_PKG
 `define XOSERA_PKG
 
+/* verilator lint_off UNUSED */
+
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
@@ -347,6 +349,8 @@ localparam PLL_DIVQ    =    3'b011;         // DIVQ =  3
 `else
 localparam PCLK_HZ     =    25_125_000;
 `endif
+
+/* verilator lint_on UNUSED */
 
 endpackage
 `endif

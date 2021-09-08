@@ -23,6 +23,8 @@ module xosera_tb();
 
 import xv::*;
 
+/* verilator lint_off UNUSED */
+
 logic clk;
 logic reset;
 // video
@@ -55,6 +57,8 @@ logic [15:0] test_data0;
 logic [15:0] test_data1;
 logic [15:0] test_data2;
 logic [15:0] test_data3;
+
+/* verilator lint_on UNUSED */
 
 xosera_main xosera(
                 .clk(clk),

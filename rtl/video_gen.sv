@@ -414,7 +414,9 @@ always_ff @(posedge clk) begin
         spritemem_sel_o <= 1'b0;
         if (sprite_y[10:5] == 6'b0) begin
             if (sprite_x[1:0] == 2'b11) begin
+/* verilator lint_off UNUSED */
                 logic [10:0] sprite_inc;
+/* verilator lint_on UNUSED */
                 sprite_inc = sprite_x + 1'b1;
                 spritemem_sel_o     <= 1'b1;
                 spritemem_addr_o    <= { sprite_y[4:0], sprite_inc[4:2]};

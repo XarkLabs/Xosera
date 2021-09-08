@@ -35,9 +35,9 @@ Xosera_intr:
                 movep.w XM_XR_DATA(A0),D0       ; read intr status [3:0]
                 movep.w D0,XM_TIMER(A0)         ; clear any interrupts in status
 
-                // NOTE: could check D0 bits for other
-                //       interrupt sources, but for now
-                //       just assume it is vsync [3]
+                ; NOTE: could check D0 bits for other
+                ;       interrupt sources, but for now
+                ;       just assume it is vsync [3]
 
                 move.w  #XR_COLOR_MEM+2,D0      ; set color entry #2
                 movep.w D0,XM_XR_ADDR(A0)

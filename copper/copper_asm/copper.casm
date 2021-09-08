@@ -1,0 +1,53 @@
+; copper.casm - customasm rules for Xosera copper
+;
+; vim: set et ts=4 sw=4
+;
+; Copyright (c) 2021 Ross Bamford - https://github.com/roscopeco
+;
+; See top-level LICENSE file for license information. (Hint: MIT)
+;
+; This is for use with customasm: https://github.com/hlorenzi/customasm
+; See also `example.asm`.
+
+#bits 16
+#subruledef reg {
+    VID_CTRL        => 0x00
+    COPP_CTRL       => 0x01
+    CURSOR_X        => 0x02
+    CURSOR_Y     => 0x03
+    VID_TOP      => 0x04
+    VID_BOTTOM   => 0x05
+    VID_LEFT     => 0x06
+    VID_RIGHT    => 0x07
+    PA_GFX_CTRL  => 0x10
+    PA_TILE_CTRL => 0x11
+    PA_DISP_ADDR => 0x12
+    PA_LINE_LEN  => 0x13
+    PA_HV_SCROLL => 0x14
+    PA_LINE_ADDR => 0x15
+    PB_GFX_CTRL  => 0x18
+    PB_TILE_CTRL => 0x19
+    PB_DISP_ADDR => 0x1A
+    PB_LINE_LEN  => 0x1B
+    PB_HV_SCROLL => 0x1C
+    PB_LINE_ADDR => 0x1D
+    
+}
+
+#ruledef {
+    wait  {x: u11},    {y: u11}                 => 0b0000 @ 0b0     @ y`11    @ 0b0     @ x`11    @ 0b0000
+    wait  {x: u11},    {y: u11},    {flags: u4} => 0b0000 @ 0b0     @ y`11    @ 0b0     @ x`11    @ flags`4
+    skip  {x: u11},    {y: u11}                 => 0b0010 @ 0b0     @ y`11    @ 0b0     @ x`11    @ 0b0000
+    skip  {x: u11},    {y: u11},    {flags: u4} => 0b0010 @ 0b0     @ y`11    @ 0b0     @ x`11    @ flags`4
+    jmp   {addr: u11}                           => 0b0100 @ 0b0     @ addr`11 @ 0b0000000000000000
+    mover {data: u16}, {r: reg}                 => 0b1001 @ 0b0000  @ r`8     @ data`16
+    mover {data: u16}, {addr: u8}               => 0b1001 @ 0b0000  @ addr`8 @ data`16
+    movef {data: u16}, {addr: u12}              => 0b1010 @ addr`12 @ data`16
+    movep {data: u16}, {addr: u8}               => 0b1011 @ 0b0000  @ addr`8  @ data`16
+    movec {data: u16}, {addr: u11}              => 0b1100 @ 0b0     @ addr`11 @ data`16
+
+    ; nextf (wait next frame) is a pseudo-instruction, 
+    ; it just generates a wait with both X and Y ignored.
+    nextf                                       => asm { wait 0, 0, 0b0011 }
+}
+ 

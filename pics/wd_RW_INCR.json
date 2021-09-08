@@ -1,0 +1,12 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "16-bit RW_INCR value for RW_ADDR",
+            "type": 4
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

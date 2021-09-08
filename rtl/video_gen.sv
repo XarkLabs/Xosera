@@ -27,6 +27,10 @@ module video_gen(
     output      logic [15:0]     vgen_reg_data_o,    // register/status data reads
     input wire  logic  [3:0]     intr_status_i,      // interrupt pending status
     output      logic  [3:0]     intr_signal_o,      // generate interrupt signal
+    // outputs for copper
+    output      logic [10:0]     h_count_o,          // Horizontal video counter
+    output      logic [10:0]     v_count_o,          // Vertical video counter
+    output      logic            in_vblank_o,
     // video memories
     output      logic            vram_sel_o,         // vram read select
     output      logic [15:0]     vram_addr_o,        // vram word address out (16x64K)
@@ -149,7 +153,12 @@ logic [1:0]     v_state_next;
 logic           mem_fetch_next;
 logic           h_start_line_fetch;
 
-// video config registers write
+assign h_count_o    = h_count;
+assign v_count_o    = v_count;
+
+always_comb in_vblank_o = v_state != STATE_VISIBLE;
+
+// video config registers read/write
 always_ff @(posedge clk) begin
     if (reset_i) begin
         intr_signal_o       <= 4'b0;

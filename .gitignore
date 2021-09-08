@@ -38,16 +38,20 @@ xvid_spi/xvid_spi
 **/*.o
 
 # rosco files
-**_m68k*/*.elf
-**_m68k*/*.s
-**_m68k*/*.i
-**_m68k*/*.sym
-**_m68k*/*.dis
-**_m68k*/*.map
-**_m68k*/*.lst
+**/**_m68k*/*.elf
+**/**_m68k*/*.s
+**/**_m68k*/*.i
+**/**_m68k*/*.sym
+**/**_m68k*/*.dis
+**/**_m68k*/*.map
+**/**_m68k*/*.lst
 
 # macOS thing
 .DS_Store
 utils/raw256to16color
 utils/pal_to_raw
 utils/image_pal
+
+# Vim swaps
+**/*.swp
+

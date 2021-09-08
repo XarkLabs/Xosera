@@ -1,0 +1,12 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "16-bit tenth of millisecond timer",
+            "type": 4
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

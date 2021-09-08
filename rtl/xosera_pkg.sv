@@ -25,6 +25,8 @@
 
 //`define TESTPATTERN     // init with "test pattern" instead of clear VRAM
 
+`define HACKFAST                    // temp hacks to (more easily) get 848x480 bitstream
+
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
 // Xosera directly addressable registers (16 x 16-bit word)

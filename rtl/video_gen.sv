@@ -36,7 +36,9 @@ module video_gen(
     input  wire logic [15:0]     tilemem_data_i,     // tile mem word data in
     output      logic            spritemem_sel_o,    // sprite mem read select
     output      logic  [7:0]     spritemem_addr_o,   // sprite mem word address out (16x256)
+/* verilator lint_off UNUSED */                      // HACKFAST
     input  wire logic [15:0]     spritemem_data_i,   // sprite mem word data in
+/* verilator lint_on UNUSED */
     // video signal outputs
     output      logic  [7:0]     color_index_o,      // color palette index output (16x256)
     output      logic            vsync_o, hsync_o,   // video sync outputs
@@ -57,8 +59,10 @@ localparam H_SCANOUT_END = xv::TOTAL_WIDTH; // h count position to start line sc
 logic [7:0]     border_color;
 logic [10:0]    cursor_x;
 logic [10:0]    cursor_y;
+/* verilator lint_off UNUSED */                      // HACKFAST
 logic [10:0]    sprite_x;
 logic [10:0]    sprite_y;
+/* verilator lint_on UNUSED */
 logic [10:0]    vid_top;
 logic [10:0]    vid_bottom;
 logic [10:0]    vid_left;
@@ -339,13 +343,18 @@ end
 
 // generate tile address from index, tile y, bpp and tile size (8x8 or 8x16)
 function automatic [15:0] calc_tile_addr(
+/* verilator lint_off UNUSED */                      // HACKFAST
         input [9:0] tile_char,
         input [3:0] tile_y,
         input [5:0] tilebank,
         input [1:0] bpp,
         input       tile_8x16
+/* verilator lint_on UNUSED */
     );
     begin
+`ifdef HACKFAST        
+            calc_tile_addr = { tilebank, 10'b0 } | { 5'b0, tile_char[7: 0], tile_y[3:1] };         // 8W  1-BPP 8x16 (even/odd byte)
+`else
         case ({ bpp, tile_8x16})
             3'b000:  calc_tile_addr = { tilebank, 10'b0 } | { 6'b0, tile_char[7: 0], tile_y[2:1] };         // 4W  1-BPP 8x8 (even/odd byte)
             3'b001:  calc_tile_addr = { tilebank, 10'b0 } | { 5'b0, tile_char[7: 0], tile_y[3:1] };         // 8W  1-BPP 8x16 (even/odd byte)
@@ -356,12 +365,17 @@ function automatic [15:0] calc_tile_addr(
             3'b110:  calc_tile_addr = { tilebank, 10'b0 } | { 1'b0, tile_char[9: 0], tile_y[2:0], 2'b0 };   // 32W 8-BPP 8x8
             3'b111:  calc_tile_addr = { tilebank, 10'b0 } | { tile_char[9: 0], tile_y[3:0], 2'b0 };         // 64W 8-BPP 8x16
         endcase
+`endif
     end
 endfunction
 
 // up to 1024 tile glyphs per tile (256 in 1-bpp mode)
+`ifdef HACKFAST        
+assign pa_tile_addr = calc_tile_addr(vram_data_i[9: 0], pa_tile_y, pa_tile_bank, pa_bpp, pa_tile_height[3]);  // NOTE: uses "hot" vram data output
+`else
 assign pa_tile_addr = calc_tile_addr(vram_data_i[9: 0], (vram_data_i[11] && (pa_bpp != xv::BPP_1_ATTR)) ? pa_tile_height - pa_tile_y : pa_tile_y,
                                      pa_tile_bank, pa_bpp, pa_tile_height[3]);  // NOTE: uses "hot" vram data output
+`endif
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -409,7 +423,7 @@ always_ff @(posedge clk) begin
         // set output pixel index from pixel shift-out
         color_index_o <= pa_pixel_shiftout[63:56];
 
-`ifndef BADJUJU
+/* verilator lint_off UNUSED */                      // HACKFAST
         // sprite (TODO: this is pretty crappy 😅)
         spritemem_sel_o <= 1'b0;
         if (sprite_y[10:5] == 6'b0) begin

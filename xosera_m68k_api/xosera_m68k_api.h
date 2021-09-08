@@ -15,7 +15,7 @@
  * Copyright (c) 2021 Xark
  * MIT License
  *
- * Xosera low-level C API to read/write Xosera registers
+ * Xosera rosco_m68k low-level C API for Xosera registers
  * ------------------------------------------------------------
  */
 
@@ -29,7 +29,7 @@
 #define cpu_delay(ms) mcBusywait(ms << 4);
 
 bool xosera_sync();                        // true if Xosera present and responding
-bool xosera_init(int reconfig_num);        // wait a bit for Xosera to respond with optional reconfig (if 0 to 3)
+bool xosera_init(int reconfig_num);        // wait a bit for Xosera to respond and optional reconfig (if 0 to 3)
 void xv_vram_fill(uint32_t vram_addr, uint32_t numwords, uint32_t word_value);           // fill VRAM with word
 void xv_copy_to_vram(uint16_t * source, uint32_t vram_dest, uint32_t numbytes);          // copy to VRAM
 void xv_copy_from_vram(uint32_t vram_source, uint16_t * dest, uint32_t numbytes);        // copy from VRAM
@@ -85,38 +85,49 @@ typedef struct _xreg
     };
 } xmreg_t;
 
+// Xosera SM register base ptr
 // NOTE: This seems "evil" to define in a header file, but since this is a const address gcc is smart
 // enough to just use a 32-bit immediate vs loading this from a pointer variable (exactly what is desired)
 static volatile xmreg_t * const xosera_ptr = (volatile xmreg_t * const)XM_BASEADDR;        // Xosera base address
 
-// Xosera SM register base ptr
-// extern volatile xmreg_t * const xosera_ptr;
-
-// set high byte of XM_<xmreg> to 8-bit byte bh
-#define xm_setbh(xmreg, bhval) (xosera_ptr[XM_##xmreg >> 2].b.h = (uint8_t)(bhval))
-// set low byte of XM_<xmreg> xr to 8-bit byte bl
-#define xm_setbl(xmreg, blval) (xosera_ptr[XM_##xmreg >> 2].b.l = (uint8_t)(blval))
-// set XM_<xmreg> to 16-bit word wv
-#define xm_setw(xmreg, wval)                                                                                           \
-    __asm__ __volatile__("movep.w %[src]," XM_STR(XM_##xmreg) "(%[ptr])"                                               \
-                         :                                                                                             \
-                         : [src] "d"((uint16_t)(wval)), [ptr] "a"(xosera_ptr)                                          \
-                         :)
-// set XM_<xmreg> to 32-bit long lv (sets two consecutive 16-bit word registers)
-#define xm_setl(xmreg, lval)                                                                                           \
-    __asm__ __volatile__("movep.l %[src]," XM_STR(XM_##xmreg) "(%[ptr])"                                               \
-                         :                                                                                             \
-                         : [src] "d"((uint32_t)(lval)), [ptr] "a"(xosera_ptr)                                          \
-                         :)
-// set XR reg XR_<xreg> to 16-bit word wv (uses MOVEP.L if reg and value are constant)
-#define xreg_setw(xreg, wval)                                                                                          \
+// set high byte (even address) of XM register XM_<xmreg> to 8-bit high_byte
+#define xm_setbh(xmreg, high_byte) (xosera_ptr[(XM_##xmreg) >> 2].b.h = (high_byte))
+// set low byte (odd address) of XM register XM_<xmreg> xr to 8-bit low_byte
+#define xm_setbl(xmreg, low_byte) (xosera_ptr[(XM_##xmreg) >> 2].b.l = (low_byte))
+// set XM register XM_<xmreg> to 16-bit word word_value
+#define xm_setw(xmreg, word_value)                                                                                     \
     do                                                                                                                 \
     {                                                                                                                  \
-        if (__builtin_constant_p((XR_##xreg)) && __builtin_constant_p((wval)))                                         \
+        (void)(XM_##xmreg);                                                                                            \
+        uint16_t uval16 = (word_value);                                                                                \
+        __asm__ __volatile__("movep.w %[src]," XM_STR(XM_##xmreg) "(%[ptr])"                                           \
+                             :                                                                                         \
+                             : [src] "d"(uval16), [ptr] "a"(xosera_ptr)                                                \
+                             :);                                                                                       \
+    } while (false)
+
+// set XM register XM_<xmreg> to 32-bit long long_value (sets two consecutive 16-bit word registers)
+#define xm_setl(xmreg, long_value)                                                                                     \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        (void)(XM_##xmreg);                                                                                            \
+        uint32_t uval32 = (long_value);                                                                                \
+        __asm__ __volatile__("movep.l %[src]," XM_STR(XM_##xmreg) "(%[ptr])"                                           \
+                             :                                                                                         \
+                             : [src] "d"(uval32), [ptr] "a"(xosera_ptr)                                                \
+                             :);                                                                                       \
+    } while (false)
+// set XR register XR_<xreg> to 16-bit word word_value (uses MOVEP.L if reg and value are constant)
+#define xreg_setw(xreg, word_value)                                                                                    \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        (void)(XR_##xreg);                                                                                             \
+        uint16_t uval16 = (word_value);                                                                                \
+        if (__builtin_constant_p((XR_##xreg)) && __builtin_constant_p((word_value)))                                   \
         {                                                                                                              \
             __asm__ __volatile__("movep.l %[rxav]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; "                                   \
                                  :                                                                                     \
-                                 : [rxav] "d"(((XR_##xreg) << 16) | (uint16_t)(wval)), [ptr] "a"(xosera_ptr)           \
+                                 : [rxav] "d"(((XR_##xreg) << 16) | (uint16_t)((word_value))), [ptr] "a"(xosera_ptr)   \
                                  :);                                                                                   \
         }                                                                                                              \
         else                                                                                                           \
@@ -124,65 +135,97 @@ static volatile xmreg_t * const xosera_ptr = (volatile xmreg_t * const)XM_BASEAD
             __asm__ __volatile__(                                                                                      \
                 "movep.w %[rxa]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; movep.w %[src]," XM_STR(XM_XR_DATA) "(%[ptr])"        \
                 :                                                                                                      \
-                : [rxa] "d"((XR_##xreg)), [src] "d"((uint16_t)(wval)), [ptr] "a"(xosera_ptr)                           \
+                : [rxa] "d"((XR_##xreg)), [src] "d"(uval16), [ptr] "a"(xosera_ptr)                                     \
                 :);                                                                                                    \
         }                                                                                                              \
     } while (false)
 
-// set XR memory address to 16-bit word wv
-#define xmem_setw(xrmem, wval)                                                                                         \
-    __asm__ __volatile__(                                                                                              \
-        "movep.w %[xra]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; movep.w %[src]," XM_STR(XM_XR_DATA) "(%[ptr])"                \
-        :                                                                                                              \
-        : [xra] "d"((uint16_t)(xrmem)), [src] "d"((uint16_t)(wval)), [ptr] "a"(xosera_ptr)                             \
-        :)
+// set XR memory address xrmem to 16-bit word word_value
+#define xmem_setw(xrmem, word_value)                                                                                   \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        uint16_t umem16 = (xrmem);                                                                                     \
+        uint16_t uval16 = (word_value);                                                                                \
+        __asm__ __volatile__(                                                                                          \
+            "movep.w %[xra]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; movep.w %[src]," XM_STR(XM_XR_DATA) "(%[ptr])"            \
+            :                                                                                                          \
+            : [xra] "d"(umem16), [src] "d"(uval16), [ptr] "a"(xosera_ptr)                                              \
+            :);                                                                                                        \
+    } while (false)
 
 // NOTE: Uses clang and gcc supported extension (statement expression), so we must slightly lower shields...
 #pragma GCC diagnostic ignored "-Wpedantic"        // Yes, I'm slightly cheating (but ugly to have to pass in "return
                                                    // variable" - and this is the "low level" API, remember)
 
-// return high byte from XM_<xmreg>
+// return high byte (even address) from XM register XM_<xmreg>
 #define xm_getbh(xmreg) (xosera_ptr[XM_##xmreg >> 2].b.h)
-// return low byte from XM_<xmreg>
+// return low byte (odd address) from XM register XM_<xmreg>
 #define xm_getbl(xmreg) (xosera_ptr[XM_##xmreg >> 2].b.l)
-// return 16-bit word from XM_<xmreg>
+// return 16-bit word from XM register XM_<xmreg>
 #define xm_getw(xmreg)                                                                                                 \
     ({                                                                                                                 \
-        uint16_t wval;                                                                                                 \
+        (void)(XM_##xmreg);                                                                                            \
+        uint16_t word_value;                                                                                           \
         __asm__ __volatile__("movep.w " XM_STR(XM_##xmreg) "(%[ptr]),%[dst]"                                           \
-                             : [dst] "=d"(wval)                                                                        \
+                             : [dst] "=d"(word_value)                                                                  \
                              : [ptr] "a"(xosera_ptr)                                                                   \
                              :);                                                                                       \
-        wval;                                                                                                          \
+        word_value;                                                                                                    \
     })
-// return 32-bit word from two consecutive 16-bit word registers (XM_<xmreg>, XM_<xmreg>+1)
+// return 32-bit word from two consecutive 16-bit word XM registers XM_<xmreg> & XM_<xmreg>+1
 #define xm_getl(xmreg)                                                                                                 \
     ({                                                                                                                 \
-        uint32_t lval;                                                                                                 \
+        (void)(XM_##xmreg);                                                                                            \
+        uint32_t long_value;                                                                                           \
         __asm__ __volatile__("movep.l " XM_STR(XM_##xmreg) "(%[ptr]),%[dst]"                                           \
-                             : [dst] "=d"(lval)                                                                        \
+                             : [dst] "=d"(long_value)                                                                  \
                              : [ptr] "a"(xosera_ptr)                                                                   \
                              :);                                                                                       \
-        lval;                                                                                                          \
+        long_value;                                                                                                    \
     })
-// return high byte from AUX address xa
+// return high byte (even address) from XR memory address xrmem
 #define xmem_getbh(xrmem) (xm_setw(XR_ADDR, xrmem), xosera_ptr[XM_XR_DATA >> 2].b.h)
-// return low byte from AUX address xa
+// return low byte (odd address) from XR memory address xrmem
 #define xmem_getbl(xrmem) (xm_setw(XR_ADDR, xrmem), xosera_ptr[XM_XR_DATA >> 2].b.l)
-// return 16-bit word from AUX address xa
+// return 16-bit word from XR memory address xrmem
 #define xmem_getw(xrmem)                                                                                               \
     ({                                                                                                                 \
-        uint16_t w;                                                                                                    \
+        uint16_t word_value;                                                                                           \
         xm_setw(XR_ADDR, xrmem);                                                                                       \
         __asm__ __volatile__("movep.w " XM_STR(XM_XR_DATA) "(%[ptr]),%[dst]"                                           \
-                             : [dst] "=d"(w)                                                                           \
+                             : [dst] "=d"(word_value)                                                                  \
                              : [ptr] "a"(xosera_ptr)                                                                   \
                              :);                                                                                       \
-        w;                                                                                                             \
+        word_value;                                                                                                    \
     })
-// return high byte from xosera_xr_reg xr
-#define xreg_getbh(xreg) xmem_getbh(XR_##xreg)
-// return low byte from xosera_xr_reg xr
-#define xreg_getbl(xreg) xmem_getbl(XR_##xreg)
-// return 16-bit word from xosera_xr_reg xr
-#define xreg_getw(xreg) xmem_getw(XR_##xreg)
+// return high byte (even address) from XR register XR_<xreg>
+#define xreg_getbh(xreg)                                                                                               \
+    ({                                                                                                                 \
+        (void)(XR_##xreg);                                                                                             \
+        uint8_t byte_value;                                                                                            \
+        xm_setw(XR_ADDR, (XR_##xreg));                                                                                 \
+        byte_value = xosera_ptr[XM_XR_DATA >> 2].b.h;                                                                  \
+        byte_value;                                                                                                    \
+    })
+
+// return low byte (odd address) from XR register XR_<xreg>
+#define xreg_getbl(xreg)                                                                                               \
+    ({                                                                                                                 \
+        (void)(XR_##xreg);                                                                                             \
+        uint8_t byte_value;                                                                                            \
+        xm_setw(XR_ADDR, (XR_##xreg));                                                                                 \
+        byte_value = xosera_ptr[XM_XR_DATA >> 2].b.l;                                                                  \
+        byte_value;                                                                                                    \
+    })
+// return 16-bit word from XR register XR_<xreg>
+#define xreg_getw(xreg)                                                                                                \
+    ({                                                                                                                 \
+        (void)(XR_##xreg);                                                                                             \
+        uint16_t word_value;                                                                                           \
+        xm_setw(XR_ADDR, (XR_##xreg));                                                                                 \
+        __asm__ __volatile__("movep.w " XM_STR(XM_XR_DATA) "(%[ptr]),%[dst]"                                           \
+                             : [dst] "=d"(word_value)                                                                  \
+                             : [ptr] "a"(xosera_ptr)                                                                   \
+                             :);                                                                                       \
+        word_value;                                                                                                    \
+    })

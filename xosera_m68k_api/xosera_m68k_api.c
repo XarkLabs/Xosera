@@ -1,16 +1,21 @@
 /*
  * vim: set et ts=4 sw=4
  *------------------------------------------------------------
- *                                  ___ ___ _
- *  ___ ___ ___ ___ ___       _____|  _| . | |_
- * |  _| . |_ -|  _| . |     |     | . | . | '_|
- * |_| |___|___|___|___|_____|_|_|_|___|___|_,_|
- *                     |_____|
+ *  __ __
+ * |  |  |___ ___ ___ ___ ___
+ * |-   -| . |_ -| -_|  _| .'|
+ * |__|__|___|___|___|_| |__,|
+ *
+ * Xark's Open Source Enhanced Retro Adapter
+ *
+ * - "Not as clumsy or random as a GPU, an embedded retro
+ *    adapter for a more civilized age."
+ *
  * ------------------------------------------------------------
  * Copyright (c) 2021 Xark
  * MIT License
  *
- * Xosera low-level C API to read/write Xosera registers
+ * Xosera rosco_m68k low-level C API for Xosera registers
  * ------------------------------------------------------------
  */
 
@@ -81,12 +86,12 @@ void xv_vram_fill(uint32_t vram_addr, uint32_t numwords, uint32_t word_value)
     uint32_t long_value = (word_value << 16) | (word_value & 0xffff);
     if (numwords & 1)
     {
-        xm_setw(WR_DATA, word_value);
+        xm_setw(DATA, word_value);
     }
     int long_size = numwords >> 1;
     while (long_size--)
     {
-        xm_setl(WR_DATA, long_value);
+        xm_setl(DATA, long_value);
     }
 }
 
@@ -97,13 +102,13 @@ void xv_copy_to_vram(uint16_t * source, uint32_t vram_dest, uint32_t numbytes)
     xm_setw(WR_INCR, 1);
     if (numbytes & 2)
     {
-        xm_setw(WR_DATA, *source++);
+        xm_setw(DATA, *source++);
     }
     uint32_t * long_ptr  = (uint32_t *)source;
     int        long_size = numbytes >> 2;
     while (long_size--)
     {
-        xm_setl(WR_DATA, *long_ptr++);
+        xm_setl(DATA, *long_ptr++);
     }
 }
 

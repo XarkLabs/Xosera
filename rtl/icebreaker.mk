@@ -14,7 +14,7 @@
 #       Built using macOS BigSur 11.5.2 and GNU/Linux Ubuntu 20.04 distribution
 
 # This is a hack to get make to exit if command fails (even if command after pipe succeeds, e.g., tee)
-SHELL := $(shell echo $(SHELL)) -o pipefail
+SHELL := /bin/bash -o pipefail
 
 # Version bookkeeping
 GITSHORTHASH := $(shell git rev-parse --short HEAD)

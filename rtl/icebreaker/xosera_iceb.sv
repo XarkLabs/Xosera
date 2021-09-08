@@ -97,8 +97,6 @@ logic [7:0] bus_data_in;
 // only set bus to output if CS enabled and read
 assign bus_out_ena = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ);
 
-logic zzz;
-
 `ifdef SPI_INTERFACE   // SPU interface to drive bus signals
     // assign SPI GPIO for SPI interface (to emulate bus interface)
     assign spi_cs_n     = LEDR_N;

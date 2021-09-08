@@ -25,11 +25,12 @@
 #if defined(delay)        // clear out mcBusywait
 #undef delay
 #endif
-#define delay(x)      mcDelaymsec10(x / 10);
-#define cpu_delay(ms) mcBusywait(ms << 4);
+#define delay(ms)     xv_delay(ms)
+#define cpu_delay(ms) mcBusywait(ms << 9);        // ~500 == 1ms @ 10MHz 68K
 
 bool xosera_sync();                        // true if Xosera present and responding
 bool xosera_init(int reconfig_num);        // wait a bit for Xosera to respond and optional reconfig (if 0 to 3)
+void xv_delay(uint32_t ms);                // delay milliseconds using Xosera TIMER
 void xv_vram_fill(uint32_t vram_addr, uint32_t numwords, uint32_t word_value);           // fill VRAM with word
 void xv_copy_to_vram(uint16_t * source, uint32_t vram_dest, uint32_t numbytes);          // copy to VRAM
 void xv_copy_from_vram(uint32_t vram_source, uint16_t * dest, uint32_t numbytes);        // copy from VRAM
@@ -85,10 +86,19 @@ typedef struct _xreg
     };
 } xmreg_t;
 
-// Xosera SM register base ptr
-// NOTE: This seems "evil" to define in a header file, but since this is a const address gcc is smart
-// enough to just use a 32-bit immediate vs loading this from a pointer variable (exactly what is desired)
-static volatile xmreg_t * const xosera_ptr = (volatile xmreg_t * const)XM_BASEADDR;        // Xosera base address
+// Xosera XM register base ptr
+extern volatile xmreg_t * const xosera_ptr;
+
+// Extra-credit function that saves 8 cycles per function that calls xosera API functions (call once at top).
+// (NOTE: This works by "shadowing" the global xosera_ptr and using asm to load the constant value more efficiently.  If
+// GCC "sees" the constant pointer value, it seems to want to load it over and over as needed.  This method gets GCC to
+// load the pointer once (using more efficient immediate addressing mode) and keep it loaded in an address register.)
+#define xv_prep()                                                                                                      \
+    volatile xmreg_t * const xosera_ptr = ({                                                                           \
+        xmreg_t * ptr;                                                                                                 \
+        __asm__ __volatile__("lea.l " XM_STR(XM_BASEADDR) ",%[ptr]" : [ptr] "=a"(ptr) : :);                            \
+        ptr;                                                                                                           \
+    })
 
 // set high byte (even address) of XM register XM_<xmreg> to 8-bit high_byte
 #define xm_setbh(xmreg, high_byte) (xosera_ptr[(XM_##xmreg) >> 2].b.h = (high_byte))

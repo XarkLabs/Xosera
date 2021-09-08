@@ -36,10 +36,6 @@ extern void remove_intr(void);
 
 extern volatile uint32_t XFrameCount;
 
-// Define rosco_m68k Xosera board base address pointer (See
-// https://github.com/rosco-m68k/hardware-projects/blob/feature/xosera/xosera/code/pld/decoder/ic3_decoder.pld#L25)
-// static volatile xmreg_t * const xosera_ptr = (volatile xmreg_t * const)XM_BASEADDR;        // rosco_m68k Xosera base
-
 bool use_sd;
 
 // Xosera default color palette
@@ -106,19 +102,22 @@ bool checkchar()
 }
 #endif
 
-bool delay_check(int ms)
+__attribute__((noinline)) bool delay_check(int ms)
 {
-    while (ms > 0)
+    while (ms--)
     {
         if (checkchar())
         {
             return true;
         }
 
-        uint32_t old_framecount = XFrameCount;
-        while (XFrameCount == old_framecount)
-            ;
-        ms -= 16;
+        uint16_t tms = 10;
+        do
+        {
+            uint8_t tvb = xm_getbl(TIMER);
+            while (tvb == xm_getbl(TIMER))
+                ;
+        } while (--tms);
     }
 
     return false;
@@ -266,6 +265,7 @@ void test_hello()
 void test_vram_speed()
 {
     xcls();
+    xv_prep();
     xm_setw(WR_INCR, 1);
     xm_setw(WR_ADDR, 0x0000);
     xm_setw(RD_INCR, 1);
@@ -525,9 +525,8 @@ void     xosera_test()
     install_intr();
     dprintf("okay.\n");
 
+    printf("Checking for interrupt...");
     uint32_t t = XFrameCount;
-    dprintf("XFrameCount = %d\n", t);
-    printf("Waiting for interrupt...");
     while (XFrameCount == t)
         ;
     printf("okay. Vsync interrupt detected.\n\n");

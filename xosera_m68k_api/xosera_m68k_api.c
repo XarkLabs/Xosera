@@ -28,10 +28,26 @@
 
 #include "xosera_m68k_api.h"
 
+void xv_delay(uint32_t ms)
+{
+    xv_prep();
+
+    while (ms--)
+    {
+        uint16_t tms = 10;
+        do
+        {
+            uint8_t tvb = xm_getbl(TIMER);
+            while (tvb == xm_getbl(TIMER))
+                ;
+        } while (--tms);
+    }
+}
+
 bool xosera_init(int reconfig_num)
 {
     // check for Xosera presense (retry in case it is reconfiguring)
-    for (int r = 0; r < 500; r++)
+    for (int r = 0; r < 200; r++)
     {
         if (xosera_sync())
         {
@@ -39,6 +55,8 @@ bool xosera_init(int reconfig_num)
         }
         cpu_delay(10);
     }
+
+    xv_prep();
 
     // done if configuration if not valid (0 to 3)
     if ((reconfig_num & 3) == reconfig_num)
@@ -50,7 +68,7 @@ bool xosera_init(int reconfig_num)
             return false;
         }
         // wait for Xosera to regain consciousness (takes ~80 milliseconds)
-        for (int r = 0; r < 500; r++)
+        for (int r = 0; r < 200; r++)
         {
             cpu_delay(10);
             if (xosera_sync())
@@ -65,6 +83,8 @@ bool xosera_init(int reconfig_num)
 
 bool xosera_sync()
 {
+    xv_prep();
+
     xm_setw(XR_ADDR, 0xF5A5);
     if (xm_getw(XR_ADDR) != 0xF5A5)
     {
@@ -81,6 +101,8 @@ bool xosera_sync()
 // NOTE: size is in bytes, but assumed to be a multiple of 2 (words)
 void xv_vram_fill(uint32_t vram_addr, uint32_t numwords, uint32_t word_value)
 {
+    xv_prep();
+
     xm_setw(WR_ADDR, vram_addr);
     xm_setw(WR_INCR, 1);
     uint32_t long_value = (word_value << 16) | (word_value & 0xffff);
@@ -98,6 +120,8 @@ void xv_vram_fill(uint32_t vram_addr, uint32_t numwords, uint32_t word_value)
 // NOTE: numbytes is in bytes, but assumed to be a multiple of 2 (words)
 void xv_copy_to_vram(uint16_t * source, uint32_t vram_dest, uint32_t numbytes)
 {
+    xv_prep();
+
     xm_setw(WR_ADDR, vram_dest);
     xm_setw(WR_INCR, 1);
     if (numbytes & 2)
@@ -115,6 +139,8 @@ void xv_copy_to_vram(uint16_t * source, uint32_t vram_dest, uint32_t numbytes)
 // NOTE: size is in bytes, but assumed to be a multiple of 2 (words)
 void xv_copy_from_vram(uint32_t vram_source, uint16_t * dest, uint32_t numbytes)
 {
+    xv_prep();
+
     xm_setw(RD_ADDR, vram_source);
     xm_setw(RD_INCR, 1);
     if (numbytes & 2)
@@ -128,3 +154,11 @@ void xv_copy_from_vram(uint32_t vram_source, uint16_t * dest, uint32_t numbytes)
         *long_ptr++ = xm_getl(DATA);
     }
 }
+
+// define xosera_ptr in a way that GCC can't see the immediate const value (causing it to keep it in a register).
+__asm__(
+    "               .data\n"
+    "               .section    .rodata.xosera_ptr,\"a\"\n"
+    "               .align      2\n"
+    "               .globl      xosera_ptr\n"
+    "xosera_ptr:    .long       " XM_STR(XM_BASEADDR) "\n");

@@ -29,7 +29,7 @@
 // TODO update below with actual instruction timing.
 //
 // If the copper encounters an illegal instruction, ~~it will halt
-// and catch fire~~ that instruction will be ignored (wasting four pixels,
+// and catch fire~~ that instruction will be ignored (wasting five pixels,
 // which I guess might prove useful if you need a NOP).
 //
 // This means:
@@ -106,17 +106,17 @@
 //
 //      MOVEF - [1010 AAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
-//          Move 16-bit data to AUX_FONT memory.
+//          Move 16-bit data to XR_TILE_MEM memory.
 //
 //
 //      MOVEP - [1011 oooo AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
-//          Move 16-bit data to AUX_COLORTBL (palette) memory.
+//          Move 16-bit data to XR_COLOR_MEM (palette) memory.
 //
 //
 //      MOVEC - [1100 oAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
-//          Move 16-bit data to AUX_COPPER memory.
+//          Move 16-bit data to XR_COPPER_MEM memory.
 //
 //  
 //      Y - Y position (11 bits)

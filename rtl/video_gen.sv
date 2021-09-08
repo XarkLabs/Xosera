@@ -22,7 +22,8 @@
 module video_gen(
     // video registers and control
     input  wire logic            vgen_reg_wr_i,      // strobe to write internal config register number
-    input  wire logic  [4:0]     vgen_reg_num_i,     // internal config register number
+    input  wire logic  [4:0]     vgen_reg_num_r_i,   // internal config register number (for reads)
+    input  wire logic  [4:0]     vgen_reg_num_w_i,   // internal config register number (for writes)
     input  wire logic [15:0]     vgen_reg_data_i,    // data for internal config register
     output      logic [15:0]     vgen_reg_data_o,    // register/status data reads
     input wire  logic  [3:0]     intr_status_i,      // interrupt pending status
@@ -189,7 +190,7 @@ always_ff @(posedge clk) begin
         pa_line_start_set   <= 1'b0;
         // video register write
         if (vgen_reg_wr_i) begin
-            case (vgen_reg_num_i[4:0])
+            case (vgen_reg_num_w_i[4:0])
                 xv::XR_VID_CTRL[4:0]: begin
                     border_color    <= vgen_reg_data_i[15:8];
                     intr_signal_o   <= vgen_reg_data_i[3:0];
@@ -255,7 +256,7 @@ end
 
 // video registers read
 always_ff @(posedge clk) begin
-    case (vgen_reg_num_i[4:0])
+    case (vgen_reg_num_r_i[4:0])
         xv::XR_VID_CTRL[4:0]:       vgen_reg_data_o <= {border_color, 4'bx, intr_status_i };
         xv::XR_COPP_CTRL[4:0]:      vgen_reg_data_o <= {16'h0000 }; // TODO copper
         xv::XR_CURSOR_X[4:0]:       vgen_reg_data_o <= {5'b0, cursor_x };

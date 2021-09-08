@@ -241,7 +241,8 @@ blitter blitter(
 //  video generation
 video_gen video_gen(
     .vgen_reg_wr_i(xr_reg_wr_in),
-    .vgen_reg_num_i(xr_reg_wr_addr_in),
+    .vgen_reg_num_r_i(blit_addr[4:0]),
+    .vgen_reg_num_w_i(xr_reg_wr_addr_in),
     .vgen_reg_data_i(xr_reg_wr_data_in),
     .vgen_reg_data_o(vgen_reg_data_out),
     .intr_status_i(intr_status),        // status read from VID_CTRL

@@ -87,7 +87,9 @@ typedef struct _xreg
 } xmreg_t;
 
 // Xosera XM register base ptr
+#if !defined(XV_PREP_REQUIRED)
 extern volatile xmreg_t * const xosera_ptr;
+#endif
 
 // Extra-credit function that saves 8 cycles per function that calls xosera API functions (call once at top).
 // (NOTE: This works by "shadowing" the global xosera_ptr and using asm to load the constant value more efficiently.  If

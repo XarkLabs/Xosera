@@ -97,4 +97,15 @@
 #define XR_PB_UNUSED_1E 0x1E        //
 #define XR_PB_UNUSED_1F 0x1F        //
 
+// Macros to make bit-fields easier
+#define XB_(v, lb, rb) (((v) & ((1 << ((lb) - (rb) + 1)) - 1)) << (rb))
+
+#define MAKE_SYS_CTRL(reboot, bootcfg, wrmask, intena)                                                                 \
+    (XB_(reboot, 15, 15) | XB_(bootcfg, 14, 13) | XB_(wrmask, 11, 8) | XB_(intena, 3, 0))
+#define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 15, 8) | XB_(intmask, 3, 0))
+#define MAKE_GFX_CTRL(colbase, blank, bpp, bm, hx, vx)                                                                 \
+    (XB_(colbase, 15, 8) | XB_(blank, 7, 7) | XB_(bm, 6, 6) | XB_(bpp, 5, 4) | XB_(hx, 3, 2) | XB_(vx, 1, 0))
+#define MAKE_TILE_CTRL(tilebase, vram, tileheight) (((tilebase)&0xFC00) | XB_(vram, 8, 8) | XB_(tileheight, 3, 0))
+#define MAKE_HV_SCROLL(h_scrl, v_scrl)             (XB_(h_scrl, 12, 8) | XB_(v_scrl, 5, 0))
+
 // TODO blit and polydraw

@@ -149,7 +149,7 @@ _NOINLINE static void dprintf(const char * fmt, ...)
 #define LOGF(fmt, ...)
 #endif
 
-// terminal support
+// terminal xosera support
 
 _NOINLINE static void wait_vsync()
 {
@@ -211,7 +211,7 @@ _NOINLINE void text_reset(ansiterm_data * td)
 
 // terminal functions
 
-void cls(ansiterm_data * td)
+static void cls(ansiterm_data * td)
 {
     xv_prep();
 
@@ -228,13 +228,13 @@ void cls(ansiterm_data * td)
     td->cur_addr = td->vram_base;
 }
 
-void ansiterm_init(ansiterm_data * td)
+static void ansiterm_init(ansiterm_data * td)
 {
     text_reset(td);
     cls(td);
 }
 
-void ansiterm_scroll_up(ansiterm_data * td)
+static void ansiterm_scroll_up(ansiterm_data * td)
 {
     xv_prep();
     xm_setw(WR_INCR, 1);
@@ -252,7 +252,7 @@ void ansiterm_scroll_up(ansiterm_data * td)
     }
 }
 
-void ansiterm_drawchar(ansiterm_data * td, char c)
+static void ansiterm_drawchar(ansiterm_data * td, char c)
 {
     xv_prep();
     xm_setw(WR_INCR, 1);
@@ -260,7 +260,7 @@ void ansiterm_drawchar(ansiterm_data * td, char c)
     xm_setbh(DATA, td->color);
     xm_setbl(DATA, c);
 
-    if ((td->cur_addr - td->vram_base) > td->vram_size)
+    if ((uint16_t)(td->cur_addr - td->vram_base) >= td->vram_size)
     {
         ansiterm_scroll_up(td);
         td->cur_addr -= td->cols;
@@ -314,13 +314,14 @@ _NOINLINE static void tprintf(const char * fmt, ...)
 void xosera_ansiterm()
 {
     LOG("ANSI terminal started.\n");
-    xosera_init(0);
+    xosera_init(1);
     xv_delay(100);
     ansiterm_init(&atd);
 
     do
     {
-        tprint("ANSI Terminal Test! \n");
+        tprint("This is an ANSI Terminal Test!  \n");
+        atd.color++;
     } while (!checkchar());
 
     cls(&atd);

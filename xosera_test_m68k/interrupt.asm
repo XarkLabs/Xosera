@@ -9,12 +9,15 @@
 install_intr::
                 movem.l D0-D7/A0-A6,-(A7)
 
+                or.w    #$0200,SR               ; disable interrupts
+
                 move.l  #XM_BASEADDR,A0         ; get Xosera base addr
                 move.b  #$0F,D0                 ; all interrupt source bits
-                move.b  D0,XM_TIMER+2(A0)       ; clear out prior pending interrupts
+                move.b  D0,XM_TIMER+2(A0)       ; clear out any prior pending interrupts
 
-                move.l  #Xosera_intr,$68
-                and.w   #$F0FF,SR
+                move.l  #Xosera_intr,$68        ; set interrupt vector
+                and.w   #$F0FF,SR               ; enable interrupts
+
                 movem.l (A7)+,D0-D7/A0-A6
                 rts
 

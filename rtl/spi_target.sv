@@ -14,19 +14,19 @@
 
 module spi_target(
 
-            input  logic        spi_sck_i,          // SPI clock
-            input  logic        spi_copi_i,         // SPI data from initiator
-            output logic        spi_cipo_o,         // SPI data to initiator
-            input  logic        spi_cs_i,           // SPI target select
+            input  wire logic        spi_sck_i,          // SPI clock
+            input  wire logic        spi_copi_i,         // SPI data from initiator
+            output      logic        spi_cipo_o,         // SPI data to initiator
+            input  wire logic        spi_cs_i,           // SPI target select
 
-            output logic        select_o,
-            output logic        receive_strobe_o,   // true for cycle when data available
-            output logic [7: 0] receive_byte_o,     // data read from initiator
-            output logic        transmit_strobe_o,  // data to send to initiator (on next initiator write)
-            input  logic [7: 0] transmit_byte_i,    // data to send to initiator (on next initiator write)
+            output      logic        select_o,
+            output      logic        receive_strobe_o,   // true for cycle when data available
+            output      logic [7: 0] receive_byte_o,     // data read from initiator
+            output      logic        transmit_strobe_o,  // data to send to initiator (on next initiator write)
+            input  wire logic [7: 0] transmit_byte_i,    // data to send to initiator (on next initiator write)
 
-            input  logic        reset_i,            // reset
-            input  logic        clk                 // input clk (should be ~4x faster than SPI clock)
+            input  wire logic        reset_i,            // reset
+            input  wire logic        clk                 // input clk (should be ~4x faster than SPI clock)
        );
 
 // input synchronizers (shifts left each cycle with bit 0 is set from inputs and bit 1 is acted on)

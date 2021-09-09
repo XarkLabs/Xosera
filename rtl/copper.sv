@@ -144,20 +144,20 @@ module copper(
     output       logic [15:0]   ram_wr_data_o,          // General, for all RAM blocks
     output       logic [10:0]   coppermem_rd_addr_o,
     output       logic          coppermem_rd_en_o,
-    input        logic [15:0]   coppermem_rd_data_i,
+    input   wire logic [15:0]   coppermem_rd_data_i,
     output       logic          coppermem_wr_en_o,
     output       logic          colormem_wr_en_o,
     output       logic          tilemem_wr_en_o,
     output       logic          vgen_reg_wr_en_o,
-    input        logic          blit_xr_reg_sel_i,
-    input        logic          blit_tilemem_sel_i,
-    input        logic          blit_colormem_sel_i,
-    input        logic          blit_coppermem_sel_i,
+    input   wire logic          blit_xr_reg_sel_i,
+    input   wire logic          blit_tilemem_sel_i,
+    input   wire logic          blit_colormem_sel_i,
+    input   wire logic          blit_coppermem_sel_i,
     input   wire logic          copp_reg_wr_i,          // strobe to write internal config register number
     input   wire logic  [3:0]   copp_reg_num_i,         // internal config register number
     input   wire logic [15:0]   copp_reg_data_i,        // data for internal config register
-    input        logic [10:0]   h_count_i,
-    input        logic [10:0]   v_count_i
+    input   wire logic [10:0]   h_count_i,
+    input   wire logic [10:0]   v_count_i
     );
 
 // instruction register

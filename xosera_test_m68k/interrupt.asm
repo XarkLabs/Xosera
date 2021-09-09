@@ -9,6 +9,10 @@
 install_intr::
                 movem.l D0-D7/A0-A6,-(A7)
 
+                move.l  #XM_BASEADDR,A0         ; get Xosera base addr
+                move.b  #$0F,D0                 ; all interrupt source bits
+                move.b  D0,XM_TIMER+2(A0)       ; clear out prior pending interrupts
+
                 move.l  #Xosera_intr,$68
                 and.w   #$F0FF,SR
                 movem.l (A7)+,D0-D7/A0-A6

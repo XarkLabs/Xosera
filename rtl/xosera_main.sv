@@ -372,7 +372,9 @@ always_ff @(posedge clk) begin
         intr_status <= 4'b0;
     end else begin
         // signal a bus interrupt if not masked and not set in status and
-        if ((intr_signal & intr_mask & (~intr_status)) != 4'b0) begin
+// TODO: Interrupt acknowledge is not reliable:
+//      if ((intr_signal & intr_mask & (~intr_status)) != 4'b0) begin
+        if ((intr_signal & intr_mask) != 4'b0) begin    // HACK: ignore intr_status
             bus_intr_o  <= 1'b1;
         end else begin
             bus_intr_o  <= 1'b0;

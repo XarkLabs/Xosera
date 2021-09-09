@@ -91,13 +91,19 @@ assign  blit_spritemem_wr   = blit_spritemem_sel && blit_wr;
 assign  blit_coppermem_wr   = blit_coppermem_sel && blit_wr;
 
 // Copper
-logic [11:0] copp_wr_addr;
-logic [15:0] copp_data_out;
+logic [15:0] copp_wr_addr       /* verilator public */;
+logic [15:0] copp_data_out      /* verilator public */;
+logic        copp_xr_wr_sel     /* verilator public */;
 
-logic        copp_coppermem_wr;
-logic        copp_colormem_wr;
-logic        copp_tilemem_wr;
-logic        copp_vgen_reg_wr;
+logic        copp_vgen_reg_wr   /* verilator public */;
+logic        copp_colormem_wr   /* verilator public */;
+logic        copp_tilemem_wr    /* verilator public */;
+logic        copp_coppermem_wr  /* verilator public */;
+
+assign  copp_vgen_reg_wr    = copp_xr_wr_sel && !copp_wr_addr[15];
+assign  copp_colormem_wr    = copp_xr_wr_sel && copp_wr_addr[15] && (copp_wr_addr[13:12] == xv::XR_COLOR_MEM[13:12]);
+assign  copp_tilemem_wr     = copp_xr_wr_sel && copp_wr_addr[15] && (copp_wr_addr[13:12] == xv::XR_TILE_MEM[13:12]);
+assign  copp_coppermem_wr   = copp_xr_wr_sel && copp_wr_addr[15] && (copp_wr_addr[13:12] == xv::XR_COPPER_MEM[13:12]);
 
 logic        coppermem_wr_in;
 logic [10:0] coppermem_wr_addr_in;
@@ -318,15 +324,12 @@ copper copper(
     .clk(clk),
     .reset_i(reset_i),
     .vblank_i(vgen_in_vblank),
-    .ram_wr_addr_o(copp_wr_addr),
-    .ram_wr_data_o(copp_data_out),
+    .xr_ram_wr_en_o(copp_xr_wr_sel),
+    .xr_ram_wr_addr_o(copp_wr_addr),
+    .xr_ram_wr_data_o(copp_data_out),
     .coppermem_rd_addr_o(copper_pc),
     .coppermem_rd_en_o(coppermem_rd_en),
     .coppermem_rd_data_i(coppermem_rd_data_out),
-    .coppermem_wr_en_o(copp_coppermem_wr),
-    .colormem_wr_en_o(copp_colormem_wr),
-    .tilemem_wr_en_o(copp_tilemem_wr),
-    .vgen_reg_wr_en_o(copp_vgen_reg_wr),
     .blit_xr_reg_sel_i(blit_vgen_reg_sel),
     .blit_tilemem_sel_i(blit_tilemem_sel),
     .blit_colormem_sel_i(blit_colormem_sel),

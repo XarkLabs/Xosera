@@ -142,15 +142,12 @@ module copper(
     input   wire logic          clk,    
     input   wire logic          reset_i,
     input   wire logic          vblank_i,
-    output       logic [11:0]   ram_wr_addr_o,          // General, for all RAM blocks
-    output       logic [15:0]   ram_wr_data_o,          // General, for all RAM blocks
+    output       logic          xr_ram_wr_en_o,         // General, for all RAM block writes
+    output       logic [15:0]   xr_ram_wr_addr_o,       // General, for all RAM block writes
+    output       logic [15:0]   xr_ram_wr_data_o,       // General, for all RAM block writes
     output       logic [10:0]   coppermem_rd_addr_o,
     output       logic          coppermem_rd_en_o,
     input   wire logic [15:0]   coppermem_rd_data_i,
-    output       logic          coppermem_wr_en_o,
-    output       logic          colormem_wr_en_o,
-    output       logic          tilemem_wr_en_o,
-    output       logic          vgen_reg_wr_en_o,
     input   wire logic          blit_xr_reg_sel_i,
     input   wire logic          blit_tilemem_sel_i,
     input   wire logic          blit_colormem_sel_i,
@@ -202,20 +199,13 @@ assign coppermem_rd_en_o        = ram_rd_strobe;
 assign coppermem_rd_addr_o      = copper_pc;
 
 logic [15:0]  ram_wr_data_out;
-logic [11:0]  ram_wr_addr_out;
+logic [15:0]  ram_wr_addr_out;
 
-logic         xr_reg_wr_strobe;
-logic         tilemem_wr_strobe;
-logic         colormem_wr_strobe;
-logic         coppermem_wr_strobe;
+logic         xr_wr_strobe;
 
-assign ram_wr_addr_o            = ram_wr_addr_out;
-assign ram_wr_data_o            = ram_wr_data_out;
-
-assign coppermem_wr_en_o        = coppermem_wr_strobe;
-assign colormem_wr_en_o         = colormem_wr_strobe;
-assign tilemem_wr_en_o          = tilemem_wr_strobe;
-assign vgen_reg_wr_en_o         = xr_reg_wr_strobe;
+assign xr_ram_wr_en_o           = xr_wr_strobe;
+assign xr_ram_wr_addr_o         = ram_wr_addr_out;
+assign xr_ram_wr_data_o         = ram_wr_data_out;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -226,10 +216,7 @@ always_ff @(posedge clk) begin
         copper_ex_state         <= STATE_INIT;
         ram_rd_strobe           <= 1'b0;
 
-        coppermem_wr_strobe     <= 1'b0;
-        colormem_wr_strobe      <= 1'b0;
-        tilemem_wr_strobe       <= 1'b0;
-        xr_reg_wr_strobe        <= 1'b0;
+        xr_wr_strobe            <= 1'b0;
     end
     else begin
         // video register write
@@ -250,10 +237,7 @@ always_ff @(posedge clk) begin
             copper_pc               <= copper_init_pc;
             ram_rd_strobe           <= 1'b0;
 
-            coppermem_wr_strobe     <= 1'b0;
-            colormem_wr_strobe      <= 1'b0;
-            tilemem_wr_strobe       <= 1'b0;
-            xr_reg_wr_strobe        <= 1'b0;
+            xr_wr_strobe            <= 1'b0;
         end
         else begin
             if (copper_en) begin
@@ -271,12 +255,9 @@ always_ff @(posedge clk) begin
                     // State 1 - Wait for copper RAM - Usually will jump 
                     // directly here after execution of previous instruction.
                     STATE_WAIT: begin
-                        // Reset all strobes in case previous was a MOVEx
+                        // Reset strobe in case previous was a MOVEx
                         // In this case, the write will happen this cycle...
-                        coppermem_wr_strobe     <= 1'b0;
-                        colormem_wr_strobe      <= 1'b0;
-                        tilemem_wr_strobe       <= 1'b0;
-                        xr_reg_wr_strobe        <= 1'b0;
+                        xr_wr_strobe        <= 1'b0;
 
                         copper_ex_state <= STATE_LATCH1;
                         copper_pc       <= copper_pc + 1;
@@ -395,8 +376,8 @@ always_ff @(posedge clk) begin
                             INSN_MOVER: begin
                                 // mover
                                 if (!blit_xr_reg_sel_i) begin
-                                    xr_reg_wr_strobe        <= 1'b1;
-                                    ram_wr_addr_out[11:8]   <= 4'h0;
+                                    xr_wr_strobe            <= 1'b1;
+                                    ram_wr_addr_out[15:8]   <= 8'h0;
                                     ram_wr_addr_out[7:0]    <= r_insn[23:16];
                                     ram_wr_data_out         <= r_insn[15:0];
 
@@ -409,7 +390,8 @@ always_ff @(posedge clk) begin
                             INSN_MOVEF: begin
                                 // movef
                                 if (!blit_tilemem_sel_i) begin
-                                    tilemem_wr_strobe       <= 1'b1;
+                                    xr_wr_strobe            <= 1'b1;
+                                    ram_wr_addr_out[15:12]  <= xv::XR_TILE_MEM[15:12];
                                     ram_wr_addr_out[11:0]   <= r_insn[27:16];
                                     ram_wr_data_out         <= r_insn[15:0];
 
@@ -422,8 +404,8 @@ always_ff @(posedge clk) begin
                             INSN_MOVEP: begin
                                 // movep
                                 if (!blit_colormem_sel_i) begin
-                                    colormem_wr_strobe      <= 1'b1;
-                                    ram_wr_addr_out[11:8]   <= 4'b0;
+                                    xr_wr_strobe            <= 1'b1;
+                                    ram_wr_addr_out[15:8]   <= xv::XR_COLOR_MEM[15:8];
                                     ram_wr_addr_out[7:0]    <= r_insn[23:16];
                                     ram_wr_data_out         <= r_insn[15:0];
 
@@ -436,8 +418,8 @@ always_ff @(posedge clk) begin
                             INSN_MOVEC: begin
                                 // movec
                                 if (!blit_coppermem_sel_i) begin
-                                    coppermem_wr_strobe     <= 1'b1;
-                                    ram_wr_addr_out[11]     <= 1'b0;
+                                    xr_wr_strobe            <= 1'b1;
+                                    ram_wr_addr_out[15:11]  <= xv::XR_COPPER_MEM[15:11];
                                     ram_wr_addr_out[10:0]   <= r_insn[26:16];
                                     ram_wr_data_out         <= r_insn[15:0];
                             

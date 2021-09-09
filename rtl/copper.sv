@@ -175,17 +175,16 @@ logic [31:0]  r_insn;
 
 // execution state
 typedef enum logic [2:0] {
-    STATE_FETCH1    = 3'b000,
+    STATE_FETCH     = 3'b000,
     STATE_WAIT1     = 3'b001,
-    STATE_FETCH2    = 3'b010,
-    STATE_WAIT2     = 3'b011,
-    STATE_LATCH     = 3'b100,
-    STATE_EXEC      = 3'b101,
-    STATE_WRITE     = 3'b110,
-    STATE_CLEANUP   = 3'b111
+    STATE_WAIT2     = 3'b010,
+    STATE_LATCH     = 3'b011,
+    STATE_EXEC      = 3'b100,
+    STATE_WRITE     = 3'b101,
+    STATE_CLEANUP   = 3'b110
 } copper_ex_state_t;
 
-logic  [2:0]  copper_ex_state   = STATE_FETCH1;
+logic  [2:0]  copper_ex_state   = STATE_FETCH;
 
 // init PC is the initial PC value after vblank
 // It comes from the copper control register.
@@ -225,7 +224,7 @@ always_ff @(posedge clk) begin
         copper_init_pc          <= 11'h0;
         copper_pc               <= 11'h0;
 
-        copper_ex_state         <= STATE_FETCH1;
+        copper_ex_state         <= STATE_FETCH;
         ram_rd_strobe           <= 1'b0;
 
         coppermem_wr_strobe     <= 1'b0;
@@ -248,7 +247,7 @@ always_ff @(posedge clk) begin
 
         // Main logic
         if (vblank_i) begin
-            copper_ex_state         <= STATE_FETCH1;
+            copper_ex_state         <= STATE_FETCH;
             copper_pc               <= copper_init_pc;
             ram_rd_strobe           <= 1'b0;
 
@@ -261,7 +260,7 @@ always_ff @(posedge clk) begin
             if (copper_en) begin
                 case (copper_ex_state)
                     // State 0 - Begin fetch first word
-                    STATE_FETCH1: begin
+                    STATE_FETCH: begin
                         read_ack                <= 1'b0;
 
                         if (!blit_coppermem_sel_i) begin
@@ -274,26 +273,14 @@ always_ff @(posedge clk) begin
                     end
                     // State 1 - Wait for copper RAM
                     STATE_WAIT1: begin
-                        ram_rd_strobe   <= 1'b0;    // TODO maybe only do this if abandoning?
-
                         if (blit_coppermem_sel_i) begin
                             // Blitter wants RAM, abandon fetch
-                            copper_ex_state <= STATE_FETCH1;
+                            ram_rd_strobe   <= 1'b0;    // TODO maybe only do this if abandoning?
+                            copper_ex_state <= STATE_FETCH;
                             read_ack        <= 1'b0;
                         end
                         else begin
                             read_ack        <= 1'b1;
-                            copper_ex_state <= STATE_FETCH2;
-                        end
-                    end
-                    // State 2 - Read first and begin fetch second word
-                    STATE_FETCH2: begin
-                        if (read_ack) begin
-                            r_insn[31:16]    <= coppermem_rd_data_i;
-                            read_ack         <= 1'b0;
-                        end
-
-                        if (!blit_coppermem_sel_i) begin
                             copper_ex_state <= STATE_WAIT2;
                             copper_pc       <= copper_pc + 1;
                             ram_rd_strobe   <= 1'b1;
@@ -303,9 +290,15 @@ always_ff @(posedge clk) begin
                     STATE_WAIT2: begin
                         ram_rd_strobe   <= 1'b0;    // TODO maybe only do this if abandoning?
 
+                        if (read_ack) begin
+                            r_insn[31:16]    <= coppermem_rd_data_i;
+                            read_ack         <= 1'b0;
+                        end
+
+
                         if (blit_coppermem_sel_i) begin
                             // Blitter wants RAM, abandon fetch
-                            copper_ex_state <= STATE_FETCH2;
+                            copper_ex_state <= STATE_WAIT1;
                         end
                         else begin
                             copper_ex_state <= STATE_LATCH;
@@ -331,7 +324,7 @@ always_ff @(posedge clk) begin
                                         // Checking only horizontal position
                                         if (h_count_i >= r_insn[15:5]) begin
                                             copper_pc       <= copper_pc + 1;
-                                            copper_ex_state <= STATE_FETCH1;
+                                            copper_ex_state <= STATE_FETCH;
                                         end
                                     end
                                 end 
@@ -341,7 +334,7 @@ always_ff @(posedge clk) begin
                                         // Checking only vertical position
                                         if (v_count_i >= r_insn[26:16]) begin
                                             copper_pc       <= copper_pc + 1;
-                                            copper_ex_state <= STATE_FETCH1;
+                                            copper_ex_state <= STATE_FETCH;
                                         end
                                     end
                                     else begin
@@ -349,7 +342,7 @@ always_ff @(posedge clk) begin
                                         // vertical positions
                                         if (h_count_i >= r_insn[15:5] && v_count_i >= r_insn[26:16]) begin
                                             copper_pc       <= copper_pc + 1;
-                                            copper_ex_state <= STATE_FETCH1;
+                                            copper_ex_state <= STATE_FETCH;
                                         end
                                     end
                                 end
@@ -395,12 +388,12 @@ always_ff @(posedge clk) begin
                                         end
                                     end
                                 end
-                                copper_ex_state <= STATE_FETCH1;
+                                copper_ex_state <= STATE_FETCH;
                             end
                             INSN_JUMP: begin
                                 // jmp
                                 copper_pc               <= r_insn[26:16];
-                                copper_ex_state         <= STATE_FETCH1;
+                                copper_ex_state         <= STATE_FETCH;
                             end
                             INSN_MOVER: begin
                                 // mover
@@ -443,7 +436,7 @@ always_ff @(posedge clk) begin
                             end
                             default: begin
                                 // illegal instruction; do nothing
-                                copper_ex_state <= STATE_FETCH1;
+                                copper_ex_state <= STATE_FETCH;
                                 copper_pc       <= copper_pc + 1;
                             end
                         endcase // Instruction                  
@@ -484,8 +477,9 @@ always_ff @(posedge clk) begin
                         xr_reg_wr_strobe        <= 1'b0;
 
                         copper_pc               <= copper_pc + 1;
-                        copper_ex_state         <= STATE_FETCH1;
+                        copper_ex_state         <= STATE_FETCH;
                     end
+                    default: ; // Should never happen
                 endcase // Execution state
             end
         end

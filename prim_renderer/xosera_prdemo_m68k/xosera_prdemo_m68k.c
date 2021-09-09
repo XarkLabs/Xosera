@@ -34,9 +34,9 @@
 //#define DELAY_TIME 100        // machine speed
 
 #define NB_RECTS        100
-#define NB_TRIANGLES    2
+#define NB_TRIANGLES    10
 
-#include "xosera_api.h"
+#include "xosera_m68k_api.h"
 
 
 const uint16_t defpal[16] = {
@@ -58,29 +58,23 @@ const uint16_t defpal[16] = {
     0x0FFF         // white
 };
 
-
-// Define rosco_m68k Xosera board base address pointer (See
-// https://github.com/rosco-m68k/hardware-projects/blob/feature/xosera/xosera/code/pld/decoder/ic3_decoder.pld#L25)
-volatile xreg_t * const xosera_ptr = (volatile xreg_t * const)0xf80060;        // rosco_m68k Xosera base
-
 // dummy global variable
 uint32_t global;        // this is used to prevent the compiler from optimizing out tests
 
 uint16_t screen_addr;
-uint8_t  text_color = 0x02;        // dark green on black
 uint8_t  text_columns;
 uint8_t  text_rows;
 int8_t   text_h;
 int8_t   text_v;
+uint8_t  text_color = 0x02;        // dark green on black
 
 static void get_textmode_settings()
 {
-    int  mode      = xv_reg_getw(gfxctrl);
-    bool v_dbl     = mode & 2;
-    int  tile_size = ((xv_reg_getw(fontctrl) & 0xf) + 1) << (v_dbl ? 1 : 0);
-    screen_addr    = xv_reg_getw(dispstart);
-    text_columns   = xv_reg_getw(dispwidth);
-    text_rows      = (xv_reg_getw(vidheight) + (tile_size - 1)) / tile_size;
+    uint16_t vx          = (xreg_getw(PA_GFX_CTRL) & 3) + 1;
+    uint16_t tile_height = (xreg_getw(PA_TILE_CTRL) & 0xf) + 1;
+    screen_addr          = xreg_getw(PA_DISP_ADDR);
+    text_columns         = (uint8_t)xreg_getw(PA_LINE_LEN);
+    text_rows            = (uint8_t)(((xreg_getw(VID_VSIZE) / vx) + (tile_height - 1)) / tile_height);
 }
 
 static void xpos(uint8_t h, uint8_t v)
@@ -104,28 +98,28 @@ static void xcls()
 {
     // clear screen
     xhome();
-    xv_setw(wr_addr, screen_addr);
-    xv_setw(wr_inc, 1);
-    xv_setbh(data, text_color);
+    xm_setw(WR_ADDR, screen_addr);
+    xm_setw(WR_INCR, 1);
+    xm_setbh(DATA, text_color);
     for (uint16_t i = 0; i < (text_columns * text_rows); i++)
     {
-        xv_setbl(data, ' ');
+        xm_setbl(DATA, ' ');
     }
-    xv_setw(wr_addr, screen_addr);
+    xm_setw(WR_ADDR, screen_addr);
 }
 
 static void xprint(const char * str)
 {
-    xv_setw(wr_inc, 1);
-    xv_setw(wr_addr, screen_addr + (text_v * text_columns) + text_h);
-    xv_setbh(data, text_color);
+    xm_setw(WR_INCR, 1);
+    xm_setw(WR_ADDR, screen_addr + (text_v * text_columns) + text_h);
+    xm_setbh(DATA, text_color);
 
     char c;
     while ((c = *str++) != '\0')
     {
         if (c >= ' ')
         {
-            xv_setbl(data, c);
+            xm_setbl(DATA, c);
             if (++text_h >= text_columns)
             {
                 text_h = 0;
@@ -140,7 +134,7 @@ static void xprint(const char * str)
         {
             case '\r':
                 text_h = 0;
-                xv_setw(wr_addr, screen_addr + (text_v * text_columns) + text_h);
+                xm_setw(WR_ADDR, screen_addr + (text_v * text_columns) + text_h);
                 break;
             case '\n':
                 text_h = 0;
@@ -148,7 +142,7 @@ static void xprint(const char * str)
                 {
                     text_v = text_rows - 1;
                 }
-                xv_setw(wr_addr, screen_addr + (text_v * text_columns) + text_h);
+                xm_setw(WR_ADDR, screen_addr + (text_v * text_columns) + text_h);
                 break;
             case '\b':
                 if (--text_h < 0)
@@ -159,7 +153,7 @@ static void xprint(const char * str)
                         text_v = 0;
                     }
                 }
-                xv_setw(wr_addr, screen_addr + (text_v * text_columns) + text_h);
+                xm_setw(WR_ADDR, screen_addr + (text_v * text_columns) + text_h);
                 break;
             case '\f':
                 xcls();
@@ -194,47 +188,47 @@ static void draw_line(Coord2 coord, int color)
 {
     uint8_t busy;
     do {
-        busy = xv_getbh(wr_pr_cmd);
+        busy = xm_getbh(WR_PR_CMD);
     } while(busy & 0x80);
 
-    xv_setw(wr_pr_cmd, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COORDX1 | ((int)(coord.x2) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COLOR | color);
-    xv_setw(wr_pr_cmd, PR_EXECUTE | PR_LINE);
+    xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDX1 | ((int)(coord.x2) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COLOR | color);
+    xm_setw(WR_PR_CMD, PR_EXECUTE | PR_LINE);
 }
 
 static void draw_filled_rectangle(Coord2 coord, int color)
 {
     uint8_t busy;
     do {
-        busy = xv_getbh(wr_pr_cmd);
+        busy = xm_getbh(WR_PR_CMD);
     } while(busy & 0x80);
 
-    xv_setw(wr_pr_cmd, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COORDX1 | ((int)(coord.x2) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COLOR | color);
-    xv_setw(wr_pr_cmd, PR_EXECUTE | PR_FILLED_RECTANGLE);
+    xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDX1 | ((int)(coord.x2) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COLOR | color);
+    xm_setw(WR_PR_CMD, PR_EXECUTE | PR_FILLED_RECTANGLE);
 }
 
 static void draw_filled_triangle(Coord3 coord, int color)
 {
     uint8_t busy;
     do {
-        busy = xv_getbh(wr_pr_cmd);
+        busy = xm_getbh(WR_PR_CMD);
     } while(busy & 0x80);
 
-    xv_setw(wr_pr_cmd, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COORDX1 | ((int)(coord.x2) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COORDX2 | ((int)(coord.x3) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COORDY2 | ((int)(coord.y3) & 0x0FFF));
-    xv_setw(wr_pr_cmd, PR_COLOR | color);
-    xv_setw(wr_pr_cmd, PR_EXECUTE | PR_FILLED_TRIANGLE);
+    xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDX1 | ((int)(coord.x2) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDX2 | ((int)(coord.x3) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY2 | ((int)(coord.y3) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COLOR | color);
+    xm_setw(WR_PR_CMD, PR_EXECUTE | PR_FILLED_TRIANGLE);
 }
 
 // Color conversion
@@ -322,11 +316,11 @@ void set_palette(double hue_offset)
     double hue = hue_offset;
     for (uint16_t i = 0; i < 256; i++)
     {
-        xv_setw(aux_addr, XV_AUX_COLORMEM | i);
+        xm_setw(XR_ADDR, XR_COLOR_MEM | i);
 
         if (i < 16)
         {
-            xv_setw(aux_data, defpal[i]);        // set palette data
+            xm_setw(XR_DATA, defpal[i]);        // set palette data
         }
         else
         {
@@ -336,7 +330,7 @@ void set_palette(double hue_offset)
             uint8_t  g   = 15.0 * rgb.g;
             uint8_t  b   = 15.0 * rgb.b;
             uint16_t c   = (r << 8) | (g << 4) | b;
-            xv_setw(aux_data, c);        // set palette data
+            xm_setw(XR_DATA, c);        // set palette data
         }
 
         hue += 360.0 / 256.0;
@@ -346,10 +340,10 @@ void set_palette(double hue_offset)
 void clear()
 {
     // Blue background
-    xv_setw(wr_inc, 0x0001);
-    xv_setw(wr_addr, 0x0000);
+    xm_setw(WR_INCR, 0x0001);
+    xm_setw(WR_ADDR, 0x0000);
     for (int i = 0; i < 320 * 240 / 2; ++i)
-        xv_setw(data, 0x0101);
+        xm_setw(DATA, 0x0101);
 }
 
 void demo_lines()
@@ -510,27 +504,28 @@ void xosera_demo()
 
     while(!xosera_sync());
 
-    xv_reg_setw(gfxctrl, 0x0005);
+    while(1) {
 
-/*
-    xcolor(0x02);
-    xcls();
-    xprintf("Xosera\nPrimitive\nRenderer\nDemo\n");
-    delay(2000);
-*/
-    xv_reg_setw(gfxctrl, 0x0075);
-    xv_reg_setw(dispstart, 0x0000);
-    xv_reg_setw(dispwidth, 160);
+        xreg_setw(PA_GFX_CTRL, 0x0005);
 
-    set_palette(0);
+        xcolor(0x02);
+        xcls();
+        xprintf("Xosera\nPrimitive\nRenderer\nDemo\n");
+        delay(2000);
 
-    demo_lines();
-    delay(2000);
+        xreg_setw(PA_GFX_CTRL, 0x0075);
+        xreg_setw(PA_DISP_ADDR, 0x0000);
+        xreg_setw(PA_LINE_LEN, 160);
 
-    demo_filled_rectangles(500);
+        set_palette(0);
 
-    //demo_filled_triangle_single();
-    demo_filled_triangle(5000);
+        demo_lines();
+        delay(2000);
 
-    while(1);
+        demo_filled_rectangles(100);
+
+        //demo_filled_triangle_single();
+        demo_filled_triangle(1000);
+
+    }
 }

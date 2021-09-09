@@ -175,7 +175,7 @@ logic [31:0]  r_insn;
 
 // execution state
 typedef enum logic [2:0] {
-    STATE_FETCH     = 3'b000,
+    STATE_INIT     = 3'b000,
     STATE_WAIT1     = 3'b001,
     STATE_WAIT2     = 3'b010,
     STATE_LATCH     = 3'b011,
@@ -184,7 +184,7 @@ typedef enum logic [2:0] {
     STATE_CLEANUP   = 3'b110
 } copper_ex_state_t;
 
-logic  [2:0]  copper_ex_state   = STATE_FETCH;
+logic  [2:0]  copper_ex_state   = STATE_INIT;
 
 // init PC is the initial PC value after vblank
 // It comes from the copper control register.
@@ -224,7 +224,7 @@ always_ff @(posedge clk) begin
         copper_init_pc          <= 11'h0;
         copper_pc               <= 11'h0;
 
-        copper_ex_state         <= STATE_FETCH;
+        copper_ex_state         <= STATE_INIT;
         ram_rd_strobe           <= 1'b0;
 
         coppermem_wr_strobe     <= 1'b0;
@@ -247,7 +247,7 @@ always_ff @(posedge clk) begin
 
         // Main logic
         if (vblank_i) begin
-            copper_ex_state         <= STATE_FETCH;
+            copper_ex_state         <= STATE_INIT;
             copper_pc               <= copper_init_pc;
             ram_rd_strobe           <= 1'b0;
 
@@ -259,8 +259,13 @@ always_ff @(posedge clk) begin
         else begin
             if (copper_en) begin
                 case (copper_ex_state)
-                    // State 0 - Begin fetch first word
-                    STATE_FETCH: begin
+                    // State 0 - Initial begin fetch first word
+                    // This state is only used for the first instruction, or
+                    // when the copper has stalled due to contention.
+                    //
+                    // Normally, the next instruction fetch is started by the
+                    // EXEC state of the previous instruction.
+                    STATE_INIT: begin
                         read_ack                <= 1'b0;
 
                         if (!blit_coppermem_sel_i) begin
@@ -271,12 +276,13 @@ always_ff @(posedge clk) begin
                             ram_rd_strobe   <= 1'b0;
                         end
                     end
-                    // State 1 - Wait for copper RAM
+                    // State 1 - Wait for copper RAM - Usually will jump 
+                    // directly here after execution of previous instruction.
                     STATE_WAIT1: begin
                         if (blit_coppermem_sel_i) begin
                             // Blitter wants RAM, abandon fetch
                             ram_rd_strobe   <= 1'b0;    // TODO maybe only do this if abandoning?
-                            copper_ex_state <= STATE_FETCH;
+                            copper_ex_state <= STATE_INIT;
                             read_ack        <= 1'b0;
                         end
                         else begin
@@ -286,7 +292,7 @@ always_ff @(posedge clk) begin
                             ram_rd_strobe   <= 1'b1;
                         end
                     end
-                    // State 3 - Wait for copper RAM
+                    // State 2 - Wait for copper RAM
                     STATE_WAIT2: begin
                         ram_rd_strobe   <= 1'b0;    // TODO maybe only do this if abandoning?
 
@@ -304,13 +310,14 @@ always_ff @(posedge clk) begin
                             copper_ex_state <= STATE_LATCH;
                         end
                     end
-                    // State 4 - Latch second word
+                    // State 3 - Latch second word
                     STATE_LATCH: begin
                         r_insn[15:0]        <= coppermem_rd_data_i;
                         copper_ex_state     <= STATE_EXEC;
                     end                        
-                    // State 5 - Execution
+                    // State 4 - Execution
                     STATE_EXEC: begin
+
                         case (r_insn[31:28])
                             INSN_WAIT: begin
                                 // wait
@@ -324,7 +331,16 @@ always_ff @(posedge clk) begin
                                         // Checking only horizontal position
                                         if (h_count_i >= r_insn[15:5]) begin
                                             copper_pc       <= copper_pc + 1;
-                                            copper_ex_state <= STATE_FETCH;
+
+                                            if (!blit_coppermem_sel_i) begin
+                                                copper_ex_state     <= STATE_WAIT1;
+                                                ram_rd_strobe       <= 1'b1;
+                                            end
+                                            else begin
+                                                // Blitter contention, go back to init fetch
+                                                ram_rd_strobe       <= 1'b0;
+                                                copper_ex_state     <= STATE_INIT;
+                                            end
                                         end
                                     end
                                 end 
@@ -334,7 +350,16 @@ always_ff @(posedge clk) begin
                                         // Checking only vertical position
                                         if (v_count_i >= r_insn[26:16]) begin
                                             copper_pc       <= copper_pc + 1;
-                                            copper_ex_state <= STATE_FETCH;
+
+                                            if (!blit_coppermem_sel_i) begin
+                                                copper_ex_state     <= STATE_WAIT1;
+                                                ram_rd_strobe       <= 1'b1;
+                                            end
+                                            else begin
+                                                // Blitter contention, go back to init fetch
+                                                ram_rd_strobe       <= 1'b0;
+                                                copper_ex_state     <= STATE_INIT;
+                                            end
                                         end
                                     end
                                     else begin
@@ -342,7 +367,16 @@ always_ff @(posedge clk) begin
                                         // vertical positions
                                         if (h_count_i >= r_insn[15:5] && v_count_i >= r_insn[26:16]) begin
                                             copper_pc       <= copper_pc + 1;
-                                            copper_ex_state <= STATE_FETCH;
+
+                                            if (!blit_coppermem_sel_i) begin
+                                                copper_ex_state     <= STATE_WAIT1;
+                                                ram_rd_strobe       <= 1'b1;
+                                            end
+                                            else begin
+                                                // Blitter contention, go back to init fetch
+                                                ram_rd_strobe       <= 1'b0;
+                                                copper_ex_state     <= STATE_INIT;
+                                            end
                                         end
                                     end
                                 end
@@ -388,13 +422,34 @@ always_ff @(posedge clk) begin
                                         end
                                     end
                                 end
-                                copper_ex_state <= STATE_FETCH;
+
+                                if (!blit_coppermem_sel_i) begin
+                                    copper_ex_state     <= STATE_WAIT1;
+                                    ram_rd_strobe       <= 1'b1;
+                                end
+                                else begin
+                                    // Blitter contention, go back to init fetch
+                                    ram_rd_strobe       <= 1'b0;
+                                    copper_ex_state     <= STATE_INIT;
+                                end
                             end
                             INSN_JUMP: begin
                                 // jmp
                                 copper_pc               <= r_insn[26:16];
-                                copper_ex_state         <= STATE_FETCH;
+
+                                if (!blit_coppermem_sel_i) begin
+                                    copper_ex_state     <= STATE_WAIT1;
+                                    ram_rd_strobe       <= 1'b1;
+                                end
+                                else begin
+                                    // Blitter contention, go back to init fetch
+                                    ram_rd_strobe       <= 1'b0;
+                                    copper_ex_state     <= STATE_INIT;
+                                end
                             end
+                            // All move instructions have a second wait state, 
+                            // during which next instruction read is also set
+                            // up...
                             INSN_MOVER: begin
                                 // mover
                                 if (!blit_tilemem_sel_i) begin
@@ -436,12 +491,12 @@ always_ff @(posedge clk) begin
                             end
                             default: begin
                                 // illegal instruction; do nothing
-                                copper_ex_state <= STATE_FETCH;
+                                copper_ex_state <= STATE_INIT;
                                 copper_pc       <= copper_pc + 1;
                             end
                         endcase // Instruction                  
                     end
-                    // State 6 - Wait cycle for memory write
+                    // State 5 - Wait cycle for memory write
                     STATE_WRITE: begin
                         if (coppermem_wr_strobe && blit_coppermem_sel_i) begin
                             // Contending for copper ram, abandon cycle
@@ -465,19 +520,23 @@ always_ff @(posedge clk) begin
                         end 
                         else begin
                             // Done.
-                            copper_ex_state         <= STATE_CLEANUP;
-                        end
-                    end
-                    // State 7 - Memory write finished; Increment PC
-                    STATE_CLEANUP: begin
-                        // N.B. Must reset all RAM strobes here!
-                        coppermem_wr_strobe     <= 1'b0;
-                        colormem_wr_strobe      <= 1'b0;
-                        tilemem_wr_strobe       <= 1'b0;
-                        xr_reg_wr_strobe        <= 1'b0;
+                            coppermem_wr_strobe     <= 1'b0;
+                            colormem_wr_strobe      <= 1'b0;
+                            tilemem_wr_strobe       <= 1'b0;
+                            xr_reg_wr_strobe        <= 1'b0;
 
-                        copper_pc               <= copper_pc + 1;
-                        copper_ex_state         <= STATE_FETCH;
+                            copper_pc               <= copper_pc + 1;
+
+                            if (!blit_coppermem_sel_i) begin
+                                copper_ex_state     <= STATE_WAIT1;
+                                ram_rd_strobe       <= 1'b1;
+                            end
+                            else begin
+                                // Blitter contention, go back to init fetch
+                                ram_rd_strobe       <= 1'b0;
+                                copper_ex_state     <= STATE_INIT;
+                            end
+                        end
                     end
                     default: ; // Should never happen
                 endcase // Execution state

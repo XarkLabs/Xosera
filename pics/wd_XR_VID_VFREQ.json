@@ -1,0 +1,12 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "monitor mode update rate (BCD 1/100th Hz)",
+            "type": 4
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

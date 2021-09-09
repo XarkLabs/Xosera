@@ -1,0 +1,22 @@
+{
+    "reg": [
+        {
+            "bits": 12,
+            "name": "Xosera BCD version code (x.xx)",
+            "type": 4,
+            "attr": [
+                "(Example 0x142 = version 1.42)"
+            ]
+        },
+        {
+            "bits": 4,
+            "type": 1,
+            "attr": [
+                "(optional feature bits TBD)"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

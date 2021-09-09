@@ -1,0 +1,31 @@
+{
+    "reg": [
+        {
+            "bits": 11,
+            "name": "current video scanline",
+            "type": 4,
+            "attr": [
+                "current display scanline (including non-visible lines >= 480)",
+                "V blank = 1 when in vertical blank (off bottom edge)",
+                "H blank = 1 when in horizontal blank (off left edge)"
+            ]
+        },
+        {
+            "bits": 3,
+            "type": 1
+        },
+        {
+            "name": "H blank",
+            "bits": 1,
+            "type": 3
+        },
+        {
+            "name": "V blank",
+            "bits": 1,
+            "type": 5
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

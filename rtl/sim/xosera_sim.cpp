@@ -58,56 +58,80 @@ class BusInterface
 
     enum
     {
-        // register 16-bit read/write (no side effects)
-        XVID_AUX_ADDR,        // reg 0: TODO video data (as set by VID_CTRL)
-        XVID_CONST,           // reg 1: TODO CPU data (instead of read from VRAM)
-        XVID_RD_ADDR,         // reg 2: address to read from VRAM
-        XVID_WR_ADDR,         // reg 3: address to write from VRAM
-
-        // special, odd byte write triggers
-        XVID_DATA,            // reg 4: read/write word from/to VRAM RD/WR
-        XVID_DATA_2,          // reg 5: read/write word from/to VRAM RD/WR (for 32-bit)
-        XVID_AUX_DATA,        // reg 6: aux data (font/audio)
-        XVID_COUNT,           // reg 7: TODO blitter "repeat" count/trigger
-
-        // write only, 16-bit
-        XVID_RD_INC,           // reg 8: read addr increment value
-        XVID_WR_INC,           // reg 9: write addr increment value
-        XVID_WR_MOD,           // reg A: TODO write modulo width for 2D blit
-        XVID_RD_MOD,           // reg B: TODO read modulo width for 2D blit
-        XVID_WIDTH,            // reg C: TODO width for 2D blit
-        XVID_BLIT_CTRL,        // reg D: TODO
-        XVID_UNUSED_E,         // reg E: TODO
-        XVID_UNUSED_F          // reg F: TODO
+        XM_XR_ADDR = 0x0,        // (R /W+) XR register number/address for XM_XR_DATA read/write access
+        XM_XR_DATA = 0x1,        // (R /W+) read/write XR register/memory at XM_XR_ADDR (XM_XR_ADDR incr. on write)
+        XM_RD_INCR = 0x2,        // (R /W ) increment value for XM_RD_ADDR read from XM_DATA/XM_DATA_2
+        XM_RD_ADDR = 0x3,        // (R /W+) VRAM address for reading from VRAM when XM_DATA/XM_DATA_2 is read
+        XM_WR_INCR = 0x4,        // (R /W ) increment value for XM_WR_ADDR on write to XM_DATA/XM_DATA_2
+        XM_WR_ADDR = 0x5,        // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
+        XM_DATA   = 0x6,        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR (and add XM_RD_INCR/XM_WR_INCR)
+        XM_DATA_2 = 0x7,        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
+        XM_SYS_CTRL  = 0x8,        // (R /W+) busy status, FPGA reconfig, interrupt status/control, write masking
+        XM_TIMER     = 0x9,        // (RO   ) read 1/10th millisecond timer [TODO]
+        XM_UNUSED_A  = 0xA,        // (R /W ) unused direct register 0xA [TODO]
+        XM_UNUSED_B  = 0xB,        // (R /W ) unused direct register 0xB [TODO]
+        XM_RW_INCR   = 0xC,        // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
+        XM_RW_ADDR   = 0xD,        // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
+        XM_RW_DATA   = 0xE,        // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
+        XM_RW_DATA_2 = 0xF         // (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
     };
 
     enum
     {
-        AUX_DISPSTART = 0x0000,        // display start address
-        AUX_DISPWIDTH = 0x0001,        // display width in words
-        AUX_SCROLLXY  = 0x0002,        // [10:8] H fine scroll, [3:0] V fine scroll
-        AUX_FONTCTRL  = 0x0003,        // [15:11] 1KW/2KW font bank,[8] bram/vram [3:0] font height
-        AUX_GFXCTRL   = 0x0004,        // [15:8] colorbase [7] disable, [6] bitmap [5:4] bpp, [3:2] H rept, [1:0] V rept
-        AUX_LINESTART = 0x0005,
-        AUX_LINEINTR  = 0x0006,
-        AUX_UNUSED_7  = 0x0007,
-        AUX_R_WIDTH   = 0x0008,          // display resolution width
-        AUX_R_HEIGHT  = 0x0009,          // display resolution height
-        AUX_R_FEATURES  = 0x000A,        // [15] = 1 (test)
-        AUX_R_SCANLINE  = 0x000B,        // [15] V blank, [14] H blank, [13:11] zero [10:0] V line
-        AUX_R_GITHASH_H = 0x000C,
-        AUX_R_GITHASH_L = 0x000D,
-        AUX_R_UNUSED_E  = 0x000E,
-        AUX_R_UNUSED_F  = 0x000F
+        // XR Register Regions
+        XR_CONFIG_REGS   = 0x0000,        // 0x0000-0x000F 16 config/copper registers
+        XR_PA_REGS       = 0x0010,        // 0x0000-0x0017 8 playfield A video registers
+        XR_PB_REGS       = 0x0018,        // 0x0000-0x000F 8 playfield B video registers
+        XR_BLIT_REGS     = 0x0020,        // 0x0000-0x000F 16 blit registers [TBD]
+        XR_POLYDRAW_REGS = 0x0030,        // 0x0000-0x000F 16 line/polygon draw registers [TBD]
+
+        // XR Memory Regions
+        XR_COLOR_MEM  = 0x8000,        // 0x8000-0x80FF 256 16-bit word color lookup table (0xXRGB)
+        XR_TILE_MEM   = 0x9000,        // 0x9000-0x9FFF 4K 16-bit words of tile/font memory
+        XR_COPPER_MEM = 0xA000,        // 0xA000-0xA7FF 2K 16-bit words copper program memory
+        XR_SPRITE_MEM = 0xB000,        // 0xB000-0xB0FF 256 16-bit word sprite/cursor memory
+        XR_UNUSED_MEM = 0xC000,        // 0xC000-0xFFFF (currently unused)
     };
 
     enum
     {
-        AUX_VID      = 0x0000,        // 0x0000-0x000F 16 word video registers (see below)
-        AUX_FONTMEM  = 0x4000,        // 0x4000-0x5FFF 8K byte font memory (even byte [15:8] ignored)
-        AUX_COLORMEM = 0x8000,        // 0x8000-0x80FF 256 word color lookup table (0xXRGB)
-        AUX_OTHERMEM = 0xC000         // 0xC000-0x??? TODO (audio registers)
+        // Video Config / Copper XR Registers
+        XR_VID_CTRL   = 0x00,        // (R /W) display control and border color index
+        XR_COPP_CTRL  = 0x01,        // (R /W) display synchronized coprocessor control
+        XR_CURSOR_X   = 0x02,        // (R /W) sprite cursor X position
+        XR_CURSOR_Y   = 0x03,        // (R /W) sprite cursor Y position
+        XR_VID_TOP    = 0x04,        // (R /W) top line of active display window (typically 0)
+        XR_VID_BOTTOM = 0x05,        // (R /W) bottom line of active display window (typically 479)
+        XR_VID_LEFT   = 0x06,        // (R /W) left edge of active display window (typically 0)
+        XR_VID_RIGHT  = 0x07,        // (R /W) right edge of active display window (typically 639 or 847)
+        XR_SCANLINE   = 0x08,        // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
+        XR_UNUSED_09  = 0x09,        // (RO  )
+        XR_VERSION    = 0x0A,        // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
+        XR_GITHASH_H  = 0x0B,        // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
+        XR_GITHASH_L  = 0x0C,        // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
+        XR_VID_HSIZE  = 0x0D,        // (RO  ) native pixel width of monitor mode (e.g. 640/848)
+        XR_VID_VSIZE  = 0x0E,        // (RO  ) native pixel height of monitor mode (e.g. 480)
+        XR_VID_VFREQ  = 0x0F,        // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
 
+        // Playfield A Control XR Registers
+        XR_PA_GFX_CTRL  = 0x10,        //  playfield A graphics control
+        XR_PA_TILE_CTRL = 0x11,        //  playfield A tile control
+        XR_PA_DISP_ADDR = 0x12,        //  playfield A display VRAM start address
+        XR_PA_LINE_LEN  = 0x13,        //  playfield A display line width in words
+        XR_PA_HV_SCROLL = 0x14,        //  playfield A horizontal and vertical fine scroll
+        XR_PA_LINE_ADDR = 0x15,        //  playfield A scanline start address (loaded at start of line)
+        XR_PA_UNUSED_16 = 0x16,        //
+        XR_PA_UNUSED_17 = 0x17,        //
+
+        // Playfield B Control XR Registers
+        XR_PB_GFX_CTRL  = 0x18,        //  playfield B graphics control
+        XR_PB_TILE_CTRL = 0x19,        //  playfield B tile control
+        XR_PB_DISP_ADDR = 0x1A,        //  playfield B display VRAM start address
+        XR_PB_LINE_LEN  = 0x1B,        //  playfield B display line width in words
+        XR_PB_HV_SCROLL = 0x1C,        //  playfield B horizontal and vertical fine scroll
+        XR_PB_LINE_ADDR = 0x1D,        //  playfield B scanline start address (loaded at start of line)
+        XR_PB_UNUSED_1E = 0x1E,        //
+        XR_PB_UNUSED_1F = 0x1F         //
     };
 
     static const char * reg_name[];
@@ -208,6 +232,7 @@ public:
                     printf("[@t=%lu Wait VSYNC...]\n", main_time);
                     wait_vsync = true;
                     index++;
+                    return;
                 }
                 else if (!data_upload && (test_data[index] & 0xfff0) == 0xfff0)
                 {
@@ -218,10 +243,11 @@ public:
                     printf("[Upload #%d started, %d bytes, mode %s]\n",
                            data_upload_num + 1,
                            data_upload_count,
-                           data_upload_mode ? "AUX_DATA" : "VRAM_DATA");
+                           data_upload_mode ? "XR_DATA" : "VRAM_DATA");
 
                     index++;
                 }
+                int rd_wr   = (test_data[index] & 0xC000) == 0x8000 ? 1 : 0;
                 int bytesel = (test_data[index] & 0x1000) ? 1 : 0;
                 int reg_num = (test_data[index] >> 8) & 0xf;
                 int data    = test_data[index] & 0xff;
@@ -229,7 +255,7 @@ public:
                 if (data_upload && state == BUS_START)
                 {
                     bytesel = data_upload_index & 1;
-                    reg_num = data_upload_mode ? XVID_AUX_DATA : XVID_DATA;
+                    reg_num = data_upload_mode ? XM_XR_DATA : XM_DATA;
                     data    = upload_payload[data_upload_num][data_upload_index++];
                 }
 
@@ -239,7 +265,7 @@ public:
 
                         top->bus_cs_n_i    = 1;
                         top->bus_bytesel_i = bytesel;
-                        top->bus_rd_nwr_i  = 0;
+                        top->bus_rd_nwr_i  = rd_wr;
                         top->bus_reg_num_i = reg_num;
                         top->bus_data_i    = data;
                         if (data_upload && data_upload_index < 16)
@@ -256,6 +282,22 @@ public:
                     case BUS_HOLD:
                         break;
                     case BUS_STROBEOFF:
+                        if (rd_wr)
+                        {
+                            printf("[@t=%lu] Read Reg #%02x.%s => 0x%02x\n",
+                                   main_time,
+                                   reg_num,
+                                   bytesel ? "L" : "H",
+                                   top->bus_data_o);
+                        }
+                        else if (!data_upload)
+                        {
+                            printf("[@t=%lu] Write Reg #%02x.%s <= 0x%02x\n",
+                                   main_time,
+                                   reg_num,
+                                   bytesel ? "L" : "H",
+                                   top->bus_data_i);
+                        }
                         top->bus_cs_n_i = 0;
                         break;
                     case BUS_END:
@@ -292,33 +334,27 @@ public:
     }
 };
 
-const char * BusInterface::reg_name[] = {
-    // register 16-bit read/write (no side effects)
-    "XVID_AUX_ADDR",        // reg 0: TODO video data (as set by VID_CTRL)
-    "XVID_CONST",           // reg 1: TODO CPU data (instead of read from VRAM)
-    "XVID_RD_ADDR",         // reg 2: address to read from VRAM
-    "XVID_WR_ADDR",         // reg 3: address to write from VRAM
+const char * BusInterface::reg_name[] = {"XM_XR_ADDR ",
+                                         "XM_XR_DATA ",
+                                         "XM_RD_INCR ",
+                                         "XM_RD_ADDR ",
+                                         "XM_WR_INCR ",
+                                         "XM_WR_ADDR ",
+                                         "XM_DATA     ",
+                                         "XM_DATA_2   ",
+                                         "XM_SYS_CTRL ",
+                                         "XM_TIMER    ",
+                                         "XM_UNUSED_A ",
+                                         "XM_UNUSED_B ",
+                                         "XM_RW_INCR  ",
+                                         "XM_RW_ADDR  ",
+                                         "XM_RW_DATA  ",
+                                         "XM_RW_DATA_2"};
 
-    // special, odd byte write triggers
-    "XVID_DATA",            // reg 4: read/write word from/to VRAM RD/WR
-    "XVID_DATA_2",          // reg 5: read/write word from/to VRAM RD/WR (for 32-bit)
-    "XVID_AUX_DATA",        // reg 6: aux data (font/audio)
-    "XVID_COUNT",           // reg 7: TODO blitter "repeat" count/trigger
-
-    // write only, 16-bit
-    "XVID_RD_INC",           // reg 9: read addr increment value
-    "XVID_WR_INC",           // reg A: write addr increment value
-    "XVID_WR_MOD",           // reg C: TODO write modulo width for 2D blit
-    "XVID_RD_MOD",           // reg B: TODO read modulo width for 2D blit
-    "XVID_WIDTH",            // reg 8: TODO width for 2D blit
-    "XVID_BLIT_CTRL",        // reg D: TODO
-    "XVID_UNUSED_E",         // reg E: TODO
-    "XVID_UNUSED_F"          // reg F: TODO
-};
-
-#define REG_B(r, v) (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
+#define REG_B(r, v) (((BusInterface::XM_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_W(r, v)                                                                                                    \
-    ((BusInterface::XVID_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XVID_##r) | 0x10) << 8) | ((v)&0xff)
+    ((BusInterface::XM_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XM_##r) | 0x10) << 8) | ((v)&0xff)
+#define REG_RW(r)        (((BusInterface::XM_##r) | 0x80) << 8), (((BusInterface::XM_##r) | 0x90) << 8)
 #define REG_UPLOAD()     0xfff0
 #define REG_UPLOAD_AUX() 0xfff1
 #define REG_WAITVSYNC()  0xfffe
@@ -330,34 +366,39 @@ BusInterface bus;
 int          BusInterface::test_data_len   = 999;
 uint16_t     BusInterface::test_data[1024] = {
     // test data
-    REG_WAITVSYNC(),        // show boot screen
-    REG_W(AUX_ADDR, AUX_LINEINTR),
-    REG_W(AUX_DATA, 0x80a0),
-    REG_WAITVSYNC(),                     // show boot screen
-    REG_WAITVSYNC(),                     // show boot screen
-    REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 1-BPP BMAP
-    REG_W(AUX_DATA, 0x0040),
-    REG_W(WR_INC, 0x0001),
+    REG_WAITVSYNC(),                       // show boot screen
+    REG_W(XR_ADDR, XR_COPP_CTRL),          // do copper test on bootscreen...
+    REG_W(XR_DATA, 0x8000),
+    REG_WAITVSYNC(),                       // show boot screen
+    REG_WAITVSYNC(),                       // show boot screen
+    REG_W(XR_ADDR, XR_COPP_CTRL),          // disable copper so as not to ruin image tests.
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 1-BPP BMAP
+    REG_W(XR_DATA, 0x0040),
+    REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
-    REG_WAITVSYNC(),                     // show 1-BPP BMAP
-    REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 4-BPP BMAP
-    REG_W(AUX_DATA, 0x0065),
-    REG_W(AUX_ADDR, AUX_DISPWIDTH),        // 320/2/2 wide
-    REG_W(AUX_DATA, 80),
-    REG_W(AUX_ADDR, AUX_COLORMEM),        // upload palette
+    REG_WAITVSYNC(),        // show 1-BPP BMAP
+    REG_W(XR_ADDR, XR_VID_CTRL),
+    REG_RW(XR_DATA),
+    REG_W(TIMER, 0x0800),
+    REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 4-BPP BMAP
+    REG_W(XR_DATA, 0x0065),
+    REG_W(XR_ADDR, XR_PA_LINE_LEN),        // 320/2/2 wide
+    REG_W(XR_DATA, 80),
+    REG_W(XR_ADDR, XR_COLOR_MEM),        // upload color palette
     REG_UPLOAD_AUX(),
-    REG_W(WR_INC, 0x0001),
+    REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
-    REG_WAITVSYNC(),                     // show 4-BPP BMAP
-    REG_W(AUX_ADDR, AUX_GFXCTRL),        // set 8-BPP BMAP
-    REG_W(AUX_DATA, 0x0075),
-    REG_W(AUX_ADDR, AUX_DISPWIDTH),        // 320/2 wide
-    REG_W(AUX_DATA, 160),
-    REG_W(AUX_ADDR, AUX_COLORMEM),        // upload palette
+    REG_WAITVSYNC(),                       // show 4-BPP BMAP
+    REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 8-BPP BMAP
+    REG_W(XR_DATA, 0x0075),
+    REG_W(XR_ADDR, XR_PA_LINE_LEN),        // 320/2 wide
+    REG_W(XR_DATA, 160),
+    REG_W(XR_ADDR, XR_COLOR_MEM),        // upload color palette
     REG_UPLOAD_AUX(),
-    REG_W(WR_INC, 0x0001),
+    REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
     REG_WAITVSYNC(),        // show 8-BPP BMAP
@@ -630,7 +671,7 @@ int main(int argc, char ** argv)
                 printf(" => write VRAM[0x%04x]=0x%04x\n", top->xosera_main->blit_addr, top->xosera_main->blit_data_out);
             }
 
-            if (top->xosera_main->blit_aux_sel && top->xosera_main->blit_wr)
+            if (top->xosera_main->blit_xr_sel && top->xosera_main->blit_wr)
             {
                 printf(" => write AUX[0x%04x]=0x%04x\n", top->xosera_main->blit_addr, top->xosera_main->blit_data_out);
             }

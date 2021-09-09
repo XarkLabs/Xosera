@@ -64,10 +64,12 @@ logic       bus_cs_n;                   // bus select (active LOW)
 logic       bus_rd_nwr;                 // bus read not write (write LOW, read HIGH)
 logic       bus_bytesel;                // bus even/odd byte select (even LOW, odd HIGH)
 logic [3:0] bus_reg_num;                // bus 4-bit register index number (16-bit registers)
+/* verilator lint_off UNUSED */
 logic [7:0] bus_data;                   // bus 8-bit bidirectional data I/O
 logic       audio_l;                    // left audio PWM
 logic       audio_r;                    // right audio PWM
 logic       bus_intr;                   // bus interrupt signal output (not used)
+/* verilator lint_on UNUSED */
 logic [3:0] vga_r;                      // vga red (4-bit)
 logic [3:0] vga_g;                      // vga green (4-bits)
 logic [3:0] vga_b;                      // vga blue (4-bits)
@@ -87,7 +89,9 @@ logic       spi_reset   = 1'b0;         // SPI "soft" reset (if SPI_INTERFACE)
 assign      nreset      = BTN_N;        // active LOW reset button
 
 // split tri-state data lines into in/out signals for inside FPGA
+/* verilator lint_off UNUSED */
 logic bus_out_ena;
+/* verilator lint_on UNUSED */
 logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
 // only set bus to output if CS enabled and read
@@ -268,7 +272,9 @@ xosera_main xosera_main(
 
 logic   spi_select;
 logic   spi_receive_strobe;
+/* verilator lint_off UNUSED */
 logic   spi_transmit_strobe;
+/* verilator lint_on UNUSED */
 logic   [7:0] spi_receive_data;
 logic   [7:0] spi_transmit_data;
 
@@ -293,8 +299,6 @@ logic [7:0] spi_data_byte       = 8'h00;
 logic       spi_payload_byte    = 1'b0;   // true on 2nd byte (payload byte) of packet
 logic       spi_cs_hold0        = 1'b0;   // saved CS from spi_cmd_byte (held for two cycles)
 logic       spi_cs_hold1        = 1'b0;   // saved CS from spi_cmd_byte (held for two cycles)
-logic       spi_rs_hold0        = 1'b0;   // saved CS from spi_cmd_byte (held for two cycles)
-logic       spi_rs_hold1        = 1'b0;   // saved CS from spi_cmd_byte (held for two cycles)
 
 assign bus_cs_n             = ~spi_cs_hold0;                            // CS bit
 assign bus_rd_nwr           = ~spi_cmd_byte[6];                         // WR bit

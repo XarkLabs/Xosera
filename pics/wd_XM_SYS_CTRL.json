@@ -1,0 +1,66 @@
+{
+    "reg": [
+        {
+            "bits": 4,
+            "name": "intrrupt enable",
+            "type": 5,
+            "attr": [
+                "[3] = vsync",
+                "[2] = copper",
+                "[1] = draw done",
+                "[0] = audio"
+            ]
+        },
+        {
+            "bits": 3,
+            "type": 1
+        },
+        {
+            "bits": 1,
+            "name": "busy",
+            "type": 6,
+            "attr": [
+                "0 = idle",
+                "1 = busy",
+                "drawing"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "VRAM nibble write mask",
+            "type": 4,
+            "attr": [
+                "[3:0] for XM_DATA/XM_DATA_2",
+                "(1 = allow write to nibble)"
+            ]
+        },
+        {
+            "bits": 1,
+            "type": 1
+        },
+        {
+            "bits": 2,
+            "name": "boot config",
+            "type": 2,
+            "attr": [
+                "00 = 640x480",
+                "01 = 848x480",
+                "10 = custom2",
+                "11 = custom3"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "boot",
+            "type": 2,
+            "attr": [
+                "1 =",
+                "reboot",
+                "FPGA"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

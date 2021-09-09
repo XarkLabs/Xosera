@@ -1,0 +1,12 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "low 16-bits of Git short hash identifier",
+            "type": 4
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

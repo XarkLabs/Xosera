@@ -1,0 +1,19 @@
+{
+    "reg": [
+        {
+            "bits": 11,
+            "name": "video window top",
+            "type": 4,
+            "attr": [
+                "top line of video display window (inclusive)"
+            ]
+        },
+        {
+            "bits": 5,
+            "type": 1,
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

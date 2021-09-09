@@ -1,0 +1,31 @@
+{
+    "reg": [
+        {
+            "bits": 4,
+            "name": "interrupt status/signal",
+            "type": 5,
+            "attr": [
+                "(write 1 to generate interrupt)",
+                "[3] = vsync",
+                "[2] = copper",
+                "[1] = draw done",
+                "[0] = audio"
+            ]
+        },
+        {
+            "bits": 4,
+            "type": 1
+        },
+        {
+            "bits": 8,
+            "name": "border color index",
+            "type": 2,
+            "attr": [
+                "color index of border area / outside playfield"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

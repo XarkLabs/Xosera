@@ -14,6 +14,7 @@
  * ------------------------------------------------------------
  */
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -25,25 +26,28 @@
 #include <machine.h>
 #include <sdfat.h>
 
+//#define DELAY_TIME 15000        // slow human speed
 #define DELAY_TIME 5000        // human speed
 //#define DELAY_TIME 1000        // impatient human speed
 //#define DELAY_TIME 100        // machine speed
 
-#include "xosera_api.h"
+#define COPPER_TEST 1
+
+#if !defined(NUM_ELEMENTS)
+#define NUM_ELEMENTS(a) (sizeof(a) / sizeof(a[0]))
+#endif
+
+#include "xosera_m68k_api.h"
 
 extern void install_intr(void);
 extern void remove_intr(void);
 
 extern volatile uint32_t XFrameCount;
 
-// Define rosco_m68k Xosera board base address pointer (See
-// https://github.com/rosco-m68k/hardware-projects/blob/feature/xosera/xosera/code/pld/decoder/ic3_decoder.pld#L25)
-volatile xreg_t * const xosera_ptr = (volatile xreg_t * const)0xf80060;        // rosco_m68k Xosera base
-
 bool use_sd;
 
-// Xosera default palette
-uint16_t def_palette[256] = {
+// Xosera default color palette
+uint16_t def_colors[256] = {
     0x0000, 0x000a, 0x00a0, 0x00aa, 0x0a00, 0x0a0a, 0x0aa0, 0x0aaa, 0x0555, 0x055f, 0x05f5, 0x05ff, 0x0f55, 0x0f5f,
     0x0ff5, 0x0fff, 0x0213, 0x0435, 0x0546, 0x0768, 0x098a, 0x0bac, 0x0dce, 0x0313, 0x0425, 0x0636, 0x0858, 0x0a7a,
     0x0c8c, 0x0eae, 0x0413, 0x0524, 0x0635, 0x0746, 0x0857, 0x0a68, 0x0b79, 0x0500, 0x0801, 0x0a33, 0x0d55, 0x0f78,
@@ -63,6 +67,101 @@ uint16_t def_palette[256] = {
     0x098d, 0x0baf, 0x0315, 0x0426, 0x0537, 0x0648, 0x085a, 0x096b, 0x0a7c, 0x0405, 0x0708, 0x092a, 0x0c4d, 0x0f6f,
     0x0f9f, 0x0fbf, 0x0000, 0x0111, 0x0222, 0x0333, 0x0444, 0x0555, 0x0666, 0x0777, 0x0888, 0x0999, 0x0aaa, 0x0bbb,
     0x0ccc, 0x0ddd, 0x0eee, 0x0fff};
+
+#if COPPER_TEST
+// Copper list
+const uint16_t copper_list[] = {
+    0xb000,
+    0x0000,        // movep 0, 0x0F00          ; Make color 0 red
+                   //
+    30 * 1,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0111,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 2,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0222,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 3,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0333,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 4,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0444,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 5,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0555,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 6,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0666,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 7,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0777,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 8,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0888,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 9,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0999,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 10,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0AAA,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 11,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0BBB,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 12,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0ccc,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 13,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0ddd,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 14,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0eee,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 15,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0fff,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 16,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0000,        // movep 0, 0x00F0          ; Make color 0 green
+
+    // end
+    0x0000,
+    0x0003        // wait  0, 0, 0b000011     ; Wait for next frame
+};
+const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
+
+static_assert(NUM_ELEMENTS(copper_list) < 1024, "copper list too long");
+#endif
 
 // dummy global variable
 uint32_t global;        // this is used to prevent the compiler from optimizing out tests
@@ -106,19 +205,22 @@ bool checkchar()
 }
 #endif
 
-bool delay_check(int ms)
+_NOINLINE bool delay_check(int ms)
 {
-    while (ms > 0)
+    while (ms--)
     {
         if (checkchar())
         {
             return true;
         }
 
-        uint32_t old_framecount = XFrameCount;
-        while (XFrameCount == old_framecount)
-            ;
-        ms -= 16;
+        uint16_t tms = 10;
+        do
+        {
+            uint8_t tvb = xm_getbl(TIMER);
+            while (tvb == xm_getbl(TIMER))
+                ;
+        } while (--tms);
     }
 
     return false;
@@ -161,53 +263,61 @@ static void dprintf(const char * fmt, ...)
 }
 
 uint16_t screen_addr;
-uint8_t  text_color = 0x02;        // dark green on black
 uint8_t  text_columns;
 uint8_t  text_rows;
 int8_t   text_h;
 int8_t   text_v;
+uint8_t  text_color = 0x02;        // dark green on black
 
 static void get_textmode_settings()
 {
-    //    int mode = 0;               // xv_reg_getw(gfxctrl);
-    //    bool v_dbl     = mode & 2;
-    int tile_size = 16;        //((xv_reg_getw(fontctrl) & 0xf) + 1) << (v_dbl ? 1 : 0);
-    screen_addr   = 0;         // xv_reg_getw(dispstart);
-    text_columns  = xv_reg_getw(dispwidth);
-    text_rows     = (xv_reg_getw(vidheight) + (tile_size - 1)) / tile_size;
+    uint16_t vx          = (xreg_getw(PA_GFX_CTRL) & 3) + 1;
+    uint16_t tile_height = (xreg_getw(PA_TILE_CTRL) & 0xf) + 1;
+    screen_addr          = xreg_getw(PA_DISP_ADDR);
+    text_columns         = (uint8_t)xreg_getw(PA_LINE_LEN);
+    text_rows            = (uint8_t)(((xreg_getw(VID_VSIZE) / vx) + (tile_height - 1)) / tile_height);
 }
 
 static void xcls()
 {
     get_textmode_settings();
-    xv_setw(wr_addr, screen_addr);
-    xv_setw(wr_inc, 1);
-    xv_setbh(data, text_color);
+    xm_setw(WR_ADDR, screen_addr);
+    xm_setw(WR_INCR, 1);
+    xm_setbh(DATA, text_color);
     for (uint16_t i = 0; i < (text_columns * text_rows); i++)
     {
-        xv_setbl(data, ' ');
+        xm_setbl(DATA, ' ');
     }
-    xv_setw(wr_addr, screen_addr);
+    xm_setw(WR_ADDR, screen_addr);
 }
 
 static void xmsg(int x, int y, int color, const char * msg)
 {
-    xv_setw(wr_addr, (y * text_columns) + x);
-    xv_setbh(data, color);
+    xm_setw(WR_ADDR, (y * text_columns) + x);
+    xm_setbh(DATA, color);
     char c;
     while ((c = *msg++) != '\0')
     {
-        xv_setbl(data, c);
+        xm_setbl(DATA, c);
     }
 }
 
-void restore_palette()
+void wait_vsync()
 {
-    xv_setw(aux_addr, XV_AUX_COLORMEM);
-    for (int i = 0; i < 256; i++)
+    while (xreg_getw(SCANLINE) >= 0x8000)
+        ;
+    while (xreg_getw(SCANLINE) < 0x8000)
+        ;
+}
+
+_NOINLINE void restore_colors()
+{
+    xm_setw(XR_ADDR, XR_COLOR_MEM);
+    uint16_t * cp = def_colors;
+    for (uint16_t i = 256; i != 0; i--)
     {
-        xv_setw(aux_data, def_palette[i]);
-    }
+        xm_setw(XR_DATA, *cp++);
+    };
 }
 
 void test_hello()
@@ -217,39 +327,39 @@ void test_hello()
 
     xcls();
     xmsg(0, 0, 0xa, "WROTE:");
-    xv_setw(wr_inc, 1);                            // set write inc
-    xv_setw(wr_addr, 0x0008);                      // set write address
-    xv_setw(data, 0x0200 | test_string[0]);        // set full word
+    xm_setw(WR_INCR, 1);                           // set write inc
+    xm_setw(WR_ADDR, 0x0008);                      // set write address
+    xm_setw(DATA, 0x0200 | test_string[0]);        // set full word
     for (size_t i = 1; i < sizeof(test_string) - 1; i++)
     {
         if (i == sizeof(test_string) - 5)
         {
-            xv_setbh(data, 0x04);        // test setting bh only (saved, VRAM not altered)
+            xm_setbh(DATA, 0x04);        // test setting bh only (saved, VRAM not altered)
         }
-        xv_setbl(data, test_string[i]);        // set byte, will use continue using previous high byte (0x20)
+        xm_setbl(DATA, test_string[i]);        // set byte, will use continue using previous high byte (0x20)
     }
 
     // read test
     dprintf("Read VRAM test, with auto-increment.\n\n");
     dprintf(" Begin: rd_addr=0x0000, rd_inc=0x0001\n");
-    xv_setw(rd_inc, 1);
-    xv_setw(rd_addr, 0x0008);
+    xm_setw(RD_INCR, 1);
+    xm_setw(RD_ADDR, 0x0008);
     uint16_t * tp = test_read;
     for (uint16_t c = 0; c < (sizeof(test_string) - 1); c++)
     {
-        *tp++ = xv_getw(data);
+        *tp++ = xm_getw(DATA);
     }
-    uint16_t end_addr = xv_getw(rd_addr);
+    uint16_t end_addr = xm_getw(RD_ADDR);
 
     xmsg(0, 2, 0xa, "READ:");
-    xv_setw(wr_inc, 1);                              // set write inc
-    xv_setw(wr_addr, (text_columns * 2) + 8);        // set write address
+    xm_setw(WR_INCR, 1);                             // set write inc
+    xm_setw(WR_ADDR, (text_columns * 2) + 8);        // set write address
 
     bool good = true;
     for (size_t i = 0; i < sizeof(test_string) - 1; i++)
     {
         uint16_t v = test_read[i];
-        xv_setw(data, v);
+        xm_setw(DATA, v);
         if ((v & 0xff) != test_string[i])
         {
             good = false;
@@ -267,17 +377,18 @@ void test_hello()
 void test_vram_speed()
 {
     xcls();
-    xv_setw(wr_inc, 1);
-    xv_setw(wr_addr, 0x0000);
-    xv_setw(rd_inc, 1);
-    xv_setw(rd_addr, 0x0000);
+    xv_prep();
+    xm_setw(WR_INCR, 1);
+    xm_setw(WR_ADDR, 0x0000);
+    xm_setw(RD_INCR, 1);
+    xm_setw(RD_ADDR, 0x0000);
 
-    int vram_write = 0;
-    int vram_read  = 0;
-    int main_write = 0;
-    int main_read  = 0;
+    uint32_t vram_write = 0;
+    uint32_t vram_read  = 0;
+    uint32_t main_write = 0;
+    uint32_t main_read  = 0;
 
-    int reps = 16;        // just a few flashes for write test
+    uint16_t reps = 16;        // just a few flashes for write test
     xmsg(0, 0, 0x02, "VRAM write     ");
     dprintf("VRAM write x %d\n", reps);
     uint32_t v = ((0x0f00 | 'G') << 16) | (0xf000 | 'o');
@@ -287,7 +398,7 @@ void test_vram_speed()
         uint16_t count = 0x8000;        // VRAM long count
         do
         {
-            xv_setl(data, v);
+            xm_setl(DATA, v);
         } while (--count);
         v ^= 0xff00ff00;
     }
@@ -328,7 +439,7 @@ void test_vram_speed()
         uint16_t count = 0x8000;        // VRAM long count
         do
         {
-            v = xv_getl(data);
+            v = xm_getl(DATA);
         } while (--count);
     }
     vram_read = timer_stop();
@@ -364,8 +475,8 @@ void test_vram_speed()
         uint16_t count = 0x8000;        // VRAM long count
         do
         {
-            xv_setw(rd_addr, 0);
-            v = xv_getbl(data);
+            xm_setw(RD_ADDR, 0);
+            v = xm_getbl(DATA);
         } while (--count);
     }
     vram_read = timer_stop();
@@ -383,8 +494,8 @@ void test_vram_speed()
         uint16_t count = 0x8000;        // VRAM long count
         do
         {
-            xv_setw(rd_addr, count & 0xff);
-            v = xv_getbl(data);
+            xm_setw(RD_ADDR, count & 0xff);
+            v = xm_getbl(DATA);
         } while (--count);
     }
     vram_read = timer_stop();
@@ -397,16 +508,17 @@ void test_vram_speed()
 
     dprintf("MOVEP.L VRAM write      128KB x 16 (2MB)    %d ms (%d KB/sec)\n",
             vram_write,
-            (1000 * 128 * reps) / vram_write);
+            (1000U * 128 * reps) / vram_write);
     dprintf(
-        "MOVEP.L VRAM read       128KB x 16 (2MB)    %d ms (%d KB/sec)\n", vram_read, (1000 * 128 * reps) / vram_read);
-    dprintf("MOVE.L  main RAM write  128KB x 16 (2MB)    %d ms (%d KB/sec)\n",
+        "MOVEP.L VRAM read       128KB x 16 (2MB)    %u ms (%u KB/sec)\n", vram_read, (1000U * 128 * reps) / vram_read);
+    dprintf("MOVE.L  main RAM write  128KB x 16 (2MB)    %u ms (%u KB/sec)\n",
             main_write,
-            (1000 * 128 * reps) / main_write);
+            (1000U * 128 * reps) / main_write);
     dprintf(
-        "MOVE.L  main RAM read   128KB x 16 (2MB)    %d ms (%d KB/sec)\n", main_read, (1000 * 128 * reps) / main_read);
+        "MOVE.L  main RAM read   128KB x 16 (2MB)    %u ms (%u KB/sec)\n", main_read, (1000U * 128 * reps) / main_read);
 }
 
+#if 0        // TODO: needs recalibrating for VSync timer
 uint16_t rosco_m68k_CPUMHz()
 {
     uint32_t count;
@@ -423,15 +535,16 @@ uint16_t rosco_m68k_CPUMHz()
         : [count] "=d"(count), [tv] "=&d"(tv)
         :
         :);
-    uint16_t MHz = ((count * 26) + 500) / 1000;
+    uint16_t MHz = (uint16_t)(((count * 26U) + 500U) / 1000U);
     dprintf("rosco_m68k: m68k CPU speed %d.%d MHz (%d.%d BogoMIPS)\n",
             MHz / 10,
             MHz % 10,
             count * 3 / 10000,
             ((count * 3) % 10000) / 10);
 
-    return (MHz + 5) / 10;
+    return (uint16_t)((MHz + 5U) / 10U);
 }
+#endif
 
 static void load_sd_bitmap(const char * filename)
 {
@@ -445,17 +558,16 @@ static void load_sd_bitmap(const char * filename)
 
         while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
         {
-            /* period every 4KiB, does not noticeably affect speed */
-            if (!(vaddr % 0x7))
+            if ((vaddr & 0xFFF) == 0)
             {
                 dprintf(".");
             }
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
-            xv_setw(wr_addr, vaddr);
+            xm_setw(WR_ADDR, vaddr);
             for (int i = 0; i < (cnt >> 1); i++)
             {
-                xv_setw(data, *maddr++);
+                xm_setw(DATA, *maddr++);
             }
             vaddr += (cnt >> 1);
         }
@@ -469,7 +581,7 @@ static void load_sd_bitmap(const char * filename)
     }
 }
 
-static void load_sd_palette(const char * filename)
+static void load_sd_colors(const char * filename)
 {
     dprintf("Loading colormap: \"%s\"", filename);
     void * file = fl_fopen(filename, "r");
@@ -481,17 +593,16 @@ static void load_sd_palette(const char * filename)
 
         while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
         {
-            /* period every 4KiB, does not noticeably affect speed */
-            if (!(vaddr % 0x7))
+            if ((vaddr & 0x7) == 0)
             {
                 dprintf(".");
             }
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
-            xv_setw(aux_addr, XV_AUX_COLORMEM);
+            xm_setw(XR_ADDR, XR_COLOR_MEM);
             for (int i = 0; i < (cnt >> 1); i++)
             {
-                xv_setw(aux_data, *maddr++);
+                xm_setw(XR_DATA, *maddr++);
             }
             vaddr += (cnt >> 1);
         }
@@ -516,10 +627,9 @@ void     xosera_test()
 
     dprintf("Xosera_test_m68k\n");
 
-    dprintf("\nxosera_init(1)...");
-    // wait for monitor to unblank
+    dprintf("\nxosera_init(0)...");
     bool success = xosera_init(0);
-    dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xv_reg_getw(vidwidth), xv_reg_getw(vidheight));
+    dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
 
@@ -527,18 +637,26 @@ void     xosera_test()
     install_intr();
     dprintf("okay.\n");
 
-    if (delay_check(4000))
+    printf("Checking for interrupt...");
+    uint32_t t = XFrameCount;
+    while (XFrameCount == t)
+        ;
+    printf("okay. Vsync interrupt detected.\n\n");
+
+#if COPPER_TEST
+    dprintf("Loading copper list...");
+
+    xm_setw(XR_ADDR, XR_COPPER_MEM);
+
+    for (uint16_t i = 0; i < copper_list_len; i++)
     {
-        return;
+        xm_setw(XR_DATA, copper_list[i]);
     }
 
-    dprintf("Setting scanline interrupt line 399...");
+    dprintf("okay\n");
+#endif
 
-    xv_reg_setw(lineintr, 0x818F);        // line 399
-
-    dprintf("okay.\n");
-
-    if (delay_check(2000))
+    if (delay_check(4000))
     {
         return;
     }
@@ -546,25 +664,49 @@ void     xosera_test()
     while (true)
     {
         uint32_t t = XFrameCount;
-        int      h = t / (60 * 60 * 60);
-        int      m = t / (60 * 60) % 60;
-        int      s = (t / 60) % 60;
-        dprintf("*** xosera_test_m68k iteration: %d, running %d:%02d:%02d\n", test_count++, h, m, s);
+        uint32_t h = t / (60 * 60 * 60);
+        uint32_t m = t / (60 * 60) % 60;
+        uint32_t s = (t / 60) % 60;
+        dprintf("*** xosera_test_m68k iteration: %u, running %u:%02u:%02u\n", test_count++, h, m, s);
 
         xcls();
-        uint32_t githash   = (xv_reg_getw(githash_h) << 16) | xv_reg_getw(githash_l);
-        uint16_t width     = xv_reg_getw(vidwidth);
-        uint16_t height    = xv_reg_getw(vidheight);
-        uint16_t features  = xv_reg_getw(features);
-        uint16_t dispstart = xv_reg_getw(dispstart);
-        uint16_t dispwidth = xv_reg_getw(dispwidth);
-        uint16_t scrollxy  = xv_reg_getw(scrollxy);
-        uint16_t gfxctrl   = xv_reg_getw(gfxctrl);
+        uint16_t version   = xreg_getw(VERSION);
+        uint32_t githash   = ((uint32_t)xreg_getw(GITHASH_H) << 16) | (uint32_t)xreg_getw(GITHASH_L);
+        uint16_t monwidth  = xreg_getw(VID_HSIZE);
+        uint16_t monheight = xreg_getw(VID_VSIZE);
+        uint16_t monfreq   = xreg_getw(VID_VFREQ);
 
-        dprintf("Xosera #%08x\n", githash);
-        dprintf("Mode: %dx%d  Features:0x%04x\n", width, height, features);
-        dprintf("dispstart:0x%04x dispwidth:0x%04x\n", dispstart, dispwidth);
-        dprintf(" scrollxy:0x%04x   gfxctrl:0x%04x\n", scrollxy, gfxctrl);
+        uint16_t gfxctrl  = xreg_getw(PA_GFX_CTRL);
+        uint16_t tilectrl = xreg_getw(PA_TILE_CTRL);
+        uint16_t dispaddr = xreg_getw(PA_DISP_ADDR);
+        uint16_t linelen  = xreg_getw(PA_LINE_LEN);
+        uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
+
+        dprintf(
+            "Xosera v%1x.%02x #%08x Features:0x%02x\n", (version >> 8) & 0xf, (version & 0xff), githash, version >> 8);
+        dprintf("Monitor Mode: %dx%d@%2x.%02xHz\n", monwidth, monheight, monfreq >> 8, monfreq & 0xff);
+        dprintf("\nPlayfield A:\n");
+        dprintf("PA_GFX_CTRL : 0x%04x PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
+        dprintf("PA_DISP_ADDR: 0x%04x PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
+        dprintf("PA_HV_SCROLL: 0x%04x\n", hvscroll);
+
+#if COPPER_TEST
+        if (test_count & 1)
+        {
+            dprintf("Copper enabled this interation.\n");
+            wait_vsync();
+            restore_colors();
+            xreg_setw(COPP_CTRL, 0x8000);
+        }
+        else
+        {
+            dprintf("Copper disabled this iteration.\n");
+            wait_vsync();
+            restore_colors();
+            xreg_setw(COPP_CTRL, 0x0000);
+        }
+
+#endif
 
         for (int y = 0; y < 30; y += 3)
         {
@@ -598,84 +740,87 @@ void     xosera_test()
         // 4/8 bpp test
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0075);        // bitmap + 8-bpp + Hx2 + Vx2
-            xv_reg_setw(dispwidth, 160);
+            wait_vsync();
+            xreg_setw(PA_GFX_CTRL, 0x0075);        // bitmap + 8-bpp + Hx2 + Vx2
+            xreg_setw(PA_LINE_LEN, 160);
 
-            load_sd_palette("/xosera_r1_pal.raw");
+            load_sd_colors("/xosera_r1_pal.raw");
             load_sd_bitmap("/xosera_r1.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0000);
         }
 
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
-            xv_reg_setw(dispwidth, 80);
+            wait_vsync();
+            xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
+            xreg_setw(PA_LINE_LEN, 80);
 
-            load_sd_palette("/ST_KingTut_Dpaint_16_pal.raw");
+            load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw");
             load_sd_bitmap("/ST_KingTut_Dpaint_16.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0000);
         }
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
-            xv_reg_setw(dispwidth, 80);
+            wait_vsync();
+            xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
+            xreg_setw(PA_LINE_LEN, 80);
 
-            load_sd_palette("/escher-relativity_320x240_16_pal.raw");
+            load_sd_colors("/escher-relativity_320x240_16_pal.raw");
             load_sd_bitmap("/escher-relativity_320x240_16.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0000);
         }
-        restore_palette();
+        wait_vsync();
+        restore_colors();
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
-            xv_reg_setw(dispwidth, 80);
+            wait_vsync();
+            xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
+            xreg_setw(PA_LINE_LEN, 80);
 
             load_sd_bitmap("/space_shuttle_color_small.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0000);
         }
 
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
-            xv_reg_setw(dispwidth, 80);
+            wait_vsync();
+            xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
+            xreg_setw(PA_LINE_LEN, 80);
 
             load_sd_bitmap("/mountains_mono_640x480w.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0000);
         }
 
         if (use_sd)
         {
-            xv_reg_setw(gfxctrl, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
-            xv_reg_setw(dispwidth, 80);
+            wait_vsync();
+            xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
+            xreg_setw(PA_LINE_LEN, 80);
 
             load_sd_bitmap("/escher-relativity_640x480w.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
-            xv_reg_setw(gfxctrl, 0x0000);
         }
 
+        wait_vsync();
+        xreg_setw(PA_GFX_CTRL, 0x0000);
         test_hello();
         if (delay_check(DELAY_TIME))
         {
@@ -688,9 +833,17 @@ void     xosera_test()
             break;
         }
     }
-    xv_reg_setw(gfxctrl, 0x0000);
+    wait_vsync();
 
+    xreg_setw(PA_GFX_CTRL, 0x0000);                           // text mode
+    xreg_setw(PA_TILE_CTRL, 0x000F);                          // text mode
+    xreg_setw(COPP_CTRL, 0x0000);                             // disable copper
+    xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) >> 3);        // line len
+    restore_colors();
     remove_intr();
+    xcls();
+    xmsg(0, 0, 0x02, "Exited.");
+
 
     while (checkchar())
     {

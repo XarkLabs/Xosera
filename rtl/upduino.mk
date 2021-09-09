@@ -16,6 +16,9 @@
 #       Icarus Verilog          (optional)
 #       Built using macOS BigSur 11.5.2 and GNU/Linux Ubuntu 20.04 distribution
 
+# This is a hack to get make to exit if command fails (even if command after pipe succeeds, e.g., tee)
+SHELL := /bin/bash -o pipefail
+
 # Version bookkeeping
 GITSHORTHASH := $(shell git rev-parse --short HEAD)
 DIRTYFILES := $(shell git status --porcelain --untracked-files=no | grep -v _stats.txt | cut -d " " -f 3-)
@@ -90,12 +93,12 @@ DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MOD
 
 # Verilator tool (used for "lint")
 VERILATOR := verilator
-VERILATOR_ARGS := -I$(SRCDIR) -Wall -Wno-DECLFILENAME -Wno-UNUSED
+VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -Wall -Wno-DECLFILENAME
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
-NEXTPNR_ARGS := --randomize-seed --placer heap --opt-timing --promote-logic
+NEXTPNR_ARGS := --randomize-seed --promote-logic --opt-timing --placer heap
 
 # defult target is make bitstream
 all: upduino/$(TOP)_$(VIDEO_MODE).bin upduino.mk
@@ -131,7 +134,7 @@ upduino/%_$(VIDEO_MODE).json: $(SRC) $(INC) $(FONTFILES) upduino.mk
 	@echo === Building UPduino Xosera ===
 	@rm -f $@
 	@mkdir -p $(LOGS)
-	-$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(TOP)_verilator.log
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(TOP)_verilator.log
 	$(YOSYS) -l $(LOGS)/$(TOP)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
 
 # make ASCII bitstream from JSON description and device parameters
@@ -139,10 +142,15 @@ upduino/%_$(VIDEO_MODE).asc: upduino/%_$(VIDEO_MODE).json $(PIN_DEF) upduino.mk
 	@rm -f $@
 	@mkdir -p $(LOGS)
 	@-cp $(TOP)_stats.txt $(LOGS)/$(TOP)_stats_last.txt
+ifdef NO_PNR_RETRY
+	@echo NO_PNR_RETRY set, so failure is an option...
+	$(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
+else
 	@echo $(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 	@until $$($(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@) ; do \
         	echo 'Retrying nextpnr-ice40 with new seed...' ; \
     	done
+endif
 	@echo === UPduino Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(TOP)_stats.txt
 	@-tabbyadm version | grep "Package" | tee -a $(TOP)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt

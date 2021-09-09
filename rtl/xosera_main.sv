@@ -44,7 +44,7 @@ module xosera_main(
            input  wire logic         bus_bytesel_i,          // 0 = even byte, 1 = odd byte
            input  wire logic [7:0]   bus_data_i,             // 8-bit data bus input
            output logic      [7:0]   bus_data_o,             // 8-bit data bus output
-           output logic              bus_intr_o,             // Vertical blank (active high)
+           output logic              bus_intr_o,             // Xosera CPU interrupt strobe
            output logic      [3:0]   red_o, green_o, blue_o, // RGB 4-bit color outputs
            output logic              hsync_o, vsync_o,       // horizontal and vertical sync
            output logic              dv_de_o,                // pixel visible (aka display enable)
@@ -55,35 +55,88 @@ module xosera_main(
        );
 
 logic        blit_vram_sel  /* verilator public */;     // blitter VRAM select
-logic        blit_aux_sel   /* verilator public */;     // blitter AUX select
-logic        blit_wr        /* verilator public */;     // blitter VRAM/AUX rite
+logic        blit_xr_sel    /* verilator public */;     // blitter XR select
+logic        blit_wr        /* verilator public */;     // blitter VRAM/XR write
 logic  [3:0] blit_mask      /* verilator public */;     // 4 nibble write masks for vram
 
-logic [15:0] blit_addr      /* verilator public */;     // blitter VRAM/AUX addr
-logic [15:0] blit_data_in   /* verilator public */;     // blitter VRAM/AUX data read
-logic [15:0] blit_data_out  /* verilator public */;     // blitter bus VRAM/AUX data write
+logic [15:0] blit_addr      /* verilator public */;     // blitter VRAM/XR addr
+logic [15:0] blit_data_in   /* verilator public */;     // blitter VRAM/XR data read
+logic [15:0] blit_data_out  /* verilator public */;     // blitter bus VRAM/XR data write
 
 logic blit_vgen_reg_sel     /* verilator public */;
 logic blit_vgen_reg_wr      /* verilator public */;
 
-logic blit_fontram_sel      /* verilator public */;
-logic blit_fontram_wr       /* verilator public */;
+logic blit_tilemem_sel      /* verilator public */;
+logic blit_tilemem_wr       /* verilator public */;
 
-logic blit_paletteram_sel   /* verilator public */;
-logic blit_paletteram_wr    /* verilator public */;
+logic blit_colormem_sel     /* verilator public */;
+logic blit_colormem_wr      /* verilator public */;
 
-logic blit_other_sel        /* verilator public */;
-logic blit_other_wr         /* verilator public */;
+logic blit_coppermem_sel    /* verilator public */;
+logic blit_coppermem_wr     /* verilator public */;
 
-assign  blit_vgen_reg_sel   = (blit_addr[15:14] == xv::AUX_VID[15:14]) && blit_aux_sel;
-assign  blit_fontram_sel    = (blit_addr[15:14] == xv::AUX_FONTMEM[15:14]) && blit_aux_sel;
-assign  blit_paletteram_sel = (blit_addr[15:14] == xv::AUX_COLORMEM[15:14]) && blit_aux_sel;
-assign  blit_other_sel      = (blit_addr[15:14] == xv::AUX_OTHERMEM[15:14]) && blit_aux_sel;
+logic blit_spritemem_sel    /* verilator public */;
+logic blit_spritemem_wr     /* verilator public */;
 
-assign  blit_vgen_reg_wr    = blit_vgen_reg_sel & blit_wr;
-assign  blit_fontram_wr     = blit_fontram_sel & blit_wr;
-assign  blit_paletteram_wr  = blit_paletteram_sel && blit_wr;
-assign  blit_other_wr       = blit_paletteram_sel && blit_wr;
+assign  blit_vgen_reg_sel   = blit_xr_sel && !blit_addr[15];
+assign  blit_colormem_sel   = blit_xr_sel && blit_addr[15] && (blit_addr[13:12] == xv::XR_COLOR_MEM[13:12]);
+assign  blit_tilemem_sel    = blit_xr_sel && blit_addr[15] && (blit_addr[13:12] == xv::XR_TILE_MEM[13:12]);
+assign  blit_coppermem_sel  = blit_xr_sel && blit_addr[15] && (blit_addr[13:12] == xv::XR_COPPER_MEM[13:12]);
+assign  blit_spritemem_sel  = blit_xr_sel && blit_addr[15] && (blit_addr[13:12] == xv::XR_SPRITE_MEM[13:12]);
+
+assign  blit_vgen_reg_wr    = blit_vgen_reg_sel && blit_wr;
+assign  blit_tilemem_wr     = blit_tilemem_sel && blit_wr;
+assign  blit_colormem_wr    = blit_colormem_sel && blit_wr;
+assign  blit_spritemem_wr   = blit_spritemem_sel && blit_wr;
+assign  blit_coppermem_wr   = blit_coppermem_sel && blit_wr;
+
+// Copper
+logic [11:0] copp_wr_addr;
+logic [15:0] copp_data_out;
+
+logic        copp_coppermem_wr;
+logic        copp_colormem_wr;
+logic        copp_tilemem_wr;
+logic        copp_vgen_reg_wr;
+
+logic        coppermem_wr_in;
+logic [10:0] coppermem_wr_addr_in;
+logic [15:0] coppermem_wr_data_in;
+
+logic        colormem_wr_in;
+logic  [7:0] colormem_wr_addr_in;
+logic [15:0] colormem_wr_data_in;
+
+logic        tilemem_wr_in;
+logic [11:0] tilemem_wr_addr_in;
+logic [15:0] tilemem_wr_data_in;
+
+logic        xr_reg_wr_in;
+logic [4:0]  xr_reg_wr_addr_in;
+logic [15:0] xr_reg_wr_data_in;
+
+assign coppermem_wr_in          = blit_coppermem_wr  || copp_coppermem_wr;
+assign coppermem_wr_addr_in     = blit_coppermem_wr   ? blit_addr[10:0] : copp_wr_addr[10:0]; 
+assign coppermem_wr_data_in     = blit_coppermem_wr   ? blit_data_out   : copp_data_out;
+
+assign colormem_wr_in           = blit_colormem_wr || copp_colormem_wr;
+assign colormem_wr_addr_in      = blit_colormem_wr  ? blit_addr[7:0]  : copp_wr_addr[7:0]; 
+assign colormem_wr_data_in      = blit_colormem_wr  ? blit_data_out   : copp_data_out;
+
+assign tilemem_wr_in            = blit_tilemem_wr    || copp_tilemem_wr;
+assign tilemem_wr_addr_in       = blit_tilemem_wr     ? blit_addr[11:0]  : copp_wr_addr[11:0]; 
+assign tilemem_wr_data_in       = blit_tilemem_wr     ? blit_data_out    : copp_data_out;
+
+assign xr_reg_wr_in             = blit_vgen_reg_wr   || copp_vgen_reg_wr;
+assign xr_reg_wr_addr_in        = blit_vgen_reg_wr    ? blit_addr[4:0]   : copp_wr_addr[4:0];
+assign xr_reg_wr_data_in        = blit_vgen_reg_wr    ? blit_data_out    : copp_data_out;
+
+logic [10:0]    copper_pc;
+logic           coppermem_rd_en;
+logic [15:0]    coppermem_rd_data_out;
+//logic [15:0]    copp_reg_data_out;
+logic [10:0]    video_h_count;
+logic [10:0]    video_v_count;
 
 //  16x64K (128KB) video memory
 logic        vram_sel       /* verilator public */;
@@ -97,33 +150,37 @@ logic [15:0] vgen_vram_read;
 logic        blit_vram_load;
 logic [15:0] blit_vram_read;
 
-logic vgen_ena;                 // enable text/bitmap generation
 logic vgen_vram_sel;            // video vram select (read)
 logic [15:0] vgen_vram_addr;    // video vram addr
 logic [15:0] vgen_data_in;      // video vram read data
 logic [15:0] vgen_reg_data_out; // video data out for blitter reg reads
 
+logic  [3:0]    intr_mask;          // true for each enabled interrupt
+logic  [3:0]    intr_status;        // pending interrupt status
+logic  [3:0]    intr_signal;        // interrupt signalled by Copper (or CPU)
+logic  [3:0]    intr_clear;         // interrupt cleared by CPU
+
 logic dbug_cs_strobe;               // TODO debug ACK signal
-logic dbug_drive_bus;               // TODO debug bus output signal
 
-logic           fontram_rd_en       /* verilator public */;
-logic [11:0]    fontram_addr        /* verilator public */; // 12-bit word address
-logic [15:0]    fontram_data_out    /* verilator public */;
+logic           tilemem_rd_en       /* verilator public */;
+logic [11:0]    tilemem_addr        /* verilator public */; // 12-bit word address
+logic [15:0]    tilemem_data_out    /* verilator public */;
 
-logic  [7:0]    pal_index       /* verilator public */;
-logic [15:0]    pal_lookup      /* verilator public */;
+logic           spritemem_rd_en     /* verilator public */;
+logic  [7:0]    spritemem_addr      /* verilator public */; // 8-bit word address
+logic [15:0]    spritemem_data_out  /* verilator public */;
 
-logic           vgen_vsync_intr_1;
-logic           vgen_vline_intr_1;
+logic  [7:0]    color_index         /* verilator public */;
+logic [15:0]    pal_lookup          /* verilator public */;
+
+logic           vgen_in_vblank;
 logic           vsync_1;
 logic           hsync_1;
 logic           dv_de_1;
 
 // audio generation (TODO)
 assign audio_l_o = dbug_cs_strobe;                    // TODO: audio
-assign audio_r_o = blit_aux_sel; //dbug_drive_bus;                    // TODO: audio
-
-assign dbug_drive_bus = (bus_cs_n_i == xv::cs_ENABLED && bus_rd_nwr_i == xv::RnW_READ);
+assign audio_r_o = blit_xr_sel; //dbug_drive_bus;                    // TODO: audio
 
 assign vram_sel     = vgen_vram_sel ? 1'b1              : blit_vram_sel;
 assign vram_wr      = vgen_vram_sel ? 1'b0              : (blit_wr & blit_vram_sel);
@@ -132,7 +189,7 @@ assign vram_addr    = vgen_vram_sel ? vgen_vram_addr    : blit_addr;
 assign vram_data_in = blit_data_out;
 assign blit_data_in = blit_vram_load ? vram_data_out    : blit_vram_read;
 assign vgen_data_in = vgen_vram_load ? vram_data_out    : vgen_vram_read;
- 
+
 // save vgen value read from vram
 always_ff @(posedge clk) begin
     if (vgen_vram_load) begin
@@ -155,51 +212,59 @@ always_ff @(posedge clk) begin
     end
 end
 
+// blitter (really register logic for CPU access)
 blitter blitter(
-            .clk(clk),
-            .bus_cs_n_i(bus_cs_n_i),            // register select strobe
-            .bus_rd_nwr_i(bus_rd_nwr_i),        // 0 = write, 1 = read
-            .bus_reg_num_i(bus_reg_num_i),      // register number
-            .bus_bytesel_i(bus_bytesel_i),      // 0=even byte, 1=odd byte
-            .bus_data_i(bus_data_i),            // 8-bit data bus input
-            .bus_data_o(bus_data_o),            // 8-bit data bus output
-            .vgen_sel_i(vgen_vram_sel),         // blitter or vgen vram access this cycle
-            .vgen_ena_o(vgen_ena),              // enable video generation
-            .blit_vram_sel_o(blit_vram_sel),    // blitter vram select
-            .blit_aux_sel_o(blit_aux_sel),      // blitter aux memory select
-            .blit_wr_o(blit_wr),                // blitter write
-            .blit_mask_o(blit_mask),            // vram nibble masks
-            .blit_addr_o(blit_addr),            // vram/aux address
-            .blit_data_i(blit_data_in),         // 16-bit word read from aux/vram
-            .blit_data_o(blit_data_out),        // 16-bit word write to aux/vram
-            .aux_data_i(vgen_reg_data_out),
-            .reconfig_o(reconfig_o),
-            .boot_select_o(boot_select_o),
-            .bus_ack_o(dbug_cs_strobe),            // TODO debug
-            .reset_i(reset_i)
-        );
+    .clk(clk),
+    .bus_cs_n_i(bus_cs_n_i),            // register select strobe
+    .bus_rd_nwr_i(bus_rd_nwr_i),        // 0 = write, 1 = read
+    .bus_reg_num_i(bus_reg_num_i),      // register number
+    .bus_bytesel_i(bus_bytesel_i),      // 0=even byte, 1=odd byte
+    .bus_data_i(bus_data_i),            // 8-bit data bus input
+    .bus_data_o(bus_data_o),            // 8-bit data bus output
+    .vgen_sel_i(vgen_vram_sel),         // blitter or vgen vram access this cycle
+    .blit_vram_sel_o(blit_vram_sel),    // blitter vram select
+    .blit_xr_sel_o(blit_xr_sel),        // blitter aux memory select
+    .blit_wr_o(blit_wr),                // blitter write
+    .blit_mask_o(blit_mask),            // vram nibble masks
+    .blit_addr_o(blit_addr),            // vram/aux address
+    .blit_data_i(blit_data_in),         // 16-bit word read from aux/vram
+    .blit_data_o(blit_data_out),        // 16-bit word write to aux/vram
+    .xr_data_i(vgen_reg_data_out),
+    .reconfig_o(reconfig_o),
+    .boot_select_o(boot_select_o),
+    .intr_mask_o(intr_mask),            // set with write to SYS_CTRL
+    .intr_clear_o(intr_clear),          // strobe with write to TIMER
+    .bus_ack_o(dbug_cs_strobe),         // TODO debug
+    .reset_i(reset_i)
+);
 
 //  video generation
 video_gen video_gen(
-    .clk(clk),
-    .reset_i(reset_i),
-    .enable_i(vgen_ena),
-    .fontram_sel_o(fontram_rd_en),
-    .fontram_addr_o(fontram_addr),
-    .fontram_data_i(fontram_data_out),
+    .vgen_reg_wr_i(xr_reg_wr_in),
+    .vgen_reg_num_r_i(blit_addr[4:0]),
+    .vgen_reg_num_w_i(xr_reg_wr_addr_in),
+    .vgen_reg_data_i(xr_reg_wr_data_in),
+    .vgen_reg_data_o(vgen_reg_data_out),
+    .intr_status_i(intr_status),        // status read from VID_CTRL
+    .intr_signal_o(intr_signal),        // signaled by write to VID_CTRL
     .vram_sel_o(vgen_vram_sel),
     .vram_addr_o(vgen_vram_addr),
     .vram_data_i(vgen_data_in),
-    .vgen_reg_wr_i(blit_vgen_reg_wr),
-    .vgen_reg_num_i(blit_addr[3:0]),
-    .vgen_reg_data_o(vgen_reg_data_out),
-    .vgen_reg_data_i(blit_data_out),
-    .pal_index_o(pal_index),
-    .vsync_intr_o(vgen_vsync_intr_1),
-    .vline_intr_o(vgen_vline_intr_1),
+    .tilemem_sel_o(tilemem_rd_en),
+    .tilemem_addr_o(tilemem_addr),
+    .tilemem_data_i(tilemem_data_out),
+    .spritemem_sel_o(spritemem_rd_en),
+    .spritemem_addr_o(spritemem_addr),
+    .spritemem_data_i(spritemem_data_out),
+    .color_index_o(color_index),
     .hsync_o(hsync_1),
     .vsync_o(vsync_1),
-    .dv_de_o(dv_de_1)
+    .dv_de_o(dv_de_1),
+    .h_count_o(video_h_count),
+    .v_count_o(video_v_count),
+    .in_vblank_o(vgen_in_vblank),
+    .reset_i(reset_i),
+    .clk(clk)
 );
 
 vram vram(
@@ -212,43 +277,108 @@ vram vram(
     .data_out(vram_data_out)
 );
 
-//  16-bit x 4KB font memory
-fontram fontram(
-    .clk(clk),
-    .rd_en_i(fontram_rd_en),
-    .rd_address_i(fontram_addr),
-    .rd_data_o(fontram_data_out),
-    .wr_clk(clk),
-    .wr_en_i(blit_fontram_wr),
-    .wr_address_i(blit_addr[11:0]),
-    .wr_data_i(blit_data_out)
-);
-
-// video palette RAM
-paletteram paletteram(
+// video color RAM
+colormem colormem(
     .clk(clk),
     .rd_en_i(1'b1),
-    .rd_address_i(pal_index),
+    .rd_address_i(color_index),
     .rd_data_o(pal_lookup),
     .wr_clk(clk),
-    .wr_en_i(blit_paletteram_wr),
+    .wr_en_i(colormem_wr_in),
+    .wr_address_i(colormem_wr_addr_in),
+    .wr_data_i(colormem_wr_data_in)
+);
+
+//  16-bit x 4KB tile memory
+tilemem tilemem(
+    .clk(clk),
+    .rd_en_i(tilemem_rd_en),
+    .rd_address_i(tilemem_addr),
+    .rd_data_o(tilemem_data_out),
+    .wr_clk(clk),
+    .wr_en_i(tilemem_wr_in),
+    .wr_address_i(tilemem_wr_addr_in),
+    .wr_data_i(tilemem_wr_data_in)
+);
+
+// cursor sprite RAM
+spritemem spritemem(
+    .clk(clk),
+    .rd_en_i(spritemem_rd_en),
+    .rd_address_i(spritemem_addr),
+    .rd_data_o(spritemem_data_out),
+    .wr_clk(clk),
+    .wr_en_i(blit_spritemem_wr),
     .wr_address_i(blit_addr[7:0]),
     .wr_data_i(blit_data_out)
 );
 
-// palette RAM lookup (delays video 1 cycle for BRAM)
+// Copper
+copper copper(
+    .clk(clk),
+    .reset_i(reset_i),
+    .vblank_i(vgen_in_vblank),
+    .ram_wr_addr_o(copp_wr_addr),
+    .ram_wr_data_o(copp_data_out),
+    .coppermem_rd_addr_o(copper_pc),
+    .coppermem_rd_en_o(coppermem_rd_en),
+    .coppermem_rd_data_i(coppermem_rd_data_out),
+    .coppermem_wr_en_o(copp_coppermem_wr),
+    .colormem_wr_en_o(copp_colormem_wr),
+    .tilemem_wr_en_o(copp_tilemem_wr),
+    .vgen_reg_wr_en_o(copp_vgen_reg_wr),
+    .blit_xr_reg_sel_i(blit_vgen_reg_sel),
+    .blit_tilemem_sel_i(blit_tilemem_sel),
+    .blit_colormem_sel_i(blit_colormem_sel),
+    .blit_coppermem_sel_i(blit_coppermem_sel),
+    .copp_reg_wr_i(blit_vgen_reg_wr),
+    .copp_reg_num_i(blit_addr[3:0]),
+    .copp_reg_data_i(blit_data_out),
+    .h_count_i(video_h_count),
+    .v_count_i(video_v_count)
+);
+
+// Copper RAM
+coppermem coppermem(
+    .clk(clk),
+    .rd_en_i(coppermem_rd_en),
+    .rd_address_i(copper_pc),
+    .rd_data_o(coppermem_rd_data_out),
+    .wr_clk(clk),
+    .wr_en_i(coppermem_wr_in),
+    .wr_address_i(coppermem_wr_addr_in),
+    .wr_data_i(coppermem_wr_data_in)
+);
+
+// color RAM lookup (delays video 1 cycle for BRAM)
 always_ff @(posedge clk) begin
-    bus_intr_o  <= (vgen_vsync_intr_1 | vgen_vline_intr_1);
     vsync_o     <= vsync_1;
     hsync_o     <= hsync_1;
     dv_de_o     <= dv_de_1;
-    red_o       <= 4'h0;
-    green_o     <= 4'h0;
-    blue_o      <= 4'h0;
     if (dv_de_1) begin
         red_o       <= pal_lookup[11:8];
         green_o     <= pal_lookup[7:4];
         blue_o      <= pal_lookup[3:0];
+    end else begin
+        red_o       <= 4'h0;
+        green_o     <= 4'h0;
+        blue_o      <= 4'h0;
+    end
+end
+
+// interrupt handling
+always_ff @(posedge clk) begin
+    if (reset_i) begin
+        intr_status <= 4'b0;
+    end else begin
+        // signal a bus interrupt if not masked and not set in status and
+        if ((intr_signal & intr_mask & (~intr_status)) != 4'b0) begin
+            bus_intr_o  <= 1'b1;
+        end else begin
+            bus_intr_o  <= 1'b0;
+        end
+        // remember interrupt signal and clear cleared interrupts
+        intr_status <= (intr_status | intr_signal) & (~intr_clear);
     end
 end
 

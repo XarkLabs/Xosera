@@ -1,0 +1,67 @@
+{
+    "reg": [
+        {
+            "bits": 2,
+            "name": "V repeat",
+            "type": 6,
+            "attr": [
+                "00=1x tall",
+                "01=2x tall",
+                "10=3x tall",
+                "11=4x tall"
+            ]
+        },
+        {
+            "bits": 2,
+            "name": "H repeat",
+            "type": 6,
+            "attr": [
+                "00=1x wide",
+                "01=2x wide",
+                "10=3x wide",
+                "11=4x wide"
+            ]
+        },
+        {
+            "bits": 2,
+            "name": "bits-per-pixel",
+            "type": 3,
+            "attr": [
+                "00=1-bpp",
+                "01=2-bpp",
+                "10=4-bpp",
+                "11=8-bpp"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "bitmap",
+            "type": 5,
+            "attr": [
+                "0=tiled",
+                "1=bitmap"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "blank",
+            "type": 2,
+            "attr": [
+                "0=on",
+                "1=off"
+            ]
+        },
+        {
+            "bits": 8,
+            "name": "colorbase",
+            "type": 4,
+            "attr": [
+                "upper bits for color index",
+                "(when less than 8-bpp)"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

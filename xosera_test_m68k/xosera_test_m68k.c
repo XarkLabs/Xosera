@@ -14,6 +14,7 @@
  * ------------------------------------------------------------
  */
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -25,9 +26,16 @@
 #include <machine.h>
 #include <sdfat.h>
 
+//#define DELAY_TIME 15000        // slow human speed
 #define DELAY_TIME 5000        // human speed
 //#define DELAY_TIME 1000        // impatient human speed
 //#define DELAY_TIME 100        // machine speed
+
+#define COPPER_TEST 1
+
+#if !defined(NUM_ELEMENTS)
+#define NUM_ELEMENTS(a) (sizeof(a) / sizeof(a[0]))
+#endif
 
 #include "xosera_m68k_api.h"
 
@@ -60,17 +68,99 @@ uint16_t def_colors[256] = {
     0x0f9f, 0x0fbf, 0x0000, 0x0111, 0x0222, 0x0333, 0x0444, 0x0555, 0x0666, 0x0777, 0x0888, 0x0999, 0x0aaa, 0x0bbb,
     0x0ccc, 0x0ddd, 0x0eee, 0x0fff};
 
-#ifdef COPPER
+#if COPPER_TEST
 // Copper list
-const uint8_t  copper_list_len = 12;
 const uint16_t copper_list[] = {
-    0xb000, 0x0f00,             // movep 0, 0x0F00          ; Make color 0 red
-    0x0140, 0x0002,             // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000, 0x00f0,             // movep 0, 0x00F0          ; Make color 0 green
-    0x0280, 0x0002,             // wait  0, 320, 0b000010   ; Wait for line 320, ignore X position
-    0xb000, 0x000f,             // movep 0, 0x000F          ; Make color 0 blue
-    0x0000, 0x0003              // wait  0, 0, 0b000011     ; Wait for next frame
+    0xb000,
+    0x0000,        // movep 0, 0x0F00          ; Make color 0 red
+                   //
+    30 * 1,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0111,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 2,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0222,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 3,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0333,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 4,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0444,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 5,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0555,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 6,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0666,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 7,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0777,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 8,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0888,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 9,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0999,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 10,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0AAA,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 11,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0BBB,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 12,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0ccc,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 13,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0ddd,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 14,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0eee,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 15,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0fff,        // movep 0, 0x00F0          ; Make color 0 green
+    //
+    30 * 16,
+    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
+    0xb000,
+    0x0000,        // movep 0, 0x00F0          ; Make color 0 green
+
+    // end
+    0x0000,
+    0x0003        // wait  0, 0, 0b000011     ; Wait for next frame
 };
+const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
+
+static_assert(NUM_ELEMENTS(copper_list) < 1024, "copper list too long");
 #endif
 
 // dummy global variable
@@ -115,7 +205,7 @@ bool checkchar()
 }
 #endif
 
-__attribute__((noinline)) bool delay_check(int ms)
+_NOINLINE bool delay_check(int ms)
 {
     while (ms--)
     {
@@ -212,13 +302,22 @@ static void xmsg(int x, int y, int color, const char * msg)
     }
 }
 
-void restore_colors()
+void wait_vsync()
+{
+    while (xreg_getw(SCANLINE) >= 0x8000)
+        ;
+    while (xreg_getw(SCANLINE) < 0x8000)
+        ;
+}
+
+_NOINLINE void restore_colors()
 {
     xm_setw(XR_ADDR, XR_COLOR_MEM);
-    for (int i = 0; i < 256; i++)
+    uint16_t * cp = def_colors;
+    for (uint16_t i = 256; i != 0; i--)
     {
-        xm_setw(XR_DATA, def_colors[i]);
-    }
+        xm_setw(XR_DATA, *cp++);
+    };
 }
 
 void test_hello()
@@ -544,18 +643,15 @@ void     xosera_test()
         ;
     printf("okay. Vsync interrupt detected.\n\n");
 
-#ifdef COPPER
+#if COPPER_TEST
     dprintf("Loading copper list...");
-    
-    xv_setw(aux_addr, XV_AUX_COPPERMEM);
 
-    for (uint8_t i = 0; i < copper_list_len; i++) {
-        xv_setw(aux_data, copper_list[i]);
+    xm_setw(XR_ADDR, XR_COPPER_MEM);
+
+    for (uint16_t i = 0; i < copper_list_len; i++)
+    {
+        xm_setw(XR_DATA, copper_list[i]);
     }
-
-    dprintf(" and enabling copper...");
-
-    xv_reg_setw(coppctrl, 0x8000);
 
     dprintf("okay\n");
 #endif
@@ -594,6 +690,24 @@ void     xosera_test()
         dprintf("PA_DISP_ADDR: 0x%04x PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
         dprintf("PA_HV_SCROLL: 0x%04x\n", hvscroll);
 
+#if COPPER_TEST
+        if (test_count & 1)
+        {
+            dprintf("Copper enabled this interation.\n");
+            wait_vsync();
+            restore_colors();
+            xreg_setw(COPP_CTRL, 0x8000);
+        }
+        else
+        {
+            dprintf("Copper disabled this iteration.\n");
+            wait_vsync();
+            restore_colors();
+            xreg_setw(COPP_CTRL, 0x0000);
+        }
+
+#endif
+
         for (int y = 0; y < 30; y += 3)
         {
             xmsg(20, y, (y & 0xf) ? (y & 0xf) : 0xf0, ">>> Xosera rosco_m68k test utility <<<<");
@@ -626,6 +740,7 @@ void     xosera_test()
         // 4/8 bpp test
         if (use_sd)
         {
+            wait_vsync();
             xreg_setw(PA_GFX_CTRL, 0x0075);        // bitmap + 8-bpp + Hx2 + Vx2
             xreg_setw(PA_LINE_LEN, 160);
 
@@ -635,11 +750,11 @@ void     xosera_test()
             {
                 break;
             }
-            xreg_setw(PA_GFX_CTRL, 0x0000);
         }
 
         if (use_sd)
         {
+            wait_vsync();
             xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
             xreg_setw(PA_LINE_LEN, 80);
 
@@ -649,10 +764,10 @@ void     xosera_test()
             {
                 break;
             }
-            xreg_setw(PA_GFX_CTRL, 0x0000);
         }
         if (use_sd)
         {
+            wait_vsync();
             xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
             xreg_setw(PA_LINE_LEN, 80);
 
@@ -662,11 +777,12 @@ void     xosera_test()
             {
                 break;
             }
-            xreg_setw(PA_GFX_CTRL, 0x0000);
         }
+        wait_vsync();
         restore_colors();
         if (use_sd)
         {
+            wait_vsync();
             xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
             xreg_setw(PA_LINE_LEN, 80);
 
@@ -675,11 +791,11 @@ void     xosera_test()
             {
                 break;
             }
-            xreg_setw(PA_GFX_CTRL, 0x0000);
         }
 
         if (use_sd)
         {
+            wait_vsync();
             xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
             xreg_setw(PA_LINE_LEN, 80);
 
@@ -688,11 +804,11 @@ void     xosera_test()
             {
                 break;
             }
-            xreg_setw(PA_GFX_CTRL, 0x0000);
         }
 
         if (use_sd)
         {
+            wait_vsync();
             xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
             xreg_setw(PA_LINE_LEN, 80);
 
@@ -701,9 +817,10 @@ void     xosera_test()
             {
                 break;
             }
-            xreg_setw(PA_GFX_CTRL, 0x0000);
         }
 
+        wait_vsync();
+        xreg_setw(PA_GFX_CTRL, 0x0000);
         test_hello();
         if (delay_check(DELAY_TIME))
         {
@@ -716,9 +833,17 @@ void     xosera_test()
             break;
         }
     }
-    xreg_setw(PA_GFX_CTRL, 0x0000);
+    wait_vsync();
 
+    xreg_setw(PA_GFX_CTRL, 0x0000);                           // text mode
+    xreg_setw(PA_TILE_CTRL, 0x000F);                          // text mode
+    xreg_setw(COPP_CTRL, 0x0000);                             // disable copper
+    xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) >> 3);        // line len
+    restore_colors();
     remove_intr();
+    xcls();
+    xmsg(0, 0, 0x02, "Exited.");
+
 
     while (checkchar())
     {

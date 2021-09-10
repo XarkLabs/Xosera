@@ -227,7 +227,7 @@ _NOINLINE void set_defaut_palette()
 
 static void xansi_calc_xy(ansiterm_data * td)
 {
-    uint32_t l = (uint16_t)(td->cur_addr - td->vram_base);
+    uint32_t l = td->cur_addr - td->vram_base;
     uint16_t r;
     // GCC is annoying me and not using perfect opcode that gives division and remainder result
     __asm__ __volatile__(

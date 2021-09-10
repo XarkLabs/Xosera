@@ -37,12 +37,31 @@
 #if !defined(NUM_ELEMENTS)
 #define NUM_ELEMENTS(arr) (sizeof((arr)) / sizeof((arr)[0]))
 #endif
+
+#if TEST
+#if !defined ASSERT
+#define ASSERT(e)                                                                                                      \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        if (!(e))                                                                                                      \
+        {                                                                                                              \
+            LOGF("\n\aASSERTION: %s:%d : (%s) is false\n", __FILE__, __LINE__, XM_STR(e));                             \
+        }                                                                                                              \
+    } while (false)
+#endif
+#else
+#define ASSERT(e)
+#endif
+
 // rosco_m68k ANSI Terminal Functions
+
+#define MAX_CSI_ARGS 4
 
 enum e_term_flags
 {
-    TFLAG_NO_CURSOR       = 1 << 0,
-    TFLAG_CURSOR_INVERTED = 1 << 1,
+    TFLAG_NO_CURSOR         = 1 << 0,        // no cursor on input
+    TFLAG_CURSOR_INVERTED   = 1 << 1,        // cursor currently inverted flag
+    TFLAG_CTRLCHAR_PASSTHRU = 1 << 2,        // pass through control chars as graphic [HIDDEN attribute]
 };
 
 enum e_term_state
@@ -58,12 +77,13 @@ typedef struct _ansiterm_device
     uint16_t vram_base;
     uint16_t vram_size;
     uint16_t cur_addr;
-    uint16_t data_save;
+    uint16_t csi_args[MAX_CSI_ARGS];
+    uint8_t  num_args;
     uint8_t  flags;
     uint8_t  state;
     uint8_t  color;
     uint8_t  cols, rows;
-    uint8_t  cur_x, cur_y;
+    uint8_t  x, y;
 
 } ansiterm_data;
 
@@ -170,15 +190,8 @@ _NOINLINE static void dprintf(const char * fmt, ...)
 
 _NOINLINE static void wait_vsync()
 {
-    const uint16_t VSYNC_MARGIN_LINES = 20;        // scanlines into vblank early enough for register writes
-
     xv_prep();
 
-    uint16_t vsize = xreg_getw(VID_VSIZE);
-    uint16_t sline = xreg_getw(SCANLINE);
-    // if in first 'margin' lines of vblank, return now
-    if ((sline & 0x8000) && ((sline & 0x7ff) < (vsize + VSYNC_MARGIN_LINES)))
-        return;
     // wait until not vblank (if in vblank)
     while (xreg_getw(SCANLINE) & 0x8000)
         ;
@@ -198,8 +211,29 @@ _NOINLINE void set_defaut_palette()
     };
 }
 
-
 // terminal functions
+
+static void xansi_calc_xy(ansiterm_data * td)
+{
+    uint32_t l = (uint16_t)(td->cur_addr - td->vram_base);
+    uint16_t r;
+    // GCC is annoying me and not using perfect opcode that gives division and remainder result
+    __asm__ __volatile__(
+        "divu.w %[w],%[l]\n"
+        "move.l %[l],%[r]\n"
+        "swap.w %[r]\n"
+        : [l] "+d"(l), [r] "=d"(r)
+        : [w] "d"((uint16_t)td->cols));
+    td->y = l;
+    td->x = r;
+    ASSERT(td->y < td->rows && td->x < td->cols);
+}
+
+static void xansi_calc_cur_addr(ansiterm_data * td)
+{
+    td->cur_addr = td->vram_base + (uint16_t)(td->y * td->cols) + td->x;
+    ASSERT((uint16_t)(td->cur_addr - td->vram_base) < td->vram_size);
+}
 
 static void xansi_cls(ansiterm_data * td)
 {
@@ -208,14 +242,33 @@ static void xansi_cls(ansiterm_data * td)
     xm_setw(WR_INCR, 1);
     xm_setw(WR_ADDR, td->vram_base);
     xm_setbh(DATA, td->color);
-    for (uint16_t i = td->rows * td->cols; i != 0; i--)
+    for (uint16_t i = td->vram_size; i != 0; i--)
     {
         xm_setbl(DATA, ' ');
     }
     xm_setw(WR_ADDR, td->vram_base);
-    td->cur_x    = 0;
-    td->cur_y    = 0;
+    td->x        = 0;
+    td->y        = 0;
     td->cur_addr = td->vram_base;
+}
+
+static _NOINLINE void xansi_visualbell(ansiterm_data * td)
+{
+    xv_prep();
+
+    xm_setw(RD_INCR, 1);
+    xm_setw(WR_INCR, 1);
+    for (int l = 0; l < 2; l++)
+    {
+        xm_setw(RD_ADDR, td->vram_base);
+        xm_setw(WR_ADDR, td->vram_base);
+        for (uint16_t i = td->vram_size; i != 0; i--)
+        {
+            uint16_t data = xm_getw(DATA);
+            xm_setw(DATA,
+                    (((uint16_t)(data & 0xf000) >> 4) | (uint16_t)((data & 0x0f00) << 4) | (uint16_t)(data & 0xff)));
+        }
+    }
 }
 
 // fully reset Xosera "text mode" with defaults that should make it visible
@@ -242,8 +295,8 @@ _NOINLINE void xansi_reset(ansiterm_data * td)
     td->cur_addr  = 0;
     td->cols      = cols;
     td->rows      = rows;
-    td->cur_x     = 0;
-    td->cur_y     = 0;
+    td->x         = 0;
+    td->y         = 0;
     td->color     = 0x02;        // default dark-green on black
 
     xansi_cls(td);
@@ -267,19 +320,93 @@ static void xansi_scroll_up(ansiterm_data * td)
     }
 }
 
-static void xansi_drawchar(ansiterm_data * td, char c)
+static void xansi_scroll_down(ansiterm_data * td)
 {
     xv_prep();
+    xm_setw(WR_INCR, -1);
+    xm_setw(RD_INCR, -1);
+    xm_setw(WR_ADDR, (uint16_t)(td->vram_base + td->vram_size - 1));
+    xm_setw(RD_ADDR, (uint16_t)(td->vram_base + td->vram_size - td->cols - 1));
+    for (uint16_t i = td->vram_size - td->cols; i != 0; i--)
+    {
+        xm_setw(DATA, xm_getw(DATA));
+    }
+    xm_setbh(DATA, td->color);
+    for (uint16_t i = td->cols; i != 0; i--)
+    {
+        xm_setbl(DATA, ' ');
+    }
+}
+
+static void xansi_drawchar(ansiterm_data * td, char cdata)
+{
+    xv_prep();
+
     xm_setw(WR_INCR, 1);
     xm_setw(WR_ADDR, td->cur_addr++);
     xm_setbh(DATA, td->color);
-    xm_setbl(DATA, c);
+    xm_setbl(DATA, cdata);
 
     if ((uint16_t)(td->cur_addr - td->vram_base) >= td->vram_size)
     {
         xansi_scroll_up(td);
-        td->cur_addr -= td->cols;
+        td->cur_addr = td->vram_base + (td->vram_size - td->cols);
     }
+}
+
+static void xansi_processchar(ansiterm_data * td, char cdata)
+{
+    if ((int8_t)cdata < ' ' && !(td->flags & TFLAG_CTRLCHAR_PASSTHRU))
+    {
+        switch (cdata)
+        {
+            case '\a':
+                xansi_visualbell(td);
+                return;
+            case '\b':
+                if (td->cur_addr > td->vram_base)
+                {
+                    td->cur_addr--;
+                }
+                return;
+            case '\t':
+                xansi_calc_xy(td);
+                td->x = (td->x & ~0x7) + 8;
+                if (((int16_t)td->cols - (int16_t)td->x) < 8)
+                {
+                    td->x = 0;
+                    td->y++;
+                    if (td->y >= td->rows)
+                    {
+                        xansi_scroll_up(td);
+                        td->y = td->rows - 1;
+                    }
+                }
+                xansi_calc_cur_addr(td);
+                return;
+            case '\n':
+            case '\v':        // vertical tab processas as LF
+                td->cur_addr += td->cols;
+                if (td->cur_addr >= (uint16_t)(td->vram_base + td->vram_size))
+                {
+                    xansi_scroll_up(td);
+                    td->cur_addr -= td->cols;
+                }
+                return;
+            case '\f':        // FF clears screen
+                xansi_cls(td);
+                return;
+            case '\r':
+                xansi_calc_xy(td);
+                td->x = 0;
+                xansi_calc_cur_addr(td);
+                return;
+            default:        // other control chars printed
+                break;
+        }
+    }
+
+    xansi_drawchar(td, cdata);
 }
 
 // external terminal functions
@@ -308,11 +435,12 @@ bool xansiterm_checkchar()
         if (inverted != invert)
         {
             td->flags ^= TFLAG_CURSOR_INVERTED;
-            xm_setw(RW_INCR, 0x0000);
+            xm_setw(RW_INCR, 0x0000);        // NOTE: double incr hazard...
             xm_setw(RW_ADDR, td->cur_addr);
             uint16_t data = xm_getw(RW_DATA);
             // swap color attribute nibbles
-            xm_setw(RW_DATA, ((data & 0xf000) >> 4) | ((data & 0x0f00) << 4) | (data & 0xff));
+            xm_setw(RW_DATA,
+                    (((uint16_t)(data & 0xf000) >> 4) | (uint16_t)((data & 0x0f00) << 4) | (uint16_t)(data & 0xff)));
         }
     }
 
@@ -331,12 +459,61 @@ void xansiterm_putchar(char cdata)
     {
         // fall through
         case TSTATE_NORMAL:
-            xansi_drawchar(td, cdata);
+            if (cdata == '\x1b')
+            {
+                td->state = TSTATE_ESC;
+                break;
+            }
+            xansi_processchar(td, cdata);
             break;
         case TSTATE_ESC:
+            td->state = TSTATE_NORMAL;
+            switch (cdata)
+            {
+                case '\x1b':        // print 2nd ESC
+                    xansi_processchar(td, cdata);
+                    break;
+                case 'c':        // VT100 reset device
+                    xansi_reset(td);
+                    break;
+                case '[':        // VT100 CSI
+                    td->state = TSTATE_CSI;
+                    break;
+                case '(':        // TODO: VT100 font 0
+                    LOG("ANSI: set FONT 0\n");
+                    break;
+                case ')':        // TODO: VT100 font 1
+                    LOG("ANSI: set FONT 1\n");
+                    break;
+                case 'D':        // VT100 scroll down
+                    xansi_scroll_down(td);
+                    break;
+                case 'M':        // VT100 scroll up
+                    xansi_scroll_up(td);
+                    break;
+                default:
+                    LOGF("ANSI: Ignoring <ESC>%c (<ESC>0x%02x)\n", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
+                    break;
+            }
+            break;
         case TSTATE_CSI:
+            td->state = TSTATE_NORMAL;
+            switch (cdata)
+            {
+                case '\x1b':        // print 2nd ESC
+                    xansi_processchar(td, cdata);
+                    break;
+                default:
+                    LOGF("ANSI: Ignoring CSI <ESC>[%c (<ESC>0x%02x)\n",
+                         (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ',
+                         cdata);
+                    break;
+            }
+            break;
+            break;
         default:
-            LOGF("ANSI: bad state: %d\n", td->state);
+            LOGF("ANSI: bad state: %d (reset to TSTATE_NORMAL)\n", td->state);
+            td->state = TSTATE_NORMAL;
             break;
     }
 }
@@ -374,16 +551,12 @@ void xosera_ansiterm()
 
     xansiterm_init();
 
-    tprint("This is an ANSI Terminal Test!\n\n");
+    tprint("Welcome to ANSI Terminal test\n\n");
 
-    tprint("Basic controlchar test \\n\n");
-    tprint("Basic control test \\b N\bY (should see Y, not N)\n");
-
-    tprint("\n\nEcho test, hit ^A to exit...\n");
+    tprint("Echo test, hit ^A to exit...\n\n");
 
     while (true)
     {
-
         while (!xansiterm_checkchar())
             ;
 

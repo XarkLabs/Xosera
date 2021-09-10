@@ -148,6 +148,8 @@
 			"Wpedantic",
 			"wrmask",
 			"wval",
+			"xansi",
+			"xansiterm",
 			"Xark",
 			"xmem",
 			"xmreg",

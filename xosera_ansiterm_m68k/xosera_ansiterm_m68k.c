@@ -39,14 +39,31 @@
 #endif
 // rosco_m68k ANSI Terminal Functions
 
+enum e_term_flags
+{
+    TFLAG_NO_CURSOR       = 1 << 0,
+    TFLAG_CURSOR_INVERTED = 1 << 1,
+};
+
+enum e_term_state
+{
+    TSTATE_NORMAL,
+    TSTATE_ESC,
+    TSTATE_CSI,
+    NUM_TSTATES
+};
+
 typedef struct _ansiterm_device
 {
     uint16_t vram_base;
     uint16_t vram_size;
-    uint8_t  cols, rows;
-    uint8_t  color, pad;
-    uint8_t  cur_x, cur_y;
     uint16_t cur_addr;
+    uint16_t data_save;
+    uint8_t  flags;
+    uint8_t  state;
+    uint8_t  color;
+    uint8_t  cols, rows;
+    uint8_t  cur_x, cur_y;
 
 } ansiterm_data;
 
@@ -181,8 +198,28 @@ _NOINLINE void set_defaut_palette()
     };
 }
 
+
+// terminal functions
+
+static void xansi_cls(ansiterm_data * td)
+{
+    xv_prep();
+
+    xm_setw(WR_INCR, 1);
+    xm_setw(WR_ADDR, td->vram_base);
+    xm_setbh(DATA, td->color);
+    for (uint16_t i = td->rows * td->cols; i != 0; i--)
+    {
+        xm_setbl(DATA, ' ');
+    }
+    xm_setw(WR_ADDR, td->vram_base);
+    td->cur_x    = 0;
+    td->cur_y    = 0;
+    td->cur_addr = td->vram_base;
+}
+
 // fully reset Xosera "text mode" with defaults that should make it visible
-_NOINLINE void text_reset(ansiterm_data * td)
+_NOINLINE void xansi_reset(ansiterm_data * td)
 {
     xv_prep();
     uint16_t cols = xreg_getw(VID_HSIZE) >> 3;        // get pixel width / 8 for 8x16 text columns
@@ -202,39 +239,17 @@ _NOINLINE void text_reset(ansiterm_data * td)
 
     td->vram_base = 0;
     td->vram_size = cols * rows;
+    td->cur_addr  = 0;
     td->cols      = cols;
     td->rows      = rows;
     td->cur_x     = 0;
     td->cur_y     = 0;
     td->color     = 0x02;        // default dark-green on black
+
+    xansi_cls(td);
 }
 
-// terminal functions
-
-static void cls(ansiterm_data * td)
-{
-    xv_prep();
-
-    xm_setw(WR_INCR, 1);
-    xm_setw(WR_ADDR, td->vram_base);
-    xm_setbh(DATA, td->color);
-    for (uint16_t i = td->rows * td->cols; i != 0; i--)
-    {
-        xm_setbl(DATA, ' ');
-    }
-    xm_setw(WR_ADDR, td->vram_base);
-    td->cur_x    = 0;
-    td->cur_y    = 0;
-    td->cur_addr = td->vram_base;
-}
-
-static void ansiterm_init(ansiterm_data * td)
-{
-    text_reset(td);
-    cls(td);
-}
-
-static void ansiterm_scroll_up(ansiterm_data * td)
+static void xansi_scroll_up(ansiterm_data * td)
 {
     xv_prep();
     xm_setw(WR_INCR, 1);
@@ -252,7 +267,7 @@ static void ansiterm_scroll_up(ansiterm_data * td)
     }
 }
 
-static void ansiterm_drawchar(ansiterm_data * td, char c)
+static void xansi_drawchar(ansiterm_data * td, char c)
 {
     xv_prep();
     xm_setw(WR_INCR, 1);
@@ -262,31 +277,71 @@ static void ansiterm_drawchar(ansiterm_data * td, char c)
 
     if ((uint16_t)(td->cur_addr - td->vram_base) >= td->vram_size)
     {
-        ansiterm_scroll_up(td);
+        xansi_scroll_up(td);
         td->cur_addr -= td->cols;
     }
 }
 
-void ansiterm_putchar(char c)
+// external terminal functions
+static void xansiterm_init()
 {
-    ansiterm_drawchar(&atd, c);
+    LOG("ANSI: ansiterm_init\n");
+
+    memset(&atd, 0, sizeof(atd));
+    ansiterm_data * td = &atd;
+
+    xansi_reset(td);
+    xansi_cls(td);
 }
 
-// testing harness
-
-_NOINLINE void xmsg(ansiterm_data * td, const char * msg)
+bool xansiterm_checkchar()
 {
-    xv_prep();
+    ansiterm_data * td = &atd;
 
-    xm_setw(WR_ADDR, td->cur_addr);
-    xm_setbh(DATA, td->color);
-    char c;
-    while ((c = *msg++) != '\0')
+    bool res = checkchar();
+
+    if (!(td->flags & TFLAG_NO_CURSOR))
     {
-        xm_setbl(DATA, c);
+        xv_prep();
+        bool invert   = (xm_getw(TIMER) & 0x800) && !res;
+        bool inverted = td->flags & TFLAG_CURSOR_INVERTED;
+        if (inverted != invert)
+        {
+            td->flags ^= TFLAG_CURSOR_INVERTED;
+            xm_setw(RW_INCR, 0x0000);
+            xm_setw(RW_ADDR, td->cur_addr);
+            uint16_t data = xm_getw(RW_DATA);
+            // swap color attribute nibbles
+            xm_setw(RW_DATA, ((data & 0xf000) >> 4) | ((data & 0x0f00) << 4) | (data & 0xff));
+        }
     }
-    xm_setw(WR_ADDR, td->cur_addr);
+
+    return res;
 }
+
+char xansiterm_readchar()
+{
+    return readchar();
+}
+
+void xansiterm_putchar(char cdata)
+{
+    ansiterm_data * td = &atd;
+    switch (td->state)
+    {
+        // fall through
+        case TSTATE_NORMAL:
+            xansi_drawchar(td, cdata);
+            break;
+        case TSTATE_ESC:
+        case TSTATE_CSI:
+        default:
+            LOGF("ANSI: bad state: %d\n", td->state);
+            break;
+    }
+}
+
+// testing harness functions
 
 _NOINLINE static void tprint(const char * str)
 {
@@ -295,9 +350,9 @@ _NOINLINE static void tprint(const char * str)
     {
         if (c == '\n')
         {
-            ansiterm_putchar('\r');
+            xansiterm_putchar('\r');
         }
-        ansiterm_putchar(c);
+        xansiterm_putchar(c);
     }
 }
 
@@ -313,19 +368,37 @@ _NOINLINE static void tprintf(const char * fmt, ...)
 
 void xosera_ansiterm()
 {
-    LOG("ANSI terminal started.\n");
+    LOG("ANSI: Terminal test started.\n");
     xosera_init(1);
-    xv_delay(100);
-    ansiterm_init(&atd);
+    xv_delay(3000);
 
-    do
+    xansiterm_init();
+
+    tprint("This is an ANSI Terminal Test!\n\n");
+
+    tprint("Basic controlchar test \\n\n");
+    tprint("Basic control test \\b N\bY (should see Y, not N)\n");
+
+    tprint("\n\nEcho test, hit ^A to exit...\n");
+
+    while (true)
     {
-        tprint("This is an ANSI Terminal Test!  \n");
-        atd.color++;
-    } while (!checkchar());
 
-    cls(&atd);
-    xmsg(&atd, "ANSI terminal test exit.");
+        while (!xansiterm_checkchar())
+            ;
 
-    LOG("ANSI terminal test exit.\n");
+        char cdata = xansiterm_readchar();
+        if (cdata == 1)
+        {
+            break;
+        }
+        xansiterm_putchar(cdata);
+    }
+
+    tprint("\n\nExiting...\n");
+
+    atd.color = 0x02;
+    xansiterm_putchar('\f');
+
+    LOG("ANSI: Terminal test exiting.\n");
 }

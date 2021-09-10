@@ -502,7 +502,7 @@ void demo_filled_triangle(int nb_iterations)
 void xosera_demo()
 {
 
-    while(!xosera_sync());
+    xosera_init(0);
 
     while(1) {
 

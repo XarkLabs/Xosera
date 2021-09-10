@@ -62,8 +62,8 @@ bool xosera_init(int reconfig_num)
     if ((reconfig_num & 3) == reconfig_num)
     {
         // set reconfig bit, along with reconfig values
-        xm_setw(SYS_CTRL, 0x8000 | (reconfig_num << 13));        // reboot FPGA to config_num
-        if (xosera_sync())                                       // should not sync right away...
+        xm_setw(SYS_CTRL, 0x8000 | (uint16_t)(reconfig_num << 13));        // reboot FPGA to config_num
+        if (xosera_sync())                                                 // should not sync right away...
         {
             return false;
         }
@@ -105,7 +105,7 @@ void xv_vram_fill(uint32_t vram_addr, uint32_t numwords, uint32_t word_value)
 
     xm_setw(WR_ADDR, vram_addr);
     xm_setw(WR_INCR, 1);
-    uint32_t long_value = (word_value << 16) | (word_value & 0xffff);
+    uint32_t long_value = (word_value << 16) | (uint16_t)(word_value & 0xffff);
     if (numwords & 1)
     {
         xm_setw(DATA, word_value);

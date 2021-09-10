@@ -28,7 +28,7 @@
 #define XV_PREP_REQUIRED        // require xv_prep()
 #include "xosera_m68k_api.h"
 
-#define TEST 1
+#define TEST 0
 
 #if !defined(_NOINLINE)
 #define _NOINLINE __attribute__((noinline))
@@ -55,19 +55,21 @@
 
 // rosco_m68k ANSI Terminal Functions
 
-#define MAX_CSI_ARGS 4
+#define MAX_CSI_PARMS 16
 
 enum e_term_flags
 {
-    TFLAG_NO_CURSOR         = 1 << 0,        // no cursor on input
-    TFLAG_CURSOR_INVERTED   = 1 << 1,        // cursor currently inverted flag
-    TFLAG_CTRLCHAR_PASSTHRU = 1 << 2,        // pass through control chars as graphic [HIDDEN attribute]
+    TFLAG_NO_CURSOR       = 1 << 0,        // no cursor on input
+    TFLAG_CURSOR_INVERTED = 1 << 1,        // cursor currently inverted flag
+    TFLAG_CSI_PARMSTART   = 1 << 2,        // parameter digit has been entered
+    TFLAG_ATTRIB_PASSTHRU = 1 << 3,        // pass through control chars as graphic [HIDDEN attribute]
 };
 
 enum e_term_state
 {
     TSTATE_NORMAL,
     TSTATE_ESC,
+    TSTATE_CSI_START,
     TSTATE_CSI,
     NUM_TSTATES
 };
@@ -77,20 +79,20 @@ typedef struct _ansiterm_device
     uint16_t vram_base;
     uint16_t vram_size;
     uint16_t cur_addr;
-    uint16_t csi_args[MAX_CSI_ARGS];
-    uint8_t  num_args;
     uint8_t  flags;
-    uint8_t  state;
-    uint8_t  color;
+    uint8_t  color;        // currently effective color
+    uint8_t  set_color;
     uint8_t  cols, rows;
     uint8_t  x, y;
-
+    uint8_t  state;
+    uint8_t  num_parms;
+    uint16_t csi_parms[MAX_CSI_PARMS];
 } ansiterm_data;
 
 ansiterm_data atd;
 
 // Xosera default 16-color palette
-uint16_t def_colors16[256] = {
+uint16_t def_colors16[16] = {
     0x0000,
     0x000a,
     0x00a0,
@@ -202,6 +204,8 @@ _NOINLINE static void wait_vsync()
 
 _NOINLINE void set_defaut_palette()
 {
+    return;
+#if 0
     xv_prep();
     xm_setw(XR_ADDR, XR_COLOR_MEM);
     uint16_t * cp = def_colors16;
@@ -209,6 +213,14 @@ _NOINLINE void set_defaut_palette()
     {
         xm_setw(XR_DATA, *cp++);
     };
+#else
+    xv_prep();
+    xm_setw(XR_ADDR, XR_COLOR_MEM);
+    for (uint16_t i = 0; i < 16; i++)
+    {
+        xm_setw(XR_DATA, def_colors16[i]);
+    };
+#endif
 }
 
 // terminal functions
@@ -298,6 +310,7 @@ _NOINLINE void xansi_reset(ansiterm_data * td)
     td->x         = 0;
     td->y         = 0;
     td->color     = 0x02;        // default dark-green on black
+    td->set_color = 0x02;        // default dark-green on black
 
     xansi_cls(td);
 }
@@ -342,7 +355,6 @@ static void xansi_drawchar(ansiterm_data * td, char cdata)
 {
     xv_prep();
 
-    xm_setw(WR_INCR, 1);
     xm_setw(WR_ADDR, td->cur_addr++);
     xm_setbh(DATA, td->color);
     xm_setbl(DATA, cdata);
@@ -356,7 +368,7 @@ static void xansi_drawchar(ansiterm_data * td, char cdata)
 
 static void xansi_processchar(ansiterm_data * td, char cdata)
 {
-    if ((int8_t)cdata < ' ' && !(td->flags & TFLAG_CTRLCHAR_PASSTHRU))
+    if ((int8_t)cdata < ' ' && !(td->flags & TFLAG_ATTRIB_PASSTHRU))
     {
         switch (cdata)
         {
@@ -378,19 +390,26 @@ static void xansi_processchar(ansiterm_data * td, char cdata)
                     td->y++;
                     if (td->y >= td->rows)
                     {
-                        xansi_scroll_up(td);
                         td->y = td->rows - 1;
+                        xansi_scroll_up(td);
                     }
                 }
                 xansi_calc_cur_addr(td);
                 return;
             case '\n':
-            case '\v':        // vertical tab processas as LF
                 td->cur_addr += td->cols;
                 if (td->cur_addr >= (uint16_t)(td->vram_base + td->vram_size))
                 {
-                    xansi_scroll_up(td);
                     td->cur_addr -= td->cols;
+                    xansi_scroll_up(td);
+                }
+                return;
+            case '\v':        // vertical tab is cursor up
+                td->cur_addr -= td->cols;
+                if (td->cur_addr < td->vram_base)
+                {
+                    td->cur_addr -= td->cols;
+                    xansi_scroll_down(td);
                 }
                 return;
             case '\f':        // FF clears screen
@@ -409,10 +428,153 @@ static void xansi_processchar(ansiterm_data * td, char cdata)
     xansi_drawchar(td, cdata);
 }
 
+static void xansi_begin_csi(ansiterm_data * td)
+{
+    td->state     = TSTATE_CSI;
+    td->num_parms = 0;
+    memset(td->csi_parms, 0, sizeof(td->csi_parms));
+    td->flags &= ~TFLAG_CSI_PARMSTART;
+}
+
+static void xansi_process_csi(ansiterm_data * td, char cdata)
+{
+    LOGF("> CSI '%c': %d parms", cdata, td->num_parms);
+    for (uint16_t i = 0; i < td->num_parms; i++)
+    {
+        LOGF("%s [%d]=%d", i ? "," : ":", i, td->csi_parms[i]);
+    }
+    LOGF(" [c=%02x]\n", td->color);
+
+    xansi_calc_xy(td);
+
+    uint16_t n = 1;        // default one
+    uint16_t m = 0;        // default zero
+    if (td->num_parms > 0)
+    {
+        n = td->csi_parms[0];
+        m = n;
+    }
+
+    switch (cdata)
+    {
+        case 'f':        // Cursor Home / position (force)
+        case 'H':        // Cursor Home / position
+            td->x = 0;
+            td->y = 0;
+            if (td->num_parms > 0 && td->csi_parms[0] < td->rows)
+            {
+                td->y = td->csi_parms[0] - 1;
+            }
+            if (td->num_parms > 1 && td->csi_parms[1] < td->cols)
+            {
+                td->x = td->csi_parms[1] - 1;
+            }
+            LOGF("> CPos %d,%d\n", td->x, td->y);
+            break;
+        case 'A':        // Cursor Up
+            td->y -= n;
+            if (td->y >= td->rows)
+            {
+                td->y = 0;
+            }
+            LOGF("> CUp %d\n", n);
+            break;
+        case 'B':        // Cursor Down
+            td->y += n;
+            if (td->y >= td->rows)
+            {
+                td->y = td->rows - 1;
+            }
+            LOGF("> CDown %d\n", n);
+            break;
+        case 'C':        // Cursor Right
+            td->x += n;
+            if (td->x >= td->cols)
+            {
+                td->x = td->cols - 1;
+            }
+            LOGF("> CRight %d\n", n);
+            break;
+        case 'D':        // Cursor Left
+            td->x -= n;
+            if (td->x >= td->cols)
+            {
+                td->x = 0;
+            }
+            LOGF("> CLeft %d\n", n);
+            break;
+        case 'K':        // TODO: Erase EOL/SOL/LINE
+            (void)m;
+            LOGF("> Erase %s\n", m == 0 ? "EOL" : m == 1 ? "SOL" : m == 2 ? "LINE" : "?");
+            break;
+        case 'J':        // TODO: Erase DOWN/UP/SCREEN
+            (void)m;
+            LOGF("> Erase %s\n", m == 0 ? "DOWN" : m == 1 ? "UP" : m == 2 ? "SCREEN" : "?");
+            break;
+        case 'm':
+            if (td->num_parms == 0)
+            {
+                td->num_parms = 1;
+            }
+            for (uint16_t i = 0; i < td->num_parms; i++)
+            {
+                uint8_t c = (uint32_t)td->csi_parms[i] % (uint16_t)10;
+                switch (td->csi_parms[i])
+                {
+                    case 0:        // reset
+                        td->flags &= ~TFLAG_ATTRIB_PASSTHRU;
+                        td->color = td->set_color;
+                        LOGF("> Attr RESET, c=%02x\n", td->color);
+                        break;
+                    case 1:        // bright
+                        td->color = td->color | 0x08;
+                        LOGF("> Attr BRIGHT, c=%02x\n", td->color);
+                        break;
+                    case 2:        // dim
+                        td->color = td->color & ~0x08;
+                        LOGF("> Attr DIM, c=%02x\n", td->color);
+                        break;
+                    case 7:        // reverse
+                        td->color = ((uint8_t)(td->color & 0xf0) >> 4) | (uint8_t)((td->color & 0x0f) << 4);
+                        LOGF("> Attr REVERSE, c=%02x\n", td->color);
+                        break;
+                    case 8:        // hidden (control graphic passthru)
+                        LOG("> Attr CTRLPASSTHRU\n");
+                        td->flags |= TFLAG_ATTRIB_PASSTHRU;
+                        break;
+                    case 30:        // set foreground
+                    case 31:
+                    case 32:
+                    case 33:
+                    case 34:
+                    case 35:
+                    case 36:
+                    case 37:
+                        td->color = (uint8_t)(td->color & 0xf0) | c;
+                        LOGF("> Attr FORE, c=%02x\n", td->color);
+                        break;
+                    case 40:        // set background
+                    case 41:
+                    case 42:
+                    case 43:
+                    case 44:
+                    case 45:
+                    case 46:
+                    case 47:
+                        td->color = (uint8_t)(td->color & 0x0f) | ((uint8_t)(c << 4));
+                        LOGF("> Attr BACK, c=%02x\n", td->color);
+                        break;
+                }
+            }
+    }
+
+    xansi_calc_cur_addr(td);
+}
+
 // external terminal functions
 static void xansiterm_init()
 {
-    LOG("ANSI: ansiterm_init\n");
+    LOG("> ansiterm_init\n");
 
     memset(&atd, 0, sizeof(atd));
     ansiterm_data * td = &atd;
@@ -464,6 +626,11 @@ void xansiterm_putchar(char cdata)
                 td->state = TSTATE_ESC;
                 break;
             }
+            else if (cdata == '\x9b')        // 8-bit CSI
+            {
+                xansi_begin_csi(td);
+                break;
+            }
             xansi_processchar(td, cdata);
             break;
         case TSTATE_ESC:
@@ -473,46 +640,93 @@ void xansiterm_putchar(char cdata)
                 case '\x1b':        // print 2nd ESC
                     xansi_processchar(td, cdata);
                     break;
-                case 'c':        // VT100 reset device
+                case 'c':        // VT100 RIS reset device
                     xansi_reset(td);
                     break;
                 case '[':        // VT100 CSI
-                    td->state = TSTATE_CSI;
+                    xansi_begin_csi(td);
                     break;
-                case '(':        // TODO: VT100 font 0
-                    LOG("ANSI: set FONT 0\n");
+                case 'D':        // VT100 IND move cursor down (^J)
+                    xansi_processchar(td, '\n');
                     break;
-                case ')':        // TODO: VT100 font 1
-                    LOG("ANSI: set FONT 1\n");
+                case 'M':        // VT100 RI move cursor up (^K)
+                    xansi_processchar(td, '\v');
                     break;
-                case 'D':        // VT100 scroll down
-                    xansi_scroll_down(td);
-                    break;
-                case 'M':        // VT100 scroll up
-                    xansi_scroll_up(td);
+                case 'E':        // VT100 NEL next line
+                    xansi_calc_xy(td);
+                    td->x = 0;
+                    td->y += 1;
+                    if (td->y >= td->cols)
+                    {
+                        td->y = td->cols;
+                        xansi_scroll_up(td);
+                    }
+                    xansi_calc_cur_addr(td);
                     break;
                 default:
-                    LOGF("ANSI: Ignoring <ESC>%c (<ESC>0x%02x)\n", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
+                    LOGF("> Ign: <ESC>%c (<ESC>0x%02x)\n", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
                     break;
             }
             break;
-        case TSTATE_CSI:
-            td->state = TSTATE_NORMAL;
-            switch (cdata)
+        case TSTATE_CSI: {
+            uint8_t cclass = cdata & 0xf0;
+            if (cclass == 0x30)        // parameter number
             {
-                case '\x1b':        // print 2nd ESC
-                    xansi_processchar(td, cdata);
-                    break;
-                default:
-                    LOGF("ANSI: Ignoring CSI <ESC>[%c (<ESC>0x%02x)\n",
-                         (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ',
-                         cdata);
-                    break;
+                uint8_t d = (uint8_t)(cdata - '0');
+                if (d <= 9)
+                {
+                    td->flags |= TFLAG_CSI_PARMSTART;
+                    uint16_t v = td->csi_parms[td->num_parms];
+                    v *= (uint16_t)10;
+                    v += d;
+                    if (v > 9999)
+                    {
+                        v = 9999;
+                    }
+                    td->csi_parms[td->num_parms] = v;
+                }
+                else if (cdata == ';')
+                {
+                    td->flags &= ~TFLAG_CSI_PARMSTART;
+                    if (td->num_parms == MAX_CSI_PARMS - 1)
+                    {
+                        LOG("> Too many CSI parms\n");
+                    }
+                    else
+                    {
+                        LOGF("> Got parm[%d] = %d\n", td->num_parms, td->csi_parms[td->num_parms]);
+                        td->num_parms += 1;
+                    }
+                }
+                else
+                {
+                    LOGF("> Unexpected CSI P...P: %c (0x%02x)\n", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
+                }
+            }
+            else if (cclass >= 0x40)
+            {
+                if (td->flags & TFLAG_CSI_PARMSTART)
+                {
+                    LOGF("> Got parm[%d] = %d\n", td->num_parms, td->csi_parms[td->num_parms]);
+                    td->num_parms++;
+                }
+
+                td->state = TSTATE_NORMAL;
+                xansi_process_csi(td, cdata);
+            }
+            else if (cdata == '\x1b')
+            {
+                xansi_begin_csi(td);
+            }
+            else
+            {
+                td->state = TSTATE_NORMAL;
+                LOGF("> End CSI char: %c (0x%02x)\n", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
             }
             break;
-            break;
+        }
         default:
-            LOGF("ANSI: bad state: %d (reset to TSTATE_NORMAL)\n", td->state);
+            LOGF("> bad state: %d (reset to TSTATE_NORMAL)\n", td->state);
             td->state = TSTATE_NORMAL;
             break;
     }
@@ -545,15 +759,53 @@ _NOINLINE static void tprintf(const char * fmt, ...)
 
 void xosera_ansiterm()
 {
-    LOG("ANSI: Terminal test started.\n");
+    LOG("> Terminal test started.\n");
     xosera_init(1);
     xv_delay(3000);
 
     xansiterm_init();
-
     tprint("Welcome to ANSI Terminal test\n\n");
 
-    tprint("Echo test, hit ^A to exit...\n\n");
+#if 1        // color test
+
+    for (uint16_t i = 0; i < 8; i++)
+    {
+        tprintf(
+            "Fore %d\t\x9b"
+            "3%dmNormal \x9b"
+            "1m Bright ",
+            i,
+            i);
+        tprint(
+            "\x9b"
+            "2m Dim   ");
+        tprint(
+            "\x9b"
+            "7m Reverse \t");
+        tprint("\x9bm Reset\n");
+    }
+    tprint("\n");
+    for (uint16_t i = 0; i < 8; i++)
+    {
+        tprintf(
+            "Back %d\t\x9b"
+            "37m\x9b"
+            "4%dmNormal \x9b"
+            "1m Bright ",
+            i,
+            i);
+        tprint(
+            "\x9b"
+            "2m Dim   ");
+        tprint(
+            "\x9b"
+            "7m Reverse \t");
+        tprint("\x9bm Reset\n");
+    }
+    tprint("\n");
+
+#endif
+    tprint("Echo test, type ^A to exit...\n\n");
 
     while (true)
     {
@@ -568,10 +820,7 @@ void xosera_ansiterm()
         xansiterm_putchar(cdata);
     }
 
-    tprint("\n\nExiting...\n");
+    tprint("\fExiting...\n");
 
-    atd.color = 0x02;
-    xansiterm_putchar('\f');
-
-    LOG("ANSI: Terminal test exiting.\n");
+    LOG("> Terminal test exiting.\n");
 }

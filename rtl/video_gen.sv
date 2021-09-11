@@ -362,8 +362,12 @@ function automatic [15:0] calc_tile_addr(
 /* verilator lint_on UNUSED */
     );
     begin
-`ifdef HACKFAST        
-            calc_tile_addr = { tilebank, 10'b0 } | { 5'b0, tile_char[7: 0], tile_y[3:1] };         // 8W  1-BPP 8x16 (even/odd byte)
+`ifdef HACKFAST
+            if (tile_8x16) begin        
+                calc_tile_addr = { tilebank, 10'b0 } | { 5'b0, tile_char[7: 0], tile_y[3:1] };         // 8W  1-BPP 8x16 (even/odd byte)
+            end else begin
+                calc_tile_addr = { tilebank, 10'b0 } | { 6'b0, tile_char[7: 0], tile_y[2:1] };
+            end
 `else
         case ({ bpp, tile_8x16})
             3'b000:  calc_tile_addr = { tilebank, 10'b0 } | { 6'b0, tile_char[7: 0], tile_y[2:1] };         // 4W  1-BPP 8x8 (even/odd byte)

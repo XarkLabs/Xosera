@@ -135,6 +135,7 @@
 			"verilog",
 			"VFREQ",
 			"vgen",
+			"vlbank",
 			"vline",
 			"vltstd",
 			"vluint",
@@ -198,6 +199,7 @@
 		},
 		"files.associations": {
 			"*.sv": "systemverilog",
+			"*.asm": "vasmmot",
 			"array": "cpp",
 			"iterator": "cpp",
 			"string": "cpp",
@@ -207,7 +209,8 @@
 			"ios": "c",
 			"chrono": "c",
 			"queue": "c",
-			"random": "c"
+			"random": "c",
+			"machine.h": "c"
 		}
 	}
 }

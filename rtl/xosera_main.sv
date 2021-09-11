@@ -369,6 +369,7 @@ end
 // interrupt handling
 always_ff @(posedge clk) begin
     if (reset_i) begin
+        bus_intr_o  <= 1'b0;
         intr_status <= 4'b0;
     end else begin
         // signal a bus interrupt if not masked and not set in status and

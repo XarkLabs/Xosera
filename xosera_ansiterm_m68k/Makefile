@@ -14,10 +14,8 @@ EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
 SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib
 DEFINES=-DROSCO_M68K
-CFLAGS=-std=c11 -ffreestanding -ffunction-sections -fdata-sections \
-    -Wall -Wextra -Werror -Wno-unused-function -pedantic -I$(SYSINCDIR) \
-    -I$(XOSERA_M68K_API) \
-    -mcpu=68010 -march=68010 -mtune=68010 $(DEFINES)
+CFLAGS= -mcpu=68010 -march=68010 -mtune=68010 -std=c11 -ffreestanding -ffunction-sections -fdata-sections -pedantic\
+ -Wall -Wextra -Werror -Wno-unused-function -Wno-variadic-macros -I$(SYSINCDIR) -I$(XOSERA_M68K_API) $(DEFINES)
 # EVIL    	CFLAGS += -Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla -Warray-bounds=2 -Wimplicit-fallthrough=3 -Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion -Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wformat-signedness -Wshadow -Wstrict-overflow=4 -Wswitch-default -Wswitch-enum -Wstack-usage=1000000 -Wcast-align=strict
 # Too-EVIL 	-Wundef -Wstrict-prototypes  -Wtraditional-conversion
 GCC_LIBS=$(shell $(CC) --print-search-dirs \
@@ -55,10 +53,14 @@ SYM=$(PROGRAM_BASENAME).sym
 
 # Assume source files in Makefile directory are source files for project
 CSOURCES=$(wildcard *.c)
-CSOURCES+=$(wildcard $(XOSERA_M68K_API)/*.c)
+CINCLUDES=$(wildcard *.h)
 SSOURCES=$(wildcard *.S)
 ASMSOURCES=$(wildcard *.asm)
 SOURCES=$(CSOURCES) $(SSOURCES) $(ASMSOURCES)
+
+# additional for Xosera API
+CSOURCES+=$(wildcard $(XOSERA_M68K_API)/*.c)
+CINCLUDES+=$(wildcard $(XOSERA_M68K_API)/*.h)
 
 # Assume each source files makes an object file
 OBJECTS=$(addsuffix .o,$(basename $(SOURCES)))
@@ -79,7 +81,7 @@ $(DISASM) : $(ELF)
 
 $(OBJECTS): Makefile
 
-%.o : %.c
+%.o : %.c $(CINCLUDES)
 	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) -o $@ $<
 
 %.o : %.asm

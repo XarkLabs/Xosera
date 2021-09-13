@@ -39,6 +39,11 @@
 #include "xosera_m68k_api.h"
 
 
+extern void install_intr(void);
+extern void remove_intr(void);
+
+extern volatile uint32_t XFrameCount;
+
 const uint16_t defpal[16] = {
     0x0000,        // black
     0x000A,        // blue
@@ -344,19 +349,24 @@ void clear()
     draw_filled_rectangle(c, 1);
 }
 
+void wait_frame()
+{
+    uint32_t f = XFrameCount;
+    while (XFrameCount == f);
+}
+
 void swap()
 {
     wait_pr_done();
+    wait_frame();
 
     if (disp_buffer) {
         disp_buffer = 0;
         xreg_setw(PA_DISP_ADDR, 0x0000);
-        xreg_setw(PA_LINE_ADDR, 0x0000);
         xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x7D0);
     } else {
         disp_buffer = 1;
         xreg_setw(PA_DISP_ADDR, 0x7D00);
-        xreg_setw(PA_LINE_ADDR, 0x7D00);
         xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x000);
     }
 }
@@ -369,6 +379,9 @@ void demo_lines()
                                     {12, 0, 14, 0}, {14, 0, 14, 2}, {14, 2, 12, 2},    {12, 2, 14, 4}, {12, 4, 12, 0},
                                     {15, 4, 16, 0}, {16, 0, 17, 4}, {15.5, 2, 16.5, 2}};
 
+
+    clear();
+    swap();
 
     clear();
 
@@ -516,15 +529,23 @@ void demo_filled_triangle(int nb_iterations)
         }
 
         swap();
-
-        delay(100);
     }
 }
 
 void xosera_demo()
 {
-
     xosera_init(0);
+
+    install_intr();
+
+    uint32_t t = XFrameCount;
+    while (XFrameCount == t)
+        ;
+
+
+    xreg_setw(PA_DISP_ADDR, 0x0000);
+    xreg_setw(PA_LINE_ADDR, 0x0000);
+    xreg_setw(PA_LINE_LEN, 160);
 
     while(1) {
 
@@ -535,27 +556,26 @@ void xosera_demo()
         xprintf("Xosera\nPrimitive\nRenderer\nDemo\n");
         delay(2000);
 
-        xreg_setw(PA_GFX_CTRL, 0x0075);
+        xreg_setw(PA_GFX_CTRL, 0x0075);        
 
-        xreg_setw(PA_DISP_ADDR, 0x0000);
-        xreg_setw(PA_LINE_ADDR, 0x0000);
-        xreg_setw(PA_LINE_LEN, 160);
+        // Black background for 2 buffers
+        xm_setw(WR_INCR, 0x0001);
+        xm_setw(WR_ADDR, 0x0000);
+        for (int i = 0; i < 320 * 240; ++i)
+            xm_setw(DATA, 0x0000);        
 
-        //xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x7D0);
+        wait_pr_done();
+        xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x7D0);
 
         set_palette(0);
 
-        clear();
-        //swap();
+        demo_lines();
         delay(2000);
 
-        //demo_lines();
-        //delay(2000);
-
-        //demo_filled_rectangles(100);
+        demo_filled_rectangles(100);
 
         //demo_filled_triangle_single();
-        //demo_filled_triangle(1000);
+        demo_filled_triangle(1000);
 
     }
 }

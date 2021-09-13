@@ -63,17 +63,17 @@ typedef struct xansiterm_data
     uint16_t vram_size;                       // size of text screen in current mode (init clears to allow 8x8 font)
     uint16_t vram_end;                        // ending address for text screen in current mode
     uint16_t cursor_save;                     // word under input cursor
+    uint16_t cols, rows;                      // text columns and rows in current mode (zero based)
+    uint16_t x, y;                            // current x and y cursor position (zero based)
+    uint16_t save_x, save_y;                  // storage to save/restore cursor postion
     uint16_t csi_parms[MAX_CSI_PARMS];        // CSI parameter storage
-    uint8_t  intermediate_char;               // CSI intermediate character (only one supported)
     uint8_t  num_parms;                       // number of parsed CSI parameters
+    uint8_t  intermediate_char;               // CSI intermediate character (only one supported)
     uint8_t  def_color;                       // default terminal colors // TODO: good item for ICP
     uint8_t  cur_color;                       // logical colors before attribute modifications (high/low nibble)
     uint8_t  state;                           // current ANSI parsing state (e_term_state)
     uint8_t  flags;                           // various terminal flags (e_term_flags)
     uint8_t  color;                           // effective current background and forground color (high/low nibble)
-    uint8_t  cols, rows;                      // text columns and rows in current mode (zero based)
-    uint8_t  x, y;                            // current x and y cursor position (zero based)
-    uint8_t  save_x, save_y;                  // storage to save/restore cursor postion
     bool     lcf;                             // flag for delayed last column wrap flag (PITA)
     bool     save_lcf;                        // storeage to save/restore lcf with cursor position
     bool     cursor_drawn;                    // flag if cursor_save data valid
@@ -152,7 +152,6 @@ static inline void xansi_drawchar(xansiterm_data * td, char cdata)
 {
     xv_prep();
     xansi_check_lcf(td);
-
     xm_setw(WR_ADDR, td->cur_addr++);
     xm_setbh(DATA, td->color);
     xm_setbl(DATA, cdata);
@@ -226,28 +225,28 @@ static _NOINLINE void xansi_do_scroll(xansiterm_data * td)
 
 static void set_defaut_palette()
 {
-    static const uint16_t def_colors16[16] = {
-        0x0000,
-        0x000a,
-        0x00a0,
-        0x00aa,
-        0x0a00,
-        0x0a0a,
-        0x0aa0,
-        0x0aaa,
-        0x0555,
-        0x055f,
-        0x05f5,
-        0x05ff,
-        0x0f55,
-        0x0f5f,
-    };
+    static const uint16_t def_colors16[16] = {0x0000,
+                                              0x000a,
+                                              0x00a0,
+                                              0x00aa,
+                                              0x0a00,
+                                              0x0a0a,
+                                              0x0aa0,
+                                              0x0aaa,
+                                              0x0555,
+                                              0x055f,
+                                              0x05f5,
+                                              0x05ff,
+                                              0x0f55,
+                                              0x0f5f,
+                                              0x0ff5,
+                                              0x0fff};
     xv_prep();
+
     xm_setw(XR_ADDR, XR_COLOR_MEM);
-    const uint16_t * cp = def_colors16;
     for (uint16_t i = 0; i < 16; i++)
     {
-        xm_setw(XR_DATA, *cp++);
+        xm_setw(XR_DATA, def_colors16[i]);
     };
 }
 
@@ -258,9 +257,11 @@ static void xansi_vidreset(xansiterm_data * td)
     bool alt_font = td->flags & TFLAG_8X8_FONT;
     // set xosera playfield A registers
     uint16_t tile_addr   = alt_font ? 0x800 : 0x0000;
-    uint8_t  tile_height = alt_font ? 7 : 15;
+    uint16_t tile_height = alt_font ? 7 : 15;
     uint16_t cols        = xreg_getw(VID_HSIZE) >> 3;        // get pixel width / 8 for text columns
 
+    while ((xreg_getw(SCANLINE) & 0x8000))
+        ;
     while (!(xreg_getw(SCANLINE) & 0x8000))
         ;
 
@@ -279,7 +280,7 @@ static void xansi_vidreset(xansiterm_data * td)
 static void xansi_reset(xansiterm_data * td)
 {
     xv_prep();
-    uint8_t  th   = ((uint8_t)xreg_getw(PA_TILE_CTRL) & 0xf) + 1;        // get font height
+    uint16_t th   = ((uint8_t)xreg_getw(PA_TILE_CTRL) & 0xf) + 1;        // get font height
     uint16_t rows = (xreg_getw(VID_VSIZE) + th - 1) / th;                // get text rows
     uint16_t cols = xreg_getw(VID_HSIZE) >> 3;                           // get text columns
 
@@ -311,19 +312,26 @@ static void xansi_draw_cursor(xansiterm_data * td, bool onoff)
     if (onoff && !td->cursor_drawn)        // cursor on, but not drawn
     {
         td->cursor_drawn = true;
-
         xm_setw(RW_INCR, 0x0000);
         xm_setw(RW_ADDR, td->cur_addr);
         uint16_t data   = xm_getw(RW_DATA);
         td->cursor_save = data;
 
-        // calculate cursor color
-        // use current colors reversed, but alter dim/bright for improved contrast with colors under cursor
-        uint16_t cursor_color = ((uint16_t)(td->color & 0xf0) << 4) | ((uint16_t)(td->color & 0x0f) << 12);
-        uint16_t cursor_char  = ((cursor_color ^ td->cursor_save) & 0x88ff) ^ 0x8800;        // constast + char
-        cursor_char ^= cursor_color;        // cursor_color with for/back dim/bright toggled for constrast
+        // calculate cursor color:
+        // use current forground as background with foreground color from char under cursor
+        uint16_t cursor_color = ((uint16_t)(td->color & 0x0f) << 12) | ((uint16_t)(td->color & 0xf0) << 4);
+        // check for same cursor background and data background
+        if ((uint16_t)(cursor_color & 0xf000) == (uint16_t)(data & 0xf000))
+        {
+            cursor_color ^= 0x8000;        // if match, toggle bright/dim of background
+        }
+        // check for same cursor foreground and data foreground
+        if ((uint16_t)(cursor_color & 0x0f00) == (uint16_t)(data & 0x0f00))
+        {
+            cursor_color ^= 0x0800;        // if match, toggle bright/dim of foreground
+        }
 
-        xm_setw(RW_DATA, cursor_char);        // draw char with cursor colors
+        xm_setw(RW_DATA, (uint16_t)(cursor_color | (uint16_t)(data & 0x00ff)));        // draw char with cursor colors
     }
     else if (!onoff && td->cursor_drawn)        // cursor off, but drawn
     {
@@ -415,17 +423,18 @@ static void xansi_processchar(xansiterm_data * td, char cdata)
             case '\t':
                 // VT:    \t tab (8 character)
                 LOG("[TAB]");
-                uint8_t nx = (uint8_t)(td->x & ~0x7) + 8;
-                if ((uint8_t)(td->cols - nx) < 8)
+                uint16_t nx = (uint16_t)(td->x & ~0x7) + 8;
+                if ((uint16_t)(td->cols - nx) >= 8)
+                {
+                    td->cur_addr += (nx - td->x);
+                    td->x = nx;
+                }
+                else
                 {
                     td->cur_addr -= td->x;
                     td->cur_addr += td->cols;
                     td->x = 0;
                     td->y++;
-                }
-                else
-                {
-                    td->x = (uint8_t)(td->x & ~0x7) + 8;
                 }
                 break;
             case '\n':
@@ -827,7 +836,6 @@ void xansiterm_init()
 
     xansiterm_data * td = get_xansi_data();
     memset(td, 0, sizeof(*td));
-
     xansi_vidreset(td);
     xansi_reset(td);
     xansi_cls(td, true);
@@ -861,16 +869,18 @@ void xansiterm_putchar(char cdata)
     xansiterm_data * td = get_xansi_data();
 
     // these are just used for DEBUG
-    uint8_t initial_state = td->state;
-    uint8_t initial_flags = td->flags;
-    uint8_t initial_col   = td->color;
-    uint8_t initial_x     = td->x;
-    uint8_t initial_y     = td->y;
-    (void)initial_flags;        // no warnings if unused
-    (void)initial_col;          // no warnings if unused
-    (void)initial_x;            // no warnings if unused
-    (void)initial_y;            // no warnings if unused
-    (void)initial_state;        // no warnings if unused
+    uint8_t  initial_state   = td->state;
+    uint8_t  initial_flags   = td->flags;
+    uint8_t  initial_cur_col = td->cur_color;
+    uint8_t  initial_col     = td->color;
+    uint16_t initial_x       = td->x;
+    uint16_t initial_y       = td->y;
+    (void)initial_flags;          // no warnings if unused
+    (void)initial_col;            // no warnings if unused
+    (void)initial_cur_col;        // no warnings if unused
+    (void)initial_x;              // no warnings if unused
+    (void)initial_y;              // no warnings if unused
+    (void)initial_state;          // no warnings if unused
 
 #if DEBUG
     xansi_check_xy(td);
@@ -951,7 +961,7 @@ void xansiterm_putchar(char cdata)
             case 'D':
                 // VT: <ESC>D  IND move cursor down
                 LOGF("%c\n  := [CDOWN]", cdata);
-                uint8_t x_save = td->x;        // save restore X in case NEWLINE mode
+                uint16_t x_save = td->x;        // save restore X in case NEWLINE mode
                 xansi_processchar(td, '\n');
                 td->x = x_save;
                 break;
@@ -1046,9 +1056,9 @@ void xansiterm_putchar(char cdata)
     {
         LOGF("{Flags:%02x->%02x}", initial_flags, td->flags);
     }
-    if (initial_col != td->color)
+    if (initial_cur_col != td->cur_color || initial_col != td->color)
     {
-        LOGF("{Color:%02x->%02x}", initial_col, td->color);
+        LOGF("{Color:%02x:%02x->%02x:%02x}", initial_cur_col, initial_col, td->cur_color, td->color);
     }
     // position spam only on non-PASSTHRU ctrl chars or non-NORMAL state
     if (((initial_x != td->x) || (initial_y != td->y)) &&

@@ -33,10 +33,12 @@ module blitter(
     output      logic  [3:0]     intr_clear_o,      // interrupt CPU acknowledge
     output      logic            bus_ack_o,         // TODO ACK strobe for debug
 
+`ifdef PRIMITIVE_RENDERER    
     // primitive renderer
     output      logic [15:0]     prim_rndr_cmd_o,         // received primitive renderer command
     output      logic            prim_rndr_cmd_valid_o,   // is command valid
     input  wire logic            prim_rndr_busy_i,        // is primitive renderer busy?
+`endif    
 
     input  wire logic            reset_i,
     input  wire logic            clk
@@ -158,7 +160,12 @@ function [7:0] reg_read(
         xv::XM_SYS_CTRL[3:0]:   reg_read = !b_sel ? { 4'bx, wr_nibmask }: { blit_busy, 3'bx, intr_mask };
         xv::XM_TIMER[3:0]:      reg_read = !b_sel ? ms_timer[15:8]      : ms_timer[7:0];
 
-        xv::XM_WR_PR_CMD[3:0]:  reg_read = !b_sel ? { prim_rndr_busy_i, 7'b0 } : 8'b0;
+        xv::XM_WR_PR_CMD[3:0]:
+`ifdef PRIMITIVE_RENDERER        
+                                reg_read = !b_sel ? { prim_rndr_busy_i, 7'b0 } : 8'b0;
+`else
+                                reg_read = 8'bx;
+`endif                                
         xv::XM_UNUSED_B[3:0]:   reg_read = 8'bx;
 
         xv::XM_RW_INCR[3:0]:    reg_read = !b_sel ? reg_rw_incr[15:8]   : reg_rw_incr[7:0];
@@ -237,8 +244,10 @@ always_ff @(posedge clk) begin
         reg_other_even  <= 8'h00;
         reg_other_reg   <= 4'h0;
 
+`ifdef PRIMITIVE_RENDERER
         // primitive renderer
         prim_rndr_cmd_valid_o <= 1'b0;        
+`endif        
     end
     else begin
         intr_clear_o    <= 4'b0;
@@ -306,8 +315,10 @@ always_ff @(posedge clk) begin
             vram_rw_wr      <= 1'b0;            // clear rw write
         end
 
+`ifdef PRIMITIVE_RENDERER
         // invalidate the primitive renderer command
         prim_rndr_cmd_valid_o <= 1'b0;
+`endif        
 
         if (bus_write_strobe) begin
             if (!bus_bytesel) begin // even byte write (saved specially for certain registers)
@@ -377,10 +388,12 @@ always_ff @(posedge clk) begin
                     end
                     xv::XM_TIMER: begin
                         intr_clear_o        <= bus_data_byte[3:0];
-                    end
+                    end                    
                     xv::XM_WR_PR_CMD: begin
+`ifdef PRIMITIVE_RENDERER                        
                         prim_rndr_cmd_o        <= { reg_even_byte, bus_data_byte };
                         prim_rndr_cmd_valid_o  <= 1'b1;
+`endif                        
                     end
                     xv::XM_UNUSED_B: begin
                     end

@@ -160,6 +160,9 @@ localparam V_BACK_PORCH      = 35;          // V post-sync (back porch) lines
 localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
 localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
+// Primitive renderer module is available at this pixel clock
+`define PRIMITIVE_RENDERER
+
 `elsif    MODE_640x400_85
 // VGA mode 640x400 @ 85Hz (pixel clock 31.500Mhz)
 localparam PIXEL_FREQ        = 31_500_000;  // pixel clock in Hz
@@ -189,6 +192,9 @@ localparam V_SYNC_PULSE      = 2;           // V sync pulse lines
 localparam V_BACK_PORCH      = 33;          // V post-sync (back porch) lines
 localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
 localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
+
+// Primitive renderer module is available at this pixel clock
+`define PRIMITIVE_RENDERER
 
 `elsif    MODE_640x480_75
 // VGA mode 640x480 @ 75Hz (pixel clock 31.500Mhz)

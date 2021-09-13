@@ -123,6 +123,7 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         start_line <= 0;
         start_filled_rectangle <= 0;
+        start_filled_triangle <= 0;
         prim_rndr_vram_sel_o <= 0;
         prim_rndr_wr_o <= 0;
     end

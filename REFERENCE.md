@@ -601,16 +601,17 @@ Currently, the primitive renderer only supports 8-bpp mode with 2x H&V scale fac
 
 The following commands are available:
 
-| Data   | Name           | Description
----------|----------------|------------
-| 0x0vvv | `PR_COORDX0`   | set the 12-bit X0 coordinate (optional)
-| 0x1vvv | `PR_COORDY0`   | set the 12-bit Y0 coordinate (optional)
-| 0x2vvv | `PR_COORDX1`   | set the 12-bit X1 coordinate (optional)
-| 0x3vvv | `PR_COORDY1`   | set the 12-bit Y1 coordinate (optional)
-| 0x4vvv | `PR_COORDX2`   | set the 12-bit X2 coordinate (optional)
-| 0x5vvv | `PR_COORDY2`   | set the 12-bit Y2 coordinate (optional)
-| 0x6xvv | `PR_COLOR`     | set the 8-bit color (optional)
-| 0xFxxs | `PR_EXECUTE`   | draw the primitive (s=shape, see below)
+| Data   | Name            | Description
+---------|-----------------|------------
+| 0x0vvv | `PR_COORDX0`    | set the 12-bit X0 coordinate (optional)
+| 0x1vvv | `PR_COORDY0`    | set the 12-bit Y0 coordinate (optional)
+| 0x2vvv | `PR_COORDX1`    | set the 12-bit X1 coordinate (optional)
+| 0x3vvv | `PR_COORDY1`    | set the 12-bit Y1 coordinate (optional)
+| 0x4vvv | `PR_COORDX2`    | set the 12-bit X2 coordinate (optional)
+| 0x5vvv | `PR_COORDY2`    | set the 12-bit Y2 coordinate (optional)
+| 0x6xvv | `PR_COLOR`      | set the 8-bit color (optional)
+| 0x7vvv | `PR_DEST_ADDR`  | destination start address (MSB, optional)
+| 0xFxxs | `PR_EXECUTE`    | draw the primitive (s=shape, see below)
 
 Note: x=don't care
 

@@ -30,11 +30,13 @@ module prim_renderer(
     input  wire logic            clk
     );
 
+logic oe;
 logic start_line;
 logic start_filled_rectangle;
 logic start_filled_triangle;
 logic signed [11:0] x0, y0, x1, y1, x2, y2;
-logic signed [11:0] x, y;
+logic        [15:0] dest_addr;
+logic signed [11:0] x, y, cx, cy;
 logic signed [11:0] x_line, y_line;
 logic signed [11:0] x_filled_rectangle, y_filled_rectangle;
 logic signed [11:0] x_filled_triangle, y_filled_triangle;
@@ -57,7 +59,7 @@ draw_line #(.CORDW(12)) draw_line (    // framebuffer coord width in bits
     .clk(clk),                         // clock
     .reset_i(reset_i),                 // reset
     .start_i(start_line),              // start line rendering
-    .oe_i(oe_i),                       // output enable
+    .oe_i(oe),                         // output enable
     .x0_i(x0),                         // point 0 - horizontal position
     .y0_i(y0),                         // point 0 - vertical position
     .x1_i(x1),                         // point 1 - horizontal position
@@ -73,7 +75,7 @@ draw_rectangle_fill #(.CORDW(12)) draw_rectangle_fill (     // framebuffer coord
     .clk(clk),                              // clock
     .reset_i(reset_i),                      // reset
     .start_i(start_filled_rectangle),       // start rectangle rendering
-    .oe_i(oe_i),                            // output enable
+    .oe_i(oe),                              // output enable
     .x0_i(x0),                              // point 0 - horizontal position
     .y0_i(y0),                              // point 0 - vertical position
     .x1_i(x1),                              // point 1 - horizontal position
@@ -89,7 +91,7 @@ draw_triangle_fill #(.CORDW(12)) draw_triangle_fill (     // framebuffer coord w
     .clk(clk),                              // clock
     .reset_i(reset_i),                      // reset
     .start_i(start_filled_triangle),        // start triangle rendering
-    .oe_i(oe_i),                            // output enable
+    .oe_i(oe),                              // output enable
     .x0_i(x0),                              // point 0 - horizontal position
     .y0_i(y0),                              // point 0 - vertical position
     .x1_i(x1),                              // point 1 - horizontal position
@@ -126,17 +128,19 @@ always_ff @(posedge clk) begin
         start_filled_triangle <= 0;
         prim_rndr_vram_sel_o <= 0;
         prim_rndr_wr_o <= 0;
+        dest_addr <= 16'h0000;
     end
 
     if (cmd_valid_i) begin
         case(cmd_i[15:12])
-            xv::PR_COORDX0 : x0    <= cmd_i[11:0];
-            xv::PR_COORDY0 : y0    <= cmd_i[11:0];
-            xv::PR_COORDX1 : x1    <= cmd_i[11:0];
-            xv::PR_COORDY1 : y1    <= cmd_i[11:0];
-            xv::PR_COORDX2 : x2    <= cmd_i[11:0];
-            xv::PR_COORDY2 : y2    <= cmd_i[11:0];
-            xv::PR_COLOR   : color <= cmd_i[7:0];
+            xv::PR_COORDX0      : x0    <= cmd_i[11:0];
+            xv::PR_COORDY0      : y0    <= cmd_i[11:0];
+            xv::PR_COORDX1      : x1    <= cmd_i[11:0];
+            xv::PR_COORDY1      : y1    <= cmd_i[11:0];
+            xv::PR_COORDX2      : x2    <= cmd_i[11:0];
+            xv::PR_COORDY2      : y2    <= cmd_i[11:0];
+            xv::PR_COLOR        : color <= cmd_i[7:0];
+            xv::PR_DEST_ADDR    : dest_addr <= {cmd_i[11:0], 4'b0000};
             xv::PR_EXECUTE: begin
                 case(cmd_i[3:0])
                     xv::PR_LINE             : start_line             <= 1;
@@ -153,27 +157,46 @@ always_ff @(posedge clk) begin
         endcase
     end
 
-    if (drawing) begin
-        if (x >= 0 && y >= 0 && x < xv::VISIBLE_WIDTH / 2 && y < xv::VISIBLE_HEIGHT / 2) begin
-            prim_rndr_vram_sel_o <= 1;
-            prim_rndr_wr_o <= 1;
-            prim_rndr_mask_o <= (x & 12'h001) != 12'h000 ? 4'b0011 : 4'b1100;
-            prim_rndr_addr_o <= {4'b0, y} * (xv::VISIBLE_WIDTH / 4) + {4'b0, x} / 2;
-            prim_rndr_data_out_o <= {color[7:0], color[7:0]};
-        end else begin
-            prim_rndr_vram_sel_o <= 0;
-            prim_rndr_wr_o <= 0;
-        end
-    end
-
-    if (done) begin
-        prim_rndr_vram_sel_o <= 0;
-        prim_rndr_wr_o <= 0;
-    end
-
     if (start_line) start_line <= 0;
     if (start_filled_rectangle) start_filled_rectangle <= 0;
     if (start_filled_triangle) start_filled_triangle <= 0;
+end
+
+
+enum {RENDER, CLIP_AND_WRITE} state;
+
+assign oe = oe_i && state == RENDER;
+
+always_ff @(posedge clk) begin
+    if (reset_i) begin
+        state <= RENDER;
+    end
+
+    case (state)
+        RENDER: begin
+            if (drawing) begin
+                cx <= x;
+                cy <= y;
+                state <= CLIP_AND_WRITE;
+            end else if (done) begin
+                prim_rndr_vram_sel_o <= 0;
+                prim_rndr_wr_o <= 0;
+            end
+        end
+        CLIP_AND_WRITE: begin
+            if (cx >= 0 && cy >= 0 && cx < xv::VISIBLE_WIDTH / 2 && cy < xv::VISIBLE_HEIGHT / 2) begin
+                prim_rndr_vram_sel_o <= 1;
+                prim_rndr_wr_o <= 1;
+                prim_rndr_mask_o <= (cx & 12'h001) != 12'h000 ? 4'b0011 : 4'b1100;
+                prim_rndr_addr_o <= dest_addr + {4'b0, cy} * (xv::VISIBLE_WIDTH / 4) + {4'b0, cx} / 2;
+                prim_rndr_data_out_o <= {color[7:0], color[7:0]};
+            end else begin
+                prim_rndr_vram_sel_o <= 0;
+                prim_rndr_wr_o <= 0;
+            end
+            state <= RENDER;            
+        end
+    endcase
 end
 
 endmodule

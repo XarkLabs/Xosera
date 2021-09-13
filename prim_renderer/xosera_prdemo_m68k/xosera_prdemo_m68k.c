@@ -68,6 +68,8 @@ int8_t   text_h;
 int8_t   text_v;
 uint8_t  text_color = 0x02;        // dark green on black
 
+uint8_t  disp_buffer = 0;
+
 static void get_textmode_settings()
 {
     uint16_t vx          = (xreg_getw(PA_GFX_CTRL) & 3) + 1;
@@ -184,12 +186,17 @@ typedef struct
     float x1, y1, x2, y2, x3, y3;
 } Coord3;
 
-static void draw_line(Coord2 coord, int color)
+void wait_pr_done()
 {
     uint8_t busy;
     do {
         busy = xm_getbh(WR_PR_CMD);
     } while(busy & 0x80);
+}
+
+static void draw_line(Coord2 coord, int color)
+{
+    wait_pr_done();
 
     xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
@@ -201,10 +208,7 @@ static void draw_line(Coord2 coord, int color)
 
 static void draw_filled_rectangle(Coord2 coord, int color)
 {
-    uint8_t busy;
-    do {
-        busy = xm_getbh(WR_PR_CMD);
-    } while(busy & 0x80);
+    wait_pr_done();
 
     xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
@@ -216,10 +220,7 @@ static void draw_filled_rectangle(Coord2 coord, int color)
 
 static void draw_filled_triangle(Coord3 coord, int color)
 {
-    uint8_t busy;
-    do {
-        busy = xm_getbh(WR_PR_CMD);
-    } while(busy & 0x80);
+    wait_pr_done();
 
     xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
@@ -339,11 +340,25 @@ void set_palette(double hue_offset)
 
 void clear()
 {
-    // Blue background
-    xm_setw(WR_INCR, 0x0001);
-    xm_setw(WR_ADDR, 0x0000);
-    for (int i = 0; i < 320 * 240 / 2; ++i)
-        xm_setw(DATA, 0x0101);
+    Coord2 c = {0, 0, 320, 200};
+    draw_filled_rectangle(c, 1);
+}
+
+void swap()
+{
+    wait_pr_done();
+
+    if (disp_buffer) {
+        disp_buffer = 0;
+        xreg_setw(PA_DISP_ADDR, 0x0000);
+        xreg_setw(PA_LINE_ADDR, 0x0000);
+        xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x7D0);
+    } else {
+        disp_buffer = 1;
+        xreg_setw(PA_DISP_ADDR, 0x7D00);
+        xreg_setw(PA_LINE_ADDR, 0x7D00);
+        xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x000);
+    }
 }
 
 void demo_lines()
@@ -389,6 +404,8 @@ void demo_lines()
         scale_x += 1;
         scale_y += 1;
     }
+
+    swap();
 }
 
 typedef struct {
@@ -421,7 +438,7 @@ void demo_filled_rectangles(int nb_iterations)
     for(size_t i = 0; i < NB_RECTS; ++i) {
         Particle* p = &particles[i];
         p->x = rand2() % 320;
-        p->y = rand2() % 240;
+        p->y = rand2() % 200;
         p->radius = rand2() % 10 + 5;
         p->color = rand2() % 256;
         p->speed_x = rand2() % 10 - 5;
@@ -430,8 +447,7 @@ void demo_filled_rectangles(int nb_iterations)
 
     for (int i = 0; i < nb_iterations; ++i) {
 
-        Coord2 c = {0, 0, 320, 240};
-        draw_filled_rectangle(c, 1);
+        clear();
 
         for(size_t j = 0; j < NB_RECTS; ++j) {
             Particle* p = &particles[j];
@@ -439,13 +455,15 @@ void demo_filled_rectangles(int nb_iterations)
             draw_filled_rectangle(c, p->color);
         }
 
+        swap();
+
         for(size_t j = 0; j < NB_RECTS; ++j) {
             Particle* p = &particles[j];
             p->x += p->speed_x;
             p->y += p->speed_y;
             if (p->x <= 0 || p->x >= 320)
                 p->speed_x = -p->speed_x;
-            if (p->y <= 0 || p->y >= 240)
+            if (p->y <= 0 || p->y >= 200)
                 p->speed_y = -p->speed_y;
         }
     }
@@ -453,11 +471,12 @@ void demo_filled_rectangles(int nb_iterations)
 
 void demo_filled_triangle_single()
 {
-    Coord2 c = {0, 0, 320, 240};
-    draw_filled_rectangle(c, 1);
+    clear();
 
     Coord3 c2 = {231, 120, 50, 230,  217, 55};
     draw_filled_triangle(c2, 2);
+
+    swap();
 }
 
 void demo_filled_triangle(int nb_iterations)
@@ -467,7 +486,7 @@ void demo_filled_triangle(int nb_iterations)
     for(size_t i = 0; i < 3*NB_TRIANGLES; ++i) {
         Particle* p = &particles[i];
         p->x = rand2() % 320;
-        p->y = rand2() % 240;
+        p->y = rand2() % 200;
         p->radius = 0;
         p->color = rand2() % 256;
         p->speed_x = rand2() % 10 - 5;
@@ -476,8 +495,7 @@ void demo_filled_triangle(int nb_iterations)
 
     for (int i = 0; i < nb_iterations; ++i) {
 
-        Coord2 c = {0, 0, 320, 240};
-        draw_filled_rectangle(c, 1);
+        clear();
 
         for(size_t j = 0; j < 3*NB_TRIANGLES; j+=3) {
             Particle* p1 = &particles[j];
@@ -493,9 +511,13 @@ void demo_filled_triangle(int nb_iterations)
             p->y += p->speed_y;
             if (p->x <= 0 || p->x >= 320)
                 p->speed_x = -p->speed_x;
-            if (p->y <= 0 || p->y >= 240)
+            if (p->y <= 0 || p->y >= 200)
                 p->speed_y = -p->speed_y;
         }
+
+        swap();
+
+        delay(100);
     }
 }
 
@@ -514,18 +536,26 @@ void xosera_demo()
         delay(2000);
 
         xreg_setw(PA_GFX_CTRL, 0x0075);
+
         xreg_setw(PA_DISP_ADDR, 0x0000);
+        xreg_setw(PA_LINE_ADDR, 0x0000);
         xreg_setw(PA_LINE_LEN, 160);
+
+        //xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x7D0);
 
         set_palette(0);
 
-        demo_lines();
+        clear();
+        //swap();
         delay(2000);
 
-        demo_filled_rectangles(100);
+        //demo_lines();
+        //delay(2000);
+
+        //demo_filled_rectangles(100);
 
         //demo_filled_triangle_single();
-        demo_filled_triangle(1000);
+        //demo_filled_triangle(1000);
 
     }
 }

@@ -121,6 +121,7 @@ typedef enum logic [3:0] {
     PR_COORDX2      = 4'h4,
     PR_COORDY2      = 4'h5,
     PR_COLOR        = 4'h6,
+    PR_DEST_ADDR    = 4'h7,
     PR_EXECUTE      = 4'hF
 } pr_cmds_t;
 

@@ -91,8 +91,9 @@ static inline xansiterm_data * get_xansi_data()
     return ptr;
 }
 
-// calculate x, y from td->cur_addr VRAM address
-static inline void xansi_calc_xy(xansiterm_data * td)
+#if DEBUG
+// verify x, y matches td->cur_addr VRAM address
+static inline void xansi_check_xy(xansiterm_data * td)
 {
     uint16_t r;
     uint32_t l = td->cur_addr - td->vram_base;
@@ -103,9 +104,22 @@ static inline void xansi_calc_xy(xansiterm_data * td)
         "swap.w %[r]\n"
         : [l] "+d"(l), [r] "=d"(r)
         : [w] "d"((uint16_t)td->cols));
-    td->y = l;
-    td->x = r;
+    if (td->y != (l & 0xffff) || td->x != r)
+    {
+        if ((l & 0xffff) - td->y == 1 && td->lcf)
+        {
+            LOG("MISMATCH ok\n");
+        }
+        else
+        {
+            LOGF(
+                "MISMATCH: addr %04x @ %u,%u should be %u,%u\n", td->cur_addr, td->x, td->y, r, (uint16_t)(l & 0xffff));
+            while (true)
+                ;
+        }
+    }
 }
+#endif
 
 // calculate VRAM address from x, y
 static inline uint16_t xansi_calc_addr(xansiterm_data * td, uint16_t x, uint16_t y)
@@ -125,10 +139,6 @@ static void xansi_check_lcf(xansiterm_data * td)
     if (td->lcf)
     {
         td->lcf = 0;
-        td->x   = 0;
-        td->y++;
-
-        td->cur_addr++;
         if ((uint16_t)(td->cur_addr - td->vram_base) >= td->vram_size)
         {
             td->cur_addr = td->vram_base + (td->vram_size - td->cols);
@@ -143,19 +153,27 @@ static inline void xansi_drawchar(xansiterm_data * td, char cdata)
     xv_prep();
     xansi_check_lcf(td);
 
-    xm_setw(WR_ADDR, td->cur_addr);
+    xm_setw(WR_ADDR, td->cur_addr++);
     xm_setbh(DATA, td->color);
     xm_setbl(DATA, cdata);
 
     td->x++;
-    if (td->x < td->cols)
+    if (td->x >= td->cols)
     {
-        td->cur_addr++;
-    }
-    else
-    {
-        td->x   = td->cols - 1;
-        td->lcf = !(td->flags & TFLAG_NO_AUTOWRAP);
+        if (td->flags & TFLAG_NO_AUTOWRAP)
+        {
+            td->x = td->cols - 1;
+        }
+        else
+        {
+            td->x = 0;
+            td->y++;
+            if (td->y >= td->rows)
+            {
+                td->y = td->rows - 1;
+            }
+            td->lcf = true;
+        }
     }
 }
 
@@ -377,48 +395,59 @@ static void xansi_processchar(xansiterm_data * td, char cdata)
 {
     if ((int8_t)cdata < ' ' && !(td->flags & TFLAG_ATTRIB_PASSTHRU))
     {
-        xansi_calc_xy(td);
+        //        xansi_calc_xy(td);
         switch (cdata)
         {
             case '\a':
                 // VT:    \a  alert (visual bell)
                 LOG("[BELL]");
                 xansi_visualbell(td);
-                return;        // fast out (no cursor change)
+                return;        // fast out (no lcf clear)
             case '\b':
                 // VT:  \b  backspace
                 LOG("[BS]");
                 if (td->x > 0)
                 {
                     td->x -= 1;
+                    td->cur_addr--;
                 }
                 break;
             case '\t':
                 // VT:    \t tab (8 character)
                 LOG("[TAB]");
-                td->x = (uint8_t)(td->x & ~0x7) + 8;
-                if ((uint8_t)(td->cols - td->x) < 8)
+                uint8_t nx = (uint8_t)(td->x & ~0x7) + 8;
+                if ((uint8_t)(td->cols - nx) < 8)
                 {
+                    td->cur_addr -= td->x;
+                    td->cur_addr += td->cols;
                     td->x = 0;
                     td->y++;
+                }
+                else
+                {
+                    td->x = (uint8_t)(td->x & ~0x7) + 8;
                 }
                 break;
             case '\n':
                 // VT:    \n  line feed (or LF+CR if NEWLINE mode)
                 LOG("[LF]");
+                td->cur_addr += td->cols;
                 td->y++;
                 if (td->flags & TFLAG_NEWLINE)
                 {
+                    td->cur_addr -= td->x;
                     td->x = 0;
                 }
                 break;
             case '\v':
                 // VT:    \v  vertical tab EXTENSION: cursor up vs another LF
                 LOG("[VT]");
+                td->cur_addr -= td->cols;
                 td->y--;
                 if (td->y >= td->rows)
                 {
-                    td->y = 0;
+                    td->cur_addr += td->cols;
+                    td->y += 1;
                     xansi_scroll_down(td);
                 }
                 break;
@@ -430,6 +459,7 @@ static void xansi_processchar(xansiterm_data * td, char cdata)
             case '\r':
                 // VT: \r   carriage return
                 LOG("[CR]");
+                td->cur_addr -= td->x;
                 td->x = 0;
                 break;
             default:           // suppress others
@@ -438,13 +468,16 @@ static void xansi_processchar(xansiterm_data * td, char cdata)
 
         if (td->y >= td->rows)
         {
-            td->y = td->rows - 1;
+            td->cur_addr -= td->cols;
+            td->y -= 1;
             xansi_scroll_up(td);
         }
-
-        xansi_calc_cur_addr(td);
+        //        xansi_calc_cur_addr(td);
         td->lcf = 0;
 
+#if DEBUG
+        xansi_check_xy(td);
+#endif
         return;
     }
 
@@ -458,7 +491,6 @@ static void xansi_begin_csi(xansiterm_data * td, char c)
     td->intermediate_char = 0;
     td->num_parms         = 0;
     memset(td->csi_parms, 0, sizeof(td->csi_parms));
-    xansi_calc_xy(td);
 }
 
 // process a completed CSI sequence
@@ -839,6 +871,10 @@ void xansiterm_putchar(char cdata)
     (void)initial_x;            // no warnings if unused
     (void)initial_y;            // no warnings if unused
     (void)initial_state;        // no warnings if unused
+
+#if DEBUG
+    xansi_check_xy(td);
+#endif
 
     // ESC or 8-bit CSI received
     if ((cdata & 0x7f) == '\x1b')

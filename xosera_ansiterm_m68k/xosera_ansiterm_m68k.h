@@ -14,7 +14,7 @@
  * ------------------------------------------------------------
  */
 
-#define ECHOONLY 0        // lightweight echo only test
+#define TINYECHO 0        // lightweight echo only test
 #define DEBUG    0        // set to 1 for debugging
 
 #if !defined(_NOINLINE)

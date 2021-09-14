@@ -52,8 +52,9 @@ enum e_term_flags
 enum e_term_state
 {
     TSTATE_NORMAL,
+    TSTATE_ILLEGAL,
     TSTATE_ESC,
-    TSTATE_CSI
+    TSTATE_CSI,
 };
 
 typedef struct xansiterm_data
@@ -106,11 +107,7 @@ static inline void xansi_check_xy(xansiterm_data * td)
         : [w] "d"((uint16_t)td->cols));
     if (td->y != (l & 0xffff) || td->x != r)
     {
-        if ((l & 0xffff) - td->y == 1 && td->lcf)
-        {
-            LOG("MISMATCH ok\n");
-        }
-        else
+        if (!((l & 0xffff) - td->y == 1 && td->lcf))
         {
             LOGF(
                 "MISMATCH: addr %04x @ %u,%u should be %u,%u\n", td->cur_addr, td->x, td->y, r, (uint16_t)(l & 0xffff));
@@ -219,6 +216,49 @@ static _NOINLINE void xansi_do_scroll(xansiterm_data * td)
     }
 }
 
+static void xansi_draw_cursor(xansiterm_data * td)
+{
+    xv_prep();
+
+    if (!td->cursor_drawn)
+    {
+        td->cursor_drawn = true;
+        xm_setw(RW_INCR, 0x0000);
+        xm_setw(RW_ADDR, td->cur_addr);
+        uint16_t data   = xm_getw(RW_DATA);
+        td->cursor_save = data;
+
+        // calculate cursor color:
+        // start with current forground and background color swapped
+        uint16_t cursor_color = ((uint16_t)(td->color & 0x0f) << 12) | ((uint16_t)(td->color & 0xf0) << 4);
+
+        // check for same cursor foreground and data foreground
+        if ((uint16_t)((cursor_color ^ data) & 0x0f00) == 0)
+        {
+            cursor_color ^= 0x0800;        // if match, toggle bright/dim of foreground
+        }
+        // check for same cursor background and data background
+        if ((uint16_t)((cursor_color ^ data) & 0xf000) == 0)
+        {
+            cursor_color ^= 0x8000;        // if match, toggle bright/dim of background
+        }
+
+        xm_setw(RW_DATA, (uint16_t)(cursor_color | (uint16_t)(data & 0x00ff)));        // draw char with cursor colors
+    }
+}
+
+static void xansi_erase_cursor(xansiterm_data * td)
+{
+    xv_prep();
+
+    if (td->cursor_drawn)
+    {
+        td->cursor_drawn = false;
+        xm_setw(WR_ADDR, td->cur_addr);
+        xm_setw(DATA, td->cursor_save);
+    }
+}
+
 // functions that don't need to be so fast, so optimize for size
 #pragma GCC push_options
 #pragma GCC optimize("-Os")
@@ -250,15 +290,26 @@ static void set_defaut_palette()
     };
 }
 
-// fully reset Xosera "text mode" with defaults that should make it visible
-static void xansi_vidreset(xansiterm_data * td)
+// reset video mode and terminal state
+static void xansi_reset(xansiterm_data * td)
 {
     xv_prep();
-    bool alt_font = td->flags & TFLAG_8X8_FONT;
+
     // set xosera playfield A registers
+    bool     alt_font    = td->flags & TFLAG_8X8_FONT;
+    uint16_t rows        = ((uint16_t)(xreg_getw(VID_VSIZE) >> (uint16_t)(alt_font ? 3 : 4)));        // get text rows
+    uint16_t cols        = (uint16_t)(xreg_getw(VID_HSIZE) >> 3);        // get pixel width / 8 for text columns
     uint16_t tile_addr   = alt_font ? 0x800 : 0x0000;
     uint16_t tile_height = alt_font ? 7 : 15;
-    uint16_t cols        = xreg_getw(VID_HSIZE) >> 3;        // get pixel width / 8 for text columns
+
+    td->vram_base = 0;
+    td->vram_size = cols * rows;
+    td->vram_end  = td->vram_size;
+    td->cols      = cols;
+    td->rows      = rows;
+    td->def_color = 0x02;        // default dark-green on black
+    td->cur_color = 0x02;        // default dark-green on black
+    td->color     = 0x02;        // default dark-green on black
 
     while ((xreg_getw(SCANLINE) & 0x8000))
         ;
@@ -275,71 +326,17 @@ static void xansi_vidreset(xansiterm_data * td)
     xm_setw(XR_DATA, 0x0000);                                           // unused
 
     set_defaut_palette();
-}
-
-static void xansi_reset(xansiterm_data * td)
-{
-    xv_prep();
-    uint16_t th   = ((uint8_t)xreg_getw(PA_TILE_CTRL) & 0xf) + 1;        // get font height
-    uint16_t rows = (xreg_getw(VID_VSIZE) + th - 1) / th;                // get text rows
-    uint16_t cols = xreg_getw(VID_HSIZE) >> 3;                           // get text columns
-
-    td->vram_base = 0;
-    td->vram_size = cols * rows;
-    td->vram_end  = td->vram_size;
-    td->cols      = cols;
-    td->rows      = rows;
-    td->def_color = 0x02;        // default dark-green on black
-    td->cur_color = 0x02;        // default dark-green on black
-    td->color     = 0x02;        // default dark-green on black
 
     if (td->x >= cols)
     {
         td->x   = cols - 1;
         td->lcf = 0;
     }
-    if (td->y > rows)
+    if (td->y >= rows)
     {
         td->y = rows - 1;
     }
     xansi_calc_cur_addr(td);
-}
-
-static void xansi_draw_cursor(xansiterm_data * td, bool onoff)
-{
-    xv_prep();
-
-    if (onoff && !td->cursor_drawn)        // cursor on, but not drawn
-    {
-        td->cursor_drawn = true;
-        xm_setw(RW_INCR, 0x0000);
-        xm_setw(RW_ADDR, td->cur_addr);
-        uint16_t data   = xm_getw(RW_DATA);
-        td->cursor_save = data;
-
-        // calculate cursor color:
-        // use current forground as background with foreground color from char under cursor
-        uint16_t cursor_color = ((uint16_t)(td->color & 0x0f) << 12) | ((uint16_t)(td->color & 0xf0) << 4);
-        // check for same cursor background and data background
-        if ((uint16_t)(cursor_color & 0xf000) == (uint16_t)(data & 0xf000))
-        {
-            cursor_color ^= 0x8000;        // if match, toggle bright/dim of background
-        }
-        // check for same cursor foreground and data foreground
-        if ((uint16_t)(cursor_color & 0x0f00) == (uint16_t)(data & 0x0f00))
-        {
-            cursor_color ^= 0x0800;        // if match, toggle bright/dim of foreground
-        }
-
-        xm_setw(RW_DATA, (uint16_t)(cursor_color | (uint16_t)(data & 0x00ff)));        // draw char with cursor colors
-    }
-    else if (!onoff && td->cursor_drawn)        // cursor off, but drawn
-    {
-        td->cursor_drawn = false;
-        xm_setw(RW_INCR, 0x0000);
-        xm_setw(RW_ADDR, td->cur_addr);
-        xm_setw(RW_DATA, td->cursor_save);
-    }
 }
 
 static void xansi_visualbell(xansiterm_data * td)
@@ -361,20 +358,15 @@ static void xansi_visualbell(xansiterm_data * td)
     }
 }
 
-// clear screen (fullheight always clears the full 8x8 height)
-static void xansi_cls(xansiterm_data * td, bool fullheight)
+// clear screen (clears the full 8x8 height)
+static void xansi_cls(xansiterm_data * td)
 {
-    // if using 8x8 font, already fullheight
-    if (td->flags & TFLAG_8X8_FONT)
-    {
-        fullheight = false;
-    }
-    xansi_clear(td, fullheight ? td->vram_base : td->vram_base << 1, fullheight ? td->vram_end << 1 : td->vram_end);
-    td->x   = 0;
-    td->y   = 0;
-    td->lcf = 0;
-
+    // if not using 8x8 font, clear double high (clear if mode switched later)
+    xansi_clear(td, td->vram_base, (td->flags & TFLAG_8X8_FONT) ? td->vram_end : td->vram_end << 1);
     td->cur_addr = td->vram_base;
+    td->x        = 0;
+    td->y        = 0;
+    td->lcf      = 0;
 }
 
 static void xansi_scroll_up(xansiterm_data * td)
@@ -463,7 +455,7 @@ static void xansi_processchar(xansiterm_data * td, char cdata)
             case '\f':
                 // VT:    \f  form feed EXTENSION clears screen and homes cursor
                 LOG("[FF]");
-                xansi_cls(td, false);
+                xansi_cls(td);
                 break;
             case '\r':
                 // VT: \r   carriage return
@@ -494,12 +486,87 @@ static void xansi_processchar(xansiterm_data * td, char cdata)
 }
 
 // starts CSI sequence or ESC sequence (if c is ESC)
-static void xansi_begin_csi(xansiterm_data * td, char c)
+static void xansi_begin_csi_or_esc(xansiterm_data * td, char c)
 {
     td->state             = (c == '\x1b') ? TSTATE_ESC : TSTATE_CSI;
     td->intermediate_char = 0;
     td->num_parms         = 0;
     memset(td->csi_parms, 0, sizeof(td->csi_parms));
+}
+
+static void xansi_process_esc(xansiterm_data * td, char cdata)
+{
+    td->state = TSTATE_NORMAL;
+    switch (cdata)
+    {
+        case '\x9b':
+            // VT: $9B      CSI
+        case '[':
+            // VT: <ESC>[   CSI
+            xansi_begin_csi_or_esc(td, cdata);
+            return;
+        case 'c':
+            // VT: <ESC>c  RIS reset video mode
+            LOGF("%c\n  := [TERM RESET]", cdata);
+            td->flags = 0;
+            xansi_reset(td);
+            xansi_cls(td);
+            return;
+        case '7':
+            // VT: <ESC>7  save cursor
+            LOGF("%c\n[CURSOR SAVE]", cdata);
+            td->save_x   = td->x;
+            td->save_y   = td->y;
+            td->save_lcf = td->lcf;
+            return;
+        case '8':
+            // VT: <ESC>8  restore cursor
+            LOGF("%c\n  := [CURSOR RESTORE]\n", cdata);
+            td->x   = td->save_x;
+            td->y   = td->save_y;
+            td->lcf = td->save_lcf;
+            break;
+        case '(':
+            // VT: <ESC>(  1st font 8x16 (default) EXTENSION: 8x16 font size
+            td->flags &= ~TFLAG_8X8_FONT;
+            xansi_reset(td);
+            LOGF("%c\n  := [FONT0 8x16 %dx%d]\n", cdata, td->cols, td->rows);
+            return;
+        case ')':
+            // VT: <ESC>)  2nd font 8x8         EXTENSION: 8x8 font size
+            td->flags |= TFLAG_8X8_FONT;
+            xansi_reset(td);
+            LOGF("%c\n  := [FONT1 8x8 %dx%d]\n", cdata, td->cols, td->rows);
+            break;
+        case 'D':
+            // VT: <ESC>D  IND move cursor down
+            LOGF("%c\n  := [CDOWN]", cdata);
+            uint16_t x_save = td->x;        // save restore X in case NEWLINE mode
+            xansi_processchar(td, '\n');
+            td->x = x_save;
+            break;
+        case 'M':
+            // VT: <ESC>M  RI move cursor up
+            LOGF("%c\n  := [CUP]\n", cdata);
+            xansi_processchar(td, '\v');
+            break;
+        case 'E':
+            // VT: <ESC>E  NEL next line
+            LOGF("%c\n  := [NEL]\n", cdata);
+            td->y++;
+            td->x   = 0;
+            td->lcf = 0;
+            if (td->y >= td->cols)
+            {
+                td->y = td->cols - 1;
+                xansi_scroll_up(td);
+            }
+            break;
+        default:
+            LOGF("%c\n  := [ignore 0x%02x]\n", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
+            return;
+    }
+    xansi_calc_cur_addr(td);
 }
 
 // process a completed CSI sequence
@@ -553,9 +620,8 @@ static void xansi_process_csi(xansiterm_data * td, char cdata)
                         uint16_t config = (res == 640) ? 0 : 1;
                         LOGF("<reconfig #%d>\n", config);
                         xosera_init(config);
-                        xansi_vidreset(td);
                         xansi_reset(td);
-                        xansi_cls(td, true);
+                        xansi_cls(td);
                         LOGF("[RECONFIG %dx%d]", td->rows, td->cols);
                     }
                 }
@@ -661,6 +727,26 @@ static void xansi_process_csi(xansiterm_data * td, char cdata)
             }
             LOGF("[CLEFT %d]", num);
             break;
+        case 'J':
+            // VT:  <CSI>J  erase down from cursor line to end of screen
+            // VT:  <CSI>1J erase up from cursor line to start of screen
+            // VT:  <CSI>2J erase whole screen
+            LOGF("[ERASE %s]", num_z == 0 ? "DOWN" : num_z == 1 ? "UP" : num_z == 2 ? "SCREEN" : "?");
+            switch (num_z)
+            {
+                case 0:
+                    xansi_clear(td, xansi_calc_addr(td, 0, td->y), td->vram_end);
+                    break;
+                case 1:
+                    xansi_clear(td, td->vram_base, xansi_calc_addr(td, td->cols - 1, td->y));
+                    break;
+                case 2:
+                    xansi_clear(td, td->vram_base, td->vram_end);
+                    break;
+                default:
+                    break;
+            }
+            break;
         case 'K':
             // VT:  <CSI>K  erase from cursor to end of line
             // VT:  <CSI>1K erase from cursor to start of line
@@ -676,26 +762,6 @@ static void xansi_process_csi(xansiterm_data * td, char cdata)
                     break;
                 case 2:
                     xansi_clear(td, xansi_calc_addr(td, 0, td->y), xansi_calc_addr(td, td->cols - 1, td->y));
-                    break;
-                default:
-                    break;
-            }
-            break;
-        case 'J':
-            // VT:  <CSI>J  erase down from cursor line to end of screen
-            // VT:  <CSI>1J erase up from cursor line to start of screen
-            // VT:  <CSI>2J erase whole screen
-            LOGF("[ERASE %s]", num_z == 0 ? "DOWN" : num_z == 1 ? "UP" : num_z == 2 ? "SCREEN" : "?");
-            switch (num_z)
-            {
-                case 0:
-                    xansi_clear(td, xansi_calc_addr(td, 0, td->y), td->vram_end);
-                    break;
-                case 1:
-                    xansi_clear(td, td->vram_base, xansi_calc_addr(td, td->cols - 1, td->y));
-                    break;
-                case 2:
-                    xansi_cls(td, false);
                     break;
                 default:
                     break;
@@ -829,39 +895,72 @@ static void xansi_process_csi(xansiterm_data * td, char cdata)
     xansi_calc_cur_addr(td);
 }
 
-// external public terminal functions
-void xansiterm_init()
+static void xansi_parse_csi(xansiterm_data * td, char cdata)
 {
-    LOG("[xansiterm_init]\n");
-
-    xansiterm_data * td = get_xansi_data();
-    memset(td, 0, sizeof(*td));
-    xansi_vidreset(td);
-    xansi_reset(td);
-    xansi_cls(td, true);
-}
-
-bool xansiterm_checkchar()
-{
-    xansiterm_data * td = get_xansi_data();
-    xv_prep();
-
-    xansi_check_lcf(td);        // wrap cursor if needed
-    bool char_ready = checkchar();
-    // blink at ~409.6ms (on half the time but only if cursor not disabled and no char ready)
-    bool show_cursor = !(td->flags & TFLAG_HIDE_CURSOR) && !char_ready && (xm_getw(TIMER) & 0x800);
-    xansi_draw_cursor(td, show_cursor);
-
-    return char_ready;
-}
-
-char xansiterm_readchar()
-{
-    xansiterm_data * td = get_xansi_data();
-    xansi_draw_cursor(td, false);        // make sure cursor not drawn
-
-    // TODO terminal query stuff, but seems not so useful.
-    return readchar();
+    uint8_t cclass = cdata & 0xf0;
+    if (cdata <= ' ')
+    {
+        // ASCII CAN or SUB aborts sequence, otherwise ignore
+        if (cdata == '\x18' || cdata == '\x1A')
+        {
+            td->state = TSTATE_NORMAL;
+        }
+    }
+    else if (cclass == 0x20)        // intermediate char
+    {
+        if (td->intermediate_char)
+        {
+            LOG("[2nd intermediate]");
+        }
+        td->intermediate_char = cdata;
+    }
+    else if (cclass == 0x30)        // parameter number
+    {
+        uint8_t d = (uint8_t)(cdata - '0');
+        if (d <= 9)
+        {
+            if (td->num_parms == 0)
+            {
+                td->num_parms = 1;
+            }
+            uint16_t v = td->csi_parms[td->num_parms - 1];
+            v *= (uint16_t)10;
+            v += d;
+            if (v > 9999)
+            {
+                v = 9999;
+            }
+            td->csi_parms[td->num_parms - 1] = v;
+        }
+        else if (cdata == ';')
+        {
+            td->num_parms++;
+            if (td->num_parms >= MAX_CSI_PARMS)
+            {
+                LOG("[parm >16]\n");
+                td->num_parms = MAX_CSI_PARMS - 1;
+            }
+        }
+        else if (cdata == ':')
+        {
+            LOG("[colon illegal]\n");
+            td->state = TSTATE_ILLEGAL;
+        }
+        else
+        {
+            td->intermediate_char = cdata;
+        }
+    }
+    else if (cclass >= 0x40)
+    {
+        xansi_process_csi(td, cdata);
+    }
+    else
+    {
+        // ASCII CAN or SUB aborts sequence, otherwise ignore
+        LOGF("[illegal '%c' (0x%02x)]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
+        td->state = TSTATE_ILLEGAL;
+    }
 }
 
 void xansiterm_putchar(char cdata)
@@ -886,18 +985,21 @@ void xansiterm_putchar(char cdata)
     xansi_check_xy(td);
 #endif
 
+    xansi_erase_cursor(td);
+
     // ESC or 8-bit CSI received
     if ((cdata & 0x7f) == '\x1b')
     {
         // if already in CSI/ESC state and PASSTHRU set, print 2nd CSI/ESC
-        if (td->state != TSTATE_NORMAL && td->flags & TFLAG_ATTRIB_PASSTHRU)
+        if (td->state >= TSTATE_ESC && (td->flags & TFLAG_ATTRIB_PASSTHRU))
         {
             td->state = TSTATE_NORMAL;
+            xansi_drawchar(td, cdata);
         }
         else
         {
             // otherwise start new CSI/ESC
-            xansi_begin_csi(td, cdata);
+            xansi_begin_csi_or_esc(td, cdata);
         }
     }
     else if (td->state == TSTATE_NORMAL)
@@ -908,150 +1010,32 @@ void xansiterm_putchar(char cdata)
     {
         // VT: $18     ABORT (CAN)
         // VT: $1A     ABORT (SUB)
-        LOGF("[Cancel CSI/ESC: '%c' (0x%02x)]\n", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
-        td->state = TSTATE_NORMAL;
+        LOGF("[CANCEL: 0x%02x]", cdata);
+        td->state = TSTATE_NORMAL;        // TODO: cancel state
     }
     else if (td->state == TSTATE_ESC)        // NOTE: only one char sequences supported
     {
-        td->state = TSTATE_NORMAL;
-        switch (cdata)
-        {
-            case '\x9b':
-                // VT: $9B      CSI
-            case '[':
-                // VT: <ESC>[   CSI
-                xansi_begin_csi(td, cdata);
-                break;
-            case 'c':
-                // VT: <ESC>c  RIS reset video mode
-                LOGF("%c\n  := [TERM RESET]", cdata);
-                td->flags = 0;
-                xansi_vidreset(td);
-                xansi_reset(td);
-                xansi_cls(td, true);
-                break;
-            case '7':
-                // VT: <ESC>7  save cursor
-                LOGF("%c\n[CURSOR SAVE]", cdata);
-                td->save_x   = td->x;
-                td->save_y   = td->y;
-                td->save_lcf = td->lcf;
-                break;
-            case '8':
-                // VT: <ESC>8  restore cursor
-                LOGF("%c\n  := [CURSOR RESTORE]\n", cdata);
-                td->x   = td->save_x;
-                td->y   = td->save_y;
-                td->lcf = td->save_lcf;
-                break;
-            case '(':
-                // VT: <ESC>(  1st font 8x16 (default) EXTENSION: 8x16 font size
-                td->flags &= ~TFLAG_8X8_FONT;
-                xansi_vidreset(td);
-                xansi_reset(td);
-                LOGF("%c\n  := [FONT0 8x16 %dx%d]\n", cdata, td->cols, td->rows);
-                break;
-            case ')':
-                // VT: <ESC>)  2nd font 8x8         EXTENSION: 8x8 font size
-                td->flags |= TFLAG_8X8_FONT;
-                xansi_vidreset(td);
-                xansi_reset(td);
-                LOGF("%c\n  := [FONT1 8x8 %dx%d]\n", cdata, td->cols, td->rows);
-                break;
-            case 'D':
-                // VT: <ESC>D  IND move cursor down
-                LOGF("%c\n  := [CDOWN]", cdata);
-                uint16_t x_save = td->x;        // save restore X in case NEWLINE mode
-                xansi_processchar(td, '\n');
-                td->x = x_save;
-                break;
-            case 'M':
-                // VT: <ESC>M  RI move cursor up
-                LOGF("%c\n  := [CUP]\n", cdata);
-                xansi_processchar(td, '\v');
-                break;
-            case 'E':
-                // VT: <ESC>E  NEL next line
-                LOGF("%c\n  := [NEL]\n", cdata);
-                td->y++;
-                td->x   = 0;
-                td->lcf = 0;
-                if (td->y >= td->cols)
-                {
-                    td->y = td->cols - 1;
-                    xansi_scroll_up(td);
-                }
-                break;
-            default:
-                LOGF("%c\n  := [unknown 0x%02x]\n", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
-                break;
-        }
-        xansi_calc_cur_addr(td);
+        xansi_process_esc(td, cdata);
     }
     else if (td->state == TSTATE_CSI)
     {
-        uint8_t cclass = cdata & 0xf0;
-        if (cdata <= ' ')
+        xansi_parse_csi(td, cdata);
+    }
+    else if (td->state == TSTATE_ILLEGAL)
+    {
+        if (cdata >= 0x40)
         {
-            // ASCII CAN or SUB aborts sequence, otherwise ignore
-            if (cdata == '\x18' || cdata == '\x1A')
-            {
-                td->state = TSTATE_NORMAL;
-            }
-        }
-        else if (cclass == 0x20)        // intermediate char
-        {
-            if (td->intermediate_char)
-            {
-                LOG("[2nd intermediate]");
-            }
-            td->intermediate_char = cdata;
-        }
-        else if (cclass == 0x30)        // parameter number
-        {
-            uint8_t d = (uint8_t)(cdata - '0');
-            if (d <= 9)
-            {
-                if (td->num_parms == 0)
-                {
-                    td->num_parms = 1;
-                }
-                uint16_t v = td->csi_parms[td->num_parms - 1];
-                v *= (uint16_t)10;
-                v += d;
-                if (v > 9999)
-                {
-                    v = 9999;
-                }
-                td->csi_parms[td->num_parms - 1] = v;
-            }
-            else if (cdata == ';')
-            {
-                td->num_parms++;
-                if (td->num_parms >= MAX_CSI_PARMS)
-                {
-                    LOG("[parm >16]\n");
-                    td->num_parms = MAX_CSI_PARMS - 1;
-                }
-            }
-            else
-            {
-                td->intermediate_char = cdata;
-            }
-        }
-        else if (cclass >= 0x40)
-        {
-            xansi_process_csi(td, cdata);
+            td->state = TSTATE_NORMAL;
+            LOGF("[end skip '%c' 0x%02x]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
         }
         else
         {
-            // ASCII CAN or SUB aborts sequence, otherwise ignore
-            LOGF("[Cancel '%c' (0x%02x)]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
-            td->state = TSTATE_NORMAL;
+            LOGF("[skip '%c' 0x%02x]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
         }
     }
 
 #if DEBUG
+    // show altered state in log
     if (initial_flags != td->flags)
     {
         LOGF("{Flags:%02x->%02x}", initial_flags, td->flags);
@@ -1072,7 +1056,52 @@ void xansiterm_putchar(char cdata)
     }
     if (td->state != initial_state)
     {
-        LOGF("%s", td->state == TSTATE_NORMAL ? "\n<NORM>" : td->state == TSTATE_ESC ? "<ESC>" : "<CSI>");
+        LOGF("%s",
+             td->state == TSTATE_NORMAL    ? "\n<NORM>"
+             : td->state == TSTATE_ILLEGAL ? "<ILLEGAL>"
+             : td->state == TSTATE_ESC     ? "<ESC>"
+                                           : "<CSI>");
     }
 #endif
+}
+
+// external public terminal functions
+void xansiterm_init()
+{
+    LOG("[xansiterm_init]\n");
+
+    xansiterm_data * td = get_xansi_data();
+    memset(td, 0, sizeof(*td));
+    xansi_reset(td);
+    xansi_cls(td);
+}
+
+bool xansiterm_checkchar()
+{
+    xansiterm_data * td = get_xansi_data();
+    xv_prep();
+
+    xansi_check_lcf(td);        // wrap cursor if needed
+    bool char_ready = checkchar();
+    // blink at ~409.6ms (on half the time but only if cursor not disabled and no char ready)
+    bool show_cursor = !(td->flags & TFLAG_HIDE_CURSOR) && !char_ready && (xm_getw(TIMER) & 0x800);
+    if (show_cursor)
+    {
+        xansi_draw_cursor(td);
+    }
+    else
+    {
+        xansi_erase_cursor(td);        // make sure cursor not drawn
+    }
+
+    return char_ready;
+}
+
+char xansiterm_readchar()
+{
+    xansiterm_data * td = get_xansi_data();
+    xansi_erase_cursor(td);        // make sure cursor not drawn
+
+    // TODO terminal query stuff, but seems not so useful.
+    return readchar();
 }

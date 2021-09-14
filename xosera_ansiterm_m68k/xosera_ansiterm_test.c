@@ -77,6 +77,29 @@ void dprintf(const char * fmt, ...)
 #endif
 
 // testing harness functions
+static char ansiterm_waitchar()
+{
+    while (!xansiterm_checkchar())
+        ;
+
+    return xansiterm_readchar();
+}
+
+static void tputs(char * p)
+{
+    char c;
+    while ((c = *p++) != '\0')
+    {
+        if (c == '\n')
+        {
+            xansiterm_putchar('\r');
+        }
+        xansiterm_putchar(c);
+    }
+}
+
+#if !TINYECHO
+
 #if defined(printf)        // printf macro interferes with gcc format attribute
 #define _save_printf printf
 #undef printf
@@ -89,16 +112,7 @@ static void tprintf(const char * fmt, ...)
     va_list     args;
     va_start(args, fmt);
     vsnprintf(tprint_buff, sizeof(tprint_buff), fmt, args);
-    char * p = tprint_buff;
-    char   c;
-    while ((c = *p++) != '\0')
-    {
-        if (c == '\n')
-        {
-            xansiterm_putchar('\r');
-        }
-        xansiterm_putchar(c);
-    }
+    tputs(tprint_buff);
     va_end(args);
 }
 
@@ -107,131 +121,188 @@ static void tprintf(const char * fmt, ...)
 #undef _save_printf
 #endif
 
-#if !ECHOONLY
 // attribute test
-static int test_attrib()
+static int ansiterm_test_attrib()
 {
+    tprintf("\nAttribute test (space to pause, ^C to exit, ^A to reboot)\n\n");
     static uint8_t cbg_tbl[] = {40, 41, 42, 43, 44, 45, 46, 47, 100, 101, 102, 103, 104, 105, 106, 107, 49};
     static uint8_t cfg_tbl[] = {30, 31, 32, 33, 34, 35, 36, 37, 90, 91, 92, 93, 94, 95, 96, 97, 39};
-    for (uint16_t cbg = 0; cbg < sizeof(cbg_tbl); cbg++)
+    while (true)
     {
-        for (uint16_t cfg = 0; cfg < sizeof(cfg_tbl); cfg++)
+        for (uint16_t cbg = 0; cbg < sizeof(cbg_tbl); cbg++)
         {
-            for (uint16_t attr = 0; attr < 8; attr++)
+            for (uint16_t cfg = 0; cfg < sizeof(cfg_tbl); cfg++)
             {
-                if (attr > 2 && attr < 7)
+                for (uint16_t attr = 0; attr < 8; attr++)
                 {
-                    continue;
+                    if (attr > 2 && attr < 7)
+                    {
+                        continue;
+                    }
+                    tprintf("\x1b[%d;%d;%dm ^[%d;%d;%dm AaBb123 \x1b[0m",
+                            attr,
+                            cbg_tbl[cbg],
+                            cfg_tbl[cfg],
+                            attr,
+                            cbg_tbl[cbg],
+                            cfg_tbl[cfg]);
                 }
-                tprintf("\x1b[%d;%d;%dm ^[%d;%d;%dm \x1b[0m",
-                        attr,
-                        cbg_tbl[cbg],
-                        cfg_tbl[cfg],
-                        attr,
-                        cbg_tbl[cbg],
-                        cfg_tbl[cfg]);
-
-                if (checkchar())
+                if (xansiterm_checkchar())
                 {
-                    char c = readchar();
-                    if (c == 1)
+                    char c = xansiterm_readchar();
+                    while (true)
                     {
-                        return -1;
-                    }
-                    if (c == 3)
-                    {
-                        return 0;
-                    }
-
-                    while (!checkchar())
-                        ;
-
-                    c = readchar();
-                    if (c == 1)
-                    {
-                        return -1;
-                    }
-                    if (c == 3)
-                    {
-                        return 0;
+                        if (c == 1)
+                        {
+                            return -1;
+                        }
+                        else if (c == 3)
+                        {
+                            return 0;
+                        }
+                        c = xansiterm_readchar();
+                        if (c >= ' ')
+                        {
+                            break;
+                        }
                     }
                 }
+                tprintf("\r\n");
             }
-            tprintf("\n");
         }
     }
+}
 
-    return 1;
+static int ansiterm_spamtest()
+{
+    char spam[97];
+    for (uint8_t i = 0; i < 96; i++)
+    {
+        spam[i] = i + ' ';
+    }
+    spam[96] = 0;
+
+    while (true)
+    {
+        tputs(spam);
+        if (xansiterm_checkchar())
+        {
+            char c = xansiterm_readchar();
+            while (true)
+            {
+                if (c == 1)
+                {
+                    return -1;
+                }
+                else if (c == 2 || c == 3)
+                {
+                    return 0;
+                }
+                c = xansiterm_readchar();
+                if (c >= ' ')
+                {
+                    break;
+                }
+            }
+        }
+    }
+}
+
+static int ansiterm_echotest()
+{
+    tprintf("\nEcho test (^A to reboot, ^B for spam, ^C to exit)\n\n");
+    while (true)
+    {
+        char c = ansiterm_waitchar();
+
+        if (c == 1)        // ^A exit for kermit
+        {
+            return -1;
+        }
+        else if (c == 2)
+        {
+            if (ansiterm_spamtest() < 0)
+                return -1;
+        }
+        else if (c == 3)        // ^B begin megatest again
+        {
+            return 0;
+        }
+
+        xansiterm_putchar(c);
+    }
+}
+
+static void ansiterm_testmenu()
+{
+    while (true)
+    {
+        tprintf("\x9bm\n");
+        tprintf("\n");
+        tprintf("rosco_m68k ANSI Terminal Driver Test Menu\n");
+        tprintf("\n");
+        tprintf("  A - ANSI color attribute test.\n");
+        tprintf("  B - Fast spam test\n");
+        tprintf("  C - Echo test\n\n");
+        tprintf(" ^A - Warm boot exit\n");
+        tprintf(" ^C - Returns to this menu\n");
+        tprintf("\n");
+        tprintf("Selection:");
+
+        int res = 1;
+        do
+        {
+            char c = ansiterm_waitchar();
+            switch (c)
+            {
+                case 1:        // ^A exit for kermit
+                    return;
+                case 'A':
+                case 'a':
+                    xansiterm_putchar(c);
+                    xansiterm_putchar('\n');
+                    res = ansiterm_test_attrib();
+                    break;
+                case 'B':
+                case 'b':
+                    xansiterm_putchar(c);
+                    xansiterm_putchar('\n');
+                    tprintf("\nSpam test (space to pause, ^C to exit, ^A to reboot)\n\n");
+                    res = ansiterm_spamtest();
+                    break;
+                case 'C':
+                case 'c':
+                    xansiterm_putchar(c);
+                    xansiterm_putchar('\n');
+                    res = ansiterm_echotest();
+                    break;
+                default:
+                    break;
+            }
+
+        } while (res > 0);
+        if (res < 0)
+        {
+            return;
+        }
+    }
 }
 
 void xosera_ansiterm()
 {
     LOG("\nxosera_ansiterm_test started.\n\n");
     xosera_init(1);
-
     xansiterm_init();
 
-    tprintf("\x1b)");        // alternate 8x8 font
-    tprintf("Welcome to ANSI Terminal test\n\n");
-
-    bool restart;
-    do
-    {
-        restart = false;
-        tprintf("\nPress a key to start mega-test\n");
-        tprintf(" (any key pauses, ESC to skip)\n");
-
-        while (!xansiterm_checkchar())
-            ;
-
-        char c = xansiterm_readchar();
-        if (c == 1)        // ^A exit for kermit
-        {
-            break;
-        }
-
-        if (c != '\x1b')
-        {
-            int res;
-            do
-            {
-                res = test_attrib();
-            } while (res > 0);
-
-            if (res < 0)        // exit for kermit
-            {
-                break;
-            }
-        }
-
-        tprintf("\nEcho test, type ^A to exit...\n\n");
-
-        while (true)
-        {
-            while (!xansiterm_checkchar())
-                ;
-
-            c = xansiterm_readchar();
-            if (c == 1)        // ^A exit for kermit
-            {
-                break;
-            }
-
-            if (c == 2)        // ^B begin megatest again
-            {
-                restart = true;
-                break;
-            }
-            xansiterm_putchar(c);
-        }
-
-    } while (restart);
+    ansiterm_testmenu();
 
     tprintf("\fExiting...\n");
 
     LOG("\n\nxosera_ansiterm_test exiting.\n");
 }
+
 #else
+
 // lightweight echo only test
 void xosera_ansiterm()
 {
@@ -239,10 +310,7 @@ void xosera_ansiterm()
     xansiterm_init();
     while (true)
     {
-        while (!xansiterm_checkchar())
-            ;
-
-        char c = xansiterm_readchar();
+        char c = ansiterm_waitchar();
         if (c == 1)        // ^A exit for kermit
         {
             break;

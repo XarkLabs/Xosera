@@ -98,6 +98,10 @@ static void tputs(char * p)
     }
 }
 
+// keep test functions small
+#pragma GCC push_options
+#pragma GCC optimize("-Os")
+
 #if !TINYECHO
 
 #if defined(printf)        // printf macro interferes with gcc format attribute
@@ -175,12 +179,12 @@ static int ansiterm_test_attrib()
 
 static int ansiterm_spamtest()
 {
-    char spam[97];
-    for (uint8_t i = 0; i < 96; i++)
+    char spam[225];
+    for (uint8_t i = 0; i < 224; i++)
     {
         spam[i] = i + ' ';
     }
-    spam[96] = 0;
+    spam[224] = 0;
 
     while (true)
     {
@@ -319,3 +323,5 @@ void xosera_ansiterm()
     }
 }
 #endif
+
+#pragma GCC pop_options        // end -Os

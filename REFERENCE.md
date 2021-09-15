@@ -595,23 +595,28 @@ Before sending an execute command, the user must check if this bit is cleared.
 
 To reduce the number of bus accesses, parameters such as coordinates or color are optional in the sequence of commands. If not sent, the last value of the given parameter received by the primitive renderer will be used.
 
-Currently, the primitive renderer only supports 8-bpp mode with 2x H&V scale factors (mode 0x75).
+The primitive renderer only supports 8-bpp mode with 2x H&V scale factors (mode 0x75). Therefore, the
+maximum effective resolution is 320x240.
+
+Due to memory constraints, double buffering is only available with 200 lines (or lower). The destination height
+must be set to 200 (or lower) in order to clip properly the rendered pixels at the bottom.
 
 #### Commands
 
 The following commands are available:
 
-| Data   | Name            | Description
----------|-----------------|------------
-| 0x0vvv | `PR_COORDX0`    | set the 12-bit X0 coordinate (optional)
-| 0x1vvv | `PR_COORDY0`    | set the 12-bit Y0 coordinate (optional)
-| 0x2vvv | `PR_COORDX1`    | set the 12-bit X1 coordinate (optional)
-| 0x3vvv | `PR_COORDY1`    | set the 12-bit Y1 coordinate (optional)
-| 0x4vvv | `PR_COORDX2`    | set the 12-bit X2 coordinate (optional)
-| 0x5vvv | `PR_COORDY2`    | set the 12-bit Y2 coordinate (optional)
-| 0x6xvv | `PR_COLOR`      | set the 8-bit color (optional)
-| 0x7vvv | `PR_DEST_ADDR`  | destination start address (MSB, optional)
-| 0xFxxs | `PR_EXECUTE`    | draw the primitive (s=shape, see below)
+| Data   | Name             | Description
+---------|------------------|------------
+| 0x0vvv | `PR_COORDX0`     | set the 12-bit X0 coordinate (optional)
+| 0x1vvv | `PR_COORDY0`     | set the 12-bit Y0 coordinate (optional)
+| 0x2vvv | `PR_COORDX1`     | set the 12-bit X1 coordinate (optional)
+| 0x3vvv | `PR_COORDY1`     | set the 12-bit Y1 coordinate (optional)
+| 0x4vvv | `PR_COORDX2`     | set the 12-bit X2 coordinate (optional)
+| 0x5vvv | `PR_COORDY2`     | set the 12-bit Y2 coordinate (optional)
+| 0x6xvv | `PR_COLOR`       | set the 8-bit color (optional)
+| 0x7vvv | `PR_DEST_ADDR`   | destination start address (MSB, optional)
+| 0x8vvv | `PR_DEST_HEIGHT` | destination height in lines (optional)
+| 0xFxxs | `PR_EXECUTE`     | draw the primitive (s=shape, see below)
 
 Note: x=don't care
 

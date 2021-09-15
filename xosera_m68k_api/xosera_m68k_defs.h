@@ -127,15 +127,16 @@
 // TODO blit and polydraw
 
 // Primitive renderer commands
-#define PR_COORDX0   0x0000
-#define PR_COORDY0   0x1000
-#define PR_COORDX1   0x2000
-#define PR_COORDY1   0x3000
-#define PR_COORDX2   0x4000
-#define PR_COORDY2   0x5000
-#define PR_COLOR     0x6000
-#define PR_DEST_ADDR 0x7000
-#define PR_EXECUTE   0xF000
+#define PR_COORDX0     0x0000
+#define PR_COORDY0     0x1000
+#define PR_COORDX1     0x2000
+#define PR_COORDY1     0x3000
+#define PR_COORDX2     0x4000
+#define PR_COORDY2     0x5000
+#define PR_COLOR       0x6000
+#define PR_DEST_ADDR   0x7000
+#define PR_DEST_HEIGHT 0x8000
+#define PR_EXECUTE     0xF000
 
 // Primitive renderer shapes
 #define PR_LINE             0x0

@@ -7,7 +7,7 @@
  * |_| |___|___|___|___|_____|_|_|_|___|___|_,_|
  *                     |_____|
  * ------------------------------------------------------------
- * Copyright (c) 2021 Xark
+ * Copyright (c) 2021 Xark & Contributors
  * MIT License
  *
  * Test and tech-demo for Xosera FPGA "graphics card"
@@ -33,11 +33,13 @@
 //#define DELAY_TIME 1000        // impatient human speed
 //#define DELAY_TIME 100        // machine speed
 
-#define NB_RECTS        100
+#define NB_RECTS        10
 #define NB_TRIANGLES    10
 
 #include "xosera_m68k_api.h"
 
+
+#define INTERRUPTS_AVAIL    1
 
 extern void install_intr(void);
 extern void remove_intr(void);
@@ -74,6 +76,17 @@ int8_t   text_v;
 uint8_t  text_color = 0x02;        // dark green on black
 
 uint8_t  disp_buffer = 0;
+
+const uint8_t  copper_list_len = 10;
+const uint16_t copper_list[] = {
+    0x0028, 0x0002, // wait  0, 40                   ; Wait for line 40, H position ignored
+    0x9010, 0x0075, // mover 0x0075, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
+    0x01b8, 0x0002, // wait  0, 440                  ; Wait for line 440, H position ignored
+    0x9010, 0x0080, // mover 0x0080, PA_GFX_CTRL     ; Blank
+    0x0000, 0x0003  // nextf
+};
+
+
 
 static void get_textmode_settings()
 {
@@ -358,7 +371,9 @@ void wait_frame()
 void swap()
 {
     wait_pr_done();
+#if INTERRUPTS_AVAIL    
     wait_frame();
+#endif    
 
     if (disp_buffer) {
         disp_buffer = 0;
@@ -416,6 +431,17 @@ void demo_lines()
         offset_y += 5 * scale_y;
         scale_x += 1;
         scale_y += 1;
+    }
+
+    {
+        Coord2 c1 = {0,0, 319, 0};
+        Coord2 c2 = {0,0, 0, 199};
+        Coord2 c3 = {0, 199, 319, 199};
+        Coord2 c4 = {319, 199, 319, 0};
+        draw_line(c1, 4);
+        draw_line(c2, 4);
+        draw_line(c3, 4);
+        draw_line(c4, 4);
     }
 
     swap();
@@ -536,16 +562,22 @@ void xosera_demo()
 {
     xosera_init(0);
 
+#if INTERRUPTS_AVAIL
     install_intr();
+#endif    
 
-    uint32_t t = XFrameCount;
-    while (XFrameCount == t)
-        ;
+    xm_setw(XR_ADDR, XR_COPPER_MEM);
 
+    for (uint8_t i = 0; i < copper_list_len; i++) {
+        xm_setw(XR_DATA, copper_list[i]);
+    }    
 
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_LINE_ADDR, 0x0000);
     xreg_setw(PA_LINE_LEN, 160);
+
+    wait_pr_done();
+    xm_setw(WR_PR_CMD, PR_DEST_HEIGHT | 200);    
 
     while(1) {
 
@@ -556,13 +588,8 @@ void xosera_demo()
         xprintf("Xosera\nPrimitive\nRenderer\nDemo\n");
         delay(2000);
 
-        xreg_setw(PA_GFX_CTRL, 0x0075);        
-
-        // Black background for 2 buffers
-        xm_setw(WR_INCR, 0x0001);
-        xm_setw(WR_ADDR, 0x0000);
-        for (int i = 0; i < 320 * 240; ++i)
-            xm_setw(DATA, 0x0000);        
+        // enable Copper
+        xreg_setw(COPP_CTRL, 0x8000);        
 
         wait_pr_done();
         xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x7D0);
@@ -572,10 +599,12 @@ void xosera_demo()
         demo_lines();
         delay(2000);
 
-        demo_filled_rectangles(100);
+        demo_filled_rectangles(1000);
 
         //demo_filled_triangle_single();
         demo_filled_triangle(1000);
 
+        // disable Copper
+        xreg_setw(COPP_CTRL, 0x0000);
     }
 }

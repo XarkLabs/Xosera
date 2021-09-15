@@ -35,6 +35,7 @@ logic start_filled_rectangle;
 logic start_filled_triangle;
 logic signed [11:0] x0, y0, x1, y1, x2, y2;
 logic        [15:0] dest_addr;
+logic        [11:0] dest_height;
 logic signed [11:0] x, y;
 logic signed [11:0] x_line, y_line;
 logic signed [11:0] x_filled_rectangle, y_filled_rectangle;
@@ -128,6 +129,7 @@ always_ff @(posedge clk) begin
         prim_rndr_vram_sel_o <= 0;
         prim_rndr_wr_o <= 0;
         dest_addr <= 16'h0000;
+        dest_height <= xv::VISIBLE_HEIGHT / 2;
     end
 
     if (cmd_valid_i) begin
@@ -140,6 +142,7 @@ always_ff @(posedge clk) begin
             xv::PR_COORDY2      : y2    <= cmd_i[11:0];
             xv::PR_COLOR        : color <= cmd_i[7:0];
             xv::PR_DEST_ADDR    : dest_addr <= {cmd_i[11:0], 4'b0000};
+            xv::PR_DEST_HEIGHT  : dest_height <= cmd_i[11:0];
             xv::PR_EXECUTE: begin
                 case(cmd_i[3:0])
                     xv::PR_LINE             : start_line             <= 1;
@@ -157,7 +160,7 @@ always_ff @(posedge clk) begin
     end
 
     if (drawing) begin
-        if (x >= 0 && y >= 0 && x < 320/*xv::VISIBLE_WIDTH / 2*/ && y < 200/*xv::VISIBLE_HEIGHT / 2*/) begin
+        if (x >= 0 && y >= 0 && x < xv::VISIBLE_WIDTH / 2 && y < dest_height) begin
             prim_rndr_vram_sel_o <= 1;
             prim_rndr_wr_o <= 1;
             prim_rndr_mask_o <= (x & 12'h001) != 12'h000 ? 4'b0011 : 4'b1100;

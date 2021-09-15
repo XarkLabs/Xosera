@@ -26,6 +26,7 @@
 
 #include <machine.h>
 
+#define XV_PREP_REQUIRED
 #include "xosera_m68k_api.h"
 
 void xv_delay(uint32_t ms)
@@ -46,6 +47,8 @@ void xv_delay(uint32_t ms)
 
 bool xosera_init(int reconfig_num)
 {
+    xv_prep();
+
     // check for Xosera presense (retry in case it is reconfiguring)
     for (int r = 0; r < 200; r++)
     {
@@ -56,14 +59,12 @@ bool xosera_init(int reconfig_num)
         cpu_delay(10);
     }
 
-    xv_prep();
-
     // done if configuration if not valid (0 to 3)
     if ((reconfig_num & 3) == reconfig_num)
     {
         // set reconfig bit, along with reconfig values
-        xm_setw(SYS_CTRL, 0x8000 | (reconfig_num << 13));        // reboot FPGA to config_num
-        if (xosera_sync())                                       // should not sync right away...
+        xm_setw(SYS_CTRL, 0x8000 | (uint16_t)(reconfig_num << 13));        // reboot FPGA to config_num
+        if (xosera_sync())                                                 // should not sync right away...
         {
             return false;
         }
@@ -105,7 +106,7 @@ void xv_vram_fill(uint32_t vram_addr, uint32_t numwords, uint32_t word_value)
 
     xm_setw(WR_ADDR, vram_addr);
     xm_setw(WR_INCR, 1);
-    uint32_t long_value = (word_value << 16) | (word_value & 0xffff);
+    uint32_t long_value = (word_value << 16) | (uint16_t)(word_value & 0xffff);
     if (numwords & 1)
     {
         xm_setw(DATA, word_value);

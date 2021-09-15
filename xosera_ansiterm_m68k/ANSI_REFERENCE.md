@@ -1,0 +1,54 @@
+# rosco_m68k Xosera ANSI Code Reference
+
+- `\a`                  alert (visual bell)
+- `\b`                  backspace
+- `\t`                  tab (8 character)
+- `\n`                  line feed (or LF+CR if NEWLINE mode)
+- `\v`                  vertical tab EXTENSION: cursor up vs another LF
+- `\f`                  form feed EXTENSION clears screen and homes cursor
+- `\r`                  carriage return
+- `$18`                 CAN (abort CSI)
+- `$1A`                 SUB (abort CSI)
+- `$9B`                 CSI
+- `<ESC>[`              CSI
+- `<ESC>c`              RIS reset video mode
+- `<ESC>7`              save cursor
+- `<ESC>8`              restore cursor
+- `<ESC>(`              1st font 8x16 (default) EXTENSION: 8x16 font size
+- `<ESC>)`              2nd font 8x8         EXTENSION: 8x8 font size
+- `<ESC>D`              IND move cursor down
+- `<ESC>M`              RI move cursor up
+- `<ESC>E`              NEL next line
+- `<CSI><row>;<col>H`   cursor home / position
+- `<CSI><row>;<col>f`   cursor home / position (force)
+- `<CSI>?3h`            select 16:9 mode (848x480) EXTENSION: was DEC 132 column
+- `<CSI>?3l`            select  4:3 mode (640x480) EXTENSION: was DEC 80 column
+- `<CSI>?7h`            autowrap ON (auto wrap/scroll at EOL) (default)
+- `<CSI>?7l`            autowrap OFF (cursor stops at right margin)
+- `<CSI>?25h`           show cursor when waiting for input (default)
+- `<CSI>?25l`           no cursor
+- `<CSI>?20h`           newline mode on,  LF also does CR
+- `<CSI>?20l`           newline mode off, LF only (default)
+- `<CSI>s`              save cursor position
+- `<CSI>u`              restore cursor position
+- `<CSI>A`              cursor up (no scroll)
+- `<CSI>B`              cursor down (no scroll)
+- `<CSI>C`              cursor right (no scroll)
+- `<CSI>D`              cursor left (no scroll)
+- `<CSI>K`              erase from cursor to end of line
+- `<CSI>1K`             erase from cursor to start of line
+- `<CSI>2K`             erase from whole cursor line
+- `<CSI>J`              erase down from cursor line to end of screen
+- `<CSI>1J`             erase up from cursor line to start of screen
+- `<CSI>2J`             erase whole screen
+- `<CSI>`_parms;..._`m` select graphic rendidtion parms (see below)
+  - `0`             &emsp;&emsp;reset   reset all attributes and default color
+  - `1`             &emsp;&emsp;bright  select bright colors (8-15)
+  - `2`             &emsp;&emsp;dim     select dim colors (0-7)
+  - `7`             &emsp;&emsp;reverse swap fore/back colors
+  - `8`             &emsp;&emsp;hidden  EXTENSION: ctrl char graphic pass-through
+  - `30-37`         select forground color 0-7
+  - `39`            &emsp;&emsp;select default forground color
+  - `40-47`         select background color 0-7
+  - `49`            &emsp;&emsp;select default background color
+  - `68`            &emsp;&emsp;rosco_m68k  EXTENSION: special stuff here...

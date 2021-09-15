@@ -279,7 +279,7 @@ always_ff @(posedge clk) begin
 
             // if we did a rw write, increment rw addr
             if (vram_rw_wr) begin
-                reg_wr_addr  <= reg_wr_addr + reg_wr_incr;
+                reg_rw_addr  <= reg_rw_addr + reg_rw_incr;
             end
   
             // if xr write auto increment
@@ -306,8 +306,10 @@ always_ff @(posedge clk) begin
                         reg_rd_addr[15:8]   <= bus_data_byte;
                     xv::XM_WR_ADDR:
                         reg_wr_addr[15:8]   <= bus_data_byte;
+                    xv::XM_RW_ADDR:
+                        reg_rw_addr[15:8]   <= bus_data_byte;
                     xv::XM_XR_DATA:
-                        reg_xr_data_even    <= bus_data_byte;   // data reg even byte storage
+                        reg_xr_data_even    <= bus_data_byte;   // data xr reg even byte storage
                     xv::XM_DATA,
                     xv::XM_DATA_2,
                     xv::XM_RW_DATA,
@@ -343,7 +345,7 @@ always_ff @(posedge clk) begin
                         vram_rd             <= 1'b1;            // remember pending vramread request
                     end
                     xv::XM_WR_INCR: begin
-                        reg_rw_incr         <= { reg_even_byte, bus_data_byte };
+                        reg_wr_incr         <= { reg_even_byte, bus_data_byte };
                     end
                     xv::XM_WR_ADDR: begin
                         reg_wr_addr[7:0]    <= bus_data_byte;
@@ -368,6 +370,9 @@ always_ff @(posedge clk) begin
                     end
                     xv::XM_UNUSED_B: begin
                     end
+                    xv::XM_RW_INCR: begin
+                        reg_rw_incr         <= { reg_even_byte, bus_data_byte };
+                    end
                     xv::XM_RW_ADDR: begin
                         reg_rw_addr[7:0]    <= bus_data_byte;
                         blit_addr_o         <= { reg_rw_addr[15:8], bus_data_byte };      // output read address
@@ -375,14 +380,13 @@ always_ff @(posedge clk) begin
                         vram_rd             <= 1'b1;            // remember pending vramread request
                         vram_rw_rd          <= 1'b1;            // remember rw read
                     end
-                    xv::XM_RW_DATA: begin
+                    xv::XM_RW_DATA,
+                    xv::XM_RW_DATA_2: begin
                         blit_addr_o         <= reg_rw_addr;    // output write address
                         blit_data_o         <= { reg_data_even, bus_data_byte };      // output write data
                         blit_vram_sel_o     <= 1'b1;            // select VRAM
                         blit_wr_o           <= 1'b1;            // write
                         vram_rw_wr          <= 1'b1;            // remember rw write
-                    end
-                    default: begin
                     end
                 endcase
             end // bus_bytesel

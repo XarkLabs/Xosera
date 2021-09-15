@@ -120,8 +120,10 @@
 			"spammy",
 			"SPRAM",
 			"strobed",
+			"TFLAG",
 			"Tindie",
 			"Toolchain",
+			"TSTATES",
 			"UART",
 			"underfow",
 			"Updino",
@@ -133,6 +135,7 @@
 			"verilog",
 			"VFREQ",
 			"vgen",
+			"vlbank",
 			"vline",
 			"vltstd",
 			"vluint",
@@ -146,6 +149,8 @@
 			"Wpedantic",
 			"wrmask",
 			"wval",
+			"xansi",
+			"xansiterm",
 			"Xark",
 			"xmem",
 			"xmreg",
@@ -194,6 +199,7 @@
 		},
 		"files.associations": {
 			"*.sv": "systemverilog",
+			"*.asm": "vasmmot",
 			"array": "cpp",
 			"iterator": "cpp",
 			"string": "cpp",
@@ -203,7 +209,8 @@
 			"ios": "c",
 			"chrono": "c",
 			"queue": "c",
-			"random": "c"
+			"random": "c",
+			"machine.h": "c"
 		}
 	}
 }

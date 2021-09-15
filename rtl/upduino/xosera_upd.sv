@@ -130,7 +130,7 @@ assign bus_out_ena = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ);
 `ifdef SYNTHESIS
 // NOTE: Need to use iCE40 SB_IO primitive to control tri-state properly here
 SB_IO #(
-    .PIN_TYPE(6'b101001)
+    .PIN_TYPE(6'b101001)    // {PIN_OUTPUT_TRISTATE, PIN_INPUT }
 ) bus_tristate [7:0] (
     .PACKAGE_PIN(bus_data),
     //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT

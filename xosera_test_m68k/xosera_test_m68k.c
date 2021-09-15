@@ -408,7 +408,7 @@ void test_vram_speed()
     {
         return;
     }
-    reps = 32;        // main ram test (NOTE: I am not even incrementing pointer below - like "fake
+    reps = 16;        // main ram test (NOTE: I am not even incrementing pointer below - like "fake
                       // register" write)
     xmsg(0, 0, 0x02, "main RAM write ");
     dprintf("main RAM write x %d\n", reps);
@@ -430,7 +430,7 @@ void test_vram_speed()
     {
         return;
     }
-    reps = 32;        // a bit longer read test (to show stable during read)
+    reps = 16;        // a bit longer read test (to show stable during read)
     xmsg(0, 0, 0x02, "VRAM read      ");
     dprintf("VRAM read x %d\n", reps);
     timer_start();
@@ -448,7 +448,7 @@ void test_vram_speed()
     {
         return;
     }
-    reps = 32;        // main ram test (NOTE: I am not even incrementing pointer below - like "fake
+    reps = 16;        // main ram test (NOTE: I am not even incrementing pointer below - like "fake
                       // register" read)
     xmsg(0, 0, 0x02, "main RAM read  ");
     dprintf("main RAM read x %d\n", reps);
@@ -485,7 +485,7 @@ void test_vram_speed()
     {
         return;
     }
-    reps = 32;        // a bit longer read test (to show stable during read)
+    reps = 16;        // a bit longer read test (to show stable during read)
     xmsg(0, 0, 0x02, "VRAM slow read2");
     dprintf("VRAM slow read2 x %d\n", reps);
     timer_start();
@@ -746,6 +746,21 @@ void     xosera_test()
 
             load_sd_colors("/xosera_r1_pal.raw");
             load_sd_bitmap("/xosera_r1.raw");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+        }
+
+        // 4/8 bpp test
+        if (use_sd)
+        {
+            wait_vsync();
+            xreg_setw(PA_GFX_CTRL, 0x0075);        // bitmap + 8-bpp + Hx2 + Vx2
+            xreg_setw(PA_LINE_LEN, 160);
+
+            load_sd_colors("/color_cube_320x240_256_pal.raw");
+            load_sd_bitmap("/color_cube_320x240_256.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;

@@ -34,6 +34,7 @@ Current Xosera features:
 * 16 or 256 color palette out of 4096 colors (12-bit RGB)
 * 8KB of dedicated font RAM (or fonts can be in VRAM)
 * Smooth horizontal and vertical tile scrolling
+* Amiga-inspired Video-Synchronized Co-processor ("Copper")
 * Draws "test image" with prototype-blitter
 * Test iCEBreaker target that allows "poking" Xosera bus registers from PC via USB (for testing).
 * GNU Make based build using the pre-built [YosysHQ OSS CAD Suite Builds](https://github.com/YosysHQ/oss-cad-suite-build/releases/latest) tested on Linux (Ubuntu 20.04 and also Ubuntu on RPi4 and RISC-V 64), Windows 10 and MacOS.

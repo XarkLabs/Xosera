@@ -25,11 +25,13 @@
 // (though the wait instruction can be used with both X and Y ignored
 // as a "wait for end of frame" instruction).
 //
-// Copper instructions take multiple pixels to execute.
-// TODO update below with actual instruction timing.
+// In the general case, copper instructions take four pixels to execute.
+// The exception is the first instruction executed in a frame, or 
+// after the copper is first enabled - this will take five pixels 
+// (as it has to pre-fetch the first instruction).
 //
 // If the copper encounters an illegal instruction, ~~it will halt
-// and catch fire~~ that instruction will be ignored (wasting five pixels,
+// and catch fire~~ that instruction will be ignored (wasting four pixels,
 // which I guess might prove useful if you need a NOP).
 //
 // This means:
@@ -140,15 +142,12 @@ module copper(
     input   wire logic          clk,    
     input   wire logic          reset_i,
     input   wire logic          vblank_i,
-    output       logic [11:0]   ram_wr_addr_o,          // General, for all RAM blocks
-    output       logic [15:0]   ram_wr_data_o,          // General, for all RAM blocks
+    output       logic          xr_ram_wr_en_o,         // General, for all RAM block writes
+    output       logic [15:0]   xr_ram_wr_addr_o,       // General, for all RAM block writes
+    output       logic [15:0]   xr_ram_wr_data_o,       // General, for all RAM block writes
     output       logic [10:0]   coppermem_rd_addr_o,
     output       logic          coppermem_rd_en_o,
     input   wire logic [15:0]   coppermem_rd_data_i,
-    output       logic          coppermem_wr_en_o,
-    output       logic          colormem_wr_en_o,
-    output       logic          tilemem_wr_en_o,
-    output       logic          vgen_reg_wr_en_o,
     input   wire logic          blit_xr_reg_sel_i,
     input   wire logic          blit_tilemem_sel_i,
     input   wire logic          blit_colormem_sel_i,
@@ -175,17 +174,14 @@ logic [31:0]  r_insn;
 
 // execution state
 typedef enum logic [2:0] {
-    STATE_FETCH1    = 3'b000,
-    STATE_WAIT1     = 3'b001,
-    STATE_FETCH2    = 3'b010,
-    STATE_WAIT2     = 3'b011,
-    STATE_LATCH     = 3'b100,
-    STATE_EXEC      = 3'b101,
-    STATE_WRITE     = 3'b110,
-    STATE_CLEANUP   = 3'b111
+    STATE_INIT      = 3'b000,
+    STATE_WAIT      = 3'b001,
+    STATE_LATCH1    = 3'b010,
+    STATE_LATCH2    = 3'b011,
+    STATE_EXEC      = 3'b100
 } copper_ex_state_t;
 
-logic  [2:0]  copper_ex_state   = STATE_FETCH1;
+logic  [2:0]  copper_ex_state   = STATE_INIT;
 
 // init PC is the initial PC value after vblank
 // It comes from the copper control register.
@@ -197,27 +193,19 @@ logic         copper_en;
 logic [3:0]   reg_reserved;
 /* verilator lint_on UNUSED */
 
-logic         read_ack          = 1'b0;
 logic         ram_rd_strobe     = 1'b0;
 
 assign coppermem_rd_en_o        = ram_rd_strobe;
 assign coppermem_rd_addr_o      = copper_pc;
 
 logic [15:0]  ram_wr_data_out;
-logic [11:0]  ram_wr_addr_out;
+logic [15:0]  ram_wr_addr_out;
 
-logic         xr_reg_wr_strobe;
-logic         tilemem_wr_strobe;
-logic         colormem_wr_strobe;
-logic         coppermem_wr_strobe;
+logic         xr_wr_strobe;
 
-assign ram_wr_addr_o            = ram_wr_addr_out;
-assign ram_wr_data_o            = ram_wr_data_out;
-
-assign coppermem_wr_en_o        = coppermem_wr_strobe;
-assign colormem_wr_en_o         = colormem_wr_strobe;
-assign tilemem_wr_en_o          = tilemem_wr_strobe;
-assign vgen_reg_wr_en_o         = xr_reg_wr_strobe;
+assign xr_ram_wr_en_o           = xr_wr_strobe;
+assign xr_ram_wr_addr_o         = ram_wr_addr_out;
+assign xr_ram_wr_data_o         = ram_wr_data_out;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -225,13 +213,10 @@ always_ff @(posedge clk) begin
         copper_init_pc          <= 11'h0;
         copper_pc               <= 11'h0;
 
-        copper_ex_state         <= STATE_FETCH1;
+        copper_ex_state         <= STATE_INIT;
         ram_rd_strobe           <= 1'b0;
 
-        coppermem_wr_strobe     <= 1'b0;
-        colormem_wr_strobe      <= 1'b0;
-        tilemem_wr_strobe       <= 1'b0;
-        xr_reg_wr_strobe        <= 1'b0;
+        xr_wr_strobe            <= 1'b0;
     end
     else begin
         // video register write
@@ -248,75 +233,48 @@ always_ff @(posedge clk) begin
 
         // Main logic
         if (vblank_i) begin
-            copper_ex_state         <= STATE_FETCH1;
+            copper_ex_state         <= STATE_INIT;
             copper_pc               <= copper_init_pc;
             ram_rd_strobe           <= 1'b0;
 
-            coppermem_wr_strobe     <= 1'b0;
-            colormem_wr_strobe      <= 1'b0;
-            tilemem_wr_strobe       <= 1'b0;
-            xr_reg_wr_strobe        <= 1'b0;
+            xr_wr_strobe            <= 1'b0;
         end
         else begin
             if (copper_en) begin
                 case (copper_ex_state)
-                    // State 0 - Begin fetch first word
-                    STATE_FETCH1: begin
-                        read_ack                <= 1'b0;
-
-                        if (!blit_coppermem_sel_i) begin
-                            copper_ex_state <= STATE_WAIT1;
-                            ram_rd_strobe   <= 1'b1;
-                        end
-                        else begin
-                            ram_rd_strobe   <= 1'b0;
-                        end
+                    // State 0 - Initial begin fetch first word
+                    // This state is only used for the first instruction, or
+                    // when the copper has stalled due to contention.
+                    //
+                    // Normally, the next instruction fetch is started by the
+                    // EXEC state of the previous instruction.
+                    STATE_INIT: begin
+                        copper_ex_state <= STATE_WAIT;
+                        ram_rd_strobe   <= 1'b1;
                     end
-                    // State 1 - Wait for copper RAM
-                    STATE_WAIT1: begin
-                        ram_rd_strobe   <= 1'b0;    // TODO maybe only do this if abandoning?
+                    // State 1 - Wait for copper RAM - Usually will jump 
+                    // directly here after execution of previous instruction.
+                    STATE_WAIT: begin
+                        // Reset strobe in case previous was a MOVEx
+                        // In this case, the write will happen this cycle...
+                        xr_wr_strobe        <= 1'b0;
 
-                        if (blit_coppermem_sel_i) begin
-                            // Blitter wants RAM, abandon fetch
-                            copper_ex_state <= STATE_FETCH1;
-                            read_ack        <= 1'b0;
-                        end
-                        else begin
-                            read_ack        <= 1'b1;
-                            copper_ex_state <= STATE_FETCH2;
-                        end
+                        copper_ex_state <= STATE_LATCH1;
+                        copper_pc       <= copper_pc + 1;
+                        ram_rd_strobe   <= 1'b1;
                     end
-                    // State 2 - Read first and begin fetch second word
-                    STATE_FETCH2: begin
-                        if (read_ack) begin
-                            r_insn[31:16]    <= coppermem_rd_data_i;
-                            read_ack         <= 1'b0;
-                        end
-
-                        if (!blit_coppermem_sel_i) begin
-                            copper_ex_state <= STATE_WAIT2;
-                            copper_pc       <= copper_pc + 1;
-                            ram_rd_strobe   <= 1'b1;
-                        end
+                    // State 2 - Wait for copper RAM
+                    STATE_LATCH1: begin
+                        r_insn[31:16]   <= coppermem_rd_data_i;
+                        copper_ex_state <= STATE_LATCH2;
                     end
-                    // State 3 - Wait for copper RAM
-                    STATE_WAIT2: begin
-                        ram_rd_strobe   <= 1'b0;    // TODO maybe only do this if abandoning?
-
-                        if (blit_coppermem_sel_i) begin
-                            // Blitter wants RAM, abandon fetch
-                            copper_ex_state <= STATE_FETCH2;
-                        end
-                        else begin
-                            copper_ex_state <= STATE_LATCH;
-                        end
-                    end
-                    // State 4 - Latch second word
-                    STATE_LATCH: begin
-                        r_insn[15:0]        <= coppermem_rd_data_i;
-                        copper_ex_state     <= STATE_EXEC;
+                    // State 3 - Latch second word
+                    STATE_LATCH2: begin
+                        ram_rd_strobe   <= 1'b0;
+                        r_insn[15:0]    <= coppermem_rd_data_i;
+                        copper_ex_state <= STATE_EXEC;
                     end                        
-                    // State 5 - Execution
+                    // State 4 - Execution
                     STATE_EXEC: begin
                         case (r_insn[31:28])
                             INSN_WAIT: begin
@@ -330,8 +288,10 @@ always_ff @(posedge clk) begin
                                     else begin
                                         // Checking only horizontal position
                                         if (h_count_i >= r_insn[15:5]) begin
-                                            copper_pc       <= copper_pc + 1;
-                                            copper_ex_state <= STATE_FETCH1;
+                                            // Setup fetch next instruction
+                                            copper_pc           <= copper_pc + 1;
+                                            copper_ex_state     <= STATE_WAIT;
+                                            ram_rd_strobe       <= 1'b1;
                                         end
                                     end
                                 end 
@@ -340,16 +300,20 @@ always_ff @(posedge clk) begin
                                     if (r_insn[1]) begin
                                         // Checking only vertical position
                                         if (v_count_i >= r_insn[26:16]) begin
-                                            copper_pc       <= copper_pc + 1;
-                                            copper_ex_state <= STATE_FETCH1;
+                                            // Setup fetch next instruction
+                                            copper_pc           <= copper_pc + 1;
+                                            copper_ex_state     <= STATE_WAIT;
+                                            ram_rd_strobe       <= 1'b1;
                                         end
                                     end
                                     else begin
                                         // Checking both horizontal and
                                         // vertical positions
                                         if (h_count_i >= r_insn[15:5] && v_count_i >= r_insn[26:16]) begin
-                                            copper_pc       <= copper_pc + 1;
-                                            copper_ex_state <= STATE_FETCH1;
+                                            // Setup fetch next instruction
+                                            copper_pc           <= copper_pc + 1;
+                                            copper_ex_state     <= STATE_WAIT;
+                                            ram_rd_strobe       <= 1'b1;
                                         end
                                     end
                                 end
@@ -395,97 +359,84 @@ always_ff @(posedge clk) begin
                                         end
                                     end
                                 end
-                                copper_ex_state <= STATE_FETCH1;
+
+                                // Setup fetch next instruction
+                                copper_ex_state     <= STATE_WAIT;
+                                ram_rd_strobe       <= 1'b1;
                             end
                             INSN_JUMP: begin
                                 // jmp
                                 copper_pc               <= r_insn[26:16];
-                                copper_ex_state         <= STATE_FETCH1;
+                                copper_ex_state         <= STATE_WAIT;
+                                ram_rd_strobe           <= 1'b1;
                             end
+                            // All move instructions have a second wait state, 
+                            // during which next instruction read is also set
+                            // up...
                             INSN_MOVER: begin
                                 // mover
-                                if (!blit_tilemem_sel_i) begin
-                                    xr_reg_wr_strobe        <= 1'b1;
-                                    ram_wr_addr_out[11:8]   <= 4'h0;
+                                if (!blit_xr_reg_sel_i) begin
+                                    xr_wr_strobe            <= 1'b1;
+                                    ram_wr_addr_out[15:8]   <= 8'h0;
                                     ram_wr_addr_out[7:0]    <= r_insn[23:16];
                                     ram_wr_data_out         <= r_insn[15:0];
-                                    copper_ex_state         <= STATE_WRITE;
+
+                                    // Setup fetch next instruction
+                                    copper_pc               <= copper_pc + 1;
+                                    copper_ex_state         <= STATE_WAIT;
+                                    ram_rd_strobe           <= 1'b1;
                                 end
                             end
                             INSN_MOVEF: begin
                                 // movef
                                 if (!blit_tilemem_sel_i) begin
-                                    tilemem_wr_strobe       <= 1'b1;
+                                    xr_wr_strobe            <= 1'b1;
+                                    ram_wr_addr_out[15:12]  <= xv::XR_TILE_MEM[15:12];
                                     ram_wr_addr_out[11:0]   <= r_insn[27:16];
                                     ram_wr_data_out         <= r_insn[15:0];
-                                    copper_ex_state         <= STATE_WRITE;
+
+                                    // Setup fetch next instruction
+                                    copper_pc               <= copper_pc + 1;
+                                    copper_ex_state         <= STATE_WAIT;
+                                    ram_rd_strobe           <= 1'b1;
                                 end
                             end
                             INSN_MOVEP: begin
                                 // movep
                                 if (!blit_colormem_sel_i) begin
-                                    colormem_wr_strobe      <= 1'b1;
-                                    ram_wr_addr_out[11:8]   <= 4'b0;
+                                    xr_wr_strobe            <= 1'b1;
+                                    ram_wr_addr_out[15:8]   <= xv::XR_COLOR_MEM[15:8];
                                     ram_wr_addr_out[7:0]    <= r_insn[23:16];
                                     ram_wr_data_out         <= r_insn[15:0];
-                                    copper_ex_state         <= STATE_WRITE;
+
+                                    // Setup fetch next instruction
+                                    copper_pc               <= copper_pc + 1;
+                                    copper_ex_state         <= STATE_WAIT;
+                                    ram_rd_strobe           <= 1'b1;
                                 end
                             end
                             INSN_MOVEC: begin
                                 // movec
                                 if (!blit_coppermem_sel_i) begin
-                                    coppermem_wr_strobe     <= 1'b1;
-                                    ram_wr_addr_out[11]     <= 1'b0;
+                                    xr_wr_strobe            <= 1'b1;
+                                    ram_wr_addr_out[15:11]  <= xv::XR_COPPER_MEM[15:11];
                                     ram_wr_addr_out[10:0]   <= r_insn[26:16];
                                     ram_wr_data_out         <= r_insn[15:0];
-                                    copper_ex_state         <= STATE_WRITE;
+                            
+                                    // Setup fetch next instruction
+                                    copper_pc               <= copper_pc + 1;
+                                    copper_ex_state         <= STATE_WAIT;
+                                    ram_rd_strobe           <= 1'b1;
                                 end
                             end
                             default: begin
                                 // illegal instruction; do nothing
-                                copper_ex_state <= STATE_FETCH1;
+                                copper_ex_state <= STATE_INIT;
                                 copper_pc       <= copper_pc + 1;
                             end
                         endcase // Instruction                  
                     end
-                    // State 6 - Wait cycle for memory write
-                    STATE_WRITE: begin
-                        if (coppermem_wr_strobe && blit_coppermem_sel_i) begin
-                            // Contending for copper ram, abandon cycle
-                            coppermem_wr_strobe     <= 1'b0;
-                            copper_ex_state         <= STATE_EXEC;
-                        end
-                        else if (colormem_wr_strobe && blit_colormem_sel_i) begin
-                            // Contending for palette ram, abandon cycle
-                            colormem_wr_strobe      <= 1'b0;
-                            copper_ex_state         <= STATE_EXEC;
-                        end 
-                        else if (tilemem_wr_strobe && blit_tilemem_sel_i) begin
-                            // Contending for font ram, abandon cycle
-                            tilemem_wr_strobe       <= 1'b0;
-                            copper_ex_state         <= STATE_EXEC;
-                        end 
-                        else if (xr_reg_wr_strobe && blit_xr_reg_sel_i) begin
-                            // Contending for XR registers (aux ram), abandon cycle
-                            xr_reg_wr_strobe        <= 1'b0;
-                            copper_ex_state         <= STATE_EXEC;
-                        end 
-                        else begin
-                            // Done.
-                            copper_ex_state         <= STATE_CLEANUP;
-                        end
-                    end
-                    // State 7 - Memory write finished; Increment PC
-                    STATE_CLEANUP: begin
-                        // N.B. Must reset all RAM strobes here!
-                        coppermem_wr_strobe     <= 1'b0;
-                        colormem_wr_strobe      <= 1'b0;
-                        tilemem_wr_strobe       <= 1'b0;
-                        xr_reg_wr_strobe        <= 1'b0;
-
-                        copper_pc               <= copper_pc + 1;
-                        copper_ex_state         <= STATE_FETCH1;
-                    end
+                    default: ; // Should never happen
                 endcase // Execution state
             end
         end

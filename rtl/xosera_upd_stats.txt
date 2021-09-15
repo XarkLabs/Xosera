@@ -1,7 +1,7 @@
 === UPduino Xosera: PMOD_DIGILENT_VGA MODE_848x480
-Package: oss-cad-suite-darwin-x64-20210901
-Yosys 0.9+4290 (git sha1 fe9da25c4, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
-nextpnr-ice40 -- Next Generation Place and Route (Version 0c40bed4)
+Package: oss-cad-suite-darwin-x64-20210708
+Yosys 0.9+4292 (open-tool-forge build) (git sha1 50be8fd0, clang 11.0.3 )
+nextpnr-ice40 -- Next Generation Place and Route (Version nightly-20210521)
 Info: Device utilisation:
 Info: 	         ICESTORM_LC:  2463/ 5280    46%
 Info: 	        ICESTORM_RAM:    25/   30    83%

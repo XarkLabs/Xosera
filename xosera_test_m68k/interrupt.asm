@@ -9,8 +9,15 @@
 install_intr::
                 movem.l D0-D7/A0-A6,-(A7)
 
-                move.l  #Xosera_intr,$68
-                and.w   #$F0FF,SR
+                or.w    #$0200,SR               ; disable interrupts
+
+                move.l  #XM_BASEADDR,A0         ; get Xosera base addr
+                move.b  #$0F,D0                 ; all interrupt source bits
+                move.b  D0,XM_TIMER+2(A0)       ; clear out any prior pending interrupts
+
+                move.l  #Xosera_intr,$68        ; set interrupt vector
+                and.w   #$F0FF,SR               ; enable interrupts
+
                 movem.l (A7)+,D0-D7/A0-A6
                 rts
 
@@ -63,7 +70,7 @@ Xosera_intr:
 
                 add.l   #1,XFrameCount          ; increment frame counter
 
-                movep.w D2,XM_XR_ADDR(A0)       ; restore aux_addr
+                movep.w D1,XM_XR_ADDR(A0)       ; restore aux_addr
                 movem.l (A7)+,D0-D1/A0          ; restore regs
                 rte
 

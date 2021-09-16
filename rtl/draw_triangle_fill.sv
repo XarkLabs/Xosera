@@ -85,8 +85,8 @@ module draw_triangle_fill #(parameter CORDW=16) (      // signed coordinate widt
             SORT_2: begin
                 state <= INIT_A;
                 if (y1s > y2s) begin
-                    x1s <= x2_i;
-                    y1s <= y2_i;
+                    x1s <= x2s;
+                    y1s <= y2s;
                     x2s <= x1s;
                     y2s <= y1s;
                 end
@@ -145,7 +145,6 @@ module draw_triangle_fill #(parameter CORDW=16) (      // signed coordinate widt
             end
             default: begin  // IDLE
                 if (start_i) begin
-                    //$display("Draw triangle %0d, %1d, %2d, %3d, %4d, %4d", x0_i, y0_i, x1_i, y1_i, x2_i, y2_i);
                     state <= SORT_0;
                     busy_p1 <= 1;
                 end

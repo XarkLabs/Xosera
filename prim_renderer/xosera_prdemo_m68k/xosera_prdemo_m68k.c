@@ -29,10 +29,6 @@
 #define M_PI 3.14159265358979323846264338327950288
 #endif
 
-#define DELAY_TIME 5000        // human speed
-//#define DELAY_TIME 1000        // impatient human speed
-//#define DELAY_TIME 100        // machine speed
-
 #define NB_RECTS        10
 #define NB_TRIANGLES    10
 
@@ -64,6 +60,8 @@ const uint16_t defpal[16] = {
     0x0FF5,        // yellow
     0x0FFF         // white
 };
+
+uint16_t pal[256][3];
 
 // dummy global variable
 uint32_t global;        // this is used to prevent the compiler from optimizing out tests
@@ -330,30 +328,56 @@ RGB hsv2rgb(HSV in)
 }
 
 
-void set_palette(double hue_offset)
+void calc_palette()
 {
-    double hue = hue_offset;
+    double hue = 0.0;
     for (uint16_t i = 0; i < 256; i++)
     {
-        xm_setw(XR_ADDR, XR_COLOR_MEM | i);
-
         if (i < 16)
         {
-            xm_setw(XR_DATA, defpal[i]);        // set palette data
+            uint16_t c = defpal[i];
+            pal[i][0] = (uint8_t)(c >> 8 & 0xf);
+            pal[i][1] = (uint8_t)(c >> 4 & 0xf);
+            pal[i][2] = (uint8_t)(c & 0xf);
         }
         else
         {
-            HSV      hsv = {hue, 1.0, 1.0};
-            RGB      rgb = hsv2rgb(hsv);
-            uint8_t  r   = 15.0 * rgb.r;
-            uint8_t  g   = 15.0 * rgb.g;
-            uint8_t  b   = 15.0 * rgb.b;
-            uint16_t c   = (r << 8) | (g << 4) | b;
-            xm_setw(XR_DATA, c);        // set palette data
+            HSV hsv = {hue, 1.0, 1.0};
+            RGB rgb = hsv2rgb(hsv);
+            pal[i][0] = 15.0 * rgb.r;
+            pal[i][1] = 15.0 * rgb.g;
+            pal[i][2] = 15.0 * rgb.b;
         }
 
         hue += 360.0 / 256.0;
     }
+}
+
+void set_palette(float value)
+{
+    for (uint16_t i = 0; i < 256; i++)
+    {
+        xm_setw(XR_ADDR, XR_COLOR_MEM | i);
+
+        uint16_t r = pal[i][0] * value;
+        uint16_t g = pal[i][1] * value;
+        uint16_t b = pal[i][2] * value;
+
+        uint16_t c   = (r << 8) | (g << 4) | b;
+        xm_setw(XR_DATA, c);        // set palette data
+    }
+}
+
+void fade_in()
+{
+    for (int i = 0; i <= 100; i += 20)
+        set_palette((float)i / 100.0f);
+}
+
+void fade_out()
+{
+    for (int i = 0; i <= 100; i += 20)
+        set_palette(1.0f - (float)i / 100.0f);
 }
 
 void clear()
@@ -368,6 +392,15 @@ void wait_frame()
     while (XFrameCount == f);
 }
 
+void init_swap()
+{
+    disp_buffer = 0;
+    xreg_setw(PA_DISP_ADDR, 0x0000);
+    xreg_setw(PA_LINE_ADDR, 0x0000);
+    wait_pr_done();
+    xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x7D0);
+}
+
 void swap()
 {
     wait_pr_done();
@@ -378,10 +411,12 @@ void swap()
     if (disp_buffer) {
         disp_buffer = 0;
         xreg_setw(PA_DISP_ADDR, 0x0000);
+        wait_pr_done();
         xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x7D0);
     } else {
         disp_buffer = 1;
         xreg_setw(PA_DISP_ADDR, 0x7D00);
+        wait_pr_done();
         xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x000);
     }
 }
@@ -394,9 +429,6 @@ void demo_lines()
                                     {12, 0, 14, 0}, {14, 0, 14, 2}, {14, 2, 12, 2},    {12, 2, 14, 4}, {12, 4, 12, 0},
                                     {15, 4, 16, 0}, {16, 0, 17, 4}, {15.5, 2, 16.5, 2}};
 
-
-    clear();
-    swap();
 
     clear();
 
@@ -445,6 +477,9 @@ void demo_lines()
     }
 
     swap();
+    fade_in();
+    delay(2000);
+    fade_out();
 }
 
 typedef struct {
@@ -484,6 +519,11 @@ void demo_filled_rectangles(int nb_iterations)
         p->speed_y = rand2() % 10 - 5;
     }
 
+    clear();
+    swap();
+
+    fade_in();
+
     for (int i = 0; i < nb_iterations; ++i) {
 
         clear();
@@ -506,19 +546,11 @@ void demo_filled_rectangles(int nb_iterations)
                 p->speed_y = -p->speed_y;
         }
     }
+
+    fade_out();
 }
 
-void demo_filled_triangle_single()
-{
-    clear();
-
-    Coord3 c2 = {231, 120, 50, 230,  217, 55};
-    draw_filled_triangle(c2, 2);
-
-    swap();
-}
-
-void demo_filled_triangle(int nb_iterations)
+void demo_filled_triangles(int nb_iterations)
 {
     Particle particles[3*NB_TRIANGLES];
 
@@ -531,6 +563,11 @@ void demo_filled_triangle(int nb_iterations)
         p->speed_x = rand2() % 10 - 5;
         p->speed_y = rand2() % 10 - 5;
     }
+
+    clear();
+    swap();
+
+    fade_in();
 
     for (int i = 0; i < nb_iterations; ++i) {
 
@@ -556,6 +593,8 @@ void demo_filled_triangle(int nb_iterations)
 
         swap();
     }
+
+    fade_out();
 }
 
 void xosera_demo()
@@ -579,30 +618,30 @@ void xosera_demo()
     wait_pr_done();
     xm_setw(WR_PR_CMD, PR_DEST_HEIGHT | 200);    
 
+    calc_palette();
+    set_palette(0.0f);
+
     while(1) {
 
         xreg_setw(PA_GFX_CTRL, 0x0005);
 
         xcolor(0x02);
         xcls();
+
         xprintf("Xosera\nPrimitive\nRenderer\nDemo\n");
+        fade_in();
         delay(2000);
+        fade_out();
+
+        // initialize swap
+        init_swap();
 
         // enable Copper
         xreg_setw(COPP_CTRL, 0x8000);        
 
-        wait_pr_done();
-        xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x7D0);
-
-        set_palette(0);
-
         demo_lines();
-        delay(2000);
-
         demo_filled_rectangles(1000);
-
-        //demo_filled_triangle_single();
-        demo_filled_triangle(1000);
+        demo_filled_triangles(1000);
 
         // disable Copper
         xreg_setw(COPP_CTRL, 0x0000);

@@ -86,7 +86,7 @@ ICEPROG := iceprog
 ICEMULTI := icemulti
 
 # Yosys synthesis arguments
-YOSYS_SYNTH_ARGS := -dsp -relut -retime -abc2 -top $(TOP)
+YOSYS_SYNTH_ARGS := -dsp -retime -abc2 -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DICEBREAKER -DSPI_INTERFACE

@@ -31,7 +31,6 @@ module video_gen(
     // outputs for copper
     output      logic [10:0]     h_count_o,          // Horizontal video counter
     output      logic [10:0]     v_count_o,          // Vertical video counter
-    output      logic            in_vblank_o,
     // video memories
     output      logic            vram_sel_o,         // vram read select
     output      logic [15:0]     vram_addr_o,        // vram word address out (16x64K)
@@ -157,7 +156,6 @@ logic           h_start_line_fetch;
 assign h_count_o    = h_count;
 assign v_count_o    = v_count;
 
-always_comb in_vblank_o = v_state != STATE_VISIBLE;
 
 // video config registers read/write
 always_ff @(posedge clk) begin

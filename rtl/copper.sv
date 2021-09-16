@@ -141,7 +141,6 @@
 module copper(
     input   wire logic          clk,    
     input   wire logic          reset_i,
-    input   wire logic          vblank_i,
     output       logic          xr_ram_wr_en_o,         // General, for all RAM block writes
     output       logic [15:0]   xr_ram_wr_addr_o,       // General, for all RAM block writes
     output       logic [15:0]   xr_ram_wr_data_o,       // General, for all RAM block writes
@@ -207,6 +206,10 @@ assign xr_ram_wr_en_o           = xr_wr_strobe;
 assign xr_ram_wr_addr_o         = ram_wr_addr_out;
 assign xr_ram_wr_data_o         = ram_wr_data_out;
 
+logic         copp_reset;
+always_comb   copp_reset  = h_count_i == xv::VISIBLE_WIDTH + xv::H_FRONT_PORCH + xv::H_SYNC_PULSE + xv::H_BACK_PORCH - 5 &&
+                            v_count_i == xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH + xv::V_SYNC_PULSE + xv::V_BACK_PORCH - 1;
+
 always_ff @(posedge clk) begin
     if (reset_i) begin
         copper_en               <= 1'b0;
@@ -232,7 +235,7 @@ always_ff @(posedge clk) begin
         end
 
         // Main logic
-        if (vblank_i) begin
+        if (copp_reset) begin
             copper_ex_state         <= STATE_INIT;
             copper_pc               <= copper_init_pc;
             ram_rd_strobe           <= 1'b0;
@@ -287,7 +290,7 @@ always_ff @(posedge clk) begin
                                     end
                                     else begin
                                         // Checking only horizontal position
-                                        if (h_count_i >= r_insn[15:5]) begin
+                                        if (h_count_i >= r_insn[14:4]) begin
                                             // Setup fetch next instruction
                                             copper_pc           <= copper_pc + 1;
                                             copper_ex_state     <= STATE_WAIT;
@@ -309,7 +312,7 @@ always_ff @(posedge clk) begin
                                     else begin
                                         // Checking both horizontal and
                                         // vertical positions
-                                        if (h_count_i >= r_insn[15:5] && v_count_i >= r_insn[26:16]) begin
+                                        if (h_count_i >= r_insn[14:4] && v_count_i >= r_insn[26:16]) begin
                                             // Setup fetch next instruction
                                             copper_pc           <= copper_pc + 1;
                                             copper_ex_state     <= STATE_WAIT;
@@ -329,7 +332,7 @@ always_ff @(posedge clk) begin
                                     end
                                     else begin
                                         // Checking only horizontal position
-                                        if (h_count_i >= r_insn[15:5]) begin
+                                        if (h_count_i >= r_insn[14:4]) begin
                                             copper_pc       <= copper_pc + 3;
                                         end
                                         else begin
@@ -351,7 +354,7 @@ always_ff @(posedge clk) begin
                                     else begin
                                         // Checking both horizontal and
                                         // vertical positions
-                                        if (h_count_i >= r_insn[15:5] && v_count_i >= r_insn[26:16]) begin
+                                        if (h_count_i >= r_insn[14:4] && v_count_i >= r_insn[26:16]) begin
                                             copper_pc       <= copper_pc + 3;
                                         end
                                         else begin

@@ -301,22 +301,22 @@ static inline void xansi_erase_cursor(xansiterm_data * td)
 // set first 16 colors to default VGA colors
 static void set_default_colors()
 {
-    static const uint16_t def_colors16[16] = {0x0000,
-                                              0x000a,
-                                              0x00a0,
-                                              0x00aa,
-                                              0x0a00,
-                                              0x0a0a,
-                                              0x0aa0,
-                                              0x0aaa,
-                                              0x0555,
-                                              0x055f,
-                                              0x05f5,
-                                              0x05ff,
-                                              0x0f55,
-                                              0x0f5f,
-                                              0x0ff5,
-                                              0x0fff};
+    static const uint16_t def_colors16[16] = {0x0000,         // black
+                                              0x000a,         // blue
+                                              0x00a0,         // green
+                                              0x00aa,         // cyan
+                                              0x0a00,         // red
+                                              0x0a0a,         // magenta
+                                              0x0a50,         // brown
+                                              0x0aaa,         // white
+                                              0x0555,         // gray
+                                              0x055f,         // light blue
+                                              0x05f5,         // light green
+                                              0x05ff,         // light cyan
+                                              0x0f55,         // light red
+                                              0x0f5f,         // light magenta
+                                              0x0ff5,         // yellow
+                                              0x0fff};        // bright white
     xv_prep();
 
     xm_setw(XR_ADDR, XR_COLOR_MEM);
@@ -366,7 +366,7 @@ static void xansi_reset()
     if (td->x >= cols)
     {
         td->x   = cols - 1;
-        td->lcf = 0;
+        td->lcf = false;
     }
     if (td->y >= rows)
     {
@@ -406,7 +406,7 @@ static void xansi_cls()
     td->cur_addr = td->vram_base;
     td->x        = 0;
     td->y        = 0;
-    td->lcf      = 0;
+    td->lcf      = false;
 }
 
 // setup Xosera registers for scrolling up and call scroll function
@@ -522,7 +522,7 @@ static void xansi_processchar(char cdata)
         td->y -= 1;
         xansi_scroll_up(td);
     }
-    td->lcf = 0;
+    td->lcf = false;
 
 #if DEBUG
     xansi_assert_xy_valid(td);
@@ -605,7 +605,7 @@ static inline void xansi_process_esc(xansiterm_data * td, char cdata)
             LOGF("%c\n  := [NEL]\n", cdata);
             td->y++;
             td->x   = 0;
-            td->lcf = 0;
+            td->lcf = false;
             if (td->y >= td->cols)
             {
                 td->y = td->cols - 1;
@@ -625,6 +625,17 @@ static inline void xansi_process_esc(xansiterm_data * td, char cdata)
 // process a completed CSI sequence
 static inline void xansi_process_csi(xansiterm_data * td, char cdata)
 {
+    static const uint8_t ansi_to_vga_color[8] = {
+        0,        // black
+        4,        // red
+        2,        // green
+        6,        // brown (dark yellow)
+        1,        // blue
+        5,        // magenta
+        3,        // cyan
+        7         // gray
+    };
+
     if (td->intermediate_char)
     {
         LOGF("%c", td->intermediate_char);
@@ -642,7 +653,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
     switch (cdata)
     {
         case 'A':
-            // VT: <CSI>A  cursor up (no scroll)
+            // VT: <CSI><n>A  CUU  cursor up (no scroll)
             td->y -= num;
             if (td->y >= td->rows)
             {
@@ -651,7 +662,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
             LOGF("[CUP %d]", num);
             break;
         case 'B':
-            // VT: <CSI>B  cursor down (no scroll)
+            // VT: <CSI><n>B  CUD  cursor down (no scroll)
             td->y += num;
             if (td->y >= td->rows)
             {
@@ -660,7 +671,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
             LOGF("[CDOWN %d]", num);
             break;
         case 'C':
-            // VT: <CSI>C  cursor right (no scroll)
+            // VT: <CSI><n>C  CUF  cursor right (no scroll)
             td->x += num;
             if (td->x >= td->cols)
             {
@@ -669,7 +680,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
             LOGF("[CRIGHT %d]", num);
             break;
         case 'D':
-            // VT: <CSI>D  cursor left (no scroll)
+            // VT: <CSI><n>D  CUB   cursor left (no scroll)
             td->x -= num;
             if (td->x >= td->cols)
             {
@@ -678,12 +689,12 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
             LOGF("[CLEFT %d]", num);
             break;
         case 'H':
-            // VT: <CSI><row>;<col>H   cursor home / position
+            // VT: <CSI><row>;<col>H    CUP cursor home / position
         case 'f':
-            // VT: <CSI><row>;<col>f   cursor home / position (force)
+            // VT: <CSI><row>;<col>f    HVP cursor home / position (force)
             td->x   = 0;
             td->y   = 0;
-            td->lcf = 0;
+            td->lcf = false;
             if (td->num_parms > 0 && td->csi_parms[0] < td->rows)
             {
                 td->y = td->csi_parms[0] - 1;
@@ -700,8 +711,8 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
             {
                 if (num == 3)
                 {
-                    // VT:  <CSI>?3h    select 16:9 mode (848x480) EXTENSION: was DEC 132 column
-                    // VT:  <CSI>?3l    select  4:3 mode (640x480) EXTENSION: was DEC 80 column
+                    // VT:  <CSI>?3h    DECCOLM 132 (106) column    EXTENSION: video mode 16:9 (848x480)
+                    // VT:  <CSI>?3l    DECCOLM 80 column           EXTENSION: video mode 4:3 (640x480)
                     uint16_t res = (cdata == 'h') ? 848 : 640;
                     xv_prep();
                     if (xreg_getw(VID_HSIZE) != res)
@@ -716,41 +727,35 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                 }
                 else if (num == 5)
                 {
-                    // VT:  <CSI>?5h    screen mode reverse EXTENSION: this swaps current and default fore/back colors
-                    // VT:  <CSI>?5l    screen mode normal EXTENSION: this swaps current and default fore/back colors
-                    if (cdata == 'l' || cdata == 'h')
-                    {
-                        td->def_color = (uint8_t)((td->def_color & 0xf0) >> 4) | (uint8_t)((td->def_color & 0x0f) << 4);
-                        td->color     = (uint8_t)((td->color & 0xf0) >> 4) | (uint8_t)((td->color & 0x0f) << 4);
-                        td->cur_color = (uint8_t)((td->cur_color & 0xf0) >> 4) | (uint8_t)((td->cur_color & 0x0f) << 4);
-                        xansi_visualbell(true);
-                        LOG("[SCREEN REVERSE]");
-                    }
+                    // VT:  <CSI>?5h    DECSCNM on  screen reverse  EXTENSION: swap fore/back (persistant)
+                    // VT:  <CSI>?5l    DECSCNM off screen normal   EXTENSION: swap fore/back (persistant)
+                    // fore/back colors
+                    td->def_color = (uint8_t)((td->def_color & 0xf0) >> 4) | (uint8_t)((td->def_color & 0x0f) << 4);
+                    td->color     = (uint8_t)((td->color & 0xf0) >> 4) | (uint8_t)((td->color & 0x0f) << 4);
+                    td->cur_color = (uint8_t)((td->cur_color & 0xf0) >> 4) | (uint8_t)((td->cur_color & 0x0f) << 4);
+                    xansi_visualbell(true);
+                    LOG("[SCREEN REVERSE]");
                 }
                 else if (num == 7)
                 {
-                    // VT:  <CSI>?7h    autowrap ON (auto wrap/scroll at EOL) (default)
-                    // VT:  <CSI>?7l    autowrap OFF (cursor stops at right margin)
+                    // VT:  <CSI>?7h    DECAWM on   autowrap mode on (auto wrap/scroll at EOL) (default)
+                    // VT:  <CSI>?7l    DECAWM off  autowrap mode off (cursor stops at right margin)
+                    xansi_check_lcf(td);        // TODO: double check
                     if (cdata == 'l')
                     {
                         LOG("[AUTOWRAP OFF]");
                         td->flags |= TFLAG_NO_AUTOWRAP;
-                        td->lcf = 0;
                     }
                     else
                     {
                         LOG("[AUTOWRAP ON]");
                         td->flags &= ~TFLAG_NO_AUTOWRAP;
-                        if (td->x >= td->cols - 1)
-                        {
-                            td->lcf = 1;
-                        }
                     }
                 }
                 else if (num == 25)
                 {
-                    // VT:  <CSI>?25h   show cursor when waiting for input (default)
-                    // VT:  <CSI>?25l   no cursor
+                    // VT:  <CSI>?25h   DECTCEM on  show cursor when waiting for input (default)
+                    // VT:  <CSI>?25l   DECTCEM off no cursor
                     if (cdata == 'l')
                     {
                         LOG("[CURSOR HIDE]");
@@ -765,8 +770,8 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
             }
             else if (num == 20)
             {
-                // VT:  <CSI>?20h   newline mode on,  LF also does CR
-                // VT:  <CSI>?20l   newline mode off, LF only (default)
+                // VT:  <CSI>?20h   LMN on  newline mode on,  LF also does CR
+                // VT:  <CSI>?20l   LMN off newline mode off, LF only (default)
                 if (cdata == 'l')
                 {
                     LOG("[NEWLINE OFF]");
@@ -780,23 +785,23 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
             }
             break;
         case 's':
-            // VT: <CSI>s  save cursor position (ANSI)
+            // VT: <CSI>s  SCP  save cursor position (ANSI)
             LOG("[CURSOR SAVE]");
             td->save_x   = td->x;
             td->save_y   = td->y;
             td->save_lcf = td->lcf;
             break;
         case 'u':
-            // VT: <CSI>u  restore cursor position (ANSI)
+            // VT: <CSI>u  RCP  restore cursor position (ANSI)
             LOG("[CURSOR RESTORE]");
             td->x   = td->save_x;
             td->y   = td->save_y;
             td->lcf = td->save_lcf;
             break;
         case 'J':
-            // VT:  <CSI>J  erase down from cursor line to end of screen
-            // VT:  <CSI>1J erase up from cursor line to start of screen
-            // VT:  <CSI>2J erase whole screen
+            // VT:  <CSI>J  ED  erase down from cursor line to end of screen
+            // VT:  <CSI>1J ED  erase up from cursor line to start of screen
+            // VT:  <CSI>2J ED  erase whole screen
             LOGF("[ERASE %s]", num_z == 0 ? "DOWN" : num_z == 1 ? "UP" : num_z == 2 ? "SCREEN" : "?");
             switch (num_z)
             {
@@ -814,9 +819,9 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
             }
             break;
         case 'K':
-            // VT:  <CSI>K  erase from cursor to end of line
-            // VT:  <CSI>1K erase from cursor to start of line
-            // VT:  <CSI>2K erase from whole cursor line
+            // VT:  <CSI>K  EL  erase from cursor to end of line
+            // VT:  <CSI>1K EL  erase from cursor to start of line
+            // VT:  <CSI>2K EL  erase from whole cursor line
             LOGF("[ERASE %s]", num_z == 0 ? "EOL" : num_z == 1 ? "SOL" : num_z == 2 ? "LINE" : "?");
             switch (num_z)
             {
@@ -834,7 +839,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
             }
             break;
         case 'm':
-            // VT: <CSI><parm>; ... m set character attributes
+            // VT: <CSI><n>m    SGR   set graphic rendition
             if (td->num_parms == 0)        // if no parameters
             {
                 td->num_parms = 1;        // parameter zero will be 0 default
@@ -848,8 +853,24 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                 uint16_t parm_code = td->csi_parms[i];        // attribute parameter
                 uint8_t  col       = parm_code % 10;          // modulo ten color
 
+                // special set default fore/back
+                if (parm_code == 38 || parm_code == 48)
+                {
+                    if (i + 2 >= td->num_parms || td->csi_parms[i + 1] != 5)
+                    {
+                        LOG("[Err: setcolor mode !=5]");
+                    }
+                    else
+                    {
+                        col = td->csi_parms[i + 2] & 0xf;
+                    }
+
+                    i = td->num_parms;        // no more parameters after this
+                }
+
                 if (col < 8)        // normal color 0-7 range
                 {
+                    col = ansi_to_vga_color[col];        // convert from ANSI color to VGA
                     // light color ranges?
                     if (parm_code >= 90)        // if a light color range, set to normal color range
                     {
@@ -902,9 +923,15 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                     case 35:
                     case 36:
                     case 37:
-                        // VT: SGR parm 30-37   select forground color 0-7
+                        // VT: SGR parm 30-37   select forground color
                         td->cur_color = (uint8_t)(td->cur_color & 0xf0) | col;
                         LOGF("[%sFORE=%x]", def_flag ? "DEF_" : "", col);
+                        break;
+                    case 38:
+                        // VT: SGR parm 38;5;n  change default forground color
+                        td->def_color = (uint8_t)(td->def_color & 0xf0) | col;
+                        td->cur_color = (uint8_t)(td->cur_color & 0xf0) | col;
+                        LOGF("[SETDEF_FORE=%x]", col);
                         break;
                     case 49:
                         // VT: SGR parm 49  select default background color
@@ -919,9 +946,15 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                     case 45:
                     case 46:
                     case 47:
-                        // VT: SGR parm 40-47   select background color 0-7
+                        // VT: SGR parm 40-47   select background color
                         td->cur_color = (uint8_t)(td->cur_color & 0x0f) | ((uint8_t)(col << 4));
                         LOGF("[%sBACK=%x]", def_flag ? "DEF_" : "", col);
+                        break;
+                    case 48:
+                        // VT: SGR parm 48;5;n  change default background color
+                        td->def_color = (uint8_t)(td->def_color & 0x0f) | ((uint8_t)(col << 4));
+                        td->cur_color = (uint8_t)(td->cur_color & 0x0f) | ((uint8_t)(col << 4));
+                        LOGF("[SETDEF_BACK=%x]", col);
                         break;
                     case 68:
                         // VT: SGR parm 68  rosco_m68k  EXTENSION: special stuff here...
@@ -967,14 +1000,9 @@ static inline void xansi_parse_csi(xansiterm_data * td, char cdata)
 {
     uint8_t cclass = cdata & 0xf0;
     // ignore ctrl characters (mostly)
-    if (cdata <= ' ' || cdata == 0x7f)        // NOTE: also ignores negative (high bit set)
+    if ((int8_t)cdata <= ' ' || cdata == 0x7f)        // NOTE: also ignores negative (high bit set)
     {
-        // VT:  \x18    CAN terminate current CSI sequence, otherwise ignored
-        // VT:  \x1A    SUB terminate current CSI sequence, otherwise ignored
-        if (cdata == '\x18' || cdata == '\x1A')
-        {
-            td->state = TSTATE_NORMAL;
-        }
+        return;
     }
     else if (cclass == 0x20)        // intermediate char
     {
@@ -1077,10 +1105,10 @@ void xansiterm_putchar(char cdata)
     }
     else if (cdata == '\x18' || cdata == '\x1A')
     {
-        // VT: $18     ABORT (CAN)
-        // VT: $1A     ABORT (SUB)
+        // VT:  \x18    CAN terminate current CSI sequence, otherwise ignored
+        // VT:  \x1A    SUB terminate current CSI sequence, otherwise ignored
         LOGF("[CANCEL: 0x%02x]", cdata);
-        td->state = TSTATE_NORMAL;        // TODO: cancel state
+        td->state = TSTATE_NORMAL;
     }
     else if (td->state == TSTATE_ESC)        // NOTE: only one char sequences supported
     {

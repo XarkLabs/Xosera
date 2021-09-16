@@ -693,17 +693,17 @@ void     xosera_test()
 #if COPPER_TEST
         if (test_count & 1)
         {
-            dprintf("Copper enabled this interation.\n");
-            wait_vsync();
-            restore_colors();
-            xreg_setw(COPP_CTRL, 0x8000);
-        }
-        else
-        {
-            dprintf("Copper disabled this iteration.\n");
+            dprintf("Copper test disabled for this iteration.\n");
             wait_vsync();
             restore_colors();
             xreg_setw(COPP_CTRL, 0x0000);
+        }
+        else
+        {
+            dprintf("Copper test enabled for this interation.\n");
+            wait_vsync();
+            restore_colors();
+            xreg_setw(COPP_CTRL, 0x8000);
         }
 
 #endif

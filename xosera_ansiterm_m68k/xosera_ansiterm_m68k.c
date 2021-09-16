@@ -48,11 +48,11 @@ enum e_term_flags
     TFLAG_NEWLINE         = 1 << 0,        // LF also does a CR
     TFLAG_NO_AUTOWRAP     = 1 << 1,        // don't wrap to next line at EOL
     TFLAG_HIDE_CURSOR     = 1 << 2,        // don't show a cursor on input
-    TFLAG_8X8_FONT        = 1 << 3,        // use alternate 8x8 font
+    TFLAG_UNUSED          = 1 << 3,
     TFLAG_ATTRIB_BRIGHT   = 1 << 4,        // make colors bright
     TFLAG_ATTRIB_DIM      = 1 << 5,        // make colors dim
     TFLAG_ATTRIB_REVERSE  = 1 << 6,        // reverse fore/back colors
-    TFLAG_ATTRIB_PASSTHRU = 1 << 7,        // pass through control chars as graphic [HIDDEN attribute]
+    TFLAG_ATTRIB_PASSTHRU = 1 << 7,        // print control chars as graphic [using HIDDEN attribute]
 };
 
 // current processing state of terminal
@@ -71,13 +71,18 @@ typedef struct xansiterm_data
     uint16_t vram_base;                       // base VRAM address for text screen
     uint16_t vram_size;                       // size of text screen in current mode (init clears to allow 8x8 font)
     uint16_t vram_end;                        // ending address for text screen in current mode
+    uint16_t line_len;                        // user specified line len (normally 0)
+    uint16_t height;                          // user specified screen height (normally 0)
     uint16_t cursor_save;                     // word under input cursor
     uint16_t cols, rows;                      // text columns and rows in current mode (zero based)
     uint16_t x, y;                            // current x and y cursor position (zero based)
     uint16_t save_x, save_y;                  // storage to save/restore cursor postion
+    uint16_t gfx_ctrl;                        // default graphics mode
+    uint16_t tile_ctrl[4];                    // up to four fonts <ESC>( <ESC>) <ESC>* <ESC>+
     uint16_t csi_parms[MAX_CSI_PARMS];        // CSI parameter storage
     uint8_t  num_parms;                       // number of parsed CSI parameters
     uint8_t  intermediate_char;               // CSI intermediate character (only one supported)
+    uint8_t  cur_font;                        // default font number from tile_ctrl
     uint8_t  def_color;                       // default terminal colors
     uint8_t  cur_color;                       // logical colors before attribute modifications (high/low nibble)
     uint8_t  state;                           // current ANSI parsing state (e_term_state)
@@ -177,6 +182,7 @@ static inline void xansi_drawchar(xansiterm_data * td, char cdata)
     {
         if (td->flags & TFLAG_NO_AUTOWRAP)
         {
+            td->cur_addr--;
             td->x = td->cols - 1;
         }
         else
@@ -333,45 +339,66 @@ static void xansi_reset()
     xv_prep();
 
     // set xosera playfield A registers
-    bool     alt_font    = td->flags & TFLAG_8X8_FONT;
-    uint16_t rows        = ((uint16_t)(xreg_getw(VID_VSIZE) >> (uint16_t)(alt_font ? 3 : 4)));        // get text rows
-    uint16_t cols        = (uint16_t)(xreg_getw(VID_HSIZE) >> 3);        // get pixel width / 8 for text columns
-    uint16_t tile_addr   = alt_font ? 0x800 : 0x0000;
-    uint16_t tile_height = alt_font ? 7 : 15;
+    uint16_t gfx_ctrl_val  = td->gfx_ctrl;
+    bool     bitmap        = gfx_ctrl_val & 0x40;
+    uint16_t bpp           = ((gfx_ctrl_val >> 4) & 0x3);
+    uint16_t h_rpt         = ((gfx_ctrl_val >> 2) & 0x3) + 1;
+    uint16_t v_rpt         = (gfx_ctrl_val & 0x3) + 1;
+    uint16_t tile_ctrl_val = td->tile_ctrl[td->cur_font];
+    uint16_t tile_w        = ((!bitmap || bpp < 2) ? 8 : (bpp == 2) ? 4 : 1) * h_rpt;
+    uint16_t tile_h        = ((bitmap) ? 1 : ((tile_ctrl_val & 0xf) + 1)) * v_rpt;
+    uint16_t rows          = (xreg_getw(VID_VSIZE) + tile_h - 1) / tile_h;        // calc text rows
+    uint16_t cols          = td->line_len;
 
-    td->vram_base = 0;
+    if (cols == 0)
+    {
+        cols = (xreg_getw(VID_HSIZE) + tile_w - 1) / tile_w;        // calc text columns
+    }
+
+    uint16_t prev_end = td->vram_end;
+
     td->vram_size = cols * rows;
-    td->vram_end  = td->vram_size;
+    td->vram_end  = td->vram_base + td->vram_size;
     td->cols      = cols;
     td->rows      = rows;
     td->cur_color = td->def_color;
     td->color     = td->def_color;
+
+    if (td->x >= cols)
+    {
+        td->x = cols - 1;
+    }
+    if (td->y >= rows)
+    {
+        td->y = rows - 1;
+    }
+
+    LOGF("{Xosera gfx_ctrl=%04X tile_ctrl=%04X vram_addr=%04X line_len=%04X vram_end=%04X}",
+         gfx_ctrl_val,
+         tile_ctrl_val,
+         td->vram_base,
+         cols,
+         td->vram_end);
 
     while ((xreg_getw(SCANLINE) & 0x8000))
         ;
     while (!(xreg_getw(SCANLINE) & 0x8000))
         ;
 
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, 0, 0, 0, 0));         // graphics mode
-    xm_setw(XR_DATA, MAKE_TILE_CTRL(tile_addr, 0, tile_height));        // tile mode
-    xm_setw(XR_DATA, td->vram_base);                                    // disp addr
-    xm_setw(XR_DATA, cols);                                             // line len
-    xm_setw(XR_DATA, 0x0000);                                           // hv scroll
-    xm_setw(XR_DATA, 0x0000);                                           // line addr
-    xm_setw(XR_DATA, 0x0000);                                           // unused
-    xm_setw(XR_DATA, 0x0000);                                           // unused
+    xreg_setw(PA_GFX_CTRL, gfx_ctrl_val);        // graphics mode
+    xm_setw(XR_DATA, tile_ctrl_val);             // tile mode
+    xm_setw(XR_DATA, td->vram_base);             // disp addr
+    xm_setw(XR_DATA, cols);                      // line len
+    xm_setw(XR_DATA, 0x0000);                    // hv scroll
 
     set_default_colors();
 
-    if (td->x >= cols)
+    // only clear any additional VRAM used from previous mode
+    if (prev_end < td->vram_end)
     {
-        td->x   = cols - 1;
-        td->lcf = false;
+        xansi_clear(prev_end, td->vram_end);
     }
-    if (td->y >= rows)
-    {
-        td->y = rows - 1;
-    }
+
     xansi_calc_cur_addr();
 }
 
@@ -387,7 +414,7 @@ static void xansi_visualbell(bool invert)
     {
         xm_setw(RD_ADDR, td->vram_base);
         xm_setw(WR_ADDR, td->vram_base);
-        for (uint16_t i = 0; i < ((td->flags & TFLAG_8X8_FONT) ? td->vram_end : td->vram_end << 1); i++)
+        for (uint16_t i = 0; i < td->vram_end; i++)
         {
             uint16_t data = xm_getw(DATA);
             xm_setw(DATA,
@@ -396,13 +423,13 @@ static void xansi_visualbell(bool invert)
     }
 }
 
-// clear screen (clears the full 8x8 height)
+// clear screen
 static void xansi_cls()
 {
     xansiterm_data * td = get_xansi_data();
 
     // if not using 8x8 font, clear double high (clear if mode switched later)
-    xansi_clear(td->vram_base, (td->flags & TFLAG_8X8_FONT) ? td->vram_end : td->vram_end << 1);
+    xansi_clear(td->vram_base, td->vram_end);
     td->cur_addr = td->vram_base;
     td->x        = 0;
     td->y        = 0;
@@ -576,17 +603,17 @@ static inline void xansi_process_esc(xansiterm_data * td, char cdata)
             td->lcf = td->save_lcf;
             break;
         case '(':
-            // VT: <ESC>(  G0 character set (8x16 default) EXTENSION: Xosera 8x16 font size
-            td->flags &= ~TFLAG_8X8_FONT;
-            xansi_reset();
-            LOGF("%c\n  := [FONT0 8x16 %dx%d]\n", cdata, td->cols, td->rows);
-            return;
         case ')':
-            // VT: <ESC>)  G1 character set (8x8 alternate) EXTENSION: Xosera 8x8 font size
-            td->flags |= TFLAG_8X8_FONT;
+        case '*':
+        case '+':
+            // VT: <ESC>(  VT220 G0 font EXTENSION: Xosera font 0 (ST 8x16 default)
+            // VT: <ESC>)  VT220 G1 font EXTENSION: Xosera font 1 (ST 8x8)
+            // VT: <ESC>*  VT220 G2 font EXTENSION: Xosera font 2 (PC 8x8)
+            // VT: <ESC>+  VT220 G3 font EXTENSION: Xosera font 3 ()
+            td->cur_font = cdata & 0x03;
+            LOGF("%c\n  := [FONT%u]\n", cdata, td->cur_font);
             xansi_reset();
-            LOGF("%c\n  := [FONT1 8x8 %dx%d]\n", cdata, td->cols, td->rows);
-            break;
+            return;
         case 'D':
             // VT: <ESC>D  IND move cursor down (regardless of NEWLINE mode)
             LOGF("%c\n  := [CDOWN]", cdata);
@@ -740,7 +767,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                 {
                     // VT:  <CSI>?7h    DECAWM on   autowrap mode on (auto wrap/scroll at EOL) (default)
                     // VT:  <CSI>?7l    DECAWM off  autowrap mode off (cursor stops at right margin)
-                    xansi_check_lcf(td);        // TODO: double check
+                    xansi_check_lcf(td);
                     if (cdata == 'l')
                     {
                         LOG("[AUTOWRAP OFF]");
@@ -957,15 +984,78 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                         LOGF("[SETDEF_BACK=%x]", col);
                         break;
                     case 68:
-                        // VT: SGR parm 68  rosco_m68k  EXTENSION: special stuff here...
-                        // TODO: colormem, gfx_ctrl, tile_ctrl, vram_base, disp_base, line_len
-                        // default fore/back color
-                        LOG("[ROSCO_M68K=");
-                        for (int rp = ++i; rp < td->num_parms; rp++)
+                        // VT: SGR parm 68  rosco_m68k  EXTENSION: rosco_m68k Xosera commands
+                        LOG("[ROSCO_M68K=68;");
+                        bool rosco_cmd_good = false;
+                        (void)rosco_cmd_good;
+                        if (i + 3 < td->num_parms)        // must have at least rosco_cmd, n, parm0
                         {
-                            LOGF("%c%d", (rp != i) ? ',' : '(', td->csi_parms[rp]);
+                            uint16_t rosco_cmd = td->csi_parms[++i];
+                            uint16_t n         = td->csi_parms[++i];
+                            uint16_t parm0     = td->csi_parms[++i];
+
+
+                            LOGF("%03u;", rosco_cmd);
+                            switch (rosco_cmd)
+                            {
+                                // VT: SGR 68;000;<n>;<val>>m   n=0 vram addr, 1=line_len, 2=height (0=auto)
+                                case 0:
+                                    if (n < 3)        // n valid
+                                    {
+                                        if (n == 0)
+                                        {
+                                            td->vram_base = parm0;
+                                            LOGF(" vram_base=0x%04x", parm0);
+                                        }
+                                        else if (n == 1)
+                                        {
+                                            td->line_len = parm0;
+                                            LOGF(" line_len=0x%04x", parm0);
+                                        }
+                                        else if (n == 2)
+                                        {
+                                            td->height = parm0;
+                                            LOGF(" height=0x%04x", parm0);
+                                        }
+                                        rosco_cmd_good = true;
+                                    }
+                                    break;
+                                // VT: SGR 68;010;<n>;<r>;<g>;<b>m  set COLOR_MEM[n] = RGB (each 0-255)
+                                case 10:
+                                    if (n < 256 && (i + 2) < td->num_parms)
+                                    {
+                                        uint16_t rgb = ((uint16_t)(parm0 & 0xf0) << 4) |
+                                                       ((uint16_t)(td->csi_parms[i + 1] & 0xf0) << 0) |
+                                                       ((uint16_t)(td->csi_parms[i + 2] & 0xf0) >> 4);
+
+                                        xv_prep();
+                                        xmem_setw(XR_COLOR_MEM + n, rgb);
+                                        LOGF(" COLOR_MEM[%u]=0x%03x", n, rgb);
+                                        rosco_cmd_good = true;
+                                    }
+                                    break;
+                                // VT: SGR 68;012;<n><tile_ctrl>m   set Xosera TILE_CTRL value for font n (0-3)
+                                case 12:
+                                    if (n < 4)
+                                    {
+                                        td->tile_ctrl[n] = parm0;
+                                        LOGF(" FONT%u TILE_CTRL=0x%04x", n, parm0);
+                                        rosco_cmd_good = true;
+                                    }
+                                    break;
+                                // VT: SGR 68;020;16;<gfx_ctrl>m    set Xosera GFX_CTRL register value
+                                case 20:
+                                    if (n == XR_PA_GFX_CTRL)
+                                    {
+                                        td->gfx_ctrl = parm0;
+                                        LOGF(" GFX_CTRL=0x%04x", parm0);
+                                        rosco_cmd_good = true;
+                                    }
+                                    break;
+                            }
                         }
-                        LOG(")]");
+
+                        LOGF("%s]", rosco_cmd_good ? "" : "<bad>");
                         i = td->num_parms;        // eat remaning parms
                         break;
                     default:
@@ -1017,16 +1107,19 @@ static inline void xansi_parse_csi(xansiterm_data * td, char cdata)
         uint8_t d = (uint8_t)(cdata - '0');
         if (d <= 9)
         {
-            if (td->num_parms == 0)
+            if (td->num_parms == 0)        // if no parms use parm 0 as default zero
             {
                 td->num_parms = 1;
             }
             uint16_t v = td->csi_parms[td->num_parms - 1];
             v *= (uint16_t)10;
-            v += d;
-            if (v > 9999)
+            if ((uint16_t)(v + d) < v)        // check for unsigned wrap
             {
-                v = 9999;
+                v = 65535;
+            }
+            else
+            {
+                v += d;
             }
             td->csi_parms[td->num_parms - 1] = v;
         }
@@ -1039,9 +1132,9 @@ static inline void xansi_parse_csi(xansiterm_data * td, char cdata)
                 td->state = TSTATE_ILLEGAL;
             }
         }
-        else if (cdata == ':')
+        else if (td->intermediate_char != 0 || cdata == ':')
         {
-            LOG("[ERR: illegal colon]\n");
+            LOG("[ERR: illegal char]\n");
             td->state = TSTATE_ILLEGAL;
         }
         else
@@ -1173,7 +1266,6 @@ char xansiterm_readchar()
     xansiterm_data * td = get_xansi_data();
     xansi_erase_cursor(td);        // make sure cursor not drawn
 
-    // TODO terminal query stuff, but seems not so useful.
     return readchar();
 }
 
@@ -1207,10 +1299,14 @@ void xansiterm_init()
     xansiterm_data * td = get_xansi_data();
     memset(td, 0, sizeof(*td));
     // set default color (that is not reset if changed) // TODO: ICP default
-    td->def_color = DEFAULT_COLOR;        // default dark-green on black
+    td->gfx_ctrl     = MAKE_GFX_CTRL(0x00, 0, 0, 0, 0, 0);
+    td->tile_ctrl[0] = MAKE_TILE_CTRL(0x0000, 0, 16);
+    td->tile_ctrl[1] = MAKE_TILE_CTRL(0x0800, 0, 8);
+    td->tile_ctrl[2] = MAKE_TILE_CTRL(0x0C00, 0, 8);
+    td->tile_ctrl[3] = MAKE_TILE_CTRL(0x0000, 0, 16);
+    td->def_color    = DEFAULT_COLOR;        // default dark-green on black
 
     xansi_reset();
-    xansi_cls();
 }
 
 #pragma GCC pop_options        // end -Os

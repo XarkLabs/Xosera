@@ -179,7 +179,6 @@ logic [15:0]    spritemem_data_out  /* verilator public */;
 logic  [7:0]    color_index         /* verilator public */;
 logic [15:0]    pal_lookup          /* verilator public */;
 
-logic           vgen_in_vblank;
 logic           vsync_1;
 logic           hsync_1;
 logic           dv_de_1;
@@ -268,7 +267,6 @@ video_gen video_gen(
     .dv_de_o(dv_de_1),
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
-    .in_vblank_o(vgen_in_vblank),
     .reset_i(reset_i),
     .clk(clk)
 );
@@ -323,7 +321,6 @@ spritemem spritemem(
 copper copper(
     .clk(clk),
     .reset_i(reset_i),
-    .vblank_i(vgen_in_vblank),
     .xr_ram_wr_en_o(copp_xr_wr_sel),
     .xr_ram_wr_addr_o(copp_wr_addr),
     .xr_ram_wr_data_o(copp_data_out),

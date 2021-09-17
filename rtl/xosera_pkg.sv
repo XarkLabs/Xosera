@@ -126,12 +126,6 @@ typedef enum logic [3:0] {
     PR_EXECUTE      = 4'hF
 } pr_cmds_t;
 
-// Primitive renderer shapes
-typedef enum logic [3:0] {
-    PR_FILLED_RECTANGLE     = 4'h0,
-    PR_FILLED_TRIANGLE      = 4'h1
-} pr_shapes_t;
-
 `ifdef MODE_640x400     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x400_75  // 31.500 MHz (requested), 31.500 MHz (achieved)
 `elsif MODE_640x480     // 25.175 MHz (requested), 25.125 MHz (achieved)

@@ -217,18 +217,6 @@ static void swapf(float *a, float *b)
     *b = c;
 }
 
-static void draw_filled_rectangle(Coord2 coord, int color)
-{
-    wait_pr_done();
-
-    xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDX1 | ((int)(coord.x2) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COLOR | color);
-    xm_setw(WR_PR_CMD, PR_EXECUTE | PR_FILLED_RECTANGLE);
-}
-
 static void draw_filled_triangle(Coord3 coord, int color)
 {
     if (coord.y1 > coord.y3) {
@@ -255,7 +243,35 @@ static void draw_filled_triangle(Coord3 coord, int color)
     xm_setw(WR_PR_CMD, PR_COORDX2 | ((int)(coord.x3) & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COORDY2 | ((int)(coord.y3) & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COLOR | color);
-    xm_setw(WR_PR_CMD, PR_EXECUTE | PR_FILLED_TRIANGLE);
+    xm_setw(WR_PR_CMD, PR_EXECUTE);
+}
+
+static void draw_filled_rectangle(Coord2 coord, int color)
+{
+    if (coord.y1 > coord.y2) {
+        swapf(&coord.x1, &coord.x2);
+        swapf(&coord.y1, &coord.y2);
+    }
+    
+    wait_pr_done();
+    xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDX1 | ((int)(coord.x1) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDX2 | ((int)(coord.x2) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY2 | ((int)(coord.y2) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COLOR | color);
+    xm_setw(WR_PR_CMD, PR_EXECUTE);
+
+    wait_pr_done();
+    xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDX1 | ((int)(coord.x2) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY1 | ((int)(coord.y1) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDX2 | ((int)(coord.x2) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY2 | ((int)(coord.y2) & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COLOR | color);
+    xm_setw(WR_PR_CMD, PR_EXECUTE);    
 }
 
 // Color conversion

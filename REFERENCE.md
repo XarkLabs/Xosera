@@ -626,6 +626,5 @@ The following primitive shapes are available:
 
 | Data   | Name                     | Description
 ---------|--------------------------|------------
-| 0x0    | `PR_LINE`                | line
-| 0x1    | `PR_FILLED_RECTANGLE`    | filled rectangle
-| 0x2    | `PR_FILLED_TRIANGLE`     | filled triangle
+| 0x0    | `PR_FILLED_RECTANGLE`    | filled rectangle
+| 0x1    | `PR_FILLED_TRIANGLE`     | filled triangle

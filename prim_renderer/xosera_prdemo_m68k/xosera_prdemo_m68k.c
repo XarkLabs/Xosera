@@ -210,18 +210,6 @@ void wait_pr_done()
     } while(busy & 0x80);
 }
 
-static void draw_line(Coord2 coord, int color)
-{
-    wait_pr_done();
-
-    xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDX1 | ((int)(coord.x2) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COLOR | color);
-    xm_setw(WR_PR_CMD, PR_EXECUTE | PR_LINE);
-}
-
 static void draw_filled_rectangle(Coord2 coord, int color)
 {
     wait_pr_done();
@@ -421,6 +409,7 @@ void swap()
     }
 }
 
+/*
 void demo_lines()
 {
     const Coord2 coords[] = {{0, 0, 2, 4},   {0, 4, 2, 0},   {3, 4, 3, 0},      {3, 0, 5, 0},   {5, 0, 5, 4},
@@ -481,6 +470,7 @@ void demo_lines()
     delay(2000);
     fade_out();
 }
+*/
 
 typedef struct {
     int x, y;
@@ -639,7 +629,7 @@ void xosera_demo()
         // enable Copper
         xreg_setw(COPP_CTRL, 0x8000);        
 
-        demo_lines();
+        //demo_lines();
         demo_filled_rectangles(1000);
         demo_filled_triangles(1000);
 

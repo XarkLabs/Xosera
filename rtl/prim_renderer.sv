@@ -30,46 +30,25 @@ module prim_renderer(
     input  wire logic            clk
     );
 
-logic start_line;
 logic start_filled_rectangle;
 logic start_filled_triangle;
 logic signed [11:0] x0, y0, x1, y1, x2, y2;
 logic        [15:0] dest_addr;
 logic        [11:0] dest_height;
 logic signed [11:0] x, y;
-logic signed [11:0] x_line, y_line;
 logic signed [11:0] x_filled_rectangle, y_filled_rectangle;
 logic signed [11:0] x_filled_triangle, y_filled_triangle;
 logic         [7:0] color;
 logic drawing;
-logic drawing_line;
 logic drawing_filled_rectangle;
 logic drawing_filled_triangle;
-logic busy_line;
 logic busy_filled_rectangle;
 logic busy_filled_triangle;
 logic done;
-logic done_line;
 logic done_filled_rectangle;
 logic done_filled_triangle;
 
-always_comb busy_o = busy_line || busy_filled_rectangle || busy_filled_triangle;
-
-draw_line #(.CORDW(12)) draw_line (    // framebuffer coord width in bits
-    .clk(clk),                         // clock
-    .reset_i(reset_i),                 // reset
-    .start_i(start_line),              // start line rendering
-    .oe_i(oe_i),                       // output enable
-    .x0_i(x0),                         // point 0 - horizontal position
-    .y0_i(y0),                         // point 0 - vertical position
-    .x1_i(x1),                         // point 1 - horizontal position
-    .y1_i(y1),                         // point 1 - vertical position
-    .x_o(x_line),                      // horizontal drawing position
-    .y_o(y_line),                      // vertical drawing position
-    .drawing_o(drawing_line),          // line is drawing
-    .busy_o(busy_line),                // line drawing request in progress
-    .done_o(done_line)                 // line complete (high for one tick)
-    );
+always_comb busy_o = busy_filled_rectangle || busy_filled_triangle;
 
 draw_rectangle_fill #(.CORDW(12)) draw_rectangle_fill (     // framebuffer coord width in bits
     .clk(clk),                              // clock
@@ -106,12 +85,9 @@ draw_triangle_fill #(.CORDW(12)) draw_triangle_fill (     // framebuffer coord w
     );
 
 always_comb begin
-    drawing = drawing_line | drawing_filled_rectangle | drawing_filled_triangle;
-    done = done_line | done_filled_rectangle | done_filled_triangle;
-    if (drawing_line) begin
-        x = x_line;
-        y = y_line;
-    end else if (drawing_filled_rectangle) begin
+    drawing = drawing_filled_rectangle | drawing_filled_triangle;
+    done = done_filled_rectangle | done_filled_triangle;
+    if (drawing_filled_rectangle) begin
         x = x_filled_rectangle;
         y = y_filled_rectangle;
     end else begin
@@ -123,7 +99,6 @@ end
 always_ff @(posedge clk) begin
 
     if (reset_i) begin
-        start_line <= 0;
         start_filled_rectangle <= 0;
         start_filled_triangle <= 0;
         prim_rndr_vram_sel_o <= 0;
@@ -145,7 +120,6 @@ always_ff @(posedge clk) begin
             xv::PR_DEST_HEIGHT  : dest_height <= cmd_i[11:0];
             xv::PR_EXECUTE: begin
                 case(cmd_i[3:0])
-                    xv::PR_LINE             : start_line             <= 1;
                     xv::PR_FILLED_RECTANGLE : start_filled_rectangle <= 1;
                     xv::PR_FILLED_TRIANGLE  : start_filled_triangle  <= 1;
                     default: begin
@@ -177,7 +151,6 @@ always_ff @(posedge clk) begin
         prim_rndr_wr_o <= 0;
     end
 
-    if (start_line) start_line <= 0;
     if (start_filled_rectangle) start_filled_rectangle <= 0;
     if (start_filled_triangle) start_filled_triangle <= 0;
 end

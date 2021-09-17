@@ -128,9 +128,8 @@ typedef enum logic [3:0] {
 
 // Primitive renderer shapes
 typedef enum logic [3:0] {
-    PR_LINE                 = 4'h0,
-    PR_FILLED_RECTANGLE     = 4'h1,
-    PR_FILLED_TRIANGLE      = 4'h2
+    PR_FILLED_RECTANGLE     = 4'h0,
+    PR_FILLED_TRIANGLE      = 4'h1
 } pr_shapes_t;
 
 `ifdef MODE_640x400     // 25.175 MHz (requested), 25.125 MHz (achieved)

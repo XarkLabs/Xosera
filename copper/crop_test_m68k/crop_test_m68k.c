@@ -31,18 +31,12 @@
 #include "xosera_m68k_api.h"
 
 // Copper list
-const uint8_t  copper_list_len = 10;
-const uint16_t copper_list[]   = {
-    0x0028,
-    0x0002,        // wait  0, 40                   ; Wait for line 40, H position ignored
-    0x9010,
-    0x0075,        // mover 0x0075, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
-    0x01b8,
-    0x0002,        // wait  0, 440                  ; Wait for line 440, H position ignored
-    0x9010,
-    0x0080,        // mover 0x0080, PA_GFX_CTRL     ; Blank
-    0x0000,
-    0x0003        // nextf
+const uint32_t copper_list[] = {
+    COP_WAIT_V(40),                        // wait  0, 40                   ; Wait for line 40, H position ignored
+    COP_MOVER(0x0075, PA_GFX_CTRL),        // mover 0x0075, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
+    COP_WAIT_V(440),                       // wait  0, 440                  ; Wait for line 440, H position ignored
+    COP_MOVER(0x0080, PA_GFX_CTRL),        // mover 0x0080, PA_GFX_CTRL     ; Blank
+    COP_END()                              // nextf
 };
 
 void xosera_test()
@@ -51,9 +45,10 @@ void xosera_test()
 
     xm_setw(XR_ADDR, XR_COPPER_MEM);
 
-    for (uint8_t i = 0; i < copper_list_len; i++)
+    for (uint8_t i = 0; i < (sizeof(copper_list) / sizeof(uint32_t)); i++)
     {
-        xm_setw(XR_DATA, copper_list[i]);
+        xm_setw(XR_DATA, copper_list[i] >> 16);
+        xm_setw(XR_DATA, copper_list[i] & 0xffff);
     }
 
     xreg_setw(PA_LINE_LEN, 160);
@@ -70,4 +65,10 @@ void xosera_test()
 
     // wait for a key (so prints don't mess up screen)
     readchar();
+
+    // disable Copper
+    xreg_setw(COPP_CTRL, 0x0000);
+
+    // restore text mode
+    xosera_init(1);
 }

@@ -91,6 +91,8 @@
 			"localparam",
 			"LVCMOS",
 			"markdownlint",
+			"MOVEC",
+			"MOVEF",
 			"MOVEP",
 			"MPSSE",
 			"nettype",

@@ -10,13 +10,13 @@
 #include "copper.casm"
 
 copperlist:
-    mover 0x0065, PA_GFX_CTRL     ; First half of screen in 4-bpp + Hx2 + Vx2
-    movep 0x0ec6, 0xf             ; Palette entry 0xf from tut bitmap
+    mover PA_GFX_CTRL, 0x0065     ; First half of screen in 4-bpp + Hx2 + Vx2
+    movep 0xf, 0x0ec6             ; Palette entry 0xf from tut bitmap
 
     wait  0, 240, 0b00010         ; Wait for line 240, H position ignored
 
-    mover 0x3e80, PA_LINE_ADDR    ; Line start now at 16000
-    mover 0x0040, PA_GFX_CTRL     ; 1-bpp + Hx1 + Vx1
-    movep 0x0fff, 0xf             ; Palette entry 0xf to white for 1bpp bitmap
+    mover PA_LINE_ADDR, 0x3e80    ; Line start now at 16000
+    mover PA_GFX_CTRL, 0x0040     ; 1-bpp + Hx1 + Vx1
+    movep 0xf, 0x0fff             ; Palette entry 0xf to white for 1bpp bitmap
     nextf
 

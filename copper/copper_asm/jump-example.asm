@@ -17,17 +17,17 @@ copperlist:
 
     ; If here, we're above 320, so set blue
 
-    movep 0x000F, 0                   ; Make background blue
-    movep 0x0004, 0xA                 ; Make foreground dark blue
+    movep 0x0, 0x000F                 ; Make background blue
+    movep 0xA, 0x0004                 ; Make foreground dark blue
     nextf                             ; And we're done for this frame
 
 .gogreen:
-    movep 0x00F0, 0                   ; Make background green
-    movep 0x0040, 0xA                 ; Make foreground dark green
+    movep 0x0, 0x00F0                 ; Make background green
+    movep 0xA, 0x0040                 ; Make foreground dark green
     jmp   copperlist                  ; and restart
 
 .gored:
-    movep 0x0F00, 0                   ; Make background red
-    movep 0x0400, 0xA                 ; Make foreground dark red
+    movep 0x0, 0x0F00                 ; Make background red
+    movep 0xA, 0x0400                 ; Make foreground dark red
     jmp   copperlist                  ; and restart
 

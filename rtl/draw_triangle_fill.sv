@@ -26,9 +26,6 @@ module draw_triangle_fill #(parameter CORDW=16) (      // signed coordinate widt
     output      logic done_o                            // drawing is complete (high for one tick)
     );
 
-    // sorted input vertices
-    logic signed [CORDW-1:0] x0s, y0s, x1s, y1s, x2s, y2s;
-
     // line coordinates
     logic signed [CORDW-1:0] x0a, y0a, x1a, y1a, xa, ya;
     logic signed [CORDW-1:0] x0b, y0b, x1b, y1b, xb, yb;
@@ -51,72 +48,37 @@ module draw_triangle_fill #(parameter CORDW=16) (      // signed coordinate widt
     logic busy_p1, done_p1;
 
     // draw state machine
-    enum {IDLE, SORT_0, SORT_1, SORT_2, INIT_A, INIT_B0, INIT_B1, INIT_H,
+    enum {IDLE, INIT_A, INIT_B0, INIT_B1, INIT_H,
           START_A, START_B, START_H, EDGE, H_LINE, DONE} state;
 
     always_ff @(posedge clk) begin
         case (state)
-            SORT_0: begin
-                state <= SORT_1;
-                if (y0_i > y2_i) begin
-                    x0s <= x2_i;
-                    y0s <= y2_i;
-                    x2s <= x0_i;
-                    y2s <= y0_i;
-                end else begin
-                    x0s <= x0_i;
-                    y0s <= y0_i;
-                    x2s <= x2_i;
-                    y2s <= y2_i;
-                end
-            end
-            SORT_1: begin
-                state <= SORT_2;
-                if (y0s > y1_i) begin
-                    x0s <= x1_i;
-                    y0s <= y1_i;
-                    x1s <= x0s;
-                    y1s <= y0s;
-                end else begin
-                    x1s <= x1_i;
-                    y1s <= y1_i;
-                end
-            end
-            SORT_2: begin
-                state <= INIT_A;
-                if (y1s > y2s) begin
-                    x1s <= x2s;
-                    y1s <= y2s;
-                    x2s <= x1s;
-                    y2s <= y1s;
-                end
-            end
             INIT_A: begin
                 state <= INIT_B0;
-                x0a <= x0s;
-                y0a <= y0s;
-                x1a <= x2s;
-                y1a <= y2s;
-                prev_xa <= x0s;
-                prev_xb <= x0s;
+                x0a <= x0_i;
+                y0a <= y0_i;
+                x1a <= x2_i;
+                y1a <= y2_i;
+                prev_xa <= x0_i;
+                prev_xb <= x0_i;
             end
             INIT_B0: begin
                 state <= START_A;
                 b_edge <= 0;
-                x0b <= x0s;
-                y0b <= y0s;
-                x1b <= x1s;
-                y1b <= y1s;
-                prev_y <= y0s;
+                x0b <= x0_i;
+                y0b <= y0_i;
+                x1b <= x1_i;
+                y1b <= y1_i;
+                prev_y <= y0_i;
             end
             INIT_B1: begin
                 state <= START_B;   // we don't need to start A again
                 b_edge <= 1;
-                x0b <= x1s;
-                y0b <= y1s;
-                x1b <= x2s;
-                y1b <= y2s;
-                prev_y <= y1s;
+                x0b <= x1_i;
+                y0b <= y1_i;
+                x1b <= x2_i;
+                y1b <= y2_i;
+                prev_y <= y1_i;
             end
             START_A: state <= START_B;
             START_B: state <= EDGE;
@@ -145,7 +107,7 @@ module draw_triangle_fill #(parameter CORDW=16) (      // signed coordinate widt
             end
             default: begin  // IDLE
                 if (start_i) begin
-                    state <= SORT_0;
+                    state <= INIT_A;
                     busy_p1 <= 1;
                 end
                 done_p1 <= 0;

@@ -222,9 +222,31 @@ static void draw_filled_rectangle(Coord2 coord, int color)
     xm_setw(WR_PR_CMD, PR_EXECUTE | PR_FILLED_RECTANGLE);
 }
 
+static void swapf(float *a, float *b)
+{
+    float c = *a;
+    *a = *b;
+    *b = c;
+}
+
 static void draw_filled_triangle(Coord3 coord, int color)
 {
     wait_pr_done();
+
+    if (coord.y1 > coord.y3) {
+        swapf(&coord.x1, &coord.x3);
+        swapf(&coord.y1, &coord.y3);
+    }
+
+    if (coord.y1 > coord.y2) {
+        swapf(&coord.x1, &coord.x2);
+        swapf(&coord.y1, &coord.y2);
+    }
+
+    if (coord.y2 > coord.y3) {
+        swapf(&coord.x2, &coord.x3);
+        swapf(&coord.y2, &coord.y3);
+    }
 
     xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));

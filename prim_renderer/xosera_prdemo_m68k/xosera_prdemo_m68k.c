@@ -80,7 +80,7 @@ const uint16_t copper_list[] = {
     0x0028, 0x0002, // wait  0, 40                   ; Wait for line 40, H position ignored
     0x9010, 0x0075, // mover 0x0075, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
     0x01b8, 0x0002, // wait  0, 440                  ; Wait for line 440, H position ignored
-    0x9010, 0x0080, // mover 0x0080, PA_GFX_CTRL     ; Blank
+    0x9010, 0x00F5, // mover 0x00F5, PA_GFX_CTRL     ; Blank
     0x0000, 0x0003  // nextf
 };
 

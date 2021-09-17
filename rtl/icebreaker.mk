@@ -51,7 +51,7 @@ VIDEO_MODE ?= MODE_848x480
 #
 VIDEO_OUTPUT ?= PMOD_1B2_DVI12
 
-FONTFILES := $(wildcard ../fonts/*.mem)
+FONTFILES := $(wildcard tilesets/*.mem)
 
 # RTL source and include directory
 SRCDIR := .

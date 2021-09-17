@@ -31,9 +31,9 @@ initial begin
         memory[i] = 16'hdead;    // "garbage"
     end
 
-    $readmemb("fonts/font_ST_8x16w.mem", memory, 16'hf000);
-    $readmemb("fonts/font_ST_8x8w.mem", memory, 16'hf800);
-    $readmemb("fonts/hexfont_8x8w.mem", memory, 16'hfc00);
+    $readmemb("tilesets/font_ST_8x16w.mem", memory, 16'hf000);
+    $readmemb("tilesets/font_ST_8x8w.mem", memory, 16'hf800);
+    $readmemb("tilesets/ANSI_PC_8x8w.mem", memory, 16'hfc00);
 
 end
 

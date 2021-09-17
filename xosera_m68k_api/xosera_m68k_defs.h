@@ -109,12 +109,12 @@
 #define MAKE_HV_SCROLL(h_scrl, v_scrl)             (XB_(h_scrl, 12, 8) | XB_(v_scrl, 5, 0))
 
 // Copper instruction helper macros
-#define COP_WAIT_HV(h_pos, v_pos)   (0x00000000 | XB_((uint32_t)(v_pos), 26, 16) | (XB_((uint32_t)(h_pos)), 14, 4))
+#define COP_WAIT_HV(h_pos, v_pos)   (0x00000000 | XB_((uint32_t)(v_pos), 26, 16) | XB_((uint32_t)(h_pos), 14, 4))
 #define COP_WAIT_H(h_pos)           (0x00000001 | XB_((uint32_t)(h_pos), 14, 4))
 #define COP_WAIT_V(v_pos)           (0x00000002 | XB_((uint32_t)(v_pos), 26, 16))
 #define COP_WAIT_F()                (0x00000003)
 #define COP_END()                   (0x00000003)
-#define COP_SKIP_HV(h_pos, v_pos)   (0x20000000 | XB_((uint32_t)(v_pos), 26, 16) | (XB_((uint32_t)(h_pos)), 14, 4))
+#define COP_SKIP_HV(h_pos, v_pos)   (0x20000000 | XB_((uint32_t)(v_pos), 26, 16) | XB_((uint32_t)(h_pos), 14, 4))
 #define COP_SKIP_H(h_pos)           (0x20000001 | XB_((uint32_t)(h_pos), 14, 4))
 #define COP_SKIP_V(v_pos)           (0x20000002 | XB_((uint32_t)(v_pos), 26, 16))
 #define COP_SKIP_F()                (0x20000003 | XB_((uint32_t)(0), 14, 4))

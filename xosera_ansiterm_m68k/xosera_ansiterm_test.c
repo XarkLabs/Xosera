@@ -38,6 +38,8 @@
 #define _NOINLINE __attribute__((noinline))
 #endif
 
+#include "us-fishoe.h"
+
 #if DEBUG
 static void dputc(char c)
 {
@@ -237,6 +239,22 @@ static int ansiterm_echotest()
     }
 }
 
+static int ansiterm_arttest()
+{
+    tputs("\x1b[?3l");              // 80x30
+    tprintf("\x1b*");               // ANSI_PC_8x8 font
+    tprintf("\f\n\n\n\n\n");        // cls & vertical center
+    tputs((char *)us_fishoe);
+
+    char c = ansiterm_waitchar();
+
+    if (c == 1)        // ^A exit for kermit
+    {
+        return -1;
+    }
+    return 0;
+}
+
 static void ansiterm_testmenu()
 {
     while (true)
@@ -247,7 +265,9 @@ static void ansiterm_testmenu()
         tprintf("\n");
         tprintf("  A - ANSI color attribute test.\n");
         tprintf("  B - Fast spam test\n");
-        tprintf("  C - Echo test\n\n");
+        tprintf("  C - Echo test\n");
+        tprintf("  D - ANSI art test\n");
+        tprintf("\n");
         tprintf(" ^A - Warm boot exit\n");
         tprintf(" ^C - Returns to this menu\n");
         tprintf("\n");
@@ -279,6 +299,12 @@ static void ansiterm_testmenu()
                     xansiterm_putchar(c);
                     xansiterm_putchar('\n');
                     res = ansiterm_echotest();
+                    break;
+                case 'D':
+                case 'd':
+                    xansiterm_putchar(c);
+                    xansiterm_putchar('\n');
+                    res = ansiterm_arttest();
                     break;
                 default:
                     break;
@@ -312,6 +338,11 @@ void xosera_ansiterm()
 {
     xosera_init(1);
     xansiterm_init();
+#if 0        // ctrl-PASSTHRU test
+    xansiterm_putchar((char)0x9b);
+    xansiterm_putchar('8');
+    xansiterm_putchar('m');
+#endif
     while (true)
     {
         char c = ansiterm_waitchar();

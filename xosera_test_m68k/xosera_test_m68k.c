@@ -27,9 +27,9 @@
 #include <sdfat.h>
 
 //#define DELAY_TIME 15000        // slow human speed
-#define DELAY_TIME 5000        // human speed
-//#define DELAY_TIME 1000        // impatient human speed
-//#define DELAY_TIME 100        // machine speed
+//#define DELAY_TIME 5000        // human speed
+#define DELAY_TIME 1000        // impatient human speed
+//#define DELAY_TIME 500        // machine speed
 
 #define COPPER_TEST 1
 
@@ -70,94 +70,108 @@ uint16_t def_colors[256] = {
 
 #if COPPER_TEST
 // Copper list
-const uint16_t copper_list[] = {
-    0xb000,
-    0x0000,        // movep 0, 0x0F00          ; Make color 0 red
-                   //
-    30 * 1,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0111,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 2,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0222,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 3,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0333,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 4,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0444,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 5,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0555,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 6,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0666,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 7,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0777,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 8,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0888,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 9,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0999,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 10,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0AAA,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 11,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0BBB,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 12,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0ccc,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 13,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0ddd,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 14,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0eee,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 15,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0fff,        // movep 0, 0x00F0          ; Make color 0 green
-    //
-    30 * 16,
-    0x0002,        // wait  0, 160, 0b000010   ; Wait for line 160, ignore X position
-    0xb000,
-    0x0000,        // movep 0, 0x00F0          ; Make color 0 green
+const uint32_t copper_list[] = {
+    // change color 0 every 30 lines
+    COP_WAIT_V(30 * 0),
+    // color dot test
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
+    COP_MOVEP(0xfff, 0),
+    COP_MOVEP(0x000, 0),
 
-    // end
-    0x0000,
-    0x0003        // wait  0, 0, 0b000011     ; Wait for next frame
-};
+    COP_WAIT_V(30 * 1),
+    COP_MOVEP(0x111, 0),
+    COP_WAIT_V(30 * 2),
+    COP_MOVEP(0x222, 0),
+    COP_WAIT_V(30 * 3),
+    COP_MOVEP(0x333, 0),
+    COP_WAIT_V(30 * 4),
+    COP_MOVEP(0x444, 0),
+    COP_WAIT_V(30 * 5),
+    COP_MOVEP(0x555, 0),
+    COP_WAIT_V(30 * 6),
+    COP_MOVEP(0x666, 0),
+    COP_WAIT_V(30 * 7),
+    COP_MOVEP(0x777, 0),
+    COP_WAIT_V(30 * 8),
+    COP_MOVEP(0x888, 0),
+    COP_WAIT_V(30 * 9),
+    COP_MOVEP(0x999, 0),
+    COP_WAIT_V(30 * 10),
+    COP_MOVEP(0xaaa, 0),
+    COP_WAIT_V(30 * 11),
+    COP_MOVEP(0xbbb, 0),
+    COP_WAIT_V(30 * 12),
+    COP_MOVEP(0xccc, 0),
+    COP_WAIT_V(30 * 13),
+    COP_MOVEP(0xddd, 0),
+    COP_WAIT_V(30 * 14),
+    COP_MOVEP(0xeee, 0),
+    COP_WAIT_V(30 * 15),
+    COP_MOVEP(0xfff, 0),
+    COP_WAIT_V(30 * 16),
+    COP_END()};
+
 const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
 
 static_assert(NUM_ELEMENTS(copper_list) < 1024, "copper list too long");
@@ -650,7 +664,8 @@ void     xosera_test()
 
     for (uint16_t i = 0; i < copper_list_len; i++)
     {
-        xm_setw(XR_DATA, copper_list[i]);
+        xm_setw(XR_DATA, copper_list[i] >> 16);
+        xm_setw(XR_DATA, copper_list[i] & 0xffff);
     }
 
     dprintf("okay\n");

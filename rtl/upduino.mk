@@ -51,7 +51,7 @@ VIDEO_MODE ?= MODE_848x480
 #   PMOD_DIGILENT_VGA   12-bit VGA, PMOD 1A&1B  https://store.digilentinc.com/pmod-vga-video-graphics-array/
 VIDEO_OUTPUT ?= PMOD_DIGILENT_VGA
 
-FONTFILES := $(wildcard ../fonts/*.mem)
+FONTFILES := $(wildcard tilesets/*.mem)
 
 # RTL source and include directory
 SRCDIR := .

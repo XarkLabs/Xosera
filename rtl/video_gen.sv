@@ -706,8 +706,8 @@ always_ff @(posedge clk) begin
             pa_tile_y       <= 4'b0;                    // reset tile_y to restart new text line
         end
 
-        // end of frame / before next frame
-        if (last_frame_pixel) begin                   // if last pixel of frame
+        // end of frame or blanked, prepare for next frame
+        if (pa_blank || last_frame_pixel) begin                   // if last pixel of frame
             pa_addr         <= pa_start_addr;           // set start of display data
             pa_line_start   <= pa_start_addr;           // set line to start of display data
 

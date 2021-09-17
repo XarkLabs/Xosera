@@ -35,7 +35,7 @@ const uint32_t copper_list[] = {
     COP_WAIT_V(40),                        // wait  0, 40                   ; Wait for line 40, H position ignored
     COP_MOVER(0x0075, PA_GFX_CTRL),        // mover 0x0075, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
     COP_WAIT_V(440),                       // wait  0, 440                  ; Wait for line 440, H position ignored
-    COP_MOVER(0x0080, PA_GFX_CTRL),        // mover 0x0080, PA_GFX_CTRL     ; Blank
+    COP_MOVER(0x00F5, PA_GFX_CTRL),        // mover 0x0080, PA_GFX_CTRL     ; Blank
     COP_END()                              // nextf
 };
 

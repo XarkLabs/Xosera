@@ -26,18 +26,7 @@ module draw_line #(parameter CORDW=10) (                // framebuffer coord wid
     );
 
     // line properties
-    logic swap;     // swap points to ensure y1 >= y0
     logic right;    // drawing direction;
-    logic signed [CORDW-1:0] xa, ya;        // start point
-    logic signed [CORDW-1:0] xb, yb;        // end point
-    logic signed [CORDW-1:0] x_end, y_end;  // register end point
-    always_comb begin
-        swap = (y0_i > y1_i);   // swap points if y0 is below y1
-        xa = swap ? x1_i : x0_i;
-        xb = swap ? x0_i : x1_i;
-        ya = swap ? y1_i : y0_i;
-        yb = swap ? y0_i : y1_i;
-    end
 
     // error values
     logic signed [CORDW:0] err;         // a bit wider as signed
@@ -56,7 +45,7 @@ module draw_line #(parameter CORDW=10) (                // framebuffer coord wid
         case (state)
             DRAW: begin
                 if (oe_i) begin
-                    if (x_o == x_end && y_o == y_end) begin
+                    if (x_o == x1_i && y_o == y1_i) begin
                         state <= IDLE;
                         busy_o <= 0;
                         done_o <= 1;
@@ -79,22 +68,20 @@ module draw_line #(parameter CORDW=10) (                // framebuffer coord wid
             end
             INIT_0: begin
                 state <= INIT_1;
-                dx <= right ? xb - xa : xa - xb;    // dx = abs(xb - xa)
-                dy <= ya - yb;                      // dy = -abs(yb - ya)
+                dx <= right ? x1_i - x0_i : x0_i - x1_i;    // dx = abs(x1_i - x0_i)
+                dy <= y0_i - y1_i;                          // dy = y0_i - y1_i
             end
             INIT_1: begin
                 state <= DRAW;
                 err <= dx + dy;
-                x_o <= xa;
-                y_o <= ya;
-                x_end <= xb;
-                y_end <= yb;
+                x_o <= x0_i;
+                y_o <= y0_i;
             end
             default: begin  // IDLE
                 done_o <= 0;
                 if (start_i) begin
                     state <= INIT_0;
-                    right <= (xa < xb);     // draw right to left?
+                    right <= (x0_i < x1_i);     // draw right to left?
                     busy_o <= 1;
                 end
             end

@@ -219,8 +219,8 @@ always_ff @(posedge clk) begin
                     pa_blank        <= vgen_reg_data_i[7];
                     pa_bitmap       <= vgen_reg_data_i[6];
                     pa_bpp          <= vgen_reg_data_i[5:4];
-                    pa_v_repeat     <= vgen_reg_data_i[3:2];
-                    pa_h_repeat     <= vgen_reg_data_i[1:0];
+                    pa_h_repeat     <= vgen_reg_data_i[3:2];
+                    pa_v_repeat     <= vgen_reg_data_i[1:0];
                 end
                 xv::XR_PA_TILE_CTRL[4:0]: begin
                     pa_tile_bank    <= vgen_reg_data_i[15:10];

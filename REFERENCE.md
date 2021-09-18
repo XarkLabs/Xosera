@@ -72,7 +72,7 @@ instructions.
 
 ## Xosera Main Register Details (XM Registers)
 
-**0x0 `XM_XR_DATA` (R/W+) - eXtended Register / eXtended Region Address**
+**0x0 `XM_XR_ADDR` (R/W+) - eXtended Register / eXtended Region Address**
 <img src="./pics/wd_XM_XR_ADDR.svg">  
 **Extended register or memory address for data accessed via `XM_XR_DATA`**  
 Specifies the XR register or address to be accessed via `XM_XR_DATA`.

@@ -630,6 +630,10 @@ void xosera_demo()
     xosera_init(0);
 
 #if INTERRUPTS_AVAIL
+    // Set the Xosera interrupt mask
+    uint16_t sc = xm_getw(SYS_CTRL);
+    xm_setw(SYS_CTRL, sc | 0x8);
+
     install_intr();
 #endif    
 

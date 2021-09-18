@@ -87,6 +87,7 @@
 			"LEDR",
 			"LEDs",
 			"LFOSC",
+			"LFSR",
 			"libftdi",
 			"localparam",
 			"LVCMOS",

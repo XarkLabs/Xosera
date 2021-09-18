@@ -35,8 +35,6 @@ extern void remove_intr(void);
 
 extern volatile uint32_t XFrameCount;
 
-uint16_t vram_buffer[64 * 1024];
-
 // timer helpers
 static uint32_t start_tick;
 
@@ -138,164 +136,65 @@ void wait_vsync()
     while (xreg_getw(SCANLINE) < 0x8000)
         ;
 }
-#define LEFT
-int test_vram_LFSR_fast()
+
+// VRAM test
+uint16_t vram_buffer[64 * 1024];
+
+#define MODEFLAG_FAST  0x8000
+#define MODEFLAG_LFSR  0x4000
+#define MODEFLAG_BAD   0x2000
+#define MODEFLAG_WRITE 0x1000
+#define MODEFLAG_READ  0x0800
+
+int vram_test_fails = 0;
+
+struct fail_info
 {
-    int      LFSR_errors = 0;
-    uint16_t start_state;
-    do
-    {
-        start_state = xm_getw(TIMER);
-    } while (start_state == 0);
-    uint16_t lfsr = start_state;
+    uint16_t addr;
+    uint16_t data;
+    uint16_t expected;
+    uint16_t mode;
+    uint16_t count;
+};
 
-    dprintf("FAST LFSR VRAM scroll test .\n");
-    LFSR_errors = 0;
+int              next_fail;
+struct fail_info fails[64 * 1024];
 
-    dprintf(" ... FAST Filling VRAM with LFSR pattern\n");
-    xm_setw(WR_INCR, 0x0001);
-    xm_setw(WR_ADDR, 0x0000);
-    for (int addr = 0; addr < 0x10000; addr++)
-    {
-#ifndef LEFT
-        unsigned lsb = lfsr & 1u; /* Get LSB (i.e., the output bit). */
-        lfsr >>= 1;               /* Shift register */
-        if (lsb)                  /* If the output bit is 1, */
-            lfsr ^= 0xB400u;      /*  apply toggle mask. */
-#else
-        unsigned msb = (int16_t)lfsr < 0; /* Get MSB (i.e., the output bit). */
-        lfsr <<= 1;                       /* Shift register */
-        if (msb)                          /* If the output bit is 1, */
-            lfsr ^= 0x002Du;              /*  apply toggle mask. */
-#endif
-        vram_buffer[addr] = lfsr;
-        xm_setw(DATA, lfsr);
-    }
+#define VRAM_WR_DELAY() mcBusywait(1)
+#define VRAM_RD_DELAY() mcBusywait(1)
 
-    if (checkchar())
-    {
-        return 0;
-    }
+#define EXIT_ON_KEYPRESS()                                                                                             \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        if (checkchar())                                                                                               \
+            return -1;                                                                                                 \
+    } while (false)
 
-    dprintf(" ... FAST Verifying all of VRAM matches original LFSR pattern\n");
-    xm_setw(RD_INCR, 0x0000);
-    int retries = 0;
-    for (int addr = 0; addr < 0x10000; addr++)
+void add_fail(uint16_t addr, uint16_t data, uint16_t expected, uint16_t mode_flags)
+{
+    struct fail_info fi;
+    fi.addr     = addr;
+    fi.data     = data;
+    fi.expected = expected;
+    fi.mode     = (xreg_getw(PA_GFX_CTRL) & 0x00ff) | mode_flags;
+    fi.count    = 0;
+
+    struct fail_info * fip;
+    for (int i = 0; i < next_fail; i++)
     {
-        uint16_t data;
-        do
+        fip = &fails[i];
+        if (fi.addr == fip->addr && fi.data == fip->data && fi.expected == fip->expected && fi.mode == fip->mode)
         {
-            xm_setw(RD_ADDR, addr);
-            data = xm_getw(DATA);
-
-            if (vram_buffer[addr] != data)
-            {
-                xm_setw(RD_ADDR, addr);
-                if (++retries < 10)
-                {
-                    continue;
-                }
-            }
-            break;
-        } while (true);
-        if (retries)
-        {
-            if (++LFSR_errors < 10)
-            {
-                dprintf("*** FAST %s MISMATCH:  VRAM[0x%04x] has 0x%04x, LFSR[%04x] is 0x%04x [Error %d]\n",
-                        retries >= 10 ? "WRITE" : "READ",
-                        addr,
-                        data,
-                        addr,
-                        vram_buffer[addr],
-                        LFSR_errors);
-            }
-            retries = 0;
+            fip->count++;
+            return;
         }
     }
-    dprintf(" ... FAST VRAM LFSR pattern verified.\n");
-
-    if (checkchar())
-    {
-        return 0;
-    }
-
-    dprintf(" ... FAST Scrolling all of VRAM\n");
-
-    xm_setw(RD_INCR, 0x0001);
-    xm_setw(RD_ADDR, 0x0000);
-    xm_setw(WR_INCR, 0x0001);
-    xm_setw(WR_ADDR, 0xffff);
-    for (int addr = 0; addr < 0x10000; addr++)
-    {
-        uint16_t data = xm_getw(DATA);
-        xm_setw(DATA, data);
-    }
-
-    if (checkchar())
-    {
-        return 0;
-    }
-
-#if 0        // trust, yet verify
-    xm_setw(WR_ADDR, 1234);
-    xm_setw(DATA, 7);
-#endif
-
-    dprintf(" ... FAST Verifying all of VRAM matches original LFSR pattern\n");
-
-    xm_setw(RD_INCR, 0x0000);
-    retries = 0;
-    for (int addr = 0; addr < 0x10000; addr++)
-    {
-        uint16_t data;
-        do
-        {
-            xm_setw(RD_ADDR, (addr - 1) & 0xffff);
-            data = xm_getw(DATA);
-            if (vram_buffer[addr] != data)
-            {
-                if (++retries < 10)
-                {
-                    continue;
-                }
-            }
-            break;
-        } while (true);
-        if (retries)
-        {
-            if (++LFSR_errors < 10)
-            {
-                dprintf("*** FAST %s MISMATCH:  VRAM[0x%04x] has 0x%04x, LFSR[0x%04x] is 0x%04x [Error %d]\n",
-                        retries >= 10 ? "WRITE" : "READ",
-                        ((addr - 1)) & 0xffff,
-                        data,
-                        addr,
-                        vram_buffer[addr],
-                        LFSR_errors);
-            }
-            retries = 0;
-        }
-    }
-
-    if (LFSR_errors)
-    {
-        dprintf(" BAD FAST LFSR VRAM scroll testFAILED: %d errors.\n", LFSR_errors);
-    }
-    else
-    {
-        dprintf(" Ok! FAST VRAM LFSR pattern verified after scroll.\n");
-    }
-
-    return LFSR_errors;
+    fip  = &fails[next_fail++];
+    *fip = fi;
 }
 
-#define VRAM_WR_DELAY() mcBusywait(10)
-#define VRAM_RD_DELAY() mcBusywait(10)
-
-int test_vram_LFSR()
+void fill_LFSR()
 {
-    int      LFSR_errors = 0;
     uint16_t start_state;
     do
     {
@@ -303,146 +202,230 @@ int test_vram_LFSR()
     } while (start_state == 0);
     uint16_t lfsr = start_state;
 
-    dprintf("LFSR VRAM scroll test.\n");
-    LFSR_errors = 0;
-
-    dprintf(" ... Filling VRAM with LFSR pattern\n");
-    xm_setw(WR_INCR, 0x0000);
-    xm_setw(WR_ADDR, 0x0000);
-    for (int addr = 0; addr < 0x10000; addr++)
+    for (int i = 0; i < 0xffff; i++)
     {
-#ifndef LEFT
-        unsigned lsb = lfsr & 1u; /* Get LSB (i.e., the output bit). */
-        lfsr >>= 1;               /* Shift register */
-        if (lsb)                  /* If the output bit is 1, */
-            lfsr ^= 0xB400u;      /*  apply toggle mask. */
-#else
         unsigned msb = (int16_t)lfsr < 0; /* Get MSB (i.e., the output bit). */
         lfsr <<= 1;                       /* Shift register */
         if (msb)                          /* If the output bit is 1, */
             lfsr ^= 0x002Du;              /*  apply toggle mask. */
-#endif
-        vram_buffer[addr] = lfsr;
-        xm_setw(WR_ADDR, addr);
-        xm_setw(DATA, lfsr);
-        VRAM_WR_DELAY();
+        vram_buffer[i] = lfsr;
     }
+    // swap last lfsr and zero (to keep zero in the mix)
+    vram_buffer[0xffff] = vram_buffer[lfsr];
+    vram_buffer[lfsr]   = 0;
+}
 
-    if (checkchar())
+void fill_ADDR()
+{
+    for (int addr = 0; addr < 0x10000; addr++)
     {
-        return 0;
+        vram_buffer[addr] = addr;
     }
+}
 
-    dprintf(" ... Verifying all of VRAM matches original LFSR pattern\n");
-    xm_setw(RD_INCR, 0x0000);
+int vram_retry(uint16_t addr, uint16_t baddata, bool LFSR, bool fast)
+{
     int retries = 0;
-    for (int addr = 0; addr < 0x10000; addr++)
-    {
-        uint16_t data;
-        do
-        {
-            xm_setw(RD_ADDR, addr);
-            VRAM_RD_DELAY();
-            data = xm_getw(DATA);
-            if (vram_buffer[addr] != data)
-            {
-                xm_setw(RD_ADDR, addr);
-                VRAM_RD_DELAY();
-                if (++retries < 10)
-                {
-                    continue;
-                }
-            }
-            break;
-        } while (true);
-        if (retries)
-        {
-            if (++LFSR_errors < 10)
-            {
-                dprintf("*** %s MISMATCH:  VRAM[0x%04x] has 0x%04x, LFSR[0x%04x] was 0x%04x [Error %d]\n",
-                        retries >= 10 ? "WRITE" : "READ",
-                        addr,
-                        data,
-                        addr,
-                        vram_buffer[addr],
-                        LFSR_errors);
-            }
-            retries = 0;
-        }
-    }
-    dprintf(" ... VRAM LFSR pattern verified.\n");
-
-    if (checkchar())
-    {
-        return 0;
-    }
-
-    dprintf(" ... Scrolling all of VRAM\n");
-
-    xm_setw(RD_INCR, 0x0000);
-    xm_setw(WR_INCR, 0x0001);
-    xm_setw(WR_ADDR, 0xffff);
-    for (int addr = 0; addr < 0x10000; addr++)
+    int rc      = 0;
+    // see if slow read retry will read it correctly (if not, assume
+    // it was a write error)
+    uint16_t data = ~vram_buffer[addr];
+    while (++retries < 10)
     {
         xm_setw(RD_ADDR, addr);
         VRAM_RD_DELAY();
-        uint16_t data = xm_getw(DATA);
-        xm_setw(DATA, data);
-        VRAM_WR_DELAY();
-    }
-
-    if (checkchar())
-    {
-        return 0;
-    }
-
-    dprintf(" ... Verifying all of VRAM matches original LFSR pattern\n");
-
-    xm_setw(RD_INCR, 0x0000);
-    retries = 0;
-    for (int addr = 0; addr < 0x10000; addr++)
-    {
-        uint16_t data;
-        do
+        data = xm_getw(DATA);
+        if (data == vram_buffer[addr])
         {
-            xm_setw(RD_ADDR, (addr - 1) & 0xffff);
-            VRAM_RD_DELAY();
-            data = xm_getw(DATA);
-            if (vram_buffer[addr] != data)
-            {
-                if (++retries < 10)
-                {
-                    continue;
-                }
-            }
+            add_fail(addr,
+                     baddata,
+                     vram_buffer[addr],
+                     MODEFLAG_READ | (fast ? MODEFLAG_FAST : 0) | (LFSR ? MODEFLAG_LFSR : 0));
+            rc = 0;        // read error
             break;
-        } while (true);
-        if (retries)
-        {
-            if (++LFSR_errors < 10)
-            {
-                dprintf("*** %s MISMATCH:  VRAM[0x%04x] has 0x%04x, LFSR[0x%04x] was 0x%04x [Error %d]\n",
-                        retries >= 10 ? "WRITE" : "READ",
-                        ((addr - 1)) & 0xffff,
-                        data,
-                        addr,
-                        vram_buffer[addr],
-                        LFSR_errors);
-            }
-            retries = 0;
         }
     }
 
-    if (LFSR_errors)
+    // try to correct VRAM
+    if (data != vram_buffer[addr])
     {
-        dprintf(" BAD LFSR VRAM scroll test FAILED: %d errors.\n", LFSR_errors);
+        for (retries = 0; retries < 10; retries++)
+        {
+            xm_setw(WR_ADDR, addr);
+            xm_setw(DATA, vram_buffer[addr]);
+            VRAM_WR_DELAY();
+            xm_setw(RD_ADDR, addr);
+            VRAM_RD_DELAY();
+            data = xm_getw(DATA);
+            if (data == vram_buffer[addr])
+            {
+                add_fail(addr,
+                         baddata,
+                         vram_buffer[addr],
+                         MODEFLAG_WRITE | (fast ? MODEFLAG_FAST : 0) | (LFSR ? MODEFLAG_LFSR : 0));
+                rc = 1;        // correctable write error
+                break;
+            }
+        }
+    }
+
+    if (data != vram_buffer[addr])
+    {
+        add_fail(
+            addr, baddata, vram_buffer[addr], MODEFLAG_BAD | (fast ? MODEFLAG_FAST : 0) | (LFSR ? MODEFLAG_LFSR : 0));
+        rc = -1;        // uncorrectable error
+    }
+
+    if (++vram_test_fails <= 10)
+    {
+        dprintf("*** MISMATCH %s: VRAM[0x%04x]=0x%04x vs data[%04x]=0x%04x [Error #%d]\n",
+                rc < 0   ? "BAD!"
+                : rc > 0 ? "WRITE"
+                         : "READ",
+                addr,
+                baddata,
+                addr,
+                vram_buffer[addr],
+                vram_test_fails);
+    }
+
+    xm_setw(RD_ADDR, addr + 1);
+    xm_setw(WR_ADDR, addr + 1);
+
+    return rc;
+}
+
+int verify_vram(bool LFSR, bool fast)
+{
+    int vram_errs = 0;
+    if (fast)
+    {
+        xm_setw(RD_INCR, 0x0001);
+        xm_setw(RD_ADDR, 0x0000);
+
+        for (int addr = 0; addr < 0x10000; addr++)
+        {
+            uint16_t data = xm_getw(DATA);
+            if (data != vram_buffer[addr])
+            {
+                vram_retry(addr, data, LFSR, fast);
+                vram_errs++;
+            }
+        }
     }
     else
     {
-        dprintf(" Ok! VRAM LFSR pattern verified after scroll.\n");
+        xm_setw(RD_INCR, 0x0000);
+
+        for (int addr = 0; addr < 0x10000; addr++)
+        {
+            xm_setw(RD_ADDR, addr);
+            VRAM_RD_DELAY();
+            uint16_t data = xm_getw(DATA);
+            if (data != vram_buffer[addr])
+            {
+                vram_retry(addr, data, LFSR, fast);
+                vram_errs++;
+            }
+        }
     }
 
-    return LFSR_errors;
+    return vram_errs;
+}
+
+int test_vram(bool LFSR, bool fast)
+{
+    xv_prep();
+
+    int vram_errs = 0;
+
+    dprintf(
+        "  > VRAM test (mode=0x%04x %s %s)\n", xreg_getw(PA_GFX_CTRL), LFSR ? "LFSR" : "ADDR", fast ? "Fast" : "Slow");
+
+    // generate vram_buffer data
+    if (LFSR)
+    {
+        fill_LFSR();
+    }
+    else
+    {
+        fill_ADDR();
+    }
+    EXIT_ON_KEYPRESS();
+
+    // fill VRAM with vram_buffer
+    if (fast)
+    {
+        xm_setw(WR_INCR, 0x0001);
+        xm_setw(WR_ADDR, 0x0000);
+
+        for (int addr = 0; addr < 0x10000; addr++)
+        {
+            xm_setw(DATA, vram_buffer[addr]);
+        }
+    }
+    else
+    {
+        xm_setw(WR_INCR, 0x0000);
+
+        for (int addr = 0; addr < 0x10000; addr++)
+        {
+            xm_setw(WR_ADDR, addr);
+            xm_setw(DATA, vram_buffer[addr]);
+            VRAM_WR_DELAY();
+        }
+    }
+    EXIT_ON_KEYPRESS();
+
+    // verify write was correct
+    vram_errs += verify_vram(LFSR, fast);
+
+    // scroll vram and vram_buffer
+    for (int addr = 0; addr < 0x10000; addr++)
+    {
+        vram_buffer[(addr - 1) & 0xffff] = vram_buffer[addr];
+    }
+
+    if (fast)
+    {
+        xm_setw(RD_INCR, 0x0001);
+        xm_setw(RD_ADDR, 0x0000);
+        xm_setw(WR_INCR, 0x0001);
+        xm_setw(WR_ADDR, 0xffff);
+        for (int addr = 0; addr < 0x10000; addr++)
+        {
+            uint16_t data = xm_getw(DATA);
+            xm_setw(DATA, data);
+        }
+    }
+    else
+    {
+        xm_setw(RD_INCR, 0x0000);
+        xm_setw(WR_INCR, 0x0000);
+        for (int addr = 0; addr < 0x10000; addr++)
+        {
+            xm_setw(RD_ADDR, addr);
+            VRAM_RD_DELAY();
+            uint16_t data = xm_getw(DATA);
+            xm_setw(WR_ADDR, (addr - 1) & 0xffff);
+            xm_setw(DATA, data);
+            VRAM_WR_DELAY();
+        }
+    }
+
+    // verify scroll was correct
+    vram_errs += verify_vram(LFSR, fast);
+
+    if (vram_errs)
+    {
+        dprintf("*** FAILED! (errors: %d)\n", vram_errs);
+    }
+    else
+    {
+        dprintf("    PASSED!\n");
+    }
+
+    return vram_errs;
 }
 
 uint32_t test_count;
@@ -450,9 +433,7 @@ uint32_t test_count;
 #define TEST_MODES 4
 
 int      cur_mode;
-uint16_t test_modes[TEST_MODES] = {0x0080, 0x0040, 0x0060, 0x0070};
-uint32_t total_LFSR_fast_errors[TEST_MODES];
-uint32_t total_LFSR_errors[TEST_MODES];
+uint16_t test_modes[TEST_MODES] = {0x0040, 0x0060, 0x0070, 0x0080};
 uint32_t all_errors;
 
 void xosera_test()
@@ -469,6 +450,11 @@ void xosera_test()
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
 
+    if (delay_check(4000))
+    {
+        return;
+    }
+
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
 
     dprintf("Installing interrupt handler...");
@@ -480,11 +466,6 @@ void xosera_test()
     while (XFrameCount == t)
         ;
     printf("okay. Vsync interrupt detected.\n\n");
-
-    if (delay_check(4000))
-    {
-        return;
-    }
 
     while (true)
     {
@@ -505,7 +486,7 @@ void xosera_test()
         uint16_t monheight = xreg_getw(VID_VSIZE);
         uint16_t monfreq   = xreg_getw(VID_VFREQ);
 
-        dprintf("     Xosera v%1x.%02x #%08x Features:0x%02x %dx%d @%2x.%02xHz\n",
+        dprintf("    Xosera v%1x.%02x #%08x Features:0x%02x %dx%d @%2x.%02xHz\n",
                 (version >> 8) & 0xf,
                 (version & 0xff),
                 githash,
@@ -516,49 +497,62 @@ void xosera_test()
                 monfreq & 0xff);
 
 
-        // set funky 8-bpp mode to show all VRAM
+        // set funky mode to show most of VRAM
+        wait_vsync();
         xreg_setw(PA_DISP_ADDR, 0x0000);
         xreg_setw(PA_GFX_CTRL, test_modes[cur_mode]);        // bitmap + 8-bpp Hx2 Vx1
         xreg_setw(PA_LINE_LEN, 0x100);
 
-        uint16_t gfxctrl  = xreg_getw(PA_GFX_CTRL);
-        uint16_t tilectrl = xreg_getw(PA_TILE_CTRL);
-        uint16_t dispaddr = xreg_getw(PA_DISP_ADDR);
-        uint16_t linelen  = xreg_getw(PA_LINE_LEN);
-        uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
+        //        uint16_t gfxctrl  = xreg_getw(PA_GFX_CTRL);
+        //        uint16_t tilectrl = xreg_getw(PA_TILE_CTRL);
+        //        uint16_t dispaddr = xreg_getw(PA_DISP_ADDR);
+        //        uint16_t linelen  = xreg_getw(PA_LINE_LEN);
+        //        uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
 
-        dprintf("     Playfield A:\n");
-        dprintf("     PA_GFX_CTRL : 0x%04x PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
-        dprintf("     PA_DISP_ADDR: 0x%04x PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
-        dprintf("     PA_HV_SCROLL: 0x%04x\n", hvscroll);
+        //        dprintf("     Playfield A:\n");
+        //        dprintf("     PA_GFX_CTRL : 0x%04x PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
+        //        dprintf("     PA_DISP_ADDR: 0x%04x PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
+        //        dprintf("     PA_HV_SCROLL: 0x%04x\n", hvscroll);
 
-        int errs = test_vram_LFSR_fast();
-        all_errors += errs;
-        total_LFSR_fast_errors[cur_mode] += errs;
-
+        all_errors += test_vram(false, false);
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
+        all_errors += test_vram(false, true);
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
+        all_errors += test_vram(true, false);
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
+        all_errors += test_vram(true, true);
         if (delay_check(DELAY_TIME))
         {
             break;
         }
 
-        errs = test_vram_LFSR();
-        all_errors += errs;
-        total_LFSR_errors[cur_mode] += errs;
-
-        if (delay_check(DELAY_TIME))
+        if (all_errors)
         {
-            break;
-        }
+            dprintf("Cummulitive errors: %d\n", all_errors);
+            for (int i = 0; i < next_fail; i++)
+            {
+                struct fail_info * fip = &fails[i];
 
-        for (int i = 0; i < TEST_MODES; i++)
-        {
-            if (total_LFSR_fast_errors[i])
-            {
-                dprintf("ERRORS gfx_ctrl:0x%04x = %d (fast)\n", test_modes[i], total_LFSR_fast_errors[i]);
-            }
-            if (total_LFSR_errors[i])
-            {
-                dprintf("ERRORS gfx_ctrl:0x%04x = %d\n", test_modes[i], total_LFSR_errors[i]);
+                dprintf("ERR @ 0x%04x=0x%04x vs 0x%04x #%u mode=0x%02x %s %s%s%s\n",
+                        fip->addr,
+                        fip->data,
+                        fip->expected,
+                        fip->count,
+                        fip->mode & 0xff,
+                        fip->mode & MODEFLAG_FAST ? "FAST" : "SLOW ",
+                        fip->mode & MODEFLAG_LFSR ? "LFSR " : "ADDR ",
+                        fip->mode & MODEFLAG_READ ? "READ " : "",
+                        fip->mode & MODEFLAG_WRITE ? "WRITE " : "",
+                        fip->mode & MODEFLAG_BAD ? "BAD! " : "");
             }
         }
 

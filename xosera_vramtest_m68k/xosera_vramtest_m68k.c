@@ -142,8 +142,12 @@ void wait_vsync()
 int test_vram_LFSR_fast()
 {
     int      LFSR_errors = 0;
-    uint16_t start_state = 0xACE1u; /* Any nonzero start state will work. */
-    uint16_t lfsr        = start_state;
+    uint16_t start_state;
+    do
+    {
+        start_state = xm_getw(TIMER);
+    } while (start_state == 0);
+    uint16_t lfsr = start_state;
 
     dprintf("FAST LFSR VRAM scroll test .\n");
     LFSR_errors = 0;
@@ -292,8 +296,12 @@ int test_vram_LFSR_fast()
 int test_vram_LFSR()
 {
     int      LFSR_errors = 0;
-    uint16_t start_state = 0xACE1u; /* Any nonzero start state will work. */
-    uint16_t lfsr        = start_state;
+    uint16_t start_state;
+    do
+    {
+        start_state = xm_getw(TIMER);
+    } while (start_state == 0);
+    uint16_t lfsr = start_state;
 
     dprintf("LFSR VRAM scroll test.\n");
     LFSR_errors = 0;

@@ -216,9 +216,10 @@ bool                  first_failure;
 #define VRAM_WR_DELAY() mcBusywait(1)        // delay for "SLOW" write
 #define VRAM_RD_DELAY() mcBusywait(1)        // delay for "SLOW" read
 
-void add_fail(uint16_t addr, uint16_t data, uint16_t expected, uint16_t flags)
+void add_fail(int addr, int data, int expected, int flags)
 {
     struct vram_fail_info fi;
+
     fi.addr     = addr;
     fi.data     = data;
     fi.expected = expected;
@@ -229,7 +230,6 @@ void add_fail(uint16_t addr, uint16_t data, uint16_t expected, uint16_t flags)
     for (i = 0; i < vram_next_fail; i++)
     {
         struct vram_fail_info * fip = &vram_fails[i];
-
 
         if (fi.addr == fip->addr)
         {
@@ -448,11 +448,11 @@ int verify_vram(bool LFSR, int mode, int speed)
             for (int addr = 0; addr < 0x10000; addr += 2)
             {
                 uint32_t data = xm_getl(DATA);
-                if (data != ((uint32_t)vram_buffer[addr] << 16 | (uint32_t)vram_buffer[addr + 1]))
+                if (data != (((uint32_t)vram_buffer[addr] << 16) | (uint32_t)vram_buffer[addr + 1]))
                 {
                     if (vram_buffer[addr] != (data >> 16))
                     {
-                        vram_retry(addr, data, LFSR, mode, speed);
+                        vram_retry(addr, (data >> 16), LFSR, mode, speed);
                         if (++vram_errs >= MAX_TEST_FAIL)
                         {
                             return vram_errs;
@@ -460,7 +460,7 @@ int verify_vram(bool LFSR, int mode, int speed)
                     }
                     if (vram_buffer[addr + 1] != (data & 0xffff))
                     {
-                        vram_retry(addr + 1, data, LFSR, mode, speed);
+                        vram_retry(addr + 1, (data & 0xffff), LFSR, mode, speed);
                         if (++vram_errs >= MAX_TEST_FAIL)
                         {
                             return vram_errs;
@@ -487,7 +487,7 @@ int test_vram(bool LFSR, int mode, int speed)
     wait_vsync();
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_GFX_CTRL, vram_modes[mode]);        // bitmap + 8-bpp Hx2 Vx1
-    xreg_setw(PA_LINE_LEN, 138);                     // ~65536/480 words per line
+    xreg_setw(PA_LINE_LEN, 136);                     // ~65536/480 words per line
 
     dprintf("  > VRAM test=%s speed=%s mode=%s : ", LFSR ? "LFSR" : "ADDR", speed_names[speed], vram_mode_names[mode]);
 
@@ -667,11 +667,6 @@ void xosera_test()
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");
-
-    dprintf("Checking for interrupt...");
-    while (XFrameCount == 0)
-        ;
-    dprintf("okay. Vsync interrupt detected.\n\n");
 
     while (true)
     {

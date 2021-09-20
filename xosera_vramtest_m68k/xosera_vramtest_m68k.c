@@ -15,73 +15,44 @@
  */
 
 #include <assert.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include <basicio.h>
-#include <machine.h>
-#include <sdfat.h>
+#include "rosco_m68k_support.h"
+#include "xosera_m68k_api.h"
+
+// from interrupt.asm
+extern void              install_intr(void);
+extern void              remove_intr(void);
+extern volatile uint32_t XFrameCount;
 
 #define DELAY_TIME 100
 
-#include "xosera_m68k_api.h"
+uint32_t elapsed_tenthms;        // alternate timer since interrupts not reliable
+uint16_t last_timer_val;
 
-extern volatile uint32_t XFrameCount;
-
-// timer helpers
-static uint32_t start_tick;
-
-void timer_start()
+static void update_elapsed()
 {
-    uint32_t ts = XFrameCount;
-    uint32_t t;
-    // this waits for a "fresh tick" to reduce timing jitter
-    while ((t = XFrameCount) == ts)
-        ;
-    start_tick = t;
+    xv_prep();
+    uint16_t new_timer_val = xm_getw(TIMER);
+    uint16_t delta         = new_timer_val - last_timer_val;
+    last_timer_val         = new_timer_val;
+    elapsed_tenthms += delta;
 }
-
-uint32_t timer_stop()
-{
-    uint32_t stop_tick = XFrameCount;
-
-    return ((stop_tick - start_tick) * 1667) / 100;
-}
-
-#if !defined(checkchar)        // newer rosco_m68k library addition, this is in case not present
-bool checkchar()
-{
-    int rc;
-    __asm__ __volatile__(
-        "move.l #6,%%d1\n"        // CHECKCHAR
-        "trap   #14\n"
-        "move.b %%d0,%[rc]\n"
-        "ext.w  %[rc]\n"
-        "ext.l  %[rc]\n"
-        : [rc] "=d"(rc)
-        :
-        : "d0", "d1");
-    return rc != 0;
-}
-#endif
 
 #define RETURN_ON_KEYPRESS()                                                                                           \
+    update_elapsed();                                                                                                  \
     if (checkchar())                                                                                                   \
         return -1;                                                                                                     \
     else                                                                                                               \
         (void)0
 
 #define BREAK_ON_KEYPRESS()                                                                                            \
+    update_elapsed();                                                                                                  \
     if (checkchar())                                                                                                   \
         break;                                                                                                         \
     else                                                                                                               \
         (void)0
 
-_NOINLINE bool delay_check(int ms)
+_NOINLINE static bool delay_check(int ms)
 {
     while (ms--)
     {
@@ -93,6 +64,7 @@ _NOINLINE bool delay_check(int ms)
         uint16_t tms = 10;
         do
         {
+            update_elapsed();
             uint8_t tvb = xm_getbl(TIMER);
             while (tvb == xm_getbl(TIMER))
                 ;
@@ -100,55 +72,6 @@ _NOINLINE bool delay_check(int ms)
     }
 
     return false;
-}
-
-static void dputc(char c)
-{
-#ifndef __INTELLISENSE__
-    __asm__ __volatile__(
-        "move.w %[chr],%%d0\n"
-        "move.l #2,%%d1\n"        // SENDCHAR
-        "trap   #14\n"
-        :
-        : [chr] "d"(c)
-        : "d0", "d1");
-#endif
-}
-
-#if defined(printf)        // printf macro interferes with gcc format attribute
-#define _save_printf printf
-#undef printf
-#endif
-
-void dprintf(const char * fmt, ...) __attribute__((format(printf, 1, 2)));
-
-#if defined(_save_printf)        // retstore printf macro
-#define printf _save_printf
-#undef _save_printf
-#endif
-
-static char dprint_buff[4096];
-
-static void dprint(const char * str)
-{
-    register char c;
-    while ((c = *str++) != '\0')
-    {
-        if (c == '\n')
-        {
-            dputc('\r');
-        }
-        dputc(c);
-    }
-}
-
-void dprintf(const char * fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
-    dprint(dprint_buff);
-    va_end(args);
 }
 
 void wait_vsync()
@@ -160,10 +83,12 @@ void wait_vsync()
 }
 
 // VRAM test globals
+uint16_t pattern_buffer[64 * 1024];        // buffer for test pattern during test
+uint16_t vram_buffer[64 * 1024];           // buffer to hold copy of VRAM data
 
-// buffer for test pattern during test
-uint16_t vram_buffer[64 * 1024];
+#define MODE_TOGGLE_BIT 4        // toggle Xosera config every 4 iterations (power of two)
 
+// test flags used for error summary
 enum vram_test_flags
 {
     // test type
@@ -186,6 +111,7 @@ enum vram_test_flags
     MODEFLAG_BLANK = (1 << 13)
 };
 
+// error summary info
 struct vram_fail_info
 {
     uint16_t addr;            // vram address of error
@@ -193,12 +119,14 @@ struct vram_fail_info
     uint16_t expected;        // expected data
     uint16_t flags;           // flags for test type, error serverity and video mode
     uint16_t count;           // number of errors at this address, data and expected data
+    uint16_t pass;            // test iteration pass when first occurred
 };
 
 #define MAX_ERROR_LOG 4096
 #define MAX_TEST_FAIL 16
 #define TEST_MODES    5
 #define TEST_SPEEDS   4
+int                   num_vram_fails;
 struct vram_fail_info vram_fails[MAX_ERROR_LOG];
 const char *          vram_mode_names[TEST_MODES] = {"1-BPP", "2-BPP", "4-BPP", "8-BPP", "blank"};
 const char *          speed_names[TEST_SPEEDS]    = {"SLOW", "BYTE", "WORD", "LONG"};
@@ -208,15 +136,15 @@ const uint16_t        vram_mode_flags[TEST_MODES] = {MODEFLAG_1BPP,
                                               MODEFLAG_4BPP,
                                               MODEFLAG_8BPP,
                                               MODEFLAG_BLANK};
-int                   vram_test_fails;
-int                   vram_next_fail;
-int                   vram_test_count;
-bool                  first_failure;
+
+int  vram_test_count;             // total number of test iterations
+int  vram_test_fail_count;        // number of failed tests
+bool first_failure;               // bool indicating first failure of current test (formatting)
 
 #define VRAM_WR_DELAY() mcBusywait(1)        // delay for "SLOW" write
 #define VRAM_RD_DELAY() mcBusywait(1)        // delay for "SLOW" read
 
-void add_fail(int addr, int data, int expected, int flags)
+static void add_fail(int addr, int data, int expected, int flags)
 {
     struct vram_fail_info fi;
 
@@ -225,9 +153,10 @@ void add_fail(int addr, int data, int expected, int flags)
     fi.expected = expected;
     fi.flags    = flags;
     fi.count    = 1;
+    fi.pass     = vram_test_count;
 
     int i = 0;
-    for (i = 0; i < vram_next_fail; i++)
+    for (i = 0; i < num_vram_fails; i++)
     {
         struct vram_fail_info * fip = &vram_fails[i];
 
@@ -251,18 +180,18 @@ void add_fail(int addr, int data, int expected, int flags)
         }
     }
 
-    if (vram_next_fail < MAX_ERROR_LOG)
+    if (num_vram_fails < MAX_ERROR_LOG)
     {
-        for (int j = vram_next_fail - 1; j >= i; j--)
+        for (int j = num_vram_fails - 1; j >= i; j--)
         {
             vram_fails[j + 1] = vram_fails[j];
         }
-        vram_next_fail++;
+        num_vram_fails++;
         vram_fails[i] = fi;
     }
 }
 
-void fill_LFSR()
+static _NOINLINE void fill_LFSR()
 {
     uint16_t start_state;
     do
@@ -277,38 +206,40 @@ void fill_LFSR()
         lfsr <<= 1;                       /* Shift register */
         if (msb)                          /* If the output bit is 1, */
             lfsr ^= 0x002Du;              /*  apply toggle mask. */
-        vram_buffer[i] = lfsr;
+        pattern_buffer[i] = lfsr;
     }
     // swap last lfsr and zero (to keep zero in the mix)
-    vram_buffer[0xffff] = vram_buffer[lfsr];
-    vram_buffer[lfsr]   = 0;
+    pattern_buffer[0xffff] = pattern_buffer[lfsr];
+    pattern_buffer[lfsr]   = 0;
 }
 
-void fill_ADDR()
+static _NOINLINE void fill_ADDR()
 {
+    uint16_t start_value = xm_getw(TIMER);
+
     for (int addr = 0; addr < 0x10000; addr++)
     {
-        vram_buffer[addr] = addr;
+        pattern_buffer[addr] = start_value++;
     }
 }
 
-int vram_retry(uint16_t addr, uint16_t baddata, bool LFSR, int mode, int speed)
+static int vram_retry(uint16_t addr, uint16_t baddata, bool LFSR, int mode, int speed)
 {
     int retries = 0;
     int rc      = 0;
     // see if slow read retry will read it correctly (if not, assume
     // it was a write error)
-    uint16_t data = ~vram_buffer[addr];
+    uint16_t data = ~pattern_buffer[addr];
     while (++retries < 10)
     {
         xm_setw(RD_ADDR, addr);
         VRAM_RD_DELAY();
         data = xm_getw(DATA);
-        if (data == vram_buffer[addr])
+        if (data == pattern_buffer[addr])
         {
             add_fail(addr,
                      baddata,
-                     vram_buffer[addr],
+                     pattern_buffer[addr],
                      MODEFLAG_READ | (LFSR ? MODEFLAG_LFSR : MODEFLAG_ADDR) | vram_mode_flags[mode] |
                          (1 << (speed & 0x3)));
             rc = 0;        // read error
@@ -317,21 +248,21 @@ int vram_retry(uint16_t addr, uint16_t baddata, bool LFSR, int mode, int speed)
     }
 
     // try to correct VRAM
-    if (data != vram_buffer[addr])
+    if (data != pattern_buffer[addr])
     {
         for (retries = 0; retries < 10; retries++)
         {
             xm_setw(WR_ADDR, addr);
-            xm_setw(DATA, vram_buffer[addr]);
+            xm_setw(DATA, pattern_buffer[addr]);
             VRAM_WR_DELAY();
             xm_setw(RD_ADDR, addr);
             VRAM_RD_DELAY();
             data = xm_getw(DATA);
-            if (data == vram_buffer[addr])
+            if (data == pattern_buffer[addr])
             {
                 add_fail(addr,
                          baddata,
-                         vram_buffer[addr],
+                         pattern_buffer[addr],
                          MODEFLAG_WRITE | (LFSR ? MODEFLAG_LFSR : MODEFLAG_ADDR) | (vram_mode_flags[mode]) |
                              (1 << (speed & 0x3)));
                 rc = 1;        // correctable write error
@@ -341,18 +272,22 @@ int vram_retry(uint16_t addr, uint16_t baddata, bool LFSR, int mode, int speed)
     }
 
     // if 10 tries fail, mark it as uncorrectable
-    if (data != vram_buffer[addr])
+    if (data != pattern_buffer[addr])
     {
         add_fail(addr,
                  baddata,
-                 vram_buffer[addr],
+                 pattern_buffer[addr],
                  MODEFLAG_BAD | (LFSR ? MODEFLAG_LFSR : MODEFLAG_ADDR) | (vram_mode_flags[mode]) |
                      (1 << (speed & 0x3)));
         rc = -1;        // uncorrectable error
     }
+    else
+    {
+        vram_buffer[addr] = data;
+    }
 
     // log error
-    vram_test_fails++;
+    vram_test_fail_count++;
     if (first_failure)
     {
         dprintf("FAILED!\n");
@@ -367,19 +302,37 @@ int vram_retry(uint16_t addr, uint16_t baddata, bool LFSR, int mode, int speed)
             addr,
             baddata,
             addr,
-            vram_buffer[addr],
-            vram_test_fails);
-
-    // setup to continue trying
-    xm_setw(RD_ADDR, addr + 1);
-    xm_setw(WR_ADDR, addr + 1);
+            pattern_buffer[addr],
+            vram_test_fail_count);
 
     return rc;
 }
 
-int verify_vram(bool LFSR, int mode, int speed)
+static int verify_vram(bool LFSR, int mode, int speed)
 {
     int vram_errs = 0;
+
+    for (int addr = 0; addr < 0x10000; addr++)
+    {
+        uint16_t data = vram_buffer[addr];
+        if (data != pattern_buffer[addr])
+        {
+            vram_retry(addr, data, LFSR, mode, speed);
+            if (++vram_errs >= MAX_TEST_FAIL)
+            {
+                return vram_errs;
+            }
+        }
+    }
+
+    return vram_errs;
+}
+
+static void read_vram_buffer(int speed)
+{
+    xv_prep();
+
+    // read VRAM back into vram_buffer
     switch (speed)
     {
         case 0:
@@ -390,15 +343,7 @@ int verify_vram(bool LFSR, int mode, int speed)
             {
                 xm_setw(RD_ADDR, addr);
                 VRAM_RD_DELAY();
-                uint16_t data = xm_getw(DATA);
-                if (data != vram_buffer[addr])
-                {
-                    vram_retry(addr, data, LFSR, mode, speed);
-                    if (++vram_errs >= MAX_TEST_FAIL)
-                    {
-                        return vram_errs;
-                    }
-                }
+                vram_buffer[addr] = xm_getw(DATA);
             }
             break;
 
@@ -407,17 +352,14 @@ int verify_vram(bool LFSR, int mode, int speed)
             xm_setw(RD_INCR, 0x0001);
             xm_setw(RD_ADDR, 0x0000);
 
+            uint8_t * bp = (uint8_t *)&vram_buffer[0];
             for (int addr = 0; addr < 0x10000; addr++)
             {
-                uint16_t data = ((xm_getbh(DATA) << 8) | xm_getbl(DATA));
-                if (data != vram_buffer[addr])
-                {
-                    vram_retry(addr, data, LFSR, mode, speed);
-                    if (++vram_errs >= MAX_TEST_FAIL)
-                    {
-                        return vram_errs;
-                    }
-                }
+
+                uint8_t bh = xm_getbh(DATA);
+                *bp++      = bh;
+                uint8_t bl = xm_getbl(DATA);
+                *bp++      = bl;
             }
             break;
 
@@ -428,15 +370,8 @@ int verify_vram(bool LFSR, int mode, int speed)
 
             for (int addr = 0; addr < 0x10000; addr++)
             {
-                uint16_t data = xm_getw(DATA);
-                if (data != vram_buffer[addr])
-                {
-                    vram_retry(addr, data, LFSR, mode, speed);
-                    if (++vram_errs >= MAX_TEST_FAIL)
-                    {
-                        return vram_errs;
-                    }
-                }
+                uint16_t data     = xm_getw(DATA);
+                vram_buffer[addr] = data;
             }
             break;
 
@@ -445,36 +380,17 @@ int verify_vram(bool LFSR, int mode, int speed)
             xm_setw(RD_INCR, 0x0001);
             xm_setw(RD_ADDR, 0x0000);
 
+            uint32_t * lp = (uint32_t *)&vram_buffer[0];
             for (int addr = 0; addr < 0x10000; addr += 2)
             {
                 uint32_t data = xm_getl(DATA);
-                if (data != (((uint32_t)vram_buffer[addr] << 16) | (uint32_t)vram_buffer[addr + 1]))
-                {
-                    if (vram_buffer[addr] != (data >> 16))
-                    {
-                        vram_retry(addr, (data >> 16), LFSR, mode, speed);
-                        if (++vram_errs >= MAX_TEST_FAIL)
-                        {
-                            return vram_errs;
-                        }
-                    }
-                    if (vram_buffer[addr + 1] != (data & 0xffff))
-                    {
-                        vram_retry(addr + 1, (data & 0xffff), LFSR, mode, speed);
-                        if (++vram_errs >= MAX_TEST_FAIL)
-                        {
-                            return vram_errs;
-                        }
-                    }
-                }
+                *lp++         = data;
             }
             break;
 
         default:
             break;
     }
-
-    return vram_errs;
 }
 
 int test_vram(bool LFSR, int mode, int speed)
@@ -491,7 +407,7 @@ int test_vram(bool LFSR, int mode, int speed)
 
     dprintf("  > VRAM test=%s speed=%s mode=%s : ", LFSR ? "LFSR" : "ADDR", speed_names[speed], vram_mode_names[mode]);
 
-    // generate vram_buffer data
+    // generate pattern_buffer data
     if (LFSR)
     {
         fill_LFSR();
@@ -502,9 +418,16 @@ int test_vram(bool LFSR, int mode, int speed)
     }
     RETURN_ON_KEYPRESS();
 
-    uint16_t start_time = xm_getw(TIMER);
+    update_elapsed();
+    uint32_t start_time;
+    uint32_t check_time = elapsed_tenthms;
+    do
+    {
+        update_elapsed();
+        start_time = elapsed_tenthms;
+    } while (start_time == check_time);
 
-    // fill VRAM with vram_buffer
+    // fill VRAM with pattern_buffer
     switch (speed)
     {
         case 0:
@@ -514,7 +437,7 @@ int test_vram(bool LFSR, int mode, int speed)
             for (int addr = 0; addr < 0x10000; addr++)
             {
                 xm_setw(WR_ADDR, addr);
-                xm_setw(DATA, vram_buffer[addr]);
+                xm_setw(DATA, pattern_buffer[addr]);
                 VRAM_WR_DELAY();
             }
             break;
@@ -524,10 +447,11 @@ int test_vram(bool LFSR, int mode, int speed)
             xm_setw(WR_INCR, 0x0001);
             xm_setw(WR_ADDR, 0x0000);
 
+            uint8_t * bp = (uint8_t *)&pattern_buffer[0];
             for (int addr = 0; addr < 0x10000; addr++)
             {
-                xm_setbh(DATA, vram_buffer[addr] >> 8);
-                xm_setbl(DATA, vram_buffer[addr] & 0xff);
+                xm_setbh(DATA, *bp++);
+                xm_setbl(DATA, *bp++);
             }
             break;
         case 2:
@@ -537,7 +461,7 @@ int test_vram(bool LFSR, int mode, int speed)
 
             for (int addr = 0; addr < 0x10000; addr++)
             {
-                xm_setw(DATA, vram_buffer[addr]);
+                xm_setw(DATA, pattern_buffer[addr]);
             }
             break;
 
@@ -546,15 +470,19 @@ int test_vram(bool LFSR, int mode, int speed)
             xm_setw(WR_INCR, 0x0001);
             xm_setw(WR_ADDR, 0x0000);
 
+            uint32_t * lp = (uint32_t *)&pattern_buffer[0];
             for (int addr = 0; addr < 0x10000; addr += 2)
             {
-                xm_setl(DATA, ((vram_buffer[addr] << 16) | vram_buffer[addr + 1]));
+                xm_setl(DATA, *lp++);
             }
             break;
 
         default:
             break;
     }
+    RETURN_ON_KEYPRESS();
+
+    read_vram_buffer(speed);
     RETURN_ON_KEYPRESS();
 
     // verify write was correct
@@ -564,10 +492,10 @@ int test_vram(bool LFSR, int mode, int speed)
         dprintf("TEST CANCELLED (too many errors)!\n");
     }
 
-    // scroll vram_buffer and vram
+    // scroll pattern_buffer and vram
     for (int addr = 0; addr < 0x10000; addr++)
     {
-        vram_buffer[(addr - 1) & 0xffff] = vram_buffer[addr];
+        pattern_buffer[(addr - 1) & 0xffff] = pattern_buffer[addr];
     }
 
     switch (speed)
@@ -629,32 +557,36 @@ int test_vram(bool LFSR, int mode, int speed)
     }
     RETURN_ON_KEYPRESS();
 
+    read_vram_buffer(speed);
+    RETURN_ON_KEYPRESS();
+
     // verify scroll was correct
     vram_errs += verify_vram(LFSR, mode, speed);
     if (vram_errs == 0)
     {
-        uint16_t elapsed_time = xm_getw(TIMER) - start_time;
-        dprintf("PASSED  (%3u.%1ums)\n", elapsed_time / 10, elapsed_time % 10);
+        update_elapsed();
+        uint32_t elapsed_time = elapsed_tenthms - start_time;
+        dprintf("PASSED  (%3u.%1ums)\n", (int)elapsed_time / 10, (int)elapsed_time % 10);
     }
 
     return vram_errs;
 }
 
-extern void install_intr(void);
-extern void remove_intr(void);
-
 void xosera_test()
 {
+    xv_prep();
+
+    dprintf("Xosera_vramtest_m68k\n");
     // flush any input charaters to avoid instant exit
     while (checkchar())
     {
         readchar();
     }
 
-    dprintf("Xosera_vramtest_m68k\n");
-
-    dprintf("\nxosera_init(0)...");
-    bool success = xosera_init(0);
+    uint8_t cur_xosera_config = 0;
+    dprintf("\nxosera_init(%d)...", cur_xosera_config);
+    bool success   = xosera_init(cur_xosera_config);
+    last_timer_val = xm_getw(TIMER);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
 
     if (delay_check(4000))
@@ -670,16 +602,37 @@ void xosera_test()
 
     while (true)
     {
+        // switch between configurations every few test iterations
+        uint8_t new_config = (vram_test_count & MODE_TOGGLE_BIT) ? 1 : 0;
+        if (new_config != cur_xosera_config)
+        {
+            update_elapsed();
+            cur_xosera_config = new_config;
+            dprintf("\n [Switching to Xosera config #%d...", cur_xosera_config);
+            success        = xosera_init(cur_xosera_config);
+            last_timer_val = xm_getw(TIMER);
+            dprintf("%s (%dx%d). ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+        }
+
+#if 0
         uint32_t t = XFrameCount;
         int      h = t / (60 * 60 * 60);
         int      m = t / (60 * 60) % 60;
         int      s = (t / 60) % 60;
+#else
+        update_elapsed();
+        uint32_t t = elapsed_tenthms;
+        int      h = t / (10000 * 60 * 60);
+        int      m = t / (10000 * 60) % 60;
+        int      s = (t / 10000) % 60;
+#endif
+
         dprintf("\n>>> xosera_vramtest_m68k iteration: %u, running %u:%02u:%02u, errors: %u\n",
                 vram_test_count++,
                 h,
                 m,
                 s,
-                vram_test_fails);
+                vram_test_fail_count);
 
         uint16_t version   = xreg_getw(VERSION);
         uint32_t githash   = ((uint32_t)xreg_getw(GITHASH_H) << 16) | (uint32_t)xreg_getw(GITHASH_L);
@@ -712,17 +665,19 @@ void xosera_test()
                     break;
                 }
             }
+            BREAK_ON_KEYPRESS();
         }
         BREAK_ON_KEYPRESS();
 
-        if (vram_next_fail)
+        if (num_vram_fails)
         {
             dprintf("Cummulative VRAM test errors:\n");
-            for (int i = 0; i < vram_next_fail; i++)
+            for (int i = 0; i < num_vram_fails; i++)
             {
                 struct vram_fail_info * fip = &vram_fails[i];
 
-                dprintf("#%2u @ 0x%04x=0x%04x vs 0x%04x pat=%s%s\te=%s%s%s\tm=%s%s%s%s%s\tt=%s%s%s%s\n",
+                dprintf("pass %3u #%2u @ 0x%04x=0x%04x vs 0x%04x pat=%s%s\te=%s%s%s\tm=%s%s%s%s%s\tt=%s%s%s%s\n",
+                        fip->pass,
                         fip->count,
                         fip->addr,
                         fip->data,

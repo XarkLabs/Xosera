@@ -59,6 +59,8 @@
 			"DIVR",
 			"divu",
 			"dout",
+			"dputc",
+			"dputs",
 			"DSPI",
 			"dumpfile",
 			"dumpvars",

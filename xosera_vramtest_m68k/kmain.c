@@ -27,6 +27,6 @@ extern void xosera_test();
 
 void kmain()
 {
-    delay(5000);        // wait a bit for terminal window/serial
+    delay(8000);        // wait a bit for terminal window/serial
     xosera_test();
 }

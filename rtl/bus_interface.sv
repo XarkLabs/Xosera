@@ -29,12 +29,13 @@ module bus_interface(
            input  wire logic         reset_i                 // reset
        );
 
-// input synchronizers (shifts right each cycle with high bit set from inputs and bit 0 is acted on)
+// input synchronizers (shifts right each cycle with high bit set from inputs
+// and bit 0 is acted on)
 logic [4:0] cs_r;               // also "history bits" for detecting rising edge two cycles delayed (to allow bus to settle)
 logic [1:0] read_r;
 logic [1:0] bytesel_r;
 logic [3:0] reg_num_r [1:0];
-logic [7:0] data_r [1:0];
+logic [7:0] data_r [2:0];
 
 // aliases for synchronized inputs (low bit of synchronizers)
 logic       cs_edge;
@@ -56,6 +57,7 @@ initial begin
     reg_num_r[1]    = 4'h0;
     data_r[0]       = 8'h00;
     data_r[1]       = 8'h00;
+    data_r[2]       = 8'h00;
 end
 
 always_ff @(posedge clk) begin
@@ -76,7 +78,8 @@ always_ff @(posedge clk) begin
         reg_num_r[1]    <= bus_reg_num_i;
         bytesel_r       <= { bus_bytesel_i, bytesel_r[1] };
         data_r[0]       <= data_r[1];
-        data_r[1]       <= bus_data_i;
+        data_r[1]       <= data_r[2];
+        data_r[2]       <= bus_data_i;
 
         // set outputs
         write_strobe_o  <= 1'b0;                // assume no write

@@ -164,6 +164,8 @@ void wait_vsync()
 // buffer for test pattern during test
 uint16_t vram_buffer[64 * 1024];
 
+#define MODE_TOGGLE_BIT 4        // toggle Xosera config every 4 iterations (power of two)
+
 enum vram_test_flags
 {
     // test type
@@ -653,8 +655,9 @@ void xosera_test()
 
     dprintf("Xosera_vramtest_m68k\n");
 
-    dprintf("\nxosera_init(0)...");
-    bool success = xosera_init(0);
+    uint8_t cur_xosera_config = 0;
+    dprintf("\nxosera_init(%d)...", cur_xosera_config);
+    bool success = xosera_init(cur_xosera_config);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
 
     if (delay_check(4000))
@@ -670,6 +673,16 @@ void xosera_test()
 
     while (true)
     {
+        // switch between configurations every few test iterations
+        uint8_t new_config = vram_test_count & MODE_TOGGLE_BIT;
+        if (new_config != cur_xosera_config)
+        {
+            cur_xosera_config = new_config;
+            dprintf("\n [Switching to Xosera config #%d...", cur_xosera_config);
+            success = xosera_init(cur_xosera_config);
+            dprintf("%s (%dx%d). ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+        }
+
         uint32_t t = XFrameCount;
         int      h = t / (60 * 60 * 60);
         int      m = t / (60 * 60) % 60;

@@ -29,16 +29,17 @@ module bus_interface(
            input  wire logic         reset_i                 // reset
        );
 
-// input synchronizers (shifts right each cycle with high bit set from inputs and bit 0 is acted on)
-logic [3:0] cs_r;               // also "history bits" for detecting rising edge two cycles delayed (to allow bus to settle)
+// input synchronizers (shifts right each cycle with high bit set from inputs
+// and bit 0 is acted on)
+logic [4:0] cs_r;               // also "history bits" for detecting rising edge two cycles delayed (to allow bus to settle)
 logic [1:0] read_r;
 logic [1:0] bytesel_r;
 logic [3:0] reg_num_r [1:0];
-logic [7:0] data_r [1:0];
+logic [7:0] data_r [2:0];
 
 // aliases for synchronized inputs (low bit of synchronizers)
 logic       cs_edge;
-assign      cs_edge    = (cs_r[2:0] == 3'b110);   // true on rising edge select with cycle delay (and ignore spurious edge)
+assign      cs_edge    = (cs_r[3:0] == 4'b1110);   // true on rising edge select with cycle delay (and ignore spurious edge)
 logic       write;
 assign      write       = ~read_r[0];
 logic [3:0] reg_num;
@@ -49,18 +50,19 @@ logic [7:0] data;
 assign      data        = data_r[0];
 
 initial begin
-    cs_r           = 4'b0;               // CS has additional "history bits" to detect edge
+    cs_r            = 5'b0;               // CS has additional "history bits" to detect edge
     read_r          = 2'b0;
     bytesel_r       = 2'b0;
     reg_num_r[0]    = 4'h0;
     reg_num_r[1]    = 4'h0;
     data_r[0]       = 8'h00;
     data_r[1]       = 8'h00;
+    data_r[2]       = 8'h00;
 end
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        cs_r            <= 4'h0;
+        cs_r            <= 5'h0;
         write_strobe_o  <= 1'b0;
         read_strobe_o   <= 1'b0;
         reg_num_o       <= 4'h0;
@@ -70,13 +72,14 @@ always_ff @(posedge clk) begin
     else begin
         // synchronize new input on leftmost bit, shifting bits right
         // NOTE: inverting bus_cs_n_i here to make it active high
-        cs_r            <= { (bus_cs_n_i == xv::cs_ENABLED) ? 1'b1 : 1'b0, cs_r[3: 1] };
+        cs_r            <= { (bus_cs_n_i == xv::cs_ENABLED) ? 1'b1 : 1'b0, cs_r[4: 1] };
         read_r          <= { (bus_rd_nwr_i == xv::RnW_READ), read_r[1] };
         reg_num_r[0]    <= reg_num_r[1];
         reg_num_r[1]    <= bus_reg_num_i;
         bytesel_r       <= { bus_bytesel_i, bytesel_r[1] };
         data_r[0]       <= data_r[1];
-        data_r[1]       <= bus_data_i;
+        data_r[1]       <= data_r[2];
+        data_r[2]       <= bus_data_i;
 
         // set outputs
         write_strobe_o  <= 1'b0;                // assume no write

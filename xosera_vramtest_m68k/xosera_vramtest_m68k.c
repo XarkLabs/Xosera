@@ -674,7 +674,7 @@ void xosera_test()
     while (true)
     {
         // switch between configurations every few test iterations
-        uint8_t new_config = vram_test_count & MODE_TOGGLE_BIT;
+        uint8_t new_config = (vram_test_count & MODE_TOGGLE_BIT) ? 1 : 0;
         if (new_config != cur_xosera_config)
         {
             cur_xosera_config = new_config;

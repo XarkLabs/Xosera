@@ -32,15 +32,11 @@
 #define NB_RECTS        10
 #define NB_TRIANGLES    10
 
-#include "xosera_m68k_api.h"
-
-
-#define INTERRUPTS_AVAIL    1
+#include <xosera_m68k_api.h>
+#include <pr_api.h>
 
 extern void install_intr(void);
 extern void remove_intr(void);
-
-extern volatile uint32_t XFrameCount;
 
 const uint16_t defpal[16] = {
     0x0000,        // black
@@ -202,76 +198,14 @@ typedef struct
     float x1, y1, x2, y2, x3, y3;
 } Coord3;
 
-void wait_pr_done()
-{
-    uint8_t busy;
-    do {
-        busy = xm_getbh(WR_PR_CMD);
-    } while(busy & 0x80);
-}
-
-static void swapf(float *a, float *b)
-{
-    float c = *a;
-    *a = *b;
-    *b = c;
-}
-
 static void draw_filled_triangle(Coord3 coord, int color)
 {
-    if (coord.y1 > coord.y3) {
-        swapf(&coord.x1, &coord.x3);
-        swapf(&coord.y1, &coord.y3);
-    }
-
-    if (coord.y1 > coord.y2) {
-        swapf(&coord.x1, &coord.x2);
-        swapf(&coord.y1, &coord.y2);
-    }
-
-    if (coord.y2 > coord.y3) {
-        swapf(&coord.x2, &coord.x3);
-        swapf(&coord.y2, &coord.y3);
-    }
-
-    wait_pr_done();
-
-    xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDX1 | ((int)(coord.x2) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDX2 | ((int)(coord.x3) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY2 | ((int)(coord.y3) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COLOR | color);
-    xm_setw(WR_PR_CMD, PR_EXECUTE);
+    pr_draw_filled_triangle((int)coord.x1, (int)coord.y1, (int)coord.x2, (int)coord.y2, (int)coord.x3, (int)coord.y3, color);
 }
 
 static void draw_filled_rectangle(Coord2 coord, int color)
 {
-    if (coord.y1 > coord.y2) {
-        swapf(&coord.x1, &coord.x2);
-        swapf(&coord.y1, &coord.y2);
-    }
-    
-    wait_pr_done();
-    xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDX1 | ((int)(coord.x1) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY1 | ((int)(coord.y2) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDX2 | ((int)(coord.x2) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY2 | ((int)(coord.y2) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COLOR | color);
-    xm_setw(WR_PR_CMD, PR_EXECUTE);
-
-    wait_pr_done();
-    xm_setw(WR_PR_CMD, PR_COORDX0 | ((int)(coord.x1) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY0 | ((int)(coord.y1) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDX1 | ((int)(coord.x2) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY1 | ((int)(coord.y1) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDX2 | ((int)(coord.x2) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COORDY2 | ((int)(coord.y2) & 0x0FFF));
-    xm_setw(WR_PR_CMD, PR_COLOR | color);
-    xm_setw(WR_PR_CMD, PR_EXECUTE);    
+    pr_draw_filled_rectangle((int)coord.x1, (int)coord.y1, (int)coord.x2, (int)coord.y2, color);
 }
 
 // Color conversion
@@ -406,47 +340,6 @@ void fade_out()
         set_palette(1.0f - (float)i / 100.0f);
 }
 
-void clear()
-{
-    Coord2 c = {0, 0, 320, 200};
-    draw_filled_rectangle(c, 1);
-}
-
-void wait_frame()
-{
-    uint32_t f = XFrameCount;
-    while (XFrameCount == f);
-}
-
-void init_swap()
-{
-    disp_buffer = 0;
-    xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_ADDR, 0x0000);
-    wait_pr_done();
-    xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x7D0);
-}
-
-void swap()
-{
-    wait_pr_done();
-#if INTERRUPTS_AVAIL    
-    wait_frame();
-#endif    
-
-    if (disp_buffer) {
-        disp_buffer = 0;
-        xreg_setw(PA_DISP_ADDR, 0x0000);
-        wait_pr_done();
-        xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x7D0);
-    } else {
-        disp_buffer = 1;
-        xreg_setw(PA_DISP_ADDR, 0x7D00);
-        wait_pr_done();
-        xm_setw(WR_PR_CMD, PR_DEST_ADDR | 0x000);
-    }
-}
-
 /*
 void demo_lines()
 {
@@ -457,7 +350,7 @@ void demo_lines()
                                     {15, 4, 16, 0}, {16, 0, 17, 4}, {15.5, 2, 16.5, 2}};
 
 
-    clear();
+    pr_clear();
 
     double angle = 0.0;
     for (int i = 0; i < 256; i++)
@@ -503,7 +396,7 @@ void demo_lines()
         draw_line(c4, 4);
     }
 
-    swap();
+    pr_swap(true);
     fade_in();
     delay(2000);
     fade_out();
@@ -547,14 +440,14 @@ void demo_filled_rectangles(int nb_iterations)
         p->speed_y = rand2() % 10 - 5;
     }
 
-    clear();
-    swap();
+    pr_clear();
+    pr_swap(true);
 
     fade_in();
 
     for (int i = 0; i < nb_iterations; ++i) {
 
-        clear();
+        pr_clear();
 
         for(size_t j = 0; j < NB_RECTS; ++j) {
             Particle* p = &particles[j];
@@ -562,7 +455,7 @@ void demo_filled_rectangles(int nb_iterations)
             draw_filled_rectangle(c, p->color);
         }
 
-        swap();
+        pr_swap(true);
 
         for(size_t j = 0; j < NB_RECTS; ++j) {
             Particle* p = &particles[j];
@@ -592,14 +485,14 @@ void demo_filled_triangles(int nb_iterations)
         p->speed_y = rand2() % 10 - 5;
     }
 
-    clear();
-    swap();
+    pr_clear();
+    pr_swap(true);
 
     fade_in();
 
     for (int i = 0; i < nb_iterations; ++i) {
 
-        clear();
+        pr_clear();
 
         for(size_t j = 0; j < 3*NB_TRIANGLES; j+=3) {
             Particle* p1 = &particles[j];
@@ -619,7 +512,7 @@ void demo_filled_triangles(int nb_iterations)
                 p->speed_y = -p->speed_y;
         }
 
-        swap();
+        pr_swap(true);
     }
 
     fade_out();
@@ -629,13 +522,11 @@ void xosera_demo()
 {
     xosera_init(0);
 
-#if INTERRUPTS_AVAIL
     // Set the Xosera interrupt mask
     uint16_t sc = xm_getw(SYS_CTRL);
     xm_setw(SYS_CTRL, sc | 0x8);
 
     install_intr();
-#endif    
 
     xm_setw(XR_ADDR, XR_COPPER_MEM);
 
@@ -647,8 +538,7 @@ void xosera_demo()
     xreg_setw(PA_LINE_ADDR, 0x0000);
     xreg_setw(PA_LINE_LEN, 160);
 
-    wait_pr_done();
-    xm_setw(WR_PR_CMD, PR_DEST_HEIGHT | 200);    
+    pr_init(0, 200);
 
     calc_palette();
     set_palette(0.0f);
@@ -666,7 +556,7 @@ void xosera_demo()
         fade_out();
 
         // initialize swap
-        init_swap();
+        pr_init_swap();
 
         // enable Copper
         xreg_setw(COPP_CTRL, 0x8000);        

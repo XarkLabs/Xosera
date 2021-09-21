@@ -6,3 +6,4 @@
 **_m68k*/*.dis
 **_m68k*/*.map
 **_m68k*/*.lst
+common/*.lst

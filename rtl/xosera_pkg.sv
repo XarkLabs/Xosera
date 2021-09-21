@@ -27,6 +27,8 @@
 
 `define HACKFAST                    // temp hacks to (more easily) get 848x480 bitstream
 
+//`define NO_CS_BUS_DELAY           // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
+
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
 // Xosera directly addressable registers (16 x 16-bit word)

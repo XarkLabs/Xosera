@@ -104,14 +104,14 @@ void xv_vram_fill(uint32_t vram_addr, uint32_t numwords, uint32_t word_value)
 {
     xv_prep();
 
-    xm_setw(WR_ADDR, vram_addr);
+    xm_setw(WR_ADDR, (uint16_t)vram_addr);
     xm_setw(WR_INCR, 1);
     uint32_t long_value = (word_value << 16) | (uint16_t)(word_value & 0xffff);
     if (numwords & 1)
     {
-        xm_setw(DATA, word_value);
+        xm_setw(DATA, (uint16_t)word_value);
     }
-    int long_size = numwords >> 1;
+    uint32_t long_size = numwords >> 1;
     while (long_size--)
     {
         xm_setl(DATA, long_value);
@@ -123,14 +123,14 @@ void xv_copy_to_vram(uint16_t * source, uint32_t vram_dest, uint32_t numbytes)
 {
     xv_prep();
 
-    xm_setw(WR_ADDR, vram_dest);
+    xm_setw(WR_ADDR, (uint16_t)vram_dest);
     xm_setw(WR_INCR, 1);
     if (numbytes & 2)
     {
         xm_setw(DATA, *source++);
     }
     uint32_t * long_ptr  = (uint32_t *)source;
-    int        long_size = numbytes >> 2;
+    uint32_t   long_size = numbytes >> 2;
     while (long_size--)
     {
         xm_setl(DATA, *long_ptr++);
@@ -142,14 +142,14 @@ void xv_copy_from_vram(uint32_t vram_source, uint16_t * dest, uint32_t numbytes)
 {
     xv_prep();
 
-    xm_setw(RD_ADDR, vram_source);
+    xm_setw(RD_ADDR, (uint16_t)vram_source);
     xm_setw(RD_INCR, 1);
     if (numbytes & 2)
     {
         *dest++ = xm_getw(DATA);
     }
     uint32_t * long_ptr  = (uint32_t *)dest;
-    int        long_size = numbytes >> 2;
+    uint32_t   long_size = numbytes >> 2;
     while (long_size--)
     {
         *long_ptr++ = xm_getl(DATA);

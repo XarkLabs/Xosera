@@ -1,33 +1,43 @@
 # Make Xosera test program for rosco_m68k
 #
-# vim: set noet ts=8 sw=8
 # Copyright (c) 2021 Xark
 # MIT LICENSE
+# vim: set noet ts=8 sw=8
 
 ifndef ROSCO_M68K_DIR
 $(error Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
+else
+$(info NOTE: Using ROSCO_M68K_DIR libs in: $(ROSCO_M68K_DIR))
 endif
 XOSERA_M68K_API?=../xosera_m68k_api
 
-EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer
+-include $(ROSCO_M68K_DIR)/user.mk
+
+EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer -I$(XOSERA_M68K_API)
+EXTRA_LIBS?=
 #EXTRA_VASMFLAGS?=-showopt
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
 SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib
 DEFINES=-DROSCO_M68K
 CFLAGS=-std=c11 -ffreestanding -ffunction-sections -fdata-sections \
-    -Wall -Wextra -Werror -Wno-unused-function -pedantic -I$(SYSINCDIR) \
-    -I$(XOSERA_M68K_API) \
-    -mcpu=68010 -march=68010 -mtune=68010 $(DEFINES)
-# EVIL    	CFLAGS += -Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla -Warray-bounds=2 -Wimplicit-fallthrough=3 -Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion -Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wformat-signedness -Wshadow -Wstrict-overflow=4 -Wswitch-default -Wswitch-enum -Wstack-usage=1000000 -Wcast-align=strict
-# Too-EVIL 	-Wundef -Wstrict-prototypes  -Wtraditional-conversion
+ -Wall -Wextra -Werror -Wno-unused-function -pedantic -I$(SYSINCDIR) \
+ -mcpu=68010 -march=68010 -mtune=68010 $(DEFINES)
+# Harsh warnings: CFLAGS += -Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla -Warray-bounds=2 -Wimplicit-fallthrough=3 -Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion -Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wformat-signedness -Wshadow -Wstrict-overflow=4 -Wswitch-default -Wswitch-enum -Wstack-usage=1000000 -Wcast-align=strict -Wno-shadow
+# Too harsh warnigs: -Wundef -Wstrict-prototypes  -Wtraditional-conversion
 GCC_LIBS=$(shell $(CC) --print-search-dirs \
-    | grep libraries:\ = \
-    | sed 's/libraries: =/-L/g' \
-    | sed 's/:/m68000\/ -L/g')m68000/
-LIBS=-lprintf -lcstdlib -lmachine -lstart_serial -lgcc
+ | grep libraries:\ = \
+ | sed 's/libraries: =/-L/g' \
+ | sed 's/:/m68000\/ -L/g')m68000/
+LIBS=$(EXTRA_LIBS) -lprintf -lcstdlib -lmachine -lstart_serial -lgcc
 ASFLAGS=-mcpu=68010 -march=68010
-LDFLAGS=-T $(SYSLIBDIR)/ld/serial/rosco_m68k_program.ld -L $(SYSLIBDIR) \
-    -Map=$(MAP) --gc-sections --oformat=elf32-m68k
+
+ifeq ($(ROSCO_M68K_HUGEROM),true)
+LDSCRIPT?=$(SYSLIBDIR)/ld/serial/hugerom_rosco_m68k_program.ld
+else
+LDSCRIPT?=$(SYSLIBDIR)/ld/serial/rosco_m68k_program.ld
+endif
+
+LDFLAGS=-T $(LDSCRIPT) -L $(SYSLIBDIR) -Map=$(MAP) --gc-sections --oformat=elf32-m68k
 VASMFLAGS=-Felf -m68010 -quiet -Lnf $(DEFINES)
 CC=m68k-elf-gcc
 AS=m68k-elf-as
@@ -55,7 +65,8 @@ SYM=$(PROGRAM_BASENAME).sym
 
 # Assume source files in Makefile directory are source files for project
 CSOURCES=$(wildcard *.c)
-CSOURCES+=$(wildcard $(XOSERA_M68K_API)/*.c)
+CSOURCES+=$(wildcard $(XOSERA_M68K_API)/*.c) # add Xosera API
+CINCLUDES=$(wildcard *.h)
 SSOURCES=$(wildcard *.S)
 ASMSOURCES=$(wildcard *.asm)
 SOURCES=$(CSOURCES) $(SSOURCES) $(ASMSOURCES)
@@ -69,7 +80,7 @@ $(ELF) : $(OBJECTS)
 	$(LD) $(LDFLAGS) $(GCC_LIBS) $^ -o $@ $(LIBS)
 	$(NM) --numeric-sort $@ >$(SYM)
 	$(SIZE) $@
-	chmod a-x $@
+	-chmod a-x $@
 
 $(BINARY) : $(ELF)
 	$(OBJCOPY) -O binary $(ELF) $(BINARY)
@@ -79,7 +90,7 @@ $(DISASM) : $(ELF)
 
 $(OBJECTS): Makefile
 
-%.o : %.c
+%.o : %.c $(CINCLUDES)
 	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) -o $@ $<
 
 %.o : %.asm
@@ -99,30 +110,35 @@ dump: $(BINARY)
 load: $(BINARY)
 	$(KERMIT) -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
 
-# This is handy to test on Ubuntu Linux (kills previous "screen", opens one in shell window/tab)
-test: $(BINARY) $(DISASM)
+# Linux (gnome): Upload binary with kermit, connect with "screen" terminal
+# (NOTE: kills existing "screen", opens new screen serial in new shell window/tab)
+linuxtest: $(BINARY) $(DISASM)
 	-killall screen && sleep 1
 	$(KERMIT) -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
-	gnome-terminal --geometry=106x30 --title="rosco_m68k $(SERIAL)" -- screen $(SERIAL) $(BAUD)
+	gnome-terminal --geometry=80x25 --title="rosco_m68k $(SERIAL)" -- screen $(SERIAL) $(BAUD)
 
-# This is handy to test on MacOS (kills previous "screen", opens new one in shell window/tab)
+# Linux (gnome): Connect with "screen" terminal
+linuxterm:
+	-killall screen && sleep 1
+	gnome-terminal --geometry=80x25 --title="rosco_m68k $(SERIAL)" -- screen $(SERIAL) $(BAUD)
+
+# macOS: Upload binary with kermit, connect with "screen" terminal
+# (NOTE: kills existing "screen", opens new screen serial in new shell window/tab)
 mactest: $(BINARY) $(DISASM)
 	-killall screen && sleep 1
 	$(KERMIT) -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
 	echo "#! /bin/sh" > $(TMPDIR)/rosco_screen.sh
 	echo "/usr/bin/screen $(SERIAL) $(BAUD)" >> $(TMPDIR)/rosco_screen.sh
-	chmod +x $(TMPDIR)/rosco_screen.sh
+	-chmod +x $(TMPDIR)/rosco_screen.sh
 	sleep 1
 	open -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
 
-# This is handy to test on MacOS (kills previous "screen", opens new one in shell window/tab)
 macterm:
-	-killall screen && sleep 1
 	echo "#! /bin/sh" > $(TMPDIR)/rosco_screen.sh
 	echo "/usr/bin/screen $(SERIAL) $(BAUD)" >> $(TMPDIR)/rosco_screen.sh
-	chmod +x $(TMPDIR)/rosco_screen.sh
+	-chmod +x $(TMPDIR)/rosco_screen.sh
 	sleep 1
 	open -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
 
 # Makefile magic (for "phony" targets that are not real files)
-.PHONY: all clean dump disasm load test mactest macterm
+.PHONY: all clean disasm dump load linuxtest linuxterm mactest macterm

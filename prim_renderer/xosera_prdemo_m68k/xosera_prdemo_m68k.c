@@ -29,8 +29,8 @@
 #define M_PI 3.14159265358979323846264338327950288
 #endif
 
-#define NB_RECTS        10
-#define NB_TRIANGLES    10
+#define NB_RECTS        100
+#define NB_TRIANGLES    50
 
 #include <xosera_m68k_api.h>
 #include <pr_api.h>
@@ -197,16 +197,6 @@ typedef struct
 {
     float x1, y1, x2, y2, x3, y3;
 } Coord3;
-
-static void draw_filled_triangle(Coord3 coord, int color)
-{
-    pr_draw_filled_triangle((int)coord.x1, (int)coord.y1, (int)coord.x2, (int)coord.y2, (int)coord.x3, (int)coord.y3, color);
-}
-
-static void draw_filled_rectangle(Coord2 coord, int color)
-{
-    pr_draw_filled_rectangle((int)coord.x1, (int)coord.y1, (int)coord.x2, (int)coord.y2, color);
-}
 
 // Color conversion
 // Ref.:
@@ -451,8 +441,7 @@ void demo_filled_rectangles(int nb_iterations)
 
         for(size_t j = 0; j < NB_RECTS; ++j) {
             Particle* p = &particles[j];
-            Coord2 c = {p->x - p->radius, p->y - p->radius, p->x + p->radius, p->y + p->radius};
-            draw_filled_rectangle(c, p->color);
+            pr_draw_filled_rectangle(p->x - p->radius, p->y - p->radius, p->x + p->radius, p->y + p->radius, p->color);
         }
 
         pr_swap(true);
@@ -498,8 +487,7 @@ void demo_filled_triangles(int nb_iterations)
             Particle* p1 = &particles[j];
             Particle* p2 = &particles[j+1];
             Particle* p3 = &particles[j+2];
-            Coord3 c = {p1->x, p1->y, p2->x, p2->y, p3->x, p3->y};
-            draw_filled_triangle(c, p1->color);
+            pr_draw_filled_triangle(p1->x, p1->y, p2->x, p2->y, p3->x, p3->y, p1->color);
         }
 
         for(size_t j = 0; j < 3*NB_TRIANGLES; ++j) {

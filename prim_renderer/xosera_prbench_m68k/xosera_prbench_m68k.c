@@ -201,6 +201,46 @@ void srand2(unsigned int seed)
     next = seed;
 }
 
+typedef enum {
+    CLEAR,
+    TRIANGLES
+} BenchType;
+
+void bench(BenchType bench_type)
+{
+    pr_clear();
+    pr_finish();
+
+    uint16_t t1 = xm_getw(TIMER);
+
+    switch (bench_type)
+    {
+    case CLEAR:
+        pr_clear();
+        break;
+
+    case TRIANGLES:
+        for (int i = 0; i < 1000; ++i)
+            pr_draw_filled_triangle(0, 0, 0, 0, 0, 0, 0);
+        break;
+    
+    default:
+        break;
+    }
+
+    pr_swap(false);
+    uint16_t t2 = xm_getw(TIMER);
+
+    uint16_t dt;
+    if (t2 > t1) {
+        dt = t2 - t1;
+    } else {
+        dt = 65535 - t1 + t2;
+    }
+
+    xpos(0, 0);
+    xprintf("%s: Period: %d/10 ms               ", bench_type == CLEAR ? "Clear" : "1000 Triangles", dt);    
+}
 
 void xosera_demo()
 {
@@ -236,21 +276,10 @@ void xosera_demo()
 
     while(1)
     {
-        uint16_t t1 = xm_getw(TIMER);
-        pr_clear();
-        pr_swap(false);
-        uint16_t t2 = xm_getw(TIMER);
-
-        uint16_t period;
-        if (t2 > t1) {
-            period = t2 - t1;
-        } else {
-            period = 65535 - t1 + t2;
-        }
-
-        xpos(0, 0);
-        xprintf("Period: %d/10 ms      ", period);
-
+        for (int i = 0; i < 1000; ++i)
+            bench(CLEAR);
+        for (int i = 0; i < 100; ++i)
+            bench(TRIANGLES);
     }
 
     // disable Copper

@@ -132,3 +132,8 @@ void pr_clear()
 {
     pr_draw_filled_rectangle(0, 0, MAX_WIDTH, g_height - 1, 1);
 }
+
+void pr_finish()
+{
+    wait_pr_done();
+}

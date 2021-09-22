@@ -27,6 +27,7 @@
 void pr_init();
 void pr_init_swap();
 void pr_swap(bool is_vsync_enabled);
+void pr_draw_line(int x0, int y0, int x1, int y1, int color);
 void pr_draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, int color);
 void pr_draw_filled_rectangle(int x0, int y0, int x1, int y1, int color);
 void pr_clear();

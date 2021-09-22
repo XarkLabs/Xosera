@@ -137,3 +137,7 @@
 #define PR_DEST_ADDR   0x7000
 #define PR_DEST_HEIGHT 0x8000
 #define PR_EXECUTE     0xF000
+
+// Primitive renderer shapes
+#define PR_LINE            0x0
+#define PR_FILLED_TRIANGLE 0x1

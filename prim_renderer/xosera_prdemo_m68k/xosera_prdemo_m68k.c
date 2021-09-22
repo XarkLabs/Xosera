@@ -330,7 +330,6 @@ void fade_out()
         set_palette(1.0f - (float)i / 100.0f);
 }
 
-/*
 void demo_lines()
 {
     const Coord2 coords[] = {{0, 0, 2, 4},   {0, 4, 2, 0},   {3, 4, 3, 0},      {3, 0, 5, 0},   {5, 0, 5, 4},
@@ -348,7 +347,7 @@ void demo_lines()
         float x = 80.0f * cos(angle);
         float y = 80.0f * sin(angle);
         Coord2 c = {240, 120, 240 + x, 120 + y};
-        draw_line(c, i % (256 - 16) + 16);
+        pr_draw_line(c.x1, c.y1, c.x2, c.y2, i % (256 - 16) + 16);
         angle += 2.0f * M_PI / 256.0f;
     }
 
@@ -367,7 +366,7 @@ void demo_lines()
             coord.y1 = coord.y1 * scale_y + offset_y;
             coord.x2 = coord.x2 * scale_x + offset_x;
             coord.y2 = coord.y2 * scale_y + offset_y;
-            draw_line(coord, i + 2);
+            pr_draw_line(coord.x1, coord.y1, coord.x2, coord.y2, i + 2);
         }
 
         offset_y += 5 * scale_y;
@@ -375,23 +374,11 @@ void demo_lines()
         scale_y += 1;
     }
 
-    {
-        Coord2 c1 = {0,0, 319, 0};
-        Coord2 c2 = {0,0, 0, 199};
-        Coord2 c3 = {0, 199, 319, 199};
-        Coord2 c4 = {319, 199, 319, 0};
-        draw_line(c1, 4);
-        draw_line(c2, 4);
-        draw_line(c3, 4);
-        draw_line(c4, 4);
-    }
-
     pr_swap(true);
     fade_in();
     delay(2000);
     fade_out();
 }
-*/
 
 typedef struct {
     int x, y;
@@ -549,7 +536,7 @@ void xosera_demo()
         // enable Copper
         xreg_setw(COPP_CTRL, 0x8000);        
 
-        //demo_lines();
+        demo_lines();
         demo_filled_rectangles(1000);
         demo_filled_triangles(1000);
 

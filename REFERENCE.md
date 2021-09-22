@@ -616,6 +616,15 @@ The following commands are available:
 | 0x6xvv | `PR_COLOR`       | set the 8-bit color (optional)
 | 0x7vvv | `PR_DEST_ADDR`   | destination start address (MSB, optional)
 | 0x8vvv | `PR_DEST_HEIGHT` | destination height in lines (optional)
-| 0xFxxx | `PR_EXECUTE`     | draw the filled triangle
+| 0xFxxs | `PR_EXECUTE`     | draw the shape (s=shape, see Shapes)
 
 Note: x=don't care
+
+#### Shapes
+
+The following primitive shapes are available:
+
+| Data   | Name                     | Description
+---------|--------------------------|------------
+| 0x0    | `PR_LINE`                | line
+| 0x1    | `PR_FILLED_TRIANGLE`     | filled triangle

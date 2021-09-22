@@ -71,6 +71,23 @@ void pr_swap(bool is_vsync_enabled)
     }
 }
 
+void pr_draw_line(int x0, int y0, int x1, int y1, int color)
+{
+    if (y0 > y1) {
+        swapi(&x0, &x1);
+        swapi(&y0, &y1);
+    }
+
+    wait_pr_done();
+
+    xm_setw(WR_PR_CMD, PR_COORDX0 | (x0 & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY0 | (y0 & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDX1 | (x1 & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COORDY1 | (y1 & 0x0FFF));
+    xm_setw(WR_PR_CMD, PR_COLOR | color);
+    xm_setw(WR_PR_CMD, PR_EXECUTE | PR_LINE);
+}
+
 void pr_draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, int color)
 {
     if (y0 > y2) {
@@ -97,7 +114,7 @@ void pr_draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, int
     xm_setw(WR_PR_CMD, PR_COORDX2 | (x2 & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COORDY2 | (y2 & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COLOR | color);
-    xm_setw(WR_PR_CMD, PR_EXECUTE);
+    xm_setw(WR_PR_CMD, PR_EXECUTE | PR_FILLED_TRIANGLE);
 }
 
 void pr_draw_filled_rectangle(int x0, int y0, int x1, int y1, int color)
@@ -115,7 +132,7 @@ void pr_draw_filled_rectangle(int x0, int y0, int x1, int y1, int color)
     xm_setw(WR_PR_CMD, PR_COORDX2 | (x0 & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COORDY2 | (y1 & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COLOR | color);
-    xm_setw(WR_PR_CMD, PR_EXECUTE);
+    xm_setw(WR_PR_CMD, PR_EXECUTE | PR_FILLED_TRIANGLE);
 
     wait_pr_done();
     xm_setw(WR_PR_CMD, PR_COORDX0 | (x1 & 0x0FFF));
@@ -125,7 +142,7 @@ void pr_draw_filled_rectangle(int x0, int y0, int x1, int y1, int color)
     xm_setw(WR_PR_CMD, PR_COORDX2 | (x1 & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COORDY2 | (y1 & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COLOR | color);
-    xm_setw(WR_PR_CMD, PR_EXECUTE);    
+    xm_setw(WR_PR_CMD, PR_EXECUTE | PR_FILLED_TRIANGLE);    
 }
 
 void pr_clear()

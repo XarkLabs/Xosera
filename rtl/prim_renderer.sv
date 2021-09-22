@@ -30,19 +30,46 @@ module prim_renderer(
     input  wire logic            clk
     );
 
-logic start;
+logic start_line;
+logic start_filled_triangle;
 logic signed [11:0] x0, y0, x1, y1, x2, y2;
 logic        [15:0] dest_addr;
 logic        [11:0] dest_height;
 logic signed [11:0] x, y;
+logic signed [11:0] x_line, y_line;
+logic signed [11:0] x_filled_triangle, y_filled_triangle;
 logic         [7:0] color;
-logic               drawing;
-logic               done;
+logic drawing;
+logic drawing_line;
+logic drawing_filled_triangle;
+logic busy_line;
+logic busy_filled_triangle;
+logic done;
+logic done_line;
+logic done_filled_triangle;
+
+always_comb busy_o = busy_line || busy_filled_triangle;
+
+draw_line #(.CORDW(12)) draw_line (    // framebuffer coord width in bits
+    .clk(clk),                         // clock
+    .reset_i(reset_i),                 // reset
+    .start_i(start_line),              // start line rendering
+    .oe_i(oe_i),                       // output enable
+    .x0_i(x0),                         // point 0 - horizontal position
+    .y0_i(y0),                         // point 0 - vertical position
+    .x1_i(x1),                         // point 1 - horizontal position
+    .y1_i(y1),                         // point 1 - vertical position
+    .x_o(x_line),                      // horizontal drawing position
+    .y_o(y_line),                      // vertical drawing position
+    .drawing_o(drawing_line),          // line is drawing
+    .busy_o(busy_line),                // line drawing request in progress
+    .done_o(done_line)                 // line complete (high for one tick)
+    );
 
 draw_triangle_fill #(.CORDW(12)) draw_triangle_fill (     // framebuffer coord width in bits
     .clk(clk),                              // clock
     .reset_i(reset_i),                      // reset
-    .start_i(start),                        // start triangle rendering
+    .start_i(start_filled_triangle),        // start triangle rendering
     .oe_i(oe_i),                            // output enable
     .x0_i(x0),                              // point 0 - horizontal position
     .y0_i(y0),                              // point 0 - vertical position
@@ -50,17 +77,30 @@ draw_triangle_fill #(.CORDW(12)) draw_triangle_fill (     // framebuffer coord w
     .y1_i(y1),                              // point 1 - vertical position
     .x2_i(x2),                              // point 2 - horizontal position
     .y2_i(y2),                              // point 2 - vertical position
-    .x_o(x),                                // horizontal drawing position
-    .y_o(y),                                // vertical drawing position
-    .drawing_o(drawing),                    // triangle is drawing
-    .busy_o(busy_o),                        // triangle drawing request in progress
-    .done_o(done)                           // triangle complete (high for one tick)
+    .x_o(x_filled_triangle),                // horizontal drawing position
+    .y_o(y_filled_triangle),                // vertical drawing position
+    .drawing_o(drawing_filled_triangle),    // triangle is drawing
+    .busy_o(busy_filled_triangle),          // triangle drawing request in progress
+    .done_o(done_filled_triangle)           // triangle complete (high for one tick)
     );
+
+always_comb begin
+    drawing = drawing_line | drawing_filled_triangle;
+    done = done_line | done_filled_triangle;
+    if (drawing_line) begin
+        x = x_line;
+        y = y_line;
+    end else begin
+        x = x_filled_triangle;
+        y = y_filled_triangle;
+    end
+end
 
 always_ff @(posedge clk) begin
 
     if (reset_i) begin
-        start <= 0;
+        start_line <= 0;
+        start_filled_triangle <= 0;
         prim_rndr_vram_sel_o <= 0;
         prim_rndr_wr_o <= 0;
         dest_addr <= 16'h0000;
@@ -78,7 +118,15 @@ always_ff @(posedge clk) begin
             xv::PR_COLOR        : color <= cmd_i[7:0];
             xv::PR_DEST_ADDR    : dest_addr <= {cmd_i[11:0], 4'b0000};
             xv::PR_DEST_HEIGHT  : dest_height <= cmd_i[11:0];
-            xv::PR_EXECUTE      : start <= 1;
+            xv::PR_EXECUTE: begin
+                case(cmd_i[3:0])
+                    xv::PR_LINE             : start_line             <= 1;
+                    xv::PR_FILLED_TRIANGLE  : start_filled_triangle  <= 1;
+                    default: begin
+                        // do nothing
+                    end
+                endcase
+            end
             default: begin
                 // Do nothing
             end
@@ -103,7 +151,8 @@ always_ff @(posedge clk) begin
         prim_rndr_wr_o <= 0;
     end
 
-    if (start) start <= 0;
+    if (start_line) start_line <= 0;
+    if (start_filled_triangle) start_filled_triangle <= 0;
 end
 
 endmodule

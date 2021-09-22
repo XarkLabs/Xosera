@@ -226,24 +226,26 @@ static _NOINLINE void xansi_do_scroll()
     xv_prep();
 
     // scroll 4 longs per loop (8 words)
-    uint16_t i;
-    for (i = td->vram_size - td->cols; i >= 8; i -= 8)
     {
-        xm_setl(DATA, xm_getl(DATA));
-        xm_setl(DATA, xm_getl(DATA));
-        xm_setl(DATA, xm_getl(DATA));
-        xm_setl(DATA, xm_getl(DATA));
-    }
-    // scroll remaining longs (0-3)
-    for (; i >= 2; i -= 2)
-    {
-        xm_setl(DATA, xm_getl(DATA));
-    }
+        uint16_t i;
+        for (i = td->vram_size - td->cols; i >= 8; i -= 8)
+        {
+            xm_setl(DATA, xm_getl(DATA));
+            xm_setl(DATA, xm_getl(DATA));
+            xm_setl(DATA, xm_getl(DATA));
+            xm_setl(DATA, xm_getl(DATA));
+        }
+        // scroll remaining longs (0-3)
+        for (; i >= 2; i -= 2)
+        {
+            xm_setl(DATA, xm_getl(DATA));
+        }
 
-    // scroll remaining word
-    if (i)
-    {
-        xm_setw(DATA, xm_getw(DATA));
+        // scroll remaining word
+        if (i)
+        {
+            xm_setw(DATA, xm_getw(DATA));
+        }
     }
 
     // clear new line
@@ -643,7 +645,7 @@ static inline void xansi_process_esc(xansiterm_data * td, char cdata)
             td->state = TSTATE_ESC;
             break;
         default:
-            LOGF("%c\n  := [ignore 0x%02x]\n", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
+            LOGF("%c\n  := [ignore 0x%02x]\n", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', (uint8_t)cdata);
             return;
     }
     xansi_calc_cur_addr();
@@ -895,7 +897,9 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                     i = td->num_parms;        // no more parameters after this
                 }
 
-                if (col < 8)        // normal color 0-7 range
+                if (((parm_code >= 30 && parm_code <= 39) || (parm_code >= 40 && parm_code <= 49) ||
+                     (parm_code >= 90 && parm_code <= 97) || (parm_code >= 100 && parm_code <= 107)) &&
+                    col < 8)        // normal color 0-7 range
                 {
                     col = ansi_to_vga_color[col];        // convert from ANSI color to VGA
                     // light color ranges?
@@ -906,6 +910,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                     }
                 }
 
+                LOGF("<parm=%d>", parm_code);
                 switch (parm_code)
                 {
                     case 0:
@@ -1052,14 +1057,15 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                                         rosco_cmd_good = true;
                                     }
                                     break;
+                                default:
+                                    break;
                             }
                         }
-
                         LOGF("%s]", rosco_cmd_good ? "" : "<bad>");
                         i = td->num_parms;        // eat remaning parms
                         break;
                     default:
-                        LOGF("[%d ignored]", td->csi_parms[i]);
+                        LOGF("[SGR %d ignored]", parm_code);
                         break;
                 }
                 // calculate effective color
@@ -1080,6 +1086,10 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                     td->color |= 0x08;
                 }
             }
+            break;
+        default:
+            LOGF("[ignored CSI final '%c' (0x%02x)]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', (uint8_t)cdata);
+            break;
     }
 
     xansi_calc_cur_addr();
@@ -1113,6 +1123,7 @@ static inline void xansi_parse_csi(xansiterm_data * td, char cdata)
             }
             uint16_t v = td->csi_parms[td->num_parms - 1];
             v *= (uint16_t)10;
+            LOGF("v * 10 = %d\n", v);
             if ((uint16_t)(v + d) < v)        // check for unsigned wrap
             {
                 v = 65535;
@@ -1121,6 +1132,7 @@ static inline void xansi_parse_csi(xansiterm_data * td, char cdata)
             {
                 v += d;
             }
+            LOGF("v + %d = %d\n", d, v);
             td->csi_parms[td->num_parms - 1] = v;
         }
         else if (cdata == ';')
@@ -1149,7 +1161,7 @@ static inline void xansi_parse_csi(xansiterm_data * td, char cdata)
     else
     {
         // enter ILLEGAL state (until CAN, SUB or final character)
-        LOGF("[ERR: illegal '%c' (0x%02x)]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
+        LOGF("[ERR: illegal '%c' (0x%02x)]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', (uint8_t)cdata);
         td->state = TSTATE_ILLEGAL;
     }
 }
@@ -1200,7 +1212,7 @@ void xansiterm_putchar(char cdata)
     {
         // VT:  \x18    CAN terminate current CSI sequence, otherwise ignored
         // VT:  \x1A    SUB terminate current CSI sequence, otherwise ignored
-        LOGF("[CANCEL: 0x%02x]", cdata);
+        LOGF("[CANCEL: 0x%02x]", (uint8_t)cdata);
         td->state = TSTATE_NORMAL;
     }
     else if (td->state == TSTATE_ESC)        // NOTE: only one char sequences supported
@@ -1216,11 +1228,11 @@ void xansiterm_putchar(char cdata)
         if (cdata >= 0x40)
         {
             td->state = TSTATE_NORMAL;
-            LOGF("[end skip '%c' 0x%02x]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
+            LOGF("[end skip '%c' 0x%02x]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', (uint8_t)cdata);
         }
         else
         {
-            LOGF("[skip '%c' 0x%02x]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', cdata);
+            LOGF("[skip '%c' 0x%02x]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', (uint8_t)cdata);
         }
     }
 

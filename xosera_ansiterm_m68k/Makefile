@@ -16,13 +16,13 @@ SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib
 DEFINES=-DROSCO_M68K
 CFLAGS= -mcpu=68010 -march=68010 -mtune=68010 -std=c11 -ffreestanding -ffunction-sections -fdata-sections -pedantic\
  -Wall -Wextra -Werror -Wno-unused-function -Wno-variadic-macros -I$(SYSINCDIR) -I$(XOSERA_M68K_API) $(DEFINES)
-# EVIL    	CFLAGS += -Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla -Warray-bounds=2 -Wimplicit-fallthrough=3 -Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion -Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wformat-signedness -Wshadow -Wstrict-overflow=4 -Wswitch-default -Wswitch-enum -Wstack-usage=1000000 -Wcast-align=strict
-# Too-EVIL 	-Wundef -Wstrict-prototypes  -Wtraditional-conversion
+# harsh:	CFLAGS += -Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla -Warray-bounds=2 -Wimplicit-fallthrough=3 -Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion -Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wformat-signedness -Wshadow -Wstrict-overflow=4 -Wswitch-default -Wswitch-enum -Wstack-usage=1000000 -Wcast-align=strict  -Wno-conversion -Wno-arith-conversion 
+# Too-harsh:	-Wundef -Wstrict-prototypes  -Wtraditional-conversion
 GCC_LIBS=$(shell $(CC) --print-search-dirs \
     | grep libraries:\ = \
     | sed 's/libraries: =/-L/g' \
     | sed 's/:/m68000\/ -L/g')m68000/
-LIBS=-lsdfat -lprintf -lcstdlib -lmachine -lstart_serial -lgcc
+LIBS=-lprintf -lcstdlib -lmachine -lstart_serial -lgcc
 ASFLAGS=-mcpu=68010 -march=68010
 LDFLAGS=-T $(SYSLIBDIR)/ld/serial/rosco_m68k_program.ld -L $(SYSLIBDIR) \
     -Map=$(MAP) --gc-sections --oformat=elf32-m68k

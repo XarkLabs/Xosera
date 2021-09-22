@@ -34,6 +34,7 @@
 
 #include <xosera_m68k_api.h>
 #include <pr_api.h>
+#include <cube.h>
 
 extern void install_intr(void);
 extern void remove_intr(void);
@@ -493,6 +494,28 @@ void demo_filled_triangles(int nb_iterations)
     fade_out();
 }
 
+void demo_cube(int nb_iterations)
+{
+    pr_clear();
+    pr_swap(true);
+
+    fade_in();
+
+    float theta = 0.0f;
+    for (int i = 0; i < nb_iterations; ++i) {
+
+        pr_clear();
+
+        draw_cube(theta);
+
+        pr_swap(true);
+
+        theta += 0.1f;
+    }
+
+    fade_out();
+}
+
 void xosera_demo()
 {
     xosera_init(0);
@@ -538,7 +561,8 @@ void xosera_demo()
 
         demo_lines();
         demo_filled_rectangles(1000);
-        demo_filled_triangles(1000);
+        demo_filled_triangles(500);
+        demo_cube(100);
 
         // disable Copper
         xreg_setw(COPP_CTRL, 0x0000);

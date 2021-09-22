@@ -1,3 +1,24 @@
+/*
+ * vim: set et ts=4 sw=4
+ *------------------------------------------------------------
+ *  __ __
+ * |  |  |___ ___ ___ ___ ___
+ * |-   -| . |_ -| -_|  _| .'|
+ * |__|__|___|___|___|_| |__,|
+ *
+ * Xark's Open Source Enhanced Retro Adapter
+ *
+ * - "Not as clumsy or random as a GPU, an embedded retro
+ *    adapter for a more civilized age."
+ *
+ * ------------------------------------------------------------
+ * Copyright (c) 2021 Xark & Contributors
+ * MIT License
+ *
+ * Primitive Renderer API
+ * ------------------------------------------------------------
+ */
+
 #include "pr_api.h"
 
 #include <xosera_m68k_api.h>
@@ -86,6 +107,13 @@ void pr_draw_line(int x0, int y0, int x1, int y1, int color)
     xm_setw(WR_PR_CMD, PR_COORDY1 | (y1 & 0x0FFF));
     xm_setw(WR_PR_CMD, PR_COLOR | color);
     xm_setw(WR_PR_CMD, PR_EXECUTE | PR_LINE);
+}
+
+void pr_draw_triangle(int x0, int y0, int x1, int y1, int x2, int y2, int color)
+{
+    pr_draw_line(x0, y0, x1, y1, color);
+    pr_draw_line(x1, y1, x2, y2, color);
+    pr_draw_line(x2, y2, x0, y0, color);
 }
 
 void pr_draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, int color)

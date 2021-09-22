@@ -15,23 +15,13 @@
  * Copyright (c) 2021 Xark & Contributors
  * MIT License
  *
- * Primitive Renderer API
+ * Draw cube
  * ------------------------------------------------------------
  */
 
-#ifndef PR_API_H
-#define PR_API_H
+#ifndef CUBE_H
+#define CUBE_H
 
-#include <stdbool.h>
-
-void pr_init();
-void pr_init_swap();
-void pr_swap(bool is_vsync_enabled);
-void pr_draw_line(int x0, int y0, int x1, int y1, int color);
-void pr_draw_triangle(int x0, int y0, int x1, int y1, int x2, int y2, int color);
-void pr_draw_filled_triangle(int x0, int y0, int x1, int y1, int x2, int y2, int color);
-void pr_draw_filled_rectangle(int x0, int y0, int x1, int y1, int color);
-void pr_clear();
-void pr_finish();
+void draw_cube(float theta);
 
 #endif

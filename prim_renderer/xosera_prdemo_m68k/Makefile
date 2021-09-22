@@ -15,8 +15,8 @@ EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
 SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib
 DEFINES=-DROSCO_M68K
-CFLAGS=-std=c11 -ffreestanding -ffunction-sections -fdata-sections \
-    -Wall -Wextra -Werror -Wno-unused-function -pedantic -I$(SYSINCDIR) \
+CFLAGS=-std=c99 -ffreestanding -ffunction-sections -fdata-sections \
+    -Wall -Wextra -Wno-unused-function -I$(SYSINCDIR) \
     -I$(XOSERA_M68K_API) -I$(COMMON) \
     -mcpu=68010 -march=68010 -mtune=68010 $(DEFINES)
 GCC_LIBS=$(shell $(CC) --print-search-dirs \

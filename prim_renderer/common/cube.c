@@ -133,7 +133,7 @@ void draw_cube(float theta)
     fx32  fov_rad      = FX(1.0f / tanf(fov * 0.5f / 180.0f * 3.14159f));
 
     mat4x4 mat_proj;
-    vec3d vec_camera;
+    vec3d vec_camera = {FX(0.0f), FX(0.0f), FX(0.0f)};
 
     memset(&mat_proj, 0, sizeof(mat_proj));
     mat_proj.m[0][0] = MUL(aspect_ratio, fov_rad);

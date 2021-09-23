@@ -26,7 +26,6 @@ bool checkchar();
 #endif
 
 void dprintf(const char * fmt, ...) __attribute__((format(__printf__, 1, 2)));
-
 void dputc(char c);
 void dputs(const char * str);
 #endif        // ROSCO_M68K_SUPPORT_H

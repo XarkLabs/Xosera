@@ -15,7 +15,7 @@
  */
 
 #define TINYECHO 0        // lightweight echo only test
-#define DEBUG    0        // set to 1 for debugging
+#define DEBUG    1        // set to 1 for debugging
 
 #if !defined(_NOINLINE)
 #define _NOINLINE __attribute__((noinline))
@@ -23,18 +23,7 @@
 
 #if defined(DEBUG)
 
-#if defined(printf)        // printf macro interferes with gcc format attribute
-#define _save_printf printf
-#undef printf
-#endif
-
-void dprintf(const char * fmt, ...) __attribute__((format(printf, 1, 2)));
-
-#if defined(_save_printf)        // retstore printf macro
-#define printf _save_printf
-#undef _save_printf
-#endif
-
+void dprintf(const char * fmt, ...) __attribute__((format(__printf__, 1, 2)));
 #define DPRINTF(fmt, ...) dprintf(fmt, ##__VA_ARGS__)
 
 #else

@@ -25,11 +25,8 @@
 #include <basicio.h>
 #include <machine.h>
 
+#include "rosco_m68k_support.h"
 #include "xosera_ansiterm_m68k.h"
-
-#if defined(printf)        // this interferes with gcc format attributes
-#undef printf
-#endif
 
 #define XV_PREP_REQUIRED        // require xv_prep()
 #include "xosera_m68k_api.h"
@@ -39,44 +36,6 @@
 #endif
 
 #include "us-fishoe.h"
-
-#if DEBUG
-static void dputc(char c)
-{
-#ifndef __INTELLISENSE__
-    __asm__ __volatile__(
-        "move.w %[chr],%%d0\n"
-        "move.l #2,%%d1\n"        // SENDCHAR
-        "trap   #14\n"
-        :
-        : [chr] "d"(c)
-        : "d0", "d1");
-#endif
-}
-
-static void dprint(const char * str)
-{
-    register char c;
-    while ((c = *str++) != '\0')
-    {
-        if (c == '\n')
-        {
-            dputc('\r');
-        }
-        dputc(c);
-    }
-}
-
-void dprintf(const char * fmt, ...)
-{
-    static char dprint_buff[4096];
-    va_list     args;
-    va_start(args, fmt);
-    vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
-    dprint(dprint_buff);
-    va_end(args);
-}
-#endif
 
 // testing harness functions
 static char ansiterm_waitchar()
@@ -106,12 +65,7 @@ static void tputs(char * p)
 
 #if !TINYECHO
 
-#if defined(printf)        // printf macro interferes with gcc format attribute
-#define _save_printf printf
-#undef printf
-#endif
-
-static void tprintf(const char * fmt, ...) __attribute__((format(printf, 1, 2)));
+static void tprintf(const char * fmt, ...) __attribute__((format(__printf__, 1, 2)));
 static void tprintf(const char * fmt, ...)
 {
     static char tprint_buff[4096];
@@ -121,11 +75,6 @@ static void tprintf(const char * fmt, ...)
     tputs(tprint_buff);
     va_end(args);
 }
-
-#if defined(_save_printf)        // retstore printf macro
-#define printf _save_printf
-#undef _save_printf
-#endif
 
 // attribute test
 static int ansiterm_test_attrib()
@@ -181,15 +130,23 @@ static int ansiterm_test_attrib()
 
 static int ansiterm_spamtest()
 {
-    char spam[225];
-    for (uint8_t i = 0; i < 224; i++)
+    char   spam[259];
+    char * p = spam;
+    for (int i = 1; i < 256; i++)
     {
-        spam[i] = i + ' ';
+        if (i == 0x1b || i == 0x9b)
+        {
+            *p++ = '\x1b';
+        }
+        *p++ = i;
     }
-    spam[224] = 0;
+    *p++ = '\0';
+
+    tputs("\x1b[8m");
 
     while (true)
     {
+        xansiterm_putchar('\0');
         tputs(spam);
         if (xansiterm_checkchar())
         {

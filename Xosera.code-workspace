@@ -10,6 +10,7 @@
 			"editor.wordWrapColumn": 131,
 		},
 		"editor.formatOnSave": true,
+		"editor.dragAndDrop": false,
 		"workbench.editor.wrapTabs": true,
 		"workbench.editor.tabSizing": "fit",
 		"editor.codeActionsOnSave": {

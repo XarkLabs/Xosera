@@ -52,6 +52,7 @@
 #define SIN(x) FX(sinf(_FIXED_TO_FLOAT(x, SCALE)))
 #define COS(x) FX(cosf(_FIXED_TO_FLOAT(x, SCALE)))
 #define TAN(x) FX(tanf(_FIXED_TO_FLOAT(x, SCALE)))
+#define SQRT(x) FX(sqrtf(_FIXED_TO_FLOAT(x, SCALE)))
 
 typedef int fx32;
 
@@ -75,10 +76,10 @@ typedef struct
     fx32 m[4][4];
 } mat4x4;
 
-int screenWidth  = 320;
-int screenHeight = 200;
+int screen_width  = 320;
+int screen_height = 200;
 
-void MultiplyMatrixVector(vec3d * i, vec3d * o, mat4x4 * m)
+void multiply_matrix_vector(vec3d * i, vec3d * o, mat4x4 * m)
 {
     o->x   = MUL(i->x, m->m[0][0]) + MUL(i->y, m->m[1][0]) + MUL(i->z, m->m[2][0]) + m->m[3][0];
     o->y   = MUL(i->x, m->m[0][1]) + MUL(i->y, m->m[1][1]) + MUL(i->z, m->m[2][1]) + m->m[3][1];
@@ -121,92 +122,123 @@ triangle cube_triangles[] = {
 
 void draw_cube(float theta)
 {
-    mesh meshCube;
-    meshCube.tris = &cube_triangles[0];
+    mesh mesh_cube;
+    mesh_cube.tris = &cube_triangles[0];
 
-    // Projection matrix
+    // projection matrix
     fx32  near        = FX(0.1f);
     fx32  far         = FX(1000.0f);
     float fov         = 90.0f;
-    fx32  aspectRatio = FX((float)screenHeight / (float)screenWidth);
-    fx32  fovRad      = FX(1.0f / tanf(fov * 0.5f / 180.0f * 3.14159f));
+    fx32  aspect_ratio = FX((float)screen_height / (float)screen_width);
+    fx32  fov_rad      = FX(1.0f / tanf(fov * 0.5f / 180.0f * 3.14159f));
 
-    mat4x4 matProj;
-    memset(&matProj, 0, sizeof(matProj));
-    matProj.m[0][0] = MUL(aspectRatio, fovRad);
-    matProj.m[1][1] = fovRad;
-    matProj.m[2][2] = DIV(far, (far - near));
-    matProj.m[3][2] = DIV(MUL(-far, near), (far - near));
-    matProj.m[2][3] = FX(1.0f);
-    matProj.m[3][3] = FX(0.0f);
+    mat4x4 mat_proj;
+    vec3d vec_camera;
 
-    mat4x4 matRotZ, matRotX;
-    memset(&matRotZ, 0, sizeof(matRotZ));
-    memset(&matRotX, 0, sizeof(matRotX));
+    memset(&mat_proj, 0, sizeof(mat_proj));
+    mat_proj.m[0][0] = MUL(aspect_ratio, fov_rad);
+    mat_proj.m[1][1] = fov_rad;
+    mat_proj.m[2][2] = DIV(far, (far - near));
+    mat_proj.m[3][2] = DIV(MUL(-far, near), (far - near));
+    mat_proj.m[2][3] = FX(1.0f);
+    mat_proj.m[3][3] = FX(0.0f);
 
-    // Rotation Z
-    matRotZ.m[0][0] = FX(cosf(theta));
-    matRotZ.m[0][1] = FX(sinf(theta));
-    matRotZ.m[1][0] = FX(-sinf(theta));
-    matRotZ.m[1][1] = FX(cosf(theta));
-    matRotZ.m[2][2] = FX(1.0f);
-    matRotZ.m[3][3] = FX(1.0f);
+    mat4x4 mat_rot_z, mat_rot_x;
+    memset(&mat_rot_z, 0, sizeof(mat_rot_z));
+    memset(&mat_rot_x, 0, sizeof(mat_rot_x));
 
-    // Rotation X
-    matRotX.m[0][0] = FX(1.0f);
-    matRotX.m[1][1] = FX(cosf(theta * 0.5f));
-    matRotX.m[1][2] = FX(sinf(theta * 0.5f));
-    matRotX.m[2][1] = FX(-sinf(theta * 0.5f));
-    matRotX.m[2][2] = FX(cosf(theta * 0.5f));
-    matRotX.m[3][3] = FX(1.0f);
+    // rotation Z
+    mat_rot_z.m[0][0] = FX(cosf(theta));
+    mat_rot_z.m[0][1] = FX(sinf(theta));
+    mat_rot_z.m[1][0] = FX(-sinf(theta));
+    mat_rot_z.m[1][1] = FX(cosf(theta));
+    mat_rot_z.m[2][2] = FX(1.0f);
+    mat_rot_z.m[3][3] = FX(1.0f);
 
-    // Draw triangles
+    // rotation X
+    mat_rot_x.m[0][0] = FX(1.0f);
+    mat_rot_x.m[1][1] = FX(cosf(theta * 0.5f));
+    mat_rot_x.m[1][2] = FX(sinf(theta * 0.5f));
+    mat_rot_x.m[2][1] = FX(-sinf(theta * 0.5f));
+    mat_rot_x.m[2][2] = FX(cosf(theta * 0.5f));
+    mat_rot_x.m[3][3] = FX(1.0f);
+
+    // draw triangles
     size_t nb_triangles = sizeof(cube_triangles) / sizeof(triangle);
     for (size_t i = 0; i < nb_triangles; ++i)
     {
-        triangle * tri = &meshCube.tris[i];
-        triangle   triProjected, triTranslated, triRotatedZ, triRotatedZX;
+        triangle * tri = &mesh_cube.tris[i];
+        triangle   tri_projected, tri_translated, tri_rotated_z, tri_rotated_zx;
 
-        MultiplyMatrixVector(&tri->p[0], &triRotatedZ.p[0], &matRotZ);
-        MultiplyMatrixVector(&tri->p[1], &triRotatedZ.p[1], &matRotZ);
-        MultiplyMatrixVector(&tri->p[2], &triRotatedZ.p[2], &matRotZ);
+        // rotate in Z-axis
+        multiply_matrix_vector(&tri->p[0], &tri_rotated_z.p[0], &mat_rot_z);
+        multiply_matrix_vector(&tri->p[1], &tri_rotated_z.p[1], &mat_rot_z);
+        multiply_matrix_vector(&tri->p[2], &tri_rotated_z.p[2], &mat_rot_z);
 
-        MultiplyMatrixVector(&triRotatedZ.p[0], &triRotatedZX.p[0], &matRotX);
-        MultiplyMatrixVector(&triRotatedZ.p[1], &triRotatedZX.p[1], &matRotX);
-        MultiplyMatrixVector(&triRotatedZ.p[2], &triRotatedZX.p[2], &matRotX);
+        // rotate in X-axis
+        multiply_matrix_vector(&tri_rotated_z.p[0], &tri_rotated_zx.p[0], &mat_rot_x);
+        multiply_matrix_vector(&tri_rotated_z.p[1], &tri_rotated_zx.p[1], &mat_rot_x);
+        multiply_matrix_vector(&tri_rotated_z.p[2], &tri_rotated_zx.p[2], &mat_rot_x);
 
-        triTranslated        = triRotatedZX;
-        triTranslated.p[0].z = triRotatedZX.p[0].z + FX(3.0f);
-        triTranslated.p[1].z = triRotatedZX.p[1].z + FX(3.0f);
-        triTranslated.p[2].z = triRotatedZX.p[2].z + FX(3.0f);
+        // offset into the screen
+        tri_translated        = tri_rotated_zx;
+        tri_translated.p[0].z = tri_rotated_zx.p[0].z + FX(3.0f);
+        tri_translated.p[1].z = tri_rotated_zx.p[1].z + FX(3.0f);
+        tri_translated.p[2].z = tri_rotated_zx.p[2].z + FX(3.0f);
 
-        MultiplyMatrixVector(&triTranslated.p[0], &triProjected.p[0], &matProj);
-        MultiplyMatrixVector(&triTranslated.p[1], &triProjected.p[1], &matProj);
-        MultiplyMatrixVector(&triTranslated.p[2], &triProjected.p[2], &matProj);
+        // calculate the normal
+        vec3d normal, line1, line2;
+        line1.x = tri_translated.p[1].x - tri_translated.p[0].x;
+        line1.y = tri_translated.p[1].y - tri_translated.p[0].y;
+        line1.z = tri_translated.p[1].z - tri_translated.p[0].z;
+        
+        line2.x = tri_translated.p[2].x - tri_translated.p[0].x;
+        line2.y = tri_translated.p[2].y - tri_translated.p[0].y;
+        line2.z = tri_translated.p[2].z - tri_translated.p[0].z;
 
-        // Scale into view
-        triProjected.p[0].x += FX(1.0f);
-        triProjected.p[0].y += FX(1.0f);
-        triProjected.p[1].x += FX(1.0f);
-        triProjected.p[1].y += FX(1.0f);
-        triProjected.p[2].x += FX(1.0f);
-        triProjected.p[2].y += FX(1.0f);
+        normal.x = MUL(line1.y, line2.z) - MUL(line1.z, line2.y);
+        normal.y = MUL(line1.z, line2.x) - MUL(line1.x, line2.z);
+        normal.z = MUL(line1.x, line2.y) - MUL(line1.y, line2.x);
 
-        fx32 w              = FX(0.5f * (float)screenWidth);
-        fx32 h              = FX(0.5f * (float)screenHeight);
-        triProjected.p[0].x = MUL(triProjected.p[0].x, w);
-        triProjected.p[0].y = MUL(triProjected.p[0].y, h);
-        triProjected.p[1].x = MUL(triProjected.p[1].x, w);
-        triProjected.p[1].y = MUL(triProjected.p[1].y, h);
-        triProjected.p[2].x = MUL(triProjected.p[2].x, w);
-        triProjected.p[2].y = MUL(triProjected.p[2].y, h);
+        fx32 l = SQRT(MUL(normal.x, normal.x) + MUL(normal.y, normal.y) + MUL(normal.z, normal.z));
+        normal.x = DIV(normal.x, l);
+        normal.y = DIV(normal.y, l);
+        normal.z = DIV(normal.z, l);
 
-        pr_draw_triangle(FXI(triProjected.p[0].x),
-                                FXI(triProjected.p[0].y),
-                                FXI(triProjected.p[1].x),
-                                FXI(triProjected.p[1].y),
-                                FXI(triProjected.p[2].x),
-                                FXI(triProjected.p[2].y),
-                                0xf);
+        if (MUL(normal.x, (tri_translated.p[0].x - vec_camera.x)) +
+            MUL(normal.y, (tri_translated.p[0].y - vec_camera.y)) +
+            MUL(normal.z, (tri_translated.p[0].z - vec_camera.z)) < FX(0.0f))
+        {
+            // project triangles from 3D to 2D
+            multiply_matrix_vector(&tri_translated.p[0], &tri_projected.p[0], &mat_proj);
+            multiply_matrix_vector(&tri_translated.p[1], &tri_projected.p[1], &mat_proj);
+            multiply_matrix_vector(&tri_translated.p[2], &tri_projected.p[2], &mat_proj);
+
+            // scale into view
+            tri_projected.p[0].x += FX(1.0f);
+            tri_projected.p[0].y += FX(1.0f);
+            tri_projected.p[1].x += FX(1.0f);
+            tri_projected.p[1].y += FX(1.0f);
+            tri_projected.p[2].x += FX(1.0f);
+            tri_projected.p[2].y += FX(1.0f);
+
+            fx32 w               = FX(0.5f * (float)screen_width);
+            fx32 h               = FX(0.5f * (float)screen_height);
+            tri_projected.p[0].x = MUL(tri_projected.p[0].x, w);
+            tri_projected.p[0].y = MUL(tri_projected.p[0].y, h);
+            tri_projected.p[1].x = MUL(tri_projected.p[1].x, w);
+            tri_projected.p[1].y = MUL(tri_projected.p[1].y, h);
+            tri_projected.p[2].x = MUL(tri_projected.p[2].x, w);
+            tri_projected.p[2].y = MUL(tri_projected.p[2].y, h);
+
+            // rasterize triangle
+            pr_draw_triangle(FXI(tri_projected.p[0].x),
+                                    FXI(tri_projected.p[0].y),
+                                    FXI(tri_projected.p[1].x),
+                                    FXI(tri_projected.p[1].y),
+                                    FXI(tri_projected.p[2].x),
+                                    FXI(tri_projected.p[2].y),
+                                    0xf);
+        }
     }
 }

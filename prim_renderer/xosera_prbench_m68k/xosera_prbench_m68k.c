@@ -33,6 +33,8 @@
 #include <xosera_m68k_api.h>
 #include <pr_api.h>
 
+#include "cube.h"
+
 extern void install_intr(void);
 extern void remove_intr(void);
 
@@ -203,7 +205,8 @@ void srand2(unsigned int seed)
 
 typedef enum {
     CLEAR,
-    TRIANGLES
+    TRIANGLES,
+    CUBE
 } BenchType;
 
 void bench(BenchType bench_type)
@@ -223,6 +226,11 @@ void bench(BenchType bench_type)
         for (int i = 0; i < 1000; ++i)
             pr_draw_filled_triangle(0, 0, 0, 0, 0, 0, 0);
         break;
+
+    case CUBE:
+        draw_cube(1.0f);
+        break;
+
     
     default:
         break;
@@ -239,7 +247,7 @@ void bench(BenchType bench_type)
     }
 
     xpos(0, 0);
-    xprintf("%s: Period: %d/10 ms               ", bench_type == CLEAR ? "Clear" : "1000 Triangles", dt);    
+    xprintf("%s: Period: %d/10 ms               ", bench_type == CLEAR ? "Clear" : bench_type == TRIANGLES ? "1000 Triangles" : "Cube", dt);
 }
 
 void xosera_demo()
@@ -280,6 +288,8 @@ void xosera_demo()
             bench(CLEAR);
         for (int i = 0; i < 100; ++i)
             bench(TRIANGLES);
+        for (int i = 0; i < 100; ++i)
+            bench(CUBE);
     }
 
     // disable Copper

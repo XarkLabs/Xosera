@@ -279,7 +279,7 @@ RGB hsv2rgb(HSV in)
 }
 
 
-void calc_palette()
+void calc_palette_color()
 {
     double hue = 0.0;
     for (uint16_t i = 0; i < 256; i++)
@@ -301,6 +301,16 @@ void calc_palette()
         }
 
         hue += 360.0 / 256.0;
+    }
+}
+
+void calc_palette_mono()
+{
+    for (uint16_t i = 0; i < 256; i++)
+    {
+        pal[i][0] = i >> 4;
+        pal[i][1] = i >> 4;
+        pal[i][2] = i >> 4;
     }
 }
 
@@ -376,6 +386,7 @@ void demo_lines()
     }
 
     pr_swap(true);
+    calc_palette_color();
     fade_in();
     delay(2000);
     fade_out();
@@ -421,6 +432,7 @@ void demo_filled_rectangles(int nb_iterations)
     pr_clear();
     pr_swap(true);
 
+    calc_palette_color();
     fade_in();
 
     for (int i = 0; i < nb_iterations; ++i) {
@@ -465,6 +477,7 @@ void demo_filled_triangles(int nb_iterations)
     pr_clear();
     pr_swap(true);
 
+    calc_palette_color();
     fade_in();
 
     for (int i = 0; i < nb_iterations; ++i) {
@@ -499,6 +512,7 @@ void demo_cube(int nb_iterations)
     pr_clear();
     pr_swap(true);
 
+    calc_palette_mono();
     fade_in();
 
     float theta = 0.0f;
@@ -538,7 +552,7 @@ void xosera_demo()
 
     pr_init(0, 200);
 
-    calc_palette();
+    calc_palette_color();
     set_palette(0.0f);
 
     while(1) {
@@ -549,6 +563,7 @@ void xosera_demo()
         xcls();
 
         xprintf("Xosera\nPrimitive\nRenderer\nDemo\n");
+        calc_palette_color();
         fade_in();
         delay(2000);
         fade_out();

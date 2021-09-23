@@ -44,8 +44,8 @@
 
 #define SCALE 16
 
-#define FX(x)     _FLOAT_TO_FIXED(x, SCALE)
-#define FXI(x)    _FIXED_TO_INT(x, SCALE)
+#define FX(x)     ((fx32)_FLOAT_TO_FIXED(x, SCALE))
+#define INT(x)    ((int)_FIXED_TO_INT(x, SCALE))
 #define MUL(x, y) _MUL(x, y, SCALE)
 #define DIV(x, y) _DIV(x, y, SCALE)
 
@@ -64,6 +64,7 @@ typedef struct
 typedef struct
 {
     vec3d p[3];
+    vec3d col;
 } triangle;
 
 typedef struct
@@ -128,7 +129,7 @@ void draw_cube(float theta)
     // projection matrix
     fx32  near        = FX(0.1f);
     fx32  far         = FX(1000.0f);
-    float fov         = 90.0f;
+    float fov         = 60.0f;
     fx32  aspect_ratio = FX((float)screen_height / (float)screen_width);
     fx32  fov_rad      = FX(1.0f / tanf(fov * 0.5f / 180.0f * 3.14159f));
 
@@ -209,10 +210,23 @@ void draw_cube(float theta)
             MUL(normal.y, (tri_translated.p[0].y - vec_camera.y)) +
             MUL(normal.z, (tri_translated.p[0].z - vec_camera.z)) < FX(0.0f))
         {
+            // illumination
+            vec3d light_direction = {FX(0.0f), FX(0.0f), FX(-1.0f)};
+            fx32 l = SQRT(MUL(light_direction.x, light_direction.x) + MUL(light_direction.y, light_direction.y) + MUL(light_direction.z, light_direction.z));
+            light_direction.x = DIV(light_direction.x, l);
+            light_direction.y = DIV(light_direction.y, l);
+            light_direction.z = DIV(light_direction.z, l);
+
+            fx32 dp = MUL(normal.x, light_direction.x) + MUL(normal.y, light_direction.y) + MUL(normal.z, light_direction.z);
+            tri_translated.col.x = dp;
+            tri_translated.col.y = dp;
+            tri_translated.col.z = dp;
+
             // project triangles from 3D to 2D
             multiply_matrix_vector(&tri_translated.p[0], &tri_projected.p[0], &mat_proj);
             multiply_matrix_vector(&tri_translated.p[1], &tri_projected.p[1], &mat_proj);
             multiply_matrix_vector(&tri_translated.p[2], &tri_projected.p[2], &mat_proj);
+            tri_projected.col = tri_translated.col;
 
             // scale into view
             tri_projected.p[0].x += FX(1.0f);
@@ -232,13 +246,22 @@ void draw_cube(float theta)
             tri_projected.p[2].y = MUL(tri_projected.p[2].y, h);
 
             // rasterize triangle
-            pr_draw_triangle(FXI(tri_projected.p[0].x),
-                                    FXI(tri_projected.p[0].y),
-                                    FXI(tri_projected.p[1].x),
-                                    FXI(tri_projected.p[1].y),
-                                    FXI(tri_projected.p[2].x),
-                                    FXI(tri_projected.p[2].y),
-                                    0xf);
+            fx32 col = MUL(tri_projected.col.x, FX(255.0f));
+            pr_draw_filled_triangle(INT(tri_projected.p[0].x),
+                                    INT(tri_projected.p[0].y),
+                                    INT(tri_projected.p[1].x),
+                                    INT(tri_projected.p[1].y),
+                                    INT(tri_projected.p[2].x),
+                                    INT(tri_projected.p[2].y),
+                                    INT(col));
+
+            pr_draw_triangle(INT(tri_projected.p[0].x),
+                                    INT(tri_projected.p[0].y),
+                                    INT(tri_projected.p[1].x),
+                                    INT(tri_projected.p[1].y),
+                                    INT(tri_projected.p[2].x),
+                                    INT(tri_projected.p[2].y),
+                                    0);
         }
     }
 }

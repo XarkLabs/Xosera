@@ -24,8 +24,8 @@
     include "rosco_m68k_public.asm"
     include "xosera_m68k_defs.inc"
 
-ANSITERM_DATA::     equ     $500        ; XANSI console data area
-ANSITERM_DATA_END   equ     $57F        ; 128 bytes reserved (~0x60 used currently)
+XANSI_CON_DATA::        equ     $500        ; XANSI console data area
+XANSI_CON_DATA_END      equ     $57F        ; 128 bytes reserved (~0x60 used currently)
 
         section .text
 
@@ -54,6 +54,8 @@ HAVE_XOSERA::
         rts
 
         endif
+
+; assembly EFP entry points (C should preserve regs other than d0-d1/a0-a1)
 
 XANSI_CON_PRINT::
         movem.l d0-d1/a1,-(sp)
@@ -87,14 +89,8 @@ XANSI_CON_PRINTCHAR::
         movem.l (sp)+,d0-d1/a0-a1
         rts
 
-XANSI_CON_CLRSCR::
-        movem.l d0-d1/a0-a1,-(sp)
-
-        jsr     xansiterm_CLRSCR
-
-        movem.l (sp)+,d0-d1/a0-a1
-        rts
-
+; Input:        D0, D1
+; Modified:     -
 XANSI_CON_SETCURSOR::
         movem.l d0-d1/a0-a1,-(sp)
 
@@ -105,6 +101,8 @@ XANSI_CON_SETCURSOR::
         movem.l (sp)+,d0-d1/a0-a1
         rts
 
+; Input:        D0, D1
+; Modified:     D0
 XANSI_CON_RECVCHAR::
         movem.l d1/a0-a1,-(sp)
 
@@ -113,6 +111,8 @@ XANSI_CON_RECVCHAR::
         movem.l (sp)+,d1/a0-a1
         rts
 
+; Input:        D1
+; Modified:     D0
 XANSI_CON_CHECKCHAR::
         movem.l d1/a0-a1,-(sp)
 
@@ -137,7 +137,6 @@ XANSI_CON_INIT::
         move.l  #XANSI_CON_PRINT,EFP_PRINT.w
         move.l  #XANSI_CON_PRINTLN,EFP_PRINTLN.w
         move.l  #XANSI_CON_PRINTCHAR,EFP_PRINTCHAR.w
-        move.l  #XANSI_CON_CLRSCR,EFP_CLRSCR.w
         move.l  #XANSI_CON_SETCURSOR,EFP_SETCURSOR.w
         ; xansiterm_INIT will have saved previous input handlers (to wrap them)
         move.l  #XANSI_CON_RECVCHAR,EFP_RECVCHAR.w

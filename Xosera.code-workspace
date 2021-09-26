@@ -58,6 +58,7 @@
 			"DIVR",
 			"divu",
 			"dout",
+			"dprintch",
 			"dputc",
 			"dputs",
 			"DSPI",

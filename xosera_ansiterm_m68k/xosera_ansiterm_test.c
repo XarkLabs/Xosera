@@ -44,8 +44,8 @@
 #pragma GCC push_options
 #pragma GCC optimize("-Os")
 
-#define USE_XANSI 1        // 0 to disable XANSI installation
-#define TINYECHO  0        // set to 1 for tiny size test
+#define USE_XANSI 1        // 0 to disable XANSI RAM installation (to test firmware)
+#define TINYECHO  0        // set to 1 for tiny echo only test
 
 #if !TINYECHO
 // attribute test
@@ -271,22 +271,18 @@ void xosera_ansiterm_test()
 #else
 
 // lightweight echo only test
-void xosera_ansiterm()
+void xosera_ansiterm_test()
 {
-    XANSI_CON_INIT());
-#if 0        // ctrl-PASSTHRU test
-    xansiterm_PRINTCHAR((char)0x9b);
-    xansiterm_PRINTCHAR('8');
-    xansiterm_PRINTCHAR('m');
-#endif
+    XANSI_CON_INIT();
+    // PASSTHRU test:    print("\x9b" "8m");
     while (true)
     {
-        char c = ansiterm_waitchar();
+        char c = readchar();
         if (c == 1)        // ^A exit for kermit
         {
             break;
         }
-        xansiterm_PRINTCHAR(c);
+        printchar(c);
     }
 }
 #endif

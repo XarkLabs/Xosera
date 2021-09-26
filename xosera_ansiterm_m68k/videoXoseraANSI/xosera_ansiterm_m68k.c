@@ -12,13 +12,15 @@
  * |__|__|___|___|___|_| |__,|
  *
  * ------------------------------------------------------------
- * Copyright (c) 2021 Xark
+ * Copyright (c) 2021 Xark & contributors
  * MIT License
  *
  * rosco_m68k + Xosera VT100/ANSI terminal driver
  * Based on info from:
  *  https://vt100.net/docs/vt100-ug/chapter3.html#S3.3.6.1
  *  https://misc.flogisoft.com/bash/tip_colors_and_formatting
+ *  https://en.wikipedia.org/wiki/ANSI_escape_code
+ *  https://www.gnu.org/software/screen/manual/html_node/Control-Sequences.html
  *  (and various other sources)
  * ------------------------------------------------------------
  */
@@ -27,7 +29,6 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -39,8 +40,31 @@
 #define XV_PREP_REQUIRED        // require Xosera xv_prep() function (for speed)
 #include "xosera_m68k_api.h"
 
-#define DEFAULT_COLOR 0x02        // rosco_m68k "retro" dark green on black
-#define MAX_CSI_PARMS 16          // max CSI parameters per sequence
+#define DEBUG 0        // set to 1 for debugging (LOG/LOGF)
+
+#if !defined(_NOINLINE)
+#define _NOINLINE __attribute__((noinline))
+#endif
+
+#if DEBUG
+extern void dprintf(const char * fmt, ...) __attribute__((format(__printf__, 1, 2)));
+#define DPRINTF(fmt, ...) dprintf(fmt, ##__VA_ARGS__)
+#else
+#define DPRINTF(fmt, ...) (void)0
+#endif
+
+#if DEBUG
+#define LOG(msg)       dprintf(msg)
+#define LOGF(fmt, ...) DPRINTF(fmt, ##__VA_ARGS__)
+#else
+#define LOG(msg)       (void)0
+#define LOGF(fmt, ...) (void)0
+#endif
+
+#define DEFAULT_XOSERA_CONFIG 1           // default Xosera config (#1 848x480)
+#define DEFAULT_COLOR         0x02        // rosco_m68k "retro" dark green on black
+#define MAX_CSI_PARMS         16          // max CSI parameters per sequence
+#define MAX_QUERY_LEN         16          // max query response length (including NUL terminator)
 
 // terminal attribute and option flags
 enum e_term_flags
@@ -67,42 +91,75 @@ enum e_term_state
 // all storage for terminal (must be at 16-bit memory address [< 32KB])
 typedef struct xansiterm_data
 {
-    uint16_t cur_addr;                        // next VRAM address to draw text
-    uint16_t vram_base;                       // base VRAM address for text screen
-    uint16_t vram_size;                       // size of text screen in current mode (init clears to allow 8x8 font)
-    uint16_t vram_end;                        // ending address for text screen in current mode
-    uint16_t line_len;                        // user specified line len (normally 0)
-    uint16_t height;                          // user specified screen height (normally 0)
-    uint16_t cursor_save;                     // word under input cursor
-    uint16_t cols, rows;                      // text columns and rows in current mode (zero based)
-    uint16_t x, y;                            // current x and y cursor position (zero based)
-    uint16_t save_x, save_y;                  // storage to save/restore cursor postion
-    uint16_t gfx_ctrl;                        // default graphics mode
-    uint16_t tile_ctrl[4];                    // up to four fonts <ESC>( <ESC>) <ESC>* <ESC>+
-    uint16_t csi_parms[MAX_CSI_PARMS];        // CSI parameter storage
-    uint8_t  num_parms;                       // number of parsed CSI parameters
-    uint8_t  intermediate_char;               // CSI intermediate character (only one supported)
-    uint8_t  cur_font;                        // default font number from tile_ctrl
-    uint8_t  def_color;                       // default terminal colors
-    uint8_t  cur_color;                       // logical colors before attribute modifications (high/low nibble)
-    uint8_t  state;                           // current ANSI parsing state (e_term_state)
-    uint8_t  flags;                           // various terminal flags (e_term_flags)
-    uint8_t  color;                           // effective current background and forground color (high/low nibble)
-    bool     lcf;                             // flag for delayed last column wrap flag (PITA)
-    bool     save_lcf;                        // storeage to save/restore lcf with cursor position
-    bool     cursor_drawn;                    // flag if cursor_save data valid
+    uint16_t cur_addr;                          // next VRAM address to draw text
+    uint16_t vram_base;                         // base VRAM address for text screen
+    void *   device_recvchar;                   // trap handler for console RECVCHAR (wrapped, for asm)
+    void *   device_checkchar;                  // trap handler for console CHECKCHAR (wrapped, for asm)
+    uint16_t vram_size;                         // size of text screen in current mode (init clears to allow 8x8 font)
+    uint16_t vram_end;                          // ending address for text screen in current mode
+    uint16_t line_len;                          // user specified line len (normally 0)
+    uint16_t height;                            // user specified screen height (normally 0)
+    uint16_t cursor_save;                       // word under input cursor
+    uint16_t cols, rows;                        // text columns and rows in current mode (zero based)
+    uint16_t x, y;                              // current x and y cursor position (zero based)
+    uint16_t save_x, save_y;                    // storage to save/restore cursor postion
+    uint16_t gfx_ctrl;                          // default graphics mode
+    uint16_t tile_ctrl[4];                      // up to four fonts <ESC>( <ESC>) <ESC>* <ESC>+
+    uint16_t csi_parms[MAX_CSI_PARMS];          // CSI parameter storage
+    uint8_t  num_parms;                         // number of parsed CSI parameters
+    uint8_t  intermediate_char;                 // CSI intermediate character (only one supported)
+    uint8_t  cur_font;                          // default font number from tile_ctrl
+    uint8_t  def_color;                         // default terminal colors
+    uint8_t  cur_color;                         // logical colors before attribute modifications (high/low nibble)
+    uint8_t  state;                             // current ANSI parsing state (e_term_state)
+    uint8_t  flags;                             // various terminal flags (e_term_flags)
+    uint8_t  color;                             // effective current background and forground color (high/low nibble)
+    int8_t   send_index;                        // index into send_buffer or -1 if no query
+    char     send_buffer[MAX_QUERY_LEN];        // xmit data for queries
+    bool     lcf;                               // flag for delayed last column wrap flag (PITA)
+    bool     save_lcf;                          // storeage to save/restore lcf with cursor position
+    bool     cursor_drawn;                      // flag if cursor_save data valid
 } xansiterm_data;
 
-xansiterm_data _private_xansiterm_data __attribute__((section(".text")));        // NOTE: address must be < 32KB
+static_assert(sizeof(xansiterm_data) <= 128, "data too big");        // fit in reserved space at 0x0500
 
 // high speed small inline functions
 
 // get xansiterm data (data needs to be in first 32KB of memory)
+#if defined(TEST_FIRMWARE)
+// NOTE: address must be < 32KB, attribute is a bit of a hack (causes warning about section attributes)
+xansiterm_data                 _private_xansiterm_data __attribute__((section(".text")));
 static inline xansiterm_data * get_xansi_data()
 {
     xansiterm_data * ptr;
     __asm__ __volatile__("   lea.l   _private_xansiterm_data.w,%[ptr]" : [ptr] "=a"(ptr));
     return ptr;
+}
+#else
+static inline xansiterm_data * get_xansi_data()
+{
+    xansiterm_data * ptr;
+    __asm__ __volatile__("   lea.l   ANSITERM_DATA.w,%[ptr]\n" : [ptr] "=a"(ptr));
+    return ptr;
+}
+#endif
+
+// call EFP function ptr (with no args and D0 byte return)
+static inline char call_EFP_pointer(void * ptr)
+{
+#ifndef __INTELLISENSE__
+    register char cdata __asm__("%d0");        // force to EFP return reg
+    __asm__ __volatile(
+        "movem.l %%d1-%%d7/%%a0-%%a6,-(%%sp)\n"
+        "jsr (%[ptr])\n"
+        "ext.w  %[cdata]\n"
+        "ext.l  %[cdata]\n"
+        "movem.l (%%sp)+,%%d1-%%d7/%%a0-%%a6\n"
+        : [cdata] "=d"(cdata)
+        : [ptr] "a"(ptr));
+
+    return cdata;
+#endif
 }
 
 #if DEBUG
@@ -124,7 +181,7 @@ static void xansi_assert_xy_valid(xansiterm_data * td)
     // check for match
     if (td->x != calc_x || td->y != calc_y)
     {
-        // if y is off by 1 andLCF set, this is fine (last column flag for delayed wrap)
+        // if y is off by 1 and LCF set, this is fine (last column flag for delayed wrap)
         if (!td->lcf || (calc_y - td->y) != 1)
         {
             LOGF("ASSERT: cur_addr:0x%04x vs x, y: %u,%u (calculated %u,%u)\n",
@@ -134,6 +191,7 @@ static void xansi_assert_xy_valid(xansiterm_data * td)
                  calc_x,
                  calc_y);
 
+            // hang
             while (true)
                 ;
         }
@@ -306,6 +364,26 @@ static inline void xansi_erase_cursor(xansiterm_data * td)
 #pragma GCC push_options
 #pragma GCC optimize("-Os")
 
+// note 0-999 only
+static void str_dec(char ** strptr, unsigned int num)
+{
+    char * p = *strptr;
+    if (num >= 100)
+    {
+        uint16_t r = num / 100;
+        num -= r * (uint16_t)100;
+        *p++ = '0' + r;
+    }
+    if (num >= 10)
+    {
+        uint16_t r = num / 10;
+        num -= r * (uint16_t)10;
+        *p++ = '0' + r;
+    }
+    *p++    = '0' + num;
+    *strptr = p;
+}
+
 // set first 16 colors to default VGA colors
 static void set_default_colors()
 {
@@ -387,11 +465,11 @@ static void xansi_reset()
     while (!(xreg_getw(SCANLINE) & 0x8000))
         ;
 
-    xreg_setw(PA_GFX_CTRL, gfx_ctrl_val);        // graphics mode
-    xm_setw(XR_DATA, tile_ctrl_val);             // tile mode
-    xm_setw(XR_DATA, td->vram_base);             // disp addr
-    xm_setw(XR_DATA, cols);                      // line len
-    xm_setw(XR_DATA, 0x0000);                    // hv scroll
+    xreg_setw(PA_GFX_CTRL, gfx_ctrl_val);
+    xreg_setw(PA_TILE_CTRL, tile_ctrl_val);
+    xreg_setw(PA_DISP_ADDR, td->vram_base);
+    xreg_setw(PA_LINE_LEN, cols);
+    xreg_setw(PA_HV_SCROLL, 0x0000);
 
     set_default_colors();
 
@@ -575,9 +653,9 @@ static inline void xansi_begin_csi_or_esc(xansiterm_data * td, char c)
 static inline void xansi_process_esc(xansiterm_data * td, char cdata)
 {
     td->state = TSTATE_NORMAL;
-    switch (cdata)
+    switch ((uint8_t)cdata)
     {
-        case '\x9b':
+        case 0x9b:
             // VT: $9B      CSI
         case '[':
             // VT: <ESC>[   CSI
@@ -585,21 +663,21 @@ static inline void xansi_process_esc(xansiterm_data * td, char cdata)
             return;
         case 'c':
             // VT: <ESC>c  RIS reset initial settings
-            LOGF("%c\n  := [RIS]", cdata);
+            LOGF("%c=[RIS]", cdata);
             td->flags = 0;
             xansi_reset();
             xansi_cls();
             return;
         case '7':
             // VT: <ESC>7  DECSC save cursor
-            LOGF("%c\n[DECSC]", cdata);
+            LOGF("%c=[DECSC]", cdata);
             td->save_x   = td->x;
             td->save_y   = td->y;
             td->save_lcf = td->lcf;
             return;
         case '8':
             // VT: <ESC>8  DECRC restore cursor
-            LOGF("%c\n  := [DECRC]\n", cdata);
+            LOGF("%c=[DECRC]", cdata);
             td->x   = td->save_x;
             td->y   = td->save_y;
             td->lcf = td->save_lcf;
@@ -613,12 +691,12 @@ static inline void xansi_process_esc(xansiterm_data * td, char cdata)
             // VT: <ESC>*  VT220 G2 font EXTENSION: Xosera font 2 (PC 8x8)
             // VT: <ESC>+  VT220 G3 font EXTENSION: Xosera font 3 ()
             td->cur_font = cdata & 0x03;
-            LOGF("%c\n  := [FONT%u]\n", cdata, td->cur_font);
+            LOGF("%c=[FONT%u]", cdata, td->cur_font);
             xansi_reset();
             return;
         case 'D':
             // VT: <ESC>D  IND move cursor down (regardless of NEWLINE mode)
-            LOGF("%c\n  := [CDOWN]", cdata);
+            LOGF("%c=[CDOWN]", cdata);
             uint8_t save_flags = td->flags;        // save flags
             td->flags &= ~TFLAG_NEWLINE;           // clear NEWLINE
             xansi_processchar('\n');
@@ -626,12 +704,12 @@ static inline void xansi_process_esc(xansiterm_data * td, char cdata)
             break;
         case 'M':
             // VT: <ESC>M  RI move cursor up
-            LOGF("%c\n  := [RI]\n", cdata);
+            LOGF("%c=[RI]", cdata);
             xansi_processchar(/* td, */ '\v');
             break;
         case 'E':
             // VT: <ESC>E  NEL next line
-            LOGF("%c\n  := [NEL]\n", cdata);
+            LOGF("%c=[NEL]", cdata);
             td->y++;
             td->x   = 0;
             td->lcf = false;
@@ -641,11 +719,18 @@ static inline void xansi_process_esc(xansiterm_data * td, char cdata)
                 xansi_scroll_up(td);
             }
             break;
+        case 'Z':
+            // VT: <ESC>Z   DA  send VT101 identifier (older sequence)
+            td->send_index = 0;
+            memcpy(td->send_buffer, "\x1b[?1;0c", 8);
+            LOGF("%c=[VT101 ID reply=\"<ESC>%s\"]", cdata, td->send_buffer + 1);
+            break;
         case 0x7f:        // ignore DEL and stay in ESC state
             td->state = TSTATE_ESC;
+            LOG("[DEL eaten]");
             break;
         default:
-            LOGF("%c\n  := [ignore 0x%02x]\n", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', (uint8_t)cdata);
+            LOGF("%c=[ignore 0x%02x]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', (uint8_t)cdata);
             return;
     }
     xansi_calc_cur_addr();
@@ -664,7 +749,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
         3,        // cyan
         7         // gray
     };
-
+#if DEBUG
     if (td->intermediate_char)
     {
         LOGF("%c", td->intermediate_char);
@@ -674,8 +759,10 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
         LOGF("%s%d", i ? ";" : "", td->csi_parms[i]);
     }
     LOGF("%c\n  := ", cdata);
+#endif
 
-    td->state      = TSTATE_NORMAL;            // back to NORMAL
+    xv_prep();
+    td->state      = TSTATE_NORMAL;            // back to NORMAL state
     uint16_t num_z = td->csi_parms[0];         // for default of zero
     uint16_t num   = num_z ? num_z : 1;        // for default of  one
 
@@ -743,7 +830,6 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                     // VT:  <CSI>?3h    DECCOLM 132 (106) column    EXTENSION: video mode 16:9 (848x480)
                     // VT:  <CSI>?3l    DECCOLM 80 column           EXTENSION: video mode 4:3 (640x480)
                     uint16_t res = (cdata == 'h') ? 848 : 640;
-                    xv_prep();
                     if (xreg_getw(VID_HSIZE) != res)
                     {
                         uint16_t config = (res == 640) ? 0 : 1;
@@ -813,6 +899,68 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                 }
             }
             break;
+        case 'n':
+            // VT: // CSI 6 n    CPR report ESC[Pn;PmR where Pn is the row and Pm is the column
+            if (num_z == 5)
+            {
+                td->send_index = 0;
+                memcpy(td->send_buffer, "\x1b[0n", 5);
+                LOGF("[DSR STATUS reply=\"<ESC>%s\"]", td->send_buffer + 1);
+            }
+            else if (num_z == 6)
+            {
+                char * strptr  = td->send_buffer;
+                td->send_index = 0;
+                *strptr++      = '\x1b';
+                *strptr++      = '[';
+                str_dec(&strptr, td->y);
+                *strptr++ = ';';
+                str_dec(&strptr, td->x);
+                *strptr++ = 'R';
+                *strptr++ = '\0';
+                LOGF("[DSR CPR reply=\"<ESC>%s\"]", td->send_buffer + 1);
+            }
+            else
+            {
+                LOGF("[DSR %d ignored]", num_z);
+            }
+            break;
+        case 'c': {
+            // VT: CSI Pn c   DA report pn 0  = ESC[?1;0c         VT101 identify
+            // VT:                      pn 68 = ESC[?68;Pv;Pi;Pxc EXTENSION: rosco_m68k/Xosera identify
+            //                                                    (version = Pv.Pi, Px = xansi revision)
+            if (num_z == 0)
+            {
+                td->send_index = 0;
+                memcpy(td->send_buffer, "\x1b[?1;0c", 8);
+                LOGF("[VT101 ID reply=\"<ESC>%s\"]", td->send_buffer + 1);
+            }
+            else if (num_z == 68)
+            {
+                uint16_t vercode = xreg_getw(VERSION);
+                char *   strptr  = td->send_buffer;
+                td->send_index   = 0;
+
+                *strptr++ = '\x1b';
+                *strptr++ = '[';
+                *strptr++ = '?';
+                str_dec(&strptr, 68);
+                *strptr++ = ';';
+                str_dec(&strptr, (vercode >> 8) & 0xf);
+                *strptr++ = ';';
+                str_dec(&strptr, vercode & 0xff);
+                *strptr++ = ';';
+                str_dec(&strptr, XANSI_TERMINAL_REVISION);
+                *strptr++ = 'c';
+                *strptr++ = '\0';
+                LOGF("[Xosera ID reply=\"<ESC>%s\"]", td->send_buffer + 1);
+            }
+            else
+            {
+                LOGF("[DA %d ignored]", num_z);
+            }
+        }
+        break;
         case 's':
             // VT: <CSI>s  SCP  save cursor position (ANSI)
             LOG("[CURSOR SAVE]");
@@ -945,8 +1093,9 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                     case 39:
                         // VT: SGR parm 39  select default forground color
                         def_flag = true;
-                        col      = td->def_color & 0xf;
-                    // falls through
+                        col      = td->def_color & 0xf;        // falls through
+                        goto case_37;
+                        break;
                     case 30:
                     case 31:
                     case 32:
@@ -955,6 +1104,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                     case 35:
                     case 36:
                     case 37:
+                    case_37:
                         // VT: SGR parm 30-37   select forground color
                         td->cur_color = (uint8_t)(td->cur_color & 0xf0) | col;
                         LOGF("[%sFORE=%x]", def_flag ? "DEF_" : "", col);
@@ -969,7 +1119,8 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                         // VT: SGR parm 49  select default background color
                         col      = td->def_color >> 4;
                         def_flag = true;
-                    // falls through
+                        goto case_47;
+                        break;
                     case 40:
                     case 41:
                     case 42:
@@ -978,6 +1129,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                     case 45:
                     case 46:
                     case 47:
+                    case_47:
                         // VT: SGR parm 40-47   select background color
                         td->cur_color = (uint8_t)(td->cur_color & 0x0f) | ((uint8_t)(col << 4));
                         LOGF("[%sBACK=%x]", def_flag ? "DEF_" : "", col);
@@ -1033,7 +1185,6 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                                                        ((uint16_t)(td->csi_parms[i + 1] & 0xf0) << 0) |
                                                        ((uint16_t)(td->csi_parms[i + 2] & 0xf0) >> 4);
 
-                                        xv_prep();
                                         xmem_setw(XR_COLOR_MEM + n, rgb);
                                         LOGF(" COLOR_MEM[%u]=0x%03x", n, rgb);
                                         rosco_cmd_good = true;
@@ -1102,6 +1253,7 @@ static inline void xansi_parse_csi(xansiterm_data * td, char cdata)
     // ignore ctrl characters (mostly)
     if ((int8_t)cdata <= ' ' || cdata == 0x7f)        // NOTE: also ignores negative (high bit set)
     {
+        LOGF("[0x%02x eaten]", (uint8_t)cdata);
         return;
     }
     else if (cclass == 0x20)        // intermediate char
@@ -1123,7 +1275,6 @@ static inline void xansi_parse_csi(xansiterm_data * td, char cdata)
             }
             uint16_t v = td->csi_parms[td->num_parms - 1];
             v *= (uint16_t)10;
-            LOGF("v * 10 = %d\n", v);
             if ((uint16_t)(v + d) < v)        // check for unsigned wrap
             {
                 v = 65535;
@@ -1132,7 +1283,6 @@ static inline void xansi_parse_csi(xansiterm_data * td, char cdata)
             {
                 v += d;
             }
-            LOGF("v + %d = %d\n", d, v);
             td->csi_parms[td->num_parms - 1] = v;
         }
         else if (cdata == ';')
@@ -1171,7 +1321,7 @@ static inline void xansi_parse_csi(xansiterm_data * td, char cdata)
 // external public terminal functions
 
 // output character to terminal
-void xansiterm_putchar(char cdata)
+_NOINLINE void xansiterm_PRINTCHAR(char cdata)
 {
     xansiterm_data * td = get_xansi_data();
 
@@ -1193,7 +1343,7 @@ void xansiterm_putchar(char cdata)
     if ((cdata & 0x7f) == '\x1b')
     {
         // if already in CSI/ESC state and PASSTHRU set, print 2nd CSI/ESC
-        if (td->state >= TSTATE_ESC && (td->flags & TFLAG_ATTRIB_PASSTHRU))
+        if ((td->flags & TFLAG_ATTRIB_PASSTHRU) && td->state >= TSTATE_ESC)
         {
             td->state = TSTATE_NORMAL;
             xansi_processchar(cdata);
@@ -1228,11 +1378,11 @@ void xansiterm_putchar(char cdata)
         if (cdata >= 0x40)
         {
             td->state = TSTATE_NORMAL;
-            LOGF("[end skip '%c' 0x%02x]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', (uint8_t)cdata);
+            LOGF("[0x%02x Illegal-ended]", (uint8_t)cdata);
         }
         else
         {
-            LOGF("[skip '%c' 0x%02x]", (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ', (uint8_t)cdata);
+            LOGF("[0x%02x Illegal-eaten]", (uint8_t)cdata);
         }
     }
 
@@ -1267,30 +1417,92 @@ void xansiterm_putchar(char cdata)
 #endif
 }
 
-
 // support functions can be small
 #pragma GCC push_options
 #pragma GCC optimize("-Os")
 
-// terminal read input character (wrapper for console readchar with cursor)
-char xansiterm_readchar()
+_NOINLINE void xansiterm_CLRSCR(void)
+{
+    xansiterm_PRINTCHAR('\f');
+}
+
+_NOINLINE void xansiterm_SETCURSOR(bool showcursor)
 {
     xansiterm_data * td = get_xansi_data();
-    xansi_erase_cursor(td);        // make sure cursor not drawn
 
-    return readchar();
+    if (showcursor)
+    {
+        LOG("SetCursor(CURSOR SHOW)\n");
+        td->flags &= ~TFLAG_HIDE_CURSOR;
+    }
+    else
+    {
+        xansi_erase_cursor(td);
+        LOG("SetCursor(CURSOR HIDE)\n");
+        td->flags |= TFLAG_HIDE_CURSOR;
+    }
+}
+
+_NOINLINE char * xansiterm_PRINT(const char * strptr)
+{
+    if (strptr != NULL)
+    {
+        char cdata;
+        while ((cdata = *strptr++) != '\0')
+        {
+            xansiterm_PRINTCHAR(cdata);
+        }
+    }
+    return (char *)strptr;
+}
+
+_NOINLINE char * xansiterm_PRINTLN(const char * strptr)
+{
+    const char * end = xansiterm_PRINT(strptr);
+    xansiterm_PRINT("\r\n");
+    return (char *)end;
+}
+
+// terminal read input character (wrapper for console readchar with cursor)
+_NOINLINE char xansiterm_RECVCHAR()
+{
+    xansiterm_data * td = get_xansi_data();
+    // sending query
+    if (td->send_index >= 0)
+    {
+        char cdata = td->send_buffer[td->send_index];
+        LOGF("<recvchar QUERY[%d] = '%c' (0x%02x)",
+             td->send_index,
+             (cdata >= ' ' && cdata < 0x7f) ? cdata : ' ',
+             (uint8_t)cdata);
+        td->send_index += 1;
+        if (td->send_buffer[td->send_index] == '\0')
+        {
+            td->send_index = -1;
+            LOG(" END");
+        }
+        LOG(">\n");
+        return cdata;
+    }
+    else
+    {
+        while (xansiterm_CHECKCHAR())
+            ;
+    }
+
+    return call_EFP_pointer(td->device_recvchar);
 }
 
 // terminal check for input character ready (wrapper console checkchar with cursor)
-bool xansiterm_checkchar()
+_NOINLINE bool xansiterm_CHECKCHAR()
 {
     xansiterm_data * td = get_xansi_data();
     xv_prep();
 
     xansi_check_lcf(td);        // wrap cursor if needed
-    bool char_ready = checkchar();
+    bool char_ready = (td->send_index >= 0) || (call_EFP_pointer(td->device_checkchar) != 0);
     // blink at ~409.6ms (on half the time but only if cursor not disabled and no char ready)
-    bool show_cursor = !(td->flags & TFLAG_HIDE_CURSOR) && !char_ready && (xm_getw(TIMER) & 0x800);
+    bool show_cursor = !char_ready && !(td->flags & TFLAG_HIDE_CURSOR) && (xm_getw(TIMER) & 0x800);
     if (show_cursor)
     {
         xansi_draw_cursor(td);
@@ -1303,22 +1515,45 @@ bool xansiterm_checkchar()
     return char_ready;
 }
 
+static const char xansiterm_banner[] =
+    "\r\n\x1b[93m"
+    "                                ___ ___ _\r\n"
+    " ___ ___ ___ __ ___       _____|  _| . | |_\r\n"
+    "|  _| . |_ -| _| . |     |     | . | . | '_|\r\n"
+    "|_| |___|___|__|___|_____|_|_|_|___|___|_,_|\r\n"
+    "\x1b[0mXosera v0.20 ANSI  \x1b[93m|_____|\x1b[0m  Firmware 2.0.DEV\r\n";
+
+
 // initialize terminal functions
-void xansiterm_init()
+// TODO: ICP default values
+_NOINLINE bool xansiterm_INIT()
 {
-    LOG("[xansiterm_init]\n");
+    LOGF("\n[xansiterm_INIT: xosera_init(%d) ", DEFAULT_XOSERA_CONFIG);
+    bool reconfig_ok = xosera_init(DEFAULT_XOSERA_CONFIG);
+    LOGF(" %s]\n", reconfig_ok ? "succeeded" : "FAILED");
+
+    if (!reconfig_ok)
+    {
+        return false;
+    }
 
     xansiterm_data * td = get_xansi_data();
     memset(td, 0, sizeof(*td));
-    // set default color (that is not reset if changed) // TODO: ICP default
-    td->gfx_ctrl     = MAKE_GFX_CTRL(0x00, 0, 0, 0, 0, 0);
-    td->tile_ctrl[0] = MAKE_TILE_CTRL(0x0000, 0, 16);
-    td->tile_ctrl[1] = MAKE_TILE_CTRL(0x0800, 0, 8);
-    td->tile_ctrl[2] = MAKE_TILE_CTRL(0x0C00, 0, 8);
-    td->tile_ctrl[3] = MAKE_TILE_CTRL(0x0000, 0, 16);
-    td->def_color    = DEFAULT_COLOR;        // default dark-green on black
+    // default values (others will be zero or computed)
+    td->device_recvchar  = _EFP_RECVCHAR;
+    td->device_checkchar = _EFP_CHECKCHAR;
+    td->gfx_ctrl = MAKE_GFX_CTRL(0x00, 0, 0, 0, 0, 0);        // 16-colors 0-15, 1-BPP tiled, H repeat x1, V repeat x1
+    td->tile_ctrl[0] = MAKE_TILE_CTRL(0x0000, 0, 16);         // 1st font in tile RAM 8x16 (initial default)
+    td->tile_ctrl[1] = MAKE_TILE_CTRL(0x0800, 0, 8);          // 2nd font in tile RAM 8x8
+    td->tile_ctrl[2] = MAKE_TILE_CTRL(0x0C00, 0, 8);          // 3rd font in tile RAM 8x8
+    td->tile_ctrl[3] = MAKE_TILE_CTRL(0x0000, 0, 16);         // same as 0 (for user defined)
+    td->def_color    = DEFAULT_COLOR;                         // default dark-green on black
+    td->send_index   = -1;
 
     xansi_reset();
+    // TODO update version and firmware automatically
+    xansiterm_PRINTLN(xansiterm_banner);
+    return true;
 }
 
 #pragma GCC pop_options        // end -Os

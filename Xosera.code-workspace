@@ -11,8 +11,6 @@
 		},
 		"editor.formatOnSave": true,
 		"editor.dragAndDrop": false,
-		"workbench.editor.wrapTabs": true,
-		"workbench.editor.tabSizing": "fit",
 		"editor.codeActionsOnSave": {
 			"source.fixAll.markdownlint": true
 		},
@@ -105,6 +103,7 @@
 			"markdownlint",
 			"MOVEC",
 			"MOVEF",
+			"movem",
 			"MOVEP",
 			"MPSSE",
 			"nettype",
@@ -120,6 +119,7 @@
 			"PIND",
 			"PMOD",
 			"posedge",
+			"PRINTLN",
 			"PULLUP",
 			"readmemb",
 			"REFERENCECLK",
@@ -199,7 +199,7 @@
 			"foreground": "red",
 			/*			"background": "white", */
 			"opacity": 50,
-			"iconColour": "blue"
+			"iconColour": "yellow"
 		},
 		"todo-tree.highlights.customHighlight": {
 			"TODO": {

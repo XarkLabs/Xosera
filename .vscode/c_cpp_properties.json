@@ -50,6 +50,7 @@
             "name": "rosco_m68k",
             "includePath": [
                 "${default}",
+                "/Users/kenj/Dev/Rosco_Dev/rosco_m68k/code/software/libs/build/include",
                 "${workspaceFolder}/xosera_m68k_api"
             ],
             "defines": [

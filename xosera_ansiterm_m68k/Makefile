@@ -7,16 +7,18 @@
 ifndef ROSCO_M68K_DIR
 $(error Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
 endif
-XOSERA_M68K_API?=../xosera_m68k_api
+# NOTE: Uses "private" xosera_m68k_api.h (to be self-contained in firmware)
+XOSERA_M68K_API?=videoXoseraANSI
+XOSERA_M68K_XANSI?=videoXoseraANSI
 
-EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer
-#EXTRA_VASMFLAGS?=-showopt
+EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer -DTEST_FIRMWARE
+EXTRA_VASMFLAGS?=-showopt -I$(XOSERA_M68K_XANSI) -I$(ROSCO_M68K_DIR)/code/shared -DTEST_FIRMWARE
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
 SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib
 DEFINES=-DROSCO_M68K
 CFLAGS= -mcpu=68010 -march=68010 -mtune=68010 -std=c11 -ffreestanding -ffunction-sections -fdata-sections -pedantic\
  -Wall -Wextra -Werror -Wno-unused-function -Wno-variadic-macros -I$(SYSINCDIR) -I$(XOSERA_M68K_API) $(DEFINES)
-# harsh:	CFLAGS += -Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla -Warray-bounds=2 -Wimplicit-fallthrough=3 -Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion -Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wformat-signedness -Wshadow -Wstrict-overflow=4 -Wswitch-default -Wswitch-enum -Wstack-usage=1000000 -Wcast-align=strict  -Wno-conversion -Wno-arith-conversion 
+# harsh:	CFLAGS += -Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla -Warray-bounds=2 -Wimplicit-fallthrough=3 -Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion -Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wformat-signedness -Wshadow -Wstrict-overflow=4 -Wswitch-default -Wswitch-enum -Wstack-usage=1000000 -Wcast-align=strict  -Wno-conversion -Wno-arith-conversion
 # Too-harsh:	-Wundef -Wstrict-prototypes  -Wtraditional-conversion
 GCC_LIBS=$(shell $(CC) --print-search-dirs \
     | grep libraries:\ = \
@@ -58,9 +60,11 @@ SSOURCES=$(wildcard *.S)
 ASMSOURCES=$(wildcard *.asm)
 SOURCES=$(CSOURCES) $(SSOURCES) $(ASMSOURCES)
 
-# additional for Xosera API
-CSOURCES+=$(wildcard $(XOSERA_M68K_API)/*.c)
-CINCLUDES+=$(wildcard $(XOSERA_M68K_API)/*.h)
+# additional for Xosera xansi files (in console project)
+CSOURCES+=$(wildcard $(XOSERA_M68K_XANSI)/*.c)
+CINCLUDES+=$(wildcard $(XOSERA_M68K_XANSI)/*.h)
+ASMSOURCES+=$(wildcard $(XOSERA_M68K_XANSI)/*.asm)
+CFLAGS+=-I$(XOSERA_M68K_XANSI)
 
 # Assume each source files makes an object file
 OBJECTS=$(addsuffix .o,$(basename $(SOURCES)))

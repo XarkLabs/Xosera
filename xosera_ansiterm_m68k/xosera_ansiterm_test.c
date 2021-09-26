@@ -6,6 +6,16 @@
  * |  _| . |_ -|  _| . |     |     | . | . | '_|
  * |_| |___|___|___|___|_____|_|_|_|___|___|_,_|
  *                     |_____|
+ *  __ __
+ * |  |  |___ ___ ___ ___ ___
+ * |-   -| . |_ -| -_|  _| .'|
+ * |__|__|___|___|___|_| |__,|
+ *
+ * Xark's Open Source Enhanced Retro Adapter
+ *
+ * - "Not as clumsy or random as a GPU, an embedded retro
+ *    adapter for a more civilized age."
+ *
  * ------------------------------------------------------------
  * Copyright (c) 2021 Xark
  * MIT License
@@ -26,60 +36,22 @@
 #include <machine.h>
 
 #include "rosco_m68k_support.h"
-#include "xosera_ansiterm_m68k.h"
-
-#define XV_PREP_REQUIRED        // require xv_prep()
-#include "xosera_m68k_api.h"
-
-#if !defined(_NOINLINE)
-#define _NOINLINE __attribute__((noinline))
-#endif
+#include "videoXoseraANSI/xosera_ansiterm_m68k.h"
 
 #include "us-fishoe.h"
-
-// testing harness functions
-static char ansiterm_waitchar()
-{
-    while (!xansiterm_checkchar())
-        ;
-
-    return xansiterm_readchar();
-}
-
-static void tputs(char * p)
-{
-    char c;
-    while ((c = *p++) != '\0')
-    {
-        if (c == '\n')
-        {
-            xansiterm_putchar('\r');
-        }
-        xansiterm_putchar(c);
-    }
-}
 
 // keep test functions small
 #pragma GCC push_options
 #pragma GCC optimize("-Os")
 
+#define USE_XANSI 1        // 0 to disable XANSI installation
+#define TINYECHO  0        // set to 1 for tiny size test
+
 #if !TINYECHO
-
-static void tprintf(const char * fmt, ...) __attribute__((format(__printf__, 1, 2)));
-static void tprintf(const char * fmt, ...)
-{
-    static char tprint_buff[4096];
-    va_list     args;
-    va_start(args, fmt);
-    vsnprintf(tprint_buff, sizeof(tprint_buff), fmt, args);
-    tputs(tprint_buff);
-    va_end(args);
-}
-
 // attribute test
 static int ansiterm_test_attrib()
 {
-    tprintf("\nAttribute test (space to pause, ^C to exit, ^A to reboot)\n\n");
+    printf("\nAttribute test (space to pause, ^C to exit, ^A to reboot)\n\n");
     static uint8_t cbg_tbl[] = {40, 41, 42, 43, 44, 45, 46, 47, 100, 101, 102, 103, 104, 105, 106, 107, 49};
     static uint8_t cfg_tbl[] = {30, 31, 32, 33, 34, 35, 36, 37, 90, 91, 92, 93, 94, 95, 96, 97, 39};
     while (true)
@@ -94,17 +66,17 @@ static int ansiterm_test_attrib()
                     {
                         continue;
                     }
-                    tprintf("\x1b[%d;%d;%dm ^[%d;%d;%dm AaBb123 \x1b[0m",
-                            attr,
-                            cbg_tbl[cbg],
-                            cfg_tbl[cfg],
-                            attr,
-                            cbg_tbl[cbg],
-                            cfg_tbl[cfg]);
+                    printf("\x1b[%d;%d;%dm ^[%d;%d;%dm AaBb13 \x1b[0m",
+                           attr,
+                           cbg_tbl[cbg],
+                           cfg_tbl[cfg],
+                           attr,
+                           cbg_tbl[cbg],
+                           cfg_tbl[cfg]);
                 }
-                if (xansiterm_checkchar())
+                if (xansiterm_CHECKCHAR())
                 {
-                    char c = xansiterm_readchar();
+                    char c = xansiterm_RECVCHAR();
                     while (true)
                     {
                         if (c == 1)
@@ -115,14 +87,14 @@ static int ansiterm_test_attrib()
                         {
                             return 0;
                         }
-                        c = xansiterm_readchar();
+                        c = xansiterm_RECVCHAR();
                         if (c >= ' ')
                         {
                             break;
                         }
                     }
                 }
-                tprintf("\r\n");
+                printf("\r\n");
             }
         }
     }
@@ -142,15 +114,15 @@ static int ansiterm_spamtest()
     }
     *p++ = '\0';
 
-    tputs("\x1b[8m");
+    print("\x1b[8m");
 
     while (true)
     {
-        xansiterm_putchar('\0');
-        tputs(spam);
-        if (xansiterm_checkchar())
+        printchar('\0');
+        print(spam);
+        if (checkchar())
         {
-            char c = xansiterm_readchar();
+            char c = readchar();
             while (true)
             {
                 if (c == 1)
@@ -161,7 +133,7 @@ static int ansiterm_spamtest()
                 {
                     return 0;
                 }
-                c = xansiterm_readchar();
+                c = readchar();
                 if (c >= ' ')
                 {
                     break;
@@ -173,10 +145,10 @@ static int ansiterm_spamtest()
 
 static int ansiterm_echotest()
 {
-    tprintf("\nEcho test (^A to reboot, ^B for spam, ^C to exit)\n\n");
+    printf("\nEcho test (^A to reboot, ^B for spam, ^C to exit)\n\n");
     while (true)
     {
-        char c = ansiterm_waitchar();
+        char c = readchar();
 
         if (c == 1)        // ^A exit for kermit
         {
@@ -192,18 +164,18 @@ static int ansiterm_echotest()
             return 0;
         }
 
-        xansiterm_putchar(c);
+        printchar(c);
     }
 }
 
 static int ansiterm_arttest()
 {
-    tputs("\x1b[?3l");              // 80x30
-    tprintf("\x1b*");               // ANSI_PC_8x8 font
-    tprintf("\f\n\n\n\n\n");        // cls & vertical center
-    tputs((char *)us_fishoe);
+    print("\x1b[?3l");            // 80x30
+    print("\x1b*");               // ANSI_PC_8x8 font
+    print("\f\n\n\n\n\n");        // cls & vertical center
+    print((char *)us_fishoe);
 
-    char c = ansiterm_waitchar();
+    char c = readchar();
 
     if (c == 1)        // ^A exit for kermit
     {
@@ -216,51 +188,51 @@ static void ansiterm_testmenu()
 {
     while (true)
     {
-        tprintf("\x9bm\n");
-        tprintf("\n");
-        tprintf("rosco_m68k ANSI Terminal Driver Test Menu\n");
-        tprintf("\n");
-        tprintf("  A - ANSI color attribute test.\n");
-        tprintf("  B - Fast spam test\n");
-        tprintf("  C - Echo test\n");
-        tprintf("  D - ANSI art test\n");
-        tprintf("\n");
-        tprintf(" ^A - Warm boot exit\n");
-        tprintf(" ^C - Returns to this menu\n");
-        tprintf("\n");
-        tprintf("Selection:");
+        printf("\x9bm\n");
+        printf("\n");
+        printf("rosco_m68k ANSI Terminal Driver Test Menu\n");
+        printf("\n");
+        printf("  A - ANSI color attribute test.\n");
+        printf("  B - Fast spam test\n");
+        printf("  C - Echo test\n");
+        printf("  D - ANSI art test\n");
+        printf("\n");
+        printf(" ^A - Warm boot exit\n");
+        printf(" ^C - Returns to this menu\n");
+        printf("\n");
+        printf("Selection:");
 
         int res = 1;
         do
         {
-            char c = ansiterm_waitchar();
+            char c = readchar();
             switch (c)
             {
                 case 1:        // ^A exit for kermit
                     return;
                 case 'A':
                 case 'a':
-                    xansiterm_putchar(c);
-                    xansiterm_putchar('\n');
+                    printchar(c);
+                    printchar('\n');
                     res = ansiterm_test_attrib();
                     break;
                 case 'B':
                 case 'b':
-                    xansiterm_putchar(c);
-                    xansiterm_putchar('\n');
-                    tprintf("\nSpam test (space to pause, ^C to exit, ^A to reboot)\n\n");
+                    printchar(c);
+                    printchar('\n');
+                    printf("\nSpam test (space to pause, ^C to exit, ^A to reboot)\n\n");
                     res = ansiterm_spamtest();
                     break;
                 case 'C':
                 case 'c':
-                    xansiterm_putchar(c);
-                    xansiterm_putchar('\n');
+                    printchar(c);
+                    printchar('\n');
                     res = ansiterm_echotest();
                     break;
                 case 'D':
                 case 'd':
-                    xansiterm_putchar(c);
-                    xansiterm_putchar('\n');
+                    printchar(c);
+                    printchar('\n');
                     res = ansiterm_arttest();
                     break;
                 default:
@@ -275,17 +247,25 @@ static void ansiterm_testmenu()
     }
 }
 
-void xosera_ansiterm()
+void xosera_ansiterm_test()
 {
-    LOG("\nxosera_ansiterm_test started.\n\n");
-    xosera_init(1);
-    xansiterm_init();
+    printf("\nxosera_ansiterm_test started.\n\n");
+#if USE_XANSI
+    if (XANSI_CON_INIT())
+    {
+        printf("Xosera ANSI console initialized.\n");
+    }
+    else
+#endif
+    {
+        printf("Xosera ANSI console NOT initialized.\n");
+    }
 
     ansiterm_testmenu();
 
-    tprintf("\fExiting...\n");
+    printf("\fExiting...\n");
 
-    LOG("\n\nxosera_ansiterm_test exiting.\n");
+    printf("\n\nxosera_ansiterm_test exiting.\n");
 }
 
 #else
@@ -293,12 +273,11 @@ void xosera_ansiterm()
 // lightweight echo only test
 void xosera_ansiterm()
 {
-    xosera_init(1);
-    xansiterm_init();
+    XANSI_CON_INIT());
 #if 0        // ctrl-PASSTHRU test
-    xansiterm_putchar((char)0x9b);
-    xansiterm_putchar('8');
-    xansiterm_putchar('m');
+    xansiterm_PRINTCHAR((char)0x9b);
+    xansiterm_PRINTCHAR('8');
+    xansiterm_PRINTCHAR('m');
 #endif
     while (true)
     {
@@ -307,7 +286,7 @@ void xosera_ansiterm()
         {
             break;
         }
-        xansiterm_putchar(c);
+        xansiterm_PRINTCHAR(c);
     }
 }
 #endif

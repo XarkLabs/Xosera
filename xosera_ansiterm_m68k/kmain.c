@@ -23,10 +23,10 @@
 #include <basicio.h>
 #include <machine.h>
 
-extern void xosera_ansiterm();
+extern void xosera_ansiterm_test();
 
 void kmain()
 {
     delay(1000 * 500);        // wait a bit for terminal window/serial
-    xosera_ansiterm();
+    xosera_ansiterm_test();
 }

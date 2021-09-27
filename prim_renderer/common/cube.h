@@ -35,12 +35,12 @@
 #define _WHOLE_PART(x, scale)     ((x)&WHOLE_MASK(scale))
 
 //#define _MUL(x, y, scale) (((long long)(x) * (long long)(y)) >> scale)
-#define _MUL(x, y, scale) ((int)((x) >> (scale / 2)) * (int)((y) >> (scale / 2)))
+#define _MUL(x, y, scale) ((short int)((x) >> (scale / 2)) * (short int)((y) >> (scale / 2)))
 
 //#define _DIV(x, y, scale) (((long long)(x) << scale) / (y))
-#define _DIV(x, y, scale) (((x) << (scale / 2)) / (y) << (scale / 2))
+#define _DIV(x, y, scale) (((x) << (scale / 2)) / (short int)((y) >> (scale / 2)))
 
-#define SCALE 16
+#define SCALE 12
 
 #define FX(x)     ((fx32)_FLOAT_TO_FIXED(x, SCALE))
 #define INT(x)    ((int)_FIXED_TO_INT(x, SCALE))

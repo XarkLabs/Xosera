@@ -21,12 +21,14 @@
 #include <string.h>
 
 #include <basicio.h>
+#include <debug_stub.h>
 #include <machine.h>
 
 extern void xosera_ansiterm_test();
 
 void kmain()
 {
+    debug_stub();
     delay(1000 * 500);        // wait a bit for terminal window/serial
     xosera_ansiterm_test();
 }

@@ -44,7 +44,7 @@
 #pragma GCC push_options
 #pragma GCC optimize("-Os")
 
-#define USE_XANSI 1        // 0 to disable XANSI RAM installation (to test firmware)
+#define USE_XANSI 0        // 0 to disable XANSI RAM installation (to test firmware ANSI)
 #define TINYECHO  0        // set to 1 for tiny echo only test
 
 #if !TINYECHO

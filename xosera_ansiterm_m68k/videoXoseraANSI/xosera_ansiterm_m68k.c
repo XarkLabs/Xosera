@@ -25,31 +25,38 @@
  * ------------------------------------------------------------
  */
 
+#if defined(TEST_FIRMWARE)
 #include <assert.h>
+#include <basicio.h>
 #include <stdarg.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#else
+// thse are missing from kernel machine.h
+extern unsigned int _FIRMWARE_REV;        // rosco ROM firmware revision
+extern void (*_EFP_RECVCHAR)();
+extern void (*_EFP_CHECKCHAR)();
+#endif
 
-#include <basicio.h>
 #include <machine.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "xosera_ansiterm_m68k.h"
 
 #define XV_PREP_REQUIRED        // require Xosera xv_prep() function (for speed)
 #include "xosera_m68k_api.h"
 
-#define DEBUG 1        // set to 1 for debugging (LOG/LOGF)
+#define DEBUG 0        // set to 1 for debugging (LOG/LOGF)
 
-#if DEBUG
+#if DEBUG && defined(TEST_FIRMWARE)
 extern void dprintf(const char * fmt, ...) __attribute__((format(__printf__, 1, 2)));
 #define DPRINTF(fmt, ...) dprintf(fmt, ##__VA_ARGS__)
 #else
 #define DPRINTF(fmt, ...) (void)0
 #endif
 
-#if DEBUG
+#if DEBUG && defined(TEST_FIRMWARE)
 #define LOG(msg)       dprintf(msg)
 #define LOGF(fmt, ...) DPRINTF(fmt, ##__VA_ARGS__)
 #define LOGC(ch)       dprintch(ch)
@@ -113,42 +120,63 @@ typedef struct xansiterm_data
     uint8_t  flags;                             // various terminal flags (e_term_flags)
     uint8_t  color;                             // effective current background and forground color (high/low nibble)
     int8_t   send_index;                        // index into send_buffer or -1 if no query
-    char     send_buffer[MAX_QUERY_LEN];        // xmit data for queries
+    char     send_buffer[MAX_QUERY_LEN];        // xmit data for query replies
     bool     lcf;                               // flag for delayed last column wrap flag (PITA)
     bool     save_lcf;                          // storeage to save/restore lcf with cursor position
     bool     cursor_drawn;                      // flag if cursor_save data valid
 } xansiterm_data;
 
-static_assert(sizeof(xansiterm_data) <= 128, "data too big");        // fit in reserved space at 0x0500
-
 // high speed small inline functions
+#pragma GCC push_options
+#pragma GCC optimize("-O3")
 
 // get xansiterm data (data needs to be in first 32KB of memory)
-#if defined(TEST_FIRMWARE)
+
+#if defined(TEST_FIRMWARE)                                           // building for RAM testing
+static_assert(sizeof(xansiterm_data) <= 128, "data too big");        // fit in reserved space at 0x0500
 // NOTE: address must be < 32KB, attribute is a bit of a hack (causes warning about section attributes)
-xansiterm_data                 _private_xansiterm_data __attribute__((section(".text")));
-static inline xansiterm_data * get_xansi_data()
+xansiterm_data                                                _private_xansiterm_data __attribute__((section(".text")));
+static inline __attribute__((always_inline)) xansiterm_data * get_xansi_data()
 {
     xansiterm_data * ptr;
     __asm__ __volatile__("   lea.l   _private_xansiterm_data.w,%[ptr]" : [ptr] "=a"(ptr));
     return ptr;
 }
-#else
-static inline xansiterm_data * get_xansi_data()
+#define xansi_memset(p, n) memset(p, 0, n)        // use regular memset
+#else                                             // building for firmware
+static inline __attribute__((always_inline)) xansiterm_data * get_xansi_data()
 {
     xansiterm_data * ptr;
     __asm__ __volatile__("   lea.l   XANSI_CON_DATA.w,%[ptr]\n" : [ptr] "=a"(ptr));
     return ptr;
 }
+
+// GCC really wants to transform my code to call memset, even though I never reference it (it
+// sees loops zeroing memory and tries to optimize).  This is a problem because it causes a
+// link error in firmware-land (where some normal C libraries are missing). Since GCC seems
+// to ignore -fno-builtin, using an obfuscated version seems the best way to outsmart GCC
+// (for now...hopefully it won't learn how to parse inline asm anytime soon). :D
+static void xansi_memset(void * str, unsigned int n)
+{
+    uint8_t * buf = (uint8_t *)str;
+    uint8_t * end = buf + n;
+
+    __asm__ __volatile__(
+        "secloop:   clr.b   (%[buf])+\n"
+        "           cmp.l   %[buf],%[end]\n"
+        "           bne.s   secloop\n"
+        :
+        : [buf] "a"(buf), [end] "a"(end));
+}
 #endif
 
-// call EFP function ptr (with no args and D0 byte return)
-static inline char call_EFP_pointer(void * ptr)
+// call EFP function ptr from C(with no args and D0 byte return)
+static char call_EFP_pointer(void * ptr)
 {
 #ifndef __INTELLISENSE__
     register int r_d0 __asm__("%d0");        // force to EFP return reg
     __asm__ __volatile(
-        "jsr (%[ptr])\n"
+        "jsr    (%[ptr])\n"
         "ext.w  %[r_d0]\n"
         "ext.l  %[r_d0]\n"
         : [r_d0] "=d"(r_d0)
@@ -159,7 +187,6 @@ static inline char call_EFP_pointer(void * ptr)
 }
 
 #if DEBUG
-
 // log readable "character"
 __attribute__((noinline)) static void dprintch(char ch)
 {
@@ -325,7 +352,7 @@ static inline void xansi_drawchar(xansiterm_data * td, char cdata)
 }
 
 // functions where speed is nice (but inline is too much)
-static _NOINLINE void xansi_clear(uint16_t start, uint16_t end)
+static __attribute__((noinline)) void xansi_clear(uint16_t start, uint16_t end)
 {
     xansiterm_data * td = get_xansi_data();
 
@@ -345,29 +372,32 @@ static _NOINLINE void xansi_clear(uint16_t start, uint16_t end)
     } while (++start <= end);
 }
 
-// scroll unrolled for 16-bytes per loop, so no inline please
-static _NOINLINE void xansi_do_scroll()
+// scroll unrolled for 32-bytes per loop, so no inline please
+static __attribute__((noinline)) void xansi_do_scroll()
 {
     xansiterm_data * td = get_xansi_data();
     xv_prep();
 
-    // scroll 4 longs per loop (8 words)
+    // scroll 8 longs per loop (16 words)
     {
         uint16_t i;
-        for (i = td->vram_size - td->cols; i >= 8; i -= 8)
+        for (i = td->vram_size - td->cols; i >= 16; i -= 16)
         {
             xm_setl(DATA, xm_getl(DATA));
             xm_setl(DATA, xm_getl(DATA));
             xm_setl(DATA, xm_getl(DATA));
             xm_setl(DATA, xm_getl(DATA));
+            xm_setl(DATA, xm_getl(DATA));
+            xm_setl(DATA, xm_getl(DATA));
+            xm_setl(DATA, xm_getl(DATA));
+            xm_setl(DATA, xm_getl(DATA));
         }
-        // scroll remaining longs (0-3)
+        // scroll any remaining longs
         for (; i >= 2; i -= 2)
         {
             xm_setl(DATA, xm_getl(DATA));
         }
-
-        // scroll remaining word
+        // scroll any remaining word
         if (i)
         {
             xm_setw(DATA, xm_getw(DATA));
@@ -677,6 +707,7 @@ static void xansi_processchar(char cdata)
     xansi_assert_xy_valid(td);
 #endif
 }
+#pragma GCC pop_options        // end -O3
 
 // parsing functions can be small
 #pragma GCC push_options
@@ -702,13 +733,25 @@ static void str_dec(char ** strptr, unsigned int num)
     *strptr = p;
 }
 
+// also copies NUL
+static void str_copy(char * dest, char * src)
+{
+    char cdata;
+    do
+    {
+        cdata   = *src++;
+        *dest++ = cdata;
+
+    } while (cdata != '\0');
+}
+
 // starts CSI sequence or ESC sequence (if c is ESC)
 static inline void xansi_begin_csi_or_esc(xansiterm_data * td, char c)
 {
     td->state             = (c == '\x1b') ? TSTATE_ESC : TSTATE_CSI;
     td->intermediate_char = 0;
     td->num_parms         = 0;
-    memset(td->csi_parms, 0, sizeof(td->csi_parms));
+    xansi_memset(td->csi_parms, sizeof(td->csi_parms));
 }
 
 // process ESC sequence (only single character supported)
@@ -790,7 +833,7 @@ static inline void xansi_process_esc(xansiterm_data * td, char cdata)
         case 'Z':
             // VT: <ESC>Z   DA  send VT101 identifier (older sequence)
             td->send_index = 0;
-            memcpy(td->send_buffer, "\x1b[?1;0c", 8);
+            str_copy(td->send_buffer, "\x1b[?1;0c");
             LOGF("=[VT101 ID reply=\"<ESC>%s\"]\n", td->send_buffer + 1);
             break;
         case 0x7f:        // ignore DEL and stay in ESC state
@@ -972,7 +1015,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
             if (num_z == 5)
             {
                 td->send_index = 0;
-                memcpy(td->send_buffer, "\x1b[0n", 5);
+                str_copy(td->send_buffer, "\x1b[0n");
                 LOGF("[DSR STATUS reply=\"<ESC>%s\"]\n", td->send_buffer + 1);
             }
             else if (num_z == 6)
@@ -1002,7 +1045,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                 if (num_z == 0)
                 {
                     td->send_index = 0;
-                    memcpy(td->send_buffer, "\x1b[?1;0c", 8);
+                    str_copy(td->send_buffer, "\x1b[?1;0c");
                     LOGF("[VT101 ID reply=\"<ESC>%s\"]\n", td->send_buffer + 1);
                 }
                 else if (num_z == 68)
@@ -1401,6 +1444,8 @@ static inline void xansi_parse_csi(xansiterm_data * td, char cdata)
 #pragma GCC pop_options        // end -Os
 
 // external public console terminal functions
+#pragma GCC push_options
+#pragma GCC optimize("-O3")
 
 // output character to console
 void xansiterm_PRINTCHAR(char cdata)
@@ -1607,6 +1652,7 @@ bool xansiterm_CHECKCHAR()
 
     return char_ready;
 }
+#pragma GCC pop_options        // end -O3
 
 // init function can be small
 #pragma GCC push_options
@@ -1637,7 +1683,7 @@ bool xansiterm_INIT()
     }
 
     xansiterm_data * td = get_xansi_data();
-    memset(td, 0, sizeof(*td));
+    xansi_memset(td, sizeof(*td));
     // default values (others will be zero or computed)
     td->device_recvchar  = _EFP_RECVCHAR;
     td->device_checkchar = _EFP_CHECKCHAR;
@@ -1682,7 +1728,7 @@ bool xansiterm_INIT()
     }
     *vs++ = '\0';
     xansiterm_PRINTLN(verstr);
-    xansiterm_PRINTLN(NULL);
+    xansiterm_PRINTLN(0);
     return true;
 }
 

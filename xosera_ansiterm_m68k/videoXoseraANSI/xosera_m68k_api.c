@@ -1,11 +1,6 @@
 /*
  * vim: set et ts=4 sw=4
  *------------------------------------------------------------
- *                                  ___ ___ _
- *  ___ ___ ___ ___ ___       _____|  _| . | |_
- * |  _| . |_ -|  _| . |     |     | . | . | '_|
- * |_| |___|___|___|___|_____|_|_|_|___|___|_,_|
- *                     |_____|
  *  __ __
  * |  |  |___ ___ ___ ___ ___
  * |-   -| . |_ -| -_|  _| .'|
@@ -26,8 +21,11 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+
+#if defined(TEST_FIRMWARE)
 #include <stdio.h>
 #include <stdlib.h>
+#endif
 
 #include <machine.h>
 
@@ -160,11 +158,3 @@ void xv_copy_from_vram(uint32_t vram_source, uint16_t * dest, uint32_t numbytes)
         *long_ptr++ = xm_getl(DATA);
     }
 }
-
-// define xosera_ptr in a way that GCC can't see the immediate const value (causing it to keep it in a register).
-__asm__(
-    "               .data\n"
-    "               .section    .rodata.xosera_ptr,\"a\"\n"
-    "               .align      2\n"
-    "               .globl      xosera_ptr\n"
-    "xosera_ptr:    .long       " XM_STR(XM_BASEADDR) "\n");

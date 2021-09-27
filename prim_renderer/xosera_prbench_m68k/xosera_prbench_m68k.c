@@ -228,7 +228,13 @@ void bench(BenchType bench_type)
         break;
 
     case CUBE:
-        draw_cube(1.0f);
+        {
+            mat4x4 mat_proj, mat_rot_z, mat_rot_x;
+            get_projection_matrix(&mat_proj);
+            get_rotation_x_matrix(1.0f, &mat_rot_x);
+            get_rotation_z_matrix(1.0f, &mat_rot_z);
+            draw_cube(&mat_proj, &mat_rot_z, &mat_rot_x, true);
+        }
         break;
 
     

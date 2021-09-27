@@ -26,57 +26,6 @@
 #include <math.h>
 #include <string.h>
 
-#define _FRACTION_MASK(scale) (0xffffffff >> (32 - scale))
-#define _WHOLE_MASK(scale)    (0xffffffff ^ FRACTION_MASK(scale))
-
-#define _FLOAT_TO_FIXED(x, scale) ((x) * (float)(1 << scale))
-#define _FIXED_TO_FLOAT(x, scale) ((float)(x) / (double)(1 << scale))
-#define _INT_TO_FIXED(x, scale)   ((x) << scale)
-#define _FIXED_TO_INT(x, scale)   ((x) >> scale)
-#define _FRACTION_PART(x, scale)  ((x)&FRACTION_MASK(scale))
-#define _WHOLE_PART(x, scale)     ((x)&WHOLE_MASK(scale))
-
-//#define _MUL(x, y, scale) (((long long)(x) * (long long)(y)) >> scale)
-#define _MUL(x, y, scale) (((x) >> (scale / 2)) * ((y) >> (scale / 2)))
-
-//#define _DIV(x, y, scale) (((long long)(x) << scale) / (y))
-#define _DIV(x, y, scale) (((x) << (scale / 2)) / (y) << (scale / 2))
-
-#define SCALE 16
-
-#define FX(x)     ((fx32)_FLOAT_TO_FIXED(x, SCALE))
-#define INT(x)    ((int)_FIXED_TO_INT(x, SCALE))
-#define MUL(x, y) _MUL(x, y, SCALE)
-#define DIV(x, y) _DIV(x, y, SCALE)
-
-#define SIN(x) FX(sinf(_FIXED_TO_FLOAT(x, SCALE)))
-#define COS(x) FX(cosf(_FIXED_TO_FLOAT(x, SCALE)))
-#define TAN(x) FX(tanf(_FIXED_TO_FLOAT(x, SCALE)))
-#define SQRT(x) FX(sqrtf(_FIXED_TO_FLOAT(x, SCALE)))
-
-typedef int fx32;
-
-typedef struct
-{
-    fx32 x, y, z;
-} vec3d;
-
-typedef struct
-{
-    vec3d p[3];
-    vec3d col;
-} triangle;
-
-typedef struct
-{
-    triangle * tris;
-} mesh;
-
-typedef struct
-{
-    fx32 m[4][4];
-} mat4x4;
-
 int screen_width  = 320;
 int screen_height = 200;
 
@@ -120,49 +69,56 @@ triangle cube_triangles[] = {
     {FX(1.0f), FX(0.0f), FX(1.0f), FX(0.0f), FX(0.0f), FX(1.0f), FX(0.0f), FX(0.0f), FX(0.0f)},
     {FX(1.0f), FX(0.0f), FX(1.0f), FX(0.0f), FX(0.0f), FX(0.0f), FX(1.0f), FX(0.0f), FX(0.0f)}};
 
+void get_projection_matrix(mat4x4 * mat_proj)
+{
+    // projection matrix
+    fx32  near        = FX(0.1f);
+    fx32  far         = FX(1000.0f);
+    fx32  aspect_ratio = FX((float)screen_height / (float)screen_width);
+    float fov = 60.0f;
+    fx32  fov_rad      = FX(1.0f / tanf(fov * 0.5f / 180.0f * 3.14159f));
 
-void draw_cube(float theta)
+    memset(mat_proj, 0, sizeof(mat4x4));
+    mat_proj->m[0][0] = MUL(aspect_ratio, fov_rad);
+    mat_proj->m[1][1] = fov_rad;
+    mat_proj->m[2][2] = DIV(far, (far - near));
+    mat_proj->m[3][2] = DIV(MUL(-far, near), (far - near));
+    mat_proj->m[2][3] = FX(1.0f);
+    mat_proj->m[3][3] = FX(0.0f);
+}
+
+void get_rotation_z_matrix(float theta, mat4x4 * mat_rot_z)
+{
+    memset(mat_rot_z, 0, sizeof(mat4x4));
+
+    // rotation Z
+    mat_rot_z->m[0][0] = FX(cosf(theta));
+    mat_rot_z->m[0][1] = FX(sinf(theta));
+    mat_rot_z->m[1][0] = FX(-sinf(theta));
+    mat_rot_z->m[1][1] = FX(cosf(theta));
+    mat_rot_z->m[2][2] = FX(1.0f);
+    mat_rot_z->m[3][3] = FX(1.0f);
+}
+
+void get_rotation_x_matrix(float theta, mat4x4 * mat_rot_x)
+{
+    memset(mat_rot_x, 0, sizeof(mat4x4));
+
+    // rotation X
+    mat_rot_x->m[0][0] = FX(1.0f);
+    mat_rot_x->m[1][1] = FX(cosf(theta * 0.5f));
+    mat_rot_x->m[1][2] = FX(sinf(theta * 0.5f));
+    mat_rot_x->m[2][1] = FX(-sinf(theta * 0.5f));
+    mat_rot_x->m[2][2] = FX(cosf(theta * 0.5f));
+    mat_rot_x->m[3][3] = FX(1.0f);
+}
+
+void draw_cube(mat4x4 * mat_proj, mat4x4 * mat_rot_z, mat4x4 * mat_rot_x, bool is_lighting_ena)
 {
     mesh mesh_cube;
     mesh_cube.tris = &cube_triangles[0];
 
-    // projection matrix
-    fx32  near        = FX(0.1f);
-    fx32  far         = FX(1000.0f);
-    float fov         = 60.0f;
-    fx32  aspect_ratio = FX((float)screen_height / (float)screen_width);
-    fx32  fov_rad      = FX(1.0f / tanf(fov * 0.5f / 180.0f * 3.14159f));
-
-    mat4x4 mat_proj;
     vec3d vec_camera = {FX(0.0f), FX(0.0f), FX(0.0f)};
-
-    memset(&mat_proj, 0, sizeof(mat_proj));
-    mat_proj.m[0][0] = MUL(aspect_ratio, fov_rad);
-    mat_proj.m[1][1] = fov_rad;
-    mat_proj.m[2][2] = DIV(far, (far - near));
-    mat_proj.m[3][2] = DIV(MUL(-far, near), (far - near));
-    mat_proj.m[2][3] = FX(1.0f);
-    mat_proj.m[3][3] = FX(0.0f);
-
-    mat4x4 mat_rot_z, mat_rot_x;
-    memset(&mat_rot_z, 0, sizeof(mat_rot_z));
-    memset(&mat_rot_x, 0, sizeof(mat_rot_x));
-
-    // rotation Z
-    mat_rot_z.m[0][0] = FX(cosf(theta));
-    mat_rot_z.m[0][1] = FX(sinf(theta));
-    mat_rot_z.m[1][0] = FX(-sinf(theta));
-    mat_rot_z.m[1][1] = FX(cosf(theta));
-    mat_rot_z.m[2][2] = FX(1.0f);
-    mat_rot_z.m[3][3] = FX(1.0f);
-
-    // rotation X
-    mat_rot_x.m[0][0] = FX(1.0f);
-    mat_rot_x.m[1][1] = FX(cosf(theta * 0.5f));
-    mat_rot_x.m[1][2] = FX(sinf(theta * 0.5f));
-    mat_rot_x.m[2][1] = FX(-sinf(theta * 0.5f));
-    mat_rot_x.m[2][2] = FX(cosf(theta * 0.5f));
-    mat_rot_x.m[3][3] = FX(1.0f);
 
     // draw triangles
     size_t nb_triangles = sizeof(cube_triangles) / sizeof(triangle);
@@ -172,14 +128,14 @@ void draw_cube(float theta)
         triangle   tri_projected, tri_translated, tri_rotated_z, tri_rotated_zx;
 
         // rotate in Z-axis
-        multiply_matrix_vector(&tri->p[0], &tri_rotated_z.p[0], &mat_rot_z);
-        multiply_matrix_vector(&tri->p[1], &tri_rotated_z.p[1], &mat_rot_z);
-        multiply_matrix_vector(&tri->p[2], &tri_rotated_z.p[2], &mat_rot_z);
+        multiply_matrix_vector(&tri->p[0], &tri_rotated_z.p[0], mat_rot_z);
+        multiply_matrix_vector(&tri->p[1], &tri_rotated_z.p[1], mat_rot_z);
+        multiply_matrix_vector(&tri->p[2], &tri_rotated_z.p[2], mat_rot_z);
 
         // rotate in X-axis
-        multiply_matrix_vector(&tri_rotated_z.p[0], &tri_rotated_zx.p[0], &mat_rot_x);
-        multiply_matrix_vector(&tri_rotated_z.p[1], &tri_rotated_zx.p[1], &mat_rot_x);
-        multiply_matrix_vector(&tri_rotated_z.p[2], &tri_rotated_zx.p[2], &mat_rot_x);
+        multiply_matrix_vector(&tri_rotated_z.p[0], &tri_rotated_zx.p[0], mat_rot_x);
+        multiply_matrix_vector(&tri_rotated_z.p[1], &tri_rotated_zx.p[1], mat_rot_x);
+        multiply_matrix_vector(&tri_rotated_z.p[2], &tri_rotated_zx.p[2], mat_rot_x);
 
         // offset into the screen
         tri_translated        = tri_rotated_zx;
@@ -201,31 +157,36 @@ void draw_cube(float theta)
         normal.y = MUL(line1.z, line2.x) - MUL(line1.x, line2.z);
         normal.z = MUL(line1.x, line2.y) - MUL(line1.y, line2.x);
 
-        fx32 l = SQRT(MUL(normal.x, normal.x) + MUL(normal.y, normal.y) + MUL(normal.z, normal.z));
-        normal.x = DIV(normal.x, l);
-        normal.y = DIV(normal.y, l);
-        normal.z = DIV(normal.z, l);
+        if (is_lighting_ena) {
+            fx32 l = SQRT(MUL(normal.x, normal.x) + MUL(normal.y, normal.y) + MUL(normal.z, normal.z));
+            normal.x = DIV(normal.x, l);
+            normal.y = DIV(normal.y, l);
+            normal.z = DIV(normal.z, l);
+        }
 
         if (MUL(normal.x, (tri_translated.p[0].x - vec_camera.x)) +
             MUL(normal.y, (tri_translated.p[0].y - vec_camera.y)) +
             MUL(normal.z, (tri_translated.p[0].z - vec_camera.z)) < FX(0.0f))
         {
-            // illumination
-            vec3d light_direction = {FX(0.0f), FX(0.0f), FX(-1.0f)};
-            fx32 l = SQRT(MUL(light_direction.x, light_direction.x) + MUL(light_direction.y, light_direction.y) + MUL(light_direction.z, light_direction.z));
-            light_direction.x = DIV(light_direction.x, l);
-            light_direction.y = DIV(light_direction.y, l);
-            light_direction.z = DIV(light_direction.z, l);
+            fx32 dp = FX(1.0f);
+            if (is_lighting_ena) {
+                // illumination
+                vec3d light_direction = {FX(0.0f), FX(0.0f), FX(-1.0f)};
+                fx32 l = SQRT(MUL(light_direction.x, light_direction.x) + MUL(light_direction.y, light_direction.y) + MUL(light_direction.z, light_direction.z));
+                light_direction.x = DIV(light_direction.x, l);
+                light_direction.y = DIV(light_direction.y, l);
+                light_direction.z = DIV(light_direction.z, l);
 
-            fx32 dp = MUL(normal.x, light_direction.x) + MUL(normal.y, light_direction.y) + MUL(normal.z, light_direction.z);
+                dp = MUL(normal.x, light_direction.x) + MUL(normal.y, light_direction.y) + MUL(normal.z, light_direction.z);
+            }
             tri_translated.col.x = dp;
             tri_translated.col.y = dp;
             tri_translated.col.z = dp;
 
             // project triangles from 3D to 2D
-            multiply_matrix_vector(&tri_translated.p[0], &tri_projected.p[0], &mat_proj);
-            multiply_matrix_vector(&tri_translated.p[1], &tri_projected.p[1], &mat_proj);
-            multiply_matrix_vector(&tri_translated.p[2], &tri_projected.p[2], &mat_proj);
+            multiply_matrix_vector(&tri_translated.p[0], &tri_projected.p[0], mat_proj);
+            multiply_matrix_vector(&tri_translated.p[1], &tri_projected.p[1], mat_proj);
+            multiply_matrix_vector(&tri_translated.p[2], &tri_projected.p[2], mat_proj);
             tri_projected.col = tri_translated.col;
 
             // scale into view

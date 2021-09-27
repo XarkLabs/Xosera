@@ -516,11 +516,17 @@ void demo_cube(int nb_iterations)
     fade_in();
 
     float theta = 0.0f;
+    mat4x4 mat_proj, mat_rot_z, mat_rot_x;
+
+    get_projection_matrix(&mat_proj);
+    
     for (int i = 0; i < nb_iterations; ++i) {
 
         pr_clear();
 
-        draw_cube(theta);
+        get_rotation_z_matrix(theta, &mat_rot_z);
+        get_rotation_x_matrix(theta, &mat_rot_x);
+        draw_cube(&mat_proj, &mat_rot_z, &mat_rot_x, true);
 
         pr_swap(true);
 

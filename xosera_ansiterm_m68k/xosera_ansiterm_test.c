@@ -74,9 +74,9 @@ static int ansiterm_test_attrib()
                            cbg_tbl[cbg],
                            cfg_tbl[cfg]);
                 }
-                if (xansiterm_CHECKCHAR())
+                if (checkchar())
                 {
-                    char c = xansiterm_RECVCHAR();
+                    char c = readchar();
                     while (true)
                     {
                         if (c == 1)
@@ -87,7 +87,7 @@ static int ansiterm_test_attrib()
                         {
                             return 0;
                         }
-                        c = xansiterm_RECVCHAR();
+                        c = readchar();
                         if (c >= ' ')
                         {
                             break;

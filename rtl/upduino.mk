@@ -21,7 +21,7 @@ SHELL := /bin/bash -o pipefail
 
 # Version bookkeeping
 GITSHORTHASH := $(shell git rev-parse --short HEAD)
-DIRTYFILES := $(shell git status --porcelain --untracked-files=no | grep -v _stats.txt | cut -d " " -f 3-)
+DIRTYFILES := $(shell git status --porcelain --untracked-files=no | grep rtl/ | grep -v _stats.txt | cut -d " " -f 3-)
 ifeq ($(strip $(DIRTYFILES)),)
 # prepend 0 for "clean"
 XOSERA_HASH := 0$(GITSHORTHASH)

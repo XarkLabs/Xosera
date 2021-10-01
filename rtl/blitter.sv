@@ -41,7 +41,9 @@ localparam [11:0] version = 12'H`VERSION;
 
 logic [8*8:1]  logostring = "Xosera v";    // boot msg
 
+`ifndef TESTPATTERN
 localparam CLEARDATA = 16'h0220;    // value VRAM cleared to on init (blue+white space) TODO: zero for final?
+`endif
 
 typedef enum logic [4:0] {
     INIT, CLEAR, LOGO_1, LOGO_2, LOGO_3, LOGO_4, LOGO_5, LOGO_6, LOGO_7, LOGO_8,

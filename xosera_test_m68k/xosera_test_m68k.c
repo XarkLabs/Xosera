@@ -856,12 +856,13 @@ void     xosera_test()
         {
             break;
         }
-
+#if 0        // bored with this test. :)
         test_vram_speed();
         if (delay_check(DELAY_TIME))
         {
             break;
         }
+#endif
     }
     wait_vsync();
 
@@ -879,4 +880,5 @@ void     xosera_test()
     {
         readchar();
     }
+    printf("\x9b?3h");        // 106-column mode
 }

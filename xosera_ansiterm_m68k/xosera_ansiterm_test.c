@@ -225,7 +225,7 @@ static void ansiterm_testmenu()
 {
     while (true)
     {
-        printf("\x9bm");
+        printf("\x9bm\n");
         printf(
             "\x9b"
             "c");        // CSI c

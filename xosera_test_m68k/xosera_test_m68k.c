@@ -880,5 +880,4 @@ void     xosera_test()
     {
         readchar();
     }
-    printf("\x9b?3h");        // 106-column mode
 }

@@ -38,6 +38,9 @@
 #include "rosco_m68k_support.h"
 #include "videoXoseraANSI/xosera_ansiterm_m68k.h"
 
+#define XV_PREP_REQUIRED        // require Xosera xv_prep() function (for speed)
+#include "xosera_m68k_api.h"
+
 #include "us-fishoe.h"
 
 // keep test functions small
@@ -184,13 +187,102 @@ static int ansiterm_arttest()
     return 0;
 }
 
+char                reply_str[64];
+static const char * wait_reply()
+{
+    size_t len = 0;
+    xv_prep();
+    memset(reply_str, 0, sizeof(reply_str));
+    uint16_t start   = xm_getw(TIMER);
+    uint16_t elapsed = 0;
+
+    do
+    {
+        if (checkchar())
+        {
+            char cdata = readchar();
+            // CAN/SUB
+            if (cdata == 0x18 || cdata == 0x1a)
+            {
+                break;
+            }
+
+            reply_str[len++] = cdata;
+
+            if ((len == 1 && cdata != '\x1b') || (len == 2 && cdata != '[') || (len > 2 && cdata >= 0x40))
+            {
+                break;
+            }
+            start = xm_getw(TIMER);
+        }
+        elapsed = xm_getw(TIMER) - start;
+    } while (elapsed < 1000 && len < (sizeof(reply_str) - 1));        // 100.0 ms per char timeout
+
+    return len ? reply_str : NULL;
+}
+
 static void ansiterm_testmenu()
 {
     while (true)
     {
-        printf("\x9bm\n");
+        printf("\x9bm");
+        printf(
+            "\x9b"
+            "c");        // CSI c
+        const char * r = wait_reply();
+        printf("Terminal %s VT101 compatible. Reply %d chars: %s%s\n",
+               r ? "is" : "is NOT",
+               strlen(r),
+               r ? "<ESC>" : "",
+               r ? r + 1 : "<none>");
+
+        if (r)
+        {
+            printf("Terminal status: ");
+            printf(
+                "\x9b"
+                "5n");        // DSR status
+            r = wait_reply();
+            if (r && strncmp(r, "\x1b[0n", 4) == 0)
+            {
+                printf("OK.");
+            }
+            else
+            {
+                printf("BAD!");
+            }
+            printf(" Reply %d chars: %s%s\n", strlen(r), r ? "<ESC>" : "", r ? r + 1 : "<none>");
+
+            printf(
+                "\x9b"
+                "68c");        // CSI 68 c
+            r = wait_reply();
+            if (r && strncmp(r, "\x1b[?68;", 6) == 0)
+            {
+                printf("Terminal gave XANSI reply %d chars: %s%s\n", strlen(r), r ? "<ESC>" : "", r ? r + 1 : "<none>");
+                printf("\x9bs");        // save cursor pos
+                printf(
+                    "\x9b"
+                    "999;999H");        // go to edge of screen
+                printf(
+                    "\x9b"
+                    "6n");        // cursor position report
+                r = wait_reply();
+                printf("\x9bu");        // restore cursor pos
+                printf("Terminal CPR reply %d chars: %s%s\n", strlen(r), r ? "<ESC>" : "", r ? r + 1 : "<none>");
+            }
+            else
+            {
+                printf("Terminal gave bad reply %d chars: %s%s\n",
+                       r ? strlen(r) : 0,
+                       r ? "<ESC>" : "",
+                       r ? r + 1 : "<none>");
+            }
+        }
+
         printf("\n");
         printf("rosco_m68k ANSI Terminal Driver Test Menu\n");
+        printf("\n");
         printf("\n");
         printf("  A - ANSI color attribute test.\n");
         printf("  B - Fast spam test\n");
@@ -253,19 +345,29 @@ void xosera_ansiterm_test()
 #if INSTALL_XANSI
     if (XANSI_CON_INIT())
     {
-        printf("Xosera ANSI console initialized.\n");
+        printf("Xosera XANSI RAM console initialized.\n");
     }
     else
 #endif
     {
-        printf("Xosera ANSI console NOT initialized.\n");
+        printf("Xosera XANSI RAM console NOT installed.\n");
     }
+
+    printf("\n");
 
     ansiterm_testmenu();
 
     printf("\fExiting...\n");
 
     printf("\n\nxosera_ansiterm_test exiting.\n");
+
+#if INSTALL_XANSI
+    // force cold-boot if we messed with vectors
+    __asm__ __volatile__(
+        "   move.l  _FIRMWARE+4,%a0\n"
+        "   reset\n"
+        "   jmp     (%a0)\n");
+#endif
 }
 
 #else

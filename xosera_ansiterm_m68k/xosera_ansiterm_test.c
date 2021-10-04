@@ -230,7 +230,7 @@ static void ansiterm_testmenu()
             "\x9b"
             "c");        // CSI c
         const char * r = wait_reply();
-        printf("Terminal %s VT101 compatible. Reply %d chars: %s%s\n",
+        printf("Terminal %s VT101 compatible. Reply %lu chars: %s%s\n",
                r ? "is" : "is NOT",
                strlen(r),
                r ? "<ESC>" : "",
@@ -251,7 +251,7 @@ static void ansiterm_testmenu()
             {
                 printf("BAD!");
             }
-            printf(" Reply %d chars: %s%s\n", strlen(r), r ? "<ESC>" : "", r ? r + 1 : "<none>");
+            printf(" Reply %lu chars: %s%s\n", strlen(r), r ? "<ESC>" : "", r ? r + 1 : "<none>");
 
             printf(
                 "\x9b"
@@ -259,7 +259,8 @@ static void ansiterm_testmenu()
             r = wait_reply();
             if (r && strncmp(r, "\x1b[?68;", 6) == 0)
             {
-                printf("Terminal gave XANSI reply %d chars: %s%s\n", strlen(r), r ? "<ESC>" : "", r ? r + 1 : "<none>");
+                printf(
+                    "Terminal gave XANSI reply %lu chars: %s%s\n", strlen(r), r ? "<ESC>" : "", r ? r + 1 : "<none>");
                 printf("\x9bs");        // save cursor pos
                 printf(
                     "\x9b"
@@ -269,11 +270,11 @@ static void ansiterm_testmenu()
                     "6n");        // cursor position report
                 r = wait_reply();
                 printf("\x9bu");        // restore cursor pos
-                printf("Terminal CPR reply %d chars: %s%s\n", strlen(r), r ? "<ESC>" : "", r ? r + 1 : "<none>");
+                printf("Terminal CPR reply %lu chars: %s%s\n", strlen(r), r ? "<ESC>" : "", r ? r + 1 : "<none>");
             }
             else
             {
-                printf("Terminal gave bad reply %d chars: %s%s\n",
+                printf("Terminal gave bad reply %lu chars: %s%s\n",
                        r ? strlen(r) : 0,
                        r ? "<ESC>" : "",
                        r ? r + 1 : "<none>");

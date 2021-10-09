@@ -233,35 +233,6 @@
 			"queue": "c",
 			"random": "c",
 			"machine.h": "c"
-		},
-		"files.exclude": {
-			"rtl/**/*.json": true,
-			"**/*.asc": true,
-			"**/*.bin": true,
-			"**/*.rpt": true,
-			"**/*.vcd": true,
-			"**/log*/*": true,
-			"**/dot/*": true,
-			"rtl/sim/obj_dir/*": true,
-			"rtl/sim/xosera_tb": true,
-			"host_spi/host_spi": true,
-			"utils/image_to_mem": true,
-			"utils/image_to_monobitmap": true,
-			"xvid_spi/xvid_spi": true,
-			"**/*.xmb": true,
-			"**/*.o": true,
-			"**/**_m68k*/**/*.elf": true,
-			"**/**_m68k*/**/*.s": true,
-			"**/**_m68k*/**/*.i": true,
-			"**/**_m68k*/**/*.sym": true,
-			"**/**_m68k*/**/*.dis": true,
-			"**/**_m68k*/**/*.map": true,
-			"**/**_m68k*/**/*.lst": true,
-			"**/.DS_Store": true,
-			"utils/raw256to16color": true,
-			"utils/pal_to_raw": true,
-			"utils/image_pal": true,
-			"**/*.swp": true
 		}
 	}
 }

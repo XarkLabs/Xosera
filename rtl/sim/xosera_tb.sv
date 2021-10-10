@@ -235,78 +235,78 @@ always begin
     bus_reg_num = 4'b0;
     bus_data_in = 8'b0;
 
-    if (xosera.blitter.blit_state == xosera.blitter.IDLE) begin
+    # 8ms;
 
-        // TODO hacked in copper enable
-        #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, XR_COPP_CTRL);
-        #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h8000);
-        // TODO end
+    // TODO hacked in copper enable
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, XR_COPP_CTRL);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h8000);
+    // TODO end
         
         
 `ifdef LOAD_MONOBM
-        while (xosera.video_gen.last_frame_pixel != 1'b1) begin
-            # 1ns;
-        end
+    while (xosera.video_gen.last_frame_pixel != 1'b1) begin
+        # 1ns;
+    end
 
-        #(M68K_PERIOD * 2)  xvid_setw(XM_WR_INCR, test_inc);
-        #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0000);
-        #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, XR_PA_GFX_CTRL);
-        #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h0040);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_INCR, test_inc);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0000);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, XR_PA_GFX_CTRL);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h0040);
 
-        inject_file("sim/mountains_mono_640x480w.raw", XM_DATA);  // pump binary file into DATA
+    inject_file("sim/mountains_mono_640x480w.raw", XM_DATA);  // pump binary file into DATA
 
-        # 1000ms;
+    # 1000ms;
 
 `endif
 `ifdef ZZZUNDEF // read test
-        # 10ms;
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_ADDR, test_addr[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_ADDR, test_addr[7:0]);
+    # 10ms;
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_ADDR, test_addr[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_ADDR, test_addr[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_INCR, test_inc[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_INCR, test_inc[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_INCR, test_inc[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_INCR, test_inc[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, test_data0[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, test_data0[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, test_data0[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, test_data0[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, test_data1[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, test_data1[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, test_data1[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, test_data1[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, test_data2[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, test_data2[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, test_data2[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, test_data2[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_RD_INC, test_inc[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_RD_INC, test_inc[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XVID_RD_INC, test_inc[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XVID_RD_INC, test_inc[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_RD_ADDR, test_addr[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_RD_ADDR, test_addr[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_RD_ADDR, test_addr[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_RD_ADDR, test_addr[7:0]);
 
-        #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
-        #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
-        $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
+    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
-        #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
-        #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
-        $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
+    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
-        #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
-        #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
-        $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
+    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_ADDR, test_addr2[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_ADDR, test_addr2[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_ADDR, test_addr2[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_ADDR, test_addr2[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, test_data2[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, test_data2[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, test_data2[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, test_data2[7:0]);
 
-        #(M68K_PERIOD * 4)  write_reg(1'b0, XM_RD_ADDR, test_addr2[15:8]);
-        #(M68K_PERIOD * 4)  write_reg(1'b1, XM_RD_ADDR, test_addr2[7:0]);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_RD_ADDR, test_addr2[15:8]);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_RD_ADDR, test_addr2[7:0]);
 
-        #(M68K_PERIOD * 4);
+    #(M68K_PERIOD * 4);
 
-        #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
-        #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
-        $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
+    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
 `endif
 
@@ -317,21 +317,21 @@ always begin
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
     #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h01);
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
     #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h02);
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(1ms) ;
     #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
@@ -339,14 +339,14 @@ always begin
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
     #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h03);
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(1500us) ;
     #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
@@ -354,14 +354,9 @@ always begin
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.blitter.bus_reg_num, readword);
+    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
 `endif
-
-    end
-    else begin
-        #(M68K_PERIOD * 4);
-    end
 end
 /* verilator lint_on LATCH */
 `endif
@@ -369,20 +364,18 @@ end
 integer flag = 0;
 logic [15:0] last_rd_addr = 0;
 always @(negedge clk) begin
-    if (xosera.blitter.blit_state == xosera.blitter.IDLE) begin
-        if (xosera.blitter.blit_vram_sel_o) begin
-            if (xosera.blitter.blit_wr_o) begin
-                $display("%0t Write VRAM[%04x] <= %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
-            end
-            else begin
-                flag <= 1;
-                last_rd_addr <= xosera.vram.address_in;
-            end
+    if (xosera.reg_interface.regs_vram_sel_o) begin
+        if (xosera.reg_interface.regs_wr_o) begin
+            $display("%0t Write VRAM[%04x] <= %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
         end
-        else if (flag == 1) begin
-            $display("%0t Read VRAM[%04x] => %04x", $realtime, last_rd_addr, xosera.vram.data_out);
-            flag <= 0;
+        else begin
+            flag <= 1;
+            last_rd_addr <= xosera.vram.address_in;
         end
+    end
+    else if (flag == 1) begin
+        $display("%0t Read VRAM[%04x] => %04x", $realtime, last_rd_addr, xosera.vram.data_out);
+        flag <= 0;
     end
 end
 
@@ -424,20 +417,20 @@ end
 
 // NOTE: Horrible hacky Verilog string array to print register name (fixed 8 characters, and in reverse order).
 always @(posedge clk) begin
-    if (xosera.blitter.bus_write_strobe) begin
-        if (xosera.blitter.bus_bytesel) begin
-            $display("%0t BUS WRITE:  R[%1x:%s] <= __%02x", $realtime, xosera.blitter.bus_reg_num, regname(xosera.blitter.bus_reg_num), xosera.blitter.bus_data_byte);
+    if (xosera.reg_interface.bus_write_strobe) begin
+        if (xosera.reg_interface.bus_bytesel) begin
+            $display("%0t BUS WRITE:  R[%1x:%s] <= __%02x", $realtime, xosera.reg_interface.bus_reg_num, regname(xosera.reg_interface.bus_reg_num), xosera.reg_interface.bus_data_byte);
         end
         else begin
-            $display("%0t BUS WRITE:  R[%1x:%s] <= %02x__", $realtime, xosera.blitter.bus_reg_num, regname(xosera.blitter.bus_reg_num),xosera.blitter.bus_data_byte);
+            $display("%0t BUS WRITE:  R[%1x:%s] <= %02x__", $realtime, xosera.reg_interface.bus_reg_num, regname(xosera.reg_interface.bus_reg_num),xosera.reg_interface.bus_data_byte);
         end
     end
-    if (xosera.blitter.bus_read_strobe) begin
+    if (xosera.reg_interface.bus_read_strobe) begin
         if (xosera.bus_bytesel_i) begin
-            $display("%0t BUS READ:  R[%1x:%s] => __%02x", $realtime, xosera.blitter.bus_reg_num, regname(xosera.blitter.bus_reg_num),xosera.blitter.bus_data_o);
+            $display("%0t BUS READ:  R[%1x:%s] => __%02x", $realtime, xosera.reg_interface.bus_reg_num, regname(xosera.reg_interface.bus_reg_num),xosera.reg_interface.bus_data_o);
         end
         else begin
-            $display("%0t BUS READ:  R[%1x:%s] => %02x__", $realtime, xosera.blitter.bus_reg_num, regname(xosera.blitter.bus_reg_num), xosera.blitter.bus_data_o);
+            $display("%0t BUS READ:  R[%1x:%s] => %02x__", $realtime, xosera.reg_interface.bus_reg_num, regname(xosera.reg_interface.bus_reg_num), xosera.reg_interface.bus_data_o);
         end
     end
 end

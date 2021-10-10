@@ -147,10 +147,10 @@ module copper(
     output       logic [10:0]   coppermem_rd_addr_o,
     output       logic          coppermem_rd_en_o,
     input   wire logic [15:0]   coppermem_rd_data_i,
-    input   wire logic          blit_xr_reg_sel_i,
-    input   wire logic          blit_tilemem_sel_i,
-    input   wire logic          blit_colormem_sel_i,
-    input   wire logic          blit_coppermem_sel_i,
+    input   wire logic          regs_xr_reg_sel_i,
+    input   wire logic          regs_tilemem_sel_i,
+    input   wire logic          regs_colormem_sel_i,
+    input   wire logic          regs_coppermem_sel_i,
     input   wire logic          copp_reg_wr_i,          // strobe to write internal config register number
     input   wire logic  [3:0]   copp_reg_num_i,         // internal config register number
     input   wire logic [15:0]   copp_reg_data_i,        // data for internal config register
@@ -378,7 +378,7 @@ always_ff @(posedge clk) begin
                             // up...
                             INSN_MOVER: begin
                                 // mover
-                                if (!blit_xr_reg_sel_i) begin
+                                if (!regs_xr_reg_sel_i) begin
                                     xr_wr_strobe            <= 1'b1;
                                     ram_wr_addr_out[15:8]   <= 8'h0;
                                     ram_wr_addr_out[7:0]    <= r_insn[23:16];
@@ -392,7 +392,7 @@ always_ff @(posedge clk) begin
                             end
                             INSN_MOVEF: begin
                                 // movef
-                                if (!blit_tilemem_sel_i) begin
+                                if (!regs_tilemem_sel_i) begin
                                     xr_wr_strobe            <= 1'b1;
                                     ram_wr_addr_out[15:12]  <= xv::XR_TILE_MEM[15:12];
                                     ram_wr_addr_out[11:0]   <= r_insn[27:16];
@@ -406,7 +406,7 @@ always_ff @(posedge clk) begin
                             end
                             INSN_MOVEP: begin
                                 // movep
-                                if (!blit_colormem_sel_i) begin
+                                if (!regs_colormem_sel_i) begin
                                     xr_wr_strobe            <= 1'b1;
                                     ram_wr_addr_out[15:8]   <= xv::XR_COLOR_MEM[15:8];
                                     ram_wr_addr_out[7:0]    <= r_insn[23:16];
@@ -420,7 +420,7 @@ always_ff @(posedge clk) begin
                             end
                             INSN_MOVEC: begin
                                 // movec
-                                if (!blit_coppermem_sel_i) begin
+                                if (!regs_coppermem_sel_i) begin
                                     xr_wr_strobe            <= 1'b1;
                                     ram_wr_addr_out[15:11]  <= xv::XR_COPPER_MEM[15:11];
                                     ram_wr_addr_out[10:0]   <= r_insn[26:16];

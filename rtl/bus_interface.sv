@@ -18,7 +18,7 @@ module bus_interface(
            input  wire logic  [3:0]  bus_reg_num_i,          // register number
            input  wire logic         bus_bytesel_i,          // 0=even byte, 1=odd byte
            input  wire logic  [7:0]  bus_data_i,             // 8-bit data bus input (broken out from bi-dir data bus)
-           // blitter interface signals
+           // register interface signals
            output      logic         write_strobe_o,         // strobe for register write
            output      logic         read_strobe_o,          // strobe for register read
            output      logic  [3:0]  reg_num_o,              // register number read/written

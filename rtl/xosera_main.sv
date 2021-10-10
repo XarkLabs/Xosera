@@ -54,41 +54,41 @@ module xosera_main(
            input  wire logic         reset_i                 // reset signal
        );
 
-logic        blit_vram_sel  /* verilator public */;     // blitter VRAM select
-logic        blit_xr_sel    /* verilator public */;     // blitter XR select
-logic        blit_wr        /* verilator public */;     // blitter VRAM/XR write
-logic  [3:0] blit_mask      /* verilator public */;     // 4 nibble write masks for vram
+logic        regs_vram_sel  /* verilator public */;     // register interface VRAM select
+logic        regs_xr_sel    /* verilator public */;     // register interface XR select
+logic        regs_wr        /* verilator public */;     // register interface VRAM/XR write
+logic  [3:0] regs_mask      /* verilator public */;     // 4 nibble write masks for vram
 
-logic [15:0] blit_addr      /* verilator public */;     // blitter VRAM/XR addr
-logic [15:0] blit_data_in   /* verilator public */;     // blitter VRAM/XR data read
-logic [15:0] blit_data_out  /* verilator public */;     // blitter bus VRAM/XR data write
+logic [15:0] regs_addr      /* verilator public */;     // register interface VRAM/XR addr
+logic [15:0] regs_data_in   /* verilator public */;     // register interface VRAM/XR data read
+logic [15:0] regs_data_out  /* verilator public */;     // register interface bus VRAM/XR data write
 
-logic blit_vgen_reg_sel     /* verilator public */;
-logic blit_vgen_reg_wr      /* verilator public */;
+logic regs_vgen_reg_sel     /* verilator public */;
+logic regs_vgen_reg_wr      /* verilator public */;
 
-logic blit_tilemem_sel      /* verilator public */;
-logic blit_tilemem_wr       /* verilator public */;
+logic regs_tilemem_sel      /* verilator public */;
+logic regs_tilemem_wr       /* verilator public */;
 
-logic blit_colormem_sel     /* verilator public */;
-logic blit_colormem_wr      /* verilator public */;
+logic regs_colormem_sel     /* verilator public */;
+logic regs_colormem_wr      /* verilator public */;
 
-logic blit_coppermem_sel    /* verilator public */;
-logic blit_coppermem_wr     /* verilator public */;
+logic regs_coppermem_sel    /* verilator public */;
+logic regs_coppermem_wr     /* verilator public */;
 
-logic blit_spritemem_sel    /* verilator public */;
-logic blit_spritemem_wr     /* verilator public */;
+logic regs_spritemem_sel    /* verilator public */;
+logic regs_spritemem_wr     /* verilator public */;
 
-assign  blit_vgen_reg_sel   = blit_xr_sel && !blit_addr[15];
-assign  blit_colormem_sel   = blit_xr_sel && blit_addr[15] && (blit_addr[13:12] == xv::XR_COLOR_MEM[13:12]);
-assign  blit_tilemem_sel    = blit_xr_sel && blit_addr[15] && (blit_addr[13:12] == xv::XR_TILE_MEM[13:12]);
-assign  blit_coppermem_sel  = blit_xr_sel && blit_addr[15] && (blit_addr[13:12] == xv::XR_COPPER_MEM[13:12]);
-assign  blit_spritemem_sel  = blit_xr_sel && blit_addr[15] && (blit_addr[13:12] == xv::XR_SPRITE_MEM[13:12]);
+assign  regs_vgen_reg_sel   = regs_xr_sel && !regs_addr[15];
+assign  regs_colormem_sel   = regs_xr_sel && regs_addr[15] && (regs_addr[13:12] == xv::XR_COLOR_MEM[13:12]);
+assign  regs_tilemem_sel    = regs_xr_sel && regs_addr[15] && (regs_addr[13:12] == xv::XR_TILE_MEM[13:12]);
+assign  regs_coppermem_sel  = regs_xr_sel && regs_addr[15] && (regs_addr[13:12] == xv::XR_COPPER_MEM[13:12]);
+assign  regs_spritemem_sel  = regs_xr_sel && regs_addr[15] && (regs_addr[13:12] == xv::XR_SPRITE_MEM[13:12]);
 
-assign  blit_vgen_reg_wr    = blit_vgen_reg_sel && blit_wr;
-assign  blit_tilemem_wr     = blit_tilemem_sel && blit_wr;
-assign  blit_colormem_wr    = blit_colormem_sel && blit_wr;
-assign  blit_spritemem_wr   = blit_spritemem_sel && blit_wr;
-assign  blit_coppermem_wr   = blit_coppermem_sel && blit_wr;
+assign  regs_vgen_reg_wr    = regs_vgen_reg_sel && regs_wr;
+assign  regs_tilemem_wr     = regs_tilemem_sel && regs_wr;
+assign  regs_colormem_wr    = regs_colormem_sel && regs_wr;
+assign  regs_spritemem_wr   = regs_spritemem_sel && regs_wr;
+assign  regs_coppermem_wr   = regs_coppermem_sel && regs_wr;
 
 // Copper
 logic [15:0] copp_wr_addr       /* verilator public */;
@@ -121,21 +121,21 @@ logic        xr_reg_wr_in;
 logic [4:0]  xr_reg_wr_addr_in;
 logic [15:0] xr_reg_wr_data_in;
 
-assign coppermem_wr_in          = blit_coppermem_wr  || copp_coppermem_wr;
-assign coppermem_wr_addr_in     = blit_coppermem_wr   ? blit_addr[10:0] : copp_wr_addr[10:0]; 
-assign coppermem_wr_data_in     = blit_coppermem_wr   ? blit_data_out   : copp_data_out;
+assign coppermem_wr_in          = regs_coppermem_wr  || copp_coppermem_wr;
+assign coppermem_wr_addr_in     = regs_coppermem_wr   ? regs_addr[10:0] : copp_wr_addr[10:0]; 
+assign coppermem_wr_data_in     = regs_coppermem_wr   ? regs_data_out   : copp_data_out;
 
-assign colormem_wr_in           = blit_colormem_wr || copp_colormem_wr;
-assign colormem_wr_addr_in      = blit_colormem_wr  ? blit_addr[7:0]  : copp_wr_addr[7:0]; 
-assign colormem_wr_data_in      = blit_colormem_wr  ? blit_data_out   : copp_data_out;
+assign colormem_wr_in           = regs_colormem_wr || copp_colormem_wr;
+assign colormem_wr_addr_in      = regs_colormem_wr  ? regs_addr[7:0]  : copp_wr_addr[7:0]; 
+assign colormem_wr_data_in      = regs_colormem_wr  ? regs_data_out   : copp_data_out;
 
-assign tilemem_wr_in            = blit_tilemem_wr    || copp_tilemem_wr;
-assign tilemem_wr_addr_in       = blit_tilemem_wr     ? blit_addr[11:0]  : copp_wr_addr[11:0]; 
-assign tilemem_wr_data_in       = blit_tilemem_wr     ? blit_data_out    : copp_data_out;
+assign tilemem_wr_in            = regs_tilemem_wr    || copp_tilemem_wr;
+assign tilemem_wr_addr_in       = regs_tilemem_wr     ? regs_addr[11:0]  : copp_wr_addr[11:0]; 
+assign tilemem_wr_data_in       = regs_tilemem_wr     ? regs_data_out    : copp_data_out;
 
-assign xr_reg_wr_in             = blit_vgen_reg_wr   || copp_vgen_reg_wr;
-assign xr_reg_wr_addr_in        = blit_vgen_reg_wr    ? blit_addr[4:0]   : copp_wr_addr[4:0];
-assign xr_reg_wr_data_in        = blit_vgen_reg_wr    ? blit_data_out    : copp_data_out;
+assign xr_reg_wr_in             = regs_vgen_reg_wr   || copp_vgen_reg_wr;
+assign xr_reg_wr_addr_in        = regs_vgen_reg_wr    ? regs_addr[4:0]   : copp_wr_addr[4:0];
+assign xr_reg_wr_data_in        = regs_vgen_reg_wr    ? regs_data_out    : copp_data_out;
 
 logic [10:0]    copper_pc;
 logic           coppermem_rd_en;
@@ -153,13 +153,13 @@ logic [15:0] vram_data_in   /* verilator public */;
 logic [15:0] vram_data_out  /* verilator public */;
 logic        vgen_vram_load;
 logic [15:0] vgen_vram_read;
-logic        blit_vram_load;
-logic [15:0] blit_vram_read;
+logic        regs_vram_load;
+logic [15:0] regs_vram_read;
 
 logic vgen_vram_sel;            // video vram select (read)
 logic [15:0] vgen_vram_addr;    // video vram addr
 logic [15:0] vgen_data_in;      // video vram read data
-logic [15:0] vgen_reg_data_out; // video data out for blitter reg reads
+logic [15:0] vgen_reg_data_out; // video data out for register interface reg reads
 
 logic  [3:0]    intr_mask;          // true for each enabled interrupt
 logic  [3:0]    intr_status;        // pending interrupt status
@@ -185,14 +185,14 @@ logic           dv_de_1;
 
 // audio generation (TODO)
 assign audio_l_o = dbug_cs_strobe;                    // TODO: audio
-assign audio_r_o = blit_xr_sel; //dbug_drive_bus;                    // TODO: audio
+assign audio_r_o = regs_xr_sel; //dbug_drive_bus;                    // TODO: audio
 
-assign vram_sel     = vgen_vram_sel ? 1'b1              : blit_vram_sel;
-assign vram_wr      = vgen_vram_sel ? 1'b0              : (blit_wr & blit_vram_sel);
-assign vram_mask    = vgen_vram_sel ? 4'b0000           : blit_mask;
-assign vram_addr    = vgen_vram_sel ? vgen_vram_addr    : blit_addr;
-assign vram_data_in = blit_data_out;
-assign blit_data_in = blit_vram_load ? vram_data_out    : blit_vram_read;
+assign vram_sel     = vgen_vram_sel ? 1'b1              : regs_vram_sel;
+assign vram_wr      = vgen_vram_sel ? 1'b0              : (regs_wr & regs_vram_sel);
+assign vram_mask    = vgen_vram_sel ? 4'b0000           : regs_mask;
+assign vram_addr    = vgen_vram_sel ? vgen_vram_addr    : regs_addr;
+assign vram_data_in = regs_data_out;
+assign regs_data_in = regs_vram_load ? vram_data_out    : regs_vram_read;
 assign vgen_data_in = vgen_vram_load ? vram_data_out    : vgen_vram_read;
 
 // save vgen value read from vram
@@ -208,17 +208,17 @@ end
 
 // save blit value read from vram
 always_ff @(posedge clk) begin
-    if (blit_vram_load) begin
-        blit_vram_read <= vram_data_out;
+    if (regs_vram_load) begin
+        regs_vram_read <= vram_data_out;
     end
-    blit_vram_load <= 1'b0; 
-    if (blit_vram_sel) begin
-        blit_vram_load <= ~blit_wr;
+    regs_vram_load <= 1'b0; 
+    if (regs_vram_sel) begin
+        regs_vram_load <= ~regs_wr;
     end
 end
 
-// blitter (really register logic for CPU access)
-blitter blitter(
+// register interface (really register logic for CPU access)
+reg_interface reg_interface(
     .clk(clk),
     .bus_cs_n_i(bus_cs_n_i),            // register select strobe
     .bus_rd_nwr_i(bus_rd_nwr_i),        // 0 = write, 1 = read
@@ -226,14 +226,14 @@ blitter blitter(
     .bus_bytesel_i(bus_bytesel_i),      // 0=even byte, 1=odd byte
     .bus_data_i(bus_data_i),            // 8-bit data bus input
     .bus_data_o(bus_data_o),            // 8-bit data bus output
-    .vgen_sel_i(vgen_vram_sel),         // blitter or vgen vram access this cycle
-    .blit_vram_sel_o(blit_vram_sel),    // blitter vram select
-    .blit_xr_sel_o(blit_xr_sel),        // blitter aux memory select
-    .blit_wr_o(blit_wr),                // blitter write
-    .blit_mask_o(blit_mask),            // vram nibble masks
-    .blit_addr_o(blit_addr),            // vram/aux address
-    .blit_data_i(blit_data_in),         // 16-bit word read from aux/vram
-    .blit_data_o(blit_data_out),        // 16-bit word write to aux/vram
+    .vgen_sel_i(vgen_vram_sel),         // register interface or vgen vram access this cycle
+    .regs_vram_sel_o(regs_vram_sel),    // register interface vram select
+    .regs_xr_sel_o(regs_xr_sel),        // register interface aux memory select
+    .regs_wr_o(regs_wr),                // register interface write
+    .regs_mask_o(regs_mask),            // vram nibble masks
+    .regs_addr_o(regs_addr),            // vram/aux address
+    .regs_data_i(regs_data_in),         // 16-bit word read from aux/vram
+    .regs_data_o(regs_data_out),        // 16-bit word write to aux/vram
     .xr_data_i(vgen_reg_data_out),
     .reconfig_o(reconfig_o),
     .boot_select_o(boot_select_o),
@@ -246,7 +246,7 @@ blitter blitter(
 //  video generation
 video_gen video_gen(
     .vgen_reg_wr_i(xr_reg_wr_in),
-    .vgen_reg_num_r_i(blit_addr[4:0]),
+    .vgen_reg_num_r_i(regs_addr[4:0]),
     .vgen_reg_num_w_i(xr_reg_wr_addr_in),
     .vgen_reg_data_i(xr_reg_wr_data_in),
     .vgen_reg_data_o(vgen_reg_data_out),
@@ -312,9 +312,9 @@ spritemem spritemem(
     .rd_address_i(spritemem_addr),
     .rd_data_o(spritemem_data_out),
     .wr_clk(clk),
-    .wr_en_i(blit_spritemem_wr),
-    .wr_address_i(blit_addr[7:0]),
-    .wr_data_i(blit_data_out)
+    .wr_en_i(regs_spritemem_wr),
+    .wr_address_i(regs_addr[7:0]),
+    .wr_data_i(regs_data_out)
 );
 
 // Copper
@@ -327,13 +327,13 @@ copper copper(
     .coppermem_rd_addr_o(copper_pc),
     .coppermem_rd_en_o(coppermem_rd_en),
     .coppermem_rd_data_i(coppermem_rd_data_out),
-    .blit_xr_reg_sel_i(blit_vgen_reg_sel),
-    .blit_tilemem_sel_i(blit_tilemem_sel),
-    .blit_colormem_sel_i(blit_colormem_sel),
-    .blit_coppermem_sel_i(blit_coppermem_sel),
-    .copp_reg_wr_i(blit_vgen_reg_wr),
-    .copp_reg_num_i(blit_addr[3:0]),
-    .copp_reg_data_i(blit_data_out),
+    .regs_xr_reg_sel_i(regs_vgen_reg_sel),
+    .regs_tilemem_sel_i(regs_tilemem_sel),
+    .regs_colormem_sel_i(regs_colormem_sel),
+    .regs_coppermem_sel_i(regs_coppermem_sel),
+    .copp_reg_wr_i(regs_vgen_reg_wr),
+    .copp_reg_num_i(regs_addr[3:0]),
+    .copp_reg_data_i(regs_data_out),
     .h_count_i(video_h_count),
     .v_count_i(video_v_count)
 );

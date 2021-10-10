@@ -366,12 +366,12 @@ BusInterface bus;
 int          BusInterface::test_data_len   = 999;
 uint16_t     BusInterface::test_data[1024] = {
     // test data
-    REG_WAITVSYNC(),                       // show boot screen
-    REG_W(XR_ADDR, XR_COPP_CTRL),          // do copper test on bootscreen...
+    REG_WAITVSYNC(),                     // show boot screen
+    REG_W(XR_ADDR, XR_COPP_CTRL),        // do copper test on bootscreen...
     REG_W(XR_DATA, 0x8000),
-    REG_WAITVSYNC(),                       // show boot screen
-    REG_WAITVSYNC(),                       // show boot screen
-    REG_W(XR_ADDR, XR_COPP_CTRL),          // disable copper so as not to ruin image tests.
+    REG_WAITVSYNC(),                     // show boot screen
+    REG_WAITVSYNC(),                     // show boot screen
+    REG_W(XR_ADDR, XR_COPP_CTRL),        // disable copper so as not to ruin image tests.
     REG_W(XR_DATA, 0x0000),
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 1-BPP BMAP
     REG_W(XR_DATA, 0x0040),
@@ -666,14 +666,14 @@ int main(int argc, char ** argv)
 
         if (frame_num > 1)
         {
-            if (top->xosera_main->blit_vram_sel && top->xosera_main->blit_wr)
+            if (top->xosera_main->regs_vram_sel && top->xosera_main->regs_wr)
             {
-                printf(" => write VRAM[0x%04x]=0x%04x\n", top->xosera_main->blit_addr, top->xosera_main->blit_data_out);
+                printf(" => write VRAM[0x%04x]=0x%04x\n", top->xosera_main->regs_addr, top->xosera_main->regs_data_out);
             }
 
-            if (top->xosera_main->blit_xr_sel && top->xosera_main->blit_wr)
+            if (top->xosera_main->regs_xr_sel && top->xosera_main->regs_wr)
             {
-                printf(" => write AUX[0x%04x]=0x%04x\n", top->xosera_main->blit_addr, top->xosera_main->blit_data_out);
+                printf(" => write AUX[0x%04x]=0x%04x\n", top->xosera_main->regs_addr, top->xosera_main->regs_data_out);
             }
         }
 

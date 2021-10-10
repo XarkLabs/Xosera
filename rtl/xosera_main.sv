@@ -100,14 +100,23 @@ logic        copp_colormem_wr   /* verilator public */;
 logic        copp_tilemem_wr    /* verilator public */;
 logic        copp_coppermem_wr  /* verilator public */;
 
+`ifndef COPPER_DISABLE
 assign  copp_vgen_reg_wr    = copp_xr_wr_sel && !copp_wr_addr[15];
 assign  copp_colormem_wr    = copp_xr_wr_sel && copp_wr_addr[15] && (copp_wr_addr[13:12] == xv::XR_COLOR_MEM[13:12]);
 assign  copp_tilemem_wr     = copp_xr_wr_sel && copp_wr_addr[15] && (copp_wr_addr[13:12] == xv::XR_TILE_MEM[13:12]);
 assign  copp_coppermem_wr   = copp_xr_wr_sel && copp_wr_addr[15] && (copp_wr_addr[13:12] == xv::XR_COPPER_MEM[13:12]);
+`else
+assign  copp_vgen_reg_wr    = 1'b0;
+assign  copp_colormem_wr    = 1'b0;
+assign  copp_tilemem_wr     = 1'b0;
+assign  copp_coppermem_wr   = 1'b0;
+`endif
 
+`ifndef COPPER_DISABLE
 logic        coppermem_wr_in;
 logic [10:0] coppermem_wr_addr_in;
 logic [15:0] coppermem_wr_data_in;
+`endif
 
 logic        colormem_wr_in;
 logic  [7:0] colormem_wr_addr_in;
@@ -121,9 +130,11 @@ logic        xr_reg_wr_in;
 logic [4:0]  xr_reg_wr_addr_in;
 logic [15:0] xr_reg_wr_data_in;
 
+`ifndef COPPER_DISABLE
 assign coppermem_wr_in          = regs_coppermem_wr  || copp_coppermem_wr;
 assign coppermem_wr_addr_in     = regs_coppermem_wr   ? regs_addr[10:0] : copp_wr_addr[10:0]; 
 assign coppermem_wr_data_in     = regs_coppermem_wr   ? regs_data_out   : copp_data_out;
+`endif
 
 assign colormem_wr_in           = regs_colormem_wr || copp_colormem_wr;
 assign colormem_wr_addr_in      = regs_colormem_wr  ? regs_addr[7:0]  : copp_wr_addr[7:0]; 
@@ -137,12 +148,17 @@ assign xr_reg_wr_in             = regs_vgen_reg_wr   || copp_vgen_reg_wr;
 assign xr_reg_wr_addr_in        = regs_vgen_reg_wr    ? regs_addr[4:0]   : copp_wr_addr[4:0];
 assign xr_reg_wr_data_in        = regs_vgen_reg_wr    ? regs_data_out    : copp_data_out;
 
+`ifndef COPPER_DISABLE
 logic [10:0]    copper_pc;
 logic           coppermem_rd_en;
 logic [15:0]    coppermem_rd_data_out;
 //logic [15:0]    copp_reg_data_out;
+`endif
+
+/* verilator lint_off UNUSED */
 logic [10:0]    video_h_count;
 logic [10:0]    video_v_count;
+/* verilator lint_on UNUSED */
 
 //  16x64K (128KB) video memory
 logic        vram_sel       /* verilator public */;
@@ -317,6 +333,7 @@ spritemem spritemem(
     .wr_data_i(regs_data_out)
 );
 
+`ifndef COPPER_DISABLE
 // Copper
 copper copper(
     .clk(clk),
@@ -349,6 +366,7 @@ coppermem coppermem(
     .wr_address_i(coppermem_wr_addr_in),
     .wr_data_i(coppermem_wr_data_in)
 );
+`endif
 
 // color RAM lookup (delays video 1 cycle for BRAM)
 always_ff @(posedge clk) begin

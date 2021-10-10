@@ -26,6 +26,7 @@
 //`define TESTPATTERN     // init with "test pattern" instead of clear VRAM
 
 `define HACKFAST                    // temp hacks to (more easily) get 848x480 bitstream
+`define COPPER_DISABLE              // temp hack to disable copper to highlight other bottlenecks
 
 //`define NO_CS_BUS_DELAY           // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
 

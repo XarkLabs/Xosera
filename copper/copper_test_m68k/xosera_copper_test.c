@@ -31,7 +31,6 @@
 #include <sdfat.h>
 
 #include "xosera_m68k_api.h"
-#include "xosera_m68k_copper.h"
 
 const uint8_t  copper_list_len = 26;
 const uint16_t copper_list[] = {

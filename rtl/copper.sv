@@ -433,9 +433,11 @@ always_ff @(posedge clk) begin
                                 end
                             end
                             default: begin
-                                // illegal instruction; do nothing
-                                copper_ex_state <= STATE_INIT;
+                                // illegal instruction; just setup fetch for 
+                                // next instruction
                                 copper_pc       <= copper_pc + 1;
+                                copper_ex_state <= STATE_WAIT;
+                                ram_rd_strobe   <= 1'b1;
                             end
                         endcase // Instruction                  
                     end

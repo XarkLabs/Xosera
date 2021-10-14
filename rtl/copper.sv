@@ -177,8 +177,9 @@ typedef enum logic [2:0] {
     STATE_WAIT      = 3'b001,
     STATE_LATCH1    = 3'b010,
     STATE_LATCH2    = 3'b011,
-    STATE_COMP      = 3'b101,
-    STATE_EXEC      = 3'b100
+    STATE_EXEC      = 3'b100,
+    STATE_EX_WAIT   = 3'b101,
+    STATE_EX_SKIP   = 3'b110
 } copper_ex_state_t;
 
 logic  [2:0]  copper_ex_state   = STATE_INIT;
@@ -279,111 +280,21 @@ always_ff @(posedge clk) begin
                     STATE_LATCH2: begin
                         ram_rd_strobe   <= 1'b0;
                         r_insn[15:0]    <= coppermem_rd_data_i;
-                        copper_ex_state <= STATE_COMP;
-                    end
-                    STATE_COMP: begin
-                        v_reached       <= v_count_i >= r_insn[26:16];
-                        h_reached       <= h_count_i >= r_insn[14:4];
                         copper_ex_state <= STATE_EXEC;
-                    end 
+                    end
                     // State 4 - Execution
                     STATE_EXEC: begin
+
                         case (r_insn[31:28])
                             INSN_WAIT: begin
-                                // wait
-                                if (r_insn[0]) begin
-                                    // Ignoring vertical position
-                                    if (r_insn[1]) begin
-                                        // Ignoring horizontal position - wait
-                                        // forever, nothing to do... 
-                                    end
-                                    else begin
-                                        // Checking only horizontal position
-                                        if (h_reached) begin
-                                            // Setup fetch next instruction
-                                            copper_pc           <= copper_pc + 1;
-                                            copper_ex_state     <= STATE_WAIT;
-                                            ram_rd_strobe       <= 1'b1;
-                                        end
-                                        else begin
-                                            copper_ex_state     <= STATE_COMP;
-                                        end
-                                    end
-                                end 
-                                else begin
-                                    // Not ignoring vertical position
-                                    if (r_insn[1]) begin
-                                        // Checking only vertical position
-                                        if (v_reached) begin
-                                            // Setup fetch next instruction
-                                            copper_pc           <= copper_pc + 1;
-                                            copper_ex_state     <= STATE_WAIT;
-                                            ram_rd_strobe       <= 1'b1;
-                                        end
-                                        else begin
-                                            copper_ex_state     <= STATE_COMP;
-                                        end
-                                    end
-                                    else begin
-                                        // Checking both horizontal and
-                                        // vertical positions
-                                        if (h_reached && v_reached) begin
-                                            // Setup fetch next instruction
-                                            copper_pc           <= copper_pc + 1;
-                                            copper_ex_state     <= STATE_WAIT;
-                                            ram_rd_strobe       <= 1'b1;
-                                        end
-                                        else begin
-                                            copper_ex_state     <= STATE_COMP;
-                                        end
-                                    end
-                                end
+                                v_reached       <= v_count_i >= r_insn[26:16];
+                                h_reached       <= h_count_i >= r_insn[14:4];
+                                copper_ex_state <= STATE_EX_WAIT;
                             end
                             INSN_SKIP: begin
-                                // skip
-                                if (r_insn[0]) begin
-                                    // Ignoring vertical position
-                                    if (r_insn[1]) begin
-                                        // Ignoring horizontal position, so
-                                        // always skip.
-                                        copper_pc       <= copper_pc + 3;
-                                    end
-                                    else begin
-                                        // Checking only horizontal position
-                                        if (h_reached) begin
-                                            copper_pc       <= copper_pc + 3;
-                                        end
-                                        else begin
-                                            copper_pc       <= copper_pc + 1;
-                                        end
-                                    end
-                                end 
-                                else begin
-                                    // Not ignoring vertical position
-                                    if (r_insn[1]) begin
-                                        // Checking only vertical position
-                                        if (v_reached) begin
-                                            copper_pc       <= copper_pc + 3;
-                                        end
-                                        else begin
-                                            copper_pc       <= copper_pc + 1;
-                                        end
-                                    end
-                                    else begin
-                                        // Checking both horizontal and
-                                        // vertical positions
-                                        if (h_reached && v_reached) begin
-                                            copper_pc       <= copper_pc + 3;
-                                        end
-                                        else begin
-                                            copper_pc       <= copper_pc + 1;
-                                        end
-                                    end
-                                end
-
-                                // Setup fetch next instruction
-                                copper_ex_state     <= STATE_WAIT;
-                                ram_rd_strobe       <= 1'b1;
+                                v_reached       <= v_count_i >= r_insn[26:16];
+                                h_reached       <= h_count_i >= r_insn[14:4];
+                                copper_ex_state <= STATE_EX_SKIP;
                             end
                             INSN_JUMP: begin
                                 // jmp
@@ -458,6 +369,102 @@ always_ff @(posedge clk) begin
                                 ram_rd_strobe   <= 1'b1;
                             end
                         endcase // Instruction                  
+                    end
+                    STATE_EX_WAIT: begin
+                        // executing wait
+                        if (r_insn[0]) begin
+                            // Ignoring vertical position
+                            if (r_insn[1]) begin
+                                // Ignoring horizontal position - wait
+                                // forever, nothing to do... 
+                            end
+                            else begin
+                                // Checking only horizontal position
+                                if (h_reached) begin
+                                    // Setup fetch next instruction
+                                    copper_pc           <= copper_pc + 1;
+                                    copper_ex_state     <= STATE_WAIT;
+                                    ram_rd_strobe       <= 1'b1;
+                                end
+                                else begin
+                                    copper_ex_state     <= STATE_EXEC;
+                                end
+                            end
+                        end 
+                        else begin
+                            // Not ignoring vertical position
+                            if (r_insn[1]) begin
+                                // Checking only vertical position
+                                if (v_reached) begin
+                                    // Setup fetch next instruction
+                                    copper_pc           <= copper_pc + 1;
+                                    copper_ex_state     <= STATE_WAIT;
+                                    ram_rd_strobe       <= 1'b1;
+                                end
+                                else begin
+                                    copper_ex_state     <= STATE_EXEC;
+                                end
+                            end
+                            else begin
+                                // Checking both horizontal and
+                                // vertical positions
+                                if (h_reached && v_reached) begin
+                                    // Setup fetch next instruction
+                                    copper_pc           <= copper_pc + 1;
+                                    copper_ex_state     <= STATE_WAIT;
+                                    ram_rd_strobe       <= 1'b1;
+                                end
+                                else begin
+                                    copper_ex_state     <= STATE_EXEC;
+                                end
+                            end
+                        end
+                    end
+                    STATE_EX_SKIP: begin
+                        // skip
+                        if (r_insn[0]) begin
+                            // Ignoring vertical position
+                            if (r_insn[1]) begin
+                                // Ignoring horizontal position, so
+                                // always skip.
+                                copper_pc       <= copper_pc + 3;
+                            end
+                            else begin
+                                // Checking only horizontal position
+                                if (h_reached) begin
+                                    copper_pc       <= copper_pc + 3;
+                                end
+                                else begin
+                                    copper_pc       <= copper_pc + 1;
+                                end
+                            end
+                        end 
+                        else begin
+                            // Not ignoring vertical position
+                            if (r_insn[1]) begin
+                                // Checking only vertical position
+                                if (v_reached) begin
+                                    copper_pc       <= copper_pc + 3;
+                                end
+                                else begin
+                                    copper_pc       <= copper_pc + 1;
+                                end
+                            end
+                            else begin
+                                // Checking both horizontal and
+                                // vertical positions
+                                if (h_reached && v_reached) begin
+                                    copper_pc       <= copper_pc + 3;
+                                end
+                                else begin
+                                    copper_pc       <= copper_pc + 1;
+                                end
+                            end
+                        end
+
+                        // Setup fetch next instruction
+                        copper_ex_state     <= STATE_WAIT;
+                        ram_rd_strobe       <= 1'b1;
                     end
                     default: ; // Should never happen
                 endcase // Execution state

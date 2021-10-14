@@ -210,6 +210,8 @@ logic         copp_reset;
 always_comb   copp_reset  = h_count_i == xv::VISIBLE_WIDTH + xv::H_FRONT_PORCH + xv::H_SYNC_PULSE + xv::H_BACK_PORCH - 5 &&
                             v_count_i == xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH + xv::V_SYNC_PULSE + xv::V_BACK_PORCH - 1;
 
+logic  past_vcount;
+
 always_ff @(posedge clk) begin
     if (reset_i) begin
         copper_en               <= 1'b0;
@@ -273,6 +275,7 @@ always_ff @(posedge clk) begin
                     end
                     // State 3 - Latch second word
                     STATE_LATCH2: begin
+                        past_vcount     <= v_count_i >= r_insn[26:16];
                         ram_rd_strobe   <= 1'b0;
                         r_insn[15:0]    <= coppermem_rd_data_i;
                         copper_ex_state <= STATE_EXEC;
@@ -302,7 +305,7 @@ always_ff @(posedge clk) begin
                                     // Not ignoring vertical position
                                     if (r_insn[1]) begin
                                         // Checking only vertical position
-                                        if (v_count_i >= r_insn[26:16]) begin
+                                        if (past_vcount) begin
                                             // Setup fetch next instruction
                                             copper_pc           <= copper_pc + 1;
                                             copper_ex_state     <= STATE_WAIT;
@@ -312,7 +315,7 @@ always_ff @(posedge clk) begin
                                     else begin
                                         // Checking both horizontal and
                                         // vertical positions
-                                        if (h_count_i >= r_insn[14:4] && v_count_i >= r_insn[26:16]) begin
+                                        if (h_count_i >= r_insn[14:4] && past_vcount) begin
                                             // Setup fetch next instruction
                                             copper_pc           <= copper_pc + 1;
                                             copper_ex_state     <= STATE_WAIT;
@@ -344,7 +347,7 @@ always_ff @(posedge clk) begin
                                     // Not ignoring vertical position
                                     if (r_insn[1]) begin
                                         // Checking only vertical position
-                                        if (v_count_i >= r_insn[26:16]) begin
+                                        if (past_vcount) begin
                                             copper_pc       <= copper_pc + 3;
                                         end
                                         else begin
@@ -354,7 +357,7 @@ always_ff @(posedge clk) begin
                                     else begin
                                         // Checking both horizontal and
                                         // vertical positions
-                                        if (h_count_i >= r_insn[14:4] && v_count_i >= r_insn[26:16]) begin
+                                        if (h_count_i >= r_insn[14:4] && past_vcount) begin
                                             copper_pc       <= copper_pc + 3;
                                         end
                                         else begin

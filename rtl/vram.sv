@@ -43,31 +43,32 @@ logic [15: 0] memory[0: 65535] /* verilator public */;
 
 // clear RAM to avoid simulation errors
 initial begin
-    memory[0] = 16'h0000;
-    memory[1] = { 8'h0F, logostring[8*8-:8] };
-    memory[2] = { 8'h0e, logostring[7*8-:8] };
-    memory[3] = { 8'h0c, logostring[6*8-:8] };
-    memory[4] = { 8'h0b, logostring[5*8-:8] };
-    memory[5] = { 8'h02, logostring[4*8-:8] };
-    memory[6] = { 8'h05, logostring[3*8-:8] };
-    memory[7] = { 8'h07, logostring[2*8-:8] };
-    memory[8] = { 8'h02, logostring[1*8-:8] };
-    memory[9] = { 8'h02, hex_digit(version[3*4-1-:4]) };
-    memory[10] = { 8'h02, 8'h2e };    // '.'
-    memory[11] = { 8'h02, hex_digit(version[2*4-1-:4]) };
-    memory[12] = { 8'h02, hex_digit(version[1*4-1-:4]) };
-    memory[13] = { 8'h02, 8'h20 };    // ' '
-    memory[14] = { 8'h02, 8'h23 };    // '#'
-    memory[15] = { 8'h02, hex_digit(githash[8*4-1-:4]) };
-    memory[16] = { 8'h02, hex_digit(githash[7*4-1-:4]) };
-    memory[17] = { 8'h02, hex_digit(githash[6*4-1-:4]) };
-    memory[18] = { 8'h02, hex_digit(githash[5*4-1-:4]) };
-    memory[19] = { 8'h02, hex_digit(githash[4*4-1-:4]) };
-    memory[20] = { 8'h02, hex_digit(githash[3*4-1-:4]) };
-    memory[21] = { 8'h02, hex_digit(githash[2*4-1-:4]) };
-    memory[22] = { 8'h02, hex_digit(githash[1*4-1-:4]) };
+    memory[0] = { 8'h0F, logostring[8*8-:8] };
+    memory[1] = { 8'h0e, logostring[7*8-:8] };
+    memory[2] = { 8'h0c, logostring[6*8-:8] };
+    memory[3] = { 8'h0b, logostring[5*8-:8] };
+    memory[4] = { 8'h02, logostring[4*8-:8] };
+    memory[5] = { 8'h05, logostring[3*8-:8] };
+    memory[6] = { 8'h07, logostring[2*8-:8] };
+    memory[7] = { 8'h02, logostring[1*8-:8] };
+    memory[8] = { 8'h02, hex_digit(version[3*4-1-:4]) };
+    memory[9] = { 8'h02, 8'h2e };    // '.'
+    memory[10] = { 8'h02, hex_digit(version[2*4-1-:4]) };
+    memory[11] = { 8'h02, hex_digit(version[1*4-1-:4]) };
+    memory[12] = { 8'h02, 8'h20 };    // ' '
+    memory[13] = { 8'h02, 8'h23 };    // '#'
+    memory[14] = { 8'h02, hex_digit(githash[8*4-1-:4]) };
+    memory[15] = { 8'h02, hex_digit(githash[7*4-1-:4]) };
+    memory[16] = { 8'h02, hex_digit(githash[6*4-1-:4]) };
+    memory[17] = { 8'h02, hex_digit(githash[5*4-1-:4]) };
+    memory[18] = { 8'h02, hex_digit(githash[4*4-1-:4]) };
+    memory[19] = { 8'h02, hex_digit(githash[3*4-1-:4]) };
+    memory[20] = { 8'h02, hex_digit(githash[2*4-1-:4]) };
+    memory[21] = { 8'h02, hex_digit(githash[1*4-1-:4]) };
+    memory[22] = 16'h0000;
     memory[23] = 16'h0000;
 
+`ifndef NO_TESTPATTERN
     for (integer i = 24; i < 65536; i = i + 1) begin
         if (i[3:0] == 4'h1) begin
             memory[i] =  { 8'h02, i[15:8] };
@@ -78,9 +79,12 @@ initial begin
         end
     end
 
+    // load default fonts in upper address of VRAM
     $readmemb("tilesets/font_ST_8x16w.mem", memory, 16'hf000);
     $readmemb("tilesets/font_ST_8x8w.mem", memory, 16'hf800);
     $readmemb("tilesets/ANSI_PC_8x8w.mem", memory, 16'hfc00);
+`endif
+
 end
 
 // synchronous write (keeps memory updated for easy simulator access)

@@ -54,7 +54,6 @@ logic [15:0]    vram_rw_data;           // word read from VRAM (for RW_ADDR)
 logic           vram_rw_rd;             // flag for VRAM RW read outstanding
 logic           vram_rw_wr;             // flag for VRAM RW write outstanding
 logic           vram_rw_ack;            // flag for VRAM RW read acknowledged 
-logic [3:0]     wr_nibmask;             // flag to mask nibbles when writing 16-bit word
 
 // internal storage
 logic  [3:0]    intr_mask;              // interrupt mask
@@ -77,9 +76,6 @@ logic [11:0]    ms_timer_frac;          // internal clock counter for 1/10 ms
 
 // output interrupt mask
 assign intr_mask_o = intr_mask;
-
-// output nibble mask
-assign regs_mask_o = wr_nibmask;   // TODO replace regs_wr with just mask (non-zero for write)?
 
 // debug "ack" bus strobe
 assign bus_ack_o = (bus_write_strobe | bus_read_strobe);    // TODO: debug
@@ -121,7 +117,7 @@ function [7:0] reg_read(
         xv::XM_DATA[3:0],
         xv::XM_DATA_2[3:0]:     reg_read = !b_sel ? vram_rd_data[15:8]  : vram_rd_data[7:0];
 
-        xv::XM_SYS_CTRL[3:0]:   reg_read = !b_sel ? { 4'b0, wr_nibmask }: { 4'b0, intr_mask };
+        xv::XM_SYS_CTRL[3:0]:   reg_read = !b_sel ? { 4'b0, regs_mask_o }: { 4'b0, intr_mask };
         xv::XM_TIMER[3:0]:      reg_read = !b_sel ? ms_timer[15:8]      : ms_timer[7:0];
 
         xv::XM_UNUSED_A[3:0]:   reg_read = 8'b0;
@@ -158,7 +154,7 @@ always_ff @(posedge clk) begin
         reconfig_o      <= 1'b0;
         boot_select_o   <= 2'b00;
         intr_clear_o    <= 4'b0;
-        wr_nibmask      <= 4'b1111;
+        regs_mask_o     <= 4'b1111;
         intr_mask       <= 4'b1000;
         vram_rd         <= 1'b0;
         vram_rd_ack     <= 1'b0;
@@ -307,7 +303,7 @@ always_ff @(posedge clk) begin
                     xv::XM_SYS_CTRL: begin
                         reconfig_o          <= reg_even_byte[7];
                         boot_select_o       <= reg_even_byte[6:5];
-                        wr_nibmask          <= reg_even_byte[3:0];
+                        regs_mask_o         <= reg_even_byte[3:0];
                         intr_mask           <= bus_data_byte[3:0];
                     end
                     xv::XM_TIMER: begin

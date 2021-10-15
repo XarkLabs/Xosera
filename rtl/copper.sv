@@ -25,10 +25,24 @@
 // (though the wait instruction can be used with both X and Y ignored
 // as a "wait for end of frame" instruction).
 //
-// In the general case, copper instructions take four pixels to execute.
-// The exception is the first instruction executed in a frame, or 
-// after the copper is first enabled - this will take five pixels 
-// (as it has to pre-fetch the first instruction).
+// In the general case, most copper instructions take four pixels,
+// to execute, except for WAIT and SWAP, which take five pixels.
+//
+// Additionally, the first instruction executed in a frame, or 
+// after the copper is first enabled will take five pixels 
+// (as it has to pre-fetch the first instruction). The actual
+// execution is always on the last pixel of the instruction.
+//
+// These timings will need to be taken into account when computing
+// WAIT and SKIP offsets - often you will want to use an offset 
+// a number of pixels before the pixel you want the next instruction
+// to actually execute on.
+//
+// Also note that the first instruction in a frame is pre-fetched
+// at the end of the vertical blanking period such that the execution
+// main execution will occur exactly on the first pixel of the frame
+// (or, for WAIT and SKIP, the second, since their execution is 
+// delayed by a pixel).
 //
 // If the copper encounters an illegal instruction, ~~it will halt
 // and catch fire~~ that instruction will be ignored (wasting four pixels,
@@ -248,227 +262,242 @@ always_ff @(posedge clk) begin
             xr_wr_strobe            <= 1'b0;
         end
         else begin
-            if (copper_en) begin
-                case (copper_ex_state)
-                    // State 0 - Initial begin fetch first word
-                    // This state is only used for the first instruction, or
-                    // when the copper has stalled due to contention.
-                    //
-                    // Normally, the next instruction fetch is started by the
-                    // EXEC state of the previous instruction.
-                    STATE_INIT: begin
+            case (copper_ex_state)
+                // State 0 - Initial begin fetch first word
+                // This state is only used for the first instruction, or
+                // when the copper has stalled due to contention.
+                //
+                // Normally, the next instruction fetch is started by the
+                // EXEC state of the previous instruction.
+                STATE_INIT: begin
+                    if (copper_en) begin
+                        // Only proceed if copper is enabled
                         copper_ex_state <= STATE_WAIT;
                         ram_rd_strobe   <= 1'b1;
                     end
-                    // State 1 - Wait for copper RAM - Usually will jump 
-                    // directly here after execution of previous instruction.
-                    STATE_WAIT: begin
-                        // Reset strobe in case previous was a MOVEx
-                        // In this case, the write will happen this cycle...
-                        xr_wr_strobe        <= 1'b0;
+                end
+                // State 1 - Wait for copper RAM - Usually will jump 
+                // directly here after execution of previous instruction.
+                STATE_WAIT: begin
+                    // Reset strobe in case previous was a MOVEx
+                    // In this case, the write will happen this cycle...
+                    xr_wr_strobe        <= 1'b0;
 
+                    // Need to also check this here, as in normal running
+                    // we don't go back to STATE_INIT...
+                    if (copper_en) begin
+                        // If copper is enabled, proceed
                         copper_ex_state <= STATE_LATCH1;
                         copper_pc       <= copper_pc + 1;
                         ram_rd_strobe   <= 1'b1;
                     end
-                    // State 2 - Wait for copper RAM
-                    STATE_LATCH1: begin
-                        r_insn[31:16]   <= coppermem_rd_data_i;
-                        copper_ex_state <= STATE_LATCH2;
-                    end
-                    // State 3 - Latch second word
-                    STATE_LATCH2: begin
+                    else begin
+                        // else, go back to INIT state and stay there...
+                        copper_ex_state <= STATE_INIT;
                         ram_rd_strobe   <= 1'b0;
-                        r_insn[15:0]    <= coppermem_rd_data_i;
-                        copper_ex_state <= STATE_EXEC;
                     end
-                    // State 4 - Execution
-                    STATE_EXEC: begin
+                end
+                // State 2 - Wait for copper RAM
+                STATE_LATCH1: begin
+                    r_insn[31:16]   <= coppermem_rd_data_i;
+                    copper_ex_state <= STATE_LATCH2;
+                end
+                // State 3 - Latch second word
+                STATE_LATCH2: begin
+                    ram_rd_strobe   <= 1'b0;
+                    r_insn[15:0]    <= coppermem_rd_data_i;
+                    copper_ex_state <= STATE_EXEC;
+                end
+                // State 4 - Execution
+                STATE_EXEC: begin
 
-                        case (r_insn[31:28])
-                            INSN_WAIT: begin
-                                v_reached       <= v_count_i >= r_insn[26:16];
-                                h_reached       <= h_count_i >= r_insn[14:4];
-                                copper_ex_state <= STATE_EX_WAIT;
-                            end
-                            INSN_SKIP: begin
-                                v_reached       <= v_count_i >= r_insn[26:16];
-                                h_reached       <= h_count_i >= r_insn[14:4];
-                                copper_ex_state <= STATE_EX_SKIP;
-                            end
-                            INSN_JUMP: begin
-                                // jmp
-                                copper_pc               <= r_insn[26:16];
+                    case (r_insn[31:28])
+                        INSN_WAIT: begin
+                            v_reached       <= v_count_i >= r_insn[26:16];
+                            h_reached       <= h_count_i >= r_insn[14:4];
+                            copper_ex_state <= STATE_EX_WAIT;
+                        end
+                        INSN_SKIP: begin
+                            v_reached       <= v_count_i >= r_insn[26:16];
+                            h_reached       <= h_count_i >= r_insn[14:4];
+                            copper_ex_state <= STATE_EX_SKIP;
+                        end
+                        INSN_JUMP: begin
+                            // jmp
+                            copper_pc               <= r_insn[26:16];
+                            copper_ex_state         <= STATE_WAIT;
+                            ram_rd_strobe           <= 1'b1;
+                        end
+                        // All move instructions have a second wait state, 
+                        // during which next instruction read is also set
+                        // up...
+                        INSN_MOVER: begin
+                            // mover
+                            if (!regs_xr_reg_sel_i) begin
+                                xr_wr_strobe            <= 1'b1;
+                                ram_wr_addr_out[15:8]   <= 8'h0;
+                                ram_wr_addr_out[7:0]    <= r_insn[23:16];
+                                ram_wr_data_out         <= r_insn[15:0];
+
+                                // Setup fetch next instruction
+                                copper_pc               <= copper_pc + 1;
                                 copper_ex_state         <= STATE_WAIT;
                                 ram_rd_strobe           <= 1'b1;
                             end
-                            // All move instructions have a second wait state, 
-                            // during which next instruction read is also set
-                            // up...
-                            INSN_MOVER: begin
-                                // mover
-                                if (!regs_xr_reg_sel_i) begin
-                                    xr_wr_strobe            <= 1'b1;
-                                    ram_wr_addr_out[15:8]   <= 8'h0;
-                                    ram_wr_addr_out[7:0]    <= r_insn[23:16];
-                                    ram_wr_data_out         <= r_insn[15:0];
+                        end
+                        INSN_MOVEF: begin
+                            // movef
+                            if (!regs_tilemem_sel_i) begin
+                                xr_wr_strobe            <= 1'b1;
+                                ram_wr_addr_out[15:12]  <= xv::XR_TILE_MEM[15:12];
+                                ram_wr_addr_out[11:0]   <= r_insn[27:16];
+                                ram_wr_data_out         <= r_insn[15:0];
 
-                                    // Setup fetch next instruction
-                                    copper_pc               <= copper_pc + 1;
-                                    copper_ex_state         <= STATE_WAIT;
-                                    ram_rd_strobe           <= 1'b1;
-                                end
+                                // Setup fetch next instruction
+                                copper_pc               <= copper_pc + 1;
+                                copper_ex_state         <= STATE_WAIT;
+                                ram_rd_strobe           <= 1'b1;
                             end
-                            INSN_MOVEF: begin
-                                // movef
-                                if (!regs_tilemem_sel_i) begin
-                                    xr_wr_strobe            <= 1'b1;
-                                    ram_wr_addr_out[15:12]  <= xv::XR_TILE_MEM[15:12];
-                                    ram_wr_addr_out[11:0]   <= r_insn[27:16];
-                                    ram_wr_data_out         <= r_insn[15:0];
+                        end
+                        INSN_MOVEP: begin
+                            // movep
+                            if (!regs_colormem_sel_i) begin
+                                xr_wr_strobe            <= 1'b1;
+                                ram_wr_addr_out[15:8]   <= xv::XR_COLOR_MEM[15:8];
+                                ram_wr_addr_out[7:0]    <= r_insn[23:16];
+                                ram_wr_data_out         <= r_insn[15:0];
 
-                                    // Setup fetch next instruction
-                                    copper_pc               <= copper_pc + 1;
-                                    copper_ex_state         <= STATE_WAIT;
-                                    ram_rd_strobe           <= 1'b1;
-                                end
+                                // Setup fetch next instruction
+                                copper_pc               <= copper_pc + 1;
+                                copper_ex_state         <= STATE_WAIT;
+                                ram_rd_strobe           <= 1'b1;
                             end
-                            INSN_MOVEP: begin
-                                // movep
-                                if (!regs_colormem_sel_i) begin
-                                    xr_wr_strobe            <= 1'b1;
-                                    ram_wr_addr_out[15:8]   <= xv::XR_COLOR_MEM[15:8];
-                                    ram_wr_addr_out[7:0]    <= r_insn[23:16];
-                                    ram_wr_data_out         <= r_insn[15:0];
-
-                                    // Setup fetch next instruction
-                                    copper_pc               <= copper_pc + 1;
-                                    copper_ex_state         <= STATE_WAIT;
-                                    ram_rd_strobe           <= 1'b1;
-                                end
+                        end
+                        INSN_MOVEC: begin
+                            // movec
+                            if (!regs_coppermem_sel_i) begin
+                                xr_wr_strobe            <= 1'b1;
+                                ram_wr_addr_out[15:11]  <= xv::XR_COPPER_MEM[15:11];
+                                ram_wr_addr_out[10:0]   <= r_insn[26:16];
+                                ram_wr_data_out         <= r_insn[15:0];
+                        
+                                // Setup fetch next instruction
+                                copper_pc               <= copper_pc + 1;
+                                copper_ex_state         <= STATE_WAIT;
+                                ram_rd_strobe           <= 1'b1;
                             end
-                            INSN_MOVEC: begin
-                                // movec
-                                if (!regs_coppermem_sel_i) begin
-                                    xr_wr_strobe            <= 1'b1;
-                                    ram_wr_addr_out[15:11]  <= xv::XR_COPPER_MEM[15:11];
-                                    ram_wr_addr_out[10:0]   <= r_insn[26:16];
-                                    ram_wr_data_out         <= r_insn[15:0];
-                            
-                                    // Setup fetch next instruction
-                                    copper_pc               <= copper_pc + 1;
-                                    copper_ex_state         <= STATE_WAIT;
-                                    ram_rd_strobe           <= 1'b1;
-                                end
-                            end
-                            default: begin
-                                // illegal instruction; just setup fetch for 
-                                // next instruction
-                                copper_pc       <= copper_pc + 1;
-                                copper_ex_state <= STATE_WAIT;
-                                ram_rd_strobe   <= 1'b1;
-                            end
-                        endcase // Instruction                  
-                    end
-                    STATE_EX_WAIT: begin
-                        // executing wait
-                        if (r_insn[0]) begin
-                            // Ignoring vertical position
-                            if (r_insn[1]) begin
-                                // Ignoring horizontal position - wait
-                                // forever, nothing to do... 
-                            end
-                            else begin
-                                // Checking only horizontal position
-                                if (h_reached) begin
-                                    // Setup fetch next instruction
-                                    copper_pc           <= copper_pc + 1;
-                                    copper_ex_state     <= STATE_WAIT;
-                                    ram_rd_strobe       <= 1'b1;
-                                end
-                                else begin
-                                    copper_ex_state     <= STATE_EXEC;
-                                end
-                            end
-                        end 
+                        end
+                        default: begin
+                            // illegal instruction; just setup fetch for 
+                            // next instruction
+                            copper_pc       <= copper_pc + 1;
+                            copper_ex_state <= STATE_WAIT;
+                            ram_rd_strobe   <= 1'b1;
+                        end
+                    endcase // Instruction                  
+                end
+                // State 5 - Second state for WAIT instructions. This is where
+                // the actual position is checked.
+                STATE_EX_WAIT: begin
+                    // executing wait
+                    if (r_insn[0]) begin
+                        // Ignoring vertical position
+                        if (r_insn[1]) begin
+                            // Ignoring horizontal position - wait
+                            // forever, nothing to do... 
+                        end
                         else begin
-                            // Not ignoring vertical position
-                            if (r_insn[1]) begin
-                                // Checking only vertical position
-                                if (v_reached) begin
-                                    // Setup fetch next instruction
-                                    copper_pc           <= copper_pc + 1;
-                                    copper_ex_state     <= STATE_WAIT;
-                                    ram_rd_strobe       <= 1'b1;
-                                end
-                                else begin
-                                    copper_ex_state     <= STATE_EXEC;
-                                end
+                            // Checking only horizontal position
+                            if (h_reached) begin
+                                // Setup fetch next instruction
+                                copper_pc           <= copper_pc + 1;
+                                copper_ex_state     <= STATE_WAIT;
+                                ram_rd_strobe       <= 1'b1;
                             end
                             else begin
-                                // Checking both horizontal and
-                                // vertical positions
-                                if (h_reached && v_reached) begin
-                                    // Setup fetch next instruction
-                                    copper_pc           <= copper_pc + 1;
-                                    copper_ex_state     <= STATE_WAIT;
-                                    ram_rd_strobe       <= 1'b1;
-                                end
-                                else begin
-                                    copper_ex_state     <= STATE_EXEC;
-                                end
+                                copper_ex_state     <= STATE_EXEC;
+                            end
+                        end
+                    end 
+                    else begin
+                        // Not ignoring vertical position
+                        if (r_insn[1]) begin
+                            // Checking only vertical position
+                            if (v_reached) begin
+                                // Setup fetch next instruction
+                                copper_pc           <= copper_pc + 1;
+                                copper_ex_state     <= STATE_WAIT;
+                                ram_rd_strobe       <= 1'b1;
+                            end
+                            else begin
+                                copper_ex_state     <= STATE_EXEC;
+                            end
+                        end
+                        else begin
+                            // Checking both horizontal and
+                            // vertical positions
+                            if (h_reached && v_reached) begin
+                                // Setup fetch next instruction
+                                copper_pc           <= copper_pc + 1;
+                                copper_ex_state     <= STATE_WAIT;
+                                ram_rd_strobe       <= 1'b1;
+                            end
+                            else begin
+                                copper_ex_state     <= STATE_EXEC;
                             end
                         end
                     end
-                    STATE_EX_SKIP: begin
-                        // skip
-                        if (r_insn[0]) begin
-                            // Ignoring vertical position
-                            if (r_insn[1]) begin
-                                // Ignoring horizontal position, so
-                                // always skip.
+                end
+                // State 6 - Second state for SKIP instructions. This is where
+                // the actual position is checked.
+                STATE_EX_SKIP: begin
+                    // skip
+                    if (r_insn[0]) begin
+                        // Ignoring vertical position
+                        if (r_insn[1]) begin
+                            // Ignoring horizontal position, so
+                            // always skip.
+                            copper_pc       <= copper_pc + 3;
+                        end
+                        else begin
+                            // Checking only horizontal position
+                            if (h_reached) begin
                                 copper_pc       <= copper_pc + 3;
                             end
                             else begin
-                                // Checking only horizontal position
-                                if (h_reached) begin
-                                    copper_pc       <= copper_pc + 3;
-                                end
-                                else begin
-                                    copper_pc       <= copper_pc + 1;
-                                end
-                            end
-                        end 
-                        else begin
-                            // Not ignoring vertical position
-                            if (r_insn[1]) begin
-                                // Checking only vertical position
-                                if (v_reached) begin
-                                    copper_pc       <= copper_pc + 3;
-                                end
-                                else begin
-                                    copper_pc       <= copper_pc + 1;
-                                end
-                            end
-                            else begin
-                                // Checking both horizontal and
-                                // vertical positions
-                                if (h_reached && v_reached) begin
-                                    copper_pc       <= copper_pc + 3;
-                                end
-                                else begin
-                                    copper_pc       <= copper_pc + 1;
-                                end
+                                copper_pc       <= copper_pc + 1;
                             end
                         end
-
-                        // Setup fetch next instruction
-                        copper_ex_state     <= STATE_WAIT;
-                        ram_rd_strobe       <= 1'b1;
+                    end 
+                    else begin
+                        // Not ignoring vertical position
+                        if (r_insn[1]) begin
+                            // Checking only vertical position
+                            if (v_reached) begin
+                                copper_pc       <= copper_pc + 3;
+                            end
+                            else begin
+                                copper_pc       <= copper_pc + 1;
+                            end
+                        end
+                        else begin
+                            // Checking both horizontal and
+                            // vertical positions
+                            if (h_reached && v_reached) begin
+                                copper_pc       <= copper_pc + 3;
+                            end
+                            else begin
+                                copper_pc       <= copper_pc + 1;
+                            end
+                        end
                     end
-                    default: ; // Should never happen
-                endcase // Execution state
-            end
+
+                    // Setup fetch next instruction
+                    copper_ex_state     <= STATE_WAIT;
+                    ram_rd_strobe       <= 1'b1;
+                end
+                default: ; // Should never happen
+            endcase // Execution state
         end
     end
 end

@@ -137,9 +137,16 @@ assign xr_reg_wr_in             = regs_vgen_reg_wr   || copp_vgen_reg_wr;
 assign xr_reg_wr_addr_in        = regs_vgen_reg_wr    ? regs_addr[4:0]   : copp_wr_addr[4:0];
 assign xr_reg_wr_data_in        = regs_vgen_reg_wr    ? regs_data_out    : copp_data_out;
 
-logic [10:0]    copper_pc;
+// Separate strobes for even & odd copper RAM
+logic  coppermem_e_wr_in;
+logic  coppermem_o_wr_in;
+assign coppermem_e_wr_in        = coppermem_wr_in & !coppermem_wr_addr_in[0];
+assign coppermem_o_wr_in        = coppermem_wr_in &  coppermem_wr_addr_in[0];
+
+logic  [9:0]    copper_pc;
 logic           coppermem_rd_en;
-logic [15:0]    coppermem_rd_data_out;
+logic [15:0]    coppermem_e_rd_data_out;
+logic [15:0]    coppermem_o_rd_data_out;
 //logic [15:0]    copp_reg_data_out;
 logic [10:0]    video_h_count;
 logic [10:0]    video_v_count;
@@ -317,6 +324,7 @@ spritemem spritemem(
     .wr_data_i(regs_data_out)
 );
 
+
 // Copper
 copper copper(
     .clk(clk),
@@ -326,7 +334,8 @@ copper copper(
     .xr_ram_wr_data_o(copp_data_out),
     .coppermem_rd_addr_o(copper_pc),
     .coppermem_rd_en_o(coppermem_rd_en),
-    .coppermem_rd_data_i(coppermem_rd_data_out),
+    .coppermem_e_rd_data_i(coppermem_e_rd_data_out),
+    .coppermem_o_rd_data_i(coppermem_o_rd_data_out),
     .regs_xr_reg_sel_i(regs_vgen_reg_sel),
     .regs_tilemem_sel_i(regs_tilemem_sel),
     .regs_colormem_sel_i(regs_colormem_sel),
@@ -338,15 +347,27 @@ copper copper(
     .v_count_i(video_v_count)
 );
 
-// Copper RAM
-coppermem coppermem(
+// Copper RAM (Even word)
+coppermem coppermem_e(
     .clk(clk),
     .rd_en_i(coppermem_rd_en),
     .rd_address_i(copper_pc),
-    .rd_data_o(coppermem_rd_data_out),
+    .rd_data_o(coppermem_e_rd_data_out),
     .wr_clk(clk),
-    .wr_en_i(coppermem_wr_in),
-    .wr_address_i(coppermem_wr_addr_in),
+    .wr_en_i(coppermem_e_wr_in),
+    .wr_address_i(coppermem_wr_addr_in[10:1]),
+    .wr_data_i(coppermem_wr_data_in)
+);
+
+// Copper RAM (Odd word)
+coppermem coppermem_o(
+    .clk(clk),
+    .rd_en_i(coppermem_rd_en),
+    .rd_address_i(copper_pc),
+    .rd_data_o(coppermem_o_rd_data_out),
+    .wr_clk(clk),
+    .wr_en_i(coppermem_o_wr_in),
+    .wr_address_i(coppermem_wr_addr_in[10:1]),
     .wr_data_i(coppermem_wr_data_in)
 );
 

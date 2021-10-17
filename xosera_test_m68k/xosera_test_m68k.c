@@ -696,6 +696,7 @@ void     xosera_test()
         uint16_t dispaddr = xreg_getw(PA_DISP_ADDR);
         uint16_t linelen  = xreg_getw(PA_LINE_LEN);
         uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
+        uint16_t sysctrl  = xm_getw(SYS_CTRL);
 
         dprintf(
             "Xosera v%1x.%02x #%08x Features:0x%02x\n", (version >> 8) & 0xf, (version & 0xff), githash, version >> 8);
@@ -704,6 +705,11 @@ void     xosera_test()
         dprintf("PA_GFX_CTRL : 0x%04x PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
         dprintf("PA_DISP_ADDR: 0x%04x PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
         dprintf("PA_HV_SCROLL: 0x%04x\n", hvscroll);
+        dprintf("\n");
+
+        dprintf("SYS_CTRL: 0x%04x\n", sysctrl);
+        xm_setw(SYS_CTRL, sysctrl);
+        dprintf("SYS_CTRL: 0x%04x\n", sysctrl);
 
 #if COPPER_TEST
         if (test_count & 1)

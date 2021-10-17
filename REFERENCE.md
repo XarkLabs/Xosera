@@ -142,7 +142,7 @@ NOTE: This register is identical to `XM_DATA` to allow for 32-bit "long" MOVEP.L
 **0x8 `XM_SYS_CTRL` (R/W+) - draw busy status, reconfigure, interrupt control and write masking control [TODO]**  
 <img src="./pics/wd_XM_SYS_CTRL.svg">  
 **Read draw busy, write to reboot FPGA or read/write interrupt control/status and `XM_DATA` nibble write mask.**  
-Read:&emsp;[3:0] `XM_DATA`/`XM_DATA_2` nibble write masks, [7] draw busy, [3:0] interrupt enables  
+Read:&emsp;[11:8] `XM_DATA`/`XM_DATA_2` nibble write masks, [7] draw busy, [3:0] interrupt enables  
 Write:&emsp;[15] reboot FPGA to [14:13] configuration, [11:8] `XM_DATA`/`XM_DATA_2` nibble write masks, [3:0] interrupt mask (1
 allows corresponding interrupt source to generate CPU interrupt).
 

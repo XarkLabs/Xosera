@@ -205,7 +205,7 @@ assign audio_r_o = regs_xr_sel; //dbug_drive_bus;                    // TODO: au
 
 assign vram_sel     = vgen_vram_sel ? 1'b1              : regs_vram_sel;
 assign vram_wr      = vgen_vram_sel ? 1'b0              : (regs_wr & regs_vram_sel);
-assign vram_mask    = vgen_vram_sel ? 4'b0000           : regs_mask;
+assign vram_mask    = regs_mask;    // NOTE: vgen never writes, so this can stay set
 assign vram_addr    = vgen_vram_sel ? vgen_vram_addr    : regs_addr;
 assign vram_data_in = regs_data_out;
 assign regs_data_in = regs_vram_load ? vram_data_out    : regs_vram_read;

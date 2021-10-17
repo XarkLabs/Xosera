@@ -12,13 +12,13 @@
 `include "xosera_pkg.sv"
 
 // Default "mem" files and bank address for font data (1 2KB banks per 8x8 font, 2 banks for 8x16 font)
-`ifdef TESTPATTERN
+`ifdef USE_HEXFONT
 `define FONT_FILE_0 "tilesets/hexfont_8x16w.mem"
 `else
 `define FONT_FILE_0 "tilesets/font_ST_8x16w.mem"
 `endif
 `define FONT_ADDR_0 0*1024
-`ifdef TESTPATTERN
+`ifdef USE_HEXFONT
 `define FONT_FILE_1 "tilesets/hexfont_8x8w.mem"
 `else
 `define FONT_FILE_1 "tilesets/font_ST_8x8w.mem"

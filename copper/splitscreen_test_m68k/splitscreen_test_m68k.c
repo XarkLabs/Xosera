@@ -125,10 +125,11 @@ static bool load_sd_bitmap(const char * filename, uint16_t base_address)
         int cnt   = 0;
         int vaddr = base_address;
 
+        xm_setw(WR_INCR, 0x0001);   // needed to be set
+
         while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
         {
-            /* period every 4KiB, does not noticeably affect speed */
-            if (!(vaddr % 0x7))
+            if ((vaddr & 0xFFF) == 0)
             {
                 dprintf(".");
             }
@@ -201,7 +202,7 @@ void     xosera_test()
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
 
     dprintf("Loading copper list...\n");
-    
+
     xm_setw(XR_ADDR, XR_COPPER_MEM);
 
     for (uint8_t i = 0; i < copper_list_len; i++) {

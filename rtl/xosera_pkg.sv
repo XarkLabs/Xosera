@@ -111,9 +111,9 @@ typedef enum logic [15:0]{
 
 typedef enum logic [1:0] {
     BPP_1_ATTR      = 2'b00,
-    BPP_2           = 2'b01,
-    BPP_4           = 2'b10,
-    BPP_8           = 2'b11
+    BPP_4           = 2'b01,
+    BPP_8           = 2'b10,
+    BPP_XX          = 2'b11 // TODO: maybe YUYV or RL7?
 } bpp_depth_t;
 
 `ifdef MODE_640x400     // 25.175 MHz (requested), 25.125 MHz (achieved)

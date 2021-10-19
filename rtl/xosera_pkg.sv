@@ -23,7 +23,7 @@
 
 `define VERSION 021                 // BCD version code (x.xx)
 
-//`define USE_HEXFONT     // use hex font instead of default
+`define USE_HEXFONT     // use hex font instead of default
 //`define NO_TESTPATTERN  // don't initialize VRAM with test pattern and fonts in simulation
 
 `define HACKFAST                    // temp hacks to (more easily) get 848x480 bitstream
@@ -115,6 +115,14 @@ typedef enum logic [1:0] {
     BPP_8           = 2'b10,
     BPP_XX          = 2'b11 // TODO: maybe YUYV or RL7?
 } bpp_depth_t;
+
+typedef enum {
+    TILE_INDEX      = 0,    // rightmost bit for index (8 bit in BPP_1, otherwise 10 bit)
+    TILE_ATTR_VREV  = 10,   // mirror tile vertically (not in BPP_1)
+    TILE_ATTR_HREV  = 11,   // mirror tile horizontally (not in BPP_1)
+    TILE_ATTR_FORE  = 8,    // rightmost bit for forecolor (in BPP_1 only)
+    TILE_ATTR_BACK  = 12    // rightmost bit for backcolor (in BPP_1 only)
+} tile_index_attribute_bits_t;
 
 `ifdef MODE_640x400     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x400_75  // 31.500 MHz (requested), 31.500 MHz (achieved)

@@ -38,11 +38,12 @@ const uint16_t copper_list[] = {
      * This is a convoluted way to do this, but does serve as a useful test 
      * of the copper instructions... 
      */
-                    // copperlist:
+
+    // copperlist:
     0x20a0, 0x0002, //     skip  0, 160, 0b00010  ; Skip next if we've hit line 160
-    0x4014, 0x0000, //     jmp   .gored           ; ... else, jump to set red
+    0x400a, 0x0000, //     jmp   .gored           ; ... else, jump to set red
     0x2140, 0x0002, //     skip  0, 320, 0b00010  ; Skip next if we've hit line 320
-    0x400e, 0x0000, //     jmp   .gogreen         ; ... else jump to set green
+    0x4007, 0x0000, //     jmp   .gogreen         ; ... else jump to set green
     0xb000, 0x000f, //     movep 0x000F, 0        ; Make background blue
     0xb00a, 0x0007, //     movep 0x0007, 0xA      ; Make foreground dark blue
     0x0000, 0x0003, //     nextf                  ; and we're done for this frame
@@ -67,10 +68,6 @@ const uint16_t copper_list[] = {
     0x0000, 0x0003  // nextf                      ; Wait for next frame
     */
 };
-
-// Define rosco_m68k Xosera board base address pointer (See
-// https://github.com/rosco-m68k/hardware-projects/blob/feature/xosera/xosera/code/pld/decoder/ic3_decoder.pld#L25)
-//volatile xmreg_t * const xosera_ptr = (volatile xreg_t * const)0xf80060;        // rosco_m68k Xosera base
 
 static void dputc(char c)
 {

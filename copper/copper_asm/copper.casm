@@ -9,7 +9,7 @@
 ; This is for use with customasm: https://github.com/hlorenzi/customasm
 ; See also `example.asm`.
 
-#bits 16
+#bits 32
 #subruledef reg {
     VID_CTRL        => 0x00
     COPP_CTRL       => 0x01
@@ -39,7 +39,7 @@
     wait  {x: u11},    {y: u11},    {flags: u4} => 0b0000 @ 0b0     @ y`11    @ 0b0     @ x`11    @ flags`4
     skip  {x: u11},    {y: u11}                 => 0b0010 @ 0b0     @ y`11    @ 0b0     @ x`11    @ 0b0000
     skip  {x: u11},    {y: u11},    {flags: u4} => 0b0010 @ 0b0     @ y`11    @ 0b0     @ x`11    @ flags`4
-    jmp   {addr: u11}                           => 0b0100 @ 0b0     @ addr`11 @ 0b0000000000000000
+    jmp   {addr: u10}                           => 0b0100 @ 0b00    @ addr`10 @ 0b0000000000000000
     mover {r: reg},    {data: u16}              => 0b1001 @ 0b0000  @ r`8     @ data`16
     mover {addr: u8},  {data: u16}              => 0b1001 @ 0b0000  @ addr`8 @ data`16
     movef {addr: u12}, {data: u16}              => 0b1010 @ addr`12 @ data`16

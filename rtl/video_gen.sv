@@ -385,7 +385,7 @@ endfunction
 `ifdef HACKFAST        
 assign pa_tile_addr = calc_tile_addr(vram_data_i[9: 0], pa_tile_y, pa_tile_bank, pa_bpp, pa_tile_height[3]);  // NOTE: uses "hot" vram data output
 `else
-assign pa_tile_addr = calc_tile_addr(vram_data_i[9: 0], (vram_data_i[11] && (pa_bpp != xv::BPP_1_ATTR)) ? pa_tile_height - pa_tile_y : pa_tile_y,
+assign pa_tile_addr = calc_tile_addr(vram_data_i[9: 0], (vram_data_i[10] && (pa_bpp != xv::BPP_1_ATTR)) ? pa_tile_height - pa_tile_y : pa_tile_y,
                                      pa_tile_bank, pa_bpp, pa_tile_height[3]);  // NOTE: uses "hot" vram data output
 `endif
 

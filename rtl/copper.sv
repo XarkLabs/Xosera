@@ -110,9 +110,10 @@
 //          Skip if a given screen position has been reached.
 //
 //
-//      JMP   - [0100 ooAA AAAA AAAA],[oooo oooo oooo oooo]
+//      JMP   - [0100 oAAA AAAA AAA0],[oooo oooo oooo oooo]
 //
 //          Jump to the given copper RAM address.
+//          Must be on a 32-bit boundary.
 //
 //
 //      MOVER - [1001 FFFF AAAA AAAA],[DDDD DDDD DDDD DDDD]
@@ -245,7 +246,7 @@ logic  [3:0]  opcode;
 
 assign ignore_v                 = r_insn[0];
 assign ignore_h                 = r_insn[1];
-assign copper_pc_jmp            = r_insn[25:16];
+assign copper_pc_jmp            = r_insn[26:17];
 assign move_data                = r_insn[15:0];
 assign move_r_p_addr            = r_insn[23:16];
 assign move_f_addr              = r_insn[27:16];

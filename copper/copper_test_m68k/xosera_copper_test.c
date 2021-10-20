@@ -41,9 +41,9 @@ const uint16_t copper_list[] = {
 
     // copperlist:
     0x20a0, 0x0002, //     skip  0, 160, 0b00010  ; Skip next if we've hit line 160
-    0x400a, 0x0000, //     jmp   .gored           ; ... else, jump to set red
+    0x4014, 0x0000, //     jmp   .gored           ; ... else, jump to set red
     0x2140, 0x0002, //     skip  0, 320, 0b00010  ; Skip next if we've hit line 320
-    0x4007, 0x0000, //     jmp   .gogreen         ; ... else jump to set green
+    0x400e, 0x0000, //     jmp   .gogreen         ; ... else jump to set green
     0xb000, 0x000f, //     movep 0x000F, 0        ; Make background blue
     0xb00a, 0x0007, //     movep 0x0007, 0xA      ; Make foreground dark blue
     0x0000, 0x0003, //     nextf                  ; and we're done for this frame

@@ -161,14 +161,18 @@ assign v_count_o    = v_count;
 always_ff @(posedge clk) begin
     if (reset_i) begin
         intr_signal_o       <= 4'b0;
-        border_color        <= 8'h00;
+        border_color        <= 8'h08;           // defaulting to dark grey to show operational
         cursor_x            <= 11'h180;
         cursor_y            <= 11'h100;
         vid_top             <= 11'h0;
         vid_bottom          <= xv::VISIBLE_HEIGHT[10:0];
         vid_left            <= 11'h0;
         vid_right           <= xv::VISIBLE_WIDTH[10:0];
-        pa_blank            <= 1'b0;            // plane A starts enabled
+`ifdef SYNTHESIS
+        pa_blank            <= 1'b1;            // plane A starts blanked
+`else
+        pa_blank            <= 1'b0;            // unless simulating
+`endif
         pa_start_addr       <= 16'h0000;
         pa_line_len         <= xv::TILES_WIDE[15:0];
         pa_line_start_set   <= 1'b0;            // indicates user line address set
@@ -664,7 +668,7 @@ always_ff @(posedge clk) begin
             pa_pixel_shiftout   <= 64'he3e3e3e3e3e3e3e3;
             pa_next_shiftout    <= 64'he3e3e3e3e3e3e3e3;
 `endif
-            pa_pixel_shiftout[63:56]    <= pa_colorbase;
+            pa_pixel_shiftout[63:56]    <= border_color;
         end
 
         // when "scrolled" scanline starts outputting (before display if scrolled)
@@ -678,7 +682,7 @@ always_ff @(posedge clk) begin
 
         if (h_end_scanout) begin
             h_scanout                   <= 1'b0;
-            pa_pixel_shiftout[63:56]    <= pa_colorbase;
+            pa_pixel_shiftout[63:56]    <= border_color;
         end
 
         // end of line

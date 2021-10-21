@@ -57,7 +57,7 @@ module xosera_main(
 logic        regs_vram_sel  /* verilator public */;     // register interface VRAM select
 logic        regs_xr_sel    /* verilator public */;     // register interface XR select
 logic        regs_wr        /* verilator public */;     // register interface VRAM/XR write
-logic  [3:0] regs_mask      /* verilator public */;     // 4 nibble write masks for vram
+logic  [3:0] regs_wrmask    /* verilator public */;     // 4 nibble write masks for vram
 
 logic [15:0] regs_addr      /* verilator public */;     // register interface VRAM/XR addr
 logic [15:0] regs_data_in   /* verilator public */;     // register interface VRAM/XR data read
@@ -196,7 +196,7 @@ assign audio_r_o = regs_xr_sel; //dbug_drive_bus;                    // TODO: au
 
 assign vram_sel     = vgen_vram_sel ? 1'b1              : regs_vram_sel;
 assign vram_wr      = vgen_vram_sel ? 1'b0              : (regs_wr & regs_vram_sel);
-assign vram_mask    = regs_mask;    // NOTE: vgen never writes, so this can stay set
+assign vram_mask    = regs_wrmask;    // NOTE: vgen never writes, so this can stay set
 assign vram_addr    = vgen_vram_sel ? vgen_vram_addr    : regs_addr;
 assign vram_data_in = regs_data_out;
 assign regs_data_in = regs_vram_load ? vram_data_out    : regs_vram_read;
@@ -237,7 +237,7 @@ reg_interface reg_interface(
     .regs_vram_sel_o(regs_vram_sel),    // register interface vram select
     .regs_xr_sel_o(regs_xr_sel),        // register interface aux memory select
     .regs_wr_o(regs_wr),                // register interface write
-    .regs_mask_o(regs_mask),            // vram nibble masks
+    .regs_wrmask_o(regs_wrmask),        // vram nibble masks
     .regs_addr_o(regs_addr),            // vram/aux address
     .regs_data_i(regs_data_in),         // 16-bit word read from aux/vram
     .regs_data_o(regs_data_out),        // 16-bit word write to aux/vram

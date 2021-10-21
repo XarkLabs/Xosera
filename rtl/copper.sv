@@ -39,10 +39,10 @@
 // to actually execute on.
 //
 // Also note that the first instruction in a frame is pre-fetched
-// at the end of the vertical blanking period such that the execution
-// main execution will occur exactly on the first pixel of the frame
-// (or, for WAIT and SKIP, the second, since their execution is 
-// delayed by a pixel).
+// at the end of the vertical blanking period such that any comparisons
+// (e.g. H or V pos) will occur exactly on the first pixel of the frame.
+// This means that the main execution (e.g. register changes) will
+// happen on the second pixel.
 //
 // If the copper encounters an illegal instruction, ~~it will halt
 // and catch fire~~ that instruction will be ignored (wasting four pixels,
@@ -223,7 +223,7 @@ assign xr_ram_wr_addr_o         = ram_wr_addr_out;
 assign xr_ram_wr_data_o         = ram_wr_data_out;
 
 logic         copp_reset;
-always_comb   copp_reset  = h_count_i == xv::VISIBLE_WIDTH + xv::H_FRONT_PORCH + xv::H_SYNC_PULSE + xv::H_BACK_PORCH - 5 &&
+always_comb   copp_reset  = h_count_i == xv::VISIBLE_WIDTH + xv::H_FRONT_PORCH + xv::H_SYNC_PULSE + xv::H_BACK_PORCH - 4 &&
                             v_count_i == xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH + xv::V_SYNC_PULSE + xv::V_BACK_PORCH - 1;
 
 // The following are setup in STATE_PRECOMP for use in 

@@ -41,7 +41,14 @@ const uint32_t copper_list[] = {
 
 void xosera_test()
 {
+    if (checkchar())
+    {
+        readchar();
+    }
+
     xosera_init(0);
+
+    xreg_setw(VID_CTRL, 0x0000);        // set border black
 
     xm_setw(XR_ADDR, XR_COPPER_MEM);
 
@@ -71,4 +78,6 @@ void xosera_test()
 
     // restore text mode
     xosera_init(1);
+    xreg_setw(PA_GFX_CTRL, 0x0000);        // unblank screen
+    print("\033c");                        // reset & clear
 }

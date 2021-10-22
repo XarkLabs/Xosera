@@ -172,7 +172,7 @@ assign {P1B1, P1B2, P1B3, P1B4, P1B7, P1B8, P1B9, P1B10} =
 assign {P1A1, P1A2, P1A3, P1A4, P1A7, P1A8, P1A9, P1A10} =
        {vga_r[0], vga_r[1], vga_r[2], vga_r[3], vga_b[0], vga_b[1], vga_b[2], vga_b[3]};
 assign {P1B1, P1B2, P1B3, P1B4, P1B7, P1B8, P1B9, P1B10} =
-       {vga_g[0], vga_g[1], vga_g[2], vga_g[3], vga_hs, vga_vs, 1'bx, 1'bx};
+       {vga_g[0], vga_g[1], vga_g[2], vga_g[3], vga_hs, vga_vs, 1'b0, 1'b0};
 `elsif PMOD_XESS_VGA
 // 9-bit VGA using dual-PMOD http://www.xess.com/shop/product/stickit-vga/
 assign {P1A1, P1A2, P1A3, P1A4, P1A7, P1A8, P1A9, P1A10} =

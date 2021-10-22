@@ -259,7 +259,7 @@ end
 // video registers read
 always_ff @(posedge clk) begin
     case (vgen_reg_num_r_i[4:0])
-        xv::XR_VID_CTRL[4:0]:       vgen_reg_data_o <= {border_color, 4'bx, intr_status_i };
+        xv::XR_VID_CTRL[4:0]:       vgen_reg_data_o <= {border_color, 4'b0, intr_status_i };
         xv::XR_COPP_CTRL[4:0]:      vgen_reg_data_o <= {16'h0000 }; // TODO copper
         xv::XR_CURSOR_X[4:0]:       vgen_reg_data_o <= {5'b0, cursor_x };
         xv::XR_CURSOR_Y[4:0]:       vgen_reg_data_o <= {5'b0, cursor_y };

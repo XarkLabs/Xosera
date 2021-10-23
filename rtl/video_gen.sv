@@ -379,10 +379,7 @@ typedef enum logic [3:0] {
 } vgen_fetch_st;
 
 // scanline generation (registered signals and "_next" combinatorally set signals)
-logic [$size(vgen_fetch_st)-1:0]     pa_fetch, pa_fetch_next;            // plane A generation FSM state
-
-// fsm inputs
-logic           pa_pixels_buf_empty;                // true when pa_pixel_out needs filling
+logic [3:0]     pa_fetch, pa_fetch_next;            // plane A generation FSM state
 
 // fsm outputs
 logic [15:0]    pa_addr, pa_addr_next;              // address to fetch display bitmap/tilemap
@@ -394,6 +391,7 @@ logic [15:0]    vram_addr_next;                     // vram_address output
 logic           tilemem_sel_next;                   // tilemem select output
 logic [15:0]    tilemem_addr, tilemem_addr_next;    // tilemem address output
 
+logic           pa_initial_buf, pa_initial_buf_next;// true on first buffer per scanline
 logic           pa_words_ready, pa_words_ready_next;// true if data_words full (8-pixels)
 logic [15:0]    pa_tile_attr, pa_tile_attr_next;    // tile attributes and tile index
 logic [15:0]    pa_data_word0, pa_data_word0_next;  // 1st fetched display data word buffer
@@ -401,6 +399,7 @@ logic [15:0]    pa_data_word1, pa_data_word1_next;  // 2nd fetched display data 
 logic [15:0]    pa_data_word2, pa_data_word2_next;  // 3rd fetched display data word buffer
 logic [15:0]    pa_data_word3, pa_data_word3_next;  // 4th fetched display data word buffer
 
+logic           pa_pixels_buf_empty;                // true when pa_pixel_out needs filling
 logic           pa_pixels_buf_hrev;                 // horizontal reverse flag
 logic [63:0]    pa_pixels_buf;                      // 8 pixel buffer waiting for scan out
 
@@ -408,11 +407,6 @@ logic [63:0]    pa_pixels;                          // 8 pixels currently shifti
 
 logic           pa_line_start_set;                  // true if pa_line_start changed (register write)
 logic [15:0]    pa_line_start;                      // address of next line display data start
-
-// fetch FSM state register
-always_ff @(posedge clk) begin
-    pa_fetch   <= pa_fetch_next;
-end
 
 // fetch FSM combinational logic
 always_comb begin
@@ -429,6 +423,7 @@ always_comb begin
     tilemem_sel_next    = 1'b0;
     tilemem_addr_next   = tilemem_addr;
     pa_words_ready_next = 1'b0;
+    pa_initial_buf_next = pa_initial_buf;
 
     pa_tile_addr_next   = calc_tile_addr(pa_tile_attr[xv::TILE_INDEX+:10], pa_tile_y, pa_tile_bank, pa_bpp, pa_tile_height[3], pa_tile_attr[xv::TILE_ATTR_VREV]);
 
@@ -440,16 +435,16 @@ always_comb begin
         end
         FETCH_ADDR_DISP: begin
             // read pre-loaded font word3
-            if ((pa_bpp == xv::BPP_8) || (pa_bpp == xv::BPP_XX)) begin
+            if (!pa_bitmap && ((pa_bpp == xv::BPP_8) || (pa_bpp == xv::BPP_XX))) begin
                 pa_data_word3_next  = pa_tile_in_vram ? vram_data_i : tilemem_data_i;  // TI3: read tile data
             end
-            vram_addr_next  = pa_addr;                          // put display address on vram bus
-            pa_addr_next    = pa_addr + 1'b1;                   // increment display address
             if (!mem_fetch_active) begin                        // stop if no longer fetching
                 pa_fetch_next   = FETCH_IDLE;
             end else begin
                 if (pa_pixels_buf_empty) begin                  // if room in buffer
                     vram_sel_next   = 1'b1;                     // VO0: select vram
+                    vram_addr_next  = pa_addr;                          // put display address on vram bus
+                    pa_addr_next    = pa_addr + 1'b1;           // increment display address
                     pa_fetch_next   = FETCH_WAIT_DISP;
                 end
             end
@@ -460,7 +455,8 @@ always_comb begin
                 vram_addr_next  = pa_addr;                     // put display address on vram bus
                 pa_addr_next    = pa_addr + 1'b1;              // increment display address
             end
-            pa_words_ready_next = 1'b1;                         // set buffer ready
+            pa_words_ready_next = !pa_initial_buf;              // set buffer ready
+            pa_initial_buf_next = 1'b0;
             pa_fetch_next  = FETCH_READ_DISP_0;
         end
         FETCH_READ_DISP_0: begin
@@ -591,15 +587,14 @@ always_ff @(posedge clk) begin
         pa_data_word1       <= 16'h0000;
         pa_data_word2       <= 16'h0000;
         pa_data_word3       <= 16'h0000;
+        pa_initial_buf      <= 1'b0;
         pa_pixels_buf_empty <= 1'b0;            // flag when pa_pixels_buf is empty (continue fetching)
         pa_pixels_buf_hrev  <= 1'b0;            // flag to horizontally reverse pa_pixels_buf
         pa_pixels_buf       <= 64'h00000000;    // next 8 8-bpp pixels to scan out
         pa_pixels           <= 64'h00000000;    // 8 8-bpp pixels currently scanning out
     end else begin
-
-        // default outputs
-        spritemem_sel_o <= 1'b0;            // default to no sprite access
-
+    
+        // fetch FSM clocked process
         // register fetch combinitorial signals
         pa_fetch        <= pa_fetch_next;
         pa_addr         <= pa_addr_next;
@@ -611,16 +606,24 @@ always_ff @(posedge clk) begin
         pa_data_word3   <= pa_data_word3_next;
         pa_tile_attr    <= pa_tile_attr_next;
         tilemem_addr    <= tilemem_addr_next;
+        pa_initial_buf  <= pa_initial_buf_next;
         pa_words_ready  <= pa_words_ready_next;
 
-        vram_sel_o          <= vram_sel_next;
-        vram_addr_o         <= vram_addr_next;
-        tilemem_sel_o       <= tilemem_sel_next;
-        tilemem_addr_o      <= tilemem_addr_next[11:0];
+        vram_sel_o      <= vram_sel_next;
+        vram_addr_o     <= vram_addr_next;
+        tilemem_sel_o   <= tilemem_sel_next;
+        tilemem_addr_o  <= tilemem_addr_next[11:0];
+
+        pa_fetch        <= pa_fetch_next;
+
+        // default outputs
+        spritemem_sel_o <= 1'b0;            // default to no sprite access
 
         // have display words been fetched?
         if (pa_words_ready) begin
             // expand display data into 8 8-bit pixels in pa_pixels_buf
+            pa_pixels_buf_empty <= 1'b0;
+
             case (pa_bpp)
             xv::BPP_1_ATTR:
                 // expand to 8-bit index using upper 4-bits of colorbase
@@ -658,8 +661,6 @@ always_ff @(posedge clk) begin
             end else begin
                 pa_pixels_buf_hrev  <= pa_tile_attr[xv::TILE_ATTR_HREV];    // use horizontal reverse attrib
             end
-
-            pa_pixels_buf_empty   <= 1'b0;
         end
 
         // set output pixel index from pixel shift-out
@@ -674,7 +675,7 @@ always_ff @(posedge clk) begin
                 pa_tile_x               <= pa_tile_x + 1'b1;
 
                 if (pa_tile_x == 3'h7) begin
-                    pa_pixels_buf_empty <= 1'b1;
+                    pa_pixels_buf_empty <= !pa_initial_buf;  // TODO: 1'b1
                     if (pa_pixels_buf_hrev) begin
                          // next 8 pixels from buffer copied reversed
                         pa_pixels   <= {
@@ -703,6 +704,7 @@ always_ff @(posedge clk) begin
 
         // start of line display fetch
         if (h_start_line_fetch) begin       // on line fetch start signal
+            pa_initial_buf          <= 1'b1;
             pa_pixels_buf_empty     <= 1'b1;
             h_scanout_hcount        <= H_SCANOUT_BEGIN[10:0] + { { 6{pa_fine_hscroll[4]} }, pa_fine_hscroll };
             h_scanout_end_hcount    <= H_SCANOUT_END[10:0];   // TODO + vid_right;

@@ -35,14 +35,17 @@ function [7:0] hex_digit(
     end
 endfunction
 
+`ifdef SHOW_LOGO
 localparam [31:0] githash = 32'H`GITHASH;
 localparam [11:0] version = 12'H`VERSION;
 logic [8*8:1]  logostring = "Xosera v";    // boot msg
+`endif
 
 logic [15: 0] memory[0: 65535] /* verilator public */;
 
 // clear RAM to avoid simulation errors
 initial begin
+`ifdef SHOW_LOGO
     memory[0] = { 8'h0F, logostring[8*8-:8] };
     memory[1] = { 8'h0e, logostring[7*8-:8] };
     memory[2] = { 8'h0c, logostring[6*8-:8] };
@@ -67,9 +70,10 @@ initial begin
     memory[21] = { 8'h02, hex_digit(githash[1*4-1-:4]) };
     memory[22] = 16'h0000;
     memory[23] = 16'h0000;
+`endif
 
 `ifndef NO_TESTPATTERN
-    for (integer i = 24; i < 65536; i = i + 1) begin
+    for (integer i = 0; i < 65536; i = i + 1) begin
         if (i[3:0] == 4'h1) begin
             memory[i] =  { 8'h02, i[15:8] };
         end else if (i[3:0] == 4'h2) begin

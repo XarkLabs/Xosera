@@ -461,7 +461,7 @@ always_comb begin
         end
         FETCH_READ_DISP_0: begin
             pa_data_word0_next  = vram_data_i;                 // VI0: read vram data
-            pa_tile_attr_next    = vram_data_i;                 // also save for use as tile attribute
+            pa_tile_attr_next   = vram_data_i;                 // also save for use as tile attribute
 
             if (pa_bitmap) begin
                 if (pa_bpp == xv::BPP_1_ATTR) begin
@@ -480,7 +480,7 @@ always_comb begin
         end
         FETCH_READ_DISP_1: begin
             pa_data_word1_next  = vram_data_i;                 // VI1: read vram data
-
+            pa_tile_attr_next[15:8] = pa_colorbase;            // set attributes to colorbase
             if (pa_bpp == xv::BPP_4) begin
                 pa_fetch_next = FETCH_ADDR_DISP;               // done if BPP_4 bitmap
             end else begin

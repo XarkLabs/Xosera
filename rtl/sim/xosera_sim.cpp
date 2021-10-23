@@ -383,7 +383,7 @@ uint16_t     BusInterface::test_data[1024] = {
     REG_RW(XR_DATA),
     REG_W(TIMER, 0x0800),
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 4-BPP BMAP
-    REG_W(XR_DATA, 0x0065),
+    REG_W(XR_DATA, 0x0055),
     REG_W(XR_ADDR, XR_PA_LINE_LEN),        // 320/2/2 wide
     REG_W(XR_DATA, 80),
     REG_W(XR_ADDR, XR_COLOR_MEM),        // upload color palette
@@ -393,7 +393,7 @@ uint16_t     BusInterface::test_data[1024] = {
     REG_UPLOAD(),
     REG_WAITVSYNC(),                       // show 4-BPP BMAP
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 8-BPP BMAP
-    REG_W(XR_DATA, 0x0075),
+    REG_W(XR_DATA, 0x0065),
     REG_W(XR_ADDR, XR_PA_LINE_LEN),        // 320/2 wide
     REG_W(XR_DATA, 160),
     REG_W(XR_ADDR, XR_COLOR_MEM),        // upload color palette

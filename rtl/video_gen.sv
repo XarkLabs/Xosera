@@ -427,8 +427,7 @@ always_comb begin
     tilemem_addr_next   = tilemem_addr;
     pa_words_ready_next = 1'b0;
     pa_initial_buf_next = pa_initial_buf;
-
-    pa_tile_addr_next   = calc_tile_addr(pa_tile_attr[xv::TILE_INDEX+:10], pa_tile_y, pa_tile_bank, pa_bpp, pa_tile_height[3], pa_tile_attr[xv::TILE_ATTR_VREV]);
+    pa_tile_addr_next   = pa_tile_addr;
 
     case (pa_fetch)
         FETCH_IDLE: begin
@@ -464,10 +463,10 @@ always_comb begin
         end
         FETCH_READ_DISP_0: begin
             pa_data_word0_next  = vram_data_i;                 // VI0: read vram data
+            pa_tile_attr_next   = vram_data_i;                 // set attributes for 1_BPP_ATTR
 
             if (pa_bitmap) begin
                 if (pa_bpp == xv::BPP_1_ATTR) begin
-                    pa_tile_attr_next[15:8] = vram_data_i[15:8]; // set attributes for 1_BPP_ATTR
                     pa_fetch_next = FETCH_ADDR_DISP;           // done if BPP_1 bitmap
                 end else begin
                     if (pa_bpp != xv::BPP_4) begin
@@ -628,7 +627,7 @@ always_ff @(posedge clk) begin
         // register fetch combinitorial signals
         pa_fetch        <= pa_fetch_next;
         pa_addr         <= pa_addr_next;
-        pa_tile_addr    <= pa_tile_addr_next;
+//        pa_tile_addr    <= pa_tile_addr_next;
         pa_tile_incr    <= pa_tile_addr_next + 1'b1;
         pa_data_word0   <= pa_data_word0_next;
         pa_data_word1   <= pa_data_word1_next;
@@ -638,6 +637,7 @@ always_ff @(posedge clk) begin
         tilemem_addr    <= tilemem_addr_next;
         pa_initial_buf  <= pa_initial_buf_next;
         pa_words_ready  <= pa_words_ready_next;
+        pa_tile_addr    <= calc_tile_addr(pa_tile_attr_next[xv::TILE_INDEX+:10], pa_tile_y, pa_tile_bank, pa_bpp, pa_tile_height[3], pa_tile_attr_next[xv::TILE_ATTR_VREV]);
 
         vram_sel_o      <= vram_sel_next;
         vram_addr_o     <= vram_addr_next;

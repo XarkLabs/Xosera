@@ -73,22 +73,10 @@ logic [10:0]    vid_left;
 logic [10:0]    vid_right;
 
 // playfield A generation control signals
-logic           pa_blank;                           // disable plane A
-logic [15:0]    pa_start_addr;                      // display data start address (word address)
-logic [15:0]    pa_line_len;                        // words per disply line (added to line_addr each line)
+xv::playfield_t pa;
 logic [15:0]    pa_line_addr;                       // display data start address for next line (word address)
-logic  [7:0]    pa_colorbase;                       // colorbase for plane data (upper color bits)
-logic  [1:0]    pa_bpp;                             // bpp code (bpp_depth_t)
-logic           pa_bitmap;                          // bitmap enable (else text mode)
-logic  [5:0]    pa_tile_bank;                       // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
-logic           pa_tile_in_vram;                    // 0=tilemem, 1=vram
-logic  [3:0]    pa_tile_height;                     // max height of tile cell
-logic  [1:0]    pa_h_repeat;                        // horizontal pixel repeat
 logic  [1:0]    pa_h_count;                         // current horizontal repeat countdown
-logic  [1:0]    pa_v_repeat;                        // vertical pixel repeat
 logic  [1:0]    pa_v_count;                         // current vertical repeat countdown
-logic  [4:0]    pa_fine_hscroll;                    // horizontal fine scroll (8 pixel * 4 for repeat)
-logic  [5:0]    pa_fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
 logic  [2:0]    pa_tile_x;                          // current column of tile cell
 logic  [3:0]    pa_tile_y;                          // current line of tile cell
 
@@ -147,21 +135,25 @@ always_ff @(posedge clk) begin
         vid_bottom          <= xv::VISIBLE_HEIGHT[10:0];
         vid_left            <= 11'h0;
         vid_right           <= xv::VISIBLE_WIDTH[10:0];
-        pa_blank            <= 1'b0;            // plane A starts enabled
-        pa_start_addr       <= 16'h0000;
-        pa_line_len         <= xv::TILES_WIDE[15:0];
+
+        pa.blank            <= 1'b0;            // plane A starts enabled
+        pa.start_addr       <= 16'h0000;
+        pa.line_len         <= xv::TILES_WIDE[15:0];
+        pa.fine_hscroll     <= 5'b0;
+        pa.fine_vscroll     <= 6'b0;
+        pa.tile_height      <= 4'b1111;
+        pa.tile_bank        <= 6'b0;
+        pa.tile_in_vram     <= 1'b0;
+        pa.bitmap           <= 1'b0;
+        pa.bpp              <= xv::BPP_1_ATTR;
+        pa.colorbase        <= 8'h00;
+        pa.h_repeat         <= 2'b0;
+        pa.v_repeat         <= 2'b0;
+
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_line_addr        <= 16'h0000;        // user start of next display line
-        pa_fine_hscroll     <= 5'b0;
-        pa_fine_vscroll     <= 6'b0;
-        pa_tile_height      <= 4'b1111;
-        pa_tile_bank        <= 6'b0;
-        pa_tile_in_vram     <= 1'b0;
-        pa_bitmap           <= 1'b0;            // bitmap mode
-        pa_bpp              <= xv::BPP_1_ATTR;
-        pa_colorbase        <= 8'h00;
-        pa_h_repeat         <= 2'b0;
-        pa_v_repeat         <= 2'b0;
+        pa_h_count          <= 2'b0;
+        pa_v_count          <= 2'b0;
     end else begin
         intr_signal_o       <= 4'b0;
         pa_line_start_set   <= 1'b0;
@@ -194,27 +186,27 @@ always_ff @(posedge clk) begin
                     vid_right      <= vgen_reg_data_i[10:0];
                 end
                 xv::XR_PA_GFX_CTRL[4:0]: begin
-                    pa_colorbase    <= vgen_reg_data_i[15:8];
-                    pa_blank        <= vgen_reg_data_i[7];
-                    pa_bitmap       <= vgen_reg_data_i[6];
-                    pa_bpp          <= vgen_reg_data_i[5:4];
-                    pa_h_repeat     <= vgen_reg_data_i[3:2];
-                    pa_v_repeat     <= vgen_reg_data_i[1:0];
+                    pa.colorbase    <= vgen_reg_data_i[15:8];
+                    pa.blank        <= vgen_reg_data_i[7];
+                    pa.bitmap       <= vgen_reg_data_i[6];
+                    pa.bpp          <= vgen_reg_data_i[5:4];
+                    pa.h_repeat     <= vgen_reg_data_i[3:2];
+                    pa.v_repeat     <= vgen_reg_data_i[1:0];
                 end
                 xv::XR_PA_TILE_CTRL[4:0]: begin
-                    pa_tile_bank    <= vgen_reg_data_i[15:10];
-                    pa_tile_in_vram <= vgen_reg_data_i[7];
-                    pa_tile_height  <= vgen_reg_data_i[3:0];
+                    pa.tile_bank    <= vgen_reg_data_i[15:10];
+                    pa.tile_in_vram <= vgen_reg_data_i[7];
+                    pa.tile_height  <= vgen_reg_data_i[3:0];
                 end
                 xv::XR_PA_DISP_ADDR[4:0]: begin
-                    pa_start_addr   <= vgen_reg_data_i;
+                    pa.start_addr   <= vgen_reg_data_i;
                 end
                 xv::XR_PA_LINE_LEN[4:0]: begin
-                    pa_line_len   <= vgen_reg_data_i;
+                    pa.line_len   <= vgen_reg_data_i;
                 end
                 xv::XR_PA_HV_SCROLL[4:0]: begin
-                    pa_fine_hscroll <= vgen_reg_data_i[12:8];
-                    pa_fine_vscroll <= vgen_reg_data_i[5:0];
+                    pa.fine_hscroll <= vgen_reg_data_i[12:8];
+                    pa.fine_vscroll <= vgen_reg_data_i[5:0];
                 end
                 xv::XR_PA_LINE_ADDR[4:0]: begin
                     pa_line_start_set <= 1'b1;
@@ -249,11 +241,11 @@ always_ff @(posedge clk) begin
         xv::XR_VID_HSIZE[4:0]:      vgen_reg_data_o <= {6'h0, xv::VISIBLE_WIDTH[9:0]};
         xv::XR_VID_VSIZE[4:0]:      vgen_reg_data_o <= {6'h0, xv::VISIBLE_HEIGHT[9:0]};
         xv::XR_VID_VFREQ[4:0]:      vgen_reg_data_o <= xv::REFRESH_FREQ;
-        xv::XR_PA_GFX_CTRL[4:0]:    vgen_reg_data_o <= { pa_colorbase, pa_blank, pa_bitmap, pa_bpp, pa_v_repeat, pa_h_repeat };
-        xv::XR_PA_TILE_CTRL[4:0]:   vgen_reg_data_o <= { pa_tile_bank, 2'b0, pa_tile_in_vram, 3'b0, pa_tile_height };
-        xv::XR_PA_DISP_ADDR[4:0]:   vgen_reg_data_o <= pa_start_addr;
-        xv::XR_PA_LINE_LEN[4:0]:    vgen_reg_data_o <= pa_line_len;
-        xv::XR_PA_HV_SCROLL[4:0]:   vgen_reg_data_o <= { 3'b0, pa_fine_hscroll, 2'b00, pa_fine_vscroll };
+        xv::XR_PA_GFX_CTRL[4:0]:    vgen_reg_data_o <= { pa.colorbase, pa.blank, pa.bitmap, pa.bpp, pa.v_repeat, pa.h_repeat };
+        xv::XR_PA_TILE_CTRL[4:0]:   vgen_reg_data_o <= { pa.tile_bank, 2'b0, pa.tile_in_vram, 3'b0, pa.tile_height };
+        xv::XR_PA_DISP_ADDR[4:0]:   vgen_reg_data_o <= pa.start_addr;
+        xv::XR_PA_LINE_LEN[4:0]:    vgen_reg_data_o <= pa.line_len;
+        xv::XR_PA_HV_SCROLL[4:0]:   vgen_reg_data_o <= { 3'b0, pa.fine_hscroll, 2'b00, pa.fine_vscroll };
         default:                    vgen_reg_data_o <= 16'h0000;
     endcase
 end
@@ -432,7 +424,7 @@ always_comb begin
     case (pa_fetch)
         FETCH_IDLE: begin
             if (mem_fetch_active) begin                         // delay scanline until mem_fetch_active
-                if (pa_bitmap) begin
+                if (pa.bitmap) begin
                     pa_fetch_next  = FETCH_ADDR_DISP;
                 end else begin
                     pa_fetch_next  = FETCH_ADDR_TILEMAP;
@@ -452,7 +444,7 @@ always_comb begin
             end
         end
         FETCH_WAIT_DISP: begin
-            if (pa_bpp != xv::BPP_1_ATTR) begin
+            if (pa.bpp != xv::BPP_1_ATTR) begin
                 vram_sel_next   = 1'b1;                        // VO1: select vram
                 vram_addr_next  = pa_addr;                     // put display address on vram bus
                 pa_addr_next    = pa_addr + 1'b1;              // increment display address
@@ -465,11 +457,11 @@ always_comb begin
             pa_data_word0_next  = vram_data_i;                 // VI0: read vram data
             pa_tile_attr_next   = vram_data_i;                 // set attributes for 1_BPP_ATTR
 
-            if (pa_bitmap) begin
-                if (pa_bpp == xv::BPP_1_ATTR) begin
+            if (pa.bitmap) begin
+                if (pa.bpp == xv::BPP_1_ATTR) begin
                     pa_fetch_next = FETCH_ADDR_DISP;           // done if BPP_1 bitmap
                 end else begin
-                    if (pa_bpp != xv::BPP_4) begin
+                    if (pa.bpp != xv::BPP_4) begin
                         vram_sel_next   = 1'b1;                // VO2: select vram
                         vram_addr_next  = pa_addr;             // put display address on vram bus
                         pa_addr_next    = pa_addr + 1'b1;      // increment display address
@@ -482,8 +474,8 @@ always_comb begin
         end
         FETCH_READ_DISP_1: begin
             pa_data_word1_next  = vram_data_i;                 // VI1: read vram data
-            pa_tile_attr_next[15:8] = pa_colorbase;            // set attributes to colorbase
-            if (pa_bpp == xv::BPP_4) begin
+            pa_tile_attr_next[15:8] = pa.colorbase;            // set attributes to colorbase
+            if (pa.bpp == xv::BPP_4) begin
                 pa_fetch_next = FETCH_ADDR_DISP;               // done if BPP_4 bitmap
             end else begin
                 vram_sel_next   = 1'b1;                        // VO3: select vram
@@ -503,8 +495,8 @@ always_comb begin
 
         FETCH_ADDR_TILEMAP: begin
             // read pre-loaded font word3
-            if ((pa_bpp == xv::BPP_8) || (pa_bpp == xv::BPP_XX)) begin
-                pa_data_word3_next  = pa_tile_in_vram ? vram_data_i : tilemem_data_i;  // TI3: read tile data
+            if ((pa.bpp == xv::BPP_8) || (pa.bpp == xv::BPP_XX)) begin
+                pa_data_word3_next  = pa.tile_in_vram ? vram_data_i : tilemem_data_i;  // TI3: read tile data
             end
             if (!mem_fetch_active) begin                        // stop if no longer fetching
                 pa_fetch_next   = FETCH_IDLE;
@@ -528,55 +520,55 @@ always_comb begin
             pa_fetch_next       = FETCH_ADDR_TILE;              // read tile bitmap words
         end
         FETCH_ADDR_TILE: begin
-            vram_sel_next       = pa_tile_in_vram;              // TO0: select either vram
+            vram_sel_next       = pa.tile_in_vram;              // TO0: select either vram
             vram_addr_next      = pa_tile_addr;
-            tilemem_sel_next    = ~pa_tile_in_vram;             // TO0: or select tilemem
+            tilemem_sel_next    = ~pa.tile_in_vram;             // TO0: or select tilemem
             tilemem_addr_next   = pa_tile_addr;
 
             pa_fetch_next       = FETCH_WAIT_TILE;
         end
         FETCH_WAIT_TILE: begin
-            if (pa_bpp != xv::BPP_1_ATTR) begin
-                vram_sel_next       = pa_tile_in_vram;          // TO1: select either vram
+            if (pa.bpp != xv::BPP_1_ATTR) begin
+                vram_sel_next       = pa.tile_in_vram;          // TO1: select either vram
                 vram_addr_next      = pa_tile_addr;
-                tilemem_sel_next    = ~pa_tile_in_vram;         // TO1: or select tilemem
+                tilemem_sel_next    = ~pa.tile_in_vram;         // TO1: or select tilemem
                 tilemem_addr_next   = pa_tile_incr;
             end
             pa_fetch_next  = FETCH_READ_TILE_0;
         end
         FETCH_READ_TILE_0: begin
-            pa_data_word0_next  = pa_tile_in_vram ? vram_data_i : tilemem_data_i;  // TI0: read tile data
+            pa_data_word0_next  = pa.tile_in_vram ? vram_data_i : tilemem_data_i;  // TI0: read tile data
 
-            if (pa_bpp == xv::BPP_1_ATTR) begin                 // in BPP_1 select even/odd byte from tile word
+            if (pa.bpp == xv::BPP_1_ATTR) begin                 // in BPP_1 select even/odd byte from tile word
                 if (!pa_tile_y[0]) begin
-                    pa_data_word0_next[7:0] = pa_tile_in_vram ? vram_data_i[15:8] : tilemem_data_i[15:8];
+                    pa_data_word0_next[7:0] = pa.tile_in_vram ? vram_data_i[15:8] : tilemem_data_i[15:8];
                 end
                 pa_fetch_next = FETCH_ADDR_TILEMAP;               // done if BPP_1 bitmap
             end else begin
-                if (pa_bpp != xv::BPP_4) begin
-                    vram_sel_next       = pa_tile_in_vram;     // TO2: select either vram
+                if (pa.bpp != xv::BPP_4) begin
+                    vram_sel_next       = pa.tile_in_vram;     // TO2: select either vram
                     vram_addr_next      = pa_tile_addr;
-                    tilemem_sel_next    = ~pa_tile_in_vram;    // TO2: or select tilemem
+                    tilemem_sel_next    = ~pa.tile_in_vram;    // TO2: or select tilemem
                     tilemem_addr_next   = pa_tile_incr;
                 end
                 pa_fetch_next = FETCH_READ_TILE_1;             // else read more bitmap words
             end
         end
         FETCH_READ_TILE_1: begin
-            pa_data_word1_next  = pa_tile_in_vram ? vram_data_i : tilemem_data_i;  // TI1: read tile data
+            pa_data_word1_next  = pa.tile_in_vram ? vram_data_i : tilemem_data_i;  // TI1: read tile data
 
-            if (pa_bpp == xv::BPP_4) begin
+            if (pa.bpp == xv::BPP_4) begin
                 pa_fetch_next = FETCH_ADDR_TILEMAP;               // done if BPP_4 bitmap
             end else begin
-                vram_sel_next       = pa_tile_in_vram;         // TO3: select either vram
+                vram_sel_next       = pa.tile_in_vram;         // TO3: select either vram
                 vram_addr_next      = pa_tile_addr;
-                tilemem_sel_next    = ~pa_tile_in_vram;        // TO3: or select tilemem
+                tilemem_sel_next    = ~pa.tile_in_vram;        // TO3: or select tilemem
                 tilemem_addr_next   = pa_tile_incr;
                 pa_fetch_next       = FETCH_READ_TILE_2;       // else read more tile data words
             end
         end
         FETCH_READ_TILE_2: begin
-            pa_data_word2_next  = pa_tile_in_vram ? vram_data_i : tilemem_data_i;  // TI2: read tile data
+            pa_data_word2_next  = pa.tile_in_vram ? vram_data_i : tilemem_data_i;  // TI2: read tile data
             pa_fetch_next       = FETCH_ADDR_TILEMAP;              // NOTE will read TI3 also
         end
         default: begin
@@ -637,7 +629,7 @@ always_ff @(posedge clk) begin
         tilemem_addr    <= tilemem_addr_next;
         pa_initial_buf  <= pa_initial_buf_next;
         pa_words_ready  <= pa_words_ready_next;
-        pa_tile_addr    <= calc_tile_addr(pa_tile_attr_next[xv::TILE_INDEX+:10], pa_tile_y, pa_tile_bank, pa_bpp, pa_tile_height[3], pa_tile_attr_next[xv::TILE_ATTR_VREV]);
+        pa_tile_addr    <= calc_tile_addr(pa_tile_attr_next[xv::TILE_INDEX+:10], pa_tile_y, pa.tile_bank, pa.bpp, pa.tile_height[3], pa_tile_attr_next[xv::TILE_ATTR_VREV]);
 
         vram_sel_o      <= vram_sel_next;
         vram_addr_o     <= vram_addr_next;
@@ -654,20 +646,20 @@ always_ff @(posedge clk) begin
             // expand display data into 8 8-bit pixels in pa_pixels_buf
             pa_pixels_buf_empty <= 1'b0;
 
-            case (pa_bpp)
+            case (pa.bpp)
             xv::BPP_1_ATTR:
                 // expand to 8-bit index using upper 4-bits of colorbase
                 // register and 4-bit attribute foreground/background index
                 // based on pixel bit set/clear
                 pa_pixels_buf  <= {
-                    pa_colorbase[7:4], pa_data_word0[7] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[6] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[5] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[4] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[3] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[2] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[1] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[0] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4] };
+                    pa.colorbase[7:4], pa_data_word0[7] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    pa.colorbase[7:4], pa_data_word0[6] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    pa.colorbase[7:4], pa_data_word0[5] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    pa.colorbase[7:4], pa_data_word0[4] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    pa.colorbase[7:4], pa_data_word0[3] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    pa.colorbase[7:4], pa_data_word0[2] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    pa.colorbase[7:4], pa_data_word0[1] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    pa.colorbase[7:4], pa_data_word0[0] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4] };
             xv::BPP_4:
                 // expand to 8-bit index using 4-bit color extension attribute
                 // and 4-bit pixel value
@@ -686,7 +678,7 @@ always_ff @(posedge clk) begin
                 pa_pixels_buf  <= { pa_data_word0, pa_data_word1, pa_data_word2, pa_data_word3 };
             endcase
             // keep flag with these 8 pixels for H reverse
-            if (pa_bitmap || (pa_bpp == xv::BPP_1_ATTR)) begin
+            if (pa.bitmap || (pa.bpp == xv::BPP_1_ATTR)) begin
                 pa_pixels_buf_hrev  <= 1'b0;                // no horizontal reverse in bitmap or BPP_1
             end else begin
                 pa_pixels_buf_hrev  <= pa_tile_attr[xv::TILE_ATTR_HREV];    // use horizontal reverse attrib
@@ -701,7 +693,7 @@ always_ff @(posedge clk) begin
             if (pa_h_count != 2'b00) begin
                 pa_h_count              <= pa_h_count - 1'b1;
             end else begin
-                pa_h_count              <= pa_h_repeat;
+                pa_h_count              <= pa.h_repeat;
                 pa_tile_x               <= pa_tile_x + 1'b1;
 
                 if (pa_tile_x == 3'h7) begin
@@ -736,7 +728,7 @@ always_ff @(posedge clk) begin
         if (h_start_line_fetch) begin       // on line fetch start signal
             pa_initial_buf          <= 1'b1;
             pa_pixels_buf_empty     <= 1'b1;
-            h_scanout_hcount        <= H_SCANOUT_BEGIN[10:0] + { { 6{pa_fine_hscroll[4]} }, pa_fine_hscroll };
+            h_scanout_hcount        <= H_SCANOUT_BEGIN[10:0] + { { 6{pa.fine_hscroll[4]} }, pa.fine_hscroll };
             h_scanout_end_hcount    <= H_SCANOUT_END[10:0];   // TODO + vid_right;
 
 `ifndef SYNTHESIS
@@ -749,21 +741,21 @@ always_ff @(posedge clk) begin
             pa_pixels       <= 64'he3e3e3e3e3e3e3e3;
             pa_pixels_buf   <= 64'he3e3e3e3e3e3e3e3;
 `endif
-            pa_pixels[63:56] <= pa_colorbase;
+            pa_pixels[63:56] <= pa.colorbase;
         end
 
         // when "scrolled" scanline starts outputting (before display if scrolled)
         if (h_start_scanout) begin
             h_scanout           <= 1'b1;
             pa_tile_x           <= 3'h0;
-            pa_h_count          <= pa_h_repeat;
+            pa_h_count          <= pa.h_repeat;
             pa_pixels           <= pa_pixels_buf; // next 8 pixels from buffer
             pa_pixels_buf_empty <= 1'b1;
         end
 
         if (h_end_scanout) begin
             h_scanout           <= 1'b0;
-            pa_pixels[63:56]    <= pa_colorbase;
+            pa_pixels[63:56]    <= pa.colorbase;
         end
 
         // end of line
@@ -773,11 +765,11 @@ always_ff @(posedge clk) begin
             if (pa_v_count != 2'b00) begin                  // is line repeating
                 pa_v_count  <= pa_v_count - 1'b1;               // keep decrementing
             end else begin
-                pa_v_count  <= pa_v_repeat;                     // reset v repeat
-                if (pa_tile_y == pa_tile_height || pa_bitmap) begin // is last line of tile cell or bitmap?
+                pa_v_count  <= pa.v_repeat;                     // reset v repeat
+                if (pa_tile_y == pa.tile_height || pa.bitmap) begin // is last line of tile cell or bitmap?
                     pa_tile_y     <= 4'h0;                              // reset tile cell line
-                    pa_line_start <= pa_line_start + pa_line_len;        // new line start address
-                    pa_addr       <= pa_line_start + pa_line_len;        // new text start address
+                    pa_line_start <= pa_line_start + pa.line_len;        // new line start address
+                    pa_addr       <= pa_line_start + pa.line_len;        // new text start address
                 end
                 else begin                                          
                     pa_tile_y <= pa_tile_y + 1;                     // next line of tile cell
@@ -792,12 +784,12 @@ always_ff @(posedge clk) begin
         end
 
         // end of frame or blanked, prepare for next frame
-        if (pa_blank || last_frame_pixel) begin                   // if last pixel of frame
-            pa_addr         <= pa_start_addr;           // set start of display data
-            pa_line_start   <= pa_start_addr;           // set line to start of display data
+        if (pa.blank || last_frame_pixel) begin                   // if last pixel of frame
+            pa_addr         <= pa.start_addr;           // set start of display data
+            pa_line_start   <= pa.start_addr;           // set line to start of display data
 
-            pa_v_count      <= pa_v_repeat - pa_fine_vscroll[1:0];    // fine scroll within scaled line (v repeat)
-            pa_tile_y       <= pa_fine_vscroll[5:2];    // fine scroll tile line
+            pa_v_count      <= pa.v_repeat - pa.fine_vscroll[1:0];    // fine scroll within scaled line (v repeat)
+            pa_tile_y       <= pa.fine_vscroll[5:2];    // fine scroll tile line
         end
 
         // update registered signals from combinatorial "next" versions
@@ -805,7 +797,7 @@ always_ff @(posedge clk) begin
         v_state <= v_state_next;
         h_count <= h_count_next;
         v_count <= v_count_next;
-        mem_fetch_active <= mem_fetch_next & ~pa_blank;
+        mem_fetch_active <= mem_fetch_next & ~pa.blank;
 
         // set other video output signals
         hsync_o     <= hsync ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;

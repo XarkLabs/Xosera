@@ -124,23 +124,6 @@ typedef enum {
     TILE_ATTR_BACK  = 12    // rightmost bit for backcolor (in BPP_1 only)
 } tile_index_attribute_bits_t;
 
-// // playfield generation control signals
-// typedef struct packed {
-//     logic           blank;                           // disable playfield
-//     logic  [1:0]    bpp;                             // bpp code (bpp_depth_t)
-//     logic           bitmap;                          // bitmap enable (else text mode)
-//     logic [15:0]    start_addr;                      // display data start address (word address)
-//     logic [15:0]    line_len;                        // words per disply line (added to line_addr each line)
-//     logic  [7:0]    colorbase;                       // colorbase for playfield data (upper color bits)
-//     logic  [5:0]    tile_bank;                       // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
-//     logic  [3:0]    tile_height;                     // max height of tile cell
-//     logic           tile_in_vram;                    // 0=tilemem, 1=vram
-//     logic  [4:0]    fine_hscroll;                    // horizontal fine scroll (8 pixel * 4 for repeat)
-//     logic  [5:0]    fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
-//     logic  [1:0]    h_repeat;                        // horizontal pixel repeat
-//     logic  [1:0]    v_repeat;                        // vertical pixel repeat
-// } playfield_t;
-
 `ifdef MODE_640x400     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x400_75  // 31.500 MHz (requested), 31.500 MHz (achieved)
 `elsif MODE_640x480     // 25.175 MHz (requested), 25.125 MHz (achieved)

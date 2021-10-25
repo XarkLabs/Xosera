@@ -18,7 +18,7 @@ This is currently a work in progress, but you can follow along at [Hackaday.io](
 
 Planned Xosera features:
 
-* Two over-layed "planes" of video
+* Two over-layed "playfields" of video
 * Tile and Bit-mapped 16 and 256 color graphics modes
 * "Blitter" to accelerate copy and fill operations
 * At least one "cursor" sprite (and likely more)
@@ -44,7 +44,7 @@ Current Xosera features:
 Features in-progress:
 
 * Improved 4-bit bit mapped modes
-* Dual overlaid 4-bit video planes or combined for 8-bit
+* Dual overlaid 4-bit video playfields or combined for 8-bit
 
 Improvement ideas/TODO items (in no particular order):
 

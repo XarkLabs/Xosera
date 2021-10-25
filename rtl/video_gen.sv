@@ -72,8 +72,25 @@ logic [10:0]    vid_bottom;
 logic [10:0]    vid_left;
 logic [10:0]    vid_right;
 
+// playfield generation control signals
+typedef struct packed {
+    logic           blank;                           // disable plane A
+    logic [15:0]    start_addr;                      // display data start address (word address)
+    logic [15:0]    line_len;                        // words per disply line (added to line_addr each line)
+    logic  [7:0]    colorbase;                       // colorbase for plane data (upper color bits)
+    logic  [1:0]    bpp;                             // bpp code (bpp_depth_t)
+    logic           bitmap;                          // bitmap enable (else text mode)
+    logic  [5:0]    tile_bank;                       // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
+    logic           tile_in_vram;                    // 0=tilemem, 1=vram
+    logic  [3:0]    tile_height;                     // max height of tile cell
+    logic  [1:0]    h_repeat;                        // horizontal pixel repeat
+    logic  [1:0]    v_repeat;                        // vertical pixel repeat
+    logic  [4:0]    fine_hscroll;                    // horizontal fine scroll (8 pixel * 4 for repeat)
+    logic  [5:0]    fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
+} playfield_t;
+
 // playfield A generation control signals
-xv::playfield_t pa;
+playfield_t pa;
 logic [15:0]    pa_line_addr;                       // display data start address for next line (word address)
 logic  [1:0]    pa_h_count;                         // current horizontal repeat countdown
 logic  [1:0]    pa_v_count;                         // current vertical repeat countdown
@@ -136,7 +153,7 @@ always_ff @(posedge clk) begin
         vid_left            <= 11'h0;
         vid_right           <= xv::VISIBLE_WIDTH[10:0];
 
-        pa.blank            <= 1'b0;            // plane A starts enabled
+        pa.blank            <= 1'b0;            // playfield A starts enabled
         pa.start_addr       <= 16'h0000;
         pa.line_len         <= xv::TILES_WIDE[15:0];
         pa.fine_hscroll     <= 5'b0;
@@ -374,7 +391,7 @@ typedef enum logic [3:0] {
 } vgen_fetch_st;
 
 // scanline generation (registered signals and "_next" combinatorally set signals)
-logic [3:0]     pa_fetch, pa_fetch_next;            // plane A generation FSM state
+logic [3:0]     pa_fetch, pa_fetch_next;            // playfield A generation FSM state
 
 // fsm outputs
 logic [15:0]    pa_addr, pa_addr_next;              // address to fetch display bitmap/tilemap

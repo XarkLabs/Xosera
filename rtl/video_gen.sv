@@ -166,8 +166,6 @@ always_ff @(posedge clk) begin
 
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_line_addr        <= 16'h0000;        // user start of next display line
-        pa_h_count          <= 2'b0;
-        pa_v_count          <= 2'b0;
     end else begin
         intr_signal_o       <= 4'b0;
         pa_line_start_set   <= 1'b0;
@@ -255,7 +253,7 @@ always_ff @(posedge clk) begin
         xv::XR_VID_HSIZE[4:0]:      vgen_reg_data_o <= {6'h0, xv::VISIBLE_WIDTH[9:0]};
         xv::XR_VID_VSIZE[4:0]:      vgen_reg_data_o <= {6'h0, xv::VISIBLE_HEIGHT[9:0]};
         xv::XR_VID_VFREQ[4:0]:      vgen_reg_data_o <= xv::REFRESH_FREQ;
-        xv::XR_PA_GFX_CTRL[4:0]:    vgen_reg_data_o <= { pa_colorbase, pa_blank, pa_bitmap, pa_bpp, pa_v_repeat, pa_h_repeat };
+        xv::XR_PA_GFX_CTRL[4:0]:    vgen_reg_data_o <= { pa_colorbase, pa_blank, pa_bitmap, pa_bpp, pa_h_repeat, pa_v_repeat };
         xv::XR_PA_TILE_CTRL[4:0]:   vgen_reg_data_o <= { pa_tile_bank, 2'b0, pa_tile_in_vram, 3'b0, pa_tile_height };
         xv::XR_PA_DISP_ADDR[4:0]:   vgen_reg_data_o <= pa_start_addr;
         xv::XR_PA_LINE_LEN[4:0]:    vgen_reg_data_o <= pa_line_len;

@@ -40,7 +40,7 @@ module video_gen(
     input  wire logic [15:0]     tilemem_data_i,     // tile mem word data in
     output      logic            spritemem_sel_o,    // sprite mem read select
     output      logic  [7:0]     spritemem_addr_o,   // sprite mem word address out (16x256)
-/* verilator lint_off UNUSED */                      // HACKFAST
+/* verilator lint_off UNUSED */
     input  wire logic [15:0]     spritemem_data_i,   // sprite mem word data in
 /* verilator lint_on UNUSED */
     // video signal outputs
@@ -63,7 +63,7 @@ localparam H_SCANOUT_END = xv::TOTAL_WIDTH; // h count position to start line sc
 logic [7:0]     border_color;
 logic [10:0]    cursor_x;
 logic [10:0]    cursor_y;
-/* verilator lint_off UNUSED */                      // HACKFAST
+/* verilator lint_off UNUSED */
 logic [10:0]    sprite_x;
 logic [10:0]    sprite_y;
 /* verilator lint_on UNUSED */

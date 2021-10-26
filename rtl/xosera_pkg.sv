@@ -26,8 +26,7 @@
 //`define USE_HEXFONT     // use hex font instead of default
 //`define NO_TESTPATTERN  // don't initialize VRAM with test pattern and fonts in simulation
 
-`define HACKFAST                    // temp hacks to (more easily) get 848x480 bitstream
-`define COPPER_DISABLE              // temp hack to disable copper to highlight other bottlenecks
+//`define COPPER_DISABLE              // temp hack to disable copper to highlight other bottlenecks
 
 //`define NO_CS_BUS_DELAY           // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
 

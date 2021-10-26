@@ -57,7 +57,7 @@ module xosera_main(
 logic        regs_vram_sel  /* verilator public */;     // register interface VRAM select
 logic        regs_xr_sel    /* verilator public */;     // register interface XR select
 logic        regs_wr        /* verilator public */;     // register interface VRAM/XR write
-logic  [3:0] regs_mask      /* verilator public */;     // 4 nibble write masks for vram
+logic  [3:0] regs_wrmask    /* verilator public */;     // 4 nibble write masks for vram
 
 logic [15:0] regs_addr      /* verilator public */;     // register interface VRAM/XR addr
 logic [15:0] regs_data_in   /* verilator public */;     // register interface VRAM/XR data read
@@ -149,9 +149,16 @@ assign xr_reg_wr_addr_in        = regs_vgen_reg_wr    ? regs_addr[4:0]   : copp_
 assign xr_reg_wr_data_in        = regs_vgen_reg_wr    ? regs_data_out    : copp_data_out;
 
 `ifndef COPPER_DISABLE
-logic [10:0]    copper_pc;
+// Separate strobes for even & odd copper RAM
+logic  coppermem_e_wr_in;
+logic  coppermem_o_wr_in;
+assign coppermem_e_wr_in        = coppermem_wr_in & !coppermem_wr_addr_in[0];
+assign coppermem_o_wr_in        = coppermem_wr_in &  coppermem_wr_addr_in[0];
+
+logic  [9:0]    copper_pc;
 logic           coppermem_rd_en;
-logic [15:0]    coppermem_rd_data_out;
+logic [15:0]    coppermem_e_rd_data_out;
+logic [15:0]    coppermem_o_rd_data_out;
 //logic [15:0]    copp_reg_data_out;
 `endif
 
@@ -205,7 +212,7 @@ assign audio_r_o = regs_xr_sel; //dbug_drive_bus;                    // TODO: au
 
 assign vram_sel     = vgen_vram_sel ? 1'b1              : regs_vram_sel;
 assign vram_wr      = vgen_vram_sel ? 1'b0              : (regs_wr & regs_vram_sel);
-assign vram_mask    = regs_mask;    // NOTE: vgen never writes, so this can stay set
+assign vram_mask    = regs_wrmask;    // NOTE: vgen never writes, so this can stay set
 assign vram_addr    = vgen_vram_sel ? vgen_vram_addr    : regs_addr;
 assign vram_data_in = regs_data_out;
 assign regs_data_in = regs_vram_load ? vram_data_out    : regs_vram_read;
@@ -246,7 +253,7 @@ reg_interface reg_interface(
     .regs_vram_sel_o(regs_vram_sel),    // register interface vram select
     .regs_xr_sel_o(regs_xr_sel),        // register interface aux memory select
     .regs_wr_o(regs_wr),                // register interface write
-    .regs_mask_o(regs_mask),            // vram nibble masks
+    .regs_wrmask_o(regs_wrmask),        // vram nibble masks
     .regs_addr_o(regs_addr),            // vram/aux address
     .regs_data_i(regs_data_in),         // 16-bit word read from aux/vram
     .regs_data_o(regs_data_out),        // 16-bit word write to aux/vram
@@ -343,7 +350,8 @@ copper copper(
     .xr_ram_wr_data_o(copp_data_out),
     .coppermem_rd_addr_o(copper_pc),
     .coppermem_rd_en_o(coppermem_rd_en),
-    .coppermem_rd_data_i(coppermem_rd_data_out),
+    .coppermem_e_rd_data_i(coppermem_e_rd_data_out),
+    .coppermem_o_rd_data_i(coppermem_o_rd_data_out),
     .regs_xr_reg_sel_i(regs_vgen_reg_sel),
     .regs_tilemem_sel_i(regs_tilemem_sel),
     .regs_colormem_sel_i(regs_colormem_sel),
@@ -355,15 +363,27 @@ copper copper(
     .v_count_i(video_v_count)
 );
 
-// Copper RAM
-coppermem coppermem(
+// Copper RAM (Even word)
+coppermem coppermem_e(
     .clk(clk),
     .rd_en_i(coppermem_rd_en),
     .rd_address_i(copper_pc),
-    .rd_data_o(coppermem_rd_data_out),
+    .rd_data_o(coppermem_e_rd_data_out),
     .wr_clk(clk),
-    .wr_en_i(coppermem_wr_in),
-    .wr_address_i(coppermem_wr_addr_in),
+    .wr_en_i(coppermem_e_wr_in),
+    .wr_address_i(coppermem_wr_addr_in[10:1]),
+    .wr_data_i(coppermem_wr_data_in)
+);
+
+// Copper RAM (Odd word)
+coppermem coppermem_o(
+    .clk(clk),
+    .rd_en_i(coppermem_rd_en),
+    .rd_address_i(copper_pc),
+    .rd_data_o(coppermem_o_rd_data_out),
+    .wr_clk(clk),
+    .wr_en_i(coppermem_o_wr_in),
+    .wr_address_i(coppermem_wr_addr_in[10:1]),
     .wr_data_i(coppermem_wr_data_in)
 );
 `endif

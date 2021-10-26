@@ -142,15 +142,18 @@ assign v_count_o    = v_count;
 always_ff @(posedge clk) begin
     if (reset_i) begin
         intr_signal_o       <= 4'b0;
-        border_color        <= 8'h00;
+        border_color        <= 8'h08;           // defaulting to dark grey to show operational
         cursor_x            <= 11'h180;
         cursor_y            <= 11'h100;
         vid_top             <= 11'h0;
         vid_bottom          <= xv::VISIBLE_HEIGHT[10:0];
         vid_left            <= 11'h0;
         vid_right           <= xv::VISIBLE_WIDTH[10:0];
-
-        pa_blank            <= 1'b0;            // playfield A starts enabled
+`ifdef SYNTHESIS
+        pa_blank            <= 1'b1;            // playfield A starts blanked
+`else
+        pa_blank            <= 1'b0;            // unless simulating
+`endif
         pa_start_addr       <= 16'h0000;
         pa_line_len         <= xv::TILES_WIDE[15:0];
         pa_fine_hscroll     <= 5'b0;
@@ -238,7 +241,7 @@ end
 // video registers read
 always_ff @(posedge clk) begin
     case (vgen_reg_num_r_i[4:0])
-        xv::XR_VID_CTRL[4:0]:       vgen_reg_data_o <= {border_color, 4'bx, intr_status_i };
+        xv::XR_VID_CTRL[4:0]:       vgen_reg_data_o <= {border_color, 4'b0, intr_status_i };
         xv::XR_COPP_CTRL[4:0]:      vgen_reg_data_o <= {16'h0000 }; // TODO copper
         xv::XR_CURSOR_X[4:0]:       vgen_reg_data_o <= {5'b0, cursor_x };
         xv::XR_CURSOR_Y[4:0]:       vgen_reg_data_o <= {5'b0, cursor_y };
@@ -765,7 +768,7 @@ always_ff @(posedge clk) begin
             pa_pixels       <= 64'he3e3e3e3e3e3e3e3;
             pa_pixels_buf   <= 64'he3e3e3e3e3e3e3e3;
 `endif
-            pa_pixels[63:56] <= pa_colorbase;
+            pa_pixels[63:56] <= border_color;
         end
 
         // when "scrolled" scanline starts outputting (before display if scrolled)
@@ -779,7 +782,7 @@ always_ff @(posedge clk) begin
 
         if (h_end_scanout) begin
             h_scanout           <= 1'b0;
-            pa_pixels[63:56]    <= pa_colorbase;
+            pa_pixels[63:56]    <= border_color;
         end
 
         // end of line

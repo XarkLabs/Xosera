@@ -196,6 +196,11 @@ void     xosera_test()
 {
     dprintf("Xosera_test_m68k\n");
 
+    if (checkchar())
+    {
+        readchar();
+    }
+
     // wait for monitor to unblank
     dprintf("\nxosera_init(0)...");
     bool success = xosera_init(0);
@@ -287,7 +292,7 @@ void     xosera_test()
     bool up = false;
     uint16_t current = 240;
 
-    while (true) {
+    while (!checkchar()) {
         for (int i = 0; i < 10000; i++) {
             optguard = i;
         }
@@ -305,4 +310,12 @@ void     xosera_test()
             }
         }
     }
+
+    // disable Copper
+    xreg_setw(COPP_CTRL, 0x0000);
+
+    // restore text mode
+    xosera_init(1);
+    xreg_setw(PA_GFX_CTRL, 0x0000);        // un-blank screen
+    print("\033c");                        // reset & clear
 }

@@ -341,7 +341,7 @@ copper copper(
     .regs_colormem_sel_i(regs_colormem_sel),
     .regs_coppermem_sel_i(regs_coppermem_sel),
     .copp_reg_wr_i(regs_vgen_reg_wr),
-    .copp_reg_num_i(regs_addr[3:0]),
+    .copp_reg_num_i(regs_addr[5:0]),
     .copp_reg_data_i(regs_data_out),
     .h_count_i(video_h_count),
     .v_count_i(video_v_count)

@@ -21,9 +21,9 @@
 `define GITHASH d0000000            // unknown Git hash (assumed dirty)
 `endif
 
-`define VERSION 021                 // BCD version code (x.xx)
+`define VERSION 022                 // BCD version code (x.xx)
 
-`define USE_HEXFONT     // use hex font instead of default
+//`define USE_HEXFONT     // use hex font instead of default
 //`define NO_TESTPATTERN  // don't initialize VRAM with test pattern and fonts in simulation
 
 `define HACKFAST                    // temp hacks to (more easily) get 848x480 bitstream

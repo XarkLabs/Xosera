@@ -392,11 +392,13 @@ logic [3:0]     pa_fetch, pa_fetch_next;            // playfield A generation FS
 
 // fsm outputs
 logic [15:0]    pa_addr, pa_addr_next;              // address to fetch display bitmap/tilemap
+
 logic [15:0]    pa_tile_addr, pa_tile_addr_next;    // tile start address (VRAM or TILERAM)
 logic [15:0]    pa_tile_incr;                       // tile pa_tile_addr + 1
 
 logic           vram_sel_next;                      // vram select output
-logic [15:0]    vram_addr_next;                     // vram_address output
+logic [15:0]    vram_addr, vram_addr_next;          // vram_address output
+
 logic           tilemem_sel_next;                   // tilemem select output
 logic [15:0]    tilemem_addr, tilemem_addr_next;    // tilemem address output
 
@@ -421,14 +423,14 @@ logic [15:0]    pa_line_start;                      // address of next line disp
 always_comb begin
     // set default outputs
     pa_fetch_next       = pa_fetch;
-    vram_sel_next       = 1'b0;
-    vram_addr_next      = vram_addr_o;
     pa_addr_next        = pa_addr;
     pa_data_word0_next  = pa_data_word0;
     pa_data_word1_next  = pa_data_word1;
     pa_data_word2_next  = pa_data_word2;
     pa_data_word3_next  = pa_data_word3;
     pa_tile_attr_next   = pa_tile_attr;
+    vram_sel_next       = 1'b0;
+    vram_addr_next      = vram_addr;
     tilemem_sel_next    = 1'b0;
     tilemem_addr_next   = tilemem_addr;
     pa_words_ready_next = 1'b0;
@@ -611,20 +613,30 @@ always_ff @(posedge clk) begin
         h_scanout           <= 1'b0;
         h_scanout_hcount    <= 11'b0;
         h_scanout_end_hcount<= 11'b0;
-        pa_addr             <= 16'h0000;        // current display address during scan
+
         pa_line_start       <= 16'h0000;        // display address for start of scan line
         pa_tile_x           <= 3'b0;            // tile column
         pa_tile_y           <= 4'b0;            // tile line
         pa_h_count          <= 2'b00;           // horizontal pixel repeat counter
         pa_v_count          <= 2'b00;           // vertical pixel repeat counter
+
+        pa_fetch            <= FETCH_IDLE;
+        pa_addr             <= 16'h0000;        // current display address during scan
+        pa_tile_incr        <= 16'h0000;
         pa_tile_attr        <= 16'h0000;        // word with tile attributes and index
         pa_data_word0       <= 16'h0000;        // buffers for unexpanded display data
         pa_data_word1       <= 16'h0000;
         pa_data_word2       <= 16'h0000;
         pa_data_word3       <= 16'h0000;
         pa_initial_buf      <= 1'b0;
+        pa_words_ready      <= 1'b0;
+
         pa_pixels_buf_empty <= 1'b0;            // flag when pa_pixels_buf is empty (continue fetching)
         pa_pixels_buf_hrev  <= 1'b0;            // flag to horizontally reverse pa_pixels_buf
+
+        vram_addr           <= 16'h0000;
+        tilemem_addr        <= 16'h0000;
+
         pa_pixels_buf       <= 64'h00000000;    // next 8 8-bpp pixels to scan out
         pa_pixels           <= 64'h00000000;    // 8 8-bpp pixels currently scanning out
     end else begin
@@ -633,24 +645,24 @@ always_ff @(posedge clk) begin
         // register fetch combinitorial signals
         pa_fetch        <= pa_fetch_next;
         pa_addr         <= pa_addr_next;
-//        pa_tile_addr    <= pa_tile_addr_next;
         pa_tile_incr    <= pa_tile_addr_next + 1'b1;
+        pa_tile_attr    <= pa_tile_attr_next;
         pa_data_word0   <= pa_data_word0_next;
         pa_data_word1   <= pa_data_word1_next;
         pa_data_word2   <= pa_data_word2_next;
         pa_data_word3   <= pa_data_word3_next;
-        pa_tile_attr    <= pa_tile_attr_next;
-        tilemem_addr    <= tilemem_addr_next;
         pa_initial_buf  <= pa_initial_buf_next;
         pa_words_ready  <= pa_words_ready_next;
+
         pa_tile_addr    <= calc_tile_addr(pa_tile_attr_next[xv::TILE_INDEX+:10], pa_tile_y, pa_tile_bank, pa_bpp, pa_tile_height[3], pa_tile_attr_next[xv::TILE_ATTR_VREV]);
+
+        vram_addr       <= vram_addr_next;
+        tilemem_addr    <= tilemem_addr_next;
 
         vram_sel_o      <= vram_sel_next;
         vram_addr_o     <= vram_addr_next;
         tilemem_sel_o   <= tilemem_sel_next;
         tilemem_addr_o  <= tilemem_addr_next[11:0];
-
-        pa_fetch        <= pa_fetch_next;
 
         // default outputs
         spritemem_sel_o <= 1'b0;            // default to no sprite access

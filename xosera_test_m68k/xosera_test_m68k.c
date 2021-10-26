@@ -762,7 +762,7 @@ void     xosera_test()
         if (use_sd)
         {
             wait_vsync();
-            xreg_setw(PA_GFX_CTRL, 0x0075);        // bitmap + 8-bpp + Hx2 + Vx2
+            xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 8-bpp + Hx2 + Vx2
             xreg_setw(PA_LINE_LEN, 160);
 
             load_sd_colors("/xosera_r1_pal.raw");
@@ -777,7 +777,7 @@ void     xosera_test()
         if (use_sd)
         {
             wait_vsync();
-            xreg_setw(PA_GFX_CTRL, 0x0075);        // bitmap + 8-bpp + Hx2 + Vx2
+            xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 8-bpp + Hx2 + Vx2
             xreg_setw(PA_LINE_LEN, 160);
 
             load_sd_colors("/color_cube_320x240_256_pal.raw");
@@ -791,7 +791,7 @@ void     xosera_test()
         if (use_sd)
         {
             wait_vsync();
-            xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
+            xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
             xreg_setw(PA_LINE_LEN, 80);
 
             load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw");
@@ -804,7 +804,7 @@ void     xosera_test()
         if (use_sd)
         {
             wait_vsync();
-            xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 4-bpp + Hx2 + Vx2
+            xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
             xreg_setw(PA_LINE_LEN, 80);
 
             load_sd_colors("/escher-relativity_320x240_16_pal.raw");

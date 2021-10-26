@@ -105,9 +105,9 @@ enum vram_test_flags
     MODEFLAG_READ  = (1 << 8),
     // video modes
     MODEFLAG_1BPP  = (1 << 9),
-    MODEFLAG_2BPP  = (1 << 10),
-    MODEFLAG_4BPP  = (1 << 11),
-    MODEFLAG_8BPP  = (1 << 12),
+    MODEFLAG_4BPP  = (1 << 10),
+    MODEFLAG_8BPP  = (1 << 11),
+    MODEFLAG_XBPP  = (1 << 12),
     MODEFLAG_BLANK = (1 << 13)
 };
 
@@ -128,13 +128,13 @@ struct vram_fail_info
 #define TEST_SPEEDS   4
 int                   num_vram_fails;
 struct vram_fail_info vram_fails[MAX_ERROR_LOG];
-const char *          vram_mode_names[TEST_MODES] = {"1-BPP", "2-BPP", "4-BPP", "8-BPP", "blank"};
+const char *          vram_mode_names[TEST_MODES] = {"1-BPP", "4-BPP", "8-BPP", "X-BPP", "blank"};
 const char *          speed_names[TEST_SPEEDS]    = {"SLOW", "BYTE", "WORD", "LONG"};
 const uint16_t        vram_modes[TEST_MODES]      = {0x0040, 0x0050, 0x0060, 0x0070, 0x0080};
 const uint16_t        vram_mode_flags[TEST_MODES] = {MODEFLAG_1BPP,
-                                              MODEFLAG_2BPP,
                                               MODEFLAG_4BPP,
                                               MODEFLAG_8BPP,
+                                              MODEFLAG_XBPP,
                                               MODEFLAG_BLANK};
 
 int  vram_test_count;             // total number of test iterations
@@ -688,9 +688,9 @@ void xosera_test()
                         fip->flags & MODEFLAG_READ ? "R " : "",
                         fip->flags & MODEFLAG_WRITE ? "W " : "",
                         fip->flags & MODEFLAG_1BPP ? "1" : "",
-                        fip->flags & MODEFLAG_2BPP ? "2" : "",
                         fip->flags & MODEFLAG_4BPP ? "4" : "",
                         fip->flags & MODEFLAG_8BPP ? "8" : "",
+                        fip->flags & MODEFLAG_XBPP ? "X" : "",
                         fip->flags & MODEFLAG_BLANK ? "B" : "",
                         fip->flags & MODEFLAG_SLOW ? "S" : "",
                         fip->flags & MODEFLAG_BYTE ? "B" : "",

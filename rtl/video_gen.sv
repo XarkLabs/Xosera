@@ -394,8 +394,7 @@ logic [3:0]     pa_fetch, pa_fetch_next;            // playfield A generation FS
 // fsm outputs
 logic [15:0]    pa_addr, pa_addr_next;              // address to fetch display bitmap/tilemap
 
-logic [15:0]    pa_tile_addr, pa_tile_addr_next;    // tile start address (VRAM or TILERAM)
-logic [15:0]    pa_tile_incr;                       // tile pa_tile_addr + 1
+logic [15:0]    pa_tile_addr;                       // tile start address (VRAM or TILERAM)
 
 logic           vram_sel_next;                      // vram select output
 logic [15:0]    vram_addr, vram_addr_next;          // vram_address output
@@ -436,7 +435,6 @@ always_comb begin
     tilemem_addr_next   = tilemem_addr;
     pa_words_ready_next = 1'b0;
     pa_initial_buf_next = pa_initial_buf;
-    pa_tile_addr_next   = pa_tile_addr;
 
     case (pa_fetch)
         FETCH_IDLE: begin
@@ -547,9 +545,9 @@ always_comb begin
         FETCH_WAIT_TILE: begin
             if (pa_bpp != xv::BPP_1_ATTR) begin
                 vram_sel_next       = pa_tile_in_vram;          // TO1: select either vram
-                vram_addr_next      = pa_tile_addr;
+                vram_addr_next      = { tilemem_addr[15:1], 1'b1 };
                 tilemem_sel_next    = ~pa_tile_in_vram;         // TO1: or select tilemem
-                tilemem_addr_next   = pa_tile_incr;
+                tilemem_addr_next   = { tilemem_addr[15:1], 1'b1 };
             end
             pa_fetch_next  = FETCH_READ_TILE_0;
         end
@@ -564,9 +562,9 @@ always_comb begin
             end else begin
                 if (pa_bpp != xv::BPP_4) begin
                     vram_sel_next       = pa_tile_in_vram;     // TO2: select either vram
-                    vram_addr_next      = pa_tile_addr;
+                    vram_addr_next      = { tilemem_addr[15:2], 2'b10 };
                     tilemem_sel_next    = ~pa_tile_in_vram;    // TO2: or select tilemem
-                    tilemem_addr_next   = pa_tile_incr;
+                    tilemem_addr_next   = { tilemem_addr[15:2], 2'b10 };
                 end
                 pa_fetch_next = FETCH_READ_TILE_1;             // else read more bitmap words
             end
@@ -578,9 +576,9 @@ always_comb begin
                 pa_fetch_next = FETCH_ADDR_TILEMAP;               // done if BPP_4 bitmap
             end else begin
                 vram_sel_next       = pa_tile_in_vram;         // TO3: select either vram
-                vram_addr_next      = pa_tile_addr;
+                vram_addr_next      = { tilemem_addr[15:2], 2'b11 };
                 tilemem_sel_next    = ~pa_tile_in_vram;        // TO3: or select tilemem
-                tilemem_addr_next   = pa_tile_incr;
+                tilemem_addr_next   = { tilemem_addr[15:2], 2'b11 };
                 pa_fetch_next       = FETCH_READ_TILE_2;       // else read more tile data words
             end
         end
@@ -623,7 +621,6 @@ always_ff @(posedge clk) begin
 
         pa_fetch            <= FETCH_IDLE;
         pa_addr             <= 16'h0000;        // current display address during scan
-        pa_tile_incr        <= 16'h0000;
         pa_tile_attr        <= 16'h0000;        // word with tile attributes and index
         pa_data_word0       <= 16'h0000;        // buffers for unexpanded display data
         pa_data_word1       <= 16'h0000;
@@ -646,7 +643,6 @@ always_ff @(posedge clk) begin
         // register fetch combinitorial signals
         pa_fetch        <= pa_fetch_next;
         pa_addr         <= pa_addr_next;
-        pa_tile_incr    <= pa_tile_addr_next + 1'b1;
         pa_tile_attr    <= pa_tile_attr_next;
         pa_data_word0   <= pa_data_word0_next;
         pa_data_word1   <= pa_data_word1_next;
@@ -793,7 +789,7 @@ always_ff @(posedge clk) begin
                 pa_v_count  <= pa_v_count - 1'b1;               // keep decrementing
             end else begin
                 pa_v_count  <= pa_v_repeat;                     // reset v repeat
-                if (pa_tile_y == pa_tile_height || pa_bitmap) begin // is last line of tile cell or bitmap?
+                if (pa_bitmap || pa_tile_y == { (pa_bpp == xv::BPP_1_ATTR ? pa_tile_height[3] : 1'b0), pa_tile_height[2:0] }) begin // is last line of tile cell or bitmap?
                     pa_tile_y     <= 4'h0;                              // reset tile cell line
                     pa_line_start <= pa_line_start + pa_line_len;        // new line start address
                     pa_addr       <= pa_line_start + pa_line_len;        // new text start address

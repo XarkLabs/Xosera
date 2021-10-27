@@ -29,6 +29,7 @@ info:
 	@echo "   make vsim            - build Verilator C++ & SDL2 native visual simulation files"
 	@echo "   make vrun            - build and run Verilator C++ & SDL2 native visual simulation"
 	@echo "   make utils           - build utilities (currently image_to_mem font converter)"
+	@echo "   make m68k	       - build rosco_m68k test programs"
 	@echo "   make host_spi        - build PC side of FTDI SPI test utility (needs libftdi1)"
 	@echo "   make xvid_spi        - build PC XVID API over FTDI SPI test utility (needs libftdi1)"
 	@echo "   make clean           - clean files that can be rebuilt"
@@ -107,6 +108,15 @@ vrun:
 utils:
 	cd utils && $(MAKE)
 
+# Build image/font mem utility
+m68k:
+	cd xosera_ansiterm_m68k/ && $(MAKE)
+	cd xosera_vramtest_m68k && $(MAKE)
+	cd xosera_test_m68k && $(MAKE)
+	cd copper/copper_test_m68k && $(MAKE)
+	cd copper/crop_test_m68k && $(MAKE)
+	cd copper/splitscreen_test_m68k && $(MAKE)
+
 # Build host SPI test utility
 host_spi:
 	cd host_spi && $(MAKE)
@@ -121,5 +131,11 @@ clean:
 	cd utils && $(MAKE) clean
 	cd host_spi && $(MAKE) clean
 	cd xvid_spi && $(MAKE) clean
+	cd xosera_ansiterm_m68k/ && $(MAKE) clean
+	cd xosera_vramtest_m68k && $(MAKE) clean
+	cd xosera_test_m68k && $(MAKE) clean
+	cd copper/copper_test_m68k && $(MAKE) clean
+	cd copper/crop_test_m68k && $(MAKE) clean
+	cd copper/splitscreen_test_m68k && $(MAKE) clean
 
-.PHONY: all upduino upd upd_prog icebreaker iceb iceb_prog rtl sim isim irun vsim vrun utils host_spi xvid_spi clean
+.PHONY: all upduino upd upd_prog icebreaker iceb iceb_prog rtl sim isim irun vsim vrun utils m68k host_spi xvid_spi clean

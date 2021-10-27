@@ -177,11 +177,13 @@ task inject_file(
 
     while (!$feof(fd)) begin
         r = $fread(tempbyte, fd);
-        if (r != 1) $display("read error");
-        #(M68K_PERIOD * 2)  write_reg(1'b0, r_num, tempbyte);
+        if (r == 1) begin
+            #(M68K_PERIOD * 2)  write_reg(1'b0, r_num, tempbyte);
+        end
         r = $fread(tempbyte, fd);
-        if (r != 1) $display("read error");
-        #(M68K_PERIOD * 2)  write_reg(1'b1, r_num, tempbyte);
+        if (r == 1) begin
+            #(M68K_PERIOD * 2)  write_reg(1'b1, r_num, tempbyte);
+        end
     end
 
     $fclose(fd);
@@ -253,7 +255,7 @@ always begin
     #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, XR_PA_GFX_CTRL);
     #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h0040);
 
-    inject_file("sim/mountains_mono_640x480w.raw", XM_DATA);  // pump binary file into DATA
+    inject_file("../testdata/raw/space_shuttle_color_small.raw", XM_DATA);  // pump binary file into DATA
 
     # 1000ms;
 

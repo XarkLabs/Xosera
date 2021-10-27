@@ -117,7 +117,7 @@ function [7:0] reg_read(
         xv::XM_DATA[3:0],
         xv::XM_DATA_2[3:0]:     reg_read = !b_sel ? vram_rd_data[15:8]  : vram_rd_data[7:0];
 
-        xv::XM_SYS_CTRL[3:0]:   reg_read = !b_sel ? { 4'b0, regs_wrmask_o }: { 4'b0, intr_mask };
+        xv::XM_SYS_CTRL[3:0]:   reg_read = !b_sel ? { 4'b0, intr_mask }: { 4'b0, regs_wrmask_o };
         xv::XM_TIMER[3:0]:      reg_read = !b_sel ? ms_timer[15:8]      : ms_timer[7:0];
 
         xv::XM_UNUSED_A[3:0]:   reg_read = 8'b0;
@@ -303,8 +303,8 @@ always_ff @(posedge clk) begin
                     xv::XM_SYS_CTRL: begin
                         reconfig_o          <= reg_even_byte[7];
                         boot_select_o       <= reg_even_byte[6:5];
-                        regs_wrmask_o       <= reg_even_byte[3:0];
-                        intr_mask           <= bus_data_byte[3:0];
+                        intr_mask           <= reg_even_byte[3:0];
+                        regs_wrmask_o       <= bus_data_byte[3:0];
                     end
                     xv::XM_TIMER: begin
                         intr_clear_o        <= bus_data_byte[3:0];

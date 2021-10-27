@@ -21,12 +21,12 @@
 `define GITHASH d0000000            // unknown Git hash (assumed dirty)
 `endif
 
-`define VERSION 021                 // BCD version code (x.xx)
+`define VERSION 022                 // BCD version code (x.xx)
 
 //`define USE_HEXFONT     // use hex font instead of default
 //`define NO_TESTPATTERN  // don't initialize VRAM with test pattern and fonts in simulation
 
-`define HACKFAST                    // temp hacks to (more easily) get 848x480 bitstream
+//`define COPPER_DISABLE              // temp hack to disable copper to highlight other bottlenecks
 
 //`define NO_CS_BUS_DELAY           // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
 
@@ -110,10 +110,18 @@ typedef enum logic [15:0]{
 
 typedef enum logic [1:0] {
     BPP_1_ATTR      = 2'b00,
-    BPP_2           = 2'b01,
-    BPP_4           = 2'b10,
-    BPP_8           = 2'b11
+    BPP_4           = 2'b01,
+    BPP_8           = 2'b10,
+    BPP_XX          = 2'b11 // TODO: maybe YUYV or RL7?
 } bpp_depth_t;
+
+typedef enum {
+    TILE_INDEX      = 0,    // rightmost bit for index (8 bit in BPP_1, otherwise 10 bit)
+    TILE_ATTR_VREV  = 10,   // mirror tile vertically (not in BPP_1)
+    TILE_ATTR_HREV  = 11,   // mirror tile horizontally (not in BPP_1)
+    TILE_ATTR_FORE  = 8,    // rightmost bit for forecolor (in BPP_1 only)
+    TILE_ATTR_BACK  = 12    // rightmost bit for backcolor (in BPP_1 only)
+} tile_index_attribute_bits_t;
 
 `ifdef MODE_640x400     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x400_75  // 31.500 MHz (requested), 31.500 MHz (achieved)
@@ -352,7 +360,7 @@ localparam PLL_DIVF    =    7'b0110000;     // DIVF = 48
 localparam PLL_DIVQ    =    3'b011;         // DIVQ =  3
 `endif
 `else
-localparam PCLK_HZ     =    25_125_000;
+localparam PCLK_HZ     =    25_175_000;     // standard VGA
 `endif
 
 /* verilator lint_on UNUSED */

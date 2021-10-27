@@ -1,5 +1,15 @@
 # Informal list of notable Xosera changes
 
+2021-10-25+ Xark
+
+* I have not been good about updating this. Sorry. :)  Here are some recent ones...
+* No more 2-bpp/4-color mode, now just 1-bpp, 4-bpp, 8-bpp and "mode X" (also 8-bpp)
+* 8x16 high characters are only supported in 1-bpp mode (others are always 8x8
+  and upper bit of height ignored)
+* 4-bpp and 8-bpp tiled modes support 1024 glyphs and H&V mirroring
+* nibble write mask moved to low four bits of SYS_CTRL and can be updated with
+  byte write (without affecting interrupts/sysconfig)
+
 2021-05-01+ Xark
 
 * Fonts can now be in VRAM or the 8KB of font RAM

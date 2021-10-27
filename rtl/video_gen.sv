@@ -789,7 +789,7 @@ always_ff @(posedge clk) begin
                 pa_v_count  <= pa_v_count - 1'b1;               // keep decrementing
             end else begin
                 pa_v_count  <= pa_v_repeat;                     // reset v repeat
-                if (pa_bitmap || pa_tile_y == { (pa_bpp == xv::BPP_1_ATTR ? pa_tile_height[3] : 1'b0), pa_tile_height[2:0] }) begin // is last line of tile cell or bitmap?
+                if (pa_bitmap || (pa_tile_y == pa_tile_height)) begin // is last line of tile cell or bitmap?
                     pa_tile_y     <= 4'h0;                              // reset tile cell line
                     pa_line_start <= pa_line_start + pa_line_len;        // new line start address
                     pa_addr       <= pa_line_start + pa_line_len;        // new text start address

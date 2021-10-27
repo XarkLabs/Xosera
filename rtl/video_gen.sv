@@ -471,19 +471,15 @@ always_comb begin
             pa_data_word0_next  = vram_data_i;                 // VI0: read vram data
             pa_tile_attr_next   = vram_data_i;                 // set attributes for 1_BPP_ATTR
 
-            if (pa_bitmap) begin
-                if (pa_bpp == xv::BPP_1_ATTR) begin
-                    pa_fetch_next = FETCH_ADDR_DISP;           // done if BPP_1 bitmap
-                end else begin
-                    if (pa_bpp != xv::BPP_4) begin
-                        vram_sel_next   = 1'b1;                // VO2: select vram
-                        vram_addr_next  = pa_addr;             // put display address on vram bus
-                        pa_addr_next    = pa_addr + 1'b1;      // increment display address
-                    end
-                    pa_fetch_next = FETCH_READ_DISP_1;         // else read more bitmap words
-                end
+            if (pa_bpp == xv::BPP_1_ATTR) begin
+                pa_fetch_next = FETCH_ADDR_DISP;           // done if BPP_1 bitmap
             end else begin
-                pa_fetch_next = FETCH_ADDR_TILE;                // read tile bitmap words
+                if (pa_bpp != xv::BPP_4) begin
+                    vram_sel_next   = 1'b1;                // VO2: select vram
+                    vram_addr_next  = pa_addr;             // put display address on vram bus
+                    pa_addr_next    = pa_addr + 1'b1;      // increment display address
+                end
+                pa_fetch_next = FETCH_READ_DISP_1;         // else read more bitmap words
             end
         end
         FETCH_READ_DISP_1: begin

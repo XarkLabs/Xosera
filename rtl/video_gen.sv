@@ -78,7 +78,7 @@ logic [10:0]    vid_right;
 logic           pa_blank;                           // disable plane A
 logic [15:0]    pa_start_addr;                      // display data start address (word address)
 logic [15:0]    pa_line_len;                        // words per disply line (added to line_addr each line)
-logic  [7:0]    pa_colorbase;                       // colorbase for plane data (upper color bits)
+logic  [7:0]    pa_colorbase;                       // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
 logic  [1:0]    pa_bpp;                             // bpp code (bpp_depth_t)
 logic           pa_bitmap;                          // bitmap enable (else text mode)
 logic  [5:0]    pa_tile_bank;                       // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
@@ -413,7 +413,6 @@ logic [15:0]    pa_data_word3, pa_data_word3_next;  // 4th fetched display data 
 logic           pa_pixels_buf_empty;                // true when pa_pixel_out needs filling
 logic           pa_pixels_buf_hrev;                 // horizontal reverse flag
 logic [63:0]    pa_pixels_buf;                      // 8 pixel buffer waiting for scan out
-
 logic [63:0]    pa_pixels;                          // 8 pixels currently shifting to scan out
 
 logic           pa_line_start_set;                  // true if pa_line_start changed (register write)
@@ -489,7 +488,7 @@ always_comb begin
         end
         FETCH_READ_DISP_1: begin
             pa_data_word1_next  = vram_data_i;                 // VI1: read vram data
-            pa_tile_attr_next[15:8] = pa_colorbase;            // set attributes to colorbase
+            pa_tile_attr_next[15:11] = 5'b00000;               // clear color and hrev attributes
             if (pa_bpp == xv::BPP_4) begin
                 pa_fetch_next = FETCH_ADDR_DISP;               // done if BPP_4 bitmap
             end else begin
@@ -671,18 +670,18 @@ always_ff @(posedge clk) begin
 
             case (pa_bpp)
             xv::BPP_1_ATTR:
-                // expand to 8-bit index using upper 4-bits of colorbase
-                // register and 4-bit attribute foreground/background index
+                // expand to 8-bit index with upper 4-bits zero
+                // and 4-bit attribute foreground/background index
                 // based on pixel bit set/clear
                 pa_pixels_buf  <= {
-                    pa_colorbase[7:4], pa_data_word0[7] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[6] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[5] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[4] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[3] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[2] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[1] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
-                    pa_colorbase[7:4], pa_data_word0[0] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4] };
+                    4'h0, pa_data_word0[7] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    4'h0, pa_data_word0[6] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    4'h0, pa_data_word0[5] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    4'h0, pa_data_word0[4] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    4'h0, pa_data_word0[3] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    4'h0, pa_data_word0[2] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    4'h0, pa_data_word0[1] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4],
+                    4'h0, pa_data_word0[0] ? pa_tile_attr[xv::TILE_ATTR_FORE+:4] : pa_tile_attr[xv::TILE_ATTR_BACK+:4] };
             xv::BPP_4:
                 // expand to 8-bit index using 4-bit color extension attribute
                 // and 4-bit pixel value
@@ -709,7 +708,7 @@ always_ff @(posedge clk) begin
         end
 
         // set output pixel index from pixel shift-out
-        color_index_o <= pa_pixels[63:56];
+        color_index_o <= pa_pixels[63:56] ^ pa_colorbase;   // XOR colorbase bits here
 
         if (h_scanout) begin
             // shift-in next pixel
@@ -737,11 +736,7 @@ always_ff @(posedge clk) begin
                         pa_pixels   <= pa_pixels_buf; // next 8 pixels from buffer
                     end
                 end else begin
-    `ifndef SYNTHESIS
-                    pa_pixels   <= { pa_pixels[55:0], 8'hE3 };  // shift for next pixel
-    `else
-                    pa_pixels   <= { pa_pixels[55:0], 8'h00 };  // shift for next pixel
-    `endif
+                    pa_pixels   <= { pa_pixels[55:0], border_color };  // shift for next pixel
                 end
             end
         end

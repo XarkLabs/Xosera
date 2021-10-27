@@ -125,23 +125,12 @@ logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
 
 // only set bus to output if Xosera is selected and read is selected
-assign bus_out_ena = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ);
+assign bus_out_ena  = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ);
 
-`ifdef SYNTHESIS
-// NOTE: Need to use iCE40 SB_IO primitive to control tri-state properly here
-SB_IO #(
-    .PIN_TYPE(6'b101001)    // {PIN_OUTPUT_TRISTATE, PIN_INPUT }
-) bus_tristate [7:0] (
-    .PACKAGE_PIN(bus_data),
-    //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
-    .OUTPUT_ENABLE(bus_out_ena),
-    .D_OUT_0(bus_data_out),
-    .D_IN_0(bus_data_in)
-);
-`else
+// tri-state data bus unless Xosera is both selected and bus is reading
+// NOTE: No longer need to use iCE40 SB_IO primitive to control tri-state properly here
 assign bus_data     = bus_out_ena ? bus_data_out : 8'bZ;
 assign bus_data_in  = bus_data;
-`endif
 
 // PLL to derive proper video frequency from 12MHz oscillator (gpio_20 with OSC jumper shorted)
 logic pclk;                  // video pixel clock output from PLL block

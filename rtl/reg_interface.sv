@@ -78,7 +78,7 @@ logic [11:0]    ms_timer_frac;          // internal clock counter for 1/10 ms
 assign intr_mask_o = intr_mask;
 
 // debug "ack" bus strobe
-assign bus_ack_o = (bus_write_strobe | bus_read_strobe);    // TODO: debug
+assign bus_ack_o = (bus_write_strobe | bus_read_strobe);    // TODO: debug CS ack
 
 // bus_interface handles signal synchronization, CS and register writes to Xosera
 bus_interface bus(

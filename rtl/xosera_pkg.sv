@@ -23,12 +23,11 @@
 
 `define VERSION 022                 // BCD version code (x.xx)
 
-//`define USE_HEXFONT     // use hex font instead of default
-//`define NO_TESTPATTERN  // don't initialize VRAM with test pattern and fonts in simulation
-
-//`define COPPER_DISABLE              // temp hack to disable copper to highlight other bottlenecks
-
-//`define NO_CS_BUS_DELAY           // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
+//`define DEBUG_SIGNALS               // use "audio" outputs for bus debug signals
+//`define USE_HEXFONT                 // use hex font instead of default fonts
+//`define NO_TESTPATTERN              // don't initialize VRAM with test pattern and fonts in simulation
+//`define COPPER_DISABLE              // disable copper (to highlight other potential bottlenecks)
+//`define NO_CS_BUS_DELAY             // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;

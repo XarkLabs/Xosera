@@ -85,17 +85,11 @@ logic       spi_cs_n;                   // SPI CS for FPGA from controller
 
 logic       spi_reset   = 1'b0;         // SPI "soft" reset (if SPI_INTERFACE)
 
-
 assign      nreset      = BTN_N;        // active LOW reset button
 
 // split tri-state data lines into in/out signals for inside FPGA
-/* verilator lint_off UNUSED */
-logic bus_out_ena;
-/* verilator lint_on UNUSED */
 logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
-// only set bus to output if CS enabled and read
-assign bus_out_ena = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ);
 
 `ifdef SPI_INTERFACE   // SPU interface to drive bus signals
     // assign SPI GPIO for SPI interface (to emulate bus interface)
@@ -104,25 +98,18 @@ assign bus_out_ena = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ);
     assign spi_copi     = FLASH_IO0;
     assign FLASH_IO1    = spi_cipo;
     assign FLASH_IO2    = spi_receive_strobe;   // TODO audio_l;
-    assign FLASH_IO3    = bus_cs_n; // TODO audio_r;
-`else   // direct bus interface
+    assign FLASH_IO3    = bus_cs_n;             // TODO audio_r;
+`else   // direct bus interface (untested on iCEBreaker)
+    logic bus_out_ena;
+    // only set bus to output if Xosera is selected and read is selected
+    assign bus_out_ena  = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ);
+
     // tri-state data bus unless Xosera is both selected and bus is reading
-    `ifdef SYNTHESIS
-        // NOTE: Need to use iCE40 SB_IO primitive to control tri-state properly here
-        SB_IO #(
-            .PIN_TYPE(6'b101001)
-        ) bus_tristate [7:0] (
-            .PACKAGE_PIN(bus_data),
-            //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
-            .OUTPUT_ENABLE(bus_out_ena),
-            .D_OUT_0(bus_data_out),
-            .D_IN_0(bus_data_in)
-        );
-    `else   // !SYNTHESIS
-        // Use normal tristate in simulation
-        assign bus_data     = bus_out_ena ? bus_data_out : 8'bZ;
-        assign bus_data_in  = bus_data;
-    `endif
+    // NOTE: No longer need to use iCE40 SB_IO primitive to control tri-state properly here
+    assign bus_data     = bus_out_ena ? bus_data_out : 8'bZ;
+    assign bus_data_in  = bus_data;
+    assign bus_data     = bus_out_ena ? bus_data_out : 8'bZ;
+    assign bus_data_in  = bus_data;
     assign bus_cs_n     = LED_RED_N;        // RGB LED red as Xosera select=cs_ENABLED (UP_nCS)
     assign bus_rd_nwr   = LED_GRN_N;        // RGB LED green as RnW_WRITE=0, RnW_READ=1, read= (UP_RnW)
     assign bus_bytesel  = LED_BLU_N;        // RGB LED blue for word byte select (UP_bytesel)

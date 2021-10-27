@@ -63,20 +63,20 @@ logic [15:0] regs_addr      /* verilator public */;     // register interface VR
 logic [15:0] regs_data_in   /* verilator public */;     // register interface VRAM/XR data read
 logic [15:0] regs_data_out  /* verilator public */;     // register interface bus VRAM/XR data write
 
-logic regs_vgen_reg_sel     /* verilator public */;
-logic regs_vgen_reg_wr      /* verilator public */;
+logic   regs_vgen_reg_sel   /* verilator public */;
+logic   regs_vgen_reg_wr    /* verilator public */;
 
-logic regs_tilemem_sel      /* verilator public */;
-logic regs_tilemem_wr       /* verilator public */;
+logic   regs_tilemem_sel    /* verilator public */;
+logic   regs_tilemem_wr     /* verilator public */;
 
-logic regs_colormem_sel     /* verilator public */;
-logic regs_colormem_wr      /* verilator public */;
+logic   regs_colormem_sel   /* verilator public */;
+logic   regs_colormem_wr    /* verilator public */;
 
-logic regs_coppermem_sel    /* verilator public */;
-logic regs_coppermem_wr     /* verilator public */;
+logic   regs_coppermem_sel  /* verilator public */;
+logic   regs_coppermem_wr   /* verilator public */;
 
-logic regs_spritemem_sel    /* verilator public */;
-logic regs_spritemem_wr     /* verilator public */;
+logic   regs_spritemem_sel  /* verilator public */;
+logic   regs_spritemem_wr   /* verilator public */;
 
 assign  regs_vgen_reg_sel   = regs_xr_sel && !regs_addr[15];
 assign  regs_colormem_sel   = regs_xr_sel && regs_addr[15] && (regs_addr[13:12] == xv::XR_COLOR_MEM[13:12]);
@@ -150,10 +150,10 @@ assign xr_reg_wr_data_in        = regs_vgen_reg_wr    ? regs_data_out    : copp_
 
 `ifndef COPPER_DISABLE
 // Separate strobes for even & odd copper RAM
-logic  coppermem_e_wr_in;
-logic  coppermem_o_wr_in;
-assign coppermem_e_wr_in        = coppermem_wr_in & !coppermem_wr_addr_in[0];
-assign coppermem_o_wr_in        = coppermem_wr_in &  coppermem_wr_addr_in[0];
+logic           coppermem_e_wr_in;
+logic           coppermem_o_wr_in;
+assign          coppermem_e_wr_in   = coppermem_wr_in & ~coppermem_wr_addr_in[0];
+assign          coppermem_o_wr_in   = coppermem_wr_in &  coppermem_wr_addr_in[0];
 
 logic  [9:0]    copper_pc;
 logic           coppermem_rd_en;
@@ -168,28 +168,30 @@ logic [10:0]    video_v_count;
 /* verilator lint_on UNUSED */
 
 //  16x64K (128KB) video memory
-logic        vram_sel       /* verilator public */;
-logic        vram_wr        /* verilator public */;
-logic  [3:0] vram_mask      /* verilator public */; // 4 nibble masks for vram write
-logic [15:0] vram_addr      /* verilator public */; // 16-bit word address
-logic [15:0] vram_data_in   /* verilator public */;
-logic [15:0] vram_data_out  /* verilator public */;
-logic        vgen_vram_load;
-logic [15:0] vgen_vram_read;
-logic        regs_vram_load;
-logic [15:0] regs_vram_read;
+logic           vram_sel        /* verilator public */;
+logic           vram_wr         /* verilator public */;
+logic  [3:0]    vram_mask       /* verilator public */; // 4 nibble masks for vram write
+logic [15:0]    vram_addr       /* verilator public */; // 16-bit word address
+logic [15:0]    vram_data_in    /* verilator public */;
+logic [15:0]    vram_data_out   /* verilator public */;
+logic           vgen_vram_load;
+logic [15:0]    vgen_vram_read;
+logic           regs_vram_load;
+logic [15:0]    regs_vram_read;
 
-logic vgen_vram_sel;            // video vram select (read)
-logic [15:0] vgen_vram_addr;    // video vram addr
-logic [15:0] vgen_data_in;      // video vram read data
-logic [15:0] vgen_reg_data_out; // video data out for register interface reg reads
+logic           vgen_vram_sel;      // video vram select (read)
+logic [15:0]    vgen_vram_addr;     // video vram addr
+logic [15:0]    vgen_data_in;       // video vram read data
+logic [15:0]    vgen_reg_data_out;  // video data out for register interface reg reads
 
 logic  [3:0]    intr_mask;          // true for each enabled interrupt
 logic  [3:0]    intr_status;        // pending interrupt status
 logic  [3:0]    intr_signal;        // interrupt signalled by Copper (or CPU)
 logic  [3:0]    intr_clear;         // interrupt cleared by CPU
 
-logic dbug_cs_strobe;               // TODO debug ACK signal
+/* verilator lint_off UNUSED */
+logic           dbug_cs_strobe;     // TODO: debug CS ACK signal
+/* verilator lint_on UNUSED */
 
 logic           tilemem_rd_en       /* verilator public */;
 logic [11:0]    tilemem_addr        /* verilator public */; // 12-bit word address
@@ -206,9 +208,14 @@ logic           vsync_1;
 logic           hsync_1;
 logic           dv_de_1;
 
-// audio generation (TODO)
-assign audio_l_o = dbug_cs_strobe;                    // TODO: audio
-assign audio_r_o = regs_xr_sel; //dbug_drive_bus;                    // TODO: audio
+// TODO: audio generation
+`ifdef DEBUG_SIGNALS
+assign audio_l_o = dbug_cs_strobe;  // TODO: debug to see when CS noticed
+assign audio_r_o = regs_xr_sel;     // TODO: debug to see when XR bus selected
+`else
+assign audio_l_o = 1'b0;
+assign audio_r_o = 1'b0;
+`endif
 
 assign vram_sel     = vgen_vram_sel ? 1'b1              : regs_vram_sel;
 assign vram_wr      = vgen_vram_sel ? 1'b0              : (regs_wr & regs_vram_sel);
@@ -262,7 +269,7 @@ reg_interface reg_interface(
     .boot_select_o(boot_select_o),
     .intr_mask_o(intr_mask),            // set with write to SYS_CTRL
     .intr_clear_o(intr_clear),          // strobe with write to TIMER
-    .bus_ack_o(dbug_cs_strobe),         // TODO debug
+    .bus_ack_o(dbug_cs_strobe),         // TODO: debug
     .reset_i(reset_i)
 );
 

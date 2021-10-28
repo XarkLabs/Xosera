@@ -55,8 +55,7 @@ VIDEO_MODE ?= MODE_640x480
 #VRUN_TESTDATA ?= -u ../testdata/raw/256_colors_pal.raw -u ../testdata/raw/256_colors.raw
 #VRUN_TESTDATA ?= -u ../testdata/raw/xosera_r1_pal.raw -u ../testdata/raw/xosera_r1.raw
 #VRUN_TESTDATA ?= -u ../testdata/raw/space_shuttle_color_small.raw
-VRUN_TESTDATA ?= -u ../testdata/raw/space_shuttle_color_small.raw -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw -u ../testdata/raw/color_cube_320x240_256_pal.raw -u ../testdata/raw/color_cube_320x240_256.raw
-
+VRUN_TESTDATA ?= -u ../testdata/raw/space_shuttle_color_small.raw -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw -u ../testdata/raw/xosera_r1_pal.raw -u ../testdata/raw/xosera_r1.raw
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
 

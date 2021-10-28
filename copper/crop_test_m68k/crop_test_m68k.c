@@ -126,12 +126,37 @@ void xosera_test()
     msg("848x480 cropped to 848x400 with vid_left & vid_right window (ahh!) - press a key");
     readchar();
 
+    xm_setw(WR_INCR, 0x0001);
+    xm_setw(WR_ADDR, 0x0000);
+
+    for (int y = 0; y < 200; ++y)
+        for (int x = 0; x < 320 / 2; ++x)
+            xm_setw(DATA, x == 0 || y == 0 || x == (320 / 2 - 1) || y == (200 - 1) ? 0x0f0f : 0x0404);
+
+    msg("848x480 cropped to 848x400 hammering line_len reg glitch test - press a key");
+    while (!checkchar())
+    {
+        for (int i = 0; i < 32768; i++)
+        {
+            xreg_setw(PA_LINE_LEN, 160);
+            xreg_setw(PA_LINE_LEN, 160);
+            xreg_setw(PA_LINE_LEN, 160);
+            xreg_setw(PA_LINE_LEN, 160);
+            xreg_setw(PA_LINE_LEN, 160);
+            xreg_setw(PA_LINE_LEN, 160);
+            xreg_setw(PA_LINE_LEN, 160);
+            xreg_setw(PA_LINE_LEN, 160);
+        }
+    }
+    readchar();
+
     // disable Copper
     xreg_setw(COPP_CTRL, 0x0000);
 
     msg("exit...");
 
     // restore text mode
+    xreg_setw(PA_LINE_LEN, width / 8);
     xreg_setw(VID_LEFT, 0);
     xreg_setw(VID_RIGHT, width);
     xreg_setw(PA_GFX_CTRL, 0x0000);        // unblank screen

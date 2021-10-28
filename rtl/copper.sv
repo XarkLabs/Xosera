@@ -167,8 +167,7 @@ module copper(
     input   wire logic          regs_tilemem_sel_i,
     input   wire logic          regs_colormem_sel_i,
     input   wire logic          regs_coppermem_sel_i,
-    input   wire logic          copp_reg_wr_i,          // strobe to write internal config register number
-    input   wire logic  [5:0]   copp_reg_num_i,         // internal config register number
+    input   wire logic          copp_reg_wr_i,          // strobe to write internal config register
     input   wire logic [15:0]   copp_reg_data_i,        // data for internal config register
     input   wire logic [10:0]   h_count_i,
     input   wire logic [10:0]   v_count_i
@@ -269,14 +268,9 @@ always_ff @(posedge clk) begin
     else begin
         // video register write
         if (copp_reg_wr_i) begin
-            case (copp_reg_num_i[5:0])
-                xv::XR_COPP_CTRL[5:0]: begin
-                    copper_en       <= copp_reg_data_i[15];
-                    reg_reserved    <= copp_reg_data_i[14:10];
-                    copper_init_pc  <= copp_reg_data_i[9:0];
-                end
-                default: ;
-            endcase
+            copper_en       <= copp_reg_data_i[15];
+            reg_reserved    <= copp_reg_data_i[14:10];
+            copper_init_pc  <= copp_reg_data_i[9:0];
         end
 
         // Main logic

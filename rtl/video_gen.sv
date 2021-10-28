@@ -29,6 +29,8 @@ module video_gen(
     input wire  logic  [3:0]     intr_status_i,      // interrupt pending status
     output      logic  [3:0]     intr_signal_o,      // generate interrupt signal
     // outputs for copper
+    output      logic            copp_reg_wr_o,      // COPP_CTRL write strobe
+    output      logic [15:0]     copp_reg_data_o,    // copper reg data
     output      logic [10:0]     h_count_o,          // Horizontal video counter
     output      logic [10:0]     v_count_o,          // Vertical video counter
     // video memories
@@ -136,7 +138,6 @@ logic           h_start_line_fetch;
 assign h_count_o    = h_count;
 assign v_count_o    = v_count;
 
-
 // video config registers read/write
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -168,8 +169,11 @@ always_ff @(posedge clk) begin
 
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_line_addr        <= 16'h0000;        // user start of next display line
+        copp_reg_wr_o       <= 1'b0;
+        copp_reg_data_o     <= 16'h0000;
     end else begin
         intr_signal_o       <= 4'b0;
+        copp_reg_wr_o       <= 1'b0;
         pa_line_start_set   <= 1'b0;
         // video register write
         if (vgen_reg_wr_i) begin
@@ -179,7 +183,9 @@ always_ff @(posedge clk) begin
                     intr_signal_o   <= vgen_reg_data_i[3:0];
                 end
                 xv::XR_COPP_CTRL[4:0]: begin
-                    // TODO copper
+                    copp_reg_wr_o   <= 1'b1;
+                    copp_reg_data_o[15] <= vgen_reg_data_i[15];     // TODO: use named constants
+                    copp_reg_data_o[9:0]  <= vgen_reg_data_i[9:0];
                 end
                 xv::XR_CURSOR_X[4:0]: begin
                     cursor_x        <= vgen_reg_data_i[10:0];
@@ -241,7 +247,7 @@ end
 always_ff @(posedge clk) begin
     case (vgen_reg_num_r_i[4:0])
         xv::XR_VID_CTRL[4:0]:       vgen_reg_data_o <= {border_color, 4'b0, intr_status_i };
-        xv::XR_COPP_CTRL[4:0]:      vgen_reg_data_o <= {16'h0000 }; // TODO copper
+        xv::XR_COPP_CTRL[4:0]:      vgen_reg_data_o <= { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[9:0]};
         xv::XR_CURSOR_X[4:0]:       vgen_reg_data_o <= {5'b0, cursor_x };
         xv::XR_CURSOR_Y[4:0]:       vgen_reg_data_o <= {5'b0, cursor_y };
         xv::XR_VID_TOP[4:0]:        vgen_reg_data_o <= {5'b0, vid_top };
@@ -249,7 +255,7 @@ always_ff @(posedge clk) begin
         xv::XR_VID_LEFT[4:0]:       vgen_reg_data_o <= {5'b0, vid_left };
         xv::XR_VID_RIGHT[4:0]:      vgen_reg_data_o <= {5'b0, vid_right };
         xv::XR_SCANLINE[4:0]:       vgen_reg_data_o <= {(v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 3'b000, v_count };
-        xv::XR_VERSION[4:0]:        vgen_reg_data_o <= { 4'b0000, 12'h`VERSION };
+        xv::XR_VERSION[4:0]:        vgen_reg_data_o <= { 1'b`GITCLEAN, 3'b000, 12'h`VERSION };
         xv::XR_GITHASH_H[4:0]:      vgen_reg_data_o <= githash[31:16];
         xv::XR_GITHASH_L[4:0]:      vgen_reg_data_o <= githash[15:0];
         xv::XR_VID_HSIZE[4:0]:      vgen_reg_data_o <= {6'h0, xv::VISIBLE_WIDTH[9:0]};

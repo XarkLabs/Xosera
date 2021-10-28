@@ -155,6 +155,9 @@ logic           coppermem_o_wr_in;
 assign          coppermem_e_wr_in   = coppermem_wr_in & ~coppermem_wr_addr_in[0];
 assign          coppermem_o_wr_in   = coppermem_wr_in &  coppermem_wr_addr_in[0];
 
+logic           copp_reg_wr;
+logic [15:0]    copp_reg_data;
+
 logic  [9:0]    copper_pc;
 logic           coppermem_rd_en;
 logic [15:0]    coppermem_e_rd_data_out;
@@ -295,6 +298,8 @@ video_gen video_gen(
     .hsync_o(hsync_1),
     .vsync_o(vsync_1),
     .dv_de_o(dv_de_1),
+    .copp_reg_wr_o(copp_reg_wr),
+    .copp_reg_data_o(copp_reg_data),
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
     .reset_i(reset_i),
@@ -363,9 +368,8 @@ copper copper(
     .regs_tilemem_sel_i(regs_tilemem_sel),
     .regs_colormem_sel_i(regs_colormem_sel),
     .regs_coppermem_sel_i(regs_coppermem_sel),
-    .copp_reg_wr_i(regs_vgen_reg_wr),
-    .copp_reg_num_i(regs_addr[5:0]),
-    .copp_reg_data_i(regs_data_out),
+    .copp_reg_wr_i(copp_reg_wr),
+    .copp_reg_data_i(copp_reg_data),
     .h_count_i(video_h_count),
     .v_count_i(video_v_count)
 );

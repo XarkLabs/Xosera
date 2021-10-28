@@ -17,8 +17,11 @@
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
+`ifndef GITCLEAN
+`define GITCLEAN 0                  // unknown Git state (assumed dirty)
+`endif
 `ifndef GITHASH
-`define GITHASH d0000000            // unknown Git hash (assumed dirty)
+`define GITHASH 00000000            // unknown Git hash
 `endif
 
 `define VERSION 022                 // BCD version code (x.xx)

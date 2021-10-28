@@ -23,12 +23,14 @@ SHELL := /bin/bash -o pipefail
 GITSHORTHASH := $(shell git rev-parse --short HEAD)
 DIRTYFILES := $(shell git status --porcelain --untracked-files=no | grep rtl/ | grep -v _stats.txt | cut -d " " -f 3-)
 ifeq ($(strip $(DIRTYFILES)),)
-# prepend 0 for "clean"
-XOSERA_HASH := 0$(GITSHORTHASH)
+# "clean" (unmodified) from git
+XOSERA_HASH := $(GITSHORTHASH)
+XOSERA_CLEAN := 1
 $(info === Xosera UPduino [$(XOSERA_HASH)] is CLEAN from git)
 else
-# prepend d for "dirty"
-XOSERA_HASH := D$(GITSHORTHASH)
+# "dirty" (HDL modified) from git
+XOSERA_HASH := $(GITSHORTHASH)
+XOSERA_CLEAN := 0
 $(info === Xosera UPduino [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
@@ -89,7 +91,7 @@ ICEMULTI := icemulti
 YOSYS_SYNTH_ARGS := -dsp -abc2 -retime -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
 
 # Verilator tool (used for "lint")
 VERILATOR := verilator

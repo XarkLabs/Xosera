@@ -31,7 +31,8 @@
 #define DELAY_TIME 1000        // impatient human speed
 //#define DELAY_TIME 500        // machine speed
 
-#define COPPER_TEST 1
+#define COPPER_TEST    1
+#define LR_MARGIN_TEST 0
 
 #if !defined(NUM_ELEMENTS)
 #define NUM_ELEMENTS(a) (sizeof(a) / sizeof(a[0]))
@@ -727,6 +728,12 @@ void     xosera_test()
             xreg_setw(COPP_CTRL, 0x8000);
         }
 
+#endif
+
+#if LR_MARGIN_TEST
+        // crop left and right 10 pixels
+        xreg_setw(VID_LEFT, 10);
+        xreg_setw(VID_RIGHT, monwidth - 10);
 #endif
 
         for (int y = 0; y < 30; y += 3)

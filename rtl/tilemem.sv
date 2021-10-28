@@ -29,18 +29,22 @@
 // `define FONT_FILE_3
 // `define FONT_ADDR_3
 
-module tilemem(
+module tilemem
+#(
+    parameter   AWIDTH   = 12
+)
+(
     input  wire logic         clk,
-    input  wire logic         rd_en_i,
-    input  wire logic [11:0]  rd_address_i,
-    output      logic [15:0]  rd_data_o,
-    input  wire logic         wr_clk,
-    input  wire logic         wr_en_i,
-    input  wire logic [11:0]  wr_address_i,
-    input  wire logic [15:0]  wr_data_i
+    input  wire logic              rd_en_i,
+    input  wire logic [AWIDTH-1:0] rd_address_i,
+    output      logic      [15:0]  rd_data_o,
+    input  wire logic              wr_clk,
+    input  wire logic              wr_en_i,
+    input  wire logic [AWIDTH-1:0] wr_address_i,
+    input  wire logic      [15:0]  wr_data_i
 );
 // infer 16x4KB tile BRAM
-logic [15: 0] bram[0 : 4095];
+logic [15: 0] bram[0 : 2**AWIDTH-1];
 `ifndef SHOW        // yosys show command doesn't like "too long" init string
 initial begin
 

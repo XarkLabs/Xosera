@@ -32,9 +32,17 @@
 //`define COPPER_DISABLE              // disable copper (to highlight other potential bottlenecks)
 //`define NO_CS_BUS_DELAY             // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
 
+
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
-// Xosera directly addressable registers (16 x 16-bit word)
+
+// Xosera BRAM memory sizes
+localparam TILEMEM_AWIDTH   = 12;   // 4K words tileset mem
+localparam COLORMEM_AWIDTH  = 8;    // 256 words color table mem
+localparam COPPERMEM_AWIDTH = 10;   // 1024 32-bit (even/odd) words copper mem
+localparam SPRITEMEM_AWIDTH = 8;    // 256 words sprite mem
+
+// Xosera directly addressable registers (16 x 16-bit words)
 typedef enum logic [3:0]{
     // register 16-bit read/write (no side effects)
     XM_XR_ADDR      = 4'h0,        // (R /W+) XR register number/address for XM_XR_DATA read/write access

@@ -185,7 +185,7 @@ always_ff @(posedge clk) begin
                 xv::XR_COPP_CTRL[4:0]: begin
                     copp_reg_wr_o   <= 1'b1;
                     copp_reg_data_o[15] <= vgen_reg_data_i[15];     // TODO: use named constants
-                    copp_reg_data_o[9:0]  <= vgen_reg_data_i[9:0];
+                    copp_reg_data_o[xv::COPPERMEM_AWIDTH-1:0]  <= vgen_reg_data_i[xv::COPPERMEM_AWIDTH-1:0];
                 end
                 xv::XR_CURSOR_X[4:0]: begin
                     cursor_x        <= vgen_reg_data_i[10:0];
@@ -247,7 +247,7 @@ end
 always_ff @(posedge clk) begin
     case (vgen_reg_num_r_i[4:0])
         xv::XR_VID_CTRL[4:0]:       vgen_reg_data_o <= {border_color, 4'b0, intr_status_i };
-        xv::XR_COPP_CTRL[4:0]:      vgen_reg_data_o <= { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[9:0]};
+        xv::XR_COPP_CTRL[4:0]:      vgen_reg_data_o <= { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPPERMEM_AWIDTH-1:0]};
         xv::XR_CURSOR_X[4:0]:       vgen_reg_data_o <= {5'b0, cursor_x };
         xv::XR_CURSOR_Y[4:0]:       vgen_reg_data_o <= {5'b0, cursor_y };
         xv::XR_VID_TOP[4:0]:        vgen_reg_data_o <= {5'b0, vid_top };

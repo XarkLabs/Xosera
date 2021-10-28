@@ -158,7 +158,7 @@ assign          coppermem_o_wr_in   = coppermem_wr_in &  coppermem_wr_addr_in[0]
 logic           copp_reg_wr;
 logic [15:0]    copp_reg_data;
 
-logic  [9:0]    copper_pc;
+logic [xv::COPPERMEM_AWIDTH-1:0] copper_pc;
 logic           coppermem_rd_en;
 logic [15:0]    coppermem_e_rd_data_out;
 logic [15:0]    coppermem_o_rd_data_out;
@@ -317,7 +317,9 @@ vram vram(
 );
 
 // video color RAM
-colormem colormem(
+colormem #(
+    .AWIDTH(xv::COLORMEM_AWIDTH)
+    ) colormem(
     .clk(clk),
     .rd_en_i(1'b1),
     .rd_address_i(color_index),
@@ -329,7 +331,10 @@ colormem colormem(
 );
 
 //  16-bit x 4KB tile memory
-tilemem tilemem(
+tilemem #(
+    .AWIDTH(xv::TILEMEM_AWIDTH)
+    )
+    tilemem (
     .clk(clk),
     .rd_en_i(tilemem_rd_en),
     .rd_address_i(tilemem_addr),
@@ -341,7 +346,10 @@ tilemem tilemem(
 );
 
 // cursor sprite RAM
-spritemem spritemem(
+spritemem #(
+    .AWIDTH(xv::SPRITEMEM_AWIDTH)
+    )
+    spritemem(
     .clk(clk),
     .rd_en_i(spritemem_rd_en),
     .rd_address_i(spritemem_addr),
@@ -375,7 +383,9 @@ copper copper(
 );
 
 // Copper RAM (Even word)
-coppermem coppermem_e(
+coppermem #(
+    .AWIDTH(xv::COPPERMEM_AWIDTH)
+    ) coppermem_e(
     .clk(clk),
     .rd_en_i(coppermem_rd_en),
     .rd_address_i(copper_pc),
@@ -387,7 +397,9 @@ coppermem coppermem_e(
 );
 
 // Copper RAM (Odd word)
-coppermem coppermem_o(
+coppermem #(
+    .AWIDTH(xv::COPPERMEM_AWIDTH)
+    ) coppermem_o(
     .clk(clk),
     .rd_en_i(coppermem_rd_en),
     .rd_address_i(copper_pc),

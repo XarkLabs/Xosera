@@ -153,13 +153,15 @@
 
 `include "xosera_pkg.sv"
 
+localparam C_PC = xv::COPPERMEM_AWIDTH-1;               // short copper PC upper range alias
+
 module copper(
     input   wire logic          clk,    
     input   wire logic          reset_i,
     output       logic          xr_ram_wr_en_o,         // General, for all RAM block writes
     output       logic [15:0]   xr_ram_wr_addr_o,       // General, for all RAM block writes
     output       logic [15:0]   xr_ram_wr_data_o,       // General, for all RAM block writes
-    output       logic  [9:0]   coppermem_rd_addr_o,
+    output       logic [C_PC:0] coppermem_rd_addr_o,
     output       logic          coppermem_rd_en_o,
     input   wire logic [15:0]   coppermem_e_rd_data_i,
     input   wire logic [15:0]   coppermem_o_rd_data_i,
@@ -199,9 +201,9 @@ logic  [2:0]  copper_ex_state   = STATE_INIT;
 
 // init PC is the initial PC value after vblank
 // It comes from the copper control register.
-logic  [9:0]  copper_init_pc;
-logic  [9:0]  copper_pc;
-logic         copper_en;
+logic [C_PC:0] copper_init_pc;
+logic [C_PC:0] copper_pc;
+logic          copper_en;
 
 /* verilator lint_off UNUSED */
 logic [4:0]   reg_reserved;
@@ -229,13 +231,13 @@ always_comb   copp_reset  = h_count_i == xv::VISIBLE_WIDTH + xv::H_FRONT_PORCH +
 // STATE_EXEC if needed...
 logic         v_reached;
 logic         h_reached;
-logic  [9:0]  copper_pc_skip;
+logic  [C_PC:0] copper_pc_skip;
 
 // These are done combinatorially, but should (?) be
 // stable by the time they're needed...
 logic         ignore_v;
 logic         ignore_h;
-logic  [9:0]  copper_pc_jmp;
+logic [C_PC:0] copper_pc_jmp;
 logic [15:0]  move_data;
 logic  [7:0]  move_r_p_addr;
 logic [11:0]  move_f_addr;
@@ -270,7 +272,7 @@ always_ff @(posedge clk) begin
         if (copp_reg_wr_i) begin
             copper_en       <= copp_reg_data_i[15];
             reg_reserved    <= copp_reg_data_i[14:10];
-            copper_init_pc  <= copp_reg_data_i[9:0];
+            copper_init_pc  <= copp_reg_data_i[C_PC:0];
         end
 
         // Main logic

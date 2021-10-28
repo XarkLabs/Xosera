@@ -12,30 +12,34 @@
 
 `include "xosera_pkg.sv"
 
-module coppermem(
-           input  wire logic        clk,
-           input  wire logic        rd_en_i,
-           input  wire logic [9:0]  rd_address_i,
-           output      logic [15:0] rd_data_o,
-           input  wire logic        wr_clk,
-           input  wire logic        wr_en_i,
-           input  wire logic [9:0]  wr_address_i,
-           input  wire logic [15:0] wr_data_i
-       );
-
-`ifndef SYNTHESIS
-initial begin
-    // Fill with zeroes
-    for (integer i = 0; i < 1024; i = i + 1) begin
-        bram[i] = 16'(i);
-    end
-end
-`endif
+module coppermem
+    #(
+        parameter   AWIDTH   = 10
+    )
+    (
+           input  wire logic                clk,
+           input  wire logic                rd_en_i,
+           input  wire logic [AWIDTH-1:0]   rd_address_i,
+           output      logic      [15:0]    rd_data_o,
+           input  wire logic                wr_clk,
+           input  wire logic                wr_en_i,
+           input  wire logic [AWIDTH-1:0]   wr_address_i,
+           input  wire logic      [15:0]    wr_data_i
+    );
 
 // Note this is only half of copper mem - there are two 
 // of these memories (odd and even) to give 32-bit
 // interface internally to the copper.
-logic [15: 0] bram[0 : 1023];
+logic [15: 0] bram[0 : 2**AWIDTH-1];
+
+`ifndef SYNTHESIS
+initial begin
+    // Fill with numbers
+    for (integer i = 0; i < AWIDTH; i = i + 1) begin
+        bram[i] = 16'(i);
+    end
+end
+`endif
 
 // infer BRAM block
 always_ff @(posedge wr_clk) begin

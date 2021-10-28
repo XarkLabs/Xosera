@@ -62,10 +62,6 @@ logic  [3:0]    bus_reg_num;            // bus register on bus
 logic  [7:0]    reg_xr_data_even;       // byte written to even byte of XR_DATA
 logic  [7:0]    reg_data_even;          // byte written to even byte of XM_DATA/XM_DATA_2
 
-logic  [3:0]    reg_other_reg;          // register associated with reg_other_even
-logic  [7:0]    reg_other_even;         // even byte storage (until odd byte)
-logic  [7:0]    reg_even_byte;          // either reg_other_even or zero if different register
-
 logic           bus_write_strobe;       // strobe when a word of data written
 logic           bus_read_strobe;        // strobe when a word of data read
 logic           bus_bytesel;            // msb/lsb on bus
@@ -145,9 +141,6 @@ always_ff @(posedge clk) begin
     end
 end
 
-// even byte to write (since write happens on odd byte)
-assign reg_even_byte = (reg_other_reg == bus_reg_num) ? reg_other_even : 8'h00;
-
 always_ff @(posedge clk) begin
     if (reset_i) begin
         // control signals
@@ -176,8 +169,6 @@ always_ff @(posedge clk) begin
         reg_rw_addr     <= 16'h0000;
         reg_rw_incr     <= 16'h0000;
         reg_data_even   <= 8'h00;
-        reg_other_even  <= 8'h00;
-        reg_other_reg   <= 4'h0;
     end
     else begin
         intr_clear_o    <= 4'b0;
@@ -245,23 +236,34 @@ always_ff @(posedge clk) begin
                 case (bus_reg_num)
                     xv::XM_XR_ADDR:
                         reg_xr_addr[15:8]   <= bus_data_byte;
-                    xv::XM_RD_ADDR:
-                        reg_rd_addr[15:8]   <= bus_data_byte;
-                    xv::XM_WR_ADDR:
-                        reg_wr_addr[15:8]   <= bus_data_byte;
-                    xv::XM_RW_ADDR:
-                        reg_rw_addr[15:8]   <= bus_data_byte;
                     xv::XM_XR_DATA:
                         reg_xr_data_even    <= bus_data_byte;   // data xr reg even byte storage
+                    xv::XM_RD_INCR:
+                        reg_rd_incr[15:8]   <= bus_data_byte;
+                    xv::XM_RD_ADDR:
+                        reg_rd_addr[15:8]   <= bus_data_byte;
+                    xv::XM_WR_INCR:
+                        reg_wr_incr[15:8]   <= bus_data_byte;
+                    xv::XM_WR_ADDR:
+                        reg_wr_addr[15:8]   <= bus_data_byte;
                     xv::XM_DATA,
-                    xv::XM_DATA_2,
+                    xv::XM_DATA_2:
+                        reg_data_even       <= bus_data_byte;   // data reg even byte storage
+                    xv::XM_SYS_CTRL:
+                        { reconfig_o, boot_select_o, intr_mask} <= { bus_data_byte[7], bus_data_byte[6:5], bus_data_byte[3:0] };
+                    xv::XM_TIMER:
+                        ;
+                    xv::XM_UNUSED_A:
+                        ;
+                    xv::XM_UNUSED_B:
+                        ;
+                    xv::XM_RW_INCR:
+                        reg_rw_incr[15:8]   <= bus_data_byte;
+                    xv::XM_RW_ADDR:
+                        reg_rw_addr[15:8]   <= bus_data_byte;
                     xv::XM_RW_DATA,
                     xv::XM_RW_DATA_2:
                         reg_data_even       <= bus_data_byte;   // data reg even byte storage
-                    default: begin
-                        reg_other_even      <= bus_data_byte;   // generic even byte storage
-                        reg_other_reg       <= bus_reg_num;
-                    end
                 endcase
             end
             else begin              // odd byte write (actives action)
@@ -279,7 +281,7 @@ always_ff @(posedge clk) begin
                         regs_wr_o           <= 1'b1;
                     end
                     xv::XM_RD_INCR: begin
-                        reg_rd_incr         <= { reg_even_byte, bus_data_byte };
+                        reg_rd_incr[7:0]    <= bus_data_byte;
                     end
                     xv::XM_RD_ADDR: begin
                         reg_rd_addr[7:0]    <= bus_data_byte;
@@ -288,7 +290,7 @@ always_ff @(posedge clk) begin
                         vram_rd             <= 1'b1;            // remember pending vramread request
                     end
                     xv::XM_WR_INCR: begin
-                        reg_wr_incr         <= { reg_even_byte, bus_data_byte };
+                        reg_wr_incr[7:0]    <= bus_data_byte;
                     end
                     xv::XM_WR_ADDR: begin
                         reg_wr_addr[7:0]    <= bus_data_byte;
@@ -301,9 +303,6 @@ always_ff @(posedge clk) begin
                         regs_wr_o           <= 1'b1;            // write
                     end
                     xv::XM_SYS_CTRL: begin
-                        reconfig_o          <= reg_even_byte[7];
-                        boot_select_o       <= reg_even_byte[6:5];
-                        intr_mask           <= reg_even_byte[3:0];
                         regs_wrmask_o       <= bus_data_byte[3:0];
                     end
                     xv::XM_TIMER: begin
@@ -314,7 +313,7 @@ always_ff @(posedge clk) begin
                     xv::XM_UNUSED_B: begin
                     end
                     xv::XM_RW_INCR: begin
-                        reg_rw_incr         <= { reg_even_byte, bus_data_byte };
+                        reg_rw_incr[7:0]    <= bus_data_byte;
                     end
                     xv::XM_RW_ADDR: begin
                         reg_rw_addr[7:0]    <= bus_data_byte;

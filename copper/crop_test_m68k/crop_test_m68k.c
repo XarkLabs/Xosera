@@ -39,14 +39,28 @@ const uint32_t copper_list[] = {
     COP_END()                              // nextf
 };
 
+static void msg(char * msg)
+{
+    char * s = msg;
+    char   c;
+    while ((c = *s++) != '\0')
+    {
+        sendchar(c);
+    }
+    sendchar('\r');
+    sendchar('\n');
+}
+
 void xosera_test()
 {
     if (checkchar())
     {
         readchar();
     }
-
-    xosera_init(0);
+    delay(1000);        // wait a bit for terminal window/serial
+    msg("copper crop_test - set Xosera to 640x480");
+    msg("");
+    xosera_init(0);        // 640x480
 
     xreg_setw(VID_CTRL, 0x0000);        // set border black
 
@@ -70,14 +84,56 @@ void xosera_test()
     // enable Copper
     xreg_setw(COPP_CTRL, 0x8000);
 
+    msg("640x480 cropped to 640x400 - press a key");
+
     // wait for a key (so prints don't mess up screen)
+    readchar();
+
+    xosera_init(1);        // 848x480
+
+    uint16_t width = xreg_getw(VID_HSIZE);        // use read hsize (in case no 848 mode in FPGA)
+
+    xreg_setw(VID_CTRL, 0x0000);        // set border black
+
+    xm_setw(XR_ADDR, XR_COPPER_MEM);
+
+    for (uint8_t i = 0; i < (sizeof(copper_list) / sizeof(uint32_t)); i++)
+    {
+        xm_setw(XR_DATA, copper_list[i] >> 16);
+        xm_setw(XR_DATA, copper_list[i] & 0xffff);
+    }
+
+    xreg_setw(PA_LINE_LEN, 160);
+
+    xm_setw(WR_INCR, 0x0001);
+    xm_setw(WR_ADDR, 0x0000);
+
+    for (int y = 0; y < 200; ++y)
+        for (int x = 0; x < 320 / 2; ++x)
+            xm_setw(DATA, x == 0 || y == 0 || x == (320 / 2 - 1) || y == (200 - 1) ? 0x0f0f : 0x0202);
+
+    // enable Copper
+    xreg_setw(COPP_CTRL, 0x8000);
+
+    // wait for a key (so prints don't mess up screen)
+    msg("848x480 cropped to 848x400 (oops!) - press a key");
+    readchar();
+
+    xreg_setw(VID_LEFT, (width - 640) / 2);
+    xreg_setw(VID_RIGHT, width - ((width - 640) / 2));
+
+    // wait for a key (so prints don't mess up screen)
+    msg("848x480 cropped to 848x400 with vid_left & vid_right window (ahh!) - press a key");
     readchar();
 
     // disable Copper
     xreg_setw(COPP_CTRL, 0x0000);
 
+    msg("exit...");
+
     // restore text mode
-    xosera_init(1);
+    xreg_setw(VID_LEFT, 0);
+    xreg_setw(VID_RIGHT, width);
     xreg_setw(PA_GFX_CTRL, 0x0000);        // unblank screen
     print("\033c");                        // reset & clear
 }

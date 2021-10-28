@@ -4,11 +4,14 @@
 # MIT LICENSE
 # vim: set noet ts=8 sw=8
 
-ifndef ROSCO_M68K_DIR
-$(error Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
+ifeq (, $(shell command -v m68k-elf-gxc))
+$(info No m68k-elf-* build tools found in path)
 else
-$(info NOTE: Using ROSCO_M68K_DIR libs in: $(ROSCO_M68K_DIR))
+ifndef ROSCO_M68K_DIR
+$(info Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
 endif
+endif
+
 XOSERA_M68K_API?=../xosera_m68k_api
 
 -include $(ROSCO_M68K_DIR)/user.mk

@@ -6,11 +6,12 @@
 
 -include $(ROSCO_M68K_DIR)/user.mk
 
-ifndef ROSCO_M68K_DIR
-$(info NOTE: ROSCO_M68K_DIR not set, using libs: ../../../code/software/libs)
-ROSCO_M68K_DIR=../../..
+ifeq (, $(shell command -v m68k-elf-gxc))
+$(info No m68k-elf-* build tools found in path)
 else
-$(info NOTE: Using ROSCO_M68K_DIR libs in: $(ROSCO_M68K_DIR))
+ifndef ROSCO_M68K_DIR
+$(info Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
+endif
 endif
 
 -include $(ROSCO_M68K_DIR)/user.mk

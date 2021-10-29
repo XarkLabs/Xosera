@@ -121,16 +121,24 @@ assign gpio_10      = bus_intr;         // interrupt signal
 
 // split tri-state data lines into in/out signals for inside FPGA
 logic bus_out_ena;
-logic [7:0] bus_data_out;
-logic [7:0] bus_data_in;
+logic [7:0] bus_data_out_r;             // registered bus_data_out signal, this greatly helps timing
+logic [7:0] bus_data_out;               // bus out from Xosera
+logic [7:0] bus_data_in;                // bus input to Xosera
 
 // only set bus to output if Xosera is selected and read is selected
 assign bus_out_ena  = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ);
 
 // tri-state data bus unless Xosera is both selected and bus is reading
 // NOTE: No longer need to use iCE40 SB_IO primitive to control tri-state properly here
-assign bus_data     = bus_out_ena ? bus_data_out : 8'bZ;
+// NOTE: Using the registered ("_r") signal was a nice win for <posedge pclk> -> async
+//        timing on bus_data_out signals
+assign bus_data     = bus_out_ena ? bus_data_out_r : 8'bZ;
 assign bus_data_in  = bus_data;
+
+// update registered bus_data_out_r signal each clock
+always_ff @(posedge pclk) begin
+    bus_data_out_r  <= bus_data_out;
+end
 
 // PLL to derive proper video frequency from 12MHz oscillator (gpio_20 with OSC jumper shorted)
 logic pclk;                  // video pixel clock output from PLL block

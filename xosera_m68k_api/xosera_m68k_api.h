@@ -24,6 +24,9 @@
  * ------------------------------------------------------------
  */
 
+#if !defined(XOSERA_M68K_API_H)
+#define XOSERA_M68K_API_H
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -246,3 +249,5 @@ extern volatile xmreg_t * const xosera_ptr;
                              :);                                                                                       \
         word_value;                                                                                                    \
     })
+
+#endif        // XOSERA_M68K_API_H

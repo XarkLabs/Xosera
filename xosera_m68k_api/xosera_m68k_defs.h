@@ -21,6 +21,9 @@
 
 // See: https://github.com/XarkLabs/Xosera/blob/master/REFERENCE.md
 
+#if !defined(XOSERA_M68K_DEFS_H)
+#define XOSERA_M68K_DEFS_H
+
 #define XM_BASEADDR 0xf80060        // Xosera rosco_m68k register base address
 
 // Xosera Main Registers (XM Registers, directly CPU accessable)
@@ -125,3 +128,5 @@
 #define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 26, 16) | ((uint16)(val16)))
 
 // TODO blit and polydraw
+
+#endif        // XOSERA_M68K_DEFS_H

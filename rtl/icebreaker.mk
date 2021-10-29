@@ -50,7 +50,6 @@ VIDEO_MODE ?= MODE_848x480
 #   PMOD_DIGILENT_VGA           12-bit VGA, PMOD 1A&1B  https://store.digilentinc.com/pmod-vga-video-graphics-array/
 #   PMOD_XESS_VGA                9-bit VGA, PMOD 1A&1B  http://www.xess.com/shop/product/stickit-vga/
 #   PMOD_XESS_VGA_SINGLE         6-bit VGA, PMOD 1B     http://www.xess.com/shop/product/stickit-vga/ (half used)
-#
 VIDEO_OUTPUT ?= PMOD_1B2_DVI12
 
 FONTFILES := $(wildcard tilesets/*.mem)
@@ -59,9 +58,9 @@ FONTFILES := $(wildcard tilesets/*.mem)
 SRCDIR := .
 
 # log output directory
-LOGS   := icebreaker/logs
+LOGS := icebreaker/logs
 
-# Xosera project setup for iCEBreaker FPGA target
+# Xosera project setup for iCEBreaker FPGA
 TOP := xosera_iceb
 PIN_DEF := icebreaker/icebreaker.pcf
 DEVICE := up5k
@@ -88,7 +87,7 @@ ICEPROG := iceprog
 ICEMULTI := icemulti
 
 # Yosys synthesis arguments
-YOSYS_SYNTH_ARGS := -dsp -retime -abc2 -top $(TOP)
+YOSYS_SYNTH_ARGS := -dsp -abc2 -retime -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DICEBREAKER -DSPI_INTERFACE
@@ -100,19 +99,27 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
-NEXTPNR_ARGS := --randomize-seed --placer heap --opt-timing --promote-logic
+NEXTPNR_ARGS := --randomize-seed --promote-logic --opt-timing --placer heap
+
+ifeq ($(strip $(VIDEO_OUTPUT)), PMOD_1B2_DVI12)
+OUTSUFFIX := dvi_$(subst MODE_,,$(VIDEO_MODE))
+else
+OUTSUFFIX := vga_$(subst MODE_,,$(VIDEO_MODE))
+endif
+
+OUTNAME := $(TOP)_$(OUTSUFFIX)
 
 # defult target is make bitstream
-all: icebreaker/$(TOP)_$(VIDEO_MODE).bin icebreaker.mk
+all: icebreaker/$(OUTNAME).bin icebreaker.mk
 	@echo === Finished Building iCEBreaker Xosera: $(VIDEO_OUTPUT) $(SPI_INTERFACE) ===
 
 # program iCEBreaker FPGA via USB (may need udev rules or sudo on Linux)
-prog: icebreaker/$(TOP)_$(VIDEO_MODE).bin icebreaker.mk
+prog: icebreaker/$(OUTNAME).bin icebreaker.mk
 	@echo === Programming iCEBreaker Xosera: $(VIDEO_OUTPUT) $(SPI_INTERFACE) ===
-	-$(ICEPROG) -d i:0x0403:0x6010 $(TOP).bin
+	$(ICEPROG) -d i:0x0403:0x6010 $(TOP).bin
 
 # run icetime to generate a timing report
-timing: icebreaker/$(TOP)_$(VIDEO_MODE).rpt icebreaker.mk
+timing: icebreaker/$(OUTNAME).rpt icebreaker.mk
 	@echo iCETime timing report: $(TOP).rpt
 
 # run Yosys to generate a "dot" graphical representation of each design file
@@ -121,7 +128,7 @@ show: $(DOT) icebreaker.mk
 # run Yosys with "noflatten", which will produce a resource count per module
 count: $(SRC) $(INC) $(FONTFILES) icebreaker.mk
 	@mkdir -p $(LOGS)
-	$(YOSYS) -l $(LOGS)/$(TOP)_$(VIDEO_MODE)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
+	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 
 # run Verilator to check for Verilog issues
 lint: $(SRC) $(INC) $(FONTFILES) icebreaker.mk
@@ -129,49 +136,49 @@ lint: $(SRC) $(INC) $(FONTFILES) icebreaker.mk
 
 $(DOT): %.dot: %.sv icebreaker.mk
 	mkdir -p icebreaker/dot
-	$(YOSYS) -l $(LOGS)/$(TOP)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix icebreaker/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
+	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix icebreaker/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
 %.json: $(SRC) $(INC) $(FONTFILES) icebreaker.mk
 	@echo === Building iCEBreaker Xosera ===
 	@rm -f $@
 	@mkdir -p $(LOGS)
-	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(TOP)_verilator.log
-	$(YOSYS) -l $(LOGS)/$(TOP)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
+	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
 
 # make ASCII bitstream from JSON description and device parameters
-icebreaker/%_$(VIDEO_MODE).asc: icebreaker/%_$(VIDEO_MODE).json $(PIN_DEF) icebreaker.mk
+icebreaker/%_$(OUTSUFFIX).asc: icebreaker/%_$(OUTSUFFIX).json $(PIN_DEF) icebreaker.mk
 	@rm -f $@
 	@mkdir -p $(LOGS)
-	@-cp $(TOP)_stats.txt $(LOGS)/$(TOP)_stats_last.txt
+	@-cp $(OUTNAME)_stats.txt $(LOGS)/$(OUTNAME)_stats_last.txt
 ifdef NO_PNR_RETRY
 	@echo NO_PNR_RETRY set, so failure is an option...
-	$(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
+	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 else
-	@echo $(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
-	@until $$($(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@) ; do \
+	@echo $(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
+	@until $$($(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@) ; do \
         	echo 'Retrying nextpnr-ice40 with new seed...' ; \
     	done
 endif
-	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) $(SPI_INTERFACE) | tee $(TOP)_stats.txt
-	@-tabbyadm version | grep "Package" | tee -a $(TOP)_stats.txt
-	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt
-	@$(NEXTPNR) -V 2>&1 | tee -a $(TOP)_stats.txt
-	@sed -n '/Device utilisation/,/Info: Placed/p' $(LOGS)/$(TOP)_nextpnr.log | sed '$$d' | grep -v ":     0/" | tee -a $(TOP)_stats.txt
-	@grep "Max frequency" $(LOGS)/$(TOP)_nextpnr.log | tail -1 | tee -a $(TOP)_stats.txt
-	@-diff -U0 $(LOGS)/$(TOP)_stats_last.txt $(TOP)_stats.txt | grep -v "\(^@\|^+\|^---\)" | while read line; do echo "PREVIOUS: $$line" ; done >$(LOGS)/$(TOP)_stats_delta.txt
-	@-diff -U0 $(LOGS)/$(TOP)_stats_last.txt $(TOP)_stats.txt | grep -v "\(^@\|^+++\|^-\)" | while read line; do echo "CURRENT : $$line" ; done >>$(LOGS)/$(TOP)_stats_delta.txt
+	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) $(SPI_INTERFACE) | tee $(OUTNAME)_stats.txt
+	@-tabbyadm version | grep "Package" | tee -a $(OUTNAME)_stats.txt
+	@$(YOSYS) -V 2>&1 | tee -a $(OUTNAME)_stats.txt
+	@$(NEXTPNR) -V 2>&1 | tee -a $(OUTNAME)_stats.txt
+	@sed -n '/Device utilisation/,/Info: Placed/p' $(LOGS)/$(OUTNAME)_nextpnr.log | sed '$$d' | grep -v ":     0/" | tee -a $(OUTNAME)_stats.txt
+	@grep "Max frequency" $(LOGS)/$(OUTNAME)_nextpnr.log | tail -1 | tee -a $(OUTNAME)_stats.txt
+	@-diff -U0 $(LOGS)/$(OUTNAME)_stats_last.txt $(OUTNAME)_stats.txt | grep -v "\(^@\|^+\|^---\)" | while read line; do echo "PREVIOUS: $$line" ; done >$(LOGS)/$(OUTNAME)_stats_delta.txt
+	@-diff -U0 $(LOGS)/$(OUTNAME)_stats_last.txt $(OUTNAME)_stats.txt | grep -v "\(^@\|^+++\|^-\)" | while read line; do echo "CURRENT : $$line" ; done >>$(LOGS)/$(OUTNAME)_stats_delta.txt
 	@echo
-	@-cat $(LOGS)/$(TOP)_stats_delta.txt
+	@-cat $(LOGS)/$(OUTNAME)_stats_delta.txt
 
 # make binary bitstream from ASCII bitstream
-icebreaker/%_$(VIDEO_MODE).bin: icebreaker/%_$(VIDEO_MODE).asc icebreaker.mk
+icebreaker/%_$(OUTSUFFIX).bin: icebreaker/%_$(OUTSUFFIX).asc icebreaker.mk
 	@rm -f $@
 	$(ICEPACK) $< $@
 	$(ICEMULTI) -v -v -p0 icebreaker/*.bin -o $(TOP).bin
 
 # make timing report from ASCII bitstream
-icebreaker/%_$(VIDEO_MODE).rpt: icebreaker/%_$(VIDEO_MODE).asc icebreaker.mk
+icebreaker/%_$(OUTSUFFIX).rpt: icebreaker/%_$(OUTSUFFIX).asc icebreaker.mk
 	@rm -f $@
 	$(ICETIME) -d $(DEVICE) -m -t -r $@ $<
 

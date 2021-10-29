@@ -59,7 +59,7 @@ FONTFILES := $(wildcard tilesets/*.mem)
 SRCDIR := .
 
 # log output directory
-LOGS       := upduino/logs
+LOGS := upduino/logs
 
 # Xosera project setup for UPduino v3.0
 TOP := xosera_upd
@@ -95,24 +95,32 @@ DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$
 
 # Verilator tool (used for "lint")
 VERILATOR := verilator
-VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -Wall -Wno-DECLFILENAME
+VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -Werror-UNUSED -Wall -Wno-DECLFILENAME
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
 NEXTPNR_ARGS := --randomize-seed --promote-logic --opt-timing --placer heap
 
+ifeq ($(strip $(VIDEO_OUTPUT)), PMOD_1B2_DVI12)
+OUTSUFFIX := dvi_$(subst MODE_,,$(VIDEO_MODE))
+else
+OUTSUFFIX := vga_$(subst MODE_,,$(VIDEO_MODE))
+endif
+
+OUTNAME := $(TOP)_$(OUTSUFFIX)
+
 # defult target is make bitstream
-all: upduino/$(TOP)_$(VIDEO_MODE).bin upduino.mk
+all: upduino/$(OUTNAME).bin upduino.mk
 	@echo === Finished Building UPduino Xosera: $(VIDEO_OUTPUT) ===
 
 # program UPduino FPGA via USB (may need udev rules or sudo on Linux)
-prog: upduino/$(TOP)_$(VIDEO_MODE).bin upduino.mk
+prog: upduino/$(OUTNAME).bin upduino.mk
 	@echo === Programming UPduino Xosera: $(VIDEO_OUTPUT) ===
 	$(ICEPROG) -d i:0x0403:0x6014 $(TOP).bin
 
 # run icetime to generate a timing report
-timing: upduino/$(TOP)_$(VIDEO_MODE).rpt upduino.mk
+timing: upduino/$(OUTNAME).rpt upduino.mk
 	@echo iCETime timing report: $(TOP).rpt
 
 # run Yosys to generate a "dot" graphical representation of each design file
@@ -121,7 +129,7 @@ show: $(DOT) upduino.mk
 # run Yosys with "noflatten", which will produce a resource count per module
 count: $(SRC) $(INC) $(FONTFILES) upduino.mk
 	@mkdir -p $(LOGS)
-	$(YOSYS) -l $(LOGS)/$(TOP)_$(VIDEO_MODE)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
+	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 
 # run Verilator to check for Verilog issues
 lint: $(SRC) $(INC) $(FONTFILES) upduino.mk
@@ -129,49 +137,49 @@ lint: $(SRC) $(INC) $(FONTFILES) upduino.mk
 
 $(DOT): %.dot: %.sv upduino.mk
 	mkdir -p upduino/dot
-	$(YOSYS) -l $(LOGS)/$(TOP)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
+	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
-upduino/%_$(VIDEO_MODE).json: $(SRC) $(INC) $(FONTFILES) upduino.mk
+upduino/%_$(OUTSUFFIX).json: $(SRC) $(INC) $(FONTFILES) upduino.mk
 	@echo === Building UPduino Xosera ===
 	@rm -f $@
 	@mkdir -p $(LOGS)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(TOP)_verilator.log
-	$(YOSYS) -l $(LOGS)/$(TOP)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
+	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
 
 # make ASCII bitstream from JSON description and device parameters
-upduino/%_$(VIDEO_MODE).asc: upduino/%_$(VIDEO_MODE).json $(PIN_DEF) upduino.mk
+upduino/%_$(OUTSUFFIX).asc: upduino/%_$(OUTSUFFIX).json $(PIN_DEF) upduino.mk
 	@rm -f $@
 	@mkdir -p $(LOGS)
-	@-cp $(TOP)_stats.txt $(LOGS)/$(TOP)_stats_last.txt
+	@-cp $(OUTNAME)_stats.txt $(LOGS)/$(OUTNAME)_stats_last.txt
 ifdef NO_PNR_RETRY
 	@echo NO_PNR_RETRY set, so failure is an option...
-	$(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
+	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 else
-	@echo $(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
-	@until $$($(NEXTPNR) -l $(LOGS)/$(TOP)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@) ; do \
+	@echo $(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
+	@until $$($(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@) ; do \
         	echo 'Retrying nextpnr-ice40 with new seed...' ; \
     	done
 endif
-	@echo === UPduino Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(TOP)_stats.txt
-	@-tabbyadm version | grep "Package" | tee -a $(TOP)_stats.txt
-	@$(YOSYS) -V 2>&1 | tee -a $(TOP)_stats.txt
-	@$(NEXTPNR) -V 2>&1 | tee -a $(TOP)_stats.txt
-	@sed -n '/Device utilisation/,/Info: Placed/p' $(LOGS)/$(TOP)_nextpnr.log | sed '$$d' | grep -v ":     0/" | tee -a $(TOP)_stats.txt
-	@grep "Max frequency" $(LOGS)/$(TOP)_nextpnr.log | tail -1 | tee -a $(TOP)_stats.txt
-	@-diff -U0 $(LOGS)/$(TOP)_stats_last.txt $(TOP)_stats.txt | grep -v "\(^@\|^+\|^---\)" | while read line; do echo "PREVIOUS: $$line" ; done >$(LOGS)/$(TOP)_stats_delta.txt
-	@-diff -U0 $(LOGS)/$(TOP)_stats_last.txt $(TOP)_stats.txt | grep -v "\(^@\|^+++\|^-\)" | while read line; do echo "CURRENT : $$line" ; done >>$(LOGS)/$(TOP)_stats_delta.txt
+	@echo === UPduino Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(OUTNAME)_stats.txt
+	@-tabbyadm version | grep "Package" | tee -a $(OUTNAME)_stats.txt
+	@$(YOSYS) -V 2>&1 | tee -a $(OUTNAME)_stats.txt
+	@$(NEXTPNR) -V 2>&1 | tee -a $(OUTNAME)_stats.txt
+	@sed -n '/Device utilisation/,/Info: Placed/p' $(LOGS)/$(OUTNAME)_nextpnr.log | sed '$$d' | grep -v ":     0/" | tee -a $(OUTNAME)_stats.txt
+	@grep "Max frequency" $(LOGS)/$(OUTNAME)_nextpnr.log | tail -1 | tee -a $(OUTNAME)_stats.txt
+	@-diff -U0 $(LOGS)/$(OUTNAME)_stats_last.txt $(OUTNAME)_stats.txt | grep -v "\(^@\|^+\|^---\)" | while read line; do echo "PREVIOUS: $$line" ; done >$(LOGS)/$(OUTNAME)_stats_delta.txt
+	@-diff -U0 $(LOGS)/$(OUTNAME)_stats_last.txt $(OUTNAME)_stats.txt | grep -v "\(^@\|^+++\|^-\)" | while read line; do echo "CURRENT : $$line" ; done >>$(LOGS)/$(OUTNAME)_stats_delta.txt
 	@echo
-	@-cat $(LOGS)/$(TOP)_stats_delta.txt
+	@-cat $(LOGS)/$(OUTNAME)_stats_delta.txt
 
 # make binary bitstream from ASCII bitstream
-upduino/%_$(VIDEO_MODE).bin: upduino/%_$(VIDEO_MODE).asc upduino.mk
+upduino/%_$(OUTSUFFIX).bin: upduino/%_$(OUTSUFFIX).asc upduino.mk
 	@rm -f $@
 	$(ICEPACK) $< $@
 	$(ICEMULTI) -v -v -p0 upduino/*.bin -o $(TOP).bin
 
 # make timing report from ASCII bitstream
-upduino/%_$(VIDEO_MODE).rpt: upduino/%_$(VIDEO_MODE).asc upduino.mk
+upduino/%_$(OUTSUFFIX).rpt: upduino/%_$(OUTSUFFIX).asc upduino.mk
 	@rm -f $@
 	$(ICETIME) -d $(DEVICE) -m -t -r $@ $<
 

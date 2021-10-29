@@ -63,7 +63,7 @@ bool xosera_init(int reconfig_num)
     if ((reconfig_num & 3) == reconfig_num)
     {
         // set reconfig bit, along with reconfig values
-        xm_setw(SYS_CTRL, 0x8F00 | (uint16_t)(reconfig_num << 13));        // reboot FPGA to config_num
+        xm_setw(SYS_CTRL, 0x800F | (uint16_t)(reconfig_num << 13));        // reboot FPGA to config_num
         if (xosera_sync())                                                 // should not sync right away...
         {
             return false;

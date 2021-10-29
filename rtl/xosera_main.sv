@@ -177,10 +177,6 @@ logic  [3:0]    vram_mask       /* verilator public */; // 4 nibble masks for vr
 logic [15:0]    vram_addr       /* verilator public */; // 16-bit word address
 logic [15:0]    vram_data_in    /* verilator public */;
 logic [15:0]    vram_data_out   /* verilator public */;
-logic           vgen_vram_load;
-logic [15:0]    vgen_vram_read;
-logic           regs_vram_load;
-logic [15:0]    regs_vram_read;
 
 logic           vgen_vram_sel;      // video vram select (read)
 logic [15:0]    vgen_vram_addr;     // video vram addr
@@ -225,30 +221,8 @@ assign vram_wr      = vgen_vram_sel ? 1'b0              : (regs_wr & regs_vram_s
 assign vram_mask    = regs_wrmask;    // NOTE: vgen never writes, so this can stay set
 assign vram_addr    = vgen_vram_sel ? vgen_vram_addr    : regs_addr;
 assign vram_data_in = regs_data_out;
-assign regs_data_in = regs_vram_load ? vram_data_out    : regs_vram_read;
-assign vgen_data_in = vgen_vram_load ? vram_data_out    : vgen_vram_read;
-
-// save vgen value read from vram
-always_ff @(posedge clk) begin
-    if (vgen_vram_load) begin
-        vgen_vram_read <= vram_data_out;
-    end
-    vgen_vram_load <= 1'b0; 
-    if (vgen_vram_sel) begin
-        vgen_vram_load <= 1'b1;
-    end
-end
-
-// save blit value read from vram
-always_ff @(posedge clk) begin
-    if (regs_vram_load) begin
-        regs_vram_read <= vram_data_out;
-    end
-    regs_vram_load <= 1'b0; 
-    if (regs_vram_sel) begin
-        regs_vram_load <= ~regs_wr;
-    end
-end
+assign regs_data_in = vram_data_out;
+assign vgen_data_in = vram_data_out;
 
 // register interface (really register logic for CPU access)
 reg_interface reg_interface(

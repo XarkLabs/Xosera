@@ -54,13 +54,46 @@ module xosera_main(
            input  wire logic         reset_i                 // reset signal
        );
 
-logic        regs_vram_sel  /* verilator public */;     // register interface VRAM select
-logic        regs_xr_sel    /* verilator public */;     // register interface XR select
-logic        regs_wr        /* verilator public */;     // register interface VRAM/XR write
-logic  [3:0] regs_wrmask    /* verilator public */;     // 4 nibble write masks for vram
+// video generation
+logic           vgen_vram_sel;      // video gen vram select (read only)
+logic [15:0]    vgen_vram_addr;     // video gen vram addr
+logic [15:0]    vgen_reg_data_out;  // video gen register output
+
+logic           dv_de_1;            // display enable delayed
+logic           hsync_1;            // hsync delayed
+logic           vsync_1;            // vsync delayed
+
+logic  [7:0]    color_index     /* verilator public */; // COLORMEM index
+logic [15:0]    color_xrgb      /* verilator public */; // COLORMEM XRGB output
+
+// register interface vram/xr access
+logic           regs_vram_sel   /* verilator public */;
+logic           regs_vram_ack   /* verilator public */;
+logic           regs_xr_sel     /* verilator public */;
+logic           regs_xr_ack     /* verilator public */;
+logic           regs_wr         /* verilator public */;
+logic  [3:0]    regs_wr_mask    /* verilator public */;
+logic [15:0]    regs_vram_addr  /* verilator public */;
+
+// blit vram/xr access
+logic           blit_vram_sel   /* verilator public */  = 1'b0;
+logic           blit_vram_ack   /* verilator public */;
+logic           blit_wr         /* verilator public */  = 1'b0;
+logic  [3:0]    blit_wr_mask    /* verilator public */  = 4'b0;
+logic [15:0]    blit_vram_addr  /* verilator public */  = 16'b0;
+logic [15:0]    blit_vram_data  /* verilator public */  = 16'b0;
+
+// draw vram/xr access
+logic           draw_vram_sel   /* verilator public */  = 1'b0;
+logic           draw_vram_ack   /* verilator public */;
+logic           draw_xr_sel     /* verilator public */  = 1'b0;
+logic           draw_xr_ack     /* verilator public */  = 1'b0;
+logic           draw_wr         /* verilator public */  = 1'b0;
+logic  [3:0]    draw_wr_mask    /* verilator public */  = 4'b0;
+logic [15:0]    draw_vram_addr  /* verilator public */  = 16'b0;
+logic [15:0]    draw_vram_data  /* verilator public */  = 16'b0;
 
 logic [15:0] regs_addr      /* verilator public */;     // register interface VRAM/XR addr
-logic [15:0] regs_data_in   /* verilator public */;     // register interface VRAM/XR data read
 logic [15:0] regs_data_out  /* verilator public */;     // register interface bus VRAM/XR data write
 
 logic   regs_vgen_reg_sel   /* verilator public */;
@@ -132,16 +165,16 @@ logic [15:0] xr_reg_wr_data_in;
 
 `ifndef COPPER_DISABLE
 assign coppermem_wr_in          = regs_coppermem_wr  || copp_coppermem_wr;
-assign coppermem_wr_addr_in     = regs_coppermem_wr   ? regs_addr[10:0] : copp_wr_addr[10:0]; 
+assign coppermem_wr_addr_in     = regs_coppermem_wr   ? regs_addr[10:0] : copp_wr_addr[10:0];
 assign coppermem_wr_data_in     = regs_coppermem_wr   ? regs_data_out   : copp_data_out;
 `endif
 
 assign colormem_wr_in           = regs_colormem_wr || copp_colormem_wr;
-assign colormem_wr_addr_in      = regs_colormem_wr  ? regs_addr[7:0]  : copp_wr_addr[7:0]; 
+assign colormem_wr_addr_in      = regs_colormem_wr  ? regs_addr[7:0]  : copp_wr_addr[7:0];
 assign colormem_wr_data_in      = regs_colormem_wr  ? regs_data_out   : copp_data_out;
 
 assign tilemem_wr_in            = regs_tilemem_wr    || copp_tilemem_wr;
-assign tilemem_wr_addr_in       = regs_tilemem_wr     ? regs_addr[11:0]  : copp_wr_addr[11:0]; 
+assign tilemem_wr_addr_in       = regs_tilemem_wr     ? regs_addr[11:0]  : copp_wr_addr[11:0];
 assign tilemem_wr_data_in       = regs_tilemem_wr     ? regs_data_out    : copp_data_out;
 
 assign xr_reg_wr_in             = regs_vgen_reg_wr   || copp_vgen_reg_wr;
@@ -170,27 +203,18 @@ logic [10:0]    video_h_count;
 logic [10:0]    video_v_count;
 /* verilator lint_on UNUSED */
 
-//  16x64K (128KB) video memory
-logic           vram_sel        /* verilator public */;
-logic           vram_wr         /* verilator public */;
-logic  [3:0]    vram_mask       /* verilator public */; // 4 nibble masks for vram write
-logic [15:0]    vram_addr       /* verilator public */; // 16-bit word address
-logic [15:0]    vram_data_in    /* verilator public */;
+//  VRAM read output data (for vgen, regs, blit, draw)
 logic [15:0]    vram_data_out   /* verilator public */;
 
-logic           vgen_vram_sel;      // video vram select (read)
-logic [15:0]    vgen_vram_addr;     // video vram addr
-logic [15:0]    vgen_data_in;       // video vram read data
-logic [15:0]    vgen_reg_data_out;  // video data out for register interface reg reads
-
+// interrupt management signals
 logic  [3:0]    intr_mask;          // true for each enabled interrupt
 logic  [3:0]    intr_status;        // pending interrupt status
 logic  [3:0]    intr_signal;        // interrupt signalled by Copper (or CPU)
 logic  [3:0]    intr_clear;         // interrupt cleared by CPU
 
-/* verilator lint_off UNUSED */
-logic           dbug_cs_strobe;     // TODO: debug CS ACK signal
-/* verilator lint_on UNUSED */
+`ifdef BUS_DEBUG_SIGNALS
+logic           dbug_cs_strobe;     // debug "ack" bus strobe
+`endif
 
 logic           tilemem_rd_en       /* verilator public */;
 logic [11:0]    tilemem_addr        /* verilator public */; // 12-bit word address
@@ -200,54 +224,48 @@ logic           spritemem_rd_en     /* verilator public */;
 logic  [7:0]    spritemem_addr      /* verilator public */; // 8-bit word address
 logic [15:0]    spritemem_data_out  /* verilator public */;
 
-logic  [7:0]    color_index         /* verilator public */;
-logic [15:0]    pal_lookup          /* verilator public */;
-
-logic           vsync_1;
-logic           hsync_1;
-logic           dv_de_1;
-
-// TODO: audio generation
-`ifdef DEBUG_SIGNALS
-assign audio_l_o = dbug_cs_strobe;  // TODO: debug to see when CS noticed
-assign audio_r_o = regs_xr_sel;     // TODO: debug to see when XR bus selected
+`ifdef BUS_DEBUG_SIGNALS
+assign audio_l_o = dbug_cs_strobe;  // debug to see when CS noticed
+assign audio_r_o = regs_xr_sel;     // debug to see when XR bus selected
 `else
+// TODO: audio generation
 assign audio_l_o = 1'b0;
 assign audio_r_o = 1'b0;
 `endif
 
-assign vram_sel     = vgen_vram_sel ? 1'b1              : regs_vram_sel;
-assign vram_wr      = vgen_vram_sel ? 1'b0              : (regs_wr & regs_vram_sel);
-assign vram_mask    = regs_wrmask;    // NOTE: vgen never writes, so this can stay set
-assign vram_addr    = vgen_vram_sel ? vgen_vram_addr    : regs_addr;
-assign vram_data_in = regs_data_out;
-assign regs_data_in = vram_data_out;
-assign vgen_data_in = vram_data_out;
-
-// register interface (really register logic for CPU access)
+// register interface for CPU access
 reg_interface reg_interface(
-    .clk(clk),
-    .bus_cs_n_i(bus_cs_n_i),            // register select strobe
-    .bus_rd_nwr_i(bus_rd_nwr_i),        // 0 = write, 1 = read
-    .bus_reg_num_i(bus_reg_num_i),      // register number
+    // bus
+    .bus_cs_n_i(bus_cs_n_i),            // bus chip select
+    .bus_rd_nwr_i(bus_rd_nwr_i),        // 0=write, 1=read
+    .bus_reg_num_i(bus_reg_num_i),      // register number (0-15)
     .bus_bytesel_i(bus_bytesel_i),      // 0=even byte, 1=odd byte
     .bus_data_i(bus_data_i),            // 8-bit data bus input
     .bus_data_o(bus_data_o),            // 8-bit data bus output
-    .vgen_sel_i(vgen_vram_sel),         // register interface or vgen vram access this cycle
+    // VRAM/XR
+    .vram_ack_i(regs_vram_ack),         // register interface ack (after reg read/write cycle)
+    .xr_ack_i(regs_xr_ack),             // register interface ack (after reg read/write cycle)
     .regs_vram_sel_o(regs_vram_sel),    // register interface vram select
     .regs_xr_sel_o(regs_xr_sel),        // register interface aux memory select
     .regs_wr_o(regs_wr),                // register interface write
-    .regs_wrmask_o(regs_wrmask),        // vram nibble masks
+    .regs_wrmask_o(regs_wr_mask),       // vram nibble masks
     .regs_addr_o(regs_addr),            // vram/aux address
-    .regs_data_i(regs_data_in),         // 16-bit word read from aux/vram
+    .regs_data_i(vram_data_out),        // 16-bit word read from vram
     .regs_data_o(regs_data_out),        // 16-bit word write to aux/vram
-    .xr_data_i(vgen_reg_data_out),
+    .xr_data_i(vgen_reg_data_out),      // 16-bit word read from aux
+    //
+    .busy_i(1'b0),                      // TODO: blit/draw engine busy
+    // reconfig
     .reconfig_o(reconfig_o),
     .boot_select_o(boot_select_o),
+    // interrupts
     .intr_mask_o(intr_mask),            // set with write to SYS_CTRL
     .intr_clear_o(intr_clear),          // strobe with write to TIMER
-    .bus_ack_o(dbug_cs_strobe),         // TODO: debug
-    .reset_i(reset_i)
+`ifdef BUS_DEBUG_SIGNALS
+    .bus_ack_o(dbug_cs_strobe),         // debug "ack" bus strobe
+`endif
+    .reset_i(reset_i),
+    .clk(clk)
 );
 
 //  video generation
@@ -261,7 +279,7 @@ video_gen video_gen(
     .intr_signal_o(intr_signal),        // signaled by write to VID_CTRL
     .vram_sel_o(vgen_vram_sel),
     .vram_addr_o(vgen_vram_addr),
-    .vram_data_i(vgen_data_in),
+    .vram_data_i(vram_data_out),
     .tilemem_sel_o(tilemem_rd_en),
     .tilemem_addr_o(tilemem_addr),
     .tilemem_data_i(tilemem_data_out),
@@ -272,22 +290,45 @@ video_gen video_gen(
     .hsync_o(hsync_1),
     .vsync_o(vsync_1),
     .dv_de_o(dv_de_1),
+`ifndef COPPER_DISABLE
     .copp_reg_wr_o(copp_reg_wr),
     .copp_reg_data_o(copp_reg_data),
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
+`endif
     .reset_i(reset_i),
     .clk(clk)
 );
 
-vram vram(
-    .clk(clk),
-    .sel(vram_sel),
-    .wr_en(vram_wr),
-    .wr_mask(vram_mask),
-    .address_in(vram_addr),
-    .data_in(vram_data_in),
-    .data_out(vram_data_out)
+// VRAM memory arbitration
+vram_arb vram_arb(
+    // video gen
+    .vram_data_o(vram_data_out),
+    .vgen_sel_i(vgen_vram_sel),
+    .vgen_addr_i(vgen_vram_addr),
+    // register interface
+    .regs_sel_i(regs_vram_sel),
+    .regs_ack_o(regs_vram_ack),
+    .regs_wr_i(regs_wr & regs_vram_sel),
+    .regs_wr_mask_i(regs_wr_mask),
+    .regs_addr_i(regs_addr),
+    .regs_data_i(regs_data_out),
+    // TODO: 2D blit
+    .blit_sel_i(blit_vram_sel),
+    .blit_ack_o(blit_vram_ack),
+    .blit_wr_i(blit_wr & blit_vram_sel),
+    .blit_wr_mask_i(blit_wr_mask),
+    .blit_addr_i(blit_vram_addr),
+    .blit_data_i(blit_vram_data),
+    // TODO: polygon draw
+    .draw_sel_i(draw_vram_sel),
+    .draw_ack_o(draw_vram_ack),
+    .draw_wr_i(draw_wr & regs_vram_sel),
+    .draw_wr_mask_i(draw_wr_mask),
+    .draw_addr_i(draw_vram_addr),
+    .draw_data_i(draw_vram_data),
+
+    .clk(clk)
 );
 
 // video color RAM
@@ -297,7 +338,7 @@ colormem #(
     .clk(clk),
     .rd_en_i(1'b1),
     .rd_address_i(color_index),
-    .rd_data_o(pal_lookup),
+    .rd_data_o(color_xrgb),
     .wr_clk(clk),
     .wr_en_i(colormem_wr_in),
     .wr_address_i(colormem_wr_addr_in),
@@ -391,9 +432,9 @@ always_ff @(posedge clk) begin
     hsync_o     <= hsync_1;
     dv_de_o     <= dv_de_1;
     if (dv_de_1) begin
-        red_o       <= pal_lookup[11:8];
-        green_o     <= pal_lookup[7:4];
-        blue_o      <= pal_lookup[3:0];
+        red_o       <= color_xrgb[11:8];
+        green_o     <= color_xrgb[7:4];
+        blue_o      <= color_xrgb[3:0];
     end else begin
         red_o       <= 4'h0;
         green_o     <= 4'h0;

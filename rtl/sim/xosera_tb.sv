@@ -243,12 +243,14 @@ always begin
     #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, XR_COPP_CTRL);
     #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h8000);
     // TODO end
-        
-        
+
+
 `ifdef LOAD_MONOBM
     while (xosera.video_gen.last_frame_pixel != 1'b1) begin
         # 1ns;
     end
+
+    # 15ms;
 
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_INCR, test_inc);
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0000);
@@ -368,15 +370,15 @@ logic [15:0] last_rd_addr = 0;
 always @(negedge clk) begin
     if (xosera.reg_interface.regs_vram_sel_o) begin
         if (xosera.reg_interface.regs_wr_o) begin
-            $display("%0t Write VRAM[%04x] <= %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
+            $display("%0t Write VRAM[%04x] <= %04x", $realtime, xosera.vram_arb.vram.address_in, xosera.vram_arb.vram.data_in);
         end
         else begin
             flag <= 1;
-            last_rd_addr <= xosera.vram.address_in;
+            last_rd_addr <= xosera.vram_arb.vram.address_in;
         end
     end
     else if (flag == 1) begin
-        $display("%0t Read VRAM[%04x] => %04x", $realtime, last_rd_addr, xosera.vram.data_out);
+        $display("%0t Read VRAM[%04x] => %04x", $realtime, last_rd_addr, xosera.vram_arb.vram.data_out);
         flag <= 0;
     end
 end
@@ -397,12 +399,12 @@ always @(posedge clk) begin
             for (i = 0; i < 65536; i += 16) begin
                 $fwrite(f, "%04x: ", i[15:0]);
                 for (j = 0; j < 16; j++) begin
-                    $fwrite(f, "%04x ", xosera.vram.memory[i+j][15:0]);
+                    $fwrite(f, "%04x ", xosera.vram_arb.vram.memory[i+j][15:0]);
                 end
                 $fwrite(f, "  ");
                 for (j = 0; j < 16; j++) begin
-                    if (xosera.vram.memory[i+j][7:0] >= 32 && xosera.vram.memory[i+j][7:0] < 127) begin
-                        $fwrite(f, "%c", xosera.vram.memory[i+j][7:0]);
+                    if (xosera.vram_arb.vram.memory[i+j][7:0] >= 32 && xosera.vram_arb.vram.memory[i+j][7:0] < 127) begin
+                        $fwrite(f, "%c", xosera.vram_arb.vram.memory[i+j][7:0]);
                     end else
                     begin
                         $fwrite(f, ".");

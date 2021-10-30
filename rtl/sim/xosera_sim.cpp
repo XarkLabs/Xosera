@@ -17,6 +17,7 @@
 
 #include "Vxosera_main.h"
 #include "Vxosera_main_vram.h"
+#include "Vxosera_main_vram_arb.h"
 #include "Vxosera_main_xosera_main.h"
 
 #define USE_FST 1
@@ -272,7 +273,11 @@ public:
                         {
                             printf("[@t=%lu] ", main_time);
                             sprintf(tempstr, "r[0x%x] %s.%3s", reg_num, reg_name[reg_num], bytesel ? "lsb*" : "msb");
-                            printf("  %-25.25s <= 0x%02x\n", tempstr, data & 0xff);
+                            printf("  %-25.25s <= %s%02x%s\n",
+                                   tempstr,
+                                   bytesel ? "__" : "",
+                                   data & 0xff,
+                                   bytesel ? "" : "__");
                             if (data_upload_index == 15)
                             {
                                 printf("  ...\n");
@@ -284,19 +289,25 @@ public:
                     case BUS_STROBEOFF:
                         if (rd_wr)
                         {
-                            printf("[@t=%lu] Read Reg #%02x.%s => 0x%02x\n",
+                            printf("[@t=%lu] Read Reg %s (#%02x.%s) => %s%02x%s\n",
                                    main_time,
+                                   reg_name[reg_num],
                                    reg_num,
                                    bytesel ? "L" : "H",
-                                   top->bus_data_o);
+                                   bytesel ? "__" : "",
+                                   top->bus_data_o,
+                                   bytesel ? "" : "__");
                         }
                         else if (!data_upload)
                         {
-                            printf("[@t=%lu] Write Reg #%02x.%s <= 0x%02x\n",
+                            printf("[@t=%lu] Write Reg %s (#%02x.%s) <= %s%02x%s\n",
                                    main_time,
+                                   reg_name[reg_num],
                                    reg_num,
                                    bytesel ? "L" : "H",
-                                   top->bus_data_i);
+                                   bytesel ? "__" : "",
+                                   top->bus_data_i,
+                                   bytesel ? "" : "__");
                         }
                         top->bus_cs_n_i = 0;
                         break;
@@ -844,7 +855,7 @@ int main(int argc, char ** argv)
     FILE * mfp = fopen(LOGDIR "xosera_vsim_text.txt", "w");
     if (mfp != nullptr)
     {
-        auto       vmem = top->xosera_main->vram->memory;
+        auto       vmem = top->xosera_main->vram_arb->vram->memory;
         uint16_t * mem  = &vmem[0];
 
         for (int y = 0; y < VISIBLE_HEIGHT / 16; y++)
@@ -874,7 +885,7 @@ int main(int argc, char ** argv)
         FILE * bfp = fopen(LOGDIR "xosera_vsim_vram.bin", "w");
         if (bfp != nullptr)
         {
-            auto       vmem = top->xosera_main->vram->memory;
+            auto       vmem = top->xosera_main->vram_arb->vram->memory;
             uint16_t * mem  = &vmem[0];
             fwrite(mem, 128 * 1024, 1, bfp);
             fclose(bfp);
@@ -885,7 +896,7 @@ int main(int argc, char ** argv)
         FILE * tfp = fopen(LOGDIR "xosera_vsim_vram_hex.txt", "w");
         if (tfp != nullptr)
         {
-            auto       vmem = top->xosera_main->vram->memory;
+            auto       vmem = top->xosera_main->vram_arb->vram->memory;
             uint16_t * mem  = &vmem[0];
             for (int i = 0; i < 65536; i += 16)
             {

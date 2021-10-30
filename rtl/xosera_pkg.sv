@@ -24,13 +24,14 @@
 `define GITHASH 00000000            // unknown Git hash
 `endif
 
-`define VERSION 022                 // BCD version code (x.xx)
+`define VERSION 023                 // BCD version code (x.xx)
 
-//`define DEBUG_SIGNALS               // use "audio" outputs for bus debug signals
-//`define USE_HEXFONT                 // use hex font instead of default fonts
+`define USE_HEXFONT                 // use hex font instead of default fonts
 //`define NO_TESTPATTERN              // don't initialize VRAM with test pattern and fonts in simulation
 //`define COPPER_DISABLE              // disable copper (to highlight other potential bottlenecks)
+//`define BUS_DEBUG_SIGNALS           // use audio outputs for debug (CS strobe etc.)
 //`define NO_CS_BUS_DELAY             // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
+
 
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")

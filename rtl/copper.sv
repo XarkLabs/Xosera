@@ -12,12 +12,12 @@
 //      [14:11] - Reserved
 //      [10:0]  - Copper initial PC
 //
-// Copper programs (aka 'The Copper List') live in AUX memory at 
+// Copper programs (aka 'The Copper List') live in AUX memory at
 // 0xA000. This memory segment is 2K in size.
 //
-// When enabled, the copper will run through as much of the program 
-// as it possibly can each frame. The program is restarted at the 
-// PC contained in the control register after each vblank. 
+// When enabled, the copper will run through as much of the program
+// as it possibly can each frame. The program is restarted at the
+// PC contained in the control register after each vblank.
 //
 // You should **definitely** set up a program for the copper before
 // you enable it. Once enabled, it is always running in sync with
@@ -28,13 +28,13 @@
 // In the general case, most copper instructions take four pixels,
 // to execute, except for WAIT and SWAP, which take five pixels.
 //
-// Additionally, the first instruction executed in a frame, or 
-// after the copper is first enabled will take five pixels 
+// Additionally, the first instruction executed in a frame, or
+// after the copper is first enabled will take five pixels
 // (as it has to pre-fetch the first instruction). The actual
 // execution is always on the last pixel of the instruction.
 //
 // These timings will need to be taken into account when computing
-// WAIT and SKIP offsets - often you will want to use an offset 
+// WAIT and SKIP offsets - often you will want to use an offset
 // a number of pixels before the pixel you want the next instruction
 // to actually execute on.
 //
@@ -55,7 +55,7 @@
 //      * If your program does reach the end during a frame, and doesn't
 //        have a terminating wait, it will run through the rest of copper
 //        memory and maybe eventually start again if there's time.
-//      * Assuming the common use-case of "wait for position, do thing", 
+//      * Assuming the common use-case of "wait for position, do thing",
 //        then none of this probably matters much...
 //
 // As far as the copper is concerned, all coordinates are in native
@@ -79,14 +79,14 @@
 //      * Xosera main registers
 //      * Video RAM
 //
-// This means it's possible to change the copper program that runs on a 
-// frame-by-frame basis (both from copper code and m68k program code) by 
-// odifying the copper control/ register. The copper supports jumps within 
-// the same frame with the JMP instruction. 
+// This means it's possible to change the copper program that runs on a
+// frame-by-frame basis (both from copper code and m68k program code) by
+// odifying the copper control/ register. The copper supports jumps within
+// the same frame with the JMP instruction.
 //
 // Self-modifying code is supported (by modifying copper memory from your
 // copper code) and of course m68k program code can modify that memory at
-// will using the Xosera registers. 
+// will using the Xosera registers.
 //
 // When modifying copper code from the m68k, and depending on the nature of
 // your modifications, you may need to sync with vblank to avoid display
@@ -95,17 +95,17 @@
 // Instructions and format
 //
 //      MMNEMONIC - ENCODING [word1],[word2]
-//          
+//
 //          ... Documentation ...
 //
 //
-//  
+//
 //      WAIT  - [0000 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]
 //
 //          Wait for a given screen position to be reached.
 //
 //
-//      SKIP  - [0010 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF] 
+//      SKIP  - [0010 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]
 //
 //          Skip if a given screen position has been reached.
 //
@@ -135,7 +135,7 @@
 //
 //          Move 16-bit data to XR_COPPER_MEM memory.
 //
-//  
+//
 //      Y - Y position (11 bits)
 //      X - X position (11 bits)
 //      F - Flags
@@ -153,10 +153,8 @@
 
 `include "xosera_pkg.sv"
 
-localparam C_PC = xv::COPPERMEM_AWIDTH-1;               // short copper PC upper range alias
-
 module copper(
-    input   wire logic          clk,    
+    input   wire logic          clk,
     input   wire logic          reset_i,
     output       logic          xr_ram_wr_en_o,         // General, for all RAM block writes
     output       logic [15:0]   xr_ram_wr_addr_o,       // General, for all RAM block writes
@@ -174,6 +172,8 @@ module copper(
     input   wire logic [10:0]   h_count_i,
     input   wire logic [10:0]   v_count_i
     );
+
+localparam C_PC = xv::COPPERMEM_AWIDTH-1;               // short copper PC upper range alias
 
 // instruction register
 typedef enum logic [3:0] {
@@ -227,7 +227,7 @@ logic         copp_reset;
 always_comb   copp_reset  = h_count_i == xv::VISIBLE_WIDTH + xv::H_FRONT_PORCH + xv::H_SYNC_PULSE + xv::H_BACK_PORCH - 4 &&
                             v_count_i == xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH + xv::V_SYNC_PULSE + xv::V_BACK_PORCH - 1;
 
-// The following are setup in STATE_PRECOMP for use in 
+// The following are setup in STATE_PRECOMP for use in
 // STATE_EXEC if needed...
 logic         v_reached;
 logic         h_reached;
@@ -298,7 +298,7 @@ always_ff @(posedge clk) begin
                         ram_rd_strobe   <= 1'b1;
                     end
                 end
-                // State 1 - Wait for copper RAMs - Usually will jump 
+                // State 1 - Wait for copper RAMs - Usually will jump
                 // directly here after execution of previous instruction.
                 STATE_WAIT: begin
                     // Reset strobe in case previous was a MOVEx
@@ -340,8 +340,8 @@ always_ff @(posedge clk) begin
                 // State 4 - Execution (Main)
                 STATE_EXEC: begin
                     case (opcode)
-                        // WAIT and SKIP instructions have a second execution 
-                        // state, during which next instruction read is also 
+                        // WAIT and SKIP instructions have a second execution
+                        // state, during which next instruction read is also
                         // set up...
                         INSN_WAIT: begin
                             // executing wait
@@ -349,7 +349,7 @@ always_ff @(posedge clk) begin
                                 // Ignoring vertical position
                                 if (ignore_h) begin
                                     // Ignoring horizontal position - wait
-                                    // forever, nothing to do... 
+                                    // forever, nothing to do...
                                 end
                                 else begin
                                     // Checking only horizontal position
@@ -363,7 +363,7 @@ always_ff @(posedge clk) begin
                                         copper_ex_state     <= STATE_PRECOMP;
                                     end
                                 end
-                            end 
+                            end
                             else begin
                                 // Not ignoring vertical position
                                 if (ignore_h) begin
@@ -408,7 +408,7 @@ always_ff @(posedge clk) begin
                                         copper_pc       <= copper_pc_skip;
                                     end
                                 end
-                            end 
+                            end
                             else begin
                                 // Not ignoring vertical position
                                 if (ignore_h) begin
@@ -482,14 +482,14 @@ always_ff @(posedge clk) begin
                                 ram_wr_addr_out[15:11]  <= xv::XR_COPPER_MEM[15:11];
                                 ram_wr_addr_out[10:0]   <= move_c_addr_v_pos;
                                 ram_wr_data_out         <= move_data;
-                        
+
                                 // Setup fetch next instruction
                                 copper_ex_state         <= STATE_WAIT;
                                 ram_rd_strobe           <= 1'b1;
                             end
                         end
                         default: begin
-                            // illegal instruction; just setup fetch for 
+                            // illegal instruction; just setup fetch for
                             // next instruction
                             copper_ex_state <= STATE_WAIT;
                             ram_rd_strobe   <= 1'b1;

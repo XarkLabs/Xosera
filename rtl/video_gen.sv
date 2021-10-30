@@ -28,11 +28,13 @@ module video_gen(
     output      logic [15:0]     vgen_reg_data_o,    // register/status data reads
     input wire  logic  [3:0]     intr_status_i,      // interrupt pending status
     output      logic  [3:0]     intr_signal_o,      // generate interrupt signal
+`ifndef COPPER_DISABLE
     // outputs for copper
     output      logic            copp_reg_wr_o,      // COPP_CTRL write strobe
     output      logic [15:0]     copp_reg_data_o,    // copper reg data
     output      logic [10:0]     h_count_o,          // Horizontal video counter
     output      logic [10:0]     v_count_o,          // Vertical video counter
+`endif
     // video memories
     output      logic            vram_sel_o,         // vram read select
     output      logic [15:0]     vram_addr_o,        // vram word address out (16x64K)
@@ -135,8 +137,10 @@ logic [1:0]     v_state_next;
 logic           mem_fetch_next;
 logic           h_start_line_fetch;
 
+`ifndef COPPER_DISABLE
 assign h_count_o    = h_count;
 assign v_count_o    = v_count;
+`endif
 
 // video config registers read/write
 always_ff @(posedge clk) begin
@@ -150,7 +154,7 @@ always_ff @(posedge clk) begin
         vid_left            <= 11'h0;
         vid_right           <= xv::VISIBLE_WIDTH[10:0];
 `ifdef SYNTHESIS
-        pa_blank            <= 1'b1;            // playfield A starts blanked
+        pa_blank            <= 1'b0;            // playfield A starts blanked
 `else
         pa_blank            <= 1'b0;            // unless simulating
 `endif
@@ -169,11 +173,15 @@ always_ff @(posedge clk) begin
 
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_line_addr        <= 16'h0000;        // user start of next display line
+`ifndef COPPER_DISABLE
         copp_reg_wr_o       <= 1'b0;
         copp_reg_data_o     <= 16'h0000;
+`endif
     end else begin
         intr_signal_o       <= 4'b0;
+`ifndef COPPER_DISABLE
         copp_reg_wr_o       <= 1'b0;
+`endif
         pa_line_start_set   <= 1'b0;
         // video register write
         if (vgen_reg_wr_i) begin
@@ -183,9 +191,11 @@ always_ff @(posedge clk) begin
                     intr_signal_o   <= vgen_reg_data_i[3:0];
                 end
                 xv::XR_COPP_CTRL[4:0]: begin
+`ifndef COPPER_DISABLE
                     copp_reg_wr_o   <= 1'b1;
-                    copp_reg_data_o[15] <= vgen_reg_data_i[15];     // TODO: use named constants
+                    copp_reg_data_o[15] <= vgen_reg_data_i[15];
                     copp_reg_data_o[xv::COPPERMEM_AWIDTH-1:0]  <= vgen_reg_data_i[xv::COPPERMEM_AWIDTH-1:0];
+`endif
                 end
                 xv::XR_CURSOR_X[4:0]: begin
                     cursor_x        <= vgen_reg_data_i[10:0];
@@ -247,7 +257,11 @@ end
 always_ff @(posedge clk) begin
     case (vgen_reg_num_r_i[4:0])
         xv::XR_VID_CTRL[4:0]:       vgen_reg_data_o <= {border_color, 4'b0, intr_status_i };
+`ifndef COPPER_DISABLE
         xv::XR_COPP_CTRL[4:0]:      vgen_reg_data_o <= { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPPERMEM_AWIDTH-1:0]};
+`else
+        xv::XR_COPP_CTRL[4:0]:      vgen_reg_data_o <= 16'h0000;
+`endif
         xv::XR_CURSOR_X[4:0]:       vgen_reg_data_o <= {5'b0, cursor_x };
         xv::XR_CURSOR_Y[4:0]:       vgen_reg_data_o <= {5'b0, cursor_y };
         xv::XR_VID_TOP[4:0]:        vgen_reg_data_o <= {5'b0, vid_top };
@@ -274,8 +288,8 @@ end
 always_comb     hsync = (h_state == STATE_SYNC);
 always_comb     vsync = (v_state == STATE_SYNC);
 always_comb     dv_display_ena = (h_state == STATE_VISIBLE) && (v_state == STATE_VISIBLE);
-always_comb     scanout_start = (h_count == scanout_start_hcount) ? mem_fetch_active : 1'b0; 
-always_comb     scanout_end = (h_count == scanout_end_hcount) ? 1'b1 : 1'b0; 
+always_comb     scanout_start = (h_count == scanout_start_hcount) ? mem_fetch_active : 1'b0;
+always_comb     scanout_end = (h_count == scanout_end_hcount) ? 1'b1 : 1'b0;
 always_comb     h_start_line_fetch = (~mem_fetch_active && mem_fetch_next);
 always_comb     h_line_last_pixel = (h_state_next == STATE_PRE_SYNC) && (h_state == STATE_VISIBLE);
 always_comb     last_visible_pixel = (v_state_next == STATE_PRE_SYNC) && (v_state == STATE_VISIBLE) && h_line_last_pixel;
@@ -355,7 +369,7 @@ function automatic [15:0] calc_tile_addr(
     begin
         case (bpp)
             xv::BPP_1_ATTR: begin
-                if (!tile_8x16) begin        
+                if (!tile_8x16) begin
                     calc_tile_addr = { tilebank, 10'b0 } | { 6'b0, tile_char[7:0], tile_y[2:1] };      // 8x8 = 1Wx4 = 4W (even/odd byte) x 256 = 1024W
                 end else begin
                     calc_tile_addr = { tilebank, 10'b0 } | { 5'b0, tile_char[7:0], tile_y[3:1] };      // 8x16 = 1Wx8 = 8W (even/odd byte) x 256 = 2048W
@@ -636,7 +650,7 @@ always_ff @(posedge clk) begin
         pa_pixels_buf       <= 64'h00000000;    // next 8 8-bpp pixels to scan out
         pa_pixels           <= 64'h00000000;    // 8 8-bpp pixels currently scanning out
     end else begin
-    
+
         // fetch FSM clocked process
         // register fetch combinitorial signals
         pa_fetch        <= pa_fetch_next;
@@ -787,7 +801,7 @@ always_ff @(posedge clk) begin
                     pa_line_start   <= pa_line_start + pa_line_len;       // new line start address
                     pa_addr         <= pa_line_start + pa_line_len;       // new text start address
                 end
-                else begin                                          
+                else begin
                     pa_tile_y <= pa_tile_y + 1;                     // next line of tile cell
                 end
             end

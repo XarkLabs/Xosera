@@ -14,14 +14,11 @@
 
 module vram_arb
 (
-    // VRAM data output
-    output      logic [15:0]    vram_data_o,
-
-    // video generation signals (read-only)
+    // video generation access (read-only)
     input  wire logic           vgen_sel_i,
     input  wire logic [15:0]    vgen_addr_i,
 
-    // register interface signals (read-write)
+    // register interface access (read/write)
     input  wire logic           regs_sel_i,
     output      logic           regs_ack_o,
     input  wire logic           regs_wr_i,
@@ -29,7 +26,7 @@ module vram_arb
     input  wire logic [15:0]    regs_addr_i,
     input  wire logic [15:0]    regs_data_i,
 
-    // TODO: 2D blit signals (read-write)
+    // TODO: 2D blit access (read/write)
     input  wire logic           blit_sel_i,
     output      logic           blit_ack_o,
     input  wire logic           blit_wr_i,
@@ -37,13 +34,16 @@ module vram_arb
     input  wire logic [15:0]    blit_addr_i,
     input  wire logic [15:0]    blit_data_i,
 
-    // TODO: polygon draw signals (read-write)
+    // TODO: polygon draw access (read/write)
     input  wire logic           draw_sel_i,
     output      logic           draw_ack_o,
     input  wire logic           draw_wr_i,
     input  wire logic  [3:0]    draw_wr_mask_i,
     input  wire logic [15:0]    draw_addr_i,
     input  wire logic [15:0]    draw_data_i,
+
+    // common VRAM data output
+    output      logic [15:0]    vram_data_o,
 
     input  wire logic           clk
 );
@@ -61,32 +61,37 @@ logic           blit_ack_next;
 logic           draw_ack_next;
 
 always_comb begin
-    regs_ack_next = 1'b0;
-    blit_ack_next = 1'b0;
-    draw_ack_next = 1'b0;
+    regs_ack_next   = 1'b0;
+    blit_ack_next   = 1'b0;
+    draw_ack_next   = 1'b0;
+    vram_sel        = 1'b0;
+    vram_wr         = 1'b0;
+    vram_addr       = regs_addr_i;
+    vram_wr_mask    = regs_wr_mask_i;
+    vram_data_in    = regs_data_i;
     if (vgen_sel_i) begin
         vram_sel        = 1'b1;
-        vram_wr         = 1'b0;
+        vram_wr         = 1'b0;             // no vgen write
         vram_addr       = vgen_addr_i;
-        vram_wr_mask    = regs_wr_mask_i;   // not really used, no vgen write
-        vram_data_in    = regs_data_i;      // not really used, no vgen write
+        vram_wr_mask    = regs_wr_mask_i;   // not really used (no write)
+        vram_data_in    = regs_data_i;      // not really used (no write)
     end else if (regs_sel_i & ~regs_ack_o) begin
         regs_ack_next   = 1'b1;
-        vram_sel        = regs_sel_i;
+        vram_sel        = 1'b1;
         vram_wr         = regs_wr_i;
         vram_addr       = regs_addr_i;
         vram_wr_mask    = regs_wr_mask_i;
         vram_data_in    = regs_data_i;
     end else if (blit_sel_i & ~blit_ack_o) begin
         blit_ack_next   = 1'b1;
-        vram_sel        = blit_sel_i;
+        vram_sel        = 1'b1;
         vram_wr         = blit_wr_i;
         vram_addr       = blit_addr_i;
         vram_wr_mask    = blit_wr_mask_i;
         vram_data_in    = blit_data_i;
-    end else begin
-        draw_ack_next   = draw_sel_i & ~draw_ack_o;
-        vram_sel        = draw_sel_i;
+    end else if (draw_sel_i & ~draw_ack_o) begin
+        draw_ack_next   = 1'b1;
+        vram_sel        = 1'b1;
         vram_wr         = draw_wr_i;
         vram_addr       = draw_addr_i;
         vram_wr_mask    = draw_wr_mask_i;

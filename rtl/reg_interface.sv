@@ -54,8 +54,6 @@ logic [15:0]    reg_xr_addr;            // XR read/write address (XR_ADDR)
 logic [15:0]    xr_rd_data;             // word read from XR
 logic           xr_rd;                  // flag for xr read outstanding
 
-logic           xr_rd_ack;              // flag for xr read acknowledged    // TODO:
-
 logic [15:0]    reg_rd_incr;            // VRAM read increment
 logic [15:0]    reg_rd_addr;            // VRAM read address
 
@@ -168,7 +166,6 @@ always_ff @(posedge clk) begin
         intr_mask       <= 4'b0000;
         vram_rd         <= 1'b0;
         xr_rd           <= 1'b0;
-        xr_rd_ack       <= 1'b0;        // TODO:
         regs_vram_sel_o <= 1'b0;
         regs_xr_sel_o   <= 1'b0;
         regs_wr_o       <= 1'b0;
@@ -221,26 +218,15 @@ always_ff @(posedge clk) begin
         end
 
         // XR access acknowledge
-        // if (xr_ack_i) begin
-        //     if (xr_rd) begin
-        //         xr_rd_data      <= xr_data_i;
-        //         reg_xr_addr     <= reg_xr_addr + 1'b1;  // TODO: optional xr rd increment?
-        //     end
-
-        //     regs_xr_sel_o   <= 1'b0;            // clear xr select
-        //     regs_wr_o       <= 1'b0;            // clear write
-        //     xr_rd           <= 1'b0;            // clear pending xr read
-        // end
-        // TODO:
-        // if a xr read ack is pending, save value from xr data
-        if (xr_rd_ack) begin
-            xr_rd_data      <= xr_data_i;
-            regs_vram_sel_o <= 1'b0;
-            regs_wr_o       <= 1'b0;        // clear write
-            xr_rd           <= 1'b0;        // clear pending xr read
+        if (xr_ack_i) begin
+            if (xr_rd) begin
+                xr_rd_data      <= xr_data_i;
+            end
+            reg_xr_addr     <= reg_xr_addr + 1'b1;  // TODO: optional xr rd increment?
+            regs_xr_sel_o   <= 1'b0;            // clear xr select
+            regs_wr_o       <= 1'b0;            // clear write
+            xr_rd           <= 1'b0;            // clear pending xr read
         end
-        xr_rd_ack       <= xr_rd;       // ack is one cycle after read with aux access
-        regs_xr_sel_o   <= 1'b0;        // clear xr select
 
         // TODO: overrun check?
 

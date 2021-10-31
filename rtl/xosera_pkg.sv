@@ -27,24 +27,22 @@
 `define VERSION 023                 // BCD version code (x.xx)
 
 `define USE_HEXFONT                 // use hex font instead of default fonts
+//`define ENABLE_PB                   // enable playfield B
 //`define NO_TESTPATTERN              // don't initialize VRAM with test pattern and fonts in simulation
 //`define COPPER_DISABLE              // disable copper (to highlight other potential bottlenecks)
 //`define BUS_DEBUG_SIGNALS           // use audio outputs for debug (CS strobe etc.)
 //`define NO_CS_BUS_DELAY             // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
 
-
-
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
 
 // Xosera BRAM memory sizes
-localparam TILEMEM_AWIDTH   = 12;   // 4K words tileset mem
-localparam COLORMEM_AWIDTH  = 8;    // 256 words color table mem
-localparam COPPERMEM_AWIDTH = 10;   // 1024 32-bit (even/odd) words copper mem
-localparam SPRITEMEM_AWIDTH = 8;    // 256 words sprite mem
+localparam TILE_AWIDTH   = 12;   // 4K words tileset mem
+localparam COLOR_AWIDTH  = 8;    // 256 words color table mem
+localparam COPPER_AWIDTH = 10;   // 1024 32-bit (even/odd) words copper mem
 
 // Xosera directly addressable registers (16 x 16-bit words)
-typedef enum logic [3:0]{
+typedef enum logic [3:0] {
     // register 16-bit read/write (no side effects)
     XM_XR_ADDR      = 4'h0,        // (R /W+) XR register number/address for XM_XR_DATA read/write access
     XM_XR_DATA      = 4'h1,        // (R /W+) read/write XR register/memory at XM_XR_ADDR (XM_XR_ADDR incr. on write)
@@ -52,7 +50,7 @@ typedef enum logic [3:0]{
     XM_RD_ADDR      = 4'h3,        // (R /W+) VRAM address for reading from VRAM when XM_DATA/XM_DATA_2 is read
     XM_WR_INCR      = 4'h4,        // (R /W ) increment value for XM_WR_ADDR on write to XM_DATA/XM_DATA_2
     XM_WR_ADDR      = 4'h5,        // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
-    XM_DATA         = 4'h6,        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR (and add XM_RD_INCR/XM_WR_INCR)
+    XM_DATA         = 4'h6,        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
     XM_DATA_2       = 4'h7,        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
     XM_SYS_CTRL     = 4'h8,        // (R /W+) busy status, FPGA reconfig, interrupt status/control, write masking
     XM_TIMER        = 4'h9,        // (RO   ) read 1/10th millisecond timer, write interrupt ack [TODO]
@@ -65,23 +63,23 @@ typedef enum logic [3:0]{
 } xm_register_t;
 
 // XR register / memory regions
-typedef enum logic [15:0]{
+typedef enum logic [15:0] {
     // XR Register Regions
-    XR_CONFIG_REGS   = 16'h0000,    // 0x0000-0x000F 16 config/copper registers
-    XR_PA_REGS       = 16'h0010,    // 0x0000-0x0017 8 playfield A video registers
-    XR_PB_REGS       = 16'h0018,    // 0x0000-0x000F 8 playfield B video registers
-    XR_BLIT_REGS     = 16'h0020,    // 0x0000-0x000F 16 blit registers [TBD]
-    XR_POLYDRAW_REGS = 16'h0030,    // 0x0000-0x000F 16 line/polygon draw registers [TBD]
+    XR_CONFIG_REGS      = 16'h0000,     // 0x0000-0x000F 16 config/video/copper registers
+    XR_PA_REGS          = 16'h0010,     // 0x0010-0x0017 8 playfield A video registers
+    XR_PB_REGS          = 16'h0018,     // 0x0000-0x001F 8 playfield B video registers
+    XR_BLIT_REGS        = 16'h2000,     // 0x4000-0x400F 16 polygon blit registers      // TODO: blit
+    XR_DRAW_REGS        = 16'h4000,     // 0x6000-0x600F 16 polygon draw registers      // TODO: draw
+    XR_UNUSED_REGS_6    = 16'h6000,     // 0x6000-0x600F (unused)
     // XR Memory Regions
-    XR_COLOR_MEM    = 16'h8000,     // 0x8000-0x80FF 256 16-bit word color lookup table (0xXRGB)
-    XR_TILE_MEM     = 16'h9000,     // 0x9000-0x9FFF 4K 16-bit words of tile/font memory
-    XR_COPPER_MEM   = 16'hA000,     // 0xA000-0xA7FF 2K 16-bit words copper program memory
-    XR_SPRITE_MEM   = 16'hB000,     // 0xB000-0xB0FF 256 16-bit word sprite/cursor memory
-    XR_UNUSED_MEM   = 16'hC000      // 0xC000-0xFFFF (currently unused)
+    XR_COLOR_MEM        = 16'h8000,     // 0x8000-0x81FF 256 16-bit 0xXRGB color lookup playfield A & B
+    XR_TILE_MEM         = 16'hA000,     // 0xA000-0xAFFF 4K 16-bit words of tile memory
+    XR_COPPER_MEM       = 16'hC000,     // 0xC000-0xC7FF 2K 16-bit words copper program memory
+    XR_UNUSED_MEM_E     = 16'hE000      // 0xE000-0xFFFF (unused)
 } xr_region_t;
 
-// XR read-write registers/memory regions
-typedef enum logic [15:0]{
+// XR read/write registers/memory regions
+typedef enum logic [15:0] {
     // Video Config / Copper XR Registers
     XR_VID_CTRL     = 16'h0000,     // (R /W) display control and border color index
     XR_COPP_CTRL    = 16'h0001,     // (R /W) display synchronized coprocessor control
@@ -93,7 +91,7 @@ typedef enum logic [15:0]{
     XR_VID_RIGHT    = 16'h0007,     // (R /W) right edge of active display window (typically 639 or 847)
     XR_SCANLINE     = 16'h0008,     // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
     XR_UNUSED_09    = 16'h0009,     // (RO  )
-    XR_VERSION      = 16'h000A,     // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
+    XR_VERSION      = 16'h000A,     // (RO  ) optional feature bits [15:12] and BCD version code [11:0]  // TODO: define
     XR_GITHASH_H    = 16'h000B,     // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
     XR_GITHASH_L    = 16'h000C,     // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
     XR_VID_HSIZE    = 16'h000D,     // (RO  ) native pixel width of monitor mode (e.g. 640/848)

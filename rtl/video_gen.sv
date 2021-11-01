@@ -39,7 +39,7 @@ module video_gen(
     output      logic [15:0]     vram_addr_o,        // vram word address out (16x64K)
     input  wire logic [15:0]     vram_data_i,        // vram word data in
     output      logic            tilemem_sel_o,      // tile mem read select
-    output      logic [11:0]     tilemem_addr_o,     // tile mem word address out (16x4K)
+    output      logic [xv::TILE_AWIDTH-1:0] tilemem_addr_o, // tile mem word address out (16x5K)
     input  wire logic [15:0]     tilemem_data_i,     // tile mem word data in
     // video signal outputs
     output      logic  [7:0]     color_index_o,      // color palette index output (16x256)
@@ -648,7 +648,7 @@ always_ff @(posedge clk) begin
         vram_sel_o          <= 1'b0;
         vram_addr_o         <= 16'h0000;
         tilemem_sel_o       <= 1'b0;
-        tilemem_addr_o      <= 12'h000;
+        tilemem_addr_o      <= '0;
         color_index_o       <= 8'b0;
         hsync_o             <= 1'b0;
         vsync_o             <= 1'b0;
@@ -708,7 +708,7 @@ always_ff @(posedge clk) begin
         vram_sel_o      <= vram_sel_next;
         vram_addr_o     <= vram_addr_next;
         tilemem_sel_o   <= tilemem_sel_next;
-        tilemem_addr_o  <= tilemem_addr_next[11:0];
+        tilemem_addr_o  <= tilemem_addr_next[xv::TILE_AWIDTH-1:0];
 
         // have display words been fetched?
         if (pa_words_ready) begin

@@ -37,9 +37,10 @@
 package xv;
 
 // Xosera BRAM memory sizes
-localparam TILE_AWIDTH   = 12;   // 4K words tileset mem
-localparam COLOR_AWIDTH  = 8;    // 256 words color table mem
-localparam COPPER_AWIDTH = 10;   // 1024 32-bit (even/odd) words copper mem
+localparam TILE_AWIDTH      = 13;   // 4K words tileset mem (but 8K address bits)
+localparam TILE2_AWIDTH     = 10;   // 1K words extra tileset/sprite mem
+localparam COLOR_AWIDTH     = 8;    // 256 words color table mem
+localparam COPPER_AWIDTH    = 10;   // 1024 32-bit (even/odd) words copper mem
 
 // Xosera directly addressable registers (16 x 16-bit words)
 typedef enum logic [3:0] {

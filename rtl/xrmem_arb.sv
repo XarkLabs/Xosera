@@ -183,11 +183,15 @@ always_comb begin
         color_rd_en         = 1'b1;
         colorA_addr         = vgen_colorA_addr_i;
         colorB_addr         = vgen_colorB_addr_i;
-    end else if (xr_sel_i & ~ xr_ack_o) begin
+
+    end
+// HACK: disable color read
+//     else
+      if (xr_sel_i & ~ xr_ack_o) begin
         color_rd_ack_next   = xr_color_sel;
-        color_rd_en         = xr_color_sel;
-        colorA_addr         = xr_addr_i[7:0];
-        colorB_addr         = xr_addr_i[7:0];
+//        color_rd_en         = xr_color_sel;
+//        colorA_addr         = xr_addr_i[7:0];
+//        colorB_addr         = xr_addr_i[7:0];
     end
 end
 

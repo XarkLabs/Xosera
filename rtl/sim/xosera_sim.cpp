@@ -85,15 +85,15 @@ class BusInterface
         XR_CONFIG_REGS   = 0x0000,        // 0x0000-0x000F 16 config/copper registers
         XR_PA_REGS       = 0x0010,        // 0x0000-0x0017 8 playfield A video registers
         XR_PB_REGS       = 0x0018,        // 0x0000-0x000F 8 playfield B video registers
-        XR_BLIT_REGS     = 0x0020,        // 0x0000-0x000F 16 blit registers [TBD]
-        XR_POLYDRAW_REGS = 0x0030,        // 0x0000-0x000F 16 line/polygon draw registers [TBD]
+        XR_BLIT_REGS     = 0x2000,        // 0x0000-0x000F 16 blit registers [TBD]
+        XR_POLYDRAW_REGS = 0x4000,        // 0x0000-0x000F 16 line/polygon draw registers [TBD]
+        XR_UNUSED_REGS_6 = 0x6000,        // 0x0000-0x000F 16 unused
 
         // XR Memory Regions
-        XR_COLOR_MEM  = 0x8000,        // 0x8000-0x80FF 256 16-bit word color lookup table (0xXRGB)
-        XR_TILE_MEM   = 0x9000,        // 0x9000-0x9FFF 4K 16-bit words of tile/font memory
-        XR_COPPER_MEM = 0xA000,        // 0xA000-0xA7FF 2K 16-bit words copper program memory
-        XR_SPRITE_MEM = 0xB000,        // 0xB000-0xB0FF 256 16-bit word sprite/cursor memory
-        XR_UNUSED_MEM = 0xC000,        // 0xC000-0xFFFF (currently unused)
+        XR_COLOR_MEM  = 0x8000,        // 0x8000-0x81FF 2 x 256 16-bit A & B color lookup table (0xXRGB)
+        XR_TILE_MEM   = 0xA000,        // 0xA000-0xAFFF 4K 16-bit words of tile/font memory
+        XR_COPPER_MEM = 0xC000,        // 0xC000-0xC7FF 2K 16-bit words copper program memory
+        XR_UNUSED_MEM = 0xE000,        // 0xE000-0xFFFF (currently unused)
     };
 
     enum
@@ -379,19 +379,50 @@ BusInterface bus;
 int          BusInterface::test_data_len   = 999;
 uint16_t     BusInterface::test_data[1024] = {
     // test data
-    REG_WAITVSYNC(),                     // show boot screen
+    REG_WAITVSYNC(),                      // show boot screen
+    REG_W(XR_ADDR, XR_COPPER_MEM),        // setup copper program
+    // copperlist:
+    REG_W(XR_DATA, 0x20a0),
+    REG_W(XR_DATA, 0x0002),        //     skip  0, 160, 0b00010  ; Skip next if we've hit line 160
+    REG_W(XR_DATA, 0x4014),
+    REG_W(XR_DATA, 0x0000),        //     jmp   .gored           ; ... else, jump to set red
+    REG_W(XR_DATA, 0x2140),
+    REG_W(XR_DATA, 0x0002),        //     skip  0, 320, 0b00010  ; Skip next if we've hit line 320
+    REG_W(XR_DATA, 0x400e),
+    REG_W(XR_DATA, 0x0000),        //     jmp   .gogreen         ; ... else jump to set green
+    REG_W(XR_DATA, 0xb000),
+    REG_W(XR_DATA, 0x000f),        //     movep 0x000F, 0        ; Make background blue
+    REG_W(XR_DATA, 0xb00a),
+    REG_W(XR_DATA, 0x0007),        //     movep 0x0007, 0xA      ; Make foreground dark blue
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_DATA, 0x0003),        //     nextf                  ; and we're done for this frame
+    // .gogreen:
+    REG_W(XR_DATA, 0xb000),
+    REG_W(XR_DATA, 0x00f0),        //     movep 0x00F0, 0        ; Make background green
+    REG_W(XR_DATA, 0xb00a),
+    REG_W(XR_DATA, 0x0070),        //     movep 0x0070, 0xA       ; Make foreground dark green
+    REG_W(XR_DATA, 0x4000),
+    REG_W(XR_DATA, 0x0000),        //     jmp   copperlist       ; and restart
+    // .gored:
+    REG_W(XR_DATA, 0xb000),
+    REG_W(XR_DATA, 0x0f00),        //     movep 0x0F00, 0        ; Make background red
+    REG_W(XR_DATA, 0xb00a),
+    REG_W(XR_DATA, 0x0700),        //     movep 0x0700, 0xA      ; Make foreground dark red
+    REG_W(XR_DATA, 0x4000),
+    REG_W(XR_DATA, 0x0000),        //     jmp   copperlist       ; and restart
+
     REG_W(XR_ADDR, XR_COPP_CTRL),        // do copper test on bootscreen...
     REG_W(XR_DATA, 0x8000),
-    REG_WAITVSYNC(),                     // show boot screen
-    REG_WAITVSYNC(),                     // show boot screen
-    REG_W(XR_ADDR, XR_COPP_CTRL),        // disable copper so as not to ruin image tests.
-    REG_W(XR_DATA, 0x0000),
+    REG_WAITVSYNC(),                       // show boot screen
+    REG_WAITVSYNC(),                       // show boot screen
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 1-BPP BMAP
     REG_W(XR_DATA, 0x0040),
     REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
-    REG_WAITVSYNC(),        // show 1-BPP BMAP
+    REG_WAITVSYNC(),                     // show 1-BPP BMAP
+    REG_W(XR_ADDR, XR_COPP_CTRL),        // disable copper so as not to ruin color image tests.
+    REG_W(XR_DATA, 0x0000),
     REG_W(XR_ADDR, XR_VID_CTRL),
     REG_RW(XR_DATA),
     REG_W(TIMER, 0x0800),

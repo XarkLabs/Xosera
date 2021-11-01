@@ -648,6 +648,7 @@ void     xosera_test()
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
 
+#if 0
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");
@@ -657,6 +658,9 @@ void     xosera_test()
     while (XFrameCount == t)
         ;
     printf("okay. Vsync interrupt detected.\n\n");
+#else
+    dprintf("NOT Installing interrupt handler\n");
+#endif
 
 #if COPPER_TEST
     dprintf("Loading copper list...");

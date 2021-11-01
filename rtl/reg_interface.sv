@@ -222,7 +222,9 @@ always_ff @(posedge clk) begin
         if (xr_ack_i) begin
             if (xr_rd) begin
                 xr_rd_data      <= xr_data_i;
-            end else begin
+            end
+
+            if (regs_wr_o) begin
                 reg_xr_addr     <= reg_xr_addr + 1'b1;  // TODO: optional xr rd increment?
             end
 

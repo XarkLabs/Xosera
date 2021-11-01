@@ -648,7 +648,7 @@ void     xosera_test()
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
 
-#if 0
+#if 1
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");

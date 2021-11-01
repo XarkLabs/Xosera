@@ -79,6 +79,9 @@ logic                           xr_wr_en        /* verilator public */;
 logic [15:0]                    xr_addr         /* verilator public */;
 logic [15:0]                    xr_write_data         /* verilator public */;
 
+// xr_ack timeout counter
+logic  [2:0]    ack_timeout;
+
 // combinatorial write ack signals
 logic           copp_wr_ack_next;
 logic           xr_wr_ack_next;
@@ -166,9 +169,9 @@ always_comb begin
     xreg_data_o         = xr_write_data;
     // copper write has priority
     if (copp_xr_sel_i & ~copp_xr_ack_o) begin
-        xreg_wr_o           = copp_xr_regs_sel;  // copper only writes
+        xreg_wr_o           = copp_xr_regs_sel;     // copper only writes
     end else if (xr_sel_i & ~xr_ack_o) begin
-        xreg_rd_ack_next    = xr_regs_sel & ~xr_wr_i;   // TODO: ignore write?
+        xreg_rd_ack_next    = xr_regs_sel;          // NOTE: omit & ~xr_wr_i (since xr_wr_ack_next also set)
         xreg_wr_o           = xr_regs_sel & xr_wr_i;
     end
 end
@@ -183,15 +186,11 @@ always_comb begin
         color_rd_en         = 1'b1;
         colorA_addr         = vgen_colorA_addr_i;
         colorB_addr         = vgen_colorB_addr_i;
-
-    end
-// HACK: disable color read
-//     else
-      if (xr_sel_i & ~ xr_ack_o) begin
+    end else if (xr_sel_i & ~xr_ack_o) begin
         color_rd_ack_next   = xr_color_sel;
-//        color_rd_en         = xr_color_sel;
-//        colorA_addr         = xr_addr_i[7:0];
-//        colorB_addr         = xr_addr_i[7:0];
+        color_rd_en         = xr_color_sel;
+        colorA_addr         = xr_addr_i[7:0];
+        colorB_addr         = xr_addr_i[7:0];
     end
 end
 
@@ -229,6 +228,16 @@ end
 always_ff @(posedge clk) begin
     copp_xr_ack_o   <= copp_wr_ack_next;
     xr_ack_o        <= xr_wr_ack_next | xreg_rd_ack_next | color_rd_ack_next | tile_rd_ack_next | copp_rd_ack_next;
+
+    // timeout and assert xr_ack_o 8 cycles after xr_sel_i
+    if (!xr_sel_i) begin
+        ack_timeout <= 3'b0;                // reset counter
+    end else begin
+        ack_timeout <= ack_timeout + 1'b1;
+        if (ack_timeout == 3'b111) begin
+            xr_ack_o    <= 1'b1;            // fake ack and read "garbage"
+        end
+    end
 end
 
 // playfield A color lookup RAM

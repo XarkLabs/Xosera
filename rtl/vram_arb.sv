@@ -19,12 +19,12 @@ module vram_arb
     input  wire logic [15:0]    vgen_addr_i,
 
     // register interface access (read/write)
-    input  wire logic           regs_sel_i,
-    output      logic           regs_ack_o,
-    input  wire logic           regs_wr_i,
+    input  wire logic           regs_sel_i        /* verilator public */,
+    output      logic           regs_ack_o        /* verilator public */,
+    input  wire logic           regs_wr_i        /* verilator public */,
     input  wire logic  [3:0]    regs_wr_mask_i,
-    input  wire logic [15:0]    regs_addr_i,
-    input  wire logic [15:0]    regs_data_i,
+    input  wire logic [15:0]    regs_addr_i        /* verilator public */,
+    input  wire logic [15:0]    regs_data_i        /* verilator public */,
 
     // TODO: 2D blit access (read/write)
     input  wire logic           blit_sel_i,
@@ -43,7 +43,7 @@ module vram_arb
     input  wire logic [15:0]    draw_data_i,
 
     // common VRAM data output
-    output      logic [15:0]    vram_data_o,
+    output      logic [15:0]    vram_data_o        /* verilator public */,
 
     input  wire logic           clk
 );

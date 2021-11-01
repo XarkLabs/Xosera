@@ -15,12 +15,12 @@
 module xrmem_arb
 (
     // regs XR register/memory interface (read/write)
-    input  wire logic                           xr_sel_i,
-    output      logic                           xr_ack_o,
-    input  wire logic                           xr_wr_i,
-    input  wire logic [15:0]                    xr_addr_i,
-    input  wire logic [15:0]                    xr_data_i,
-    output      logic [15:0]                    xr_data_o,
+    input  wire logic                           xr_sel_i    /* verilator public */,
+    output      logic                           xr_ack_o    /* verilator public */,
+    input  wire logic                           xr_wr_i     /* verilator public */,
+    input  wire logic [15:0]                    xr_addr_i   /* verilator public */,
+    input  wire logic [15:0]                    xr_data_i   /* verilator public */,
+    output      logic [15:0]                    xr_data_o   /* verilator public */,
 
     // copper XR register/memory interface (write-only)
     input  wire logic                           copp_xr_sel_i,
@@ -61,7 +61,6 @@ logic [xv::COLOR_AWIDTH-1:0]    colorA_addr     /* verilator public */;
 logic [xv::COLOR_AWIDTH-1:0]    colorB_addr     /* verilator public */;
 logic [15:0]                    colorA_data_out /* verilator public */;
 logic [15:0]                    colorB_data_out /* verilator public */;
-logic                           color_B         /* verilator public */;
 
 // internal TILEMEM signals
 logic                           tile_rd_en      /* verilator public */;
@@ -74,7 +73,6 @@ logic                           copp_rd_en      /* verilator public */;
 logic                           copp_wr_en      /* verilator public */;
 logic [xv::COPPER_AWIDTH-1:0]   copp_addr       /* verilator public */;
 logic [31:0]                    copp_data_out   /* verilator public */;
-logic                           copp_odd;
 
 // internal XR write signals
 logic                           xr_wr_en        /* verilator public */;
@@ -82,18 +80,18 @@ logic [15:0]                    xr_addr         /* verilator public */;
 logic [15:0]                    xr_data         /* verilator public */;
 
 // combinatorial ack signals
-logic           xr_ack_next;
-logic           copp_xr_ack_next;
+logic           xreg_ack_next;
 logic           color_ack_next;
 logic           tile_ack_next;
 logic           copp_ack_next;
 
-// combinatorial decode signals
+// combinatorial XR decode signals
 logic           xr_regs_sel         /* verilator public */;
 logic           xr_color_sel        /* verilator public */;
 logic           xr_tile_sel         /* verilator public */;
 logic           xr_copp_sel         /* verilator public */;
 
+// combinatorial copper XR decode signals
 logic           copp_xr_regs_sel    /* verilator public */;
 logic           copp_xr_color_sel   /* verilator public */;
 logic           copp_xr_tile_sel    /* verilator public */;
@@ -117,13 +115,63 @@ assign  copp_xr_color_sel   = (copp_xr_addr_i[15:13] == xv::XR_COLOR_MEM[15:13])
 assign  copp_xr_tile_sel    = (copp_xr_addr_i[15:13] == xv::XR_TILE_MEM[15:13]);
 assign  copp_xr_copp_sel    = (copp_xr_addr_i[15:13] == xv::XR_COPPER_MEM[15:13]);
 
-// color read (vgen or reg XR memory)
+// select addr and write data from XR or copper XR write
+assign  xr_addr     = copp_xr_sel_i ? copp_xr_addr_i : xr_addr_i;
+assign  xr_data     = copp_xr_sel_i ? copp_xr_data_i : xr_data_i;
+
+// XR memory interface write select (copper / regs)
+always_comb begin
+    color_wr_en = 1'b0;
+    tile_wr_en  = 1'b0;
+    copp_wr_en  = 1'b0;
+    // copper write has priority
+    if (copp_xr_sel_i) begin
+        color_wr_en = copp_xr_color_sel;
+        tile_wr_en  = copp_xr_tile_sel;
+        copp_wr_en  = copp_xr_copp_sel;
+    end else if (xr_sel_i & xr_wr_i) begin
+        color_wr_en = xr_color_sel;
+        tile_wr_en  = xr_tile_sel;
+        copp_wr_en  = xr_copp_sel;
+    end
+end
+
+// XR read result select
+always_comb begin
+    xr_data_o       = xreg_data_i;
+    if (xr_color_sel) begin
+        xr_data_o   = !xr_addr_i[8] ? colorA_data_out : colorB_data_out;
+    end
+    if (xr_tile_sel) begin
+        xr_data_o   = tile_data_out;
+    end
+    if (xr_copp_sel) begin
+        xr_data_o   = !xr_addr_i[0] ? copp_data_out[31:16] : copp_data_out[15:0];
+    end
+end
+
+// XR register bus (XR read/write or copper XR write only)
+always_comb begin
+    xreg_ack_next       = 1'b0;
+    xreg_wr_o           = 1'b0;
+    xreg_addr_o         = xr_addr;
+    xreg_data_o         = xr_data;
+    // copper write has priority
+    if (copp_xr_sel_i & ~copp_xr_ack_o) begin
+        xreg_ack_next   = copp_xr_regs_sel;
+        xreg_wr_o       = copp_xr_regs_sel;  // copper only writes
+    end else if (xr_sel_i & ~xr_ack_o) begin
+        xreg_ack_next   = xr_regs_sel;
+        xreg_wr_o       = xr_regs_sel & xr_wr_i;
+    end
+end
+
+// color mem read (vgen or reg XR memory)
 always_comb begin
     color_ack_next  = 1'b0;
     color_rd_en     = 1'b0;
     colorA_addr     = vgen_colorA_addr_i;
     colorB_addr     = vgen_colorB_addr_i;
-    color_B         = xr_addr_i[8];
     if (vgen_color_sel_i) begin
         color_rd_en     = 1'b1;
         colorA_addr     = vgen_colorA_addr_i;
@@ -136,7 +184,7 @@ always_comb begin
     end
 end
 
-// tile read (vgen or reg XR memory)
+// tile mem read (vgen or reg XR memory)
 always_comb begin
     tile_ack_next   = 1'b0;
     tile_rd_en      = 1'b0;
@@ -144,19 +192,18 @@ always_comb begin
     if (vgen_tile_sel_i) begin
         tile_rd_en      = 1'b1;
         tile_addr       = vgen_tile_addr_i;
-    end else if (xr_sel_i & ~ xr_ack_o) begin
+    end else if (xr_sel_i & ~xr_ack_o) begin
         tile_ack_next   = xr_tile_sel;
         tile_rd_en      = xr_tile_sel;
         tile_addr       = xr_addr_i[xv::TILE_AWIDTH-1:0];
     end
 end
 
-// copp program read
+// copp mem read (copper or reg XR memory)
 always_comb begin
     copp_ack_next   = 1'b0;
     copp_rd_en      = 1'b0;
     copp_addr       = copp_prog_addr_i;
-    copp_odd        = xr_addr_i[0];
     if (copp_prog_sel_i) begin
         copp_rd_en     = 1'b1;
         copp_addr      = copp_prog_addr_i;
@@ -167,66 +214,13 @@ always_comb begin
     end
 end
 
-// XR register bus read/write
-always_comb begin
-    xr_ack_next         = 1'b0;
-    copp_xr_ack_next    = 1'b0;
-    xreg_wr_o           = 1'b0;
-    xreg_addr_o         = xr_addr;
-    xreg_data_o         = xr_data;
-    // copper write has priority
-    if (copp_xr_sel_i & ~copp_xr_ack_o) begin
-        copp_xr_ack_next    = 1'b1;
-        xreg_wr_o           = copp_xr_regs_sel;  // copper only writes
-    end else if (xr_sel_i & ~xr_ack_o) begin
-        xr_ack_next         = 1'b1;
-        xreg_wr_o           = xr_regs_sel & xr_wr_i;
-    end
-end
-
-// XR memory interface select
-always_comb begin
-    color_wr_en = 1'b0;
-    tile_wr_en  = 1'b0;
-    copp_wr_en  = 1'b0;
-    // copper write has priority
-    xr_addr     = copp_xr_sel_i ? copp_xr_addr_i : xr_addr_i;
-    xr_data     = copp_xr_sel_i ? copp_xr_data_i : xr_data_i;
-    if (copp_xr_sel_i) begin
-        color_wr_en = copp_xr_color_sel;
-        tile_wr_en  = copp_xr_tile_sel;
-        copp_wr_en  = copp_xr_copp_sel;
-    end else if (xr_sel_i) begin
-        color_wr_en = xr_color_sel;
-        tile_wr_en  = xr_tile_sel;
-        copp_wr_en  = xr_copp_sel;
-    end
-end
-
-// XR read result select with ack
+// update acknowledge signals
 always_ff @(posedge clk) begin
-    copp_xr_ack_o   <= copp_xr_ack_next;
-    xr_ack_o        <= 1'b0;
-    xr_data_o       <= xreg_data_i;
-    if (xr_ack_next) begin
-        xr_ack_o    <= 1'b1;
-        xr_data_o   <= xreg_data_i;
-    end
-    if (color_ack_next) begin
-        xr_ack_o    <= 1'b1;
-        xr_data_o   <= !color_B ? colorA_data_out : colorB_data_out;
-    end
-    if (tile_ack_next) begin
-        xr_ack_o    <= 1'b1;
-        xr_data_o   <= tile_data_out;
-    end
-    if (copp_ack_next) begin
-        xr_ack_o    <= 1'b1;
-        xr_data_o   <= !copp_odd ? copp_data_out[31:16] : copp_data_out[15:0];
-    end
+    copp_xr_ack_o   <= copp_xr_sel_i & (xreg_ack_next | color_ack_next | tile_ack_next | copp_ack_next);
+    xr_ack_o        <= xr_sel_i & (xreg_ack_next | color_ack_next | tile_ack_next | copp_ack_next);
 end
 
-//  playfield A color lookup RAM
+// playfield A color lookup RAM
 colormem #(
     .AWIDTH(xv::COLOR_AWIDTH)
     ) colormem(
@@ -240,7 +234,7 @@ colormem #(
     .wr_data_i(xr_data)
 );
 
-//  playfield B color lookup RAM
+// playfield B color lookup RAM
 colormem #(
     .AWIDTH(xv::COLOR_AWIDTH)
     ) colormem2(

@@ -26,7 +26,7 @@
 
 `define VERSION 023                 // BCD version code (x.xx)
 
-`define USE_HEXFONT                 // use hex font instead of default fonts
+//`define USE_HEXFONT                 // use hex font instead of default fonts
 //`define ENABLE_PB                   // enable playfield B
 //`define NO_TESTPATTERN              // don't initialize VRAM with test pattern and fonts in simulation
 //`define COPPER_DISABLE              // disable copper (to highlight other potential bottlenecks)

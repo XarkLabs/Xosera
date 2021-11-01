@@ -162,13 +162,14 @@ always_ff @(posedge clk) begin
         reconfig_o      <= 1'b0;
         boot_select_o   <= 2'b00;
         intr_clear_o    <= 4'b0;
-        regs_wrmask_o   <= 4'b1111;
         intr_mask       <= 4'b0000;
-        vram_rd         <= 1'b0;
-        xr_rd           <= 1'b0;
+        // register signals
         regs_vram_sel_o <= 1'b0;
         regs_xr_sel_o   <= 1'b0;
         regs_wr_o       <= 1'b0;
+        regs_wrmask_o   <= 4'b1111;
+        vram_rd         <= 1'b0;
+        xr_rd           <= 1'b0;
         // addr/data out
         regs_addr_o     <= 16'h0000;
         regs_data_o     <= 16'h0000;
@@ -221,8 +222,10 @@ always_ff @(posedge clk) begin
         if (xr_ack_i) begin
             if (xr_rd) begin
                 xr_rd_data      <= xr_data_i;
+            end else begin
+                reg_xr_addr     <= reg_xr_addr + 1'b1;  // TODO: optional xr rd increment?
             end
-            reg_xr_addr     <= reg_xr_addr + 1'b1;  // TODO: optional xr rd increment?
+
             regs_xr_sel_o   <= 1'b0;            // clear xr select
             regs_wr_o       <= 1'b0;            // clear write
             xr_rd           <= 1'b0;            // clear pending xr read

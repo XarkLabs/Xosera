@@ -310,9 +310,9 @@ always_ff @(posedge clk) begin
     hsync_o     <= hsync_1;
     dv_de_o     <= dv_de_1;
     if (dv_de_1) begin
-        red_o       <= colorA_xrgb[11:8] | colorB_xrgb[11:8];
-        green_o     <= colorA_xrgb[7:4]  | colorB_xrgb[7:4];
-        blue_o      <= colorA_xrgb[3:0]  | colorB_xrgb[3:0];
+        red_o       <= colorA_xrgb[11:8];// | colorB_xrgb[11:8];    // TODO: playfield B color
+        green_o     <= colorA_xrgb[7:4];//  | colorB_xrgb[7:4];
+        blue_o      <= colorA_xrgb[3:0];//  | colorB_xrgb[3:0];
     end else begin
         red_o       <= 4'h0;
         green_o     <= 4'h0;

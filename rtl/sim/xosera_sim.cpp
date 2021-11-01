@@ -16,9 +16,11 @@
 #include "verilated.h"
 
 #include "Vxosera_main.h"
+
 #include "Vxosera_main_vram.h"
 #include "Vxosera_main_vram_arb.h"
 #include "Vxosera_main_xosera_main.h"
+#include "Vxosera_main_xrmem_arb.h"
 
 #define USE_FST 1
 #if USE_FST
@@ -677,14 +679,36 @@ int main(int argc, char ** argv)
 
         if (frame_num > 1)
         {
-            if (top->xosera_main->regs_vram_sel && top->xosera_main->regs_wr)
+            if (top->xosera_main->vram_arb->regs_ack_o)
             {
-                printf(" => write VRAM[0x%04x]=0x%04x\n", top->xosera_main->regs_addr, top->xosera_main->regs_data_out);
+                if (top->xosera_main->vram_arb->regs_wr_i)
+                {
+                    printf(" => regs write VRAM[0x%04x]<=0x%04x\n",
+                           top->xosera_main->vram_arb->regs_addr_i,
+                           top->xosera_main->vram_arb->regs_data_i);
+                }
+                else
+                {
+                    printf(" <= regs read VRAM[0x%04x]=>0x%04x\n",
+                           top->xosera_main->vram_arb->regs_addr_i,
+                           top->xosera_main->vram_arb->vram_data_o);
+                }
             }
 
-            if (top->xosera_main->regs_xr_sel && top->xosera_main->regs_wr)
+            if (top->xosera_main->xrmem_arb->xr_ack_o)
             {
-                printf(" => write AUX[0x%04x]=0x%04x\n", top->xosera_main->regs_addr, top->xosera_main->regs_data_out);
+                if (top->xosera_main->xrmem_arb->xr_wr_i)
+                {
+                    printf(" => regs write XR[0x%04x]<=0x%04x\n",
+                           top->xosera_main->xrmem_arb->xr_addr_i,
+                           top->xosera_main->xrmem_arb->xr_data_i);
+                }
+                else
+                {
+                    printf(" <= regs read XR[0x%04x]=>0x%04x\n",
+                           top->xosera_main->xrmem_arb->xr_addr_i,
+                           top->xosera_main->xrmem_arb->xr_data_o);
+                }
             }
         }
 

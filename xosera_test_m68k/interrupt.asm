@@ -4,7 +4,7 @@
 ;
         section .text                     ; This is normal code
 
-        include "../xosera_m68k_api/xosera_m68k_defs.asm"
+        include "../xosera_m68k_api/xosera_m68k_defs.inc"
 
 install_intr::
                 movem.l D0-D7/A0-A6,-(A7)

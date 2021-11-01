@@ -26,6 +26,9 @@
 
 // See: https://github.com/XarkLabs/Xosera/blob/master/REFERENCE.md
 
+#if !defined(XOSERA_M68K_DEFS_H)
+#define XOSERA_M68K_DEFS_H
+
 #define XM_BASEADDR 0xf80060        // Xosera rosco_m68k register base address
 
 // Xosera Main Registers (XM Registers, directly CPU accessable)
@@ -54,15 +57,15 @@
 #define XR_CONFIG_REGS   0x0000        // 0x0000-0x000F config XR registers
 #define XR_PA_REGS       0x0010        // 0x0010-0x0017 playfield A XR registers
 #define XR_PB_REGS       0x0018        // 0x0018-0x001F playfield B XR registers
-#define XR_BLIT_REGS     0x0020        // 0x0020-0x002F 2D-blit XR registers
-#define XR_POLYDRAW_REGS 0x0030        // 0x0030-0x003F line/poly draw XR registers
+#define XR_BLIT_REGS     0x2000        // 0x2000-0x200F 2D-blit XR registers
+#define XR_POLYDRAW_REGS 0x4000        // 0x4000-0x400F line/poly draw XR registers
+#define XR_UNUSED_REG_6  0x6000        // 0x6000-0x600F unused
 
 // XR Memory Regions
-#define XR_COLOR_MEM  0x8000        // (WO) 0x8000-0x80FF 256 x 16-bit color lookup memory ($xRGB)
-#define XR_TILE_MEM   0x9000        // (WO) 0x9000-0x9FFF 4096 x 16-bit tile glyph storage memory
-#define XR_COPPER_MEM 0xA000        // (WO) 0xA000-0xA7FF 2048 x 16-bit copper program memory
-#define XR_SPRITE_MEM 0xB000        // (WO) 0xB000-0xB0FF 256 x 16-bit sprite cursor memory
-#define XR_UNUSED_MEM 0xC000        //      0xC000-0xF0FF unused
+#define XR_COLOR_MEM  0x8000        // (R*/W) 0x8000-0x81FF 2 x 256 x 16-bit A & B color lookup memory ($xRGB)
+#define XR_TILE_MEM   0xA000        // (R*/W) 0xA000-0xAFFF 4096 x 16-bit tile glyph storage memory
+#define XR_COPPER_MEM 0xC000        // (R*/W) 0xC000-0xC7FF 2048 x 16-bit copper program memory
+#define XR_UNUSED_MEM 0xE000        //        0xE000-0xFFFF unused
 
 //  Video Config and Copper XR Registers
 #define XR_VID_CTRL   0x00        // (R /W) display control and border color index
@@ -130,3 +133,5 @@
 #define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 26, 16) | ((uint16)(val16)))
 
 // TODO blit and polydraw
+
+#endif        // XOSERA_M68K_DEFS_H

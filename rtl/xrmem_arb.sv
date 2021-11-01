@@ -77,7 +77,7 @@ logic [31:0]                    copp_data_out   /* verilator public */;
 // internal XR write signals
 logic                           xr_wr_en        /* verilator public */;
 logic [15:0]                    xr_addr         /* verilator public */;
-logic [15:0]                    xr_write_data         /* verilator public */;
+logic [15:0]                    xr_write_data   /* verilator public */;
 
 // xr_ack timeout counter
 logic  [2:0]    ack_timeout;

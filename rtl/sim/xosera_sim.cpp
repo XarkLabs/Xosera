@@ -413,6 +413,14 @@ uint16_t     BusInterface::test_data[1024] = {
 
     REG_W(XR_ADDR, XR_COPP_CTRL),        // do copper test on bootscreen...
     REG_W(XR_DATA, 0x8000),
+    REG_W(XR_ADDR, XR_TILE_MEM + 10),
+    REG_RW(XR_DATA),
+    REG_W(XR_ADDR, XR_TILE_MEM + 11),
+    REG_RW(XR_DATA),
+    REG_W(XR_ADDR, XR_TILE_MEM + 12),
+    REG_RW(XR_DATA),
+    REG_W(XR_ADDR, XR_TILE_MEM + 13),
+    REG_RW(XR_DATA),
     REG_WAITVSYNC(),                       // show boot screen
     REG_WAITVSYNC(),                       // show boot screen
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 1-BPP BMAP

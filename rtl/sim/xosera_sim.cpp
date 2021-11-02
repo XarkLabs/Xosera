@@ -379,6 +379,13 @@ BusInterface bus;
 int          BusInterface::test_data_len   = 999;
 uint16_t     BusInterface::test_data[1024] = {
     // test data
+    REG_WAITVSYNC(),                        // show boot screen
+    REG_WAITVSYNC(),                        // show boot screen
+    REG_W(XR_ADDR, XR_PA_TILE_CTRL),        // set 4-BPP BMAP
+    REG_W(XR_DATA, 0x020F),
+    REG_WAITVSYNC(),                        // show boot screen
+    REG_W(XR_ADDR, XR_PA_TILE_CTRL),        // set 4-BPP BMAP
+    REG_W(XR_DATA, 0x000F),
     REG_WAITVSYNC(),                      // show boot screen
     REG_W(XR_ADDR, XR_COPPER_MEM),        // setup copper program
     // copperlist:

@@ -88,7 +88,7 @@ ICEPROG := iceprog
 ICEMULTI := icemulti
 
 # Yosys synthesis arguments
-YOSYS_SYNTH_ARGS := -dsp -abc2 -retime -relut -top $(TOP)
+YOSYS_SYNTH_ARGS := -dsp -abc2 -relut -retime -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
@@ -156,16 +156,19 @@ ifdef NO_PNR_RETRY
 	@echo NO_PNR_RETRY set, so failure is an option...
 	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 else
-ifdef PNR_TEST	# run nextPNR 10 times showing "Max frequency"
-	@echo === NextPNR 10 run test
-	@for num in 1 2 3 4 5 6 7 8 9; do \
-	echo -n "$(basename $@)_$${num}.asc: "; \
-	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_$${num}_nextpnr.log -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc "$(basename $@)_$${num}.asc" ; \
+ifdef FMAX_TEST	# run nextPNR 10 times to determine "Max frequency" range
+	@echo === Generating 10 test bitstreams with NextPNR...
+	@rm -f $(LOGS)/*_fMAX_*.bin $(LOGS)/*_fMAX_*.log
+	@for num in 0 1 2 3 4 5 6 7 8 9; do \
+	echo -n "$${num}   $(basename $@)_$${num}.asc: "; \
+	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_$${num}_fMAX_nextpnr.log -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc "$(basename $@)_$${num}.asc" ; \
 	rm -f "$(basename $@)_$${num}.bin" ; \
 	$(ICEPACK) "$(basename $@)_$${num}.asc" "$(basename $@)_$${num}.bin" ; \
-	mv "$(basename $@)_$${num}.bin" $(LOGS) ; \
-	rm -f "$(basename $@)_$${num}.asc" ; \
-	grep "Max frequency" $(LOGS)/$(OUTNAME)_$${num}_nextpnr.log | tail -1 ; \
+	grep "Max frequency" $(LOGS)/$(OUTNAME)_$${num}_fMAX_nextpnr.log | tail -1 ; \
+	grep "Max frequency" $(LOGS)/$(OUTNAME)_$${num}_fMAX_nextpnr.log | tail -1 | cut -d " " -f 7 >"$(LOGS)/fmax_temp.txt" ; \
+	FMAX=$$(cat "$(LOGS)/fmax_temp.txt") ; \
+	mv "$(basename $@)_$${num}.bin" "$(LOGS)/$(OUTNAME)_$${num}_fMAX_$${FMAX}.bin" ; \
+	rm -f "$(LOGS)/fmax_temp.txt" "$(basename $@)_$${num}.asc" ; \
     	done
 	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 else

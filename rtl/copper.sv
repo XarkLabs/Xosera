@@ -13,7 +13,7 @@
 //      [10:0]  - Copper initial PC
 //
 // Copper programs (aka 'The Copper List') live in AUX memory at
-// 0xA000. This memory segment is 2K in size.
+// 0xC000. This memory segment is 2K in size.
 //
 // When enabled, the copper will run through as much of the program
 // as it possibly can each frame. The program is restarted at the
@@ -100,41 +100,40 @@
 //
 //
 //
-//      WAIT  - [0000 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]
+//      WAIT  - [000o oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]
 //
 //          Wait for a given screen position to be reached.
 //
 //
-//      SKIP  - [0010 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]
+//      SKIP  - [001o oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]
 //
 //          Skip if a given screen position has been reached.
 //
 //
-//      JMP   - [0100 oAAA AAAA AAA0],[oooo oooo oooo oooo]
+//      JMP   - [010o oAAA AAAA AAA0],[oooo oooo oooo oooo]
 //
 //          Jump to the given copper RAM address.
 //          Must be on a 32-bit boundary.
 //
 //
-//      MOVER - [1001 FFFF AAAA AAAA],[DDDD DDDD DDDD DDDD]
+//      MOVER - [011o FFFF AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
 //          Move 16-bit data to XR registers.
 //
 //
-//      MOVEF - [1010 AAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]
+//      MOVEF - [100A AAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
 //          Move 16-bit data to XR_TILE_MEM memory.
 //
 //
-//      MOVEP - [1011 oooo AAAA AAAA],[DDDD DDDD DDDD DDDD]
+//      MOVEP - [101o oooo AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
 //          Move 16-bit data to XR_COLOR_MEM (palette) memory.
 //
 //
-//      MOVEC - [1100 oAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]
+//      MOVEC - [110o oAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
 //          Move 16-bit data to XR_COPPER_MEM memory.
-//
 //
 //      Y - Y position (11 bits)
 //      X - X position (11 bits)
@@ -172,14 +171,15 @@ module copper(
 localparam C_PC = xv::COPPER_AWIDTH-1;               // short copper PC upper range alias
 
 // instruction register
-typedef enum logic [3:0] {
-    INSN_WAIT       = 4'b0000,
-    INSN_SKIP       = 4'b0010,
-    INSN_JUMP       = 4'b0100,
-    INSN_MOVER      = 4'b1001,
-    INSN_MOVEF      = 4'b1010,
-    INSN_MOVEP      = 4'b1011,
-    INSN_MOVEC      = 4'b1100
+typedef enum logic [2:0] {
+    INSN_WAIT       = 3'b000,
+    INSN_SKIP       = 3'b001,
+    INSN_JUMP       = 3'b010,
+    INSN_MOVER      = 3'b011,
+    INSN_MOVEF      = 3'b100,
+    INSN_MOVEP      = 3'b101,
+    INSN_MOVEC      = 3'b110,
+    INSN_RSVD       = 3'b111
 } instruction_t;
 
 logic [31:0]  r_insn;
@@ -225,31 +225,31 @@ always_comb   copp_reset  = h_count_i == xv::VISIBLE_WIDTH + xv::H_FRONT_PORCH +
 
 // The following are setup in STATE_PRECOMP for use in
 // STATE_EXEC if needed...
-logic         v_reached;
-logic         h_reached;
-logic  [C_PC:0] copper_pc_skip;
+logic          v_reached;
+logic          h_reached;
+logic [C_PC:0] copper_pc_skip;
 
 // These are done combinatorially, but should (?) be
 // stable by the time they're needed...
-logic         ignore_v;
-logic         ignore_h;
+logic          ignore_v;
+logic          ignore_h;
 logic [C_PC:0] copper_pc_jmp;
-logic [15:0]  move_data;
-logic  [7:0]  move_r_p_addr;
-logic [11:0]  move_f_addr;
-logic [10:0]  move_c_addr_v_pos;
-logic [10:0]  h_pos;
-logic  [3:0]  opcode;
+logic [15:0]   move_data;
+logic  [7:0]   move_r_p_addr;
+logic [12:0]   move_f_addr;
+logic [10:0]   move_c_addr_v_pos;
+logic [10:0]   h_pos;
+logic  [2:0]   opcode;
 
 assign ignore_v                 = r_insn[0];
 assign ignore_h                 = r_insn[1];
 assign copper_pc_jmp            = r_insn[26:17];
 assign move_data                = r_insn[15:0];
 assign move_r_p_addr            = r_insn[23:16];
-assign move_f_addr              = r_insn[27:16];
+assign move_f_addr              = r_insn[28:16];
 assign move_c_addr_v_pos        = r_insn[26:16];
 assign h_pos                    = r_insn[14:4];
-assign opcode                   = r_insn[31:28];
+assign opcode                   = r_insn[31:29];
 
 
 always_ff @(posedge clk) begin
@@ -446,8 +446,8 @@ always_ff @(posedge clk) begin
                         INSN_MOVEF: begin
                             // movef
                             xr_wr_en                <= 1'b1;
-                            ram_wr_addr_out[15:12]  <= xv::XR_TILE_MEM[15:12];
-                            ram_wr_addr_out[11:0]   <= move_f_addr;
+                            ram_wr_addr_out[15:13]  <= xv::XR_TILE_MEM[15:13];
+                            ram_wr_addr_out[12:0]   <= move_f_addr;
                             ram_wr_data_out         <= move_data;
 
                             // Setup fetch next instruction
@@ -476,8 +476,8 @@ always_ff @(posedge clk) begin
                             copper_ex_state         <= STATE_WAIT;
                             ram_rd_strobe           <= 1'b1;
                         end
-                        default: begin
-                            // illegal instruction; just setup fetch for
+                        INSN_RSVD: begin
+                            // illegal/reserved instruction; just setup fetch for
                             // next instruction
                             copper_ex_state <= STATE_WAIT;
                             ram_rd_strobe   <= 1'b1;

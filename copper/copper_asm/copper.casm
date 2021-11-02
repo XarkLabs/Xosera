@@ -40,11 +40,12 @@
     skip  {x: u11},    {y: u11}                 => 0b0010 @ 0b0     @ y`11    @ 0b0     @ x`11    @ 0b0000
     skip  {x: u11},    {y: u11},    {flags: u4} => 0b0010 @ 0b0     @ y`11    @ 0b0     @ x`11    @ flags`4
     jmp   {addr: u11}                           => 0b0100 @ 0b00    @ addr`10 @ 0b0000000000000000
-    mover {r: reg},    {data: u16}              => 0b1001 @ 0b0000  @ r`8     @ data`16
-    mover {addr: u8},  {data: u16}              => 0b1001 @ 0b0000  @ addr`8 @ data`16
-    movef {addr: u12}, {data: u16}              => 0b1010 @ addr`12 @ data`16
-    movep {addr: u8},  {data: u16}              => 0b1011 @ 0b0000  @ addr`8  @ data`16
+    mover {r: reg},    {data: u16}              => 0b0110 @ 0b0000  @ r`8     @ data`16
+    mover {addr: u8},  {data: u16}              => 0b0110 @ 0b0000  @ addr`8 @ data`16
+    movef {addr: u12}, {data: u16}              => 0b1000 @ addr`12 @ data`16
+    movep {addr: u8},  {data: u16}              => 0b1010 @ 0b0000  @ addr`8  @ data`16
     movec {addr: u11}, {data: u16}              => 0b1100 @ 0b0     @ addr`11 @ data`16
+    movet {addr: u11}, {data: u16}              => 0b111  @ addr`13 @ data`16
 
     ; nextf (wait next frame) is a pseudo-instruction, 
     ; it just generates a wait with both X and Y ignored.

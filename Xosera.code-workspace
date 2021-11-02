@@ -242,7 +242,7 @@
 		"files.trimTrailingWhitespace": true,
 		"rewrap.autoWrap.enabled": true,
 		"rewrap.wrappingColumn": 120,
-		"markdown.extension.italic.indicator": "_",
+		"markdown.extension.italic.indicator": "*",
 		"rewrap.reformat": true
 	}
 }

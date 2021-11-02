@@ -296,8 +296,8 @@ static void get_textmode_settings()
 static void xcls()
 {
     get_textmode_settings();
-    xm_setw(WR_ADDR, screen_addr);
     xm_setw(WR_INCR, 1);
+    xm_setw(WR_ADDR, screen_addr);
     xm_setbh(DATA, text_color);
     for (uint16_t i = 0; i < (text_columns * text_rows); i++)
     {
@@ -579,6 +579,7 @@ static void load_sd_bitmap(const char * filename)
             }
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
+            xm_setw(WR_INCR, 1);
             xm_setw(WR_ADDR, vaddr);
             for (int i = 0; i < (cnt >> 1); i++)
             {

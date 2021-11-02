@@ -156,10 +156,22 @@ ifdef NO_PNR_RETRY
 	@echo NO_PNR_RETRY set, so failure is an option...
 	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 else
+ifdef PNR_TEST	# run nextPNR 10 times showing "Max frequency"
+	@echo === NextPNR 10 run test
+	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
+	@echo -n "$(basename $@).asc:   "
+	@grep "Max frequency" $(LOGS)/$(OUTNAME)_nextpnr.log | tail -1
+	@for num in 1 2 3 4 5 6 7 8 9; do \
+	echo -n "$(basename $@)_$${num}.asc: "; \
+	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_$${num}_nextpnr.log -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $(basename $@)_$${num}.asc ; \
+	grep "Max frequency" $(LOGS)/$(OUTNAME)_$${num}_nextpnr.log | tail -1 ; \
+    	done
+else
 	@echo $(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 	@until $$($(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@) ; do \
         	echo 'Retrying nextpnr-ice40 with new seed...' ; \
     	done
+endif
 endif
 	@echo === UPduino Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(OUTNAME)_stats.txt
 	@-tabbyadm version | grep "Package" | tee -a $(OUTNAME)_stats.txt

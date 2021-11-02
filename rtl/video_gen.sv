@@ -329,9 +329,9 @@ always_ff @(posedge clk) begin
 end
 
 // video signal generation
-always_comb     hsync = (h_state == STATE_SYNC);
-always_comb     vsync = (v_state == STATE_SYNC);
-always_comb     dv_display_ena = (h_state == STATE_VISIBLE) && (v_state == STATE_VISIBLE);
+always_comb     hsync = (h_state_next == STATE_SYNC);
+always_comb     vsync = (v_state_next == STATE_SYNC);
+always_comb     dv_display_ena = (h_state_next == STATE_VISIBLE) && (v_state_next == STATE_VISIBLE);
 always_comb     scanout_start = (h_count == scanout_start_hcount) ? mem_fetch_active : 1'b0;
 always_comb     scanout_end = (h_count == scanout_end_hcount) ? 1'b1 : 1'b0;
 always_comb     h_start_line_fetch = (~mem_fetch_active && mem_fetch_next);

@@ -58,6 +58,9 @@ module xosera_main(
 logic           vgen_vram_sel;      // video gen vram select (read only)
 logic [15:0]    vgen_vram_addr;     // video gen vram addr
 
+logic           dv_de;              // display enable
+logic           hsync;              // hsync
+logic           vsync;              // vsync
 logic           dv_de_1;            // display enable delayed
 logic           hsync_1;            // hsync delayed
 logic           vsync_1;            // vsync delayed
@@ -198,9 +201,9 @@ video_gen video_gen(
     .tilemem_addr_o(vgen_tile_addr),
     .tilemem_data_i(vgen_tile_data),
     .color_index_o(colorA_index),
-    .hsync_o(hsync_1),
-    .vsync_o(vsync_1),
-    .dv_de_o(dv_de_1),
+    .hsync_o(hsync),
+    .vsync_o(vsync),
+    .dv_de_o(dv_de),
 `ifndef COPPER_DISABLE
     .copp_reg_wr_o(copp_reg_wr),
     .copp_reg_data_o(copp_reg_data),
@@ -285,7 +288,7 @@ xrmem_arb xrmem_arb
     .xreg_data_o(vgen_regs_data_in),
 
     // color lookup colormem A+B 2 x 16-bit bus (read-only)
-    .vgen_color_sel_i(1'b1),            // TODO: don't leave always enabled
+    .vgen_color_sel_i(dv_de),
     .vgen_colorA_addr_i(colorA_index),
     .vgen_colorB_addr_i(colorB_index),
     .vgen_colorA_data_o(colorA_xrgb),
@@ -306,9 +309,16 @@ xrmem_arb xrmem_arb
 
 // color RAM lookup (delays video 1 cycle for BRAM)
 always_ff @(posedge clk) begin
+    // delay signals for color lookup
+    vsync_1     <= vsync;
+    hsync_1     <= hsync;
+    dv_de_1     <= dv_de;
+    // output signals
+    dv_de_o     <= dv_de_1;
     vsync_o     <= vsync_1;
     hsync_o     <= hsync_1;
-    dv_de_o     <= dv_de_1;
+
+    // color lookup happened on dv_de cycle
     if (dv_de_1) begin
         red_o       <= colorA_xrgb[11:8];// | colorB_xrgb[11:8];    // TODO: playfield B color
         green_o     <= colorA_xrgb[7:4];//  | colorB_xrgb[7:4];

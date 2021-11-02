@@ -80,7 +80,6 @@ logic  [1:0]    pa_h_repeat;                        // horizontal pixel repeat
 logic  [1:0]    pa_v_repeat;                        // vertical pixel repeat
 logic  [4:0]    pa_fine_hscroll;                    // horizontal fine scroll (8 pixel * 4 for repeat)
 logic  [5:0]    pa_fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
-logic [15:0]    pa_line_addr;                       // display data start address for next line (word address)
 logic  [1:0]    pa_h_count;                         // current horizontal repeat countdown
 logic  [1:0]    pa_v_count;                         // current vertical repeat countdown
 logic  [2:0]    pa_tile_x;                          // current column of tile cell
@@ -105,7 +104,6 @@ logic  [1:0]    pb_h_repeat;                        // horizontal pixel repeat
 logic  [1:0]    pb_v_repeat;                        // vertical pixel repeat
 logic  [4:0]    pb_fine_hscroll;                    // horizontal fine scroll (8 pixel * 4 for repeat)
 logic  [5:0]    pb_fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
-logic [15:0]    pb_line_addr;                       // display data start address for next line (word address)
 logic  [1:0]    pb_h_count;                         // current horizontal repeat countdown
 logic  [1:0]    pb_v_count;                         // current vertical repeat countdown
 logic  [2:0]    pb_tile_x;                          // current column of tile cell
@@ -138,6 +136,8 @@ logic           scanout_start;                          // scanout start strobe
 logic           scanout_end;                            // scanout stop strobe
 logic [10:0]    scanout_start_hcount;                   // horizontal pixel count to start scanout
 logic [10:0]    scanout_end_hcount;                     // horizontal pixel count to stop scanout
+
+logic [15:0]    line_set_addr;                          // address for on-the-fly addr set
 
 logic           mem_fetch_active;                       // true when fetching display data
 logic [10:0]    mem_fetch_hcount;                       // horizontal count when mem_fetch_active toggles
@@ -190,7 +190,7 @@ always_ff @(posedge clk) begin
         pa_v_repeat         <= 2'b0;
 
         pa_line_start_set   <= 1'b0;            // indicates user line address set
-        pa_line_addr        <= 16'h0000;        // user start of next display line
+        line_set_addr       <= 16'h0000;        // user set display addr
 `ifndef COPPER_DISABLE
         copp_reg_wr_o       <= 1'b0;
         copp_reg_data_o     <= 16'h0000;
@@ -259,8 +259,8 @@ always_ff @(posedge clk) begin
                     pa_fine_vscroll <= vgen_reg_data_i[5:0];
                 end
                 xv::XR_PA_LINE_ADDR[4:0]: begin
-                    pa_line_start_set <= 1'b1;
-                    pa_line_addr   <= vgen_reg_data_i;
+                    pa_line_start_set   <= 1'b1;
+                    line_set_addr       <= vgen_reg_data_i;
                 end
 `ifdef ENABLE_PB
                 // playfield B
@@ -289,8 +289,8 @@ always_ff @(posedge clk) begin
                     pb_fine_vscroll <= vgen_reg_data_i[5:0];
                 end
                 xv::XR_PB_LINE_ADDR[4:0]: begin
-                    pb_line_start_set <= 1'b1;
-                    pb_line_addr   <= vgen_reg_data_i;
+                    pb_line_start_set   <= 1'b1;
+                    line_set_addr       <= vgen_reg_data_i;
                 end
 `endif
                 default: begin
@@ -828,7 +828,7 @@ always_ff @(posedge clk) begin
                 pa_v_count  <= pa_v_count - 1'b1;               // keep decrementing
             end else begin
                 pa_v_count  <= pa_v_repeat;                     // reset v repeat
-                if (pa_bitmap || (pa_tile_y == pa_tile_height)) begin // is bitmap last line of tile cell?
+                if (pa_bitmap || (pa_tile_y == pa_tile_height)) begin // is bitmap mode or last line of tile cell?
                     pa_tile_y       <= 4'h0;                              // reset tile cell line
                     pa_line_start   <= pa_line_start + pa_line_len;       // new line start address
                     pa_addr         <= pa_line_start + pa_line_len;       // new text start address
@@ -842,12 +842,12 @@ always_ff @(posedge clk) begin
 
         // use new line start if it has been set
         if (pa_line_start_set) begin
-            pa_line_start   <= pa_line_addr;
-            pa_tile_y       <= 4'b0;                    // reset tile_y to restart new text line
+            pa_line_start   <= line_set_addr;           // set line start address
+            pa_tile_y       <= 4'b0;                    // reset tile_y to restart text line
         end
 
         // end of frame or blanked, prepare for next frame
-        if (pa_blank || last_frame_pixel) begin                   // if last pixel of frame
+        if (pa_blank || last_frame_pixel) begin     // is last pixel of frame?
             pa_addr         <= pa_start_addr;           // set start of display data
             pa_line_start   <= pa_start_addr;           // set line to start of display data
 

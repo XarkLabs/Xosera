@@ -33,7 +33,7 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 7        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 8        // video frames to dump to VCD file (and then screen-shot and exit)
 #define MAX_UPLOADS      8        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
@@ -386,7 +386,6 @@ uint16_t     BusInterface::test_data[1024] = {
     REG_WAITVSYNC(),                        // show boot screen
     REG_W(XR_ADDR, XR_PA_TILE_CTRL),        // set 4-BPP BMAP
     REG_W(XR_DATA, 0x000F),
-    REG_WAITVSYNC(),                      // show boot screen
     REG_W(XR_ADDR, XR_COPPER_MEM),        // setup copper program
     // copperlist:
     REG_W(XR_DATA, 0x20a0),
@@ -428,7 +427,6 @@ uint16_t     BusInterface::test_data[1024] = {
     REG_RW(XR_DATA),
     REG_W(XR_ADDR, XR_TILE_MEM + 13),
     REG_RW(XR_DATA),
-    REG_WAITVSYNC(),                       // show boot screen
     REG_WAITVSYNC(),                       // show boot screen
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 1-BPP BMAP
     REG_W(XR_DATA, 0x0040),

@@ -23,10 +23,10 @@ module xrmem_arb
     output      logic [15:0]                    xr_data_o   /* verilator public */,
 
     // copper XR register/memory interface (write-only)
-    input  wire logic                           copp_xr_sel_i,
-    output      logic                           copp_xr_ack_o,
-    input  wire logic [15:0]                    copp_xr_addr_i,
-    input  wire logic [15:0]                    copp_xr_data_i,
+    input  wire logic                           copp_xr_sel_i /* verilator public */,
+    output      logic                           copp_xr_ack_o /* verilator public */,
+    input  wire logic [15:0]                    copp_xr_addr_i /* verilator public */,
+    input  wire logic [15:0]                    copp_xr_data_i /* verilator public */,
 
     // XR register bus (read/write)
     output      logic                           xreg_wr_o,

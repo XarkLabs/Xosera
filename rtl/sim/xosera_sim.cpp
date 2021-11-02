@@ -414,6 +414,10 @@ uint16_t     BusInterface::test_data[1024] = {
     REG_W(XR_DATA, 0x0f00),        //     movep 0x0F00, 0        ; Make background red
     REG_W(XR_DATA, 0xb00a),
     REG_W(XR_DATA, 0x0700),        //     movep 0x0700, 0xA      ; Make foreground dark red
+    REG_W(XR_DATA, 0x8002),
+    REG_W(XR_DATA, 0x5A5A),
+    REG_W(XR_DATA, 0x9002),
+    REG_W(XR_DATA, 0x1F42),
     REG_W(XR_DATA, 0x4000),
     REG_W(XR_DATA, 0x0000),        //     jmp   copperlist       ; and restart
 
@@ -753,6 +757,13 @@ int main(int argc, char ** argv)
                            top->xosera_main->xrmem_arb->xr_addr_i,
                            top->xosera_main->xrmem_arb->xr_data_o);
                 }
+            }
+
+            if (top->xosera_main->xrmem_arb->copp_xr_sel_i)
+            {
+                printf(" => COPPER XR write XR[0x%04x]<=0x%04x\n",
+                       top->xosera_main->xrmem_arb->copp_xr_addr_i,
+                       top->xosera_main->xrmem_arb->copp_xr_data_i);
             }
         }
 

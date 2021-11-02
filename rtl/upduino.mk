@@ -88,7 +88,7 @@ ICEPROG := iceprog
 ICEMULTI := icemulti
 
 # Yosys synthesis arguments
-YOSYS_SYNTH_ARGS := -dsp -abc2 -retime -top $(TOP)
+YOSYS_SYNTH_ARGS := -dsp -abc2 -retime -relut -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
@@ -158,14 +158,16 @@ ifdef NO_PNR_RETRY
 else
 ifdef PNR_TEST	# run nextPNR 10 times showing "Max frequency"
 	@echo === NextPNR 10 run test
-	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
-	@echo -n "$(basename $@).asc:   "
-	@grep "Max frequency" $(LOGS)/$(OUTNAME)_nextpnr.log | tail -1
 	@for num in 1 2 3 4 5 6 7 8 9; do \
 	echo -n "$(basename $@)_$${num}.asc: "; \
-	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_$${num}_nextpnr.log -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $(basename $@)_$${num}.asc ; \
+	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_$${num}_nextpnr.log -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc "$(basename $@)_$${num}.asc" ; \
+	rm -f "$(basename $@)_$${num}.bin" ; \
+	$(ICEPACK) "$(basename $@)_$${num}.asc" "$(basename $@)_$${num}.bin" ; \
+	mv "$(basename $@)_$${num}.bin" $(LOGS) ; \
+	rm -f "$(basename $@)_$${num}.asc" ; \
 	grep "Max frequency" $(LOGS)/$(OUTNAME)_$${num}_nextpnr.log | tail -1 ; \
     	done
+	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 else
 	@echo $(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 	@until $$($(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@) ; do \

@@ -39,12 +39,12 @@ volatile uint32_t optguard;
 // Copper list
 const uint8_t  copper_list_len = 14;
 const uint16_t copper_list[] = {
-    0x9010, 0x0055,     // mover 0055, PA_GFX_CTRL       ; First half of screen in 4-bpp + Hx2 + Vx2
-    0xb00f, 0x0ec6,     // movep 0x0ec6, 0xf             ; Palette entry 0xf from tut bitmap
+    0x6010, 0x0055,     // mover 0055, PA_GFX_CTRL       ; First half of screen in 4-bpp + Hx2 + Vx2
+    0xa00f, 0x0ec6,     // movep 0x0ec6, 0xf             ; Palette entry 0xf from tut bitmap
     0x00f0, 0x0002,     // wait  0, 240, 0b00010         ; Wait for line 240, H position ignored
-    0x9015, 0x3e80,     // mover 0x3e80, PA_LINE_ADDR    ; Line start now at 16000
-    0x9010, 0x0040,     // mover 0x0040, PA_GFX_CTRL     ; 1-bpp + Hx1 + Vx1
-    0xb00f, 0x0fff,     // movep 0x0fff, 0xf             ; Palette entry 0xf to white for 1bpp bitmap
+    0x6015, 0x3e80,     // mover 0x3e80, PA_LINE_ADDR    ; Line start now at 16000
+    0x6010, 0x0040,     // mover 0x0040, PA_GFX_CTRL     ; 1-bpp + Hx1 + Vx1
+    0xa00f, 0x0fff,     // movep 0x0fff, 0xf             ; Palette entry 0xf to white for 1bpp bitmap
     0x0000, 0x0003      // nextf                         ; Wait for next frame
 };
 

@@ -522,7 +522,7 @@ detailed below, along with the binary format.
 The `MOVE` instruction is actually subdivided into four specific types of move, as detailed
 below.
 
-**`WAIT` - [0000 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]**
+**`WAIT` - [000o oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]**
 
 Wait for a given screen position to be reached (or exceeded).
 
@@ -537,7 +537,7 @@ If both horizontal and vertical ignore flags are set, this instruction will wait
 indefinitely (until the end of the frame). This can be used as a special "wait for
 end of frame" instruction.
 
-**`SKIP` - [0010 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]**
+**`SKIP` - [001o oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]**
 
 Skip the next instruction if a given screen position has been reached.
 
@@ -552,23 +552,23 @@ If both horizontal and vertical ignore flags are set, this instruction will **al
 skip the next instruction. While not especially useful in its own right, this can come
 in handy in conjunction with in-place code modification.
 
-**`JMP` - [0100 oAAA AAAA AAAA],[oooo oooo oooo oooo]**
+**`JMP` - [010o oAAA AAAA AAAA],[oooo oooo oooo oooo]**
 
 Jump to the given copper RAM address.
 
-**`MOVER` - [1001 FFFF AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+**`MOVER` - [011o FFFF AAAA AAAA],[DDDD DDDD DDDD DDDD]**
 
 Move 16-bit data to XR register specified by 8-bit address.
 
-**`MOVEF` - [1010 AAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+**`MOVEF` - [100A AAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
 
 Move 16-bit data to `XR_TILE_MEM` (or 'font') memory.
 
-**`MOVEP` - [1011 oooo AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+**`MOVEP` - [101o oooo AAAA AAAA],[DDDD DDDD DDDD DDDD]**
 
 Move 16-bit data to `XR_COLOR_MEM` (or 'palette') memory.
 
-**`MOVEC` - [1100 oAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+**`MOVEC` - [110o oAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
 
 Move 16-bit data to `XR_COPPER_MEM` memory.
 

@@ -44,16 +44,16 @@ const uint16_t copper_list[] = {
     0x4014, 0x0000, //     jmp   .gored           ; ... else, jump to set red
     0x2140, 0x0002, //     skip  0, 320, 0b00010  ; Skip next if we've hit line 320
     0x400e, 0x0000, //     jmp   .gogreen         ; ... else jump to set green
-    0xb000, 0x000f, //     movep 0x000F, 0        ; Make background blue
-    0xb00a, 0x0007, //     movep 0x0007, 0xA      ; Make foreground dark blue
+    0xa000, 0x000f, //     movep 0x000F, 0        ; Make background blue
+    0xa00a, 0x0004, //     movep 0x0004, 0xA      ; Make foreground dark blue
     0x0000, 0x0003, //     nextf                  ; and we're done for this frame
                     // .gogreen:
-    0xb000, 0x00f0, //     movep 0x00F0, 0        ; Make background green
-    0xb00a, 0x0070, //     movep 0x0070, 0xA       ; Make foreground dark green 
+    0xa000, 0x00f0, //     movep 0x00F0, 0        ; Make background green
+    0xa00a, 0x0040, //     movep 0x0040, 0xA      ; Make foreground dark green 
     0x4000, 0x0000, //     jmp   copperlist       ; and restart
                     // .gored:
-    0xb000, 0x0f00, //     movep 0x0F00, 0        ; Make background red
-    0xb00a, 0x0700, //     movep 0x0700, 0xA      ; Make foreground dark red
+    0xa000, 0x0f00, //     movep 0x0F00, 0        ; Make background red
+    0xa00a, 0x0400, //     movep 0x0400, 0xA      ; Make foreground dark red
     0x4000, 0x0000  //     jmp   copperlist       ; and restart
     
     /* This is a saner way to do the above!

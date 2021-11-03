@@ -28,6 +28,7 @@
 
 //`define USE_HEXFONT                 // use hex font instead of default fonts
 //`define ENABLE_PB                   // enable playfield B
+//`define ENABLE_LFSR                 // enable XM_UNUSED_A as 18-bit LFSR
 //`define NO_TESTPATTERN              // don't initialize VRAM with test pattern and fonts in simulation
 //`define COPPER_DISABLE              // disable copper (to highlight other potential bottlenecks)
 //`define BUS_DEBUG_SIGNALS           // use audio outputs for debug (CS strobe etc.)

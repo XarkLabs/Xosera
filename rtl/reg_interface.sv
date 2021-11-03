@@ -80,8 +80,13 @@ logic           bus_read_strobe;        // strobe when a word of data read
 logic           bus_bytesel;            // msb/lsb on bus
 logic  [7:0]    bus_data_byte;          // data byte from bus
 
-logic [15:0]    ms_timer;               // 1/10 ms timer (visible 16 bits)
-logic [11:0]    ms_timer_frac;          // internal clock counter for 1/10 ms
+logic [15:0]    reg_timer;               // 1/10 ms timer (visible 16 bits)
+logic [11:0]    reg_timer_frac;          // internal clock counter for 1/10 ms
+
+`ifdef ENABLE_LFSR
+parameter               LFSR_SIZE = 18; // NOTE: if changed, must change taps
+logic [LFSR_SIZE-1:0]   reg_LFSR        /* verilator public */;
+`endif
 
 // output interrupt mask
 assign intr_mask_o = intr_mask;
@@ -127,9 +132,13 @@ always_comb begin
         xv::XM_SYS_CTRL[3:0]:
             bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { busy_i, 3'b0, regs_wrmask_o };
         xv::XM_TIMER[3:0]:
-            bus_data_o  = !bus_bytesel ? ms_timer[15:8]         : ms_timer[7:0];
+            bus_data_o  = !bus_bytesel ? reg_timer[15:8]        : reg_timer[7:0];
         xv::XM_UNUSED_A[3:0]:
+`ifdef ENABLE_LFSR
+            bus_data_o  = !bus_bytesel ? reg_LFSR[15:8]         : reg_LFSR[7:0];
+`else
             bus_data_o  = 8'b0;
+`endif
         xv::XM_UNUSED_B[3:0]:
             bus_data_o  = 8'b0;
         xv::XM_RW_INCR[3:0]:
@@ -145,16 +154,27 @@ end
 // 1/10th ms timer counter
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        ms_timer <= 16'h0000;
-        ms_timer_frac <= 12'h000;
+        reg_timer <= 16'h0000;
+        reg_timer_frac <= 12'h000;
     end else begin
-        ms_timer_frac <= ms_timer_frac + 1'b1;
-        if (ms_timer_frac == 12'(xv::PCLK_HZ / 10000)) begin
-            ms_timer_frac   <= 12'h000;
-            ms_timer        <= ms_timer + 1;
+        reg_timer_frac <= reg_timer_frac + 1'b1;
+        if (reg_timer_frac == 12'(xv::PCLK_HZ / 10000)) begin
+            reg_timer_frac   <= 12'h000;
+            reg_timer        <= reg_timer + 1;
         end
     end
 end
+
+// 18-bit LFSR
+`ifdef ENABLE_LFSR
+always_ff @(posedge clk) begin
+    if (reset_i) begin
+        reg_LFSR <= LFSR_SIZE'(42);
+    end else begin
+        reg_LFSR <= {reg_LFSR[LFSR_SIZE-2:0], reg_LFSR[17] ^~ reg_LFSR[10]};
+    end
+end
+`endif
 
 always_ff @(posedge clk) begin
     if (reset_i) begin

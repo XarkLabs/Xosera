@@ -747,8 +747,16 @@ always_ff @(posedge clk) begin
                     pa_tile_attr[xv::TILE_ATTR_BACK+:4], pa_data_word1[ 3: 0] };
             xv::BPP_8,
             xv::BPP_XX:
-                // directly copy 8-bit pixel indices
-                pa_pixels_buf  <= { pa_data_word0, pa_data_word1, pa_data_word2, pa_data_word3 };
+                // copy 8-bit pixel indices XORing the upper 4-bit color extension attribute
+                pa_pixels_buf  <= {
+                    pa_tile_attr[xv::TILE_ATTR_BACK+:4] ^ pa_data_word0[15:12], pa_data_word0[11: 8],
+                    pa_tile_attr[xv::TILE_ATTR_BACK+:4] ^ pa_data_word0[ 7: 4], pa_data_word0[ 3: 0],
+                    pa_tile_attr[xv::TILE_ATTR_BACK+:4] ^ pa_data_word1[15:12], pa_data_word1[11: 8],
+                    pa_tile_attr[xv::TILE_ATTR_BACK+:4] ^ pa_data_word1[ 7: 4], pa_data_word1[ 3: 0],
+                    pa_tile_attr[xv::TILE_ATTR_BACK+:4] ^ pa_data_word2[15:12], pa_data_word2[11: 8],
+                    pa_tile_attr[xv::TILE_ATTR_BACK+:4] ^ pa_data_word2[ 7: 4], pa_data_word2[ 3: 0],
+                    pa_tile_attr[xv::TILE_ATTR_BACK+:4] ^ pa_data_word3[15:12], pa_data_word3[11: 8],
+                    pa_tile_attr[xv::TILE_ATTR_BACK+:4] ^ pa_data_word3[ 7: 4], pa_data_word3[ 3: 0]  };
             endcase
         end
 

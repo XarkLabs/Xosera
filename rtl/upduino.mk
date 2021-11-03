@@ -146,6 +146,7 @@ upduino/%_$(OUTSUFFIX).json: $(SRC) $(INC) $(FONTFILES) upduino.mk
 	@mkdir -p $(LOGS)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(TOP)_verilator.log
 	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
+#	@for num in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25; do \
 
 # make ASCII bitstream from JSON description and device parameters
 upduino/%_$(OUTSUFFIX).asc: upduino/%_$(OUTSUFFIX).json $(PIN_DEF) upduino.mk
@@ -157,19 +158,24 @@ ifdef NO_PNR_RETRY
 	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 else
 ifdef FMAX_TEST	# run nextPNR 10 times to determine "Max frequency" range
-	@echo === Generating 10 test bitstreams with NextPNR...
-	@rm -f $(LOGS)/*_fMAX_*.bin $(LOGS)/*_fMAX_*.log
-	@for num in 0 1 2 3 4 5 6 7 8 9; do \
+	@echo === Synthesizing $(FMAX_TEST) bitstreams with NextPNR to calculate average fMAX...
+	@mkdir -p $(LOGS)/fmax
+	@rm -f $(LOGS)/fmax/*
+	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
 	echo -n "$${num}   $(basename $@)_$${num}.asc: "; \
-	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_$${num}_fMAX_nextpnr.log -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc "$(basename $@)_$${num}.asc" ; \
+	$(NEXTPNR) -l "$(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_nextpnr.log" -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc "$(basename $@)_$${num}.asc" ; \
 	rm -f "$(basename $@)_$${num}.bin" ; \
 	$(ICEPACK) "$(basename $@)_$${num}.asc" "$(basename $@)_$${num}.bin" ; \
-	grep "Max frequency" $(LOGS)/$(OUTNAME)_$${num}_fMAX_nextpnr.log | tail -1 ; \
-	grep "Max frequency" $(LOGS)/$(OUTNAME)_$${num}_fMAX_nextpnr.log | tail -1 | cut -d " " -f 7 >"$(LOGS)/fmax_temp.txt" ; \
-	FMAX=$$(cat "$(LOGS)/fmax_temp.txt") ; \
-	mv "$(basename $@)_$${num}.bin" "$(LOGS)/$(OUTNAME)_$${num}_fMAX_$${FMAX}.bin" ; \
-	rm -f "$(LOGS)/fmax_temp.txt" "$(basename $@)_$${num}.asc" ; \
+	grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_nextpnr.log | tail -1 ; \
+	grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_nextpnr.log | tail -1 | cut -d " " -f 7 >"$(LOGS)/fmax/fmax_temp.txt" ; \
+	FMAX=$$(cat "$(LOGS)/fmax/fmax_temp.txt") ; \
+	echo $${FMAX} >> $(LOGS)/fmax//fMAX_list.log ; \
+	mv "$(basename $@)_$${num}.bin" "$(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_$${FMAX}.bin" ; \
+	rm -f "$(LOGS)/fmax/fmax_temp.txt" "$(basename $@)_$${num}.asc" ; \
+	((num = num + 1)) ; \
     	done
+	@echo === fMAX after $(FMAX_TEST) runs: ===
+	@awk '{ total += $$1 ; minv = (minv == 0 || minv > $$1 ? $$1 : minv) ; maxv = (maxv < $$1 ? $$1 : maxv) ; count++ } END { print "min = ", minv ; print "avg = ", total/count, " <=" ; print "max = ", maxv ; }' $(LOGS)/fmax//fMAX_list.log
 	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 else
 	@echo $(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@

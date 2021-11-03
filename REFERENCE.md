@@ -62,8 +62,8 @@ provide more efficient access to Xosera status flags (like busy and timeout)]
 | 0x6   | `XM_DATA`      | R+/W+ | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
 | 0x7   | `XM_DATA_2`    | R+/W+ | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
 | 0x8   | `XM_SYS_CTRL`  | R /W+ | busy status, FPGA reconfig, interrupt status/control, write masking                   |
-| 0x9   | `XM_TIMER`     | RO    | read 1/10<sup>th</sup> millisecond timer                                              |
-| 0xA   | `XM_UNUSED_A`  | R /W  | unused direct register 0xA [#TODO]                                                    |
+| 0x9   | `XM_TIMER`     | R /W+ | read 1/10<sup>th</sup> millisecond timer                                              |
+| 0xA   | `XM_LFSR`      | RO    | read LFSR pseudo random number (internally 18-bit)                                    |
 | 0xB   | `XM_UNUSED_B`  | R /W  | unused direct register 0xB [#TODO]                                                    |
 | 0xC   | `XM_RW_INCR`   | R /W  | `XM_RW_ADDR` increment value on read/write of `XM_RW_DATA`/`XM_RW_DATA_2`             |
 | 0xD   | `XM_RW_ADDR`   | R /W+ | read/write address for VRAM access from `XM_RW_DATA`/`XM_RW_DATA_2`                   |
@@ -159,8 +159,12 @@ allows corresponding interrupt source to generate CPU interrupt).
 Can be used for fairly accurate timing.  When value wraps, internal fractional value is maintined (so as accurate as FPGA PLL
 clock).
 
-**0xA `XM_UNUSED_A` (R/W) - unused register 0xA**
-Unused direct register 0xA
+**0xA `XM_LFSR` (RO) - LFSR pseudo-random number**
+<img src="./pics/wd_XM_LFSR.svg">
+**Read 16-bit LFSR pseudo-random value**
+Read 16-bits from internal 18-bit LFSR (linear feedback shift-register).  All values are possible and the value changes
+every cycle asynchronus at the display pixel clock, it should provide "quite random" numbers (at least for most game
+and graphics purposes).
 
 **0xB `XM_UNUSED_B` (R/W) - unused register 0xB**
 Unused direct register 0xB
@@ -304,6 +308,7 @@ Unused XR register  0x09
 **0x0A `XR_VERSION` (RO) - Xosera version and optional feature bits**
 <img src="./pics/wd_XR_VERSION.svg">
 BCD coded version (x.xx) and optional feature bits (0 for undefined/not present). Read-only.
+Bit 15 will be set if the bitstream design was "clean" Git hash (locally unmodified).
 
 **0x0B `XR_GITHASH_H` (RO) - Xosera Git hash identifier (high 16-bits)**
 <img src="./pics/wd_XR_GITHASH_H.svg">

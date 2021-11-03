@@ -133,10 +133,11 @@ always_comb begin
             bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { busy_i, 3'b0, regs_wrmask_o };
         xv::XM_TIMER[3:0]:
             bus_data_o  = !bus_bytesel ? reg_timer[15:8]        : reg_timer[7:0];
-        xv::XM_UNUSED_A[3:0]:
 `ifdef ENABLE_LFSR
+        xv::XM_LFSR[3:0]:
             bus_data_o  = !bus_bytesel ? reg_LFSR[15:8]         : reg_LFSR[7:0];
 `else
+        xv::XM_UNUSED_A[3:0]:
             bus_data_o  = 8'b0;
 `endif
         xv::XM_UNUSED_B[3:0]:
@@ -277,8 +278,13 @@ always_ff @(posedge clk) begin
                     { reconfig_o, boot_select_o, intr_mask} <= { bus_data_byte[7], bus_data_byte[6:5], bus_data_byte[3:0] };
                 xv::XM_TIMER:
                     ;
+`ifdef ENABLE_LFSR
+                xv::XM_LFSR:
+                    ;
+`else
                 xv::XM_UNUSED_A:
                     ;
+`endif
                 xv::XM_UNUSED_B:
                     ;
                 xv::XM_RW_INCR:
@@ -334,8 +340,13 @@ always_ff @(posedge clk) begin
                 xv::XM_TIMER: begin
                     intr_clear_o        <= bus_data_byte[3:0];
                 end
+`ifdef ENABLE_LFSR
+                xv::XM_LFSR: begin
+                end
+`else
                 xv::XM_UNUSED_A: begin
                 end
+`endif
                 xv::XM_UNUSED_B: begin
                 end
                 xv::XM_RW_INCR: begin

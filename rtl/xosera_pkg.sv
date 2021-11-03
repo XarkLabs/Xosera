@@ -56,7 +56,11 @@ typedef enum logic [3:0] {
     XM_DATA_2       = 4'h7,        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
     XM_SYS_CTRL     = 4'h8,        // (R /W+) busy status, FPGA reconfig, interrupt status/control, write masking
     XM_TIMER        = 4'h9,        // (RO   ) read 1/10th millisecond timer, write interrupt ack [TODO]
+`ifdef ENABLE_LFSR
+    XM_LFSR         = 4'hA,        // (R /W ) 18-bit LFSR (random numbers)
+`else
     XM_UNUSED_A     = 4'hA,        // (R /W ) unused direct register 0xA [TODO]
+`endif
     XM_UNUSED_B     = 4'hB,        // (R /W ) unused direct register 0xB [TODO]
     XM_RW_INCR      = 4'hC,        // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
     XM_RW_ADDR      = 4'hD,        // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2

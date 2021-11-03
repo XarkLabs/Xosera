@@ -147,35 +147,38 @@ upduino/%_$(OUTSUFFIX).json: $(SRC) $(INC) $(FONTFILES) upduino.mk
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(TOP)_verilator.log
 	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
 #	@for num in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25; do \
+#	@BEST=$$(cat "$(LOGS)/fmax/fmax_temp.txt") ; echo "=== Using best result from run: $${BEST}" ; cp -av "$(LOGS)/fmax/$(OUTNAME)_$${BEST}_fMAX.asc" $@ ; cp -av "$(LOGS)/fmax/$(OUTNAME)_$${BEST}_fMAX_nextpnr.log" $(LOGS)/$(OUTNAME)_nextpnr.log
 
 # make ASCII bitstream from JSON description and device parameters
 upduino/%_$(OUTSUFFIX).asc: upduino/%_$(OUTSUFFIX).json $(PIN_DEF) upduino.mk
 	@rm -f $@
 	@mkdir -p $(LOGS)
 	@-cp $(OUTNAME)_stats.txt $(LOGS)/$(OUTNAME)_stats_last.txt
-ifdef NO_PNR_RETRY
-	@echo NO_PNR_RETRY set, so failure is an option...
-	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
-else
 ifdef FMAX_TEST	# run nextPNR 10 times to determine "Max frequency" range
-	@echo === Synthesizing $(FMAX_TEST) bitstreams with NextPNR to calculate average fMAX...
+	@echo === Synthesizing $(FMAX_TEST) bitstreams and determine best fMAX
 	@mkdir -p $(LOGS)/fmax
 	@rm -f $(LOGS)/fmax/*
 	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
-	echo -n "$${num}   $(basename $@)_$${num}.asc: "; \
-	$(NEXTPNR) -l "$(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_nextpnr.log" -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc "$(basename $@)_$${num}.asc" ; \
-	rm -f "$(basename $@)_$${num}.bin" ; \
-	$(ICEPACK) "$(basename $@)_$${num}.asc" "$(basename $@)_$${num}.bin" ; \
-	grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_nextpnr.log | tail -1 ; \
-	grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_nextpnr.log | tail -1 | cut -d " " -f 7 >"$(LOGS)/fmax/fmax_temp.txt" ; \
-	FMAX=$$(cat "$(LOGS)/fmax/fmax_temp.txt") ; \
-	echo $${FMAX} >> $(LOGS)/fmax//fMAX_list.log ; \
-	mv "$(basename $@)_$${num}.bin" "$(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_$${FMAX}.bin" ; \
-	rm -f "$(LOGS)/fmax/fmax_temp.txt" "$(basename $@)_$${num}.asc" ; \
-	((num = num + 1)) ; \
+	  echo -n "$${num}	$(basename $@)_$${num}.asc:	"; \
+	  $(NEXTPNR) -l "$(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_nextpnr.log" -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@ ; \
+	  grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_nextpnr.log | tail -1 | cut -d " " -f 2- ; \
+	  grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_nextpnr.log | tail -1 | cut -d " " -f 7 >"$(LOGS)/fmax/fmax_temp.txt" ; \
+	  FMAX=$$(cat "$(LOGS)/fmax/fmax_temp.txt") ; \
+	  echo $${num} $${FMAX} "$(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX.asc" >> $(LOGS)/fmax/$(OUTNAME)_fMAX_list.log ; \
+	  mv "$@" "$(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX.asc" ; \
+	  ((num = num + 1)) ; \
     	done
 	@echo === fMAX after $(FMAX_TEST) runs: ===
-	@awk '{ total += $$1 ; minv = (minv == 0 || minv > $$1 ? $$1 : minv) ; maxv = (maxv < $$1 ? $$1 : maxv) ; count++ } END { print "min = ", minv ; print "avg = ", total/count, " <=" ; print "max = ", maxv ; }' $(LOGS)/fmax//fMAX_list.log
+	@awk '{ total += $$2 ; minv = (minv == 0 || minv > $$2 ? $$2 : minv) ; maxv = (maxv < $$2 ? $$2 : maxv) ; count++ } END { print "min = ", minv ; print "avg = ", total/count, " <==" ; print "max = ", maxv ; }' $(LOGS)/fmax/$(OUTNAME)_fMAX_list.log
+	@awk '{ if (maxv < $$2) { best = $$1 ; maxv = $$2 ; } ; } END { print best, maxv ; }' $(LOGS)/fmax/$(OUTNAME)_fMAX_list.log  > "$(LOGS)/fmax/fmax_temp.txt"
+	@BEST=$$(cut -d " " -f1 "$(LOGS)/fmax/fmax_temp.txt") FMAX=$$(cut -d " " -f2 "$(LOGS)/fmax/fmax_temp.txt") ; \
+	  echo "=== Using bitstream from NextPNR run $${BEST} with best result $${FMAX} MHz" ; \
+	  cp -av "$(LOGS)/fmax/$(OUTNAME)_$${BEST}_fMAX_nextpnr.log" "$(LOGS)/$(OUTNAME)_nextpnr.log" ; \
+	  cp -av "$(LOGS)/fmax/$(OUTNAME)_$${BEST}_fMAX.asc" $@
+	@rm -f "$(LOGS)/fmax/fmax_temp.txt"
+else
+ifdef NO_PNR_RETRY
+	@echo NO_PNR_RETRY set, so failure IS an option...
 	$(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 else
 	@echo $(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@

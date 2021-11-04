@@ -569,7 +569,7 @@ Move 16-bit data to XR register specified by 8-bit address.
 
 Move 16-bit data to `XR_TILE_MEM` (or 'font') memory.
 
-**`MOVEP` - [101o oooo AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+**`MOVEP` - [101o oooA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
 
 Move 16-bit data to `XR_COLOR_MEM` (or 'palette') memory.
 
@@ -596,7 +596,7 @@ ___
 With the available `MOVE` variants, the copper can directly MOVE to the following:
 
 - Any Xosera XR register (including the copper control register)
-- Xosera tile memory (or font memory - #TODO: except last 1KW, this limitation may be removed in the future).
+- Xosera tile memory (or font memory).
 - Xosera color memory
 - Xosera copper memory
 
@@ -632,3 +632,8 @@ for details of use.
 A simple executable ruby script, `bin2c.rb` is also provided in that directory. This is a simple
 utility that takes assembled copper binaries and outputs them as a C array (with associated size)
 for direct embedding into C code.
+
+Additionally, there are a bunch of handy C macros (in the Xosera m68k API headers) that facilitate
+writing readable copper code directly in C source code. The included examples (in `copper` directory)
+demonstrate the different ways of embedding copper code in C source.
+

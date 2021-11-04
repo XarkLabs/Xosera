@@ -43,7 +43,7 @@
     mover {r: reg},    {data: u16}              => 0b0110 @ 0b0000  @ r`8     @ data`16
     mover {addr: u8},  {data: u16}              => 0b0110 @ 0b0000  @ addr`8 @ data`16
     movef {addr: u12}, {data: u16}              => 0b1000 @ addr`12 @ data`16
-    movep {addr: u8},  {data: u16}              => 0b1010 @ 0b0000  @ addr`8  @ data`16
+    movep {addr: u9},  {data: u16}              => 0b1010 @ 0b000   @ addr`9  @ data`16
     movec {addr: u11}, {data: u16}              => 0b1100 @ 0b0     @ addr`11 @ data`16
     movet {addr: u11}, {data: u16}              => 0b111  @ addr`13 @ data`16
 

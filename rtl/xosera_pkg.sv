@@ -27,12 +27,14 @@
 `define VERSION 023                 // BCD version code (x.xx)
 
 //`define USE_HEXFONT                 // use hex font instead of default fonts
-//`define ENABLE_PB                   // enable playfield B
-//`define ENABLE_LFSR                 // enable XM_UNUSED_A as 18-bit LFSR
 //`define NO_TESTPATTERN              // don't initialize VRAM with test pattern and fonts in simulation
 //`define COPPER_DISABLE              // disable copper (to highlight other potential bottlenecks)
 //`define BUS_DEBUG_SIGNALS           // use audio outputs for debug (CS strobe etc.)
 //`define NO_CS_BUS_DELAY             // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
+
+// features under test
+`define ENABLE_LFSR                 // enable XM_UNUSED_A as 19-bit LFSR
+//`define ENABLE_PB                   // enable playfield B
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
@@ -57,7 +59,7 @@ typedef enum logic [3:0] {
     XM_SYS_CTRL     = 4'h8,        // (R /W+) busy status, FPGA reconfig, interrupt status/control, write masking
     XM_TIMER        = 4'h9,        // (RO   ) read 1/10th millisecond timer, write interrupt ack [TODO]
 `ifdef ENABLE_LFSR
-    XM_LFSR         = 4'hA,        // (R /W ) 18-bit LFSR (random numbers)
+    XM_LFSR         = 4'hA,        // (R /W ) LFSR (random numbers)
 `else
     XM_UNUSED_A     = 4'hA,        // (R /W ) unused direct register 0xA [TODO]
 `endif

@@ -84,7 +84,7 @@ logic [15:0]    reg_timer;               // 1/10 ms timer (visible 16 bits)
 logic [11:0]    reg_timer_frac;          // internal clock counter for 1/10 ms
 
 `ifdef ENABLE_LFSR
-parameter               LFSR_SIZE = 18; // NOTE: if changed, must change taps
+parameter               LFSR_SIZE = 19; // NOTE: if changed, must change taps
 logic [LFSR_SIZE-1:0]   reg_LFSR        /* verilator public */;
 `endif
 
@@ -166,13 +166,13 @@ always_ff @(posedge clk) begin
     end
 end
 
-// 18-bit LFSR
+// LFSR for random numbers
 `ifdef ENABLE_LFSR
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        reg_LFSR <= LFSR_SIZE'(42);
+        reg_LFSR <= LFSR_SIZE'(1);
     end else begin
-        reg_LFSR <= {reg_LFSR[LFSR_SIZE-2:0], reg_LFSR[17] ^~ reg_LFSR[10]};
+        reg_LFSR <= {reg_LFSR[LFSR_SIZE-2:0], reg_LFSR[18] ^~ reg_LFSR[5] ^~ reg_LFSR[1] ^~ reg_LFSR[0]};
     end
 end
 `endif

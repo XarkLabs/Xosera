@@ -63,7 +63,7 @@ provide more efficient access to Xosera status flags (like busy and timeout)]
 | 0x7   | `XM_DATA_2`    | R+/W+ | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
 | 0x8   | `XM_SYS_CTRL`  | R /W+ | busy status, FPGA reconfig, interrupt status/control, write masking                   |
 | 0x9   | `XM_TIMER`     | R /W+ | read 1/10<sup>th</sup> millisecond timer                                              |
-| 0xA   | `XM_LFSR`      | RO    | read LFSR pseudo random number (internally 18-bit)                                    |
+| 0xA   | `XM_LFSR`      | RO    | read LFSR pseudo random number (internally 19-bit)                                    |
 | 0xB   | `XM_UNUSED_B`  | R /W  | unused direct register 0xB [#TODO]                                                    |
 | 0xC   | `XM_RW_INCR`   | R /W  | `XM_RW_ADDR` increment value on read/write of `XM_RW_DATA`/`XM_RW_DATA_2`             |
 | 0xD   | `XM_RW_ADDR`   | R /W+ | read/write address for VRAM access from `XM_RW_DATA`/`XM_RW_DATA_2`                   |
@@ -162,7 +162,7 @@ clock).
 **0xA `XM_LFSR` (RO) - LFSR pseudo-random number**
 <img src="./pics/wd_XM_LFSR.svg">
 **Read 16-bit LFSR pseudo-random value**
-Read 16-bits from internal 18-bit LFSR (linear feedback shift-register).  All values are possible and the value changes
+Read 16-bits from internal 19-bit LFSR (linear feedback shift-register).  All values are possible and the value changes
 every cycle asynchronus at the display pixel clock, it should provide "quite random" numbers (at least for most game
 and graphics purposes).
 

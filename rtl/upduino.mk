@@ -88,7 +88,11 @@ ICEPROG := iceprog
 ICEMULTI := icemulti
 
 # Yosys synthesis arguments
-YOSYS_SYNTH_ARGS := -dsp -abc2 -relut -retime -top $(TOP)
+FLOW3 :=
+YOSYS_SYNTH_ARGS := -device u -dsp -abc2 -relut -retime -top $(TOP)
+#YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -relut -top $(TOP)
+#YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -relut -top $(TOP)
+#FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
@@ -100,7 +104,7 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
-NEXTPNR_ARGS := --randomize-seed --promote-logic --opt-timing --placer heap
+NEXTPNR_ARGS :=  --seed $${RANDOM} --promote-logic --opt-timing --placer heap
 
 ifeq ($(strip $(VIDEO_OUTPUT)), PMOD_1B2_DVI12)
 OUTSUFFIX := dvi_$(subst MODE_,,$(VIDEO_MODE))
@@ -140,42 +144,51 @@ $(DOT): %.dot: %.sv upduino.mk
 	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
-upduino/%_$(OUTSUFFIX).json: $(SRC) $(INC) $(FONTFILES) upduino.mk
+%.json: $(SRC) $(INC) $(FONTFILES) upduino.mk
 	@echo === Building UPduino Xosera ===
 	@rm -f $@
 	@mkdir -p $(LOGS)
-	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(TOP)_verilator.log
-	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
-#	@for num in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25; do \
-#	@BEST=$$(cat "$(LOGS)/fmax/fmax_temp.txt") ; echo "=== Using best result from run: $${BEST}" ; cp -av "$(LOGS)/fmax/$(OUTNAME)_$${BEST}_fMAX.asc" $@ ; cp -av "$(LOGS)/fmax/$(OUTNAME)_$${BEST}_fMAX_nextpnr.log" $(LOGS)/$(OUTNAME)_nextpnr.log
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
+	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
 
 # make ASCII bitstream from JSON description and device parameters
 upduino/%_$(OUTSUFFIX).asc: upduino/%_$(OUTSUFFIX).json $(PIN_DEF) upduino.mk
 	@rm -f $@
 	@mkdir -p $(LOGS)
 	@-cp $(OUTNAME)_stats.txt $(LOGS)/$(OUTNAME)_stats_last.txt
-ifdef FMAX_TEST	# run nextPNR 10 times to determine "Max frequency" range
-	@echo === Synthesizing $(FMAX_TEST) bitstreams and determine best fMAX
+ifdef FMAX_TEST	# run nextPNR FMAX_TEST times to determine "Max frequency" range
+	@echo === Synthesizing $(FMAX_TEST) bitstreams for best fMAX
+	@echo $(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 	@mkdir -p $(LOGS)/fmax
 	@rm -f $(LOGS)/fmax/*
+	@cp $< $(LOGS)/fmax
 	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
-	  echo -n "$${num}	$(basename $@)_$${num}.asc:	"; \
-	  $(NEXTPNR) -l "$(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_nextpnr.log" -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@ ; \
-	  grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_nextpnr.log | tail -1 | cut -d " " -f 2- ; \
-	  grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX_nextpnr.log | tail -1 | cut -d " " -f 7 >"$(LOGS)/fmax/fmax_temp.txt" ; \
+	  ( \
+	    $(NEXTPNR) -l "$(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log" -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $(LOGS)/fmax/$(OUTNAME)_$${num}.asc ; \
+	    grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log | tail -1 | cut -d " " -f 2- ; \
+	  ) & \
+	  pids[$${num}]=$$! ; \
+	  ((num = num + 1)) ; \
+	  if (( num % 16 == 15)) ; then \
+	    ((wnum = num - 8)) ; \
+	    wait $${pid[wnum]} ; \
+	  fi ; \
+    	done ; \
+	wait
+	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
+	  grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log | tail -1 | cut -d " " -f 7 >"$(LOGS)/fmax/fmax_temp.txt" ; \
 	  FMAX=$$(cat "$(LOGS)/fmax/fmax_temp.txt") ; \
-	  echo $${num} $${FMAX} "$(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX.asc" >> $(LOGS)/fmax/$(OUTNAME)_fMAX_list.log ; \
-	  mv "$@" "$(LOGS)/fmax/$(OUTNAME)_$${num}_fMAX.asc" ; \
+	  echo $${num} $${FMAX} "$(LOGS)/fmax/$(OUTNAME)_$${num}.asc" >> $(LOGS)/fmax/$(OUTNAME)_list.log ; \
 	  ((num = num + 1)) ; \
     	done
 	@echo === fMAX after $(FMAX_TEST) runs: ===
-	@awk '{ total += $$2 ; minv = (minv == 0 || minv > $$2 ? $$2 : minv) ; maxv = (maxv < $$2 ? $$2 : maxv) ; count++ } END { print "min = ", minv ; print "avg = ", total/count, " <==" ; print "max = ", maxv ; }' $(LOGS)/fmax/$(OUTNAME)_fMAX_list.log
-	@awk '{ if (maxv < $$2) { best = $$1 ; maxv = $$2 ; } ; } END { print best, maxv ; }' $(LOGS)/fmax/$(OUTNAME)_fMAX_list.log  > "$(LOGS)/fmax/fmax_temp.txt"
+	@awk '{ total += $$2 ; minv = (minv == 0 || minv > $$2 ? $$2 : minv) ; maxv = (maxv < $$2 ? $$2 : maxv) ; count++ } END \
+	  { print "fMAX: Minimum frequency:", minv ; print "fMAX: Average frequency:", total/count ; print "fMAX: Maximum frequency:", maxv, "   <== selected as best" ; }' $(LOGS)/fmax/$(OUTNAME)_list.log
+	@awk '{ if (maxv < $$2) { best = $$1 ; maxv = $$2 ; } ; } END { print best, maxv ; }' $(LOGS)/fmax/$(OUTNAME)_list.log  > "$(LOGS)/fmax/fmax_temp.txt"
 	@BEST=$$(cut -d " " -f1 "$(LOGS)/fmax/fmax_temp.txt") FMAX=$$(cut -d " " -f2 "$(LOGS)/fmax/fmax_temp.txt") ; \
-	  echo "=== Using bitstream from NextPNR run $${BEST} with best result $${FMAX} MHz" ; \
-	  cp -av "$(LOGS)/fmax/$(OUTNAME)_$${BEST}_fMAX_nextpnr.log" "$(LOGS)/$(OUTNAME)_nextpnr.log" ; \
-	  cp -av "$(LOGS)/fmax/$(OUTNAME)_$${BEST}_fMAX.asc" $@
-	@rm -f "$(LOGS)/fmax/fmax_temp.txt"
+	  cp "$(LOGS)/fmax/$(OUTNAME)_$${BEST}_nextpnr.log" "$(LOGS)/$(OUTNAME)_nextpnr.log" ; \
+	  cp "$(LOGS)/fmax/$(OUTNAME)_$${BEST}.asc" $@
+	@rm "$(LOGS)/fmax/fmax_temp.txt"
 else
 ifdef NO_PNR_RETRY
 	@echo NO_PNR_RETRY set, so failure IS an option...

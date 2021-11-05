@@ -49,24 +49,27 @@ module reg_interface(
     input  wire logic            clk
 );
 
-// read/write storage for first 4 reg_interface registers
+// read/write storage for main interface registers
 logic [15:0]    reg_xr_addr;            // XR read/write address (XR_ADDR)
-logic [15:0]    xr_rd_data;             // word read from XR
-logic           xr_rd;                  // flag for xr read outstanding
+logic [15:0]    reg_xr_data;            // word read from XR bus
 
 logic [15:0]    reg_rd_incr;            // VRAM read increment
 logic [15:0]    reg_rd_addr;            // VRAM read address
-
-logic           vram_rd;                // flag for VRAM read outstanding
-logic [15:0]    vram_rd_data;           // word read from VRAM (for RD_ADDR)
+logic [15:0]    reg_rd_data;            // word read from VRAM (for RD_ADDR)
 
 logic [15:0]    reg_wr_incr;            // VRAM write increment
 logic [15:0]    reg_wr_addr;            // VRAM write address
+
 logic [15:0]    reg_rw_incr;            // VRAM read/write increment
 logic [15:0]    reg_rw_addr;            // VRAM read/write address
-logic [15:0]    vram_rw_data;           // word read from VRAM (for RW_ADDR)
-logic           vram_rw_rd;             // flag for VRAM RW read outstanding
-logic           vram_rw_wr;             // flag for VRAM RW write outstanding
+logic [15:0]    reg_rw_data;            // word read from VRAM (for RW_ADDR)
+
+// read flags
+logic           xr_rd;                  // flag for XR_DATA read outstanding
+logic           vram_rd;                // flag for DATA read outstanding
+logic           vram_rw_rd;             // flag for RW_DATA read outstanding
+logic           vram_rw_wr;             // flag for RW_DATA write outstanding
+
 
 // internal storage
 logic  [3:0]    intr_mask;              // interrupt mask
@@ -85,7 +88,8 @@ logic [11:0]    reg_timer_frac;          // internal clock counter for 1/10 ms
 
 `ifdef ENABLE_LFSR
 parameter               LFSR_SIZE = 19; // NOTE: if changed, must change taps
-logic [LFSR_SIZE-1:0]   reg_LFSR        /* verilator public */;
+logic [LFSR_SIZE-1:0]   LFSR            /* verilator public */;
+logic [15:0]            reg_LFSR        /* verilator public */;
 `endif
 
 // output interrupt mask
@@ -97,19 +101,19 @@ assign bus_ack_o = (bus_write_strobe | bus_read_strobe);
 
 // bus_interface handles signal synchronization, CS and register writes to Xosera
 bus_interface bus(
-                  .bus_cs_n_i(bus_cs_n_i),              // register select strobe
-                  .bus_rd_nwr_i(bus_rd_nwr_i),          // 0=write, 1=read
-                  .bus_reg_num_i(bus_reg_num_i),        // register number
-                  .bus_bytesel_i(bus_bytesel_i),        // 0=even byte, 1=odd byte
-                  .bus_data_i(bus_data_i),              // 8-bit data bus input
-                  .write_strobe_o(bus_write_strobe),    // strobe for bus byte write
-                  .read_strobe_o(bus_read_strobe),      // strobe for bus byte read
-                  .reg_num_o(bus_reg_num),              // register number from bus
-                  .bytesel_o(bus_bytesel),              // register number from bus
-                  .bytedata_o(bus_data_byte),           // byte data from bus
-                  .clk(clk),                            // input clk (should be > 2x faster than bus signals)
-                  .reset_i(reset_i)                     // reset
-              );
+    .bus_cs_n_i(bus_cs_n_i),              // register select strobe
+    .bus_rd_nwr_i(bus_rd_nwr_i),          // 0=write, 1=read
+    .bus_reg_num_i(bus_reg_num_i),        // register number
+    .bus_bytesel_i(bus_bytesel_i),        // 0=even byte, 1=odd byte
+    .bus_data_i(bus_data_i),              // 8-bit data bus input
+    .write_strobe_o(bus_write_strobe),    // strobe for bus byte write
+    .read_strobe_o(bus_read_strobe),      // strobe for bus byte read
+    .reg_num_o(bus_reg_num),              // register number from bus
+    .bytesel_o(bus_bytesel),              // register number from bus
+    .bytedata_o(bus_data_byte),           // byte data from bus
+    .clk(clk),                            // input clk (should be > 2x faster than bus signals)
+    .reset_i(reset_i)                     // reset
+);
 
 // continuously output byte selected for read from Xosera (to be put on bus when selected for read)
 always_comb begin
@@ -117,7 +121,7 @@ always_comb begin
         xv::XM_XR_ADDR[3:0]:
             bus_data_o  = !bus_bytesel ? reg_xr_addr[15:8]      : reg_xr_addr[7:0];
         xv::XM_XR_DATA[3:0]:
-            bus_data_o  = !bus_bytesel ? xr_rd_data[15:8]       : xr_rd_data[7:0];
+            bus_data_o  = !bus_bytesel ? reg_xr_data[15:8]       : reg_xr_data[7:0];
         xv::XM_RD_INCR[3:0]:
             bus_data_o  = !bus_bytesel ? reg_rd_incr[15:8]      : reg_rd_incr[7:0];
         xv::XM_RD_ADDR[3:0]:
@@ -128,7 +132,7 @@ always_comb begin
             bus_data_o  = !bus_bytesel ? reg_wr_addr[15:8]      : reg_wr_addr[7:0];
         xv::XM_DATA[3:0],
         xv::XM_DATA_2[3:0]:
-            bus_data_o  = !bus_bytesel ? vram_rd_data[15:8]     : vram_rd_data[7:0];
+            bus_data_o  = !bus_bytesel ? reg_rd_data[15:8]     : reg_rd_data[7:0];
         xv::XM_SYS_CTRL[3:0]:
             bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { busy_i, 3'b0, regs_wrmask_o };
         xv::XM_TIMER[3:0]:
@@ -148,7 +152,7 @@ always_comb begin
             bus_data_o  = !bus_bytesel ? reg_rw_addr[15:8]      : reg_rw_addr[7:0];
         xv::XM_RW_DATA[3:0],
         xv::XM_RW_DATA_2[3:0]:
-            bus_data_o  = !bus_bytesel ? vram_rw_data[15:8]     : vram_rw_data[7:0];
+            bus_data_o  = !bus_bytesel ? reg_rw_data[15:8]     : reg_rw_data[7:0];
     endcase
 end
 
@@ -170,9 +174,14 @@ end
 `ifdef ENABLE_LFSR
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        reg_LFSR <= LFSR_SIZE'(1);
+        LFSR <= LFSR_SIZE'(1);
     end else begin
-        reg_LFSR <= {reg_LFSR[LFSR_SIZE-2:0], reg_LFSR[18] ^~ reg_LFSR[5] ^~ reg_LFSR[1] ^~ reg_LFSR[0]};
+        LFSR <= {LFSR[LFSR_SIZE-2:0], LFSR[18] ^~ LFSR[5] ^~ LFSR[1] ^~ LFSR[0]};
+
+        // latch a new LFSR into reg_LFSR on bus activity
+        if (bus_read_strobe || bus_write_strobe) begin
+            reg_LFSR    <= LFSR[16:1];
+        end
     end
 end
 `endif
@@ -212,13 +221,13 @@ always_ff @(posedge clk) begin
         if (vram_ack_i) begin
             // if rd read then save rd data, increment rd_addr
             if (vram_rd) begin
-                vram_rd_data    <= regs_data_i;
+                reg_rd_data    <= regs_data_i;
                 reg_rd_addr     <= reg_rd_addr + reg_rd_incr;
             end
 
             // if rw read then save rw data, increment rw_addr
             if (vram_rw_rd) begin
-                vram_rw_data    <= regs_data_i;
+                reg_rw_data    <= regs_data_i;
                 reg_rw_addr     <= reg_rw_addr + reg_rw_incr;   // TODO: optional rw_addr read incr
             end
 
@@ -242,7 +251,7 @@ always_ff @(posedge clk) begin
         // XR access acknowledge
         if (xr_ack_i) begin
             if (xr_rd) begin
-                xr_rd_data      <= xr_data_i;
+                reg_xr_data      <= xr_data_i;
             end
 
             if (regs_wr_o) begin

@@ -128,7 +128,7 @@ isim: sim/$(TBTOP) sim.mk
 # run Verilator to build and run native simulation executable
 vrun: sim/obj_dir/V$(VTOP) sim.mk
 	@mkdir -p $(LOGS)
-	sim/obj_dir/V$(VTOP) $(VRUN_TESTDATA) | tee $(LOGS)/xosera_vsim.log
+	sim/obj_dir/V$(VTOP) $(VRUN_TESTDATA)
 
 # run Verilator to build and run native simulation executable
 irun: sim/$(TBTOP) sim.mk

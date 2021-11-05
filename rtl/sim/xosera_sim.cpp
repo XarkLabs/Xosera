@@ -37,8 +37,9 @@
 #define MAX_UPLOADS      8        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
-vluint64_t main_time        = 0;
-vluint64_t frame_start_time = 0;
+vluint64_t main_time         = 0;
+vluint64_t first_frame_start = 0;
+vluint64_t frame_start_time  = 0;
 
 volatile bool done;
 bool          sim_render = SDL_RENDER;
@@ -53,6 +54,28 @@ const char * upload_name[MAX_UPLOADS];
 uint8_t *    upload_payload[MAX_UPLOADS];
 int          upload_size[MAX_UPLOADS];
 uint8_t      upload_buffer[128 * 1024];
+
+static FILE * logfile;
+static char   log_buff[16384];
+
+static void log_printf(const char * fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(log_buff, sizeof(log_buff), fmt, args);
+    fputs(log_buff, stdout);
+    fputs(log_buff, logfile);
+    va_end(args);
+}
+
+static void logonly_printf(const char * fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(log_buff, sizeof(log_buff), fmt, args);
+    fputs(log_buff, logfile);
+    va_end(args);
+}
 
 class BusInterface
 {
@@ -210,7 +233,7 @@ public:
             {
                 if (vsync_detect)
                 {
-                    printf("[@t=%lu  ... VSYNC arrives]\n", main_time);
+                    logonly_printf("[@t=%lu  ... VSYNC arrives]\n", main_time);
                     wait_vsync = false;
                 }
                 return;
@@ -232,7 +255,7 @@ public:
                 // REG_WAITVSYNC
                 if (!data_upload && test_data[index] == 0xfffe)
                 {
-                    printf("[@t=%lu Wait VSYNC...]\n", main_time);
+                    logonly_printf("[@t=%lu Wait VSYNC...]\n", main_time);
                     wait_vsync = true;
                     index++;
                     return;
@@ -243,10 +266,10 @@ public:
                     data_upload_mode  = test_data[index] & 0xf;
                     data_upload_count = upload_size[data_upload_num];        // byte count
                     data_upload_index = 0;
-                    printf("[Upload #%d started, %d bytes, mode %s]\n",
-                           data_upload_num + 1,
-                           data_upload_count,
-                           data_upload_mode ? "XR_DATA" : "VRAM_DATA");
+                    logonly_printf("[Upload #%d started, %d bytes, mode %s]\n",
+                                   data_upload_num + 1,
+                                   data_upload_count,
+                                   data_upload_mode ? "XR_DATA" : "VRAM_DATA");
 
                     index++;
                 }
@@ -273,16 +296,16 @@ public:
                         top->bus_data_i    = data;
                         if (data_upload && data_upload_index < 16)
                         {
-                            printf("[@t=%lu] ", main_time);
+                            logonly_printf("[@t=%lu] ", main_time);
                             sprintf(tempstr, "r[0x%x] %s.%3s", reg_num, reg_name[reg_num], bytesel ? "lsb*" : "msb");
-                            printf("  %-25.25s <= %s%02x%s\n",
-                                   tempstr,
-                                   bytesel ? "__" : "",
-                                   data & 0xff,
-                                   bytesel ? "" : "__");
+                            logonly_printf("  %-25.25s <= %s%02x%s\n",
+                                           tempstr,
+                                           bytesel ? "__" : "",
+                                           data & 0xff,
+                                           bytesel ? "" : "__");
                             if (data_upload_index == 15)
                             {
-                                printf("  ...\n");
+                                logonly_printf("  ...\n");
                             }
                         }
                         break;
@@ -291,25 +314,25 @@ public:
                     case BUS_STROBEOFF:
                         if (rd_wr)
                         {
-                            printf("[@t=%lu] Read Reg %s (#%02x.%s) => %s%02x%s\n",
-                                   main_time,
-                                   reg_name[reg_num],
-                                   reg_num,
-                                   bytesel ? "L" : "H",
-                                   bytesel ? "__" : "",
-                                   top->bus_data_o,
-                                   bytesel ? "" : "__");
+                            logonly_printf("[@t=%lu] Read Reg %s (#%02x.%s) => %s%02x%s\n",
+                                           main_time,
+                                           reg_name[reg_num],
+                                           reg_num,
+                                           bytesel ? "L" : "H",
+                                           bytesel ? "__" : "",
+                                           top->bus_data_o,
+                                           bytesel ? "" : "__");
                         }
                         else if (!data_upload)
                         {
-                            printf("[@t=%lu] Write Reg %s (#%02x.%s) <= %s%02x%s\n",
-                                   main_time,
-                                   reg_name[reg_num],
-                                   reg_num,
-                                   bytesel ? "L" : "H",
-                                   bytesel ? "__" : "",
-                                   top->bus_data_i,
-                                   bytesel ? "" : "__");
+                            logonly_printf("[@t=%lu] Write Reg %s (#%02x.%s) <= %s%02x%s\n",
+                                           main_time,
+                                           reg_name[reg_num],
+                                           reg_num,
+                                           bytesel ? "L" : "H",
+                                           bytesel ? "__" : "",
+                                           top->bus_data_i,
+                                           bytesel ? "" : "__");
                         }
                         top->bus_cs_n_i = 0;
                         break;
@@ -325,7 +348,7 @@ public:
                             if (data_upload_index >= data_upload_count)
                             {
                                 data_upload = false;
-                                printf("[Upload #%d completed]\n", data_upload_num + 1);
+                                logonly_printf("[Upload #%d completed]\n", data_upload_num + 1);
                                 data_upload_num++;
                             }
                         }
@@ -539,12 +562,21 @@ int main(int argc, char ** argv)
 
     sigaction(SIGINT, &sigIntHandler, NULL);
 
+    if ((logfile = fopen("sim/logs/xosera_vsim.log", "w")) == NULL)
+    {
+        if ((logfile = fopen("xosera_vsim.log", "w")) == NULL)
+        {
+            printf("can't create xosera_vsim.log (in \"sim/logs/\" or current directory)\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
     double Hz = 1000000.0 / ((TOTAL_WIDTH * TOTAL_HEIGHT) * (1.0 / PIXEL_CLOCK_MHZ));
-    printf("\nXosera simulation. Video Mode: %dx%d @%0.02fHz clock %0.03fMhz\n",
-           VISIBLE_WIDTH,
-           VISIBLE_HEIGHT,
-           Hz,
-           PIXEL_CLOCK_MHZ);
+    log_printf("\nXosera simulation. Video Mode: %dx%d @%0.02fHz clock %0.03fMhz\n",
+               VISIBLE_WIDTH,
+               VISIBLE_HEIGHT,
+               Hz,
+               PIXEL_CLOCK_MHZ);
 
     int nextarg = 1;
 
@@ -581,7 +613,7 @@ int main(int argc, char ** argv)
     {
         for (int u = 0; u < num_uploads; u++)
         {
-            printf("Reading upload data #%d: \"%s\"...", u + 1, upload_name[u]);
+            logonly_printf("Reading upload data #%d: \"%s\"...", u + 1, upload_name[u]);
             FILE * bfp = fopen(upload_name[u], "r");
             if (bfp != nullptr)
             {
@@ -590,21 +622,21 @@ int main(int argc, char ** argv)
 
                 if (read_size > 0)
                 {
-                    printf("read %d bytes.\n", read_size);
+                    logonly_printf("read %d bytes.\n", read_size);
                     upload_size[u]    = read_size;
                     upload_payload[u] = (uint8_t *)malloc(read_size);
                     memcpy(upload_payload[u], upload_buffer, read_size);
                 }
                 else
                 {
-                    printf("failed.\n");
+                    fprintf(stderr, "Reading upload data \"%s\" error ", upload_name[u]);
                     perror("fread failed");
                     exit(EXIT_FAILURE);
                 }
             }
             else
             {
-                printf("failed.\n");
+                fprintf(stderr, "Reading upload data \"%s\" error ", upload_name[u]);
                 perror("fopen failed");
                 exit(EXIT_FAILURE);
             }
@@ -616,11 +648,6 @@ int main(int argc, char ** argv)
     // bus test data init
     bus.set_cmdline_data(argc, argv, nextarg);
 #endif
-
-    if (sim_render)
-        printf("Press SPACE for screen-shot, ESC or ^C to exit.\n\n");
-    else
-        printf("Press ^C to exit.\n\n");
 
     Verilated::commandArgs(argc, argv);
 
@@ -673,11 +700,11 @@ int main(int argc, char ** argv)
 #if VM_TRACE
 #if USE_FST
     const auto trace_path = LOGDIR "xosera_vsim.fst";
-    printf("Started writing FST waveform file to \"%s\"...\n", trace_path);
+    logonly_printf("Writing FST waveform file to \"%s\"...\n", trace_path);
     VerilatedFstC * tfp = new VerilatedFstC;
 #else
     const auto trace_path = LOGDIR "xosera_vsim.vcd";
-    printf("Started writing VCD waveform file to \"%s\"...\n", trace_path);
+    logonly_printf("Writing VCD waveform file to \"%s\"...\n", trace_path);
     VerilatedVcdC * tfp = new VerilatedVcdC;
 #endif
 
@@ -720,13 +747,13 @@ int main(int argc, char ** argv)
 
         if (top->reconfig_o)
         {
-            printf("FPGA RECONFIG: config #0x%x\n", top->boot_select_o);
+            log_printf("FPGA RECONFIG: config #0x%x\n", top->boot_select_o);
             done = true;
         }
 
         if (top->bus_intr_o)
         {
-            printf("[@t=%lu FPGA INTERRUPT]\n", main_time);
+            logonly_printf("[@t=%lu FPGA INTERRUPT]\n", main_time);
         }
 
         if (frame_num > 1)
@@ -735,15 +762,15 @@ int main(int argc, char ** argv)
             {
                 if (top->xosera_main->vram_arb->regs_wr_i)
                 {
-                    printf(" => regs write VRAM[0x%04x]<=0x%04x\n",
-                           top->xosera_main->vram_arb->regs_addr_i,
-                           top->xosera_main->vram_arb->regs_data_i);
+                    logonly_printf(" => regs write VRAM[0x%04x]<=0x%04x\n",
+                                   top->xosera_main->vram_arb->regs_addr_i,
+                                   top->xosera_main->vram_arb->regs_data_i);
                 }
                 else
                 {
-                    printf(" <= regs read VRAM[0x%04x]=>0x%04x\n",
-                           top->xosera_main->vram_arb->regs_addr_i,
-                           top->xosera_main->vram_arb->vram_data_o);
+                    logonly_printf(" <= regs read VRAM[0x%04x]=>0x%04x\n",
+                                   top->xosera_main->vram_arb->regs_addr_i,
+                                   top->xosera_main->vram_arb->vram_data_o);
                 }
             }
 
@@ -751,23 +778,23 @@ int main(int argc, char ** argv)
             {
                 if (top->xosera_main->xrmem_arb->xr_wr_i)
                 {
-                    printf(" => regs write XR[0x%04x]<=0x%04x\n",
-                           top->xosera_main->xrmem_arb->xr_addr_i,
-                           top->xosera_main->xrmem_arb->xr_data_i);
+                    logonly_printf(" => regs write XR[0x%04x]<=0x%04x\n",
+                                   top->xosera_main->xrmem_arb->xr_addr_i,
+                                   top->xosera_main->xrmem_arb->xr_data_i);
                 }
                 else
                 {
-                    printf(" <= regs read XR[0x%04x]=>0x%04x\n",
-                           top->xosera_main->xrmem_arb->xr_addr_i,
-                           top->xosera_main->xrmem_arb->xr_data_o);
+                    logonly_printf(" <= regs read XR[0x%04x]=>0x%04x\n",
+                                   top->xosera_main->xrmem_arb->xr_addr_i,
+                                   top->xosera_main->xrmem_arb->xr_data_o);
                 }
             }
 
             if (top->xosera_main->xrmem_arb->copp_xr_sel_i)
             {
-                printf(" => COPPER XR write XR[0x%04x]<=0x%04x\n",
-                       top->xosera_main->xrmem_arb->copp_xr_addr_i,
-                       top->xosera_main->xrmem_arb->copp_xr_data_i);
+                logonly_printf(" => COPPER XR write XR[0x%04x]<=0x%04x\n",
+                               top->xosera_main->xrmem_arb->copp_xr_addr_i,
+                               top->xosera_main->xrmem_arb->copp_xr_data_i);
             }
         }
 
@@ -790,13 +817,13 @@ int main(int argc, char ** argv)
             {
                 if (top->red_o != 0 || top->green_o != 0 || top->blue_o != 0)
                 {
-                    printf("Frame %3u pixel %d, %d RGB is 0x%02x 0x%02x 0x%02x when NOT visible\n",
-                           frame_num,
-                           current_x,
-                           current_y,
-                           top->red_o,
-                           top->green_o,
-                           top->blue_o);
+                    log_printf("Frame %3u pixel %d, %d RGB is 0x%02x 0x%02x 0x%02x when NOT visible\n",
+                               frame_num,
+                               current_x,
+                               current_y,
+                               top->red_o,
+                               top->green_o,
+                               top->blue_o);
                 }
 
                 // sim_render dithered border area
@@ -852,16 +879,21 @@ int main(int argc, char ** argv)
 
             if (frame_num > 0)
             {
+                if (frame_num == 1)
+                {
+                    first_frame_start = main_time;
+                }
                 vluint64_t frame_time = (main_time - frame_start_time) / 2;
-                printf("[@t=%lu] Frame %3d, %lu pixel-clocks (% 0.03f msec real-time), %dx%d hsync %d, vsync %d\n",
-                       main_time,
-                       frame_num,
-                       frame_time,
-                       ((1.0 / PIXEL_CLOCK_MHZ) * frame_time) / 1000.0,
-                       x_max,
-                       y_max + 1,
-                       hsync_max,
-                       vsync_count);
+                logonly_printf(
+                    "[@t=%lu] Frame %3d, %lu pixel-clocks (% 0.03f msec real-time), %dx%d hsync %d, vsync %d\n",
+                    main_time,
+                    frame_num,
+                    frame_time,
+                    ((1.0 / PIXEL_CLOCK_MHZ) * frame_time) / 1000.0,
+                    x_max,
+                    y_max + 1,
+                    hsync_max,
+                    vsync_count);
 #if SDL_RENDER
 
                 if (sim_render)
@@ -879,7 +911,14 @@ int main(int argc, char ** argv)
                             save_name, LOGDIR "xosera_vsim_%dx%d_f%02d.png", VISIBLE_WIDTH, VISIBLE_HEIGHT, frame_num);
                         IMG_SavePNG(screen_shot, save_name);
                         SDL_FreeSurface(screen_shot);
-                        printf("Frame %3u saved as \"%s\" (%dx%d)\n", frame_num, save_name, w, h);
+                        float fnum = ((1.0 / PIXEL_CLOCK_MHZ) * ((main_time - first_frame_start) / 2)) / 1000.0;
+                        log_printf("[@t=%lu] %8.03f ms frame #%3u saved as \"%s\" (%dx%d)\n",
+                                   main_time,
+                                   fnum,
+                                   frame_num,
+                                   save_name,
+                                   w,
+                                   h);
                         take_shot = false;
                     }
 
@@ -897,10 +936,6 @@ int main(int argc, char ** argv)
 
             if (frame_num == MAX_TRACE_FRAMES)
             {
-#if VM_TRACE
-                printf("Finished writing VCD waveform file \"%s\"\n", trace_path);
-#endif
-                printf("Exiting simulation.\n");
                 break;
             }
 
@@ -910,7 +945,7 @@ int main(int argc, char ** argv)
             }
             else if (TOTAL_HEIGHT <= y_max)
             {
-                printf("line %d >= TOTAL_HEIGHT\n", y_max);
+                log_printf("line %d >= TOTAL_HEIGHT\n", y_max);
             }
         }
 
@@ -921,14 +956,10 @@ int main(int argc, char ** argv)
         {
             SDL_Event e;
             SDL_PollEvent(&e);
-            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_SPACE)
-            {
-                take_shot = true;
-            }
 
             if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE))
             {
-                printf("Window closed\n");
+                log_printf("Window closed\n");
                 break;
             }
         }
@@ -1010,7 +1041,7 @@ int main(int argc, char ** argv)
         }
         else
         {
-            fprintf(stderr, "Press a RETURN:\n");
+            fprintf(stderr, "Press RETURN:\n");
             fgetc(stdin);
         }
 
@@ -1020,10 +1051,10 @@ int main(int argc, char ** argv)
     }
 #endif
 
-    printf("Simulated %d frames, %lu pixel clock ticks (% 0.04f milliseconds)\n",
-           frame_num,
-           (main_time / 2),
-           ((1.0 / (PIXEL_CLOCK_MHZ * 1000000)) * (main_time / 2)) * 1000.0);
+    log_printf("Simulation ended after %d frames, %lu pixel clock ticks (%.04f milliseconds)\n",
+               frame_num,
+               (main_time / 2),
+               ((1.0 / (PIXEL_CLOCK_MHZ * 1000000)) * (main_time / 2)) * 1000.0);
 
     return EXIT_SUCCESS;
 }

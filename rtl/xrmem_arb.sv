@@ -81,7 +81,7 @@ logic [15:0]                    xr_addr         /* verilator public */;
 logic [15:0]                    xr_write_data   /* verilator public */;
 
 // xr_ack timeout counter
-logic  [2:0]    ack_timeout;
+logic  [3:0]    ack_timeout;
 
 // combinatorial write ack signals
 logic           copp_wr_ack_next;
@@ -232,10 +232,10 @@ always_ff @(posedge clk) begin
 
     // timeout and assert xr_ack_o 8 cycles after xr_sel_i
     if (!xr_sel_i) begin
-        ack_timeout <= 3'b0;                // reset counter
+        ack_timeout <= 4'b0;                // reset counter
     end else begin
         ack_timeout <= ack_timeout + 1'b1;
-        if (ack_timeout == 3'b111) begin
+        if (ack_timeout == 4'b1111) begin
             xr_ack_o    <= 1'b1;            // fake ack and read "garbage"
         end
     end

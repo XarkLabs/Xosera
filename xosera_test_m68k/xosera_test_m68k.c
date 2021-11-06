@@ -306,15 +306,22 @@ static void xcls()
     xm_setw(WR_ADDR, screen_addr);
 }
 
-static void xmsg(int x, int y, int color, const char * msg)
+static const char * xmsg(int x, int y, int color, const char * msg)
 {
     xm_setw(WR_ADDR, (y * text_columns) + x);
     xm_setbh(DATA, color);
     char c;
-    while ((c = *msg++) != '\0')
+    while ((c = *msg) != '\0')
     {
+        msg++;
+        if (c == '\n')
+        {
+            break;
+        }
+
         xm_setbl(DATA, c);
     }
+    return msg;
 }
 
 void wait_vsync()
@@ -561,6 +568,90 @@ uint16_t rosco_m68k_CPUMHz()
 }
 #endif
 
+const char blurb[] =
+    "\n"
+    "Xosera is an FPGA based video adapter designed with the rosco_m68k retro\n"
+    "computer in mind. Inspired in concept by it's \"namesake\" the Commander X16's\n"
+    "VERA, Xosera is an original open-source video adapter design, built with open-\n"
+    "source tools and is tailored with features generally appropriate for a Motorola\n"
+    "68K era retro computer like the rosco_m68k (or even an 8-bit CPU).\n"
+    "\n"
+    "  \xf9  VGA or HDMI/DVI output at 848x480 or 640x480 (16:9 or 4:3 @ 60Hz)\n"
+    "  \xf9  2 x 256 color palette out of 4096 colors (12-bit RGB)\n"
+    "  \xf9  128KB of embedded video RAM (16-bit words @33/25 MHz)\n"
+    "  \xf9  Register based interface with 16 16-bit registers\n"
+    "  \xf9  Read/write VRAM with programmable read/write address increment\n"
+    "  \xf9  Fast 8-bit bus interface (using MOVEP) for rosco_m68k (by Ross Bamford)\n"
+    "  \xf9  Fonts writable in VRAM or in dedicated 8KB of font memory\n"
+    "  \xf9  8x8 or 8x16 character tile size (or truncated e.g., 8x10)\n"
+    "  \xf9  Tiled modes with 1024 glyphs, 16 or 256 colors and H & V mirrorring\n"
+    "  \xf9  Horizontal and/or vertical pixel relpeat 1, 2, 3, 4x (e.g. 424x240 or 320x240)\n"
+    "  \xf9  Smooth horizontal and vertical native pixel tile scrolling\n"
+    "  \xf9  2-color full-res bitmap mode (with attribute per 8 pixels, ala Sinclair)\n"
+    "  \xf9  TODO: Two 16 color \"planes\" or combined for 256 colors\n"
+    "  \xf9  TODO: \"Blitter\" for fast VRAM copy & fill operations\n"
+    "  \xf9  TODO: 2-D operations \"blitter\" with modulo and shifting/masking\n"
+    "  \xf9  TODO: At least one \"cursor\" sprite (or more)\n"
+    "  \xf9  TODO: Wavetable stereo audio (spare debug GPIOs for now)\n";
+
+static void test_xr_read()
+{
+    dprintf("test_xr\n");
+
+    const char * tp = blurb;
+
+    xcls();
+
+    xm_setw(WR_INCR, 1);
+    xm_setw(WR_ADDR, 0);
+    while (*tp != '\0')
+    {
+        xm_setw(DATA, 0x1f00 | *tp);
+        tp++;
+    }
+
+    if (delay_check(DELAY_TIME))
+    {
+        return;
+    }
+
+    for (int r = 0; r < 10; r++)
+    {
+        xm_setw(WR_ADDR, 0xf000);
+        for (int w = 0; w < 4096; w++)
+        {
+            uint8_t oldint = mcDisableInterrupts();        // must disable interrupts due to XR_ADDR touching
+            xm_setw(XR_ADDR, XR_TILE_MEM + w);
+            uint16_t v = xm_getw(XR_DATA);        // read tile mem
+            mcEnableInterrupts(oldint);
+            xm_setw(XR_DATA, r & 1 ? v : ~v);        // toggle to prove read and set in VRAM
+        }
+    }
+
+    if (delay_check(DELAY_TIME))
+    {
+        return;
+    }
+
+#if 0
+
+    dprintf("Read VRAM test, with auto-increment.\n\n");
+    dprintf(" Begin: rd_addr=0x0000, rd_inc=0x0001\n");
+    xm_setw(RD_INCR, 1);
+    xm_setw(RD_ADDR, 0x0008);
+    uint16_t * tp = test_read;
+    for (uint16_t c = 0; c < (sizeof(test_string) - 1); c++)
+    {
+        *tp++ = xm_getw(DATA);
+    }
+    uint16_t end_addr = xm_getw(RD_ADDR);
+
+    xmsg(0, 2, 0xa, "READ:");
+    xm_setw(WR_INCR, 1);                             // set write inc
+    xm_setw(WR_ADDR, (text_columns * 2) + 8);        // set write address
+#endif
+}
+
 static void load_sd_bitmap(const char * filename)
 {
     dprintf("Loading bitmap: \"%s\"", filename);
@@ -654,11 +745,11 @@ void     xosera_test()
     install_intr();
     dprintf("okay.\n");
 
-    printf("Checking for interrupt...");
+    dprintf("Checking for interrupt...");
     uint32_t t = XFrameCount;
     while (XFrameCount == t)
         ;
-    printf("okay. Vsync interrupt detected.\n\n");
+    dprintf("okay. Vsync interrupt detected.\n\n");
 #else
     dprintf("NOT Installing interrupt handler\n");
 #endif
@@ -750,6 +841,8 @@ void     xosera_test()
         {
             break;
         }
+
+        test_xr_read();
 
         if (SD_check_support())
         {

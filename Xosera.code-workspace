@@ -189,7 +189,7 @@
 			"Yosys"
 		],
 		"workbench.colorCustomizations": {
-			"terminal.foreground": "#20c020",
+			"terminal.foreground": "#28e028",
 			"terminalCursor.foreground": "#E0E0E0",
 		},
 		"cSpell.allowCompoundWords": true,

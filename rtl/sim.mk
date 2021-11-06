@@ -133,14 +133,12 @@ vrun: sim/obj_dir/V$(VTOP) sim.mk
 # run Verilator to build and run native simulation executable
 irun: sim/$(TBTOP) sim.mk
 	@mkdir -p $(LOGS)
-	sim/$(TBTOP) -fst 2>&1 | tee $(LOGS)/$(TBTOP)_isim.log
+	sim/$(TBTOP) -fst
 
 # use Verilator to build native simulation executable
 sim/obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) sim.mk
 	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(TECH_LIB) $(SRC) $(current_dir)/$(CSRC)
 	cd sim/obj_dir && make -f V$(VTOP).mk
-
-# -j$(shell nproc)
 
 # use Icarus Verilog to build vvp simulation executable
 sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) sim.mk

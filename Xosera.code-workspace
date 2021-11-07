@@ -188,10 +188,6 @@
 			"xvid",
 			"Yosys"
 		],
-		"workbench.colorCustomizations": {
-			"terminal.foreground": "#28e028",
-			"terminalCursor.foreground": "#E0E0E0",
-		},
 		"cSpell.allowCompoundWords": true,
 		"cSpell.diagnosticLevel": "Hint",
 		"terminal.integrated.fontSize": 10,
@@ -237,6 +233,10 @@
 			"queue": "c",
 			"random": "c",
 			"machine.h": "c"
+		},
+		"workbench.colorCustomizations": {
+			"terminal.foreground": "#20DB20",
+			"terminalCursor.foreground": "#E0E0E0",
 		},
 		"editor.wordWrapColumn": 120,
 		"files.trimTrailingWhitespace": true,

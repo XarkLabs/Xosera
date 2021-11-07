@@ -47,6 +47,7 @@ bool          sim_bus    = BUS_INTERFACE;
 bool          wait_close = false;
 
 bool vsync_detect = false;
+bool vtop_detect  = false;
 
 int          num_uploads;
 int          next_upload;
@@ -174,6 +175,7 @@ class BusInterface
     int     state;
     int     index;
     bool    wait_vsync;
+    bool    wait_vtop;
     bool    data_upload;
     int     data_upload_mode;
     int     data_upload_num;
@@ -181,7 +183,7 @@ class BusInterface
     int     data_upload_index;
 
     static int      test_data_len;
-    static uint16_t test_data[1024];
+    static uint16_t test_data[16384];
 
 public:
 public:
@@ -215,6 +217,7 @@ public:
         index             = 0;
         state             = BUS_START;
         wait_vsync        = false;        // true;
+        wait_vtop         = false;        // true;
         data_upload       = false;
         data_upload_mode  = 0;
         data_upload_num   = 0;
@@ -239,6 +242,17 @@ public:
                 return;
             }
 
+            if (wait_vtop)
+            {
+                if (vtop_detect)
+                {
+                    logonly_printf("[@t=%lu  ... VTOP arrives]\n", main_time);
+                    wait_vtop = false;
+                }
+                return;
+            }
+
+
             int64_t bus_time = (main_time - BUS_START_TIME) / BUS_CLOCK_DIV;
 
             if (bus_time >= last_time)
@@ -250,6 +264,14 @@ public:
                 {
                     enable    = false;
                     last_time = bus_time - 1;
+                    return;
+                }
+                // REG_WAITVTOP
+                if (!data_upload && test_data[index] == 0xfffd)
+                {
+                    logonly_printf("[@t=%lu Wait VTOP...]\n", main_time);
+                    wait_vtop = true;
+                    index++;
                     return;
                 }
                 // REG_WAITVSYNC
@@ -393,24 +415,101 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR ",
 #define REG_RW(r)        (((BusInterface::XM_##r) | 0x80) << 8), (((BusInterface::XM_##r) | 0x90) << 8)
 #define REG_UPLOAD()     0xfff0
 #define REG_UPLOAD_AUX() 0xfff1
+#define REG_WAITVTOP()   0xfffd
 #define REG_WAITVSYNC()  0xfffe
 #define REG_END()        0xffff
 
 #define X_COLS 80
 
 BusInterface bus;
-int          BusInterface::test_data_len   = 999;
-uint16_t     BusInterface::test_data[1024] = {
+int          BusInterface::test_data_len    = 999;
+uint16_t     BusInterface::test_data[16384] = {
     // test data
-    REG_WAITVSYNC(),                        // show boot screen
-    REG_RW(UNUSED_A),                       // read LFSR register
-    REG_RW(UNUSED_A),                       // read LFSR register
-    REG_RW(UNUSED_A),                       // read LFSR register
-    REG_RW(UNUSED_A),                       // read LFSR register
-    REG_WAITVSYNC(),                        // show boot screen
-    REG_W(XR_ADDR, XR_PA_TILE_CTRL),        // set 4-BPP BMAP
-    REG_W(XR_DATA, 0x020F),
-    REG_WAITVSYNC(),                        // show boot screen
+    REG_WAITVSYNC(),         // show boot screen
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_WAITVSYNC(),         // show boot screen
+    REG_W(XR_ADDR, XR_PA_TILE_CTRL),
+    REG_W(XR_DATA, 0x020F),        // set disp in tile
+    REG_WAITVSYNC(),               // show boot screen
+    REG_W(XR_ADDR, XR_PA_GFX_CTRL),
+    REG_W(XR_DATA, 0x0020),        // set disp in tile
+    REG_W(XR_ADDR, XR_PA_TILE_CTRL),
+    REG_W(XR_DATA, 0x020F),        // set disp in tile
+    REG_WAITVTOP(),                // show boot screen
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_WAITVSYNC(),        // show boot screen
+    REG_W(XR_ADDR, XR_PA_GFX_CTRL),
+    REG_W(XR_DATA, 0x0000),                 // set disp in tile
     REG_W(XR_ADDR, XR_PA_TILE_CTRL),        // set 4-BPP BMAP
     REG_W(XR_DATA, 0x000F),
     REG_W(XR_ADDR, XR_COPPER_MEM),        // setup copper program
@@ -847,6 +946,8 @@ int main(int argc, char ** argv)
 
         if (hsync)
             hsync_count++;
+
+        vtop_detect = top->xosera_main->dv_de_o;
 
         // end of hsync
         if (!hsync && vga_hsync_previous)

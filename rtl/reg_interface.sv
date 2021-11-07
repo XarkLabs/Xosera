@@ -118,40 +118,40 @@ bus_interface bus(
 // continuously output byte selected for read from Xosera (to be put on bus when selected for read)
 always_comb begin
     case (bus_reg_num)
-        xv::XM_XR_ADDR[3:0]:
+        xv::XM_XR_ADDR:
             bus_data_o  = !bus_bytesel ? reg_xr_addr[15:8]      : reg_xr_addr[7:0];
-        xv::XM_XR_DATA[3:0]:
+        xv::XM_XR_DATA:
             bus_data_o  = !bus_bytesel ? reg_xr_data[15:8]       : reg_xr_data[7:0];
-        xv::XM_RD_INCR[3:0]:
+        xv::XM_RD_INCR:
             bus_data_o  = !bus_bytesel ? reg_rd_incr[15:8]      : reg_rd_incr[7:0];
-        xv::XM_RD_ADDR[3:0]:
+        xv::XM_RD_ADDR:
             bus_data_o  = !bus_bytesel ? reg_rd_addr[15:8]      : reg_rd_addr[7:0];
-        xv::XM_WR_INCR[3:0]:
+        xv::XM_WR_INCR:
             bus_data_o  = !bus_bytesel ? reg_wr_incr[15:8]      : reg_wr_incr[7:0];
-        xv::XM_WR_ADDR[3:0]:
+        xv::XM_WR_ADDR:
             bus_data_o  = !bus_bytesel ? reg_wr_addr[15:8]      : reg_wr_addr[7:0];
-        xv::XM_DATA[3:0],
-        xv::XM_DATA_2[3:0]:
+        xv::XM_DATA,
+        xv::XM_DATA_2:
             bus_data_o  = !bus_bytesel ? reg_rd_data[15:8]     : reg_rd_data[7:0];
-        xv::XM_SYS_CTRL[3:0]:
+        xv::XM_SYS_CTRL:
             bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { busy_i, 3'b0, regs_wrmask_o };
-        xv::XM_TIMER[3:0]:
+        xv::XM_TIMER:
             bus_data_o  = !bus_bytesel ? reg_timer[15:8]        : reg_timer[7:0];
 `ifdef ENABLE_LFSR
-        xv::XM_LFSR[3:0]:
+        xv::XM_LFSR:
             bus_data_o  = !bus_bytesel ? reg_LFSR[15:8]         : reg_LFSR[7:0];
 `else
-        xv::XM_UNUSED_A[3:0]:
+        xv::XM_UNUSED_A:
             bus_data_o  = 8'b0;
 `endif
-        xv::XM_UNUSED_B[3:0]:
+        xv::XM_UNUSED_B:
             bus_data_o  = 8'b0;
-        xv::XM_RW_INCR[3:0]:
+        xv::XM_RW_INCR:
             bus_data_o  = !bus_bytesel ? reg_rw_incr[15:8]      : reg_rw_incr[7:0];
-        xv::XM_RW_ADDR[3:0]:
+        xv::XM_RW_ADDR:
             bus_data_o  = !bus_bytesel ? reg_rw_addr[15:8]      : reg_rw_addr[7:0];
-        xv::XM_RW_DATA[3:0],
-        xv::XM_RW_DATA_2[3:0]:
+        xv::XM_RW_DATA,
+        xv::XM_RW_DATA_2:
             bus_data_o  = !bus_bytesel ? reg_rw_data[15:8]     : reg_rw_data[7:0];
     endcase
 end

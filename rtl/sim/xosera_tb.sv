@@ -247,7 +247,7 @@ always begin
     # 8ms;
 
     // TODO hacked in copper enable
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, XR_COPP_CTRL);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, 16'(XR_COPP_CTRL));
     #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h8000);
     // TODO end
 
@@ -279,7 +279,7 @@ always begin
 
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_INCR, test_inc);
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0000);
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, XR_PA_GFX_CTRL);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, 16'(XR_PA_GFX_CTRL));
     #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h0040);
 
     inject_file("../testdata/raw/space_shuttle_color_small.raw", XM_DATA);  // pump binary file into DATA

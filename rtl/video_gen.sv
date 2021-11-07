@@ -204,37 +204,37 @@ always_ff @(posedge clk) begin
         // video register write
         if (vgen_reg_wr_en_i) begin
             case (vgen_reg_num_i)
-                xv::XR_VID_CTRL[4:0]: begin
+                xv::XR_VID_CTRL: begin
                     border_color    <= vgen_reg_data_i[15:8];
                     intr_signal_o   <= vgen_reg_data_i[3:0];
                 end
-                xv::XR_COPP_CTRL[4:0]: begin
+                xv::XR_COPP_CTRL: begin
 `ifndef COPPER_DISABLE
                     copp_reg_wr_o   <= 1'b1;
                     copp_reg_data_o[15] <= vgen_reg_data_i[15];
                     copp_reg_data_o[xv::COPPER_AWIDTH-1:0]  <= vgen_reg_data_i[xv::COPPER_AWIDTH-1:0];
 `endif
                 end
-                xv::XR_CURSOR_X[4:0]: begin
+                xv::XR_CURSOR_X: begin
                     cursor_x        <= vgen_reg_data_i[10:0];
                 end
-                xv::XR_CURSOR_Y[4:0]: begin
+                xv::XR_CURSOR_Y: begin
                     cursor_y        <= vgen_reg_data_i[10:0];
                 end
-                xv::XR_VID_TOP[4:0]: begin
+                xv::XR_VID_TOP: begin
                     vid_top        <= vgen_reg_data_i[10:0];
                 end
-                xv::XR_VID_BOTTOM[4:0]: begin
+                xv::XR_VID_BOTTOM: begin
                     vid_bottom     <= vgen_reg_data_i[10:0];
                 end
-                xv::XR_VID_LEFT[4:0]: begin
+                xv::XR_VID_LEFT: begin
                     vid_left       <= vgen_reg_data_i[10:0];
                 end
-                xv::XR_VID_RIGHT[4:0]: begin
+                xv::XR_VID_RIGHT: begin
                     vid_right      <= vgen_reg_data_i[10:0];
                 end
                 // playfield A
-                xv::XR_PA_GFX_CTRL[4:0]: begin
+                xv::XR_PA_GFX_CTRL: begin
                     pa_colorbase    <= vgen_reg_data_i[15:8];
                     pa_blank        <= vgen_reg_data_i[7];
                     pa_bitmap       <= vgen_reg_data_i[6];
@@ -242,29 +242,29 @@ always_ff @(posedge clk) begin
                     pa_h_repeat     <= vgen_reg_data_i[3:2];
                     pa_v_repeat     <= vgen_reg_data_i[1:0];
                 end
-                xv::XR_PA_TILE_CTRL[4:0]: begin
+                xv::XR_PA_TILE_CTRL: begin
                     pa_tile_bank    <= vgen_reg_data_i[15:10];
                     pa_disp_in_tile <= vgen_reg_data_i[9];
                     pa_tile_in_vram <= vgen_reg_data_i[8];
                     pa_tile_height  <= vgen_reg_data_i[3:0];
                 end
-                xv::XR_PA_DISP_ADDR[4:0]: begin
+                xv::XR_PA_DISP_ADDR: begin
                     pa_start_addr   <= vgen_reg_data_i;
                 end
-                xv::XR_PA_LINE_LEN[4:0]: begin
+                xv::XR_PA_LINE_LEN: begin
                     pa_line_len   <= vgen_reg_data_i;
                 end
-                xv::XR_PA_HV_SCROLL[4:0]: begin
+                xv::XR_PA_HV_SCROLL: begin
                     pa_fine_hscroll <= vgen_reg_data_i[12:8];
                     pa_fine_vscroll <= vgen_reg_data_i[5:0];
                 end
-                xv::XR_PA_LINE_ADDR[4:0]: begin
+                xv::XR_PA_LINE_ADDR: begin
                     pa_line_start_set   <= 1'b1;
                     line_set_addr       <= vgen_reg_data_i;
                 end
 `ifdef ENABLE_PB
                 // playfield B
-                xv::XR_PB_GFX_CTRL[4:0]: begin
+                xv::XR_PB_GFX_CTRL: begin
                     pb_colorbase    <= vgen_reg_data_i[15:8];
                     pb_blank        <= vgen_reg_data_i[7];
                     pb_bitmap       <= vgen_reg_data_i[6];
@@ -272,23 +272,23 @@ always_ff @(posedge clk) begin
                     pb_h_repeat     <= vgen_reg_data_i[3:2];
                     pb_v_repeat     <= vgen_reg_data_i[1:0];
                 end
-                xv::XR_PB_TILE_CTRL[4:0]: begin
+                xv::XR_PB_TILE_CTRL: begin
                     pb_tile_bank    <= vgen_reg_data_i[15:10];
                     pb_disp_in_tile <= vgen_reg_data_i[9];
                     pb_tile_in_vram <= vgen_reg_data_i[8];
                     pb_tile_height  <= vgen_reg_data_i[3:0];
                 end
-                xv::XR_PB_DISP_ADDR[4:0]: begin
+                xv::XR_PB_DISP_ADDR: begin
                     pb_start_addr   <= vgen_reg_data_i;
                 end
-                xv::XR_PB_LINE_LEN[4:0]: begin
+                xv::XR_PB_LINE_LEN: begin
                     pb_line_len   <= vgen_reg_data_i;
                 end
-                xv::XR_PB_HV_SCROLL[4:0]: begin
+                xv::XR_PB_HV_SCROLL: begin
                     pb_fine_hscroll <= vgen_reg_data_i[12:8];
                     pb_fine_vscroll <= vgen_reg_data_i[5:0];
                 end
-                xv::XR_PB_LINE_ADDR[4:0]: begin
+                xv::XR_PB_LINE_ADDR: begin
                     pb_line_start_set   <= 1'b1;
                     line_set_addr       <= vgen_reg_data_i;
                 end
@@ -307,28 +307,28 @@ end
 // video registers read
 always_ff @(posedge clk) begin
     case (vgen_reg_num_i)
-        xv::XR_VID_CTRL[4:0]:       vgen_reg_data_o <= { border_color, 4'b0, intr_status_i };
+        xv::XR_VID_CTRL:       vgen_reg_data_o <= { border_color, 4'b0, intr_status_i };
 `ifndef COPPER_DISABLE
-        xv::XR_COPP_CTRL[4:0]:      vgen_reg_data_o <= { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPPER_AWIDTH-1:0]};
+        xv::XR_COPP_CTRL:      vgen_reg_data_o <= { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPPER_AWIDTH-1:0]};
 `endif
-        xv::XR_CURSOR_X[4:0]:       vgen_reg_data_o <= {5'b0, cursor_x };
-        xv::XR_CURSOR_Y[4:0]:       vgen_reg_data_o <= {5'b0, cursor_y };
-        xv::XR_VID_TOP[4:0]:        vgen_reg_data_o <= {5'b0, vid_top };
-        xv::XR_VID_BOTTOM[4:0]:     vgen_reg_data_o <= {5'b0, vid_bottom };
-        xv::XR_VID_LEFT[4:0]:       vgen_reg_data_o <= {5'b0, vid_left };
-        xv::XR_VID_RIGHT[4:0]:      vgen_reg_data_o <= {5'b0, vid_right };
-        xv::XR_SCANLINE[4:0]:       vgen_reg_data_o <= { (v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 3'b000, v_count };
-        xv::XR_VERSION[4:0]:        vgen_reg_data_o <= { 1'b`GITCLEAN, 3'b000, 12'h`VERSION };
-        xv::XR_GITHASH_H[4:0]:      vgen_reg_data_o <= githash[31:16];
-        xv::XR_GITHASH_L[4:0]:      vgen_reg_data_o <= githash[15:0];
-        xv::XR_VID_HSIZE[4:0]:      vgen_reg_data_o <= { 6'h0, xv::VISIBLE_WIDTH[9:0]};
-        xv::XR_VID_VSIZE[4:0]:      vgen_reg_data_o <= { 6'h0, xv::VISIBLE_HEIGHT[9:0]};
-        xv::XR_VID_VFREQ[4:0]:      vgen_reg_data_o <= xv::REFRESH_FREQ;
-        xv::XR_PA_GFX_CTRL[4:0]:    vgen_reg_data_o <= { pa_colorbase, pa_blank, pa_bitmap, pa_bpp, pa_h_repeat, pa_v_repeat };
-        xv::XR_PA_TILE_CTRL[4:0]:   vgen_reg_data_o <= { pa_tile_bank, pa_disp_in_tile, pa_tile_in_vram, 4'b0, pa_tile_height };
-        xv::XR_PA_DISP_ADDR[4:0]:   vgen_reg_data_o <= pa_start_addr;
-        xv::XR_PA_LINE_LEN[4:0]:    vgen_reg_data_o <= pa_line_len;
-        xv::XR_PA_HV_SCROLL[4:0]:   vgen_reg_data_o <= { 3'b0, pa_fine_hscroll, 2'b00, pa_fine_vscroll };
+        xv::XR_CURSOR_X:       vgen_reg_data_o <= {5'b0, cursor_x };
+        xv::XR_CURSOR_Y:       vgen_reg_data_o <= {5'b0, cursor_y };
+        xv::XR_VID_TOP:        vgen_reg_data_o <= {5'b0, vid_top };
+        xv::XR_VID_BOTTOM:     vgen_reg_data_o <= {5'b0, vid_bottom };
+        xv::XR_VID_LEFT:       vgen_reg_data_o <= {5'b0, vid_left };
+        xv::XR_VID_RIGHT:      vgen_reg_data_o <= {5'b0, vid_right };
+        xv::XR_SCANLINE:       vgen_reg_data_o <= { (v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 3'b000, v_count };
+        xv::XR_VERSION:        vgen_reg_data_o <= { 1'b`GITCLEAN, 3'b000, 12'h`VERSION };
+        xv::XR_GITHASH_H:      vgen_reg_data_o <= githash[31:16];
+        xv::XR_GITHASH_L:      vgen_reg_data_o <= githash[15:0];
+        xv::XR_VID_HSIZE:      vgen_reg_data_o <= { 6'h0, xv::VISIBLE_WIDTH[9:0]};
+        xv::XR_VID_VSIZE:      vgen_reg_data_o <= { 6'h0, xv::VISIBLE_HEIGHT[9:0]};
+        xv::XR_VID_VFREQ:      vgen_reg_data_o <= xv::REFRESH_FREQ;
+        xv::XR_PA_GFX_CTRL:    vgen_reg_data_o <= { pa_colorbase, pa_blank, pa_bitmap, pa_bpp, pa_h_repeat, pa_v_repeat };
+        xv::XR_PA_TILE_CTRL:   vgen_reg_data_o <= { pa_tile_bank, pa_disp_in_tile, pa_tile_in_vram, 4'b0, pa_tile_height };
+        xv::XR_PA_DISP_ADDR:   vgen_reg_data_o <= pa_start_addr;
+        xv::XR_PA_LINE_LEN:    vgen_reg_data_o <= pa_line_len;
+        xv::XR_PA_HV_SCROLL:   vgen_reg_data_o <= { 3'b0, pa_fine_hscroll, 2'b00, pa_fine_vscroll };
         default:                    vgen_reg_data_o <= 16'h0000;
     endcase
 end

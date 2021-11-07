@@ -66,6 +66,7 @@ logic [15:0]                    colorB_data_out /* verilator public */;
 logic                           tile_rd_en      /* verilator public */;
 logic                           tile_wr_en      /* verilator public */;
 logic [xv::TILE_AWIDTH-1:0]     tile_addr       /* verilator public */;
+logic [xv::TILE_AWIDTH-1:0]     tile_addr_next  /* verilator public */;
 logic [15:0]                    tile_data_out   /* verilator public */;
 logic [15:0]                    tile2_data_out  /* verilator public */;
 
@@ -79,9 +80,6 @@ logic [31:0]                    copp_data_out   /* verilator public */;
 logic                           xr_wr_en        /* verilator public */;
 logic [15:0]                    xr_addr         /* verilator public */;
 logic [15:0]                    xr_write_data   /* verilator public */;
-
-// xr_ack timeout counter
-logic  [3:0]    ack_timeout;
 
 // combinatorial write ack signals
 logic           copp_wr_ack_next;
@@ -140,7 +138,8 @@ always_comb begin
         color_wr_en         = copp_xr_color_sel;
         tile_wr_en          = copp_xr_tile_sel;
         copp_wr_en          = copp_xr_copp_sel;
-    end else if (xr_sel_i & xr_wr_i & ~xr_ack_o) begin
+    end
+    if (~copp_xr_sel_i & xr_sel_i & xr_wr_i & ~xr_ack_o) begin
         xr_wr_ack_next      = 1'b1;
         color_wr_en         = xr_color_sel;
         tile_wr_en          = xr_tile_sel;
@@ -155,7 +154,7 @@ always_comb begin
         xr_data_o   = !xr_addr_i[8] ? colorA_data_out : colorB_data_out;
     end
     if (xr_tile_sel) begin
-        xr_data_o   = tile_data_out;
+        xr_data_o   = !xr_addr_i[xv::TILE_AWIDTH-1] ? tile_data_out : tile2_data_out;
     end
     if (xr_copp_sel) begin
         xr_data_o   = !xr_addr_i[0] ? copp_data_out[31:16] : copp_data_out[15:0];
@@ -172,7 +171,7 @@ always_comb begin
     if (copp_xr_sel_i & ~copp_xr_ack_o) begin
         xreg_wr_o           = copp_xr_regs_sel;     // copper only writes
     end else if (xr_sel_i & ~xr_ack_o) begin
-        xreg_rd_ack_next    = xr_regs_sel;          // NOTE: omit & ~xr_wr_i (since xr_wr_ack_next also set)
+        xreg_rd_ack_next    = xr_regs_sel & ~xr_wr_i;
         xreg_wr_o           = xr_regs_sel & xr_wr_i;
     end
 end
@@ -188,8 +187,8 @@ always_comb begin
         colorA_addr         = vgen_colorA_addr_i;
         colorB_addr         = vgen_colorB_addr_i;
     end else if (xr_sel_i & ~xr_ack_o) begin
-        color_rd_ack_next   = xr_color_sel;
-        color_rd_en         = xr_color_sel;
+        color_rd_ack_next   = xr_color_sel & ~xr_wr_i;;
+        color_rd_en         = xr_color_sel & ~xr_wr_i;;
         colorA_addr         = xr_addr_i[7:0];
         colorB_addr         = xr_addr_i[7:0];
     end
@@ -199,14 +198,14 @@ end
 always_comb begin
     tile_rd_ack_next    = 1'b0;
     tile_rd_en          = 1'b0;
-    tile_addr           = vgen_tile_addr_i;
+    tile_addr_next           = vgen_tile_addr_i;
     if (vgen_tile_sel_i) begin
         tile_rd_en          = 1'b1;
-        tile_addr           = vgen_tile_addr_i;
+        tile_addr_next      = vgen_tile_addr_i;
     end else if (xr_sel_i & ~xr_ack_o) begin
-        tile_rd_ack_next    = xr_tile_sel;
-        tile_rd_en          = xr_tile_sel;
-        tile_addr           = xr_addr_i[xv::TILE_AWIDTH-1:0];
+        tile_rd_ack_next    = xr_tile_sel & ~xr_wr_i;
+        tile_rd_en          = xr_tile_sel & ~xr_wr_i;
+        tile_addr_next      = xr_addr_i[xv::TILE_AWIDTH-1:0];
     end
 end
 
@@ -219,26 +218,18 @@ always_comb begin
         copp_rd_en          = 1'b1;
         copp_addr           = copp_prog_addr_i;
     end else if (xr_sel_i & ~xr_ack_o) begin
-        copp_rd_ack_next    = xr_copp_sel;
-        copp_rd_en          = xr_copp_sel;
+        copp_rd_ack_next    = xr_copp_sel & ~xr_wr_i;;
+        copp_rd_en          = xr_copp_sel & ~xr_wr_i;;
         copp_addr           = xr_addr_i[xv::COPPER_AWIDTH:1];
     end
 end
 
 // update acknowledge signals
 always_ff @(posedge clk) begin
+
+    tile_addr       <= tile_addr_next;  // need last cycle's read addr to determine tile or tile2 result output
     copp_xr_ack_o   <= copp_wr_ack_next;
     xr_ack_o        <= xr_wr_ack_next | xreg_rd_ack_next | color_rd_ack_next | tile_rd_ack_next | copp_rd_ack_next;
-
-    // timeout and assert xr_ack_o 8 cycles after xr_sel_i
-    if (!xr_sel_i) begin
-        ack_timeout <= 4'b0;                // reset counter
-    end else begin
-        ack_timeout <= ack_timeout + 1'b1;
-        if (ack_timeout == 4'b1111) begin
-            xr_ack_o    <= 1'b1;            // fake ack and read "garbage"
-        end
-    end
 end
 
 // playfield A color lookup RAM
@@ -275,8 +266,8 @@ tilemem #(
     )
     tilemem(
     .clk(clk),
-    .rd_en_i(tile_rd_en & ~tile_addr[xv::TILE_AWIDTH-1]),
-    .rd_address_i(tile_addr[xv::TILE_AWIDTH-2:0]),
+    .rd_en_i(tile_rd_en & ~tile_addr_next[xv::TILE_AWIDTH-1]),
+    .rd_address_i(tile_addr_next[xv::TILE_AWIDTH-2:0]),
     .rd_data_o(tile_data_out),
     .wr_clk(clk),
     .wr_en_i(tile_wr_en & ~xr_addr[xv::TILE_AWIDTH-1]),
@@ -290,8 +281,8 @@ tilemem #(
     )
     tile2mem(
     .clk(clk),
-    .rd_en_i(tile_rd_en & tile_addr[xv::TILE_AWIDTH-1]),
-    .rd_address_i(tile_addr[xv::TILE2_AWIDTH-1:0]),
+    .rd_en_i(tile_rd_en & tile_addr_next[xv::TILE_AWIDTH-1]),
+    .rd_address_i(tile_addr_next[xv::TILE2_AWIDTH-1:0]),
     .rd_data_o(tile2_data_out),
     .wr_clk(clk),
     .wr_en_i(tile_wr_en & xr_addr[xv::TILE_AWIDTH-1]),

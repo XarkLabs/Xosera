@@ -598,58 +598,78 @@ static void test_xr_read()
 {
     dprintf("test_xr\n");
 
-    const char * tp = blurb;
-
     xcls();
 
+    uint16_t vaddr = 0;
     xm_setw(WR_INCR, 1);
-    xm_setw(WR_ADDR, 0);
-    while (*tp != '\0')
+    for (vaddr = 0; vaddr < 0x2000; vaddr++)
     {
-        xm_setw(DATA, 0x1f00 | *tp);
-        tp++;
+        xm_setw(WR_ADDR, vaddr);
+        xm_setw(DATA, vaddr + 0x0100);
     }
+    xm_setw(WR_ADDR, 0x000);
+    xm_setw(DATA, 0x1f00 | 'V');
+    xm_setw(DATA, 0x1f00 | 'R');
+    xm_setw(DATA, 0x1f00 | 'A');
+    xm_setw(DATA, 0x1f00 | 'M');
+
 
     if (delay_check(DELAY_TIME))
     {
         return;
     }
 
-    for (int r = 0; r < 10; r++)
+    for (uint16_t taddr = XR_TILE_MEM + 0x0800; taddr < XR_TILE_MEM + 0x1400; taddr++)
     {
-        xm_setw(WR_ADDR, 0xf000);
-        for (int w = 0; w < 4096; w++)
+        xm_setw(XR_ADDR, taddr);
+        xm_setw(XR_DATA, taddr + 0x0100);
+    }
+    xm_setw(XR_ADDR, XR_TILE_MEM + 0x0800);
+    xm_setw(XR_DATA, 0x1f00 | 'T');
+    xm_setw(XR_DATA, 0x1f00 | 'I');
+    xm_setw(XR_DATA, 0x1f00 | 'L');
+    xm_setw(XR_DATA, 0x1f00 | 'E');
+
+    xreg_setw(PA_DISP_ADDR, 0x0800);
+    xreg_setw(PA_TILE_CTRL, 0x020F);
+
+    if (delay_check(DELAY_TIME))
+    {
+        return;
+    }
+
+    //    uint8_t oldint = mcDisableInterrupts();        // NOTE: should not be needed (and doesn't "solve" issues)
+    for (int r = 0; r < 100; r++)
+    {
+        if (r == 50)
         {
-            uint8_t oldint = mcDisableInterrupts();        // must disable interrupts due to XR_ADDR touching
-            xm_setw(XR_ADDR, XR_TILE_MEM + w);
-            uint16_t v = xm_getw(XR_DATA);        // read tile mem
-            mcEnableInterrupts(oldint);
+            xreg_setw(PA_DISP_ADDR, 0x0000);
+            xreg_setw(PA_TILE_CTRL, 0x000F);
+        }
+        for (int w = XR_TILE_MEM; w < XR_TILE_MEM + 0x1400; w++)
+        {
+            //            touching
+            xm_setw(XR_ADDR, w);
+            //            __asm__ __volatile__("nop ; nop ; nop ; nop");
+            uint16_t v = xm_getw(XR_DATA);           // read tile mem
             xm_setw(XR_DATA, r & 1 ? v : ~v);        // toggle to prove read and set in VRAM
+                                                     //            __asm__ __volatile__("nop ; nop ; nop ; nop");
+        }
+
+        if (delay_check(10))
+        {
+            return;
         }
     }
+    //    mcEnableInterrupts(oldint);
 
-    if (delay_check(DELAY_TIME))
+    xreg_setw(PA_DISP_ADDR, 0x0000);
+    xreg_setw(PA_GFX_CTRL, 0x0000);         // set 8-BPP tiled (bad TILEMEM contention)
+    xreg_setw(PA_TILE_CTRL, 0x000F);        // set 8-BPP tiled (bad TILEMEM contention)
+    if (delay_check(DELAY_TIME * 2))
     {
         return;
     }
-
-#if 0
-
-    dprintf("Read VRAM test, with auto-increment.\n\n");
-    dprintf(" Begin: rd_addr=0x0000, rd_inc=0x0001\n");
-    xm_setw(RD_INCR, 1);
-    xm_setw(RD_ADDR, 0x0008);
-    uint16_t * tp = test_read;
-    for (uint16_t c = 0; c < (sizeof(test_string) - 1); c++)
-    {
-        *tp++ = xm_getw(DATA);
-    }
-    uint16_t end_addr = xm_getw(RD_ADDR);
-
-    xmsg(0, 2, 0xa, "READ:");
-    xm_setw(WR_INCR, 1);                             // set write inc
-    xm_setw(WR_ADDR, (text_columns * 2) + 8);        // set write address
-#endif
 }
 
 static void load_sd_bitmap(const char * filename)
@@ -807,6 +827,8 @@ void     xosera_test()
         dprintf("SYS_CTRL: 0x%04x\n", sysctrl);
         xm_setw(SYS_CTRL, sysctrl);
         dprintf("SYS_CTRL: 0x%04x\n", sysctrl);
+
+        restore_colors();
 
 #if COPPER_TEST
         if (test_count & 1)

@@ -36,12 +36,12 @@
 bool              use_sd;
 volatile uint32_t optguard;
 
+// NOTE: 8 pixels before EOL is good spot to change GFX_CTRL settings for next line
 // Copper list
 uint32_t copper_list[] = {
-    COP_MOVER(0x57, PA_GFX_CTRL),           // mover 0055, PA_GFX_CTRL    First half of screen in 4-bpp + Hx2 + Vx2 //
-                                            // TODO: Vx4 to show bug
+    COP_MOVER(0x55, PA_GFX_CTRL),           // mover 0055, PA_GFX_CTRL    First half of screen in 4-bpp + Hx2 + Vx2 //
     COP_MOVEP(0x0ec6, 0xf),                 // movep 0x0ec6, 0xf          Palette entry 0xf from tut bitmap
-    COP_WAIT_V(240),                        // wait  0, 240, 0b00010      Wait for line 240, H position ignored,
+    COP_WAIT_HV(640 - 8, 240),              // wait  632, 240             Wait for 640-8, 240
     COP_MOVER(0x0040, PA_GFX_CTRL),         // mover 0x0040, PA_GFX_CTRL  1-bpp + Hx1 + Vx1
     COP_MOVER(0x3e80, PA_LINE_ADDR),        // mover 0x3e80, PA_LINE_ADDR Line start now at 16000
     COP_MOVEP(0x0fff, 0xf),                 // movep 0x0fff, 0xf          Palette entry 0xf to white for 1bpp bitmap

@@ -86,6 +86,7 @@ logic  [2:0]    pa_tile_x;                          // current column of tile ce
 logic  [3:0]    pa_tile_y;                          // current line of tile cell
 logic           pa_line_start_set;                  // true if pa_line_start changed (register write)
 logic [15:0]    pa_line_start;                      // address of next line display data start
+logic           pa_gfx_ctrl_set;                    // true if pa_gfx_ctrl changed (register write)
 
 
 `ifdef ENABLE_PB
@@ -190,17 +191,19 @@ always_ff @(posedge clk) begin
         pa_v_repeat         <= 2'b0;
 
         pa_line_start_set   <= 1'b0;            // indicates user line address set
+        pa_gfx_ctrl_set     <= 1'b0;
         line_set_addr       <= 16'h0000;        // user set display addr
 `ifndef COPPER_DISABLE
         copp_reg_wr_o       <= 1'b0;
         copp_reg_data_o     <= 16'h0000;
 `endif
     end else begin
+        pa_line_start_set   <= 1'b0;            // indicates user line address set
+        pa_gfx_ctrl_set     <= 1'b0;
         intr_signal_o       <= 4'b0;
 `ifndef COPPER_DISABLE
         copp_reg_wr_o       <= 1'b0;
 `endif
-        pa_line_start_set   <= 1'b0;
         // video register write
         if (vgen_reg_wr_en_i) begin
             case (vgen_reg_num_i)
@@ -235,6 +238,7 @@ always_ff @(posedge clk) begin
                 end
                 // playfield A
                 xv::XR_PA_GFX_CTRL: begin
+                    pa_gfx_ctrl_set <= 1'b1;                // changed flag
                     pa_colorbase    <= vgen_reg_data_i[15:8];
                     pa_blank        <= vgen_reg_data_i[7];
                     pa_bitmap       <= vgen_reg_data_i[6];
@@ -259,8 +263,8 @@ always_ff @(posedge clk) begin
                     pa_fine_vscroll <= vgen_reg_data_i[5:0];
                 end
                 xv::XR_PA_LINE_ADDR: begin
-                    pa_line_start_set   <= 1'b1;
-                    line_set_addr       <= vgen_reg_data_i;
+                    pa_line_start_set <= 1'b1;               // changed flag
+                    line_set_addr   <= vgen_reg_data_i;
                 end
 `ifdef ENABLE_PB
                 // playfield B
@@ -794,6 +798,14 @@ always_ff @(posedge clk) begin
             end
         end
 
+        if (pa_gfx_ctrl_set) begin
+            pa_v_count      <= pa_v_repeat;     // reset v repeat count when gfx_ctrl altered
+        end
+
+        // use new line start if it has been set
+        if (pa_line_start_set) begin
+            pa_line_start   <= line_set_addr;   // set new line start address
+        end
 
         // start of line display fetch
         if (h_start_line_fetch) begin       // on line fetch start signal
@@ -845,14 +857,10 @@ always_ff @(posedge clk) begin
                     pa_tile_y <= pa_tile_y + 1;                     // next line of tile cell
                 end
             end
+
             scanout_start_hcount    <= H_SCANOUT_BEGIN[10:0] + vid_left;
         end
 
-        // use new line start if it has been set
-        if (pa_line_start_set) begin
-            pa_line_start   <= line_set_addr;           // set line start address
-            pa_tile_y       <= 4'b0;                    // reset tile_y to restart text line
-        end
 
         // end of frame or blanked, prepare for next frame
         if (pa_blank || last_frame_pixel) begin     // is last pixel of frame?

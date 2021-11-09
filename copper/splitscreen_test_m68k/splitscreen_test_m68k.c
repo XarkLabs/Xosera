@@ -86,6 +86,14 @@ static void dprintf(const char * fmt, ...)
     va_end(args);
 }
 
+void wait_vsync()
+{
+    while (xreg_getw(SCANLINE) >= 0x8000)
+        ;
+    while (xreg_getw(SCANLINE) < 0x8000)
+        ;
+}
+
 uint16_t screen_addr;
 uint8_t  text_color = 0x02;        // dark green on black
 uint8_t  text_columns;
@@ -311,10 +319,7 @@ void     xosera_test()
 
     while (!checkchar())
     {
-        for (int i = 0; i < 100000; i++)        // TODO: 10x slower to show bug
-        {
-            optguard = i;
-        }
+        wait_vsync();
 
         xm_setw(XR_ADDR, XR_COPPER_MEM + 4);
         if (up)

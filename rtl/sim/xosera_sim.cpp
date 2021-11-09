@@ -17,6 +17,7 @@
 
 #include "Vxosera_main.h"
 
+#include "Vxosera_main_colormem.h"
 #include "Vxosera_main_vram.h"
 #include "Vxosera_main_vram_arb.h"
 #include "Vxosera_main_xosera_main.h"
@@ -33,8 +34,8 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 8        // video frames to dump to VCD file (and then screen-shot and exit)
-#define MAX_UPLOADS      8        // maximum number of "payload" uploads
+#define MAX_TRACE_FRAMES 10        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_UPLOADS      8         // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
 vluint64_t main_time         = 0;
@@ -426,93 +427,91 @@ int          BusInterface::test_data_len    = 999;
 uint16_t     BusInterface::test_data[16384] = {
     // test data
     REG_WAITVSYNC(),         // show boot screen
-    REG_RW(UNUSED_A),        // read LFSR register
-    REG_RW(UNUSED_A),        // read LFSR register
-    REG_RW(UNUSED_A),        // read LFSR register
-    REG_RW(UNUSED_A),        // read LFSR register
     REG_WAITVSYNC(),         // show boot screen
-    REG_W(XR_ADDR, XR_PA_TILE_CTRL),
-    REG_W(XR_DATA, 0x020F),        // set disp in tile
-    REG_WAITVSYNC(),               // show boot screen
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_RW(UNUSED_A),        // read LFSR register
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),
-    REG_W(XR_DATA, 0x0020),        // set disp in tile
-    REG_W(XR_ADDR, XR_PA_TILE_CTRL),
-    REG_W(XR_DATA, 0x020F),        // set disp in tile
-    REG_WAITVTOP(),                // show boot screen
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
-    REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
-    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_WAITVSYNC(),        // show boot screen
-    REG_W(XR_ADDR, XR_PA_GFX_CTRL),
-    REG_W(XR_DATA, 0x0000),                 // set disp in tile
+    REG_W(XR_DATA, 0x0040),                 // set disp in tile
     REG_W(XR_ADDR, XR_PA_TILE_CTRL),        // set 4-BPP BMAP
     REG_W(XR_DATA, 0x000F),
+    REG_W(WR_INCR, 0x0001),
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),
+    REG_WAITVSYNC(),        // show boot screen
+    REG_WAITVTOP(),         // show boot screen
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),                      // read TILEMEM + 0x0a
+    REG_WAITVSYNC(),                      // show boot screen
     REG_W(XR_ADDR, XR_COPPER_MEM),        // setup copper program
+#if 0
     // copperlist:
     REG_W(XR_DATA, 0x20a0),
     REG_W(XR_DATA, 0x0002),        //     skip  0, 160, 0b00010  ; Skip next if we've hit line 160
@@ -546,9 +545,35 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(XR_DATA, 0x1F42),
     REG_W(XR_DATA, 0x4000),
     REG_W(XR_DATA, 0x0000),        //     jmp   copperlist       ; and restart
+#else
+    REG_W(XR_DATA, 0xb000),
+    REG_W(XR_DATA, 0x0000),        //     movep 0x000F, 0        ; Make background blue
+
+    REG_W(XR_DATA, 0x6010),        // copper splitscreen test
+    REG_W(XR_DATA, 0x0055),
+
+    REG_W(XR_DATA, 0xa00f),
+    REG_W(XR_DATA, 0x0ec6),
+
+    REG_W(XR_DATA, 0x00c8),
+    REG_W(XR_DATA, 0x2782),
+
+    REG_W(XR_DATA, 0xb000),
+    REG_W(XR_DATA, 0x0f0f),        //     movep 0x000F, 0        ; Make background blue
+
+    REG_W(XR_DATA, 0x6010),
+    REG_W(XR_DATA, 0x0040),
+    REG_W(XR_DATA, 0x6015),
+    REG_W(XR_DATA, 0x3e80),
+    REG_W(XR_DATA, 0xa00f),
+    REG_W(XR_DATA, 0x0fff),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_DATA, 0x0003),
+#endif
 
     REG_W(XR_ADDR, XR_COPP_CTRL),        // do copper test on bootscreen...
     REG_W(XR_DATA, 0x8000),
+    REG_WAITVTOP(),
     REG_W(XR_ADDR, XR_TILE_MEM + 10),
     REG_RW(XR_DATA),
     REG_W(XR_ADDR, XR_TILE_MEM + 11),
@@ -557,18 +582,6 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_RW(XR_DATA),
     REG_W(XR_ADDR, XR_TILE_MEM + 13),
     REG_RW(XR_DATA),
-    REG_WAITVSYNC(),                       // show boot screen
-    REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 1-BPP BMAP
-    REG_W(XR_DATA, 0x0040),
-    REG_W(WR_INCR, 0x0001),
-    REG_W(WR_ADDR, 0x0000),
-    REG_UPLOAD(),
-    REG_WAITVSYNC(),                     // show 1-BPP BMAP
-    REG_W(XR_ADDR, XR_COPP_CTRL),        // disable copper so as not to ruin color image tests.
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_VID_CTRL),
-    REG_RW(XR_DATA),
-    REG_W(TIMER, 0x0800),
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 4-BPP BMAP
     REG_W(XR_DATA, 0x0055),
     REG_W(XR_ADDR, XR_PA_LINE_LEN),        // 320/2/2 wide
@@ -578,7 +591,18 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
-    REG_WAITVSYNC(),                       // show 4-BPP BMAP
+    REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 1-BPP BMAP
+    REG_W(XR_DATA, 0x0040),
+    REG_W(WR_INCR, 0x0001),
+    REG_W(WR_ADDR, 16000),
+    REG_UPLOAD(),
+    REG_WAITVSYNC(),                     // show 1-BPP BMAP
+    REG_W(XR_ADDR, XR_COPP_CTRL),        // disable copper so as not to ruin color image tests.
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_VID_CTRL),
+    REG_RW(XR_DATA),
+    REG_W(TIMER, 0x0800),
+    //    REG_WAITVSYNC(),                       // show 4-BPP BMAP
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 8-BPP BMAP
     REG_W(XR_DATA, 0x0065),
     REG_W(XR_ADDR, XR_PA_LINE_LEN),        // 320/2 wide
@@ -589,6 +613,10 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
     REG_WAITVSYNC(),        // show 8-BPP BMAP
+    REG_W(WR_INCR, 0x0001),
+    REG_W(WR_ADDR, 16000),
+    REG_UPLOAD(),
+    REG_WAITVSYNC(),        // show 1-BPP BMAP
     REG_END()
     // end test data
 };
@@ -928,7 +956,12 @@ int main(int argc, char ** argv)
                 // sim_render dithered border area
                 if (((current_x ^ current_y) & 1) == 1)        // non-visible
                 {
-                    SDL_SetRenderDrawColor(renderer, (top->red_o << 3), (top->green_o << 3), (top->blue_o << 3), 255);
+                    // dither with dimmed color 0
+                    auto       vmem    = top->xosera_main->xrmem_arb->colormem->bram;
+                    uint16_t * color0p = &vmem[0];
+                    uint16_t   color0  = *color0p;
+                    SDL_SetRenderDrawColor(
+                        renderer, ((color0 & 0x0f00) >> 5), ((color0 & 0x00f0) >> 1), ((color0 & 0x000f) << 7), 255);
                 }
                 else
                 {

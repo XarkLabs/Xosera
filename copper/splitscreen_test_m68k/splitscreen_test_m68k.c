@@ -41,7 +41,7 @@ volatile uint32_t optguard;
 uint32_t copper_list[] = {
     COP_MOVER(0x55, PA_GFX_CTRL),           // mover 0055, PA_GFX_CTRL    First half of screen in 4-bpp + Hx2 + Vx2 //
     COP_MOVEP(0x0ec6, 0xf),                 // movep 0x0ec6, 0xf          Palette entry 0xf from tut bitmap
-    COP_WAIT_HV(640 - 8, 240),              // wait  632, 240             Wait for 640-8, 240
+    COP_WAIT_V(240),                        // wait  632, 240             Wait for 640-8, 240
     COP_MOVER(0x0040, PA_GFX_CTRL),         // mover 0x0040, PA_GFX_CTRL  1-bpp + Hx1 + Vx1
     COP_MOVER(0x3e80, PA_LINE_ADDR),        // mover 0x3e80, PA_LINE_ADDR Line start now at 16000
     COP_MOVEP(0x0fff, 0xf),                 // movep 0x0fff, 0xf          Palette entry 0xf to white for 1bpp bitmap
@@ -264,6 +264,7 @@ void     xosera_test()
 
     // load palette, and images into vram
     dprintf("Loading data...\n");
+#if 0
     if (!load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw"))
     {
         return;
@@ -273,6 +274,17 @@ void     xosera_test()
     {
         return;
     }
+#else
+    if (!load_sd_colors("/pacbox-320x240_pal.raw"))
+    {
+        return;
+    }
+
+    if (!load_sd_bitmap("/pacbox-320x240.raw", 0))
+    {
+        return;
+    }
+#endif
 
     if (!load_sd_bitmap("/mountains_mono_640x480w.raw", 16000))
     {

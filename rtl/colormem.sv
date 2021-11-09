@@ -26,7 +26,7 @@ module colormem#(
            input  wire logic       [15:0]   wr_data_i
        );
 // infer 16x256 color BRAM
-logic [15: 0] bram[0 : 2**AWIDTH-1];
+logic [15: 0] bram[0 : 2**AWIDTH-1] /* verilator public */;
 
 initial begin
     $readmemh("default_colors.mem", bram, 0);

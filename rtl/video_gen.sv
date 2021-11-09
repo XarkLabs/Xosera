@@ -814,6 +814,8 @@ always_ff @(posedge clk) begin
             scanout_start_hcount    <= scanout_start_hcount + { { 6{pa_fine_hscroll[4]} }, pa_fine_hscroll };
             scanout_end_hcount      <= H_SCANOUT_BEGIN[10:0] + vid_right;
 
+            pa_addr                 <= pa_line_start;       // set start address for this line
+
 `ifndef SYNTHESIS
             pa_data_word0           <= 16'h0BAD;            // poison buffers in simulation
             pa_data_word1           <= 16'h1BAD;
@@ -850,8 +852,7 @@ always_ff @(posedge clk) begin
                 pa_v_count  <= pa_v_repeat;                     // reset v repeat
                 if (pa_bitmap || (pa_tile_y == pa_tile_height)) begin // is bitmap mode or last line of tile cell?
                     pa_tile_y       <= 4'h0;                              // reset tile cell line
-                    pa_line_start   <= pa_line_start + pa_line_len;       // new line start address
-                    pa_addr         <= pa_line_start + pa_line_len;       // new text start address
+                    pa_line_start   <= pa_line_start + pa_line_len;       // calculate next line start address
                 end
                 else begin
                     pa_tile_y <= pa_tile_y + 1;                     // next line of tile cell

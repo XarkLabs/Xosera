@@ -295,7 +295,7 @@ assign bus_reg_num          = spi_cmd_byte[3:0];                        // regis
 assign bus_data_in          = spi_data_byte;                            // bus data to write
 assign spi_transmit_data    = spi_payload_byte ? bus_data_out : 8'hCB;  // bus data to read
 
-// DBUG assign { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 } = spi_cmd_byte;  // TODO debug
+// DBUG assign { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 } = spi_cmd_byte;  // debug
 
 always_ff @(posedge pclk) begin
     spi_cs_hold0        <= spi_cs_hold1;                 // clear held CS

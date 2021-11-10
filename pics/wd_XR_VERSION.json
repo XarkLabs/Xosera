@@ -9,10 +9,24 @@
             ]
         },
         {
-            "bits": 4,
+            "name": "features",
+            "bits": 3,
             "type": 1,
             "attr": [
-                "(optional feature bits TBD)"
+                "optional features",
+                "enabled (TBD)"
+            ]
+        },
+        {
+            "name": "clean",
+            "bits": 1,
+            "type": 3,
+            "attr": [
+                "HDL",
+                "source",
+                "git",
+                "hash",
+                "matched"
             ]
         }
     ],

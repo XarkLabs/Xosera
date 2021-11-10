@@ -6,7 +6,7 @@
 
 -include $(ROSCO_M68K_DIR)/user.mk
 
-ifeq (, $(shell command -v m68k-elf-gxc))
+ifeq (, $(shell command -v m68k-elf-gcc))
 $(info No m68k-elf-* build tools found in path)
 else
 ifndef ROSCO_M68K_DIR
@@ -28,7 +28,7 @@ DEFINES=-DROSCO_M68K
 CFLAGS=-std=c11 -ffreestanding -ffunction-sections -fdata-sections \
  -Wall -Wextra -Werror -Wno-unused-function -pedantic -I$(SYSINCDIR) \
  -mcpu=68010 -march=68010 -mtune=68010 $(DEFINES)
-# extra harsh warnings:	
+# extra harsh warnings:
 CFLAGS+= -Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla -Warray-bounds=2 -Wimplicit-fallthrough=3 -Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion -Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wformat-signedness -Wshadow -Wstrict-overflow=4 -Wswitch-default -Wswitch-enum -Wstack-usage=1000000 -Wcast-align=strict  -Wno-conversion -Wno-arith-conversion
 GCC_LIBS=$(shell $(CC) --print-search-dirs \
  | grep libraries:\ = \

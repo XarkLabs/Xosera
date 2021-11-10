@@ -401,6 +401,7 @@ int test_vram(bool LFSR, int mode, int speed)
 
     // set funky mode to show VRAM
     wait_vsync();
+    xreg_setw(VID_CTRL, 0x0000);
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_GFX_CTRL, vram_modes[mode]);        // bitmap + 8-bpp Hx2 Vx1
     xreg_setw(PA_LINE_LEN, 136);                     // ~65536/480 words per line

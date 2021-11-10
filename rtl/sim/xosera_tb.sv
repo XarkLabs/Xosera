@@ -16,7 +16,7 @@
 
 `define MEMDUMP                     // dump VRAM contents to file
 `define BUSTEST
-`define MAX_FRAMES      4
+`define MAX_FRAMES      2
 `define LOAD_MONOBM
 
 module xosera_tb();
@@ -85,12 +85,19 @@ xosera_main xosera(
 parameter CLK_PERIOD    = (1000000000.0 / PIXEL_FREQ);
 parameter M68K_PERIOD   = 80;
 
+logic [15:0] readword;
+
+integer logfile;
+
 initial begin
     $timeformat(-9, 0, " ns", 20);
+    logfile = $fopen("sim/logs/xosera_tb_isim.log");
     $dumpfile("sim/logs/xosera_tb_isim.fst");
     $dumpvars(0, xosera);
 
-    frame = 0;
+    $display("Xosera - Verilog testbench started");
+
+    frame = 1;
     test_addr = 'hABCD;
     test_inc = 'h0001;
     test_addr2 = 'h1234;
@@ -194,22 +201,22 @@ function logic [63:0] regname(
     );
     begin
         case (num)
-            4'h0: regname = "AUX_ADDR";
-            4'h1: regname = "CONST   ";
-            4'h2: regname = "RD_ADDR ";
-            4'h3: regname = "WR_ADDR ";
-            4'h4: regname = "DATA    ";
-            4'h5: regname = "DATA_2  ";
-            4'h6: regname = "AUX_DATA";
-            4'h7: regname = "COUNT   ";
-            4'h8: regname = "RD_INC  ";
-            4'h9: regname = "WR_INC  ";
-            4'hA: regname = "WR_MOD  ";
-            4'hB: regname = "RD_MOD  ";
-            4'hC: regname = "WIDTH   ";
-            4'hD: regname = "BLITCTRL";
-            4'hE: regname = "UNUSED_E";
-            4'hF: regname = "UNUSED_F";
+            4'h0: regname = "XR_ADDR ";
+            4'h1: regname = "XR_DATA ";
+            4'h2: regname = "RD_INCR ";
+            4'h3: regname = "RD_ADDR ";
+            4'h4: regname = "WR_INCR ";
+            4'h5: regname = "WR_ADDR ";
+            4'h6: regname = "DATA    ";
+            4'h7: regname = "DATA2   ";
+            4'h8: regname = "SYS_CTRL";
+            4'h9: regname = "TIMER   ";
+            4'hA: regname = "LFSR    ";
+            4'hB: regname = "UNUSED_B";
+            4'hC: regname = "RW_INCR ";
+            4'hD: regname = "RW_ADDR ";
+            4'hE: regname = "RW_DATA ";
+            4'hF: regname = "RW_DATA2";
             default: regname = "????????";
         endcase
     end
@@ -217,14 +224,14 @@ endfunction
 
 always @* begin
     if (reconfig) begin
-        $display("%0t XOSERA REBOOT: To flash config #0x%x", $realtime, boot_select);
+        $fdisplay(logfile, "%0t XOSERA REBOOT: To flash config #0x%x", $realtime, boot_select);
         $finish;
     end
 end
 
 always @(negedge clk) begin
     if (bus_intr) begin
-        $display("%0t XOSERA INTERRUPT signal active", $realtime);
+        $fdisplay(logfile, "%0t XOSERA INTERRUPT signal active", $realtime);
     end
 end
 
@@ -240,19 +247,39 @@ always begin
     # 8ms;
 
     // TODO hacked in copper enable
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, XR_COPP_CTRL);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, 16'(XR_COPP_CTRL));
     #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h8000);
     // TODO end
-        
-        
+
+`ifdef ENABLE_LFSR
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_LFSR, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_LFSR, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_LFSR, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_LFSR, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+`endif
+
+
 `ifdef LOAD_MONOBM
     while (xosera.video_gen.last_frame_pixel != 1'b1) begin
         # 1ns;
     end
 
+    # 15ms;
+
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_INCR, test_inc);
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0000);
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, XR_PA_GFX_CTRL);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, 16'(XR_PA_GFX_CTRL));
     #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h0040);
 
     inject_file("../testdata/raw/space_shuttle_color_small.raw", XM_DATA);  // pump binary file into DATA
@@ -285,15 +312,15 @@ always begin
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_ADDR, test_addr2[15:8]);
     #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_ADDR, test_addr2[7:0]);
@@ -308,7 +335,7 @@ always begin
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
 `endif
 
@@ -319,21 +346,21 @@ always begin
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
     #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h01);
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
     #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h02);
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(1ms) ;
     #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
@@ -341,14 +368,14 @@ always begin
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
     #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h03);
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(1500us) ;
     #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
@@ -356,7 +383,7 @@ always begin
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
-    $display("%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
 `endif
 end
@@ -368,15 +395,17 @@ logic [15:0] last_rd_addr = 0;
 always @(negedge clk) begin
     if (xosera.reg_interface.regs_vram_sel_o) begin
         if (xosera.reg_interface.regs_wr_o) begin
-            $display("%0t Write VRAM[%04x] <= %04x", $realtime, xosera.vram.address_in, xosera.vram.data_in);
+            if (xosera.reg_interface.bus_bytesel) begin
+                $fdisplay(logfile, "%0t Write VRAM[%04x] <= %04x", $realtime, xosera.vram_arb.vram.address_in, xosera.vram_arb.vram.data_in);
+            end
         end
         else begin
             flag <= 1;
-            last_rd_addr <= xosera.vram.address_in;
+            last_rd_addr <= xosera.vram_arb.vram.address_in;
         end
     end
     else if (flag == 1) begin
-        $display("%0t Read VRAM[%04x] => %04x", $realtime, last_rd_addr, xosera.vram.data_out);
+        $fdisplay(logfile, "%0t Read VRAM[%04x] => %04x", $realtime, last_rd_addr, xosera.vram_arb.vram.data_out);
         flag <= 0;
     end
 end
@@ -389,20 +418,21 @@ end
 always @(posedge clk) begin
     if (xosera.video_gen.last_frame_pixel == 1'b1) begin
         frame <= frame + 1;
-        $display("Finished rendering frame #%1d", frame);
+        $fdisplay(logfile, "%0t Finished rendering frame #%1d", $realtime, frame);
+        $display("%0t Finished rendering frame #%1d", $realtime, frame);
 
-        if (frame == `MAX_FRAMES) begin
+        if (frame > `MAX_FRAMES) begin
 `ifdef MEMDUMP
             f = $fopen("logs/xosera_tb_isim_vram.txt", "w");
             for (i = 0; i < 65536; i += 16) begin
                 $fwrite(f, "%04x: ", i[15:0]);
                 for (j = 0; j < 16; j++) begin
-                    $fwrite(f, "%04x ", xosera.vram.memory[i+j][15:0]);
+                    $fwrite(f, "%04x ", xosera.vram_arb.vram.memory[i+j][15:0]);
                 end
                 $fwrite(f, "  ");
                 for (j = 0; j < 16; j++) begin
-                    if (xosera.vram.memory[i+j][7:0] >= 32 && xosera.vram.memory[i+j][7:0] < 127) begin
-                        $fwrite(f, "%c", xosera.vram.memory[i+j][7:0]);
+                    if (xosera.vram_arb.vram.memory[i+j][7:0] >= 32 && xosera.vram_arb.vram.memory[i+j][7:0] < 127) begin
+                        $fwrite(f, "%c", xosera.vram_arb.vram.memory[i+j][7:0]);
                     end else
                     begin
                         $fwrite(f, ".");
@@ -417,22 +447,21 @@ always @(posedge clk) begin
     end
 end
 
-// NOTE: Horrible hacky Verilog string array to print register name (fixed 8 characters, and in reverse order).
 always @(posedge clk) begin
     if (xosera.reg_interface.bus_write_strobe) begin
         if (xosera.reg_interface.bus_bytesel) begin
-            $display("%0t BUS WRITE:  R[%1x:%s] <= __%02x", $realtime, xosera.reg_interface.bus_reg_num, regname(xosera.reg_interface.bus_reg_num), xosera.reg_interface.bus_data_byte);
+            $fdisplay(logfile, "%0t BUS WRITE:  R[%1x:%s] <= __%02x", $realtime, xosera.reg_interface.bus_reg_num, regname(xosera.reg_interface.bus_reg_num), xosera.reg_interface.bus_data_byte);
         end
         else begin
-            $display("%0t BUS WRITE:  R[%1x:%s] <= %02x__", $realtime, xosera.reg_interface.bus_reg_num, regname(xosera.reg_interface.bus_reg_num),xosera.reg_interface.bus_data_byte);
+            $fdisplay(logfile, "%0t BUS WRITE:  R[%1x:%s] <= %02x__", $realtime, xosera.reg_interface.bus_reg_num, regname(xosera.reg_interface.bus_reg_num),xosera.reg_interface.bus_data_byte);
         end
     end
     if (xosera.reg_interface.bus_read_strobe) begin
         if (xosera.bus_bytesel_i) begin
-            $display("%0t BUS READ:  R[%1x:%s] => __%02x", $realtime, xosera.reg_interface.bus_reg_num, regname(xosera.reg_interface.bus_reg_num),xosera.reg_interface.bus_data_o);
+            $fdisplay(logfile, "%0t BUS READ:  R[%1x:%s] => __%02x", $realtime, xosera.reg_interface.bus_reg_num, regname(xosera.reg_interface.bus_reg_num),xosera.reg_interface.bus_data_o);
         end
         else begin
-            $display("%0t BUS READ:  R[%1x:%s] => %02x__", $realtime, xosera.reg_interface.bus_reg_num, regname(xosera.reg_interface.bus_reg_num), xosera.reg_interface.bus_data_o);
+            $fdisplay(logfile, "%0t BUS READ:  R[%1x:%s] => %02x__", $realtime, xosera.reg_interface.bus_reg_num, regname(xosera.reg_interface.bus_reg_num), xosera.reg_interface.bus_data_o);
         end
     end
 end

@@ -296,8 +296,8 @@ static void get_textmode_settings()
 static void xcls()
 {
     get_textmode_settings();
-    xm_setw(WR_ADDR, screen_addr);
     xm_setw(WR_INCR, 1);
+    xm_setw(WR_ADDR, screen_addr);
     xm_setbh(DATA, text_color);
     for (uint16_t i = 0; i < (text_columns * text_rows); i++)
     {
@@ -306,15 +306,22 @@ static void xcls()
     xm_setw(WR_ADDR, screen_addr);
 }
 
-static void xmsg(int x, int y, int color, const char * msg)
+static const char * xmsg(int x, int y, int color, const char * msg)
 {
     xm_setw(WR_ADDR, (y * text_columns) + x);
     xm_setbh(DATA, color);
     char c;
-    while ((c = *msg++) != '\0')
+    while ((c = *msg) != '\0')
     {
+        msg++;
+        if (c == '\n')
+        {
+            break;
+        }
+
         xm_setbl(DATA, c);
     }
+    return msg;
 }
 
 void wait_vsync()
@@ -561,6 +568,110 @@ uint16_t rosco_m68k_CPUMHz()
 }
 #endif
 
+const char blurb[] =
+    "\n"
+    "Xosera is an FPGA based video adapter designed with the rosco_m68k retro\n"
+    "computer in mind. Inspired in concept by it's \"namesake\" the Commander X16's\n"
+    "VERA, Xosera is an original open-source video adapter design, built with open-\n"
+    "source tools and is tailored with features generally appropriate for a Motorola\n"
+    "68K era retro computer like the rosco_m68k (or even an 8-bit CPU).\n"
+    "\n"
+    "  \xf9  VGA or HDMI/DVI output at 848x480 or 640x480 (16:9 or 4:3 @ 60Hz)\n"
+    "  \xf9  2 x 256 color palette out of 4096 colors (12-bit RGB)\n"
+    "  \xf9  128KB of embedded video RAM (16-bit words @33/25 MHz)\n"
+    "  \xf9  Register based interface with 16 16-bit registers\n"
+    "  \xf9  Read/write VRAM with programmable read/write address increment\n"
+    "  \xf9  Fast 8-bit bus interface (using MOVEP) for rosco_m68k (by Ross Bamford)\n"
+    "  \xf9  Fonts writable in VRAM or in dedicated 8KB of font memory\n"
+    "  \xf9  8x8 or 8x16 character tile size (or truncated e.g., 8x10)\n"
+    "  \xf9  Tiled modes with 1024 glyphs, 16 or 256 colors and H & V mirrorring\n"
+    "  \xf9  Horizontal and/or vertical pixel relpeat 1, 2, 3, 4x (e.g. 424x240 or 320x240)\n"
+    "  \xf9  Smooth horizontal and vertical native pixel tile scrolling\n"
+    "  \xf9  2-color full-res bitmap mode (with attribute per 8 pixels, ala Sinclair)\n"
+    "  \xf9  TODO: Two 16 color \"planes\" or combined for 256 colors\n"
+    "  \xf9  TODO: \"Blitter\" for fast VRAM copy & fill operations\n"
+    "  \xf9  TODO: 2-D operations \"blitter\" with modulo and shifting/masking\n"
+    "  \xf9  TODO: At least one \"cursor\" sprite (or more)\n"
+    "  \xf9  TODO: Wavetable stereo audio (spare debug GPIOs for now)\n";
+
+static void test_xr_read()
+{
+    dprintf("test_xr\n");
+
+    xcls();
+
+    uint16_t vaddr = 0;
+    xm_setw(WR_INCR, 1);
+    for (vaddr = 0; vaddr < 0x2000; vaddr++)
+    {
+        xm_setw(WR_ADDR, vaddr);
+        xm_setw(DATA, vaddr + 0x0100);
+    }
+    xm_setw(WR_ADDR, 0x000);
+    xm_setw(DATA, 0x1f00 | 'V');
+    xm_setw(DATA, 0x1f00 | 'R');
+    xm_setw(DATA, 0x1f00 | 'A');
+    xm_setw(DATA, 0x1f00 | 'M');
+
+
+    if (delay_check(DELAY_TIME))
+    {
+        return;
+    }
+
+    for (uint16_t taddr = XR_TILE_MEM + 0x0800; taddr < XR_TILE_MEM + 0x1400; taddr++)
+    {
+        xm_setw(XR_ADDR, taddr);
+        xm_setw(XR_DATA, taddr + 0x0100);
+    }
+    xm_setw(XR_ADDR, XR_TILE_MEM + 0x0800);
+    xm_setw(XR_DATA, 0x1f00 | 'T');
+    xm_setw(XR_DATA, 0x1f00 | 'I');
+    xm_setw(XR_DATA, 0x1f00 | 'L');
+    xm_setw(XR_DATA, 0x1f00 | 'E');
+
+    xreg_setw(PA_DISP_ADDR, 0x0800);
+    xreg_setw(PA_TILE_CTRL, 0x020F);
+
+    if (delay_check(DELAY_TIME))
+    {
+        return;
+    }
+
+    //    uint8_t oldint = mcDisableInterrupts();        // NOTE: should not be needed (and doesn't "solve" issues)
+    for (int r = 0; r < 100; r++)
+    {
+        if (r == 50)
+        {
+            xreg_setw(PA_DISP_ADDR, 0x0000);
+            xreg_setw(PA_TILE_CTRL, 0x000F);
+        }
+        for (int w = XR_TILE_MEM; w < XR_TILE_MEM + 0x1400; w++)
+        {
+            //            touching
+            xm_setw(XR_ADDR, w);
+            //            __asm__ __volatile__("nop ; nop ; nop ; nop");
+            uint16_t v = xm_getw(XR_DATA);           // read tile mem
+            xm_setw(XR_DATA, r & 1 ? v : ~v);        // toggle to prove read and set in VRAM
+                                                     //            __asm__ __volatile__("nop ; nop ; nop ; nop");
+        }
+
+        if (delay_check(10))
+        {
+            return;
+        }
+    }
+    //    mcEnableInterrupts(oldint);
+
+    xreg_setw(PA_DISP_ADDR, 0x0000);
+    xreg_setw(PA_GFX_CTRL, 0x0000);         // set 8-BPP tiled (bad TILEMEM contention)
+    xreg_setw(PA_TILE_CTRL, 0x000F);        // set 8-BPP tiled (bad TILEMEM contention)
+    if (delay_check(DELAY_TIME * 2))
+    {
+        return;
+    }
+}
+
 static void load_sd_bitmap(const char * filename)
 {
     dprintf("Loading bitmap: \"%s\"", filename);
@@ -579,6 +690,7 @@ static void load_sd_bitmap(const char * filename)
             }
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
+            xm_setw(WR_INCR, 1);
             xm_setw(WR_ADDR, vaddr);
             for (int i = 0; i < (cnt >> 1); i++)
             {
@@ -648,15 +760,19 @@ void     xosera_test()
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
 
+#if 1
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");
 
-    printf("Checking for interrupt...");
+    dprintf("Checking for interrupt...");
     uint32_t t = XFrameCount;
     while (XFrameCount == t)
         ;
-    printf("okay. Vsync interrupt detected.\n\n");
+    dprintf("okay. Vsync interrupt detected.\n\n");
+#else
+    dprintf("NOT Installing interrupt handler\n");
+#endif
 
 #if COPPER_TEST
     dprintf("Loading copper list...");
@@ -712,6 +828,8 @@ void     xosera_test()
         xm_setw(SYS_CTRL, sysctrl);
         dprintf("SYS_CTRL: 0x%04x\n", sysctrl);
 
+        restore_colors();
+
 #if COPPER_TEST
         if (test_count & 1)
         {
@@ -745,6 +863,8 @@ void     xosera_test()
         {
             break;
         }
+
+        test_xr_read();
 
         if (SD_check_support())
         {

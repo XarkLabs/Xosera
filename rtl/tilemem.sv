@@ -48,6 +48,7 @@ logic [15: 0] bram[0 : 2**AWIDTH-1];
 `ifndef SHOW        // yosys show command doesn't like "too long" init string
 initial begin
 
+    if (AWIDTH == 12) begin
 `ifdef FONT_FILE_0
     $readmemb(`FONT_FILE_0, bram, `FONT_ADDR_0);
 `else
@@ -62,6 +63,10 @@ initial begin
 `ifdef FONT_FILE_3
     $readmemb(`FONT_FILE_3, bram, `FONT_ADDR_3);
 `endif
+    end
+    if (AWIDTH == 10) begin
+        $readmemb("tilesets/hexfont_8x8w.mem", bram, 0);
+    end
 end
 `endif
 

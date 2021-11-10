@@ -33,19 +33,19 @@
 
 #include "xosera_m68k_api.h"
 
-bool use_sd;
+bool              use_sd;
 volatile uint32_t optguard;
 
+// NOTE: 8 pixels before EOL is good spot to change GFX_CTRL settings for next line
 // Copper list
-const uint8_t  copper_list_len = 14;
-const uint16_t copper_list[] = {
-    0x9010, 0x0055,     // mover 0055, PA_GFX_CTRL       ; First half of screen in 4-bpp + Hx2 + Vx2
-    0xb00f, 0x0ec6,     // movep 0x0ec6, 0xf             ; Palette entry 0xf from tut bitmap
-    0x00f0, 0x0002,     // wait  0, 240, 0b00010         ; Wait for line 240, H position ignored
-    0x9015, 0x3e80,     // mover 0x3e80, PA_LINE_ADDR    ; Line start now at 16000
-    0x9010, 0x0040,     // mover 0x0040, PA_GFX_CTRL     ; 1-bpp + Hx1 + Vx1
-    0xb00f, 0x0fff,     // movep 0x0fff, 0xf             ; Palette entry 0xf to white for 1bpp bitmap
-    0x0000, 0x0003      // nextf                         ; Wait for next frame
+uint32_t copper_list[] = {
+    COP_MOVER(0x55, PA_GFX_CTRL),           // mover 0055, PA_GFX_CTRL    First half of screen in 4-bpp + Hx2 + Vx2 //
+    COP_MOVEP(0x0ec6, 0xf),                 // movep 0x0ec6, 0xf          Palette entry 0xf from tut bitmap
+    COP_WAIT_V(240),                        // wait  632, 240             Wait for 640-8, 240
+    COP_MOVER(0x0040, PA_GFX_CTRL),         // mover 0x0040, PA_GFX_CTRL  1-bpp + Hx1 + Vx1
+    COP_MOVER(0x3e80, PA_LINE_ADDR),        // mover 0x3e80, PA_LINE_ADDR Line start now at 16000
+    COP_MOVEP(0x0fff, 0xf),                 // movep 0x0fff, 0xf          Palette entry 0xf to white for 1bpp bitmap
+    COP_END()                               // nextf                      Wait for next frame
 };
 
 uint32_t mem_buffer[128 * 1024];
@@ -84,6 +84,14 @@ static void dprintf(const char * fmt, ...)
     vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
     dprint(dprint_buff);
     va_end(args);
+}
+
+void wait_vsync()
+{
+    while (xreg_getw(SCANLINE) >= 0x8000)
+        ;
+    while (xreg_getw(SCANLINE) < 0x8000)
+        ;
 }
 
 uint16_t screen_addr;
@@ -125,7 +133,7 @@ static bool load_sd_bitmap(const char * filename, uint16_t base_address)
         int cnt   = 0;
         int vaddr = base_address;
 
-        xm_setw(WR_INCR, 0x0001);   // needed to be set
+        xm_setw(WR_INCR, 0x0001);        // needed to be set
 
         while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
         {
@@ -209,9 +217,11 @@ void     xosera_test()
     dprintf("Loading copper list...\n");
 
     xm_setw(XR_ADDR, XR_COPPER_MEM);
-
-    for (uint8_t i = 0; i < copper_list_len; i++) {
-        xm_setw(XR_DATA, copper_list[i]);
+    uint16_t * wp = (uint16_t *)copper_list;
+    for (uint8_t i = 0; i < sizeof(copper_list) / sizeof(uint32); i++)
+    {
+        xm_setw(XR_DATA, *wp++);
+        xm_setw(XR_DATA, *wp++);
     }
 
     uint16_t version   = xreg_getw(VERSION);
@@ -226,8 +236,7 @@ void     xosera_test()
     uint16_t linelen  = xreg_getw(PA_LINE_LEN);
     uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
 
-    dprintf(
-        "Xosera v%1x.%02x #%08x Features:0x%02x\n", (version >> 8) & 0xf, (version & 0xff), githash, version >> 8);
+    dprintf("Xosera v%1x.%02x #%08x Features:0x%1x\n", (version >> 8) & 0xf, (version & 0xff), githash, version >> 8);
     dprintf("Monitor Mode: %dx%d@%2x.%02xHz\n", monwidth, monheight, monfreq >> 8, monfreq & 0xff);
     dprintf("\nPlayfield A:\n");
     dprintf("PA_GFX_CTRL : 0x%04x PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
@@ -254,7 +263,8 @@ void     xosera_test()
         dprintf("No SD card support.\n");
     }
 
-    if (!use_sd) {
+    if (!use_sd)
+    {
         dprintf("No SD support. Cannot continue\n");
         return;
     }
@@ -262,50 +272,69 @@ void     xosera_test()
 
     // load palette, and images into vram
     dprintf("Loading data...\n");
-    if (!load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw")) {
+#if 0
+    if (!load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw"))
+    {
         return;
     }
 
-    if (!load_sd_bitmap("/ST_KingTut_Dpaint_16.raw", 0)) {
+    if (!load_sd_bitmap("/ST_KingTut_Dpaint_16.raw", 0))
+    {
+        return;
+    }
+#else
+    if (!load_sd_colors("/pacbox-320x240_pal.raw"))
+    {
         return;
     }
 
-    if (!load_sd_bitmap("/mountains_mono_640x480w.raw", 16000)) {
+    if (!load_sd_bitmap("/pacbox-320x240.raw", 0))
+    {
+        return;
+    }
+#endif
+
+    if (!load_sd_bitmap("/mountains_mono_640x480w.raw", 16000))
+    {
         return;
     }
 
-    /* For manual testing tut, if copper disabled */    
+    /* For manual testing tut, if copper disabled */
     // xreg_setw(PA_GFX_CTRL, 0x0065);
-    
+
     // Set line len here, if the two res had different the copper
     // would handle this instead...
     xreg_setw(PA_LINE_LEN, 80);
-    
+
     dprintf("Ready - enabling copper...\n");
     xreg_setw(COPP_CTRL, 0x8000);
 
     /* For manual testing mountain if copper disabled... */
-    //xreg_setw(PA_GFX_CTRL, 0x0040);
-    //xreg_setw(PA_LINE_LEN, 80);
-    //xreg_setw(PA_DISP_ADDR, 0x3e80);
+    // xreg_setw(PA_GFX_CTRL, 0x0040);
+    // xreg_setw(PA_LINE_LEN, 80);
+    // xreg_setw(PA_DISP_ADDR, 0x3e80);
 
-    bool up = false;
+    bool     up      = false;
     uint16_t current = 240;
 
-    while (!checkchar()) {
-        for (int i = 0; i < 10000; i++) {
-            optguard = i;
-        }
+    while (!checkchar())
+    {
+        wait_vsync();
 
         xm_setw(XR_ADDR, XR_COPPER_MEM + 4);
-        if (up) {
+        if (up)
+        {
             xm_setw(XR_DATA, ++current);
-            if (current == 300) {
+            if (current == 300)
+            {
                 up = false;
             }
-        } else {
+        }
+        else
+        {
             xm_setw(XR_DATA, --current);
-            if (current == 200) {
+            if (current == 200)
+            {
                 up = true;
             }
         }

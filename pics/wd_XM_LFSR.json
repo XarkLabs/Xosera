@@ -2,10 +2,10 @@
     "reg": [
         {
             "bits": 16,
-            "name": "16-bit tenth of millisecond timer",
+            "name": "16-bit LFSR pseudo random value",
             "type": 4,
             "attr": [
-                "(16-bit timer value when read)"
+                "(16-bits of high-speed 19-bit LFSR)"
             ]
         }
     ],

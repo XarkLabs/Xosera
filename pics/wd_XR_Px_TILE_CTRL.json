@@ -15,16 +15,21 @@
     },
     {
       "bits": 1,
-      "name": "mem",
+      "name": "tile",
       "type": 5,
       "attr": [
-        "0 tile RAM",
-        "1 VRAM"
+        "0=tile",
+        "1=vram"
       ]
     },
     {
       "bits": 1,
-      "type": 1
+      "name": "display",
+      "type": 2,
+      "attr": [
+        "0=vram",
+        "1=tile"
+      ]
     },
     {
       "bits": 6,

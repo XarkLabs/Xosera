@@ -52,15 +52,15 @@
 #define XR_CONFIG_REGS   0x0000        // 0x0000-0x000F config XR registers
 #define XR_PA_REGS       0x0010        // 0x0010-0x0017 playfield A XR registers
 #define XR_PB_REGS       0x0018        // 0x0018-0x001F playfield B XR registers
-#define XR_BLIT_REGS     0x0020        // 0x0020-0x002F 2D-blit XR registers
-#define XR_POLYDRAW_REGS 0x0030        // 0x0030-0x003F line/poly draw XR registers
+#define XR_BLIT_REGS     0x2000        // 0x2000-0x200F 2D-blit XR registers
+#define XR_POLYDRAW_REGS 0x4000        // 0x4000-0x400F line/poly draw XR registers
+#define XR_UNUSED_REG_6  0x6000        // 0x6000-0x600F unused
 
 // XR Memory Regions
-#define XR_COLOR_MEM  0x8000        // (WO) 0x8000-0x80FF 256 x 16-bit color lookup memory ($xRGB)
-#define XR_TILE_MEM   0x9000        // (WO) 0x9000-0x9FFF 4096 x 16-bit tile glyph storage memory
-#define XR_COPPER_MEM 0xA000        // (WO) 0xA000-0xA7FF 2048 x 16-bit copper program memory
-#define XR_SPRITE_MEM 0xB000        // (WO) 0xB000-0xB0FF 256 x 16-bit sprite cursor memory
-#define XR_UNUSED_MEM 0xC000        //      0xC000-0xF0FF unused
+#define XR_COLOR_MEM  0x8000        // (R*/W) 0x8000-0x81FF 2 x 256 x 16-bit A & B color lookup memory ($xRGB)
+#define XR_TILE_MEM   0xA000        // (R*/W) 0xA000-0xAFFF 4096 x 16-bit tile glyph storage memory
+#define XR_COPPER_MEM 0xC000        // (R*/W) 0xC000-0xC7FF 2048 x 16-bit copper program memory
+#define XR_UNUSED_MEM 0xE000        //        0xE000-0xFFFF unused
 
 //  Video Config and Copper XR Registers
 #define XR_VID_CTRL   0x00        // (R /W) display control and border color index
@@ -99,34 +99,5 @@
 #define XR_PB_LINE_ADDR 0x1D        // (R /W) playfield B scanline start address (loaded at start of line)
 #define XR_PB_UNUSED_1E 0x1E        //
 #define XR_PB_UNUSED_1F 0x1F        //
-
-// Macros to make bit-fields easier
-#define XB_(v, lb, rb) (((v) & ((1 << ((lb) - (rb) + 1)) - 1)) << (rb))
-
-#define MAKE_SYS_CTRL(reboot, bootcfg, wrmask, intena)                                                                 \
-    (XB_(reboot, 15, 15) | XB_(bootcfg, 14, 13) | XB_(wrmask, 11, 8) | XB_(intena, 3, 0))
-#define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 15, 8) | XB_(intmask, 3, 0))
-#define MAKE_GFX_CTRL(colbase, blank, bpp, bm, hx, vx)                                                                 \
-    (XB_(colbase, 15, 8) | XB_(blank, 7, 7) | XB_(bm, 6, 6) | XB_(bpp, 5, 4) | XB_(hx, 3, 2) | XB_(vx, 1, 0))
-#define MAKE_TILE_CTRL(tilebase, vram, tileheight) (((tilebase)&0xFC00) | XB_(vram, 8, 8) | XB_(((tileheight)-1), 3, 0))
-#define MAKE_HV_SCROLL(h_scrl, v_scrl)             (XB_(h_scrl, 12, 8) | XB_(v_scrl, 5, 0))
-
-// Copper instruction helper macros
-#define COP_WAIT_HV(h_pos, v_pos)   (0x00000000 | XB_((uint32_t)(v_pos), 26, 16) | XB_((uint32_t)(h_pos), 14, 4))
-#define COP_WAIT_H(h_pos)           (0x00000001 | XB_((uint32_t)(h_pos), 14, 4))
-#define COP_WAIT_V(v_pos)           (0x00000002 | XB_((uint32_t)(v_pos), 26, 16))
-#define COP_WAIT_F()                (0x00000003)
-#define COP_END()                   (0x00000003)
-#define COP_SKIP_HV(h_pos, v_pos)   (0x20000000 | XB_((uint32_t)(v_pos), 26, 16) | XB_((uint32_t)(h_pos), 14, 4))
-#define COP_SKIP_H(h_pos)           (0x20000001 | XB_((uint32_t)(h_pos), 14, 4))
-#define COP_SKIP_V(v_pos)           (0x20000002 | XB_((uint32_t)(v_pos), 26, 16))
-#define COP_SKIP_F()                (0x20000003 | XB_((uint32_t)(0), 14, 4))
-#define COP_JUMP(cop_addr)          (0x40000000 | XB_((uint32_t)(cop_addr), 26, 16))
-#define COP_MOVER(val16, xreg)      (0x90000000 | XB_((uint32_t)(XR_##xreg), 23, 16) | ((uint16)(val16)))
-#define COP_MOVEF(val16, tile_addr) (0xa0000000 | XB_((uint32_t)(tile_addr), 27, 16) | ((uint16)(val16)))
-#define COP_MOVEP(rgb16, color_num) (0xB0000000 | XB_((uint32_t)(color_num), 23, 16) | ((uint16)(rgb16)))
-#define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 26, 16) | ((uint16)(val16)))
-
-// TODO blit and polydraw
 
 #endif        // XOSERA_M68K_DEFS_H

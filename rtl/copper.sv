@@ -12,12 +12,12 @@
 //      [14:11] - Reserved
 //      [10:0]  - Copper initial PC
 //
-// Copper programs (aka 'The Copper List') live in AUX memory at 
-// 0xA000. This memory segment is 2K in size.
+// Copper programs (aka 'The Copper List') live in AUX memory at
+// 0xC000. This memory segment is 2K in size.
 //
-// When enabled, the copper will run through as much of the program 
-// as it possibly can each frame. The program is restarted at the 
-// PC contained in the control register after each vblank. 
+// When enabled, the copper will run through as much of the program
+// as it possibly can each frame. The program is restarted at the
+// PC contained in the control register after each vblank.
 //
 // You should **definitely** set up a program for the copper before
 // you enable it. Once enabled, it is always running in sync with
@@ -28,13 +28,13 @@
 // In the general case, most copper instructions take four pixels,
 // to execute, except for WAIT and SWAP, which take five pixels.
 //
-// Additionally, the first instruction executed in a frame, or 
-// after the copper is first enabled will take five pixels 
+// Additionally, the first instruction executed in a frame, or
+// after the copper is first enabled will take five pixels
 // (as it has to pre-fetch the first instruction). The actual
 // execution is always on the last pixel of the instruction.
 //
 // These timings will need to be taken into account when computing
-// WAIT and SKIP offsets - often you will want to use an offset 
+// WAIT and SKIP offsets - often you will want to use an offset
 // a number of pixels before the pixel you want the next instruction
 // to actually execute on.
 //
@@ -55,7 +55,7 @@
 //      * If your program does reach the end during a frame, and doesn't
 //        have a terminating wait, it will run through the rest of copper
 //        memory and maybe eventually start again if there's time.
-//      * Assuming the common use-case of "wait for position, do thing", 
+//      * Assuming the common use-case of "wait for position, do thing",
 //        then none of this probably matters much...
 //
 // As far as the copper is concerned, all coordinates are in native
@@ -79,14 +79,14 @@
 //      * Xosera main registers
 //      * Video RAM
 //
-// This means it's possible to change the copper program that runs on a 
-// frame-by-frame basis (both from copper code and m68k program code) by 
-// odifying the copper control/ register. The copper supports jumps within 
-// the same frame with the JMP instruction. 
+// This means it's possible to change the copper program that runs on a
+// frame-by-frame basis (both from copper code and m68k program code) by
+// odifying the copper control/ register. The copper supports jumps within
+// the same frame with the JMP instruction.
 //
 // Self-modifying code is supported (by modifying copper memory from your
 // copper code) and of course m68k program code can modify that memory at
-// will using the Xosera registers. 
+// will using the Xosera registers.
 //
 // When modifying copper code from the m68k, and depending on the nature of
 // your modifications, you may need to sync with vblank to avoid display
@@ -95,47 +95,46 @@
 // Instructions and format
 //
 //      MMNEMONIC - ENCODING [word1],[word2]
-//          
+//
 //          ... Documentation ...
 //
 //
-//  
-//      WAIT  - [0000 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]
+//
+//      WAIT  - [000o oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]
 //
 //          Wait for a given screen position to be reached.
 //
 //
-//      SKIP  - [0010 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF] 
+//      SKIP  - [001o oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]
 //
 //          Skip if a given screen position has been reached.
 //
 //
-//      JMP   - [0100 oAAA AAAA AAA0],[oooo oooo oooo oooo]
+//      JMP   - [010o oAAA AAAA AAA0],[oooo oooo oooo oooo]
 //
 //          Jump to the given copper RAM address.
 //          Must be on a 32-bit boundary.
 //
 //
-//      MOVER - [1001 FFFF AAAA AAAA],[DDDD DDDD DDDD DDDD]
+//      MOVER - [011o FFFF AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
 //          Move 16-bit data to XR registers.
 //
 //
-//      MOVEF - [1010 AAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]
+//      MOVEF - [100A AAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
 //          Move 16-bit data to XR_TILE_MEM memory.
 //
 //
-//      MOVEP - [1011 oooo AAAA AAAA],[DDDD DDDD DDDD DDDD]
+//      MOVEP - [101o oooo AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
 //          Move 16-bit data to XR_COLOR_MEM (palette) memory.
 //
 //
-//      MOVEC - [1100 oAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]
+//      MOVEC - [110o oAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
 //          Move 16-bit data to XR_COPPER_MEM memory.
 //
-//  
 //      Y - Y position (11 bits)
 //      X - X position (11 bits)
 //      F - Flags
@@ -153,37 +152,34 @@
 
 `include "xosera_pkg.sv"
 
-localparam C_PC = xv::COPPERMEM_AWIDTH-1;               // short copper PC upper range alias
-
 module copper(
-    input   wire logic          clk,    
-    input   wire logic          reset_i,
-    output       logic          xr_ram_wr_en_o,         // General, for all RAM block writes
-    output       logic [15:0]   xr_ram_wr_addr_o,       // General, for all RAM block writes
-    output       logic [15:0]   xr_ram_wr_data_o,       // General, for all RAM block writes
+    output       logic          xr_wr_en_o,         // for all XR writes
+    input   wire logic          xr_wr_ack_i,        // for all XR writes
+    output       logic [15:0]   xr_wr_addr_o,       // for all XR writes
+    output       logic [15:0]   xr_wr_data_o,       // for all XR writes
     output       logic [C_PC:0] coppermem_rd_addr_o,
     output       logic          coppermem_rd_en_o,
-    input   wire logic [15:0]   coppermem_e_rd_data_i,
-    input   wire logic [15:0]   coppermem_o_rd_data_i,
-    input   wire logic          regs_xr_reg_sel_i,
-    input   wire logic          regs_tilemem_sel_i,
-    input   wire logic          regs_colormem_sel_i,
-    input   wire logic          regs_coppermem_sel_i,
+    input   wire logic [31:0]   coppermem_rd_data_i,    // NOTE: 16-bit even/odd combined
     input   wire logic          copp_reg_wr_i,          // strobe to write internal config register
     input   wire logic [15:0]   copp_reg_data_i,        // data for internal config register
     input   wire logic [10:0]   h_count_i,
-    input   wire logic [10:0]   v_count_i
+    input   wire logic [10:0]   v_count_i,
+    input   wire logic          reset_i,
+    input   wire logic          clk
     );
 
+localparam C_PC = xv::COPPER_AWIDTH-1;               // short copper PC upper range alias
+
 // instruction register
-typedef enum logic [3:0] {
-    INSN_WAIT       = 4'b0000,
-    INSN_SKIP       = 4'b0010,
-    INSN_JUMP       = 4'b0100,
-    INSN_MOVER      = 4'b1001,
-    INSN_MOVEF      = 4'b1010,
-    INSN_MOVEP      = 4'b1011,
-    INSN_MOVEC      = 4'b1100
+typedef enum logic [2:0] {
+    INSN_WAIT       = 3'b000,
+    INSN_SKIP       = 3'b001,
+    INSN_JUMP       = 3'b010,
+    INSN_MOVER      = 3'b011,
+    INSN_MOVEF      = 3'b100,
+    INSN_MOVEP      = 3'b101,
+    INSN_MOVEC      = 3'b110,
+    INSN_RSVD       = 3'b111
 } instruction_t;
 
 logic [31:0]  r_insn;
@@ -217,43 +213,43 @@ assign coppermem_rd_addr_o      = copper_pc;
 logic [15:0]  ram_wr_data_out;
 logic [15:0]  ram_wr_addr_out;
 
-logic         xr_wr_strobe;
+logic         xr_wr_en;
 
-assign xr_ram_wr_en_o           = xr_wr_strobe;
-assign xr_ram_wr_addr_o         = ram_wr_addr_out;
-assign xr_ram_wr_data_o         = ram_wr_data_out;
+assign xr_wr_en_o           = xr_wr_en;
+assign xr_wr_addr_o         = ram_wr_addr_out;
+assign xr_wr_data_o         = ram_wr_data_out;
 
 logic         copp_reset;
 always_comb   copp_reset  = h_count_i == xv::VISIBLE_WIDTH + xv::H_FRONT_PORCH + xv::H_SYNC_PULSE + xv::H_BACK_PORCH - 4 &&
                             v_count_i == xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH + xv::V_SYNC_PULSE + xv::V_BACK_PORCH - 1;
 
-// The following are setup in STATE_PRECOMP for use in 
+// The following are setup in STATE_PRECOMP for use in
 // STATE_EXEC if needed...
-logic         v_reached;
-logic         h_reached;
-logic  [C_PC:0] copper_pc_skip;
+logic          v_reached;
+logic          h_reached;
+logic [C_PC:0] copper_pc_skip;
 
 // These are done combinatorially, but should (?) be
 // stable by the time they're needed...
-logic         ignore_v;
-logic         ignore_h;
+logic          ignore_v;
+logic          ignore_h;
 logic [C_PC:0] copper_pc_jmp;
-logic [15:0]  move_data;
-logic  [7:0]  move_r_p_addr;
-logic [11:0]  move_f_addr;
-logic [10:0]  move_c_addr_v_pos;
-logic [10:0]  h_pos;
-logic  [3:0]  opcode;
+logic [15:0]   move_data;
+logic  [7:0]   move_r_p_addr;
+logic [12:0]   move_f_addr;
+logic [10:0]   move_c_addr_v_pos;
+logic [10:0]   h_pos;
+logic  [2:0]   opcode;
 
 assign ignore_v                 = r_insn[0];
 assign ignore_h                 = r_insn[1];
 assign copper_pc_jmp            = r_insn[26:17];
 assign move_data                = r_insn[15:0];
 assign move_r_p_addr            = r_insn[23:16];
-assign move_f_addr              = r_insn[27:16];
+assign move_f_addr              = r_insn[28:16];
 assign move_c_addr_v_pos        = r_insn[26:16];
 assign h_pos                    = r_insn[14:4];
-assign opcode                   = r_insn[31:28];
+assign opcode                   = r_insn[31:29];
 
 
 always_ff @(posedge clk) begin
@@ -265,9 +261,11 @@ always_ff @(posedge clk) begin
         copper_ex_state         <= STATE_INIT;
         ram_rd_strobe           <= 1'b0;
 
-        xr_wr_strobe            <= 1'b0;
+        xr_wr_en                <= 1'b0;
     end
     else begin
+        ram_rd_strobe           <= 1'b0;
+
         // video register write
         if (copp_reg_wr_i) begin
             copper_en       <= copp_reg_data_i[15];
@@ -275,13 +273,15 @@ always_ff @(posedge clk) begin
             copper_init_pc  <= copp_reg_data_i[C_PC:0];
         end
 
+        // only clear XR write enable when ack'd
+        if (xr_wr_ack_i) begin
+            xr_wr_en            <= 1'b0;
+        end
+
         // Main logic
         if (copp_reset) begin
             copper_ex_state         <= STATE_INIT;
             copper_pc               <= copper_init_pc;
-            ram_rd_strobe           <= 1'b0;
-
-            xr_wr_strobe            <= 1'b0;
         end
         else begin
             case (copper_ex_state)
@@ -298,12 +298,9 @@ always_ff @(posedge clk) begin
                         ram_rd_strobe   <= 1'b1;
                     end
                 end
-                // State 1 - Wait for copper RAMs - Usually will jump 
+                // State 1 - Wait for copper RAMs - Usually will jump
                 // directly here after execution of previous instruction.
                 STATE_WAIT: begin
-                    // Reset strobe in case previous was a MOVEx
-                    // In this case, the write will happen this cycle...
-                    xr_wr_strobe        <= 1'b0;
 
                     // Need to also check this here, as in normal running
                     // we don't go back to STATE_INIT...
@@ -324,8 +321,7 @@ always_ff @(posedge clk) begin
                 end
                 // State 2 - Latch data from copper RAMs
                 STATE_LATCH: begin
-                    r_insn[31:16]   <= coppermem_e_rd_data_i;
-                    r_insn[15:0]    <= coppermem_o_rd_data_i;
+                    r_insn          <= coppermem_rd_data_i;
                     copper_ex_state <= STATE_PRECOMP;
                     ram_rd_strobe   <= 1'b0;
                 end
@@ -340,8 +336,8 @@ always_ff @(posedge clk) begin
                 // State 4 - Execution (Main)
                 STATE_EXEC: begin
                     case (opcode)
-                        // WAIT and SKIP instructions have a second execution 
-                        // state, during which next instruction read is also 
+                        // WAIT and SKIP instructions have a second execution
+                        // state, during which next instruction read is also
                         // set up...
                         INSN_WAIT: begin
                             // executing wait
@@ -349,7 +345,7 @@ always_ff @(posedge clk) begin
                                 // Ignoring vertical position
                                 if (ignore_h) begin
                                     // Ignoring horizontal position - wait
-                                    // forever, nothing to do... 
+                                    // forever, nothing to do...
                                 end
                                 else begin
                                     // Checking only horizontal position
@@ -363,7 +359,7 @@ always_ff @(posedge clk) begin
                                         copper_ex_state     <= STATE_PRECOMP;
                                     end
                                 end
-                            end 
+                            end
                             else begin
                                 // Not ignoring vertical position
                                 if (ignore_h) begin
@@ -408,7 +404,7 @@ always_ff @(posedge clk) begin
                                         copper_pc       <= copper_pc_skip;
                                     end
                                 end
-                            end 
+                            end
                             else begin
                                 // Not ignoring vertical position
                                 if (ignore_h) begin
@@ -438,58 +434,50 @@ always_ff @(posedge clk) begin
                         end
                         INSN_MOVER: begin
                             // mover
-                            if (!regs_xr_reg_sel_i) begin
-                                xr_wr_strobe            <= 1'b1;
-                                ram_wr_addr_out[15:8]   <= 8'h0;
-                                ram_wr_addr_out[7:0]    <= move_r_p_addr;
-                                ram_wr_data_out         <= move_data;
+                            xr_wr_en                <= 1'b1;
+                            ram_wr_addr_out[15:8]   <= 8'h0;
+                            ram_wr_addr_out[7:0]    <= move_r_p_addr;
+                            ram_wr_data_out         <= move_data;
 
-                                // Setup fetch next instruction
-                                copper_ex_state         <= STATE_WAIT;
-                                ram_rd_strobe           <= 1'b1;
-                            end
+                            // Setup fetch next instruction
+                            copper_ex_state         <= STATE_WAIT;
+                            ram_rd_strobe           <= 1'b1;
                         end
                         INSN_MOVEF: begin
                             // movef
-                            if (!regs_tilemem_sel_i) begin
-                                xr_wr_strobe            <= 1'b1;
-                                ram_wr_addr_out[15:12]  <= xv::XR_TILE_MEM[15:12];
-                                ram_wr_addr_out[11:0]   <= move_f_addr;
-                                ram_wr_data_out         <= move_data;
+                            xr_wr_en                <= 1'b1;
+                            ram_wr_addr_out[15:13]  <= xv::XR_TILE_MEM[15:13];
+                            ram_wr_addr_out[12:0]   <= move_f_addr;
+                            ram_wr_data_out         <= move_data;
 
-                                // Setup fetch next instruction
-                                copper_ex_state         <= STATE_WAIT;
-                                ram_rd_strobe           <= 1'b1;
-                            end
+                            // Setup fetch next instruction
+                            copper_ex_state         <= STATE_WAIT;
+                            ram_rd_strobe           <= 1'b1;
                         end
                         INSN_MOVEP: begin
                             // movep
-                            if (!regs_colormem_sel_i) begin
-                                xr_wr_strobe            <= 1'b1;
-                                ram_wr_addr_out[15:8]   <= xv::XR_COLOR_MEM[15:8];
-                                ram_wr_addr_out[7:0]    <= move_r_p_addr;
-                                ram_wr_data_out         <= move_data;
+                            xr_wr_en                <= 1'b1;
+                            ram_wr_addr_out[15:8]   <= xv::XR_COLOR_MEM[15:8];
+                            ram_wr_addr_out[7:0]    <= move_r_p_addr;
+                            ram_wr_data_out         <= move_data;
 
-                                // Setup fetch next instruction
-                                copper_ex_state         <= STATE_WAIT;
-                                ram_rd_strobe           <= 1'b1;
-                            end
+                            // Setup fetch next instruction
+                            copper_ex_state         <= STATE_WAIT;
+                            ram_rd_strobe           <= 1'b1;
                         end
                         INSN_MOVEC: begin
                             // movec
-                            if (!regs_coppermem_sel_i) begin
-                                xr_wr_strobe            <= 1'b1;
-                                ram_wr_addr_out[15:11]  <= xv::XR_COPPER_MEM[15:11];
-                                ram_wr_addr_out[10:0]   <= move_c_addr_v_pos;
-                                ram_wr_data_out         <= move_data;
-                        
-                                // Setup fetch next instruction
-                                copper_ex_state         <= STATE_WAIT;
-                                ram_rd_strobe           <= 1'b1;
-                            end
+                            xr_wr_en                <= 1'b1;
+                            ram_wr_addr_out[15:11]  <= xv::XR_COPPER_MEM[15:11];
+                            ram_wr_addr_out[10:0]   <= move_c_addr_v_pos;
+                            ram_wr_data_out         <= move_data;
+
+                            // Setup fetch next instruction
+                            copper_ex_state         <= STATE_WAIT;
+                            ram_rd_strobe           <= 1'b1;
                         end
-                        default: begin
-                            // illegal instruction; just setup fetch for 
+                        INSN_RSVD: begin
+                            // illegal/reserved instruction; just setup fetch for
                             // next instruction
                             copper_ex_state <= STATE_WAIT;
                             ram_rd_strobe   <= 1'b1;

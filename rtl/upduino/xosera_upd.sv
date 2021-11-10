@@ -238,8 +238,8 @@ always @* begin
 end
 `endif
 
-// reset logic waits for PLL lock & reset button released (with small delay)
-logic reset = 1'b1;         // default in reset state
+// reset logic waits for PLL lock
+logic reset;
 
 always_ff @(posedge pclk) begin
     // reset if pll_lock lost

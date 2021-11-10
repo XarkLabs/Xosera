@@ -55,7 +55,7 @@ VIDEO_MODE ?= MODE_640x480
 #VRUN_TESTDATA ?= -u ../testdata/raw/256_colors_pal.raw -u ../testdata/raw/256_colors.raw
 #VRUN_TESTDATA ?= -u ../testdata/raw/xosera_r1_pal.raw -u ../testdata/raw/xosera_r1.raw
 #VRUN_TESTDATA ?= -u ../testdata/raw/space_shuttle_color_small.raw
-VRUN_TESTDATA ?= -u ../testdata/raw/space_shuttle_color_small.raw -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw -u ../testdata/raw/xosera_r1_pal.raw -u ../testdata/raw/xosera_r1.raw
+VRUN_TESTDATA ?=  -u ../testdata/raw/space_shuttle_color_small.raw -u ../testdata/raw/pacbox-320x240_pal.raw -u ../testdata/raw/pacbox-320x240.raw -u ../testdata/raw/mountains_mono_640x480w.raw -u ../testdata/raw/xosera_r1_pal.raw -u ../testdata/raw/xosera_r1.raw
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
 
@@ -128,19 +128,17 @@ isim: sim/$(TBTOP) sim.mk
 # run Verilator to build and run native simulation executable
 vrun: sim/obj_dir/V$(VTOP) sim.mk
 	@mkdir -p $(LOGS)
-	sim/obj_dir/V$(VTOP) $(VRUN_TESTDATA) | tee $(LOGS)/xosera_vsim.log
+	sim/obj_dir/V$(VTOP) $(VRUN_TESTDATA)
 
 # run Verilator to build and run native simulation executable
 irun: sim/$(TBTOP) sim.mk
 	@mkdir -p $(LOGS)
-	sim/$(TBTOP) -fst 2>&1 | tee $(LOGS)/$(TBTOP)_isim.log
+	sim/$(TBTOP) -fst
 
 # use Verilator to build native simulation executable
 sim/obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) sim.mk
 	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(TECH_LIB) $(SRC) $(current_dir)/$(CSRC)
 	cd sim/obj_dir && make -f V$(VTOP).mk
-
-# -j$(shell nproc)
 
 # use Icarus Verilog to build vvp simulation executable
 sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) sim.mk

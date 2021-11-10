@@ -16,8 +16,12 @@
 #include "verilated.h"
 
 #include "Vxosera_main.h"
+
+#include "Vxosera_main_colormem.h"
 #include "Vxosera_main_vram.h"
+#include "Vxosera_main_vram_arb.h"
 #include "Vxosera_main_xosera_main.h"
+#include "Vxosera_main_xrmem_arb.h"
 
 #define USE_FST 1
 #if USE_FST
@@ -30,12 +34,13 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 7        // video frames to dump to VCD file (and then screen-shot and exit)
-#define MAX_UPLOADS      8        // maximum number of "payload" uploads
+#define MAX_TRACE_FRAMES 10        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_UPLOADS      8         // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
-vluint64_t main_time        = 0;
-vluint64_t frame_start_time = 0;
+vluint64_t main_time         = 0;
+vluint64_t first_frame_start = 0;
+vluint64_t frame_start_time  = 0;
 
 volatile bool done;
 bool          sim_render = SDL_RENDER;
@@ -43,6 +48,7 @@ bool          sim_bus    = BUS_INTERFACE;
 bool          wait_close = false;
 
 bool vsync_detect = false;
+bool vtop_detect  = false;
 
 int          num_uploads;
 int          next_upload;
@@ -50,6 +56,28 @@ const char * upload_name[MAX_UPLOADS];
 uint8_t *    upload_payload[MAX_UPLOADS];
 int          upload_size[MAX_UPLOADS];
 uint8_t      upload_buffer[128 * 1024];
+
+static FILE * logfile;
+static char   log_buff[16384];
+
+static void log_printf(const char * fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(log_buff, sizeof(log_buff), fmt, args);
+    fputs(log_buff, stdout);
+    fputs(log_buff, logfile);
+    va_end(args);
+}
+
+static void logonly_printf(const char * fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(log_buff, sizeof(log_buff), fmt, args);
+    fputs(log_buff, logfile);
+    va_end(args);
+}
 
 class BusInterface
 {
@@ -82,15 +110,15 @@ class BusInterface
         XR_CONFIG_REGS   = 0x0000,        // 0x0000-0x000F 16 config/copper registers
         XR_PA_REGS       = 0x0010,        // 0x0000-0x0017 8 playfield A video registers
         XR_PB_REGS       = 0x0018,        // 0x0000-0x000F 8 playfield B video registers
-        XR_BLIT_REGS     = 0x0020,        // 0x0000-0x000F 16 blit registers [TBD]
-        XR_POLYDRAW_REGS = 0x0030,        // 0x0000-0x000F 16 line/polygon draw registers [TBD]
+        XR_BLIT_REGS     = 0x2000,        // 0x0000-0x000F 16 blit registers [TBD]
+        XR_POLYDRAW_REGS = 0x4000,        // 0x0000-0x000F 16 line/polygon draw registers [TBD]
+        XR_UNUSED_REGS_6 = 0x6000,        // 0x0000-0x000F 16 unused
 
         // XR Memory Regions
-        XR_COLOR_MEM  = 0x8000,        // 0x8000-0x80FF 256 16-bit word color lookup table (0xXRGB)
-        XR_TILE_MEM   = 0x9000,        // 0x9000-0x9FFF 4K 16-bit words of tile/font memory
-        XR_COPPER_MEM = 0xA000,        // 0xA000-0xA7FF 2K 16-bit words copper program memory
-        XR_SPRITE_MEM = 0xB000,        // 0xB000-0xB0FF 256 16-bit word sprite/cursor memory
-        XR_UNUSED_MEM = 0xC000,        // 0xC000-0xFFFF (currently unused)
+        XR_COLOR_MEM  = 0x8000,        // 0x8000-0x81FF 2 x 256 16-bit A & B color lookup table (0xXRGB)
+        XR_TILE_MEM   = 0xA000,        // 0xA000-0xAFFF 4K 16-bit words of tile/font memory
+        XR_COPPER_MEM = 0xC000,        // 0xC000-0xC7FF 2K 16-bit words copper program memory
+        XR_UNUSED_MEM = 0xE000,        // 0xE000-0xFFFF (currently unused)
     };
 
     enum
@@ -148,6 +176,7 @@ class BusInterface
     int     state;
     int     index;
     bool    wait_vsync;
+    bool    wait_vtop;
     bool    data_upload;
     int     data_upload_mode;
     int     data_upload_num;
@@ -155,7 +184,7 @@ class BusInterface
     int     data_upload_index;
 
     static int      test_data_len;
-    static uint16_t test_data[1024];
+    static uint16_t test_data[16384];
 
 public:
 public:
@@ -189,6 +218,7 @@ public:
         index             = 0;
         state             = BUS_START;
         wait_vsync        = false;        // true;
+        wait_vtop         = false;        // true;
         data_upload       = false;
         data_upload_mode  = 0;
         data_upload_num   = 0;
@@ -207,11 +237,22 @@ public:
             {
                 if (vsync_detect)
                 {
-                    printf("[@t=%lu  ... VSYNC arrives]\n", main_time);
+                    logonly_printf("[@t=%lu  ... VSYNC arrives]\n", main_time);
                     wait_vsync = false;
                 }
                 return;
             }
+
+            if (wait_vtop)
+            {
+                if (vtop_detect)
+                {
+                    logonly_printf("[@t=%lu  ... VTOP arrives]\n", main_time);
+                    wait_vtop = false;
+                }
+                return;
+            }
+
 
             int64_t bus_time = (main_time - BUS_START_TIME) / BUS_CLOCK_DIV;
 
@@ -226,10 +267,18 @@ public:
                     last_time = bus_time - 1;
                     return;
                 }
+                // REG_WAITVTOP
+                if (!data_upload && test_data[index] == 0xfffd)
+                {
+                    logonly_printf("[@t=%lu Wait VTOP...]\n", main_time);
+                    wait_vtop = true;
+                    index++;
+                    return;
+                }
                 // REG_WAITVSYNC
                 if (!data_upload && test_data[index] == 0xfffe)
                 {
-                    printf("[@t=%lu Wait VSYNC...]\n", main_time);
+                    logonly_printf("[@t=%lu Wait VSYNC...]\n", main_time);
                     wait_vsync = true;
                     index++;
                     return;
@@ -240,10 +289,10 @@ public:
                     data_upload_mode  = test_data[index] & 0xf;
                     data_upload_count = upload_size[data_upload_num];        // byte count
                     data_upload_index = 0;
-                    printf("[Upload #%d started, %d bytes, mode %s]\n",
-                           data_upload_num + 1,
-                           data_upload_count,
-                           data_upload_mode ? "XR_DATA" : "VRAM_DATA");
+                    logonly_printf("[Upload #%d started, %d bytes, mode %s]\n",
+                                   data_upload_num + 1,
+                                   data_upload_count,
+                                   data_upload_mode ? "XR_DATA" : "VRAM_DATA");
 
                     index++;
                 }
@@ -270,12 +319,16 @@ public:
                         top->bus_data_i    = data;
                         if (data_upload && data_upload_index < 16)
                         {
-                            printf("[@t=%lu] ", main_time);
+                            logonly_printf("[@t=%lu] ", main_time);
                             sprintf(tempstr, "r[0x%x] %s.%3s", reg_num, reg_name[reg_num], bytesel ? "lsb*" : "msb");
-                            printf("  %-25.25s <= 0x%02x\n", tempstr, data & 0xff);
+                            logonly_printf("  %-25.25s <= %s%02x%s\n",
+                                           tempstr,
+                                           bytesel ? "__" : "",
+                                           data & 0xff,
+                                           bytesel ? "" : "__");
                             if (data_upload_index == 15)
                             {
-                                printf("  ...\n");
+                                logonly_printf("  ...\n");
                             }
                         }
                         break;
@@ -284,19 +337,25 @@ public:
                     case BUS_STROBEOFF:
                         if (rd_wr)
                         {
-                            printf("[@t=%lu] Read Reg #%02x.%s => 0x%02x\n",
-                                   main_time,
-                                   reg_num,
-                                   bytesel ? "L" : "H",
-                                   top->bus_data_o);
+                            logonly_printf("[@t=%lu] Read Reg %s (#%02x.%s) => %s%02x%s\n",
+                                           main_time,
+                                           reg_name[reg_num],
+                                           reg_num,
+                                           bytesel ? "L" : "H",
+                                           bytesel ? "__" : "",
+                                           top->bus_data_o,
+                                           bytesel ? "" : "__");
                         }
                         else if (!data_upload)
                         {
-                            printf("[@t=%lu] Write Reg #%02x.%s <= 0x%02x\n",
-                                   main_time,
-                                   reg_num,
-                                   bytesel ? "L" : "H",
-                                   top->bus_data_i);
+                            logonly_printf("[@t=%lu] Write Reg %s (#%02x.%s) <= %s%02x%s\n",
+                                           main_time,
+                                           reg_name[reg_num],
+                                           reg_num,
+                                           bytesel ? "L" : "H",
+                                           bytesel ? "__" : "",
+                                           top->bus_data_i,
+                                           bytesel ? "" : "__");
                         }
                         top->bus_cs_n_i = 0;
                         break;
@@ -312,7 +371,7 @@ public:
                             if (data_upload_index >= data_upload_count)
                             {
                                 data_upload = false;
-                                printf("[Upload #%d completed]\n", data_upload_num + 1);
+                                logonly_printf("[Upload #%d completed]\n", data_upload_num + 1);
                                 data_upload_num++;
                             }
                         }
@@ -357,31 +416,172 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR ",
 #define REG_RW(r)        (((BusInterface::XM_##r) | 0x80) << 8), (((BusInterface::XM_##r) | 0x90) << 8)
 #define REG_UPLOAD()     0xfff0
 #define REG_UPLOAD_AUX() 0xfff1
+#define REG_WAITVTOP()   0xfffd
 #define REG_WAITVSYNC()  0xfffe
 #define REG_END()        0xffff
 
 #define X_COLS 80
 
 BusInterface bus;
-int          BusInterface::test_data_len   = 999;
-uint16_t     BusInterface::test_data[1024] = {
+int          BusInterface::test_data_len    = 999;
+uint16_t     BusInterface::test_data[16384] = {
     // test data
-    REG_WAITVSYNC(),                     // show boot screen
-    REG_W(XR_ADDR, XR_COPP_CTRL),        // do copper test on bootscreen...
-    REG_W(XR_DATA, 0x8000),
-    REG_WAITVSYNC(),                     // show boot screen
-    REG_WAITVSYNC(),                     // show boot screen
-    REG_W(XR_ADDR, XR_COPP_CTRL),        // disable copper so as not to ruin image tests.
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 1-BPP BMAP
-    REG_W(XR_DATA, 0x0040),
+    REG_WAITVSYNC(),         // show boot screen
+    REG_WAITVSYNC(),         // show boot screen
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_W(XR_ADDR, XR_PA_GFX_CTRL),
+    REG_W(XR_DATA, 0x0040),                 // set disp in tile
+    REG_W(XR_ADDR, XR_PA_TILE_CTRL),        // set 4-BPP BMAP
+    REG_W(XR_DATA, 0x000F),
     REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
-    REG_WAITVSYNC(),        // show 1-BPP BMAP
-    REG_W(XR_ADDR, XR_VID_CTRL),
+    REG_WAITVSYNC(),        // show boot screen
+    REG_WAITVTOP(),         // show boot screen
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),        // read TILEMEM + 0x0a
+    REG_W(XR_ADDR, XR_TILE_MEM),
+    REG_RW(XR_DATA),        // read TILEMEM
+    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    REG_RW(XR_DATA),                      // read TILEMEM + 0x0a
+    REG_WAITVSYNC(),                      // show boot screen
+    REG_W(XR_ADDR, XR_COPPER_MEM),        // setup copper program
+#if 0
+    // copperlist:
+    REG_W(XR_DATA, 0x20a0),
+    REG_W(XR_DATA, 0x0002),        //     skip  0, 160, 0b00010  ; Skip next if we've hit line 160
+    REG_W(XR_DATA, 0x4014),
+    REG_W(XR_DATA, 0x0000),        //     jmp   .gored           ; ... else, jump to set red
+    REG_W(XR_DATA, 0x2140),
+    REG_W(XR_DATA, 0x0002),        //     skip  0, 320, 0b00010  ; Skip next if we've hit line 320
+    REG_W(XR_DATA, 0x400e),
+    REG_W(XR_DATA, 0x0000),        //     jmp   .gogreen         ; ... else jump to set green
+    REG_W(XR_DATA, 0xb000),
+    REG_W(XR_DATA, 0x000f),        //     movep 0x000F, 0        ; Make background blue
+    REG_W(XR_DATA, 0xb00a),
+    REG_W(XR_DATA, 0x0007),        //     movep 0x0007, 0xA      ; Make foreground dark blue
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_DATA, 0x0003),        //     nextf                  ; and we're done for this frame
+    // .gogreen:
+    REG_W(XR_DATA, 0xb000),
+    REG_W(XR_DATA, 0x00f0),        //     movep 0x00F0, 0        ; Make background green
+    REG_W(XR_DATA, 0xb00a),
+    REG_W(XR_DATA, 0x0070),        //     movep 0x0070, 0xA       ; Make foreground dark green
+    REG_W(XR_DATA, 0x4000),
+    REG_W(XR_DATA, 0x0000),        //     jmp   copperlist       ; and restart
+    // .gored:
+    REG_W(XR_DATA, 0xb000),
+    REG_W(XR_DATA, 0x0f00),        //     movep 0x0F00, 0        ; Make background red
+    REG_W(XR_DATA, 0xb00a),
+    REG_W(XR_DATA, 0x0700),        //     movep 0x0700, 0xA      ; Make foreground dark red
+    REG_W(XR_DATA, 0x8002),
+    REG_W(XR_DATA, 0x5A5A),
+    REG_W(XR_DATA, 0x9002),
+    REG_W(XR_DATA, 0x1F42),
+    REG_W(XR_DATA, 0x4000),
+    REG_W(XR_DATA, 0x0000),        //     jmp   copperlist       ; and restart
+#else
+    REG_W(XR_DATA, 0xb000),
+    REG_W(XR_DATA, 0x0000),        //     movep 0x000F, 0        ; Make background blue
+
+    REG_W(XR_DATA, 0x6010),        // copper splitscreen test
+    REG_W(XR_DATA, 0x0055),
+
+    REG_W(XR_DATA, 0xa00f),
+    REG_W(XR_DATA, 0x0ec6),
+
+    REG_W(XR_DATA, 0x00c8),
+    REG_W(XR_DATA, 0x2782),
+
+    REG_W(XR_DATA, 0xb000),
+    REG_W(XR_DATA, 0x0f0f),        //     movep 0x000F, 0        ; Make background blue
+
+    REG_W(XR_DATA, 0x6010),
+    REG_W(XR_DATA, 0x0040),
+    REG_W(XR_DATA, 0x6015),
+    REG_W(XR_DATA, 0x3e80),
+    REG_W(XR_DATA, 0xa00f),
+    REG_W(XR_DATA, 0x0fff),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_DATA, 0x0003),
+#endif
+
+    REG_W(XR_ADDR, XR_COPP_CTRL),        // do copper test on bootscreen...
+    REG_W(XR_DATA, 0x8000),
+    REG_WAITVTOP(),
+    REG_W(XR_ADDR, XR_TILE_MEM + 10),
     REG_RW(XR_DATA),
-    REG_W(TIMER, 0x0800),
+    REG_W(XR_ADDR, XR_TILE_MEM + 11),
+    REG_RW(XR_DATA),
+    REG_W(XR_ADDR, XR_TILE_MEM + 12),
+    REG_RW(XR_DATA),
+    REG_W(XR_ADDR, XR_TILE_MEM + 13),
+    REG_RW(XR_DATA),
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 4-BPP BMAP
     REG_W(XR_DATA, 0x0055),
     REG_W(XR_ADDR, XR_PA_LINE_LEN),        // 320/2/2 wide
@@ -391,7 +591,18 @@ uint16_t     BusInterface::test_data[1024] = {
     REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
-    REG_WAITVSYNC(),                       // show 4-BPP BMAP
+    REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 1-BPP BMAP
+    REG_W(XR_DATA, 0x0040),
+    REG_W(WR_INCR, 0x0001),
+    REG_W(WR_ADDR, 16000),
+    REG_UPLOAD(),
+    REG_WAITVSYNC(),                     // show 1-BPP BMAP
+    REG_W(XR_ADDR, XR_COPP_CTRL),        // disable copper so as not to ruin color image tests.
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_VID_CTRL),
+    REG_RW(XR_DATA),
+    REG_W(TIMER, 0x0800),
+    //    REG_WAITVSYNC(),                       // show 4-BPP BMAP
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 8-BPP BMAP
     REG_W(XR_DATA, 0x0065),
     REG_W(XR_ADDR, XR_PA_LINE_LEN),        // 320/2 wide
@@ -402,6 +613,10 @@ uint16_t     BusInterface::test_data[1024] = {
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
     REG_WAITVSYNC(),        // show 8-BPP BMAP
+    REG_W(WR_INCR, 0x0001),
+    REG_W(WR_ADDR, 16000),
+    REG_UPLOAD(),
+    REG_WAITVSYNC(),        // show 1-BPP BMAP
     REG_END()
     // end test data
 };
@@ -474,12 +689,21 @@ int main(int argc, char ** argv)
 
     sigaction(SIGINT, &sigIntHandler, NULL);
 
+    if ((logfile = fopen("sim/logs/xosera_vsim.log", "w")) == NULL)
+    {
+        if ((logfile = fopen("xosera_vsim.log", "w")) == NULL)
+        {
+            printf("can't create xosera_vsim.log (in \"sim/logs/\" or current directory)\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
     double Hz = 1000000.0 / ((TOTAL_WIDTH * TOTAL_HEIGHT) * (1.0 / PIXEL_CLOCK_MHZ));
-    printf("\nXosera simulation. Video Mode: %dx%d @%0.02fHz clock %0.03fMhz\n",
-           VISIBLE_WIDTH,
-           VISIBLE_HEIGHT,
-           Hz,
-           PIXEL_CLOCK_MHZ);
+    log_printf("\nXosera simulation. Video Mode: %dx%d @%0.02fHz clock %0.03fMhz\n",
+               VISIBLE_WIDTH,
+               VISIBLE_HEIGHT,
+               Hz,
+               PIXEL_CLOCK_MHZ);
 
     int nextarg = 1;
 
@@ -516,7 +740,7 @@ int main(int argc, char ** argv)
     {
         for (int u = 0; u < num_uploads; u++)
         {
-            printf("Reading upload data #%d: \"%s\"...", u + 1, upload_name[u]);
+            logonly_printf("Reading upload data #%d: \"%s\"...", u + 1, upload_name[u]);
             FILE * bfp = fopen(upload_name[u], "r");
             if (bfp != nullptr)
             {
@@ -525,21 +749,21 @@ int main(int argc, char ** argv)
 
                 if (read_size > 0)
                 {
-                    printf("read %d bytes.\n", read_size);
+                    logonly_printf("read %d bytes.\n", read_size);
                     upload_size[u]    = read_size;
                     upload_payload[u] = (uint8_t *)malloc(read_size);
                     memcpy(upload_payload[u], upload_buffer, read_size);
                 }
                 else
                 {
-                    printf("failed.\n");
+                    fprintf(stderr, "Reading upload data \"%s\" error ", upload_name[u]);
                     perror("fread failed");
                     exit(EXIT_FAILURE);
                 }
             }
             else
             {
-                printf("failed.\n");
+                fprintf(stderr, "Reading upload data \"%s\" error ", upload_name[u]);
                 perror("fopen failed");
                 exit(EXIT_FAILURE);
             }
@@ -551,11 +775,6 @@ int main(int argc, char ** argv)
     // bus test data init
     bus.set_cmdline_data(argc, argv, nextarg);
 #endif
-
-    if (sim_render)
-        printf("Press SPACE for screen-shot, ESC or ^C to exit.\n\n");
-    else
-        printf("Press ^C to exit.\n\n");
 
     Verilated::commandArgs(argc, argv);
 
@@ -608,11 +827,11 @@ int main(int argc, char ** argv)
 #if VM_TRACE
 #if USE_FST
     const auto trace_path = LOGDIR "xosera_vsim.fst";
-    printf("Started writing FST waveform file to \"%s\"...\n", trace_path);
+    logonly_printf("Writing FST waveform file to \"%s\"...\n", trace_path);
     VerilatedFstC * tfp = new VerilatedFstC;
 #else
     const auto trace_path = LOGDIR "xosera_vsim.vcd";
-    printf("Started writing VCD waveform file to \"%s\"...\n", trace_path);
+    logonly_printf("Writing VCD waveform file to \"%s\"...\n", trace_path);
     VerilatedVcdC * tfp = new VerilatedVcdC;
 #endif
 
@@ -655,25 +874,54 @@ int main(int argc, char ** argv)
 
         if (top->reconfig_o)
         {
-            printf("FPGA RECONFIG: config #0x%x\n", top->boot_select_o);
+            log_printf("FPGA RECONFIG: config #0x%x\n", top->boot_select_o);
             done = true;
         }
 
         if (top->bus_intr_o)
         {
-            printf("[@t=%lu FPGA INTERRUPT]\n", main_time);
+            logonly_printf("[@t=%lu FPGA INTERRUPT]\n", main_time);
         }
 
         if (frame_num > 1)
         {
-            if (top->xosera_main->regs_vram_sel && top->xosera_main->regs_wr)
+            if (top->xosera_main->vram_arb->regs_ack_o)
             {
-                printf(" => write VRAM[0x%04x]=0x%04x\n", top->xosera_main->regs_addr, top->xosera_main->regs_data_out);
+                if (top->xosera_main->vram_arb->regs_wr_i)
+                {
+                    logonly_printf(" => regs write VRAM[0x%04x]<=0x%04x\n",
+                                   top->xosera_main->vram_arb->regs_addr_i,
+                                   top->xosera_main->vram_arb->regs_data_i);
+                }
+                else
+                {
+                    logonly_printf(" <= regs read VRAM[0x%04x]=>0x%04x\n",
+                                   top->xosera_main->vram_arb->regs_addr_i,
+                                   top->xosera_main->vram_arb->vram_data_o);
+                }
             }
 
-            if (top->xosera_main->regs_xr_sel && top->xosera_main->regs_wr)
+            if (top->xosera_main->xrmem_arb->xr_ack_o)
             {
-                printf(" => write AUX[0x%04x]=0x%04x\n", top->xosera_main->regs_addr, top->xosera_main->regs_data_out);
+                if (top->xosera_main->xrmem_arb->xr_wr_i)
+                {
+                    logonly_printf(" => regs write XR[0x%04x]<=0x%04x\n",
+                                   top->xosera_main->xrmem_arb->xr_addr_i,
+                                   top->xosera_main->xrmem_arb->xr_data_i);
+                }
+                else
+                {
+                    logonly_printf(" <= regs read XR[0x%04x]=>0x%04x\n",
+                                   top->xosera_main->xrmem_arb->xr_addr_i,
+                                   top->xosera_main->xrmem_arb->xr_data_o);
+                }
+            }
+
+            if (top->xosera_main->xrmem_arb->copp_xr_sel_i)
+            {
+                logonly_printf(" => COPPER XR write XR[0x%04x]<=0x%04x\n",
+                               top->xosera_main->xrmem_arb->copp_xr_addr_i,
+                               top->xosera_main->xrmem_arb->copp_xr_data_i);
             }
         }
 
@@ -696,19 +944,24 @@ int main(int argc, char ** argv)
             {
                 if (top->red_o != 0 || top->green_o != 0 || top->blue_o != 0)
                 {
-                    printf("Frame %3u pixel %d, %d RGB is 0x%02x 0x%02x 0x%02x when NOT visible\n",
-                           frame_num,
-                           current_x,
-                           current_y,
-                           top->red_o,
-                           top->green_o,
-                           top->blue_o);
+                    log_printf("Frame %3u pixel %d, %d RGB is 0x%02x 0x%02x 0x%02x when NOT visible\n",
+                               frame_num,
+                               current_x,
+                               current_y,
+                               top->red_o,
+                               top->green_o,
+                               top->blue_o);
                 }
 
                 // sim_render dithered border area
                 if (((current_x ^ current_y) & 1) == 1)        // non-visible
                 {
-                    SDL_SetRenderDrawColor(renderer, (top->red_o << 3), (top->green_o << 3), (top->blue_o << 3), 255);
+                    // dither with dimmed color 0
+                    auto       vmem    = top->xosera_main->xrmem_arb->colormem->bram;
+                    uint16_t * color0p = &vmem[0];
+                    uint16_t   color0  = *color0p;
+                    SDL_SetRenderDrawColor(
+                        renderer, ((color0 & 0x0f00) >> 5), ((color0 & 0x00f0) >> 1), ((color0 & 0x000f) << 7), 255);
                 }
                 else
                 {
@@ -726,6 +979,8 @@ int main(int argc, char ** argv)
 
         if (hsync)
             hsync_count++;
+
+        vtop_detect = top->xosera_main->dv_de_o;
 
         // end of hsync
         if (!hsync && vga_hsync_previous)
@@ -758,16 +1013,21 @@ int main(int argc, char ** argv)
 
             if (frame_num > 0)
             {
+                if (frame_num == 1)
+                {
+                    first_frame_start = main_time;
+                }
                 vluint64_t frame_time = (main_time - frame_start_time) / 2;
-                printf("[@t=%lu] Frame %3d, %lu pixel-clocks (% 0.03f msec real-time), %dx%d hsync %d, vsync %d\n",
-                       main_time,
-                       frame_num,
-                       frame_time,
-                       ((1.0 / PIXEL_CLOCK_MHZ) * frame_time) / 1000.0,
-                       x_max,
-                       y_max + 1,
-                       hsync_max,
-                       vsync_count);
+                logonly_printf(
+                    "[@t=%lu] Frame %3d, %lu pixel-clocks (% 0.03f msec real-time), %dx%d hsync %d, vsync %d\n",
+                    main_time,
+                    frame_num,
+                    frame_time,
+                    ((1.0 / PIXEL_CLOCK_MHZ) * frame_time) / 1000.0,
+                    x_max,
+                    y_max + 1,
+                    hsync_max,
+                    vsync_count);
 #if SDL_RENDER
 
                 if (sim_render)
@@ -785,7 +1045,14 @@ int main(int argc, char ** argv)
                             save_name, LOGDIR "xosera_vsim_%dx%d_f%02d.png", VISIBLE_WIDTH, VISIBLE_HEIGHT, frame_num);
                         IMG_SavePNG(screen_shot, save_name);
                         SDL_FreeSurface(screen_shot);
-                        printf("Frame %3u saved as \"%s\" (%dx%d)\n", frame_num, save_name, w, h);
+                        float fnum = ((1.0 / PIXEL_CLOCK_MHZ) * ((main_time - first_frame_start) / 2)) / 1000.0;
+                        log_printf("[@t=%lu] %8.03f ms frame #%3u saved as \"%s\" (%dx%d)\n",
+                                   main_time,
+                                   fnum,
+                                   frame_num,
+                                   save_name,
+                                   w,
+                                   h);
                         take_shot = false;
                     }
 
@@ -803,10 +1070,6 @@ int main(int argc, char ** argv)
 
             if (frame_num == MAX_TRACE_FRAMES)
             {
-#if VM_TRACE
-                printf("Finished writing VCD waveform file \"%s\"\n", trace_path);
-#endif
-                printf("Exiting simulation.\n");
                 break;
             }
 
@@ -816,7 +1079,7 @@ int main(int argc, char ** argv)
             }
             else if (TOTAL_HEIGHT <= y_max)
             {
-                printf("line %d >= TOTAL_HEIGHT\n", y_max);
+                log_printf("line %d >= TOTAL_HEIGHT\n", y_max);
             }
         }
 
@@ -827,14 +1090,10 @@ int main(int argc, char ** argv)
         {
             SDL_Event e;
             SDL_PollEvent(&e);
-            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_SPACE)
-            {
-                take_shot = true;
-            }
 
             if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE))
             {
-                printf("Window closed\n");
+                log_printf("Window closed\n");
                 break;
             }
         }
@@ -844,7 +1103,7 @@ int main(int argc, char ** argv)
     FILE * mfp = fopen(LOGDIR "xosera_vsim_text.txt", "w");
     if (mfp != nullptr)
     {
-        auto       vmem = top->xosera_main->vram->memory;
+        auto       vmem = top->xosera_main->vram_arb->vram->memory;
         uint16_t * mem  = &vmem[0];
 
         for (int y = 0; y < VISIBLE_HEIGHT / 16; y++)
@@ -874,7 +1133,7 @@ int main(int argc, char ** argv)
         FILE * bfp = fopen(LOGDIR "xosera_vsim_vram.bin", "w");
         if (bfp != nullptr)
         {
-            auto       vmem = top->xosera_main->vram->memory;
+            auto       vmem = top->xosera_main->vram_arb->vram->memory;
             uint16_t * mem  = &vmem[0];
             fwrite(mem, 128 * 1024, 1, bfp);
             fclose(bfp);
@@ -885,7 +1144,7 @@ int main(int argc, char ** argv)
         FILE * tfp = fopen(LOGDIR "xosera_vsim_vram_hex.txt", "w");
         if (tfp != nullptr)
         {
-            auto       vmem = top->xosera_main->vram->memory;
+            auto       vmem = top->xosera_main->vram_arb->vram->memory;
             uint16_t * mem  = &vmem[0];
             for (int i = 0; i < 65536; i += 16)
             {
@@ -916,7 +1175,7 @@ int main(int argc, char ** argv)
         }
         else
         {
-            fprintf(stderr, "Press a RETURN:\n");
+            fprintf(stderr, "Press RETURN:\n");
             fgetc(stdin);
         }
 
@@ -926,10 +1185,10 @@ int main(int argc, char ** argv)
     }
 #endif
 
-    printf("Simulated %d frames, %lu pixel clock ticks (% 0.04f milliseconds)\n",
-           frame_num,
-           (main_time / 2),
-           ((1.0 / (PIXEL_CLOCK_MHZ * 1000000)) * (main_time / 2)) * 1000.0);
+    log_printf("Simulation ended after %d frames, %lu pixel clock ticks (%.04f milliseconds)\n",
+               frame_num,
+               (main_time / 2),
+               ((1.0 / (PIXEL_CLOCK_MHZ * 1000000)) * (main_time / 2)) * 1000.0);
 
     return EXIT_SUCCESS;
 }

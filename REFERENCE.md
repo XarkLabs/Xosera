@@ -30,24 +30,26 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
 
 ## Xosera Reference Information
 
-Xosera has 16 main 16-bit directly accessable bus registers that are used to control its operation.
-The even and odd bytes of each 16-bit word are accessed independently (Xosera uses an 8-bit data bus
-and "bytesel" signal).  It uses 68000 big-endian convention, so "even" addressed bytes contain the
-most significant 8-bits and the "odd" addresses contains the least significant 8-bits of the complete
-16-bit value. When writing values, typically the upper 8-bits are saved until the lower 8-bits are written
-and then the entire 16-bit value is stored.  For this reason typically you should update the first (even or
-high-byte) byte before the second (odd or low-byte) byte or update both with a MOVEP.W write.
+Xosera uses an 8-bit parallel bus with 4 bits to select from one of 16 main 16-bit bus accessable registers (and a
+bit to select the even or odd register half, using 68000 big-endian convention of high byte at even addresses).
+Since Xosera uses an 8-bit bus, for low-level access on 68K systems multi-byte operations can utilize the `MOVEP.W` or
+`MOVEP.L` instructions that skip the unused half of the 16-bit data bus (also know as a 8-bit "6800" style peripheral
+bus). When this document mentions, for example "writing a word", it means writing to the even and then odd bytes of a
+register (usually with `MOVE.P` but multiple `MOVE.B` instructions work also).  For some registers there is a "special
+action" that happens on a 16-bit word when the odd (low byte) is either read or written (generally noted).
 
 Xosera's 128KB of VRAM is organized as 64K x 16-bit words, so a full VRAM address is 16-bits (and an
-individual byte is not directly accessible, only 16-bit words). [TODO: nibble masking writes is possible,
-but currently not wired up]
+individual byte is not directly accessible, only 16-bit words, however write "nibble masking" is available).
 
-In addition to the main registers and VRAM, there is an additional extended register / memory bus that provides
-access to many more control registers for system control, video configuration, drawing engines and display
-co-processor as well as additional memory regions for tile definitions, color look-up and display coprocessor
-instructions.
+In addition to the main registers and VRAM, there is an additional extended register / memory XR bus that provides
+access to control registers for system control, video configuration, drawing engines and display co-processor as
+well as additional memory regions for tile definitions, color look-up and display coprocessor instructions.
+___
 
 ### Xosera Main Registers (XM Registers) Summary
+
+[#TODO: NOTE: It is planned to swap registers 0 and 1 with registers 8 and 9 along with remapping some `XM_SYS_CTRL` bits to
+provide more efficient access to Xosera status flags (like busy and timeout)]
 
 | Reg # | Reg Name       | R /W  | Description                                                                           |
 | ----- | -------------- | ----- | ------------------------------------------------------------------------------------- |
@@ -60,169 +62,181 @@ instructions.
 | 0x6   | `XM_DATA`      | R+/W+ | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
 | 0x7   | `XM_DATA_2`    | R+/W+ | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
 | 0x8   | `XM_SYS_CTRL`  | R /W+ | busy status, FPGA reconfig, interrupt status/control, write masking                   |
-| 0x9   | `XM_TIMER`     | RO    | read 1/10<sup>th</sup> millisecond timer [TODO]                                       |
-| 0xA   | `XM_UNUSED_A`  | R /W  | unused direct register 0xA [TODO]                                                     |
-| 0xB   | `XM_UNUSED_B`  | R /W  | unused direct register 0xB [TODO]                                                     |
+| 0x9   | `XM_TIMER`     | R /W+ | read 1/10<sup>th</sup> millisecond timer                                              |
+| 0xA   | `XM_LFSR`      | RO    | read LFSR pseudo random number (internally 19-bit)                                    |
+| 0xB   | `XM_UNUSED_B`  | R /W  | unused direct register 0xB [#TODO]                                                    |
 | 0xC   | `XM_RW_INCR`   | R /W  | `XM_RW_ADDR` increment value on read/write of `XM_RW_DATA`/`XM_RW_DATA_2`             |
 | 0xD   | `XM_RW_ADDR`   | R /W+ | read/write address for VRAM access from `XM_RW_DATA`/`XM_RW_DATA_2`                   |
 | 0xE   | `XM_RW_DATA`   | R+/W+ | read/write VRAM word at `XM_RW_ADDR` (and add `XM_RW_INCR`)                           |
 | 0xF   | `XM_RW_DATA_2` | R+/W+ | 2nd `XM_RW_DATA`(to allow for 32-bit read/write access)                               |
 
 (`R+` or `W+` indicates that reading or writing this register has additional "side effects", respectively)
+___
 
 ## Xosera Main Register Details (XM Registers)
 
-**0x0 `XM_XR_ADDR` (R/W+) - eXtended Register / eXtended Region Address**
-<img src="./pics/wd_XM_XR_ADDR.svg">  
-**Extended register or memory address for data accessed via `XM_XR_DATA`**  
+**0x0 `XM_XR_ADDR` (R/W+) - XR Register / Memory Address**
+<img src="./pics/wd_XM_XR_ADDR.svg">
+**Extended register or memory address for data accessed via `XM_XR_DATA`**
 Specifies the XR register or XR region address to be accessed via `XM_XR_DATA`.
-The upper bits select XR registers or memory region and the lower 12 bits select the register number or
+The upper bits select XR registers or memory region and the lower 13 bits select the register number or
 memory word address within the region (see below for details of XR registers and memory).
 When `XM_XR_DATA` is written, the register/address specified will be read and made available for reading at `XM_XR_DATA`.
-`XM_XR_DATA` needs to be written each time before reading `XM_XR_DATA` (or the previously read value will be returned).
-However, after a word is written to `XM_XR_DATA`, the lower 12-bits of `XM_XR_DATA` will be auto-incremented by 1 which
-allows writing to contiguous registers or memory by repeatedly writing to `XM_XR_DATA` (without needing to write to `XM_XR_ADDR`
-each time).  
+`XM_XR_DATA` needs to be written each time before *reading* `XM_XR_DATA` (or the previously read value will be returned).
+After a word is *written* to `XM_XR_DATA`, the lower 13-bits of `XM_XR_DATA` will be auto-incremented which
+allows writing to contiguous registers or memory by repeatedly writing to `XM_XR_DATA` (without needing to increment to
+`XM_XR_ADDR` each time).
 The register mapping with `XM_XR_DATA` following `XM_XR_ADDR` allows for M68K code similar to the following to set an
-XR register to an immediate value:  
-&emsp;&emsp;`MOVE.L #$rrXXXX,D0`  
+XR register (or XR memory word) to an immediate word value:
+&emsp;&emsp;`MOVE.L #$rrXXXX,D0`
 &emsp;&emsp;`MOVEP.L D0,XR_ADDR(A1)`
 
 **0x1 `XM_XR_DATA` (R/W+) - eXtended Register / eXtended Region Data**
-<img src="./pics/wd_XM_XR_DATA.svg">  
-**Read or write extended register or memory addressed by `XM_XR_DATA` register.**  
-Allows read/write access to the XR register or memory using address contained in `XM_XR_DATA` register.  
-When `XM_XR_DATA` is written, the XR register or address specified will be read will be available for reading at `XM_XR_DATA`
-(`XM_XR_DATA` needs to be set each time before reading `XM_XR_DATA` or the previously read value will be returned).  
-After a word is written to `XM_XR_DATA`, the lower 12-bits of `XM_XR_DATA` will be auto-incremented by 1 which
-allows writing to contiguous XR registers or memory by repeatedly writing to `XM_XR_DATA`.  
+<img src="./pics/wd_XM_XR_DATA.svg">
+**Read or write extended register or memory addressed by `XM_XR_DATA` register.**
+Allows read/write access to the XR register or memory using address contained in `XM_XR_DATA` register.
+When `XM_XR_DATA` is *written*, the XR register or address specified will be read will be available for *reading* at `XM_XR_DATA`
+(`XM_XR_ADDR` needs to be set each time before reading `XM_XR_DATA` or the previously read value will be returned).
+After a word is *written* to `XM_XR_DATA`, the lower 13-bits of `XM_XR_DATA` will be auto-incremented which allows
+writing to  contiguous XR registers or memory by repeatedly writing to `XM_XR_DATA`.
 
-**0x2 `XM_RD_INCR` (R/W) - increment value for `XM_RD_ADDR` when `XM_DATA`/`XM_DATA_2` is read from**  
-<img src="./pics/wd_XM_RD_INCR.svg">  
-**Read or write twos-complement value added to `XM_RD_ADDR` when `XM_DATA` or `XM_DATA_2` is read from**  
-Allows quickly reading Xosera VRAM from `XM_DATA`/`XM_DATA_2` when using a fixed increment.  
-Added to `XM_RD_ADDR` when `XM_DATA` or `XM_DATA_2` is read from (twos complement, so value can be negative).  
+**0x2 `XM_RD_INCR` (R/W) - increment value for `XM_RD_ADDR` when `XM_DATA`/`XM_DATA_2` is read from**
+<img src="./pics/wd_XM_RD_INCR.svg">
+**Read or write a twos-complement value added to `XM_RD_ADDR` when `XM_DATA` or `XM_DATA_2` is read from**
+Allows quickly reading Xosera VRAM from `XM_DATA`/`XM_DATA_2` when using a fixed increment.
+Added to `XM_RD_ADDR` when `XM_DATA` or `XM_DATA_2` is read from (twos complement, so value can be negative).
 
-**0x3 `XM_RD_ADDR` (R/W+) - VRAM read address for `XM_DATA`/`XM_DATA_2`**  
-<img src="./pics/wd_XM_RD_ADDR.svg">  
-**Read or write VRAM address that will be read when `XM_DATA` or `XM_DATA_2` is read from.**  
-Specifies VRAM address used when reading from VRAM via `XM_DATA`/`XM_DATA_2`.  
-When `XM_RD_ADDR` is written (or incremented by `XM_RD_INCR`) the corresponding word in VRAM is read and made
-available for reading at `X_DATA` or `XM_DATA_2`.  
+**0x3 `XM_RD_ADDR` (R/W+) - VRAM read address for `XM_DATA`/`XM_DATA_2`**
+<img src="./pics/wd_XM_RD_ADDR.svg">
+**Read or write VRAM address that will be read when `XM_DATA` or `XM_DATA_2` is read from.**
+Specifies VRAM address used when reading from VRAM via `XM_DATA`/`XM_DATA_2`.
+When `XM_RD_ADDR` is written (or when auto incremented) the corresponding word in VRAM is read and made
+available for reading at `XM_DATA` or `XM_DATA_2`.
 
-**0x4 `XM_WR_INCR` (R/W) - increment value for `XM_WR_ADDR` when `XM_DATA`/`XM_DATA_2` is written to**  
-<img src="./pics/wd_XM_WR_INCR.svg">  
-**Read or write twos-complement value added to `XM_WR_ADDR` when `XM_DATA` or `XM_DATA_2` is written to.**  
-Allows quickly writing to Xosera VRAM via `XM_DATA`/`XM_DATA_2` when using a fixed increment.  
-Added to `XM_WR_ADDR` when `XM_DATA` or `XM_DATA_2` is written to (twos complement, so value can be negative).  
+**0x4 `XM_WR_INCR` (R/W) - increment value for `XM_WR_ADDR` when `XM_DATA`/`XM_DATA_2` is written to**
+<img src="./pics/wd_XM_WR_INCR.svg">
+**Read or write a twos-complement value added to `XM_WR_ADDR` when `XM_DATA` or `XM_DATA_2` is written to.**
+Allows quickly writing to Xosera VRAM via `XM_DATA`/`XM_DATA_2` when using a fixed increment.
+Added to `XM_WR_ADDR` when `XM_DATA` or `XM_DATA_2` is written to (twos complement, so value can be negative).
 
-**0x5 `XM_WR_ADDR` (R/W) - VRAM write address for `XM_DATA`/`XM_DATA_2`**  
-<img src="./pics/wd_XM_WR_ADDR.svg">  
-**Read or write VRAM address written when `XM_DATA` or `XM_DATA_2` is written to.**  
-Specifies VRAM address used when writing to VRAM via `XM_DATA`/`XM_DATA_2`.  
+**0x5 `XM_WR_ADDR` (R/W) - VRAM write address for `XM_DATA`/`XM_DATA_2`**
+<img src="./pics/wd_XM_WR_ADDR.svg">
+**Read or write VRAM address written when `XM_DATA` or `XM_DATA_2` is written to.**
+Specifies VRAM address used when writing to VRAM via `XM_DATA`/`XM_DATA_2`. Writing a value here does
+not cause any VRAM access (which happens when data *written* to `XM_DATA` or `XM_DATA_2`).
 
-**0x6 `XM_DATA` (R+/W+) - VRAM memory value to read/write at VRAM address `XM_RD_ADDR`/`XM_WR_ADDR`, respectively**  
-<img src="./pics/wd_XM_DATA.svg">  
+**0x6 `XM_DATA` (R+/W+) - VRAM memory value to read/write at VRAM address `XM_RD_ADDR`/`XM_WR_ADDR`, respectively**
+<img src="./pics/wd_XM_DATA.svg">
 **Read or write VRAM value from VRAM at `XM_RD_ADDR`/`XM_WR_ADDR` and add `XM_RD_INCR`/`XM_WR_INCR` to `XM_RD_ADDR`/`XM_WR_ADDR`,
-respectively.**  
+respectively.**
 When `XM_DATA` is read data from VRAM at `XM_RD_ADDR` is returned and `XM_RD_INCR` is added to `XM_RD_ADDR` and pre-reading the
-new VRAM address begins.  
-When `XM_DATA` is written, begins writing value to VRAM at `XM_WR_ADDR` and `XM_WR_INCR` is added to `XM_WR_ADDR`.  
+new VRAM address begins.
+When `XM_DATA` is written, begins writing value to VRAM at `XM_WR_ADDR` and `XM_WR_INCR` is added to `XM_WR_ADDR`.
 
-**0x7 `XM_DATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address `XM_RD_ADDR`/`XM_WR_ADDR`, respectively**  
-<img src="./pics/wd_XM_DATA.svg">  
+**0x7 `XM_DATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address `XM_RD_ADDR`/`XM_WR_ADDR`, respectively**
+<img src="./pics/wd_XM_DATA.svg">
 **Read or write VRAM value from VRAM at `XM_RD_ADDR`/`XM_WR_ADDR` and add `XM_RD_INCR`/`XM_WR_INCR` to `XM_RD_ADDR`/`XM_WR_ADDR`,
-respectively.**  
+respectively.**
 When `XM_DATA_2` is read data from VRAM at `XM_RD_ADDR` is returned and `XM_RD_INCR` is added to `XM_RD_ADDR` and pre-reading the
-new VRAM address begins.  
-When `XM_DATA_2` is written, begins writing value to VRAM at `XM_WR_ADDR` and adds `XM_WR_INCR` to `XM_WR_ADDR`.  
+new VRAM address begins.
+When `XM_DATA_2` is written, begins writing value to VRAM at `XM_WR_ADDR` and adds `XM_WR_INCR` to `XM_WR_ADDR`.
 NOTE: This register is identical to `XM_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from `XM_DATA` for additional speed
-(however, it does have its own nibble write mask).  
+(however, it does have its own nibble write mask).
 
-**0x8 `XM_SYS_CTRL` (R/W+) - draw busy status, reconfigure, interrupt control and write masking control [TODO]**  
-<img src="./pics/wd_XM_SYS_CTRL.svg">  
-**Read draw busy, write to reboot FPGA or read/write interrupt control/status and `XM_DATA` nibble write mask.**  
-Read:&emsp;[11:8] `XM_DATA`/`XM_DATA_2` nibble write masks, [7] draw busy, [3:0] interrupt enables  
+**0x8 `XM_SYS_CTRL` (R/W+) - draw busy status, reconfigure, interrupt control and write masking control [#TODO]**
+<img src="./pics/wd_XM_SYS_CTRL.svg">
+**Read draw busy, write to reboot FPGA or read/write interrupt control/status and `XM_DATA` nibble write mask.**
+Read:&emsp;[11:8] `XM_DATA`/`XM_DATA_2` nibble write masks, [7] draw busy, [3:0] interrupt enables
 Write:&emsp;[15] reboot FPGA to [14:13] configuration, [11:8] `XM_DATA`/`XM_DATA_2` nibble write masks, [3:0] interrupt mask (1
 allows corresponding interrupt source to generate CPU interrupt).
+[#TODO: add timeout status bit]
 
 **0x9 `XM_TIMER` (R/W) - 1/10<sup>th</sup> of millisecond timer (0 - 6553.5 ms) / interrupt clear**
-<img src="./pics/wd_XM_TIMER.svg">  
-<img src="./pics/wd_XM_TIMER_W.svg">  
-**Read 16-bit timer, increments every 1/10<sup>th</sup> of a millisecond**  
-**Write to clear interrupt status**  
+<img src="./pics/wd_XM_TIMER.svg">
+<img src="./pics/wd_XM_TIMER_W.svg">
+**Read 16-bit timer, increments every 1/10<sup>th</sup> of a millisecond**
+**Write to clear interrupt status**
 Can be used for fairly accurate timing.  When value wraps, internal fractional value is maintined (so as accurate as FPGA PLL
-clock).  
+clock).
 
-**0xA `XM_UNUSED_A` (R/W) - unused register 0xA**  
-Unused direct register 0xA  
+**0xA `XM_LFSR` (RO) - LFSR pseudo-random number**
+<img src="./pics/wd_XM_LFSR.svg">
+**Read 16-bit LFSR pseudo-random value**
+Read 16-bits from internal 19-bit LFSR (linear feedback shift-register).  All values are possible and the value changes
+every cycle asynchronus at the display pixel clock, it should provide "quite random" numbers (at least for most game
+and graphics purposes).
 
-**0xB `XM_UNUSED_B` (R/W) - unused register 0xB**  
-Unused direct register 0xB  
+**0xB `XM_UNUSED_B` (R/W) - unused register 0xB**
+Unused direct register 0xB
 
 **0xC `XM_RW_INCR` (R/W) - increment value for `XM_RW_ADDR` when `XM_RW_DATA`/`XM_RW_DATA_2`is read or written**
-<img src="./pics/wd_XM_RW_INCR.svg">  
+<img src="./pics/wd_XM_RW_INCR.svg">
 **Read or write twos-complement value added to`XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2`is read from or written to.**
-Allows quickly reading/writing Xosera VRAM from`XM_RW_DATA`/`XM_RW_DATA_2` when using a fixed `XM_RW_ADDR` increment.  
-Added to `XM_RW_ADDR` when `XM_RW_DATA` or`XM_RW_DATA_2` is read from (twos complement so value can be negative).  
+Allows quickly reading/writing Xosera VRAM from`XM_RW_DATA`/`XM_RW_DATA_2` when using a fixed `XM_RW_ADDR` increment.
+Added to `XM_RW_ADDR` when `XM_RW_DATA` or`XM_RW_DATA_2` is read from (twos complement so value can be negative).
 
-**0xD `XM_RW_ADDR` (R/W+) - VRAM read/write address for accessed at `XM_RW_DATA`/`XM_RW_DATA_2`**  
-<img src="./pics/wd_XM_RW_ADDR.svg">  
+**0xD `XM_RW_ADDR` (R/W+) - VRAM read/write address for accessed at `XM_RW_DATA`/`XM_RW_DATA_2`**
+<img src="./pics/wd_XM_RW_ADDR.svg">
 **Read or write VRAM address read when`XM_RW_DATA` or `XM_RW_DATA_2`is read from or written to.**
-Specifies VRAM address used when reading or writing from VRAM via`XM_RW_DATA`/`XM_RW_DATA_2`.  
+Specifies VRAM address used when reading or writing from VRAM via`XM_RW_DATA`/`XM_RW_DATA_2`.
 When `XM_RW_ADDR` is written (or incremented by `XM_RW_INCR`) the corresponding word in VRAM is read and made available for
-reading at `WR_DATA` or `WR_DATA_2`.  
+reading at `WR_DATA` or `WR_DATA_2`.
 Since this read always happens (even when only intending to write), prefer using RW_ADDR for
-reading (but fairly small VRAM access overhead).  
+reading (but fairly small VRAM access overhead).
 
-**0xE `XM_RW_DATA` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**  
-<img src="./pics/wd_XM_RW_DATA.svg">  
-**Read or write VRAM value in VRAM at`XM_RW_ADDR` and add `XM_RW_INCR` to `XM_RW_ADDR`.**  
+**0xE `XM_RW_DATA` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**
+<img src="./pics/wd_XM_RW_DATA.svg">
+**Read or write VRAM value in VRAM at`XM_RW_ADDR` and add `XM_RW_INCR` to `XM_RW_ADDR`.**
 When`XM_RW_DATA`is read, returns data from VRAM at `XM_RW_ADDR`, adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM
 value.
 When `XM_RW_DATA` is written, begins writing value to VRAM at `XM_RW_ADDR` and adds `XM_RW_INCR` to `XM_RW_ADDR` and begins
-reading new VRAM value.  
+reading new VRAM value.
 
-**0xF `XM_RW_DATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**  
-<img src="./pics/wd_XM_RW_DATA.svg">  
-**Read or write VRAM value in VRAM at`XM_RW_ADDR` and add `XM_RW_INCR` to `XM_RW_ADDR`.**  
+**0xF `XM_RW_DATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**
+<img src="./pics/wd_XM_RW_DATA.svg">
+**Read or write VRAM value in VRAM at`XM_RW_ADDR` and add `XM_RW_INCR` to `XM_RW_ADDR`.**
 When`XM_RW_DATA_2`is read, returns data from VRAM at `XM_RW_ADDR`, adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM
 value.
 When `XM_RW_DATA_2` is written, begins writing value to VRAM at `XM_RW_ADDR` and adds `XM_RW_INCR` to `XM_RW_ADDR` and begins
-reading new VRAM value.  
+reading new VRAM value.
 NOTE: This register is identical to `XM_RW_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from`XM_RW_DATA` for additional
-speed.  
+speed.
+___
 
 ### Xosera Extended Register / Extended Memory Region Summary
 
-| XR Region Name  | XR Region Range | R/W | Description                             |
-| --------------- | --------------- | --- | --------------------------------------- |
-| XR_CONFIG_REGS  | 0x0000-0x000F   | R/W | config XR registers                     |
-| XR_PA_REGS      | 0x0010-0x0017   | R/W | playfield A XR registers                |
-| XR_PB_REGS      | 0x0018-0x001F   | R/W | playfield B XR registers                |
-| XR_BLIT_REGS    | 0x0020-0x002F   | R/W | 2D-blit XR registers                    |
-| XR_DRAW_REGS    | 0x0030-0x003F   | R/W | line/poly draw XR registers             |
-| XR_COLOR_MEM    | 0x8000-0x80FF   | WO  | 256 x 16-bit color lookup memory (XRGB) |
-| XR_TILE_MEM     | 0x9000-0x9FFF   | WO  | 4096 x 16-bit tile glyph storage memory |
-| XR_COPPER_MEM   | 0xA000-0xA7FF   | WO  | 2048 x 16-bit copper program memory     |
-| XR_SPRITE_MEM   | 0xB000-0xB0FF   | -/- | 256 x 16-bit sprite/cursor memory       |
-| (unused region) | 0xC000-0xFFFF   | -/- | (unused region)                         |
+| XR Region Name  | XR Region Range | R/W | Description                                |
+| --------------- | --------------- | --- | ------------------------------------------ |
+| XR_CONFIG_REGS  | 0x0000-0x000F   | R/W | config XR registers                        |
+| XR_PA_REGS      | 0x0010-0x0017   | R/W | playfield A XR registers                   |
+| XR_PB_REGS      | 0x0018-0x001F   | R/W | playfield B XR registers                   |
+| XR_BLIT_REGS    | 0x2000-0x200F   | R/W | 2D-blit XR registers                       |
+| XR_DRAW_REGS    | 0x3000-0x300F   | R/W | line/poly draw XR registers                |
+| XR_COLOR_MEM    | 0x8000-0x81FF   | R/W | 2 x 256W 16-bit color lookup memory (XRGB) |
+| XR_TILE_MEM     | 0xA000-0xB3FF   | R/W | 5KW 16-bit tile glyph storage memory       |
+| XR_COPPER_MEM   | 0xC000-0xC7FF   | R/W | 2KW 16-bit copper program memory           |
+| (unused region) | 0xE000-0xFFFF   | -/- | (unused region)                            |
 
-To access an XR register or XR memory address, write the XR register number or address to `XM_XR_DATA`, then read or write to
-`XM_XR_DATA` (note that currently only XR registers can be read, not XR memory).  
-Each word written to `XM_XR_DATA` will also automatically increment `XM_XR_DATA` to allows faster consecutive updates (like for
-color or tile RAM update).  
-Note that this is not the case when reading from `XM_XR_DATA`, you _must_ write to `XM_XR_DATA` in order to trigger a read (or
-previously read value will remain).
-
-TODO: Investigate a way to read color, tile or copper memory (perhaps not during display time)
+To access an XR register or XR memory address, write the XR register number or address to `XM_XR_ADDR`, then read or write to
+`XM_XR_DATA`.  Each word *written* to `XM_XR_DATA` will also automatically increment `XM_XR_DATA` to allows faster
+consecutive updates (like for color or tile memory update). Note that this is not the case when reading from
+`XM_XR_DATA`, you *must* write to `XM_XR_DATA` in order to trigger a read (ort the previously read value will be
+returned).
+While all XR registers and memory regions can be read, there is an 8 cycle "timeout" in case the memory region is
+in high contention. In most cases, this 8 cycles is enough to transparently allow for shared reading from all regions except
+COLOR_MEM (which is only readable in horizontal and vertical blank when the the display is not active) and maybe in
+extreme cases, TILE_MEM when used with both playfields. [#TODO: Add `SYS_CTRL` bit to indicate timeout on last read].
+Also note that unlike the main 16 `XM` registers, the XR region can only be accessed using full 16-bit words (either
+reading or writing). The full 16-bits of the `XM_XR_DATA` value are pre-read when `XM_XR_ADDR` is written and a full 16-bit
+word is written when the odd (low-byte) of `XM_XR_DATA` is written.
+___
 
 ### Xosera Extended Registers Details (XR Registers)
 
-This XR registers are used to control of most Xosera operation other than CPU VRAM access and a few miscellaneous functions
-accessed via the main registers.  
-To access these registers, write the register address to `XM_XR_DATA` (with bit [15] zero), then read or write register data to
-`XM_XR_DATA` (and when _writing only_, the low 12-bits of `XM_XR_DATA` will be auto-incremented for each word written).
+This XR registers are used to control of most Xosera operation other than CPU VRAM access and a few miscellaneous
+control functions (which accessed directly via the main registers).
+To access these XR registers, first write the register address to `XM_XR_ADDR`, then read or write register data to `XM_XR_DATA`
+(and when *writing only*, the low 13-bits of `XM_XR_DATA` will be auto-incremented for each word written).
 
 #### Video Config and Copper XR Registers Summary
 
@@ -230,15 +244,15 @@ To access these registers, write the register address to `XM_XR_DATA` (with bit 
 | ----- | --------------- | ---- | --------------------------------------------------------------------------------------- |
 | 0x00  | `XR_VID_CTRL`   | R /W | display control and border color index                                                  |
 | 0x01  | `XR_COPP_CTRL`  | R /W | display synchronized coprocessor control                                                |
-| 0x02  | `XR_CURSOR_X`   | R /W | sprite cursor X position                                                                |
-| 0x03  | `XR_CURSOR_Y`   | R /W | sprite cursor Y position                                                                |
-| 0x04  | `XR_VID_TOP`    | R /W | top line of active display window (typically 0)                                         |
-| 0x05  | `XR_VID_BOTTOM` | R /W | bottom line of active display window (typically 479)                                    |
-| 0x06  | `XR_VID_LEFT`   | R /W | left edge of active display window (typically 0)                                        |
-| 0x07  | `XR_VID_RIGHT`  | R /W | right edge of active display window (typically 639 or 847)                              |
+| 0x02  | `XR_CURSOR_X`   | R /W | sprite cursor X position [#TODO]                                                        |
+| 0x03  | `XR_CURSOR_Y`   | R /W | sprite cursor Y position [#TODO]                                                        |
+| 0x04  | `XR_VID_TOP`    | R /W | top line of active display window (typically 0) [#TODO repurpose reg] for sprites       |
+| 0x05  | `XR_VID_BOTTOM` | R /W | bottom line of active display window (typically 479)  [#TODO repurpose reg for sprites] |
+| 0x06  | `XR_VID_LEFT`   | R /W | left edge start of active display window (normally 0)                                   |
+| 0x07  | `XR_VID_RIGHT`  | R /W | right edge + 1 end of active display window (normally 640 or 848)                       |
 | 0x08  | `XR_SCANLINE`   | RO   | [15] in V blank, [14] in H blank [10:0] V scanline                                      |
-| 0x09  | `XR_UNUSED_09`  | RO   |                                                                                         |
-| 0x0A  | `XR_VERSION`    | RO   | Xosera optional feature bits [15:8] and version code [7:0] [TODO]                       |
+| 0x09  | `XR_UNUSED_09`  | RO   | [#TODO]                                                                                 |
+| 0x0A  | `XR_VERSION`    | RO   | optional feature bits [15:12] and 3 digit BCD version [11:0]                            |
 | 0x0B  | `XR_GITHASH_H`  | RO   | [15:0] high 16-bits of 32-bit Git hash build identifier                                 |
 | 0x0C  | `XR_GITHASH_L`  | RO   | [15:0] low 16-bits of 32-bit Git hash build identifier                                  |
 | 0x0D  | `XR_VID_HSIZE`  | RO   | native pixel width of monitor mode (e.g. 640/848)                                       |
@@ -249,72 +263,74 @@ To access these registers, write the register address to `XM_XR_DATA` (with bit 
 
 #### Video Config and Copper XR Registers Details
 
-**0x00 `XR_VID_CTRL` (R/W) - interrupt status/signal and border color**  
-<img src="./pics/wd_XR_VID_CTRL.svg">  
+**0x00 `XR_VID_CTRL` (R/W) - interrupt status/signal and border color**
+<img src="./pics/wd_XR_VID_CTRL.svg">
 Pixels outside video window (`VID_TOP`, `VID_BOTTOM`, `VID_LEFT`, `VID_RIGHT`) will use border color index.  Sprite cursor will
-also use upper 4-bits of border color (with lower 4-bits from sprite data).  
+also use upper 4-bits of border color (with lower 4-bits from sprite data).
 Writing 1 to interrupt bit will generate CPU interrupt (if not already pending).  Read will give pending interrupts (which CPU can
 clear writing to `XM_TIMER`).
 
-**0x01 `XR_COPP_CTRL` (R/W) - copper start address and enable**  
-<img src="./pics/wd_XR_COPP_CTRL.svg">  
+**0x01 `XR_COPP_CTRL` (R/W) - copper start address and enable**
+<img src="./pics/wd_XR_COPP_CTRL.svg">
 Display synchronized co-processor enable and starting PC address for each video frame within copper XR memory region.
 
-**0x02 `XR_CURSOR_X` (R/W) - sprite cursor X position**  
-<img src="./pics/wd_XR_CURSOR_X.svg">  
+**0x02 `XR_CURSOR_X` (R/W) - sprite cursor X position**
+<img src="./pics/wd_XR_CURSOR_X.svg">
 Sprite cursor X native pixel position (left-edge).  Can be fully or partially offscreen.
 
-**0x03 `XR_CURSOR_Y` (R/W) - sprite cursor Y position**  
-<img src="./pics/wd_XR_CURSOR_Y.svg">  
+**0x03 `XR_CURSOR_Y` (R/W) - sprite cursor Y position**
+<img src="./pics/wd_XR_CURSOR_Y.svg">
 Sprite cursor Y native pixel position (top-edge).  Can be fully or partially offscreen.
 
-**0x04 `XR_VID_TOP` (R/W) - video display window top line**  
-<img src="./pics/wd_XR_VID_TOP.svg">  
+**0x04 `XR_VID_TOP` (R/W) - video display window top line**
+<img src="./pics/wd_XR_VID_TOP.svg">
 Defines top-most line of video display window (normally 0 for full-screen).
 
-**0x05 `XR_VID_BOTTOM` (R/W) - video display window bottom line**  
-<img src="./pics/wd_XR_VID_BOTTOM.svg">  
+**0x05 `XR_VID_BOTTOM` (R/W) - video display window bottom line**
+<img src="./pics/wd_XR_VID_BOTTOM.svg">
 Defines bottom-most line of video display window (normally 479 for full-screen).
 
-**0x06 `XR_VID_LEFT` (R/W) - video display window left edge**  
-<img src="./pics/wd_XR_VID_LEFT.svg">  
+**0x06 `XR_VID_LEFT` (R/W) - video display window left edge**
+<img src="./pics/wd_XR_VID_LEFT.svg">
 Defines left-most native pixel of video display window (normally 0 for full-screen).
 
-**0x07 `XR_VID_RIGHT` (R/W) - video display window right edge**  
-<img src="./pics/wd_XR_VID_RIGHT.svg">  
+**0x07 `XR_VID_RIGHT` (R/W) - video display window right edge**
+<img src="./pics/wd_XR_VID_RIGHT.svg">
 Defines right-most native pixel of video display window (normally 639 or 847 for 4:3 or 16:9 full-screen, respectively).
 
-**0x08 `XR_SCANLINE` (RO) - current video display scan line and blanking status**  
-<img src="./pics/wd_XR_SCANLINE.svg">  
+**0x08 `XR_SCANLINE` (RO) - current video display scan line and blanking status**
+<img src="./pics/wd_XR_SCANLINE.svg">
 Continuously updated with the scanline and blanking status during display scanning. Read-only.
 
-**0x09 `XR_UNUSED_09` (RO) - unused XR register 0x09**  
-Unused XR register  0x09  
+**0x09 `XR_UNUSED_09` (RO) - unused XR register 0x09**
+Unused XR register  0x09
 
-**0x0A `XR_VERSION` (RO) - Xosera version and optional feature bits**  
-<img src="./pics/wd_XR_VERSION.svg">  
+**0x0A `XR_VERSION` (RO) - Xosera version and optional feature bits**
+<img src="./pics/wd_XR_VERSION.svg">
 BCD coded version (x.xx) and optional feature bits (0 for undefined/not present). Read-only.
+Bit 15 will be set if the bitstream design was "clean" Git hash (locally unmodified).
 
-**0x0B `XR_GITHASH_H` (RO) - Xosera Git hash identifier (high 16-bits)**  
-<img src="./pics/wd_XR_GITHASH_H.svg">  
-High 16-bits of Git short hash identifier. Can be used to help identify exact repository version.  
+**0x0B `XR_GITHASH_H` (RO) - Xosera Git hash identifier (high 16-bits)**
+<img src="./pics/wd_XR_GITHASH_H.svg">
+High 16-bits of Git short hash identifier. Can be used to help identify exact repository version.
 Upper nibble will be 0xD when local modifications have been made. Read-only.
 
-**0x0C `XR_GITHASH_L` (RO) - Xosera Git hash identifier (low 16-bits)**  
-<img src="./pics/wd_XR_GITHASH_L.svg">  
+**0x0C `XR_GITHASH_L` (RO) - Xosera Git hash identifier (low 16-bits)**
+<img src="./pics/wd_XR_GITHASH_L.svg">
 Low 16-bits of Git short hash identifier. Can be used to help identify exact repository version. Read-only.
 
-**0x0D `XR_VID_HSIZE` (RO) - monitor display mode native horizontal resolution**  
-<img src="./pics/wd_XR_VID_HSIZE.svg">  
+**0x0D `XR_VID_HSIZE` (RO) - monitor display mode native horizontal resolution**
+<img src="./pics/wd_XR_VID_HSIZE.svg">
 Monitor display mode native horizontal resolution (e.g., 640 for 4:3 or 848 for 16:9). Read-only.
 
-**0x0E `XR_VID_VSIZE` (RO) - monitor display mode native vertical resolution**  
-<img src="./pics/wd_XR_VID_VSIZE.svg">  
+**0x0E `XR_VID_VSIZE` (RO) - monitor display mode native vertical resolution**
+<img src="./pics/wd_XR_VID_VSIZE.svg">
 Monitor display mode native vertical resolution (e.g., 480). Read-only.
 
-**0x0F `XR_VID_VFREQ` (RO) - monitor display mode update frequency in BCD 1/100<sup>th</sup> Hz**  
-<img src="./pics/wd_XR_VID_VFREQ.svg">  
+**0x0F `XR_VID_VFREQ` (RO) - monitor display mode update frequency in BCD 1/100<sup>th</sup> Hz**
+<img src="./pics/wd_XR_VID_VFREQ.svg">
 Monitor display mode update frequency in BCD 1/100<sup>th</sup> Hz (e.g., 0x5997 = 59.97 Hz). Read-only.
+___
 
 #### Playfield A & B Control XR Registers Summary
 
@@ -336,67 +352,70 @@ Monitor display mode update frequency in BCD 1/100<sup>th</sup> Hz (e.g., 0x5997
 | 0x1D  | `XR_PB_LINE_ADDR` | WO  | playfield B scanline start address (loaded at start of line) |
 | 0x1E  | `XR_PB_UNUSED_1E` | -/- |                                                              |
 | 0x1F  | `XR_PB_UNUSED_1F` | -/- |                                                              |
+___
 
 #### Playfield A & B Control XR Registers Details
 
-**0x10 `XR_PA_GFX_CTRL` (R/W) - playfield A (foreground) graphics control**  
-**0x18 `XR_PB_GFX_CTRL` (R/W) - playfield B (background) graphics control**  
-<img src="./pics/wd_XR_Px_GFX_CTRL.svg">  
-**playfield A/B graphics control**  
-colorbase is used for any color index bits not in source pixel (e.g., the upper 4-bits of 4-bit pixel).  
-blank is used to blank the display (solid colorbase color).  
-bitmap 0 for tiled character graphics (see `XR_Px_TILE_CTRL`) using display word with attribute and tile index.  
-bitmap 1 for bitmapped mode (1-bpp mode uses a 4-bit fore/back color attributes in upper 8-bits of each word).  
-bpp selects bits-per-pixel or the number of color index bits per pixel (see "Graphics Modes" [TODO]).  
-H repeat selects the number of native pixels wide an Xosera pixel will be (1-4).  
-V repeat selects the number of native pixels tall an Xosera pixel will be (1-4).  
+**0x10 `XR_PA_GFX_CTRL` (R/W) - playfield A (foreground) graphics control**
+**0x18 `XR_PB_GFX_CTRL` (R/W) - playfield B (background) graphics control**
+<img src="./pics/wd_XR_Px_GFX_CTRL.svg">
+**playfield A/B graphics control**
+colorbase is used for any color index bits not in source pixel (e.g., the upper 4-bits of 4-bit pixel).
+blank is used to blank the display (solid colorbase color).
+bitmap 0 for tiled character graphics (see `XR_Px_TILE_CTRL`) using display word with attribute and tile index.
+bitmap 1 for bitmapped mode (1-bpp mode uses a 4-bit fore/back color attributes in upper 8-bits of each word).
+bpp selects bits-per-pixel or the number of color index bits per pixel (see "Graphics Modes" [#TODO]).
+H repeat selects the number of native pixels wide an Xosera pixel will be (1-4).
+V repeat selects the number of native pixels tall an Xosera pixel will be (1-4).
 
-**0x11 `XR_PA_TILE_CTRL` (R/W) - playfield A (foreground) tile control**  
+**0x11 `XR_PA_TILE_CTRL` (R/W) - playfield A (foreground) tile control**
 **0x19 `XR_PB_TILE_CTRL` (R/W) - playfield B (background) tile control**
-<img src="./pics/wd_XR_Px_TILE_CTRL.svg">  
-**playfield A/B tile control**  
-tile base address selects the upper bits of tile storage memory on 1KW boundaries.  
-mem selects tile XR memory region or VRAM address (only 4KW of tile XR memory, upper bits ignored).  
+<img src="./pics/wd_XR_Px_TILE_CTRL.svg">
+**playfield A/B tile control**
+tile base address selects the upper bits of tile storage memory on 1KW boundaries.
+disp selects tilemap data (tile index and attributes) in VRAM or XR TILEMAP memory (5KW of tile XR memory, upper bits ignored).
+tile selects tile definitions in XR TILEMAP memory or VRAM (5KW of tile XR memory, upper bits ignored).
 tile height selects the tile height-1 from (0-15 for up to 8x16).  Tiles are stored as either 8 or 16 lines high.  Tile lines past
-height are truncated when displayed (e.g., tile height of 11 would display 8x12 of 8x16 tile).  
+height are truncated when displayed (e.g., tile height of 11 would display 8x12 of 8x16 tile).
 
-**0x12 `XR_PA_DISP_ADDR` (R/W) - playfield A (foreground) display VRAM start address**  
+**0x12 `XR_PA_DISP_ADDR` (R/W) - playfield A (foreground) display VRAM start address**
 **0x1A `XR_PB_DISP_ADDR` (R/W) - playfield B (background) display VRAM start address**
-<img src="./pics/wd_XR_Px_DISP_ADDR.svg">  
-**playfield A/B display start address**  
+<img src="./pics/wd_XR_Px_DISP_ADDR.svg">
+**playfield A/B display start address**
 Address in VRAM for start of playfield display (tiled or bitmap).
 
-**0x13 `XR_PA_LINE_LEN` (R/W) - playfield A (foreground) display line word length**  
-**0x1B `XR_PB_LINE_LEN` (R/W) - playfield B (background) display line word length**  
-<img src="./pics/wd_XR_Px_LINE_LEN.svg">  
-**playfield A/B display line word length**  
+**0x13 `XR_PA_LINE_LEN` (R/W) - playfield A (foreground) display line word length**
+**0x1B `XR_PB_LINE_LEN` (R/W) - playfield B (background) display line word length**
+<img src="./pics/wd_XR_Px_LINE_LEN.svg">
+**playfield A/B display line word length**
 Length in words for each display line (i.e., the amount added to line start address for the start of the next line - not the width
-of the display).  
+of the display).
 Twos complement, so negative values are okay (for reverse scan line order in memory).
 
-**0x14 `XR_PA_HV_SCROLL` (R/W) - playfield A (foreground) horizontal and vertical fine scroll**  
-**0x1C `XR_PB_HV_SCROLL` (R/W) - playfield B (background) horizontal and vertical fine scroll**  
-<img src="./pics/wd_XR_Px_HV_SCROLL.svg">  
-**playfield A/B  horizontal and vertical fine scroll**  
+**0x14 `XR_PA_HV_SCROLL` (R/W) - playfield A (foreground) horizontal and vertical fine scroll**
+**0x1C `XR_PB_HV_SCROLL` (R/W) - playfield B (background) horizontal and vertical fine scroll**
+<img src="./pics/wd_XR_Px_HV_SCROLL.svg">
+**playfield A/B  horizontal and vertical fine scroll**
 horizontal fine scroll should be constrained to the scaled width of 8 pixels or 1 tile (e.g., HSCALE 1x = 0-7, 2x = 0-15, 3x =
-0-23 and 4x = 0-31).  
-vertical fine scroll should be constrained to the scaled height of a tile or (one less than the tile-height times VSCALE).  
+0-23 and 4x = 0-31).
+vertical fine scroll should be constrained to the scaled height of a tile or (one less than the tile-height times VSCALE).
 (But hey, we will see what happens, it might be fine...)
 
-**0x15 `XR_PA_LINE_ADDR` (WO) - playfield A (foreground) display VRAM line address**  
+**0x15 `XR_PA_LINE_ADDR` (WO) - playfield A (foreground) display VRAM line address**
 **0x1D `XR_PB_LINE_ADDR` (WO) - playfield B (background) display VRAM line address**
-<img src="./pics/wd_XR_Px_LINE_ADDR.svg">  
-**playfield A/B display line address**  
+<img src="./pics/wd_XR_Px_LINE_ADDR.svg">
+**playfield A/B display line address**
 Address in VRAM for start of next scanline (tiled or bitmap). This is generally used to allow the copper to change the display
 address per scanline. Write-only.
 
-**0x16 `XR_PA_UNUSED_16` (-/-) - unused XR PA register 0x16**  
-**0x1E `XR_PB_UNUSED_1E` (-/-) - unused XR PB register 0x1E**  
-Unused XR playfield registers 0x16, 0x1E  
+**0x16 `XR_PA_UNUSED_16` (-/-) - unused XR PA register 0x16**
+**0x1E `XR_PB_UNUSED_1E` (-/-) - unused XR PB register 0x1E**
+Unused XR playfield registers 0x16, 0x1E
 
-**0x17 `XR_PA_UNUSED_17` (-/-) - unused XR PA register 0x17**  
-**0x1F `XR_PB_UNUSED_1F` (-/-) - unused XR PB register 0x1F**  
-Unused XR playfield registers 0x17, 0x1F  
+**0x17 `XR_PA_UNUSED_17` (-/-) - unused XR PA register 0x17**
+**0x1F `XR_PB_UNUSED_1F` (-/-) - unused XR PB register 0x1F**
+Unused XR playfield registers 0x17, 0x1F
+___
 
 #### 2D Blitter Engine XR Registers Summary
 
@@ -418,6 +437,7 @@ Unused XR playfield registers 0x17, 0x1F
 | 0x2D  | [TBD] | R/W |             |
 | 0x2E  | [TBD] | R/W |             |
 | 0x2F  | [TBD] | R/W |             |
+___
 
 #### Polygon / Line Draw Engine XR Registers Summary
 
@@ -439,6 +459,7 @@ Unused XR playfield registers 0x17, 0x1F
 | 0x3D  | [TBD] | R/W |             |
 | 0x3E  | [TBD] | R/W |             |
 | 0x3F  | [TBD] | R/W |             |
+___
 
 ## Video Synchronized Co-Processor Details
 
@@ -451,7 +472,7 @@ otherwise be possible.
 Interaction with the copper involves two Xosera memory areas:
 
 - XR Register 0x01 - The **`XR_COPP_CTRL`** register
-- Xosera XR memory area **`0xA000-0xA7FF`** - The **`XR_COPPER_MEM`** area
+- Xosera XR memory area **`0xC000-0xC7FF`** - The **`XR_COPPER_MEM`** area
 
 In general, programming the copper comprises loading a copper program (or 'copper list') into
 the `XR_COPPER_MEM` area, and then setting the starting PC (if necessary) and enable bit in
@@ -463,7 +484,7 @@ cannot be used to perform jumps - see instead the `JMP` instruction.
 
 ### Programming the Co-processor
 
-As mentioned, copper programs (aka 'The Copper List') live in XR memory at `0xA000`. This memory
+As mentioned, copper programs (aka 'The Copper List') live in XR memory at `0xC000`. This memory
 segment is 2K in size, and all copper instructions are 32-bits, meaning there is space for a
 maximum of 512 instructions at any one time.
 
@@ -486,6 +507,7 @@ As far as the copper is concerned, all coordinates are in native resolution (i.e
 The copper broadly follows the Amiga copper in terms of instructions (though we may add more
 as time progresses). There are multiple variants of the MOVE instruction that each move to a
 different place (see next section).
+___
 
 ### Co-processor Instruction Set
 
@@ -505,7 +527,7 @@ detailed below, along with the binary format.
 The `MOVE` instruction is actually subdivided into four specific types of move, as detailed
 below.
 
-**`WAIT` - [0000 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]**
+**`WAIT` - [000o oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]**
 
 Wait for a given screen position to be reached (or exceeded).
 
@@ -520,7 +542,7 @@ If both horizontal and vertical ignore flags are set, this instruction will wait
 indefinitely (until the end of the frame). This can be used as a special "wait for
 end of frame" instruction.
 
-**`SKIP` - [0010 oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]**
+**`SKIP` - [001o oYYY YYYY YYYY],[oXXX XXXX XXXX FFFF]**
 
 Skip the next instruction if a given screen position has been reached.
 
@@ -535,23 +557,23 @@ If both horizontal and vertical ignore flags are set, this instruction will **al
 skip the next instruction. While not especially useful in its own right, this can come
 in handy in conjunction with in-place code modification.
 
-**`JMP` - [0100 oAAA AAAA AAAA],[oooo oooo oooo oooo]**
+**`JMP` - [010o oAAA AAAA AAAA],[oooo oooo oooo oooo]**
 
 Jump to the given copper RAM address.
 
-**`MOVER` - [1001 FFFF AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+**`MOVER` - [011o FFFF AAAA AAAA],[DDDD DDDD DDDD DDDD]**
 
 Move 16-bit data to XR register specified by 8-bit address.
 
-**`MOVEF` - [1010 AAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+**`MOVEF` - [100A AAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
 
 Move 16-bit data to `XR_TILE_MEM` (or 'font') memory.
 
-**`MOVEP` - [1011 oooo AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+**`MOVEP` - [101o oooo AAAA AAAA],[DDDD DDDD DDDD DDDD]**
 
 Move 16-bit data to `XR_COLOR_MEM` (or 'palette') memory.
 
-**`MOVEC` - [1100 oAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
+**`MOVEC` - [110o oAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
 
 Move 16-bit data to `XR_COPPER_MEM` memory.
 
@@ -567,12 +589,14 @@ D - Data
 o - Not used / don't care
 ```
 
+___
+
 #### Notes on the MOVE variants
 
 With the available `MOVE` variants, the copper can directly MOVE to the following:
 
 - Any Xosera XR register (including the copper control register)
-- Xosera font memory (or tile memory)
+- Xosera tile memory (or font memory - #TODO: except last 1KW, this limitation may be removed in the future).
 - Xosera color memory
 - Xosera copper memory
 
@@ -580,7 +604,6 @@ The copper **cannot** directly MOVE to the following, and this is by design:
 
 - Xosera main registers
 - Video RAM
-- Sprite RAM (this limitation may be removed in future).
 
 It is also possible to change the copper program that runs on a frame-by-frame basis
 (both from copper code and m68k program code) by modifying the copper control register. The copper
@@ -592,6 +615,7 @@ memory at will using the Xosera registers.
 
 > **Note**: When modifying copper code from the m68k, and depending on the nature of your modifications,
 you may need to sync with vblank to avoid display artifacts.
+___
 
 ### Co-processor Assembler
 

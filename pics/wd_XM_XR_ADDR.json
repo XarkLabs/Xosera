@@ -1,53 +1,33 @@
 {
     "reg": [
         {
-            "bits": 12,
-            "name": "XR register number / 12-bit XR offset",
+            "bits": 13,
+            "name": "XR register number / 13-bit XR offset",
             "type": 4,
             "attr": [
-                "config / copper registers (0000-000F)",
-                "playfield mode registers (0010-001F)",
-                "2D blitter registers (0020-002F)",
-                "poly drawing registers (0030-003F)",
-                "256-word color memory (write-only 8000-80FF)",
-                "4K-word tile memory (write-only 9000-9FFF)",
-                "2K-word copper memory (write-only A000-A7FF)",
-                "256-word sprite memory (B000-B0FF)",
-                "unused (C000-FFFF)"
+                "config/video registers (0000-001F)",
+                "blit registers (2000-200F)",
+                "draw/poly registers (4000-400F)",
+                "unused (6000-7FFF)",
+                "512-word color memory (8000-81FF)",
+                "5K-word tile memory (A000-B3FF)",
+                "2K-word copper memory (C000-C7FF)",
+                "unused (E000-FFFF)"
             ]
         },
         {
-            "bits": 2,
-            "name": "mem region",
-            "type": 5,
-            "attr": [
-                "",
-                "",
-                "",
-                "",
-                "00",
-                "01",
-                "10",
-                "11"
-            ]
-        },
-        {
-            "bits": 1,
-            "type": 1
-        },
-        {
-            "bits": 1,
-            "name": "mem",
+            "bits": 3,
+            "name": "region",
             "type": 2,
             "attr": [
-                "0",
-                "0",
-                "0",
-                "0",
-                "1",
-                "1",
-                "1",
-                "1"
+                "000",
+                "001",
+                "010",
+                "011",
+                "100",
+                "101",
+                "110",
+                "111"
             ]
         }
     ],

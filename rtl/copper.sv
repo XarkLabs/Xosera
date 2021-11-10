@@ -126,7 +126,7 @@
 //          Move 16-bit data to XR_TILE_MEM memory.
 //
 //
-//      MOVEP - [101o oooo AAAA AAAA],[DDDD DDDD DDDD DDDD]
+//      MOVEP - [101o oooA AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
 //          Move 16-bit data to XR_COLOR_MEM (palette) memory.
 //
@@ -235,7 +235,8 @@ logic          ignore_v;
 logic          ignore_h;
 logic [C_PC:0] copper_pc_jmp;
 logic [15:0]   move_data;
-logic  [7:0]   move_r_p_addr;
+logic  [7:0]   move_r_addr;
+logic  [8:0]   move_p_addr;
 logic [12:0]   move_f_addr;
 logic [10:0]   move_c_addr_v_pos;
 logic [10:0]   h_pos;
@@ -245,7 +246,8 @@ assign ignore_v                 = r_insn[0];
 assign ignore_h                 = r_insn[1];
 assign copper_pc_jmp            = r_insn[26:17];
 assign move_data                = r_insn[15:0];
-assign move_r_p_addr            = r_insn[23:16];
+assign move_r_addr              = r_insn[23:16];
+assign move_p_addr              = r_insn[24:16];
 assign move_f_addr              = r_insn[28:16];
 assign move_c_addr_v_pos        = r_insn[26:16];
 assign h_pos                    = r_insn[14:4];
@@ -436,7 +438,7 @@ always_ff @(posedge clk) begin
                             // mover
                             xr_wr_en                <= 1'b1;
                             ram_wr_addr_out[15:8]   <= 8'h0;
-                            ram_wr_addr_out[7:0]    <= move_r_p_addr;
+                            ram_wr_addr_out[7:0]    <= move_r_addr;
                             ram_wr_data_out         <= move_data;
 
                             // Setup fetch next instruction
@@ -457,8 +459,8 @@ always_ff @(posedge clk) begin
                         INSN_MOVEP: begin
                             // movep
                             xr_wr_en                <= 1'b1;
-                            ram_wr_addr_out[15:8]   <= xv::XR_COLOR_MEM[15:8];
-                            ram_wr_addr_out[7:0]    <= move_r_p_addr;
+                            ram_wr_addr_out[15:9]   <= xv::XR_COLOR_MEM[15:9];
+                            ram_wr_addr_out[8:0]    <= move_p_addr;
                             ram_wr_data_out         <= move_data;
 
                             // Setup fetch next instruction

@@ -80,6 +80,12 @@ logic           pa_line_start_set;                  // true if pa_line_start cha
 logic           pa_gfx_ctrl_set;                    // true if pa_gfx_ctrl changed (register write)
 logic  [7:0]    pa_color_index;                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
 
+// video memories
+logic            vramA_sel;         // vram read select
+logic [15:0]     vramA_addr;        // vram word address out (16x64K)
+logic            tilememA_sel;      // tile mem read select
+logic [xv::TILE_AWIDTH-1:0] tilememA_addr; // tile mem word address out (16x5K)
+
 `ifdef ENABLE_PB
 // playfield B generation control signals
 logic           pb_blank;                           // disable plane B
@@ -89,19 +95,22 @@ logic  [7:0]    pb_colorbase;                       // colorbase XOR'd with pixe
 logic  [1:0]    pb_bpp;                             // bpp code (bpp_depth_t)
 logic           pb_bitmap;                          // bitmap enable (else text mode)
 logic  [5:0]    pb_tile_bank;                       // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
-logic           pa_disp_in_tile;                    // display memory 0=vram, 1=tileram
+logic           pb_disp_in_tile;                    // display memory 0=vram, 1=tileram
 logic           pb_tile_in_vram;                    // 0=tilemem, 1=vram
 logic  [3:0]    pb_tile_height;                     // max height of tile cell
 logic  [1:0]    pb_h_repeat;                        // horizontal pixel repeat
 logic  [1:0]    pb_v_repeat;                        // vertical pixel repeat
 logic  [4:0]    pb_fine_hscroll;                    // horizontal fine scroll (8 pixel * 4 for repeat)
 logic  [5:0]    pb_fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
-logic  [1:0]    pb_h_count;                         // current horizontal repeat countdown
-logic  [1:0]    pb_v_count;                         // current vertical repeat countdown
-logic  [2:0]    pb_tile_x;                          // current column of tile cell
-logic  [3:0]    pb_tile_y;                          // current line of tile cell
-logic           pb_line_start_set;                  // true if pb_line_start changed (register write)
-logic [15:0]    pb_line_start;                      // address of next line display data start
+logic           pb_line_start_set;                  // true if pa_line_start changed (register write)
+logic           pb_gfx_ctrl_set;                    // true if pa_gfx_ctrl changed (register write)
+logic  [7:0]    pb_color_index;                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+
+// video memories
+logic            vramB_sel;         // vram read select
+logic [15:0]     vramB_addr;        // vram word address out (16x64K)
+logic            tilememB_sel;      // tile mem read select
+logic [xv::TILE_AWIDTH-1:0] tilememB_addr; // tile mem word address out (16x5K)
 `endif
 
 // video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
@@ -140,6 +149,89 @@ assign h_count_o    = h_count;
 assign v_count_o    = v_count;
 `endif
 
+video_playfield video_pf_a(
+    .vram_sel_o(vramA_sel),                     // vram read select
+    .vram_addr_o(vramA_addr),                     // vram word address out (16x64K)
+    .vram_data_i(vram_data_i),                     // vram word data in
+    .tilemem_sel_o(tilememA_sel),                     // tile mem read select
+    .tilemem_addr_o(tilememA_addr),         // tile mem word address out (16x5K)
+    .tilemem_data_i(tilemem_data_i),                     // tile mem word data in
+    .v_visible(v_state == STATE_VISIBLE),
+    .h_count(h_count),
+    .h_line_last_pixel(h_line_last_pixel),
+    .last_frame_pixel(last_frame_pixel),
+    .border_color(border_color),
+    .pf_blank_i(pa_blank),
+    .pf_start_addr_i(pa_start_addr),
+    .pf_line_len_i(pa_line_len),
+    .pf_colorbase_i(pa_colorbase),
+    .pf_bpp_i(pa_bpp),
+    .pf_bitmap_i(pa_bitmap),
+    .pf_tile_bank_i(pa_tile_bank),
+    .pf_disp_in_tile_i(pa_disp_in_tile),
+    .pf_tile_in_vram_i(pa_tile_in_vram),
+    .pf_tile_height_i(pa_tile_height),
+    .pf_h_repeat_i(pa_h_repeat),
+    .pf_v_repeat_i(pa_v_repeat),
+    .pf_fine_hscroll_i(pa_fine_hscroll),
+    .pf_fine_vscroll_i(pa_fine_vscroll),
+    .pf_line_start_set_i(pa_line_start_set),
+    .pf_line_start_addr_i(line_set_addr),
+    .pf_gfx_ctrl_set_i(pa_gfx_ctrl_set),
+    .pf_color_index_o(pa_color_index),
+    .reset_i(reset_i),
+    .clk(clk)
+);
+
+`ifdef ENABLE_PB
+video_playfield video_pf_b(
+    .vram_sel_o(vramB_sel),                     // vram read select
+    .vram_addr_o(vramB_addr),                     // vram word address out (16x64K)
+    .vram_data_i(vram_data_i),                     // vram word data in
+    .tilemem_sel_o(tilememB_sel),                     // tile mem read select
+    .tilemem_addr_o(tilememB_addr),         // tile mem word address out (16x5K)
+    .tilemem_data_i(tilemem_data_i),                     // tile mem word data in
+    .v_visible(v_state == STATE_VISIBLE),
+    .h_count(h_count),
+    .h_line_last_pixel(h_line_last_pixel),
+    .last_frame_pixel(last_frame_pixel),
+    .border_color(border_color),
+    .pf_blank_i(pb_blank),
+    .pf_start_addr_i(pb_start_addr),
+    .pf_line_len_i(pb_line_len),
+    .pf_colorbase_i(pb_colorbase),
+    .pf_bpp_i(pb_bpp),
+    .pf_bitmap_i(pb_bitmap),
+    .pf_tile_bank_i(pb_tile_bank),
+    .pf_disp_in_tile_i(pb_disp_in_tile),
+    .pf_tile_in_vram_i(pb_tile_in_vram),
+    .pf_tile_height_i(pb_tile_height),
+    .pf_h_repeat_i(pb_h_repeat),
+    .pf_v_repeat_i(pb_v_repeat),
+    .pf_fine_hscroll_i(pb_fine_hscroll),
+    .pf_fine_vscroll_i(pb_fine_vscroll),
+    .pf_line_start_set_i(pb_line_start_set),
+    .pf_line_start_addr_i(line_set_addr),
+    .pf_gfx_ctrl_set_i(pb_gfx_ctrl_set),
+    .pf_color_index_o(pb_color_index),
+    .reset_i(reset_i),
+    .clk(clk)
+);
+
+`endif
+
+`ifndef ENABLE_PB
+assign vram_sel_o = vramA_sel;
+assign vram_addr_o = vramA_addr;
+assign tilemem_sel_o = tilememA_sel;
+assign tilemem_addr_o = tilememA_addr;
+`else
+assign vram_sel_o       = vramA_sel ? vramA_sel  : vramB_sel;
+assign vram_addr_o      = vramA_sel ? vramA_addr : vramB_addr;
+assign tilemem_sel_o    = tilememA_sel ? tilememA_sel  : tilememB_sel;
+assign tilemem_addr_o   = tilememA_sel ? tilememA_addr : tilememB_addr;
+`endif
+
 // video config registers read/write
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -152,9 +244,9 @@ always_ff @(posedge clk) begin
         vid_left            <= 11'h0;
         vid_right           <= xv::VISIBLE_WIDTH[10:0];
 `ifdef SYNTHESIS
-        pa_blank            <= 1'b0;            // playfield A starts blanked
+        pa_blank            <= 1'b1;            // playfield A starts blanked
 `else
-        pa_blank            <= 1'b0;            // unless simulating
+        pa_blank            <= 1'b1;            // unless simulating
 `endif
         pa_start_addr       <= 16'h0000;
         pa_line_len         <= xv::TILES_WIDE[15:0];
@@ -169,9 +261,32 @@ always_ff @(posedge clk) begin
         pa_colorbase        <= 8'h00;
         pa_h_repeat         <= 2'b0;
         pa_v_repeat         <= 2'b0;
-
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_gfx_ctrl_set     <= 1'b0;
+
+`ifdef ENABLE_PB
+`ifdef SYNTHESIS
+        pb_blank            <= 1'b1;            // playfield B starts blanked
+`else
+        pb_blank            <= 1'b0;            // unless simulating
+`endif
+        pb_start_addr       <= 16'h0000;
+        pb_line_len         <= xv::TILES_WIDE[15:0];
+        pb_fine_hscroll     <= 5'b0;
+        pb_fine_vscroll     <= 6'b0;
+        pb_tile_height      <= 4'b1111;
+        pb_tile_bank        <= 6'b0;
+        pb_disp_in_tile     <= 1'b0;
+        pb_tile_in_vram     <= 1'b0;
+        pb_bitmap           <= 1'b0;
+        pb_bpp              <= xv::BPP_1_ATTR;
+        pb_colorbase        <= 8'h00;
+        pb_h_repeat         <= 2'b0;
+        pb_v_repeat         <= 2'b0;
+        pb_line_start_set   <= 1'b0;            // indicates user line address set
+        pb_gfx_ctrl_set     <= 1'b0;
+`endif
+
         line_set_addr       <= 16'h0000;        // user set display addr
 `ifndef COPPER_DISABLE
         copp_reg_wr_o       <= 1'b0;
@@ -402,41 +517,6 @@ function automatic [15:0] calc_tile_addr(
     end
 endfunction
 
-
-video_playfield video_pf_a(
-    .vram_sel_o(vram_sel_o),                     // vram read select
-    .vram_addr_o(vram_addr_o),                     // vram word address out (16x64K)
-    .vram_data_i(vram_data_i),                     // vram word data in
-    .tilemem_sel_o(tilemem_sel_o),                     // tile mem read select
-    .tilemem_addr_o(tilemem_addr_o),         // tile mem word address out (16x5K)
-    .tilemem_data_i(tilemem_data_i),                     // tile mem word data in
-    .v_visible(v_state == STATE_VISIBLE),
-    .h_count(h_count),
-    .h_line_last_pixel(h_line_last_pixel),
-    .last_frame_pixel(last_frame_pixel),
-    .border_color(border_color),
-    .pf_blank_i(pa_blank),
-    .pf_start_addr_i(pa_start_addr),
-    .pf_line_len_i(pa_line_len),
-    .pf_colorbase_i(pa_colorbase),
-    .pf_bpp_i(pa_bpp),
-    .pf_bitmap_i(pa_bitmap),
-    .pf_tile_bank_i(pa_tile_bank),
-    .pf_disp_in_tile_i(pa_disp_in_tile),
-    .pf_tile_in_vram_i(pa_tile_in_vram),
-    .pf_tile_height_i(pa_tile_height),
-    .pf_h_repeat_i(pa_h_repeat),
-    .pf_v_repeat_i(pa_v_repeat),
-    .pf_fine_hscroll_i(pa_fine_hscroll),
-    .pf_fine_vscroll_i(pa_fine_vscroll),
-    .pf_line_start_set_i(pa_line_start_set),
-    .pf_line_start_addr_i(line_set_addr),
-    .pf_gfx_ctrl_set_i(pa_gfx_ctrl_set),
-    .pf_color_index_o(pa_color_index),
-    .reset_i(reset_i),
-    .clk(clk)
-);
-
 always_ff @(posedge clk) begin
     if (reset_i) begin
         color_index_o       <= 8'b0;
@@ -451,7 +531,11 @@ always_ff @(posedge clk) begin
     end else begin
 
         // set output pixel index from pixel shift-out
-        color_index_o <= pa_color_index;   // XOR colorbase bits here
+`ifdef ENABLE_PB
+        color_index_o <= !v_count[4] ? pa_color_index : pb_color_index;
+`else
+        color_index_o <= pa_color_index;
+`endif
 
         // update registered signals from combinatorial "next" versions
         h_state <= h_state_next;

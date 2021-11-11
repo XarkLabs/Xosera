@@ -29,6 +29,10 @@ extern void xosera_ansiterm_test();
 void kmain()
 {
     debug_stub();
-    delay(1000 * 500);        // wait a bit for terminal window/serial
+    delay(5000);               // wait a bit for terminal window/serial
+    while (checkchar())        // clear any queued input
+    {
+        readchar();
+    }
     xosera_ansiterm_test();
 }

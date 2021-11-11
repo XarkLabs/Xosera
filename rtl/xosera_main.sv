@@ -71,8 +71,6 @@ logic [15:0]    colorA_xrgb      /* verilator public */; // COLORMEM XRGB output
 logic  [7:0]    colorB_index    /* verilator public */; // COLOR2MEM index          // TODO: playfield B
 logic [15:0]    colorB_xrgb     /* verilator public */; // COLOR2MEM XRGB output    // TODO:
 
-assign colorB_index = colorA_index; // TODO: temp test
-
 //  VRAM read output data (for vgen, regs, blit, draw)
 logic [15:0]    vram_data_out   /* verilator public */;
 
@@ -200,7 +198,8 @@ video_gen video_gen(
     .tilemem_sel_o(vgen_tile_sel),
     .tilemem_addr_o(vgen_tile_addr),
     .tilemem_data_i(vgen_tile_data),
-    .color_index_o(colorA_index),
+    .colorA_index_o(colorA_index),
+    .colorB_index_o(colorB_index),
     .hsync_o(hsync),
     .vsync_o(vsync),
     .dv_de_o(dv_de),
@@ -320,9 +319,16 @@ always_ff @(posedge clk) begin
 
     // color lookup happened on dv_de cycle
     if (dv_de_1) begin
-        red_o       <= colorA_xrgb[11:8];// | colorB_xrgb[11:8];    // TODO: playfield B color
-        green_o     <= colorA_xrgb[7:4];//  | colorB_xrgb[7:4];
-        blue_o      <= colorA_xrgb[3:0];//  | colorB_xrgb[3:0];
+`ifdef ENABLE_PB
+        red_o       <= video_v_count[4]  ? colorA_xrgb[11:8] : colorB_xrgb[11:8];    // TODO: playfield B color
+        green_o     <= video_v_count[4]  ? colorA_xrgb[7:4]  : colorB_xrgb[7:4];
+        blue_o      <= video_v_count[4]  ? colorA_xrgb[3:0]  : colorB_xrgb[3:0];
+`else
+        red_o       <= colorA_xrgb[11:8];    // TODO: playfield B color
+        green_o     <= colorA_xrgb[7:4];
+        blue_o      <= colorA_xrgb[3:0];
+`endif
+
     end else begin
         red_o       <= 4'h0;
         green_o     <= 4'h0;

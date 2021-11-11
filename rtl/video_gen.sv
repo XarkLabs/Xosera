@@ -42,7 +42,8 @@ module video_gen(
     output      logic [xv::TILE_AWIDTH-1:0] tilemem_addr_o, // tile mem word address out (16x5K)
     input  wire logic [15:0]     tilemem_data_i,     // tile mem word data in
     // video signal outputs
-    output      logic  [7:0]     color_index_o,      // color palette index output (16x256)
+    output      logic  [7:0]     colorA_index_o,      // color palette index output (16x256)
+    output      logic  [7:0]     colorB_index_o,      // color palette index output (16x256)
     output      logic            vsync_o, hsync_o,   // video sync outputs
     output      logic            dv_de_o,            // video active signal (needed for HDMI)
     // standard signals
@@ -226,10 +227,10 @@ assign vram_addr_o = vramA_addr;
 assign tilemem_sel_o = tilememA_sel;
 assign tilemem_addr_o = tilememA_addr;
 `else
-assign vram_sel_o       = vramA_sel ? vramA_sel  : vramB_sel;
-assign vram_addr_o      = vramA_sel ? vramA_addr : vramB_addr;
-assign tilemem_sel_o    = tilememA_sel ? tilememA_sel  : tilememB_sel;
-assign tilemem_addr_o   = tilememA_sel ? tilememA_addr : tilememB_addr;
+assign vram_sel_o       = v_count[4] ? vramA_sel  : vramB_sel;
+assign vram_addr_o      = v_count[4] ? vramA_addr : vramB_addr;
+assign tilemem_sel_o    = v_count[4] ? tilememA_sel  : tilememB_sel;
+assign tilemem_addr_o   = v_count[4] ? tilememA_addr : tilememB_addr;
 `endif
 
 // video config registers read/write
@@ -246,7 +247,7 @@ always_ff @(posedge clk) begin
 `ifdef SYNTHESIS
         pa_blank            <= 1'b1;            // playfield A starts blanked
 `else
-        pa_blank            <= 1'b1;            // unless simulating
+        pa_blank            <= 1'b0;            // unless simulating
 `endif
         pa_start_addr       <= 16'h0000;
         pa_line_len         <= xv::TILES_WIDE[15:0];
@@ -519,7 +520,8 @@ endfunction
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        color_index_o       <= 8'b0;
+        colorA_index_o      <= 8'b0;
+        colorB_index_o      <= 8'b0;
         hsync_o             <= 1'b0;
         vsync_o             <= 1'b0;
         dv_de_o             <= 1'b0;
@@ -532,9 +534,10 @@ always_ff @(posedge clk) begin
 
         // set output pixel index from pixel shift-out
 `ifdef ENABLE_PB
-        color_index_o <= !v_count[4] ? pa_color_index : pb_color_index;
+        colorA_index_o <= pa_color_index;
+        colorB_index_o <= pb_color_index;
 `else
-        color_index_o <= pa_color_index;
+        colorA_index_o <= pa_color_index;
 `endif
 
         // update registered signals from combinatorial "next" versions

@@ -248,7 +248,8 @@ colormem #(
 
 // playfield B color lookup RAM
 colormem #(
-    .AWIDTH(xv::COLOR_AWIDTH)
+    .AWIDTH(xv::COLOR_AWIDTH),
+    .DIM(1) // TODO: 2nd colormem default
     ) colormem2(
     .clk(clk),
     .rd_en_i(color_rd_en),

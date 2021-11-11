@@ -320,9 +320,9 @@ always_ff @(posedge clk) begin
     // color lookup happened on dv_de cycle
     if (dv_de_1) begin
 `ifdef ENABLE_PB
-        red_o       <= video_v_count[4]  ? colorA_xrgb[11:8] : colorB_xrgb[11:8];    // TODO: playfield B color
-        green_o     <= video_v_count[4]  ? colorA_xrgb[7:4]  : colorB_xrgb[7:4];
-        blue_o      <= video_v_count[4]  ? colorA_xrgb[3:0]  : colorB_xrgb[3:0];
+        red_o       <= video_v_count[5] ^ video_h_count[5] ? colorA_xrgb[11:8] : colorB_xrgb[11:8];    // TODO: playfield B color
+        green_o     <= video_v_count[5] ^ video_h_count[5] ? colorA_xrgb[7:4]  : colorB_xrgb[7:4];
+        blue_o      <= video_v_count[5] ^ video_h_count[5] ? colorA_xrgb[3:0]  : colorB_xrgb[3:0];
 `else
         red_o       <= colorA_xrgb[11:8];    // TODO: playfield B color
         green_o     <= colorA_xrgb[7:4];

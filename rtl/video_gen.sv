@@ -231,11 +231,10 @@ assign tilemem_sel_o = tilememA_sel;
 assign tilemem_addr_o = tilememA_addr;
 `else
 assign playfieldB_stall = (vramA_sel && vramB_sel) || (tilememA_sel && tilememB_sel);
-
-assign vram_sel_o       = v_count[4] ? vramA_sel  : vramB_sel;
-assign vram_addr_o      = v_count[4] ? vramA_addr : vramB_addr;
-assign tilemem_sel_o    = v_count[4] ? tilememA_sel  : tilememB_sel;
-assign tilemem_addr_o   = v_count[4] ? tilememA_addr : tilememB_addr;
+assign vram_sel_o       = vramA_sel ? vramA_sel  : vramB_sel;
+assign vram_addr_o      = vramA_sel ? vramA_addr : vramB_addr;
+assign tilemem_sel_o    = tilememA_sel ? tilememA_sel  : tilememB_sel;
+assign tilemem_addr_o   = tilememA_sel ? tilememA_addr : tilememB_addr;
 `endif
 
 // video config registers read/write
@@ -250,7 +249,7 @@ always_ff @(posedge clk) begin
         vid_left            <= 11'h0;
         vid_right           <= xv::VISIBLE_WIDTH[10:0];
 `ifdef SYNTHESIS
-        pa_blank            <= 1'b0;            // playfield A starts blanked
+        pa_blank            <= 1'b1;            // playfield A starts blanked
 `else
         pa_blank            <= 1'b0;            // unless simulating
 `endif
@@ -272,7 +271,7 @@ always_ff @(posedge clk) begin
 
 `ifdef ENABLE_PB
 `ifdef SYNTHESIS
-        pb_blank            <= 1'b0;            // playfield B starts blanked
+        pb_blank            <= 1'b1;            // playfield B starts blanked
 `else
         pb_blank            <= 1'b0;            // unless simulating
 `endif
@@ -543,6 +542,7 @@ always_ff @(posedge clk) begin
         colorB_index_o <= pb_color_index;
 `else
         colorA_index_o <= pa_color_index;
+        colorB_index_o <= pa_color_index;
 `endif
 
         // update registered signals from combinatorial "next" versions

@@ -153,17 +153,19 @@ assign v_count_o    = v_count;
 
 video_playfield video_pf_a(
     .stall_i(1'b0),                             // playfield A never stalls
+    .v_visible_i(v_state == STATE_VISIBLE),
+    .h_count_i(h_count),
+    .h_line_last_pixel_i(h_line_last_pixel),
+    .last_frame_pixel_i(last_frame_pixel),
+    .border_color_i(border_color),
+    .vid_left_i(vid_left),
+    .vid_right_i(vid_right),
     .vram_sel_o(vramA_sel),                     // vram read select
     .vram_addr_o(vramA_addr),                     // vram word address out (16x64K)
     .vram_data_i(vram_data_i),                     // vram word data in
     .tilemem_sel_o(tilememA_sel),                     // tile mem read select
     .tilemem_addr_o(tilememA_addr),         // tile mem word address out (16x5K)
     .tilemem_data_i(tilemem_data_i),                     // tile mem word data in
-    .v_visible(v_state == STATE_VISIBLE),
-    .h_count(h_count),
-    .h_line_last_pixel(h_line_last_pixel),
-    .last_frame_pixel(last_frame_pixel),
-    .border_color(border_color),
     .pf_blank_i(pa_blank),
     .pf_start_addr_i(pa_start_addr),
     .pf_line_len_i(pa_line_len),
@@ -189,17 +191,19 @@ video_playfield video_pf_a(
 `ifdef ENABLE_PB
 video_playfield video_pf_b(
     .stall_i(playfieldB_stall),                             // playfield A never stalls
+    .v_visible_i(v_state == STATE_VISIBLE),
+    .h_count_i(h_count),
+    .h_line_last_pixel_i(h_line_last_pixel),
+    .last_frame_pixel_i(last_frame_pixel),
+    .border_color_i(8'h00),            // TODO: border black on pf_b?
+    .vid_left_i(vid_left),            // TODO: border black on pf_b?
+    .vid_right_i(vid_right),            // TODO: border black on pf_b?
     .vram_sel_o(vramB_sel),                     // vram read select
     .vram_addr_o(vramB_addr),                     // vram word address out (16x64K)
     .vram_data_i(vram_data_i),                     // vram word data in
     .tilemem_sel_o(tilememB_sel),                     // tile mem read select
     .tilemem_addr_o(tilememB_addr),         // tile mem word address out (16x5K)
     .tilemem_data_i(tilemem_data_i),                     // tile mem word data in
-    .v_visible(v_state == STATE_VISIBLE),
-    .h_count(h_count),
-    .h_line_last_pixel(h_line_last_pixel),
-    .last_frame_pixel(last_frame_pixel),
-    .border_color(8'h00),            // TODO: border black on pf_b?
     .pf_blank_i(pb_blank),
     .pf_start_addr_i(pb_start_addr),
     .pf_line_len_i(pb_line_len),

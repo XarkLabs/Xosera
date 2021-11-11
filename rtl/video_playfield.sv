@@ -15,11 +15,13 @@
 module video_playfield(
     // video control signals
     input  wire logic           stall_i,
-    input  wire logic           v_visible,
-    input  wire logic [10:0]    h_count,
-    input  wire logic           h_line_last_pixel,
-    input  wire logic           last_frame_pixel,
-    input  wire logic  [7:0]    border_color,                       // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+    input  wire logic           v_visible_i,
+    input  wire logic [10:0]    h_count_i,
+    input  wire logic           h_line_last_pixel_i,
+    input  wire logic           last_frame_pixel_i,
+    input  wire logic  [7:0]    border_color_i,
+    input  wire logic  [10:0]   vid_left_i,
+    input  wire logic  [10:0]   vid_right_i,
     // video memories
     output      logic           vram_sel_o,                         // vram read select
     output      logic [15:0]    vram_addr_o,                        // vram word address out (16x64K)
@@ -118,12 +120,12 @@ logic           pf_pixels_buf_hrev;                 // horizontal reverse flag
 logic [63:0]    pf_pixels_buf;                      // 8 pixel buffer waiting for scan out
 logic [63:0]    pf_pixels;                          // 8 pixels currently shifting to scan out
 
-always_comb     scanout_start = (h_count == scanout_start_hcount) ? mem_fetch_active : 1'b0;
-always_comb     scanout_end = (h_count == scanout_end_hcount) ? 1'b1 : 1'b0;
+always_comb     scanout_start = (h_count_i == scanout_start_hcount) ? mem_fetch_active : 1'b0;
+always_comb     scanout_end = (h_count_i == scanout_end_hcount) ? 1'b1 : 1'b0;
 always_comb     h_start_line_fetch = (~mem_fetch_active && mem_fetch_next);
 
 // combinational block for video fetch start and stop
-always_comb     mem_fetch_next = (v_visible && h_count == mem_fetch_hcount) ? ~mem_fetch_active : mem_fetch_active;
+always_comb     mem_fetch_next = (v_visible_i && h_count_i == mem_fetch_hcount) ? ~mem_fetch_active : mem_fetch_active;
 always_comb begin
     // set mem_fetch_active next toggle for video memory access
     if (mem_fetch_active) begin
@@ -472,7 +474,7 @@ always_ff @(posedge clk) begin
                         pf_pixels   <= pf_pixels_buf; // next 8 pixels from buffer
                     end
                 end else begin
-                    pf_pixels   <= { pf_pixels[55:0], border_color };  // shift for next pixel
+                    pf_pixels   <= { pf_pixels[55:0], border_color_i };  // shift for next pixel
                 end
             end
         end
@@ -491,7 +493,7 @@ always_ff @(posedge clk) begin
             pf_initial_buf          <= 1'b1;
             pf_pixels_buf_full      <= 1'b0;
             scanout_start_hcount    <= scanout_start_hcount + { { 6{pf_fine_hscroll_i[4]} }, pf_fine_hscroll_i };
-            scanout_end_hcount      <= H_SCANOUT_BEGIN[10:0] + xv::VISIBLE_WIDTH;   // TODO: + vid_right;
+            scanout_end_hcount      <= H_SCANOUT_BEGIN[10:0] + vid_right_i;
 
             pf_addr                 <= pf_line_start;       // set start address for this line
 
@@ -504,7 +506,7 @@ always_ff @(posedge clk) begin
             pf_pixels               <= 64'he3e3e3e3e3e3e3e3;
             pf_pixels_buf           <= 64'he3e3e3e3e3e3e3e3;
 `endif
-            pf_pixels[63:56]        <= border_color;        // set border_color (in case blanked)
+            pf_pixels[63:56]        <= border_color_i;        // set border_color_i (in case blanked)
         end
 
         // when "scrolled" scanline starts outputting (before display if scrolled)
@@ -518,11 +520,11 @@ always_ff @(posedge clk) begin
 
         if (scanout_end) begin
             scanout             <= 1'b0;
-            pf_pixels[63:56]    <= border_color;
+            pf_pixels[63:56]    <= border_color_i;
         end
 
         // end of line
-        if (h_line_last_pixel) begin
+        if (h_line_last_pixel_i) begin
             scanout     <= 1'b0;
             pf_addr     <= pf_line_start;                   // addr back to line start (for tile lines, or v repeat)
             if (pf_v_count != 2'b00) begin                  // is line repeating
@@ -538,11 +540,11 @@ always_ff @(posedge clk) begin
                 end
             end
 
-            scanout_start_hcount    <= H_SCANOUT_BEGIN[10:0]; // TODO: + vid_left;
+            scanout_start_hcount    <= H_SCANOUT_BEGIN[10:0] + vid_left_i;
         end
 
         // end of frame or blanked, prepare for next frame
-        if (pf_blank_i || last_frame_pixel) begin     // is last pixel of frame?
+        if (pf_blank_i || last_frame_pixel_i) begin     // is last pixel of frame?
             pf_addr         <= pf_start_addr_i;           // set start of display data
             pf_line_start   <= pf_start_addr_i;           // set line to start of display data
 

@@ -108,9 +108,10 @@ logic           pb_gfx_ctrl_set;                    // true if pa_gfx_ctrl chang
 logic  [7:0]    pb_color_index;                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
 
 // video memories
-logic            vramB_sel;         // vram read select
-logic [15:0]     vramB_addr;        // vram word address out (16x64K)
-logic            tilememB_sel;      // tile mem read select
+logic           playfieldB_stall;
+logic           vramB_sel;         // vram read select
+logic [15:0]    vramB_addr;        // vram word address out (16x64K)
+logic           tilememB_sel;      // tile mem read select
 logic [xv::TILE_AWIDTH-1:0] tilememB_addr; // tile mem word address out (16x5K)
 `endif
 
@@ -151,6 +152,7 @@ assign v_count_o    = v_count;
 `endif
 
 video_playfield video_pf_a(
+    .stall_i(1'b0),                             // playfield A never stalls
     .vram_sel_o(vramA_sel),                     // vram read select
     .vram_addr_o(vramA_addr),                     // vram word address out (16x64K)
     .vram_data_i(vram_data_i),                     // vram word data in
@@ -186,6 +188,7 @@ video_playfield video_pf_a(
 
 `ifdef ENABLE_PB
 video_playfield video_pf_b(
+    .stall_i(playfieldB_stall),                             // playfield A never stalls
     .vram_sel_o(vramB_sel),                     // vram read select
     .vram_addr_o(vramB_addr),                     // vram word address out (16x64K)
     .vram_data_i(vram_data_i),                     // vram word data in
@@ -227,6 +230,8 @@ assign vram_addr_o = vramA_addr;
 assign tilemem_sel_o = tilememA_sel;
 assign tilemem_addr_o = tilememA_addr;
 `else
+assign playfieldB_stall = (vramA_sel && vramB_sel) || (tilememA_sel && tilememB_sel);
+
 assign vram_sel_o       = v_count[4] ? vramA_sel  : vramB_sel;
 assign vram_addr_o      = v_count[4] ? vramA_addr : vramB_addr;
 assign tilemem_sel_o    = v_count[4] ? tilememA_sel  : tilememB_sel;
@@ -245,7 +250,7 @@ always_ff @(posedge clk) begin
         vid_left            <= 11'h0;
         vid_right           <= xv::VISIBLE_WIDTH[10:0];
 `ifdef SYNTHESIS
-        pa_blank            <= 1'b1;            // playfield A starts blanked
+        pa_blank            <= 1'b0;            // playfield A starts blanked
 `else
         pa_blank            <= 1'b0;            // unless simulating
 `endif
@@ -267,7 +272,7 @@ always_ff @(posedge clk) begin
 
 `ifdef ENABLE_PB
 `ifdef SYNTHESIS
-        pb_blank            <= 1'b1;            // playfield B starts blanked
+        pb_blank            <= 1'b0;            // playfield B starts blanked
 `else
         pb_blank            <= 1'b0;            // unless simulating
 `endif

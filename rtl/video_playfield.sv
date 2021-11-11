@@ -14,6 +14,7 @@
 
 module video_playfield(
     // video control signals
+    input  wire logic           stall_i,
     input  wire logic           v_visible,
     input  wire logic [10:0]    h_count,
     input  wire logic           h_line_last_pixel,
@@ -361,7 +362,9 @@ always_ff @(posedge clk) begin
 
         // fetch FSM clocked process
         // register fetch combinitorial signals
-        pf_fetch        <= pf_fetch_next;
+        if (!stall_i) begin
+            pf_fetch        <= pf_fetch_next;
+        end
         pf_addr         <= pf_addr_next;
         pf_tile_attr    <= pf_tile_attr_next;
         pf_data_word0   <= pf_data_word0_next;

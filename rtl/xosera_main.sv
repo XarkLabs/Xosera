@@ -306,6 +306,24 @@ xrmem_arb xrmem_arb
     .clk(clk)
 );
 
+logic [4:0] r_add;
+logic [4:0] g_add;
+logic [4:0] b_add;
+
+logic [4:0] r_sub;
+logic [4:0] g_sub;
+logic [4:0] b_sub;
+
+always_comb begin
+    r_add = colorA_xrgb[11:8] + colorB_xrgb[11:8];
+    g_add = colorA_xrgb[7:4]  + colorB_xrgb[7:4];
+    b_add = colorA_xrgb[3:0]  + colorB_xrgb[3:0];
+
+    r_sub = colorA_xrgb[11:8] - colorB_xrgb[11:8];
+    g_sub = colorA_xrgb[7:4]  - colorB_xrgb[7:4];
+    b_sub = colorA_xrgb[3:0]  - colorB_xrgb[3:0];
+end
+
 // color RAM lookup (delays video 1 cycle for BRAM)
 always_ff @(posedge clk) begin
     // delay signals for color lookup
@@ -320,9 +338,17 @@ always_ff @(posedge clk) begin
     // color lookup happened on dv_de cycle
     if (dv_de_1) begin
 `ifdef ENABLE_PB
-        red_o       <= video_v_count[5] ^ video_h_count[5] ? colorA_xrgb[11:8] : colorB_xrgb[11:8];    // TODO: playfield B color
-        green_o     <= video_v_count[5] ^ video_h_count[5] ? colorA_xrgb[7:4]  : colorB_xrgb[7:4];
-        blue_o      <= video_v_count[5] ^ video_h_count[5] ? colorA_xrgb[3:0]  : colorB_xrgb[3:0];
+
+        case ({colorB_xrgb[15], colorA_xrgb[15]})
+        2'b00:  { red_o, green_o, blue_o } <= colorA_xrgb[11:0];
+        2'b01:  { red_o, green_o, blue_o } <= colorB_xrgb[11:0];
+        2'b10:  { red_o, green_o, blue_o } <= { r_add[4] ? 4'hF : r_add[3:0],
+                                                g_add[4] ? 4'hF : g_add[3:0],
+                                                b_add[4] ? 4'hF : b_add[3:0] };
+        2'b11:  { red_o, green_o, blue_o } <= { r_sub[4] ? 4'h0 : r_sub[3:0],
+                                                g_sub[4] ? 4'h0 : g_sub[3:0],
+                                                b_sub[4] ? 4'h0 : b_sub[3:0] };
+        endcase
 `else
         red_o       <= colorA_xrgb[11:8];    // TODO: playfield B color
         green_o     <= colorA_xrgb[7:4];

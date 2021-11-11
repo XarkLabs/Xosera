@@ -608,7 +608,7 @@ static void test_xr_read()
     for (vaddr = 0xF000; vaddr != 0x0000; vaddr++)
     {
         xm_setw(WR_ADDR, vaddr);
-        xm_setw(DATA, vaddr);
+        xm_setw(DATA, vaddr - 0xF000);
     }
     xm_setw(WR_ADDR, 0xF000);
     xm_setw(DATA, 0x1f00 | 'P');

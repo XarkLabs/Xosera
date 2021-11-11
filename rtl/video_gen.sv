@@ -199,7 +199,7 @@ video_playfield video_pf_b(
     .h_count(h_count),
     .h_line_last_pixel(h_line_last_pixel),
     .last_frame_pixel(last_frame_pixel),
-    .border_color(border_color),
+    .border_color(8'h00),            // TODO: border black on pf_b?
     .pf_blank_i(pb_blank),
     .pf_start_addr_i(pb_start_addr),
     .pf_line_len_i(pb_line_len),

@@ -13,8 +13,8 @@
 `include "xosera_pkg.sv"
 
 module colormem#(
-    parameter   AWIDTH   = 8,
-    parameter   DIM      = 0
+    parameter   AWIDTH      = 8,
+    parameter   PLAYFIELD   = "A"
 )
 (
            input  wire logic                clk,
@@ -30,25 +30,10 @@ module colormem#(
 logic [15: 0] bram[0 : 2**AWIDTH-1] /* verilator public */;
 
 initial begin
-    if (DIM == 0) begin
-        $readmemh("default_colors.mem", bram, 0);
+    if (PLAYFIELD == "A") begin
+        $readmemh("default_colorsA.mem", bram, 0);
     end else begin
-        bram[ 0] = 16'h000;
-        bram[ 1] = 16'h111;
-        bram[ 2] = 16'h222;
-        bram[ 3] = 16'h333;
-        bram[ 4] = 16'h444;
-        bram[ 5] = 16'h555;
-        bram[ 6] = 16'h666;
-        bram[ 7] = 16'h777;
-        bram[ 8] = 16'h888;
-        bram[ 9] = 16'h999;
-        bram[10] = 16'hAAA;
-        bram[11] = 16'hBBB;
-        bram[12] = 16'hCCC;
-        bram[13] = 16'hDDD;
-        bram[14] = 16'hEEE;
-        bram[15] = 16'hFFF;
+        $readmemh("default_colorsB.mem", bram, 0);
     end
 end
 

@@ -101,19 +101,34 @@ logic  [3:0]    draw_wr_mask    /* verilator public */  = 4'b0;
 logic [15:0]    draw_vram_addr  /* verilator public */  = 16'b0;
 logic [15:0]    draw_vram_data  /* verilator public */  = 16'b0;
 
-logic [15:0]    regs_addr      /* verilator public */;     // register interface VRAM/XR addr
-logic [15:0]    regs_data_out  /* verilator public */;     // register interface bus VRAM/XR data write
-logic [15:0]    regs_data_in   /* verilator public */;     // register interface bus VRAM/XR data read
+// XR register bus access
+logic           xr_regs_wr_en     /* verilator public */;
+logic [15:0]    xr_regs_addr      /* verilator public */;
+logic [15:0]    xr_regs_data_out  /* verilator public */;
+logic [15:0]    xr_regs_data_in   /* verilator public */;
 
-logic           vgen_regs_wr_en     /* verilator public */;
-logic [15:0]    vgen_regs_addr      /* verilator public */;
-logic [15:0]    vgen_regs_data_out  /* verilator public */;
-logic [15:0]    vgen_regs_data_in   /* verilator public */;
+// XR register unit select signals
+logic           vgen_reg_wr_en;   // vgen XR register 0x000X & 0x001X
+/* verilator lint_off UNUSED */
+logic           blit_reg_wr_en;   // blit XR register 0x002X    // TODO
+logic           draw_reg_wr_en;   // draw XR register 0x003X    // TODO
+/* verilator lint_on UNUSED */
 
-logic                       vgen_tile_sel         /* verilator public */;
-logic [xv::TILE_AWIDTH-1:0] vgen_tile_addr  /* verilator public */;
-logic [15:0]                vgen_tile_data  /* verilator public */;
+assign vgen_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:5] == 2'h0);   // vgen reg write
+assign blit_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:4] == 3'h2);   // blit reg write
+assign draw_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:4] == 3'h3);   // draw reg write
 
+// XM top-level register signals
+logic [15:0]    xm_regs_addr      /* verilator public */;     // register interface VRAM/XR addr
+logic [15:0]    xm_regs_data_out  /* verilator public */;     // register interface bus VRAM/XR data write
+logic [15:0]    xm_regs_data_in   /* verilator public */;     // register interface bus VRAM/XR data read
+
+// vgen tile memory read signals
+logic                           vgen_tile_sel           /* verilator public */;
+logic [xv::TILE_AWIDTH-1:0]     vgen_tile_addr          /* verilator public */;
+logic [15:0]                    vgen_tile_data          /* verilator public */;
+
+// copper bus signals
 logic                           copp_prog_rd_en;
 logic [xv::COPPER_AWIDTH-1:0]   copper_pc;
 logic [31:0]                    copp_prog_data_out;
@@ -135,10 +150,6 @@ logic  [3:0]    intr_clear;         // interrupt cleared by CPU
 `ifdef BUS_DEBUG_SIGNALS
 logic           dbug_cs_strobe;     // debug "ack" bus strobe
 `endif
-
-logic           vgen_tile_rd_en         /* verilator public */;
-logic [11:0]    vgen_tilemem_addr       /* verilator public */;
-logic [15:0]    vgen_tilemem_data_out   /* verilator public */;
 
 `ifdef BUS_DEBUG_SIGNALS
 assign audio_l_o = dbug_cs_strobe;  // debug to see when CS noticed
@@ -165,10 +176,10 @@ reg_interface reg_interface(
     .regs_xr_sel_o(regs_xr_sel),        // register interface XR memory select
     .regs_wr_o(regs_wr),                // register interface write
     .regs_wrmask_o(regs_wr_mask),       // vram nibble masks
-    .regs_addr_o(regs_addr),            // vram/XR address
-    .regs_data_o(regs_data_out),        // 16-bit word write to XR/vram
+    .regs_addr_o(xm_regs_addr),            // vram/XR address
+    .regs_data_o(xm_regs_data_out),        // 16-bit word write to XR/vram
     .regs_data_i(vram_data_out),        // 16-bit word read from vram
-    .xr_data_i(regs_data_in),           // 16-bit word read from XR
+    .xr_data_i(xm_regs_data_in),           // 16-bit word read from XR
     //
     .busy_i(1'b0),                      // TODO: blit/draw engine busy
     // reconfig
@@ -186,10 +197,10 @@ reg_interface reg_interface(
 
 //  video generation
 video_gen video_gen(
-    .vgen_reg_wr_en_i(vgen_regs_wr_en),
-    .vgen_reg_num_i(vgen_regs_addr[4:0]),
-    .vgen_reg_data_i(vgen_regs_data_in),
-    .vgen_reg_data_o(vgen_regs_data_out),
+    .vgen_reg_wr_en_i(vgen_reg_wr_en),
+    .vgen_reg_num_i(xr_regs_addr[4:0]),
+    .vgen_reg_data_i(xr_regs_data_in),
+    .vgen_reg_data_o(xr_regs_data_out),
     .intr_status_i(intr_status),        // status read from VID_CTRL
     .intr_signal_o(intr_signal),        // signaled by write to VID_CTRL
     .vram_sel_o(vgen_vram_sel),
@@ -243,8 +254,8 @@ vram_arb vram_arb(
     .regs_ack_o(regs_vram_ack),
     .regs_wr_i(regs_wr & regs_vram_sel),
     .regs_wr_mask_i(regs_wr_mask),
-    .regs_addr_i(regs_addr),
-    .regs_data_i(regs_data_out),
+    .regs_addr_i(xm_regs_addr),
+    .regs_data_i(xm_regs_data_out),
     // TODO: 2D blit
     .blit_sel_i(blit_vram_sel),
     .blit_ack_o(blit_vram_ack),
@@ -270,9 +281,9 @@ xrmem_arb xrmem_arb
     .xr_sel_i(regs_xr_sel),
     .xr_ack_o(regs_xr_ack),
     .xr_wr_i(regs_wr),
-    .xr_addr_i(regs_addr),
-    .xr_data_i(regs_data_out),
-    .xr_data_o(regs_data_in),
+    .xr_addr_i(xm_regs_addr),
+    .xr_data_i(xm_regs_data_out),
+    .xr_data_o(xm_regs_data_in),
 
     // copper XR register/memory interface (write-only)
     .copp_xr_sel_i(copp_xr_wr_en),
@@ -281,10 +292,10 @@ xrmem_arb xrmem_arb
     .copp_xr_data_i(copp_xr_data_out),
 
     // XR register bus (read/write)
-    .xreg_wr_o(vgen_regs_wr_en),
-    .xreg_addr_o(vgen_regs_addr),
-    .xreg_data_i(vgen_regs_data_out),
-    .xreg_data_o(vgen_regs_data_in),
+    .xreg_wr_o(xr_regs_wr_en),
+    .xreg_addr_o(xr_regs_addr),
+    .xreg_data_i(xr_regs_data_out),
+    .xreg_data_o(xr_regs_data_in),
 
     // color lookup colormem A+B 2 x 16-bit bus (read-only)
     .vgen_color_sel_i(dv_de),

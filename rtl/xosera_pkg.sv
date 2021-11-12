@@ -131,7 +131,7 @@ typedef enum logic [5:0] {
     XR_BLIT_RD_ADDR = 6'h25,
     XR_BLIT_WR_ADDR = 6'h26,
     XR_BLIT_COUNT   = 6'h27
-    // TODO: draw registers 0x4x
+    // TODO: draw registers 0x3x
 } xr_register_t;
 
 typedef enum logic [1:0] {

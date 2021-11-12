@@ -310,7 +310,7 @@ always_ff @(posedge clk) begin
 `endif
         // video register write
         if (vgen_reg_wr_en_i) begin
-            case (vgen_reg_num_i)
+            case ({1'b0, vgen_reg_num_i})
                 xv::XR_VID_CTRL: begin
                     border_color    <= vgen_reg_data_i[15:8];
                     intr_signal_o   <= vgen_reg_data_i[3:0];
@@ -414,7 +414,7 @@ end
 
 // video registers read
 always_ff @(posedge clk) begin
-    case (vgen_reg_num_i)
+    case ({ 1'b0, vgen_reg_num_i})
         xv::XR_VID_CTRL:       vgen_reg_data_o <= { border_color, 4'b0, intr_status_i };
 `ifndef COPPER_DISABLE
         xv::XR_COPP_CTRL:      vgen_reg_data_o <= { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPPER_AWIDTH-1:0]};

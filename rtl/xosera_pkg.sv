@@ -86,42 +86,52 @@ typedef enum logic [15:0] {
 } xr_region_t;
 
 // XR read/write registers/memory regions
-typedef enum logic [4:0] {
+typedef enum logic [5:0] {
     // Video Config / Copper XR Registers
-    XR_VID_CTRL     = 5'h00,     // (R /W) display control and border color index
-    XR_COPP_CTRL    = 5'h01,     // (R /W) display synchronized coprocessor control
-    XR_CURSOR_X     = 5'h02,     // (R /W) sprite cursor X position
-    XR_CURSOR_Y     = 5'h03,     // (R /W) sprite cursor Y position
-    XR_VID_TOP      = 5'h04,     // (R /W) top line of active display window (typically 0)
-    XR_VID_BOTTOM   = 5'h05,     // (R /W) bottom line of active display window (typically 479)
-    XR_VID_LEFT     = 5'h06,     // (R /W) left edge of active display window (typically 0)
-    XR_VID_RIGHT    = 5'h07,     // (R /W) right edge of active display window (typically 639 or 847)
-    XR_SCANLINE     = 5'h08,     // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
-    XR_UNUSED_09    = 5'h09,     // (RO  )
-    XR_VERSION      = 5'h0A,     // (RO  ) optional feature bits [15:12] and BCD version code [11:0]  // TODO: define
-    XR_GITHASH_H    = 5'h0B,     // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
-    XR_GITHASH_L    = 5'h0C,     // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
-    XR_VID_HSIZE    = 5'h0D,     // (RO  ) native pixel width of monitor mode (e.g. 640/848)
-    XR_VID_VSIZE    = 5'h0E,     // (RO  ) native pixel height of monitor mode (e.g. 480)
-    XR_VID_VFREQ    = 5'h0F,     // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+    XR_VID_CTRL     = 6'h00,     // (R /W) display control and border color index
+    XR_COPP_CTRL    = 6'h01,     // (R /W) display synchronized coprocessor control
+    XR_CURSOR_X     = 6'h02,     // (R /W) sprite cursor X position
+    XR_CURSOR_Y     = 6'h03,     // (R /W) sprite cursor Y position
+    XR_VID_TOP      = 6'h04,     // (R /W) top line of active display window (typically 0)
+    XR_VID_BOTTOM   = 6'h05,     // (R /W) bottom line of active display window (typically 479)
+    XR_VID_LEFT     = 6'h06,     // (R /W) left edge of active display window (typically 0)
+    XR_VID_RIGHT    = 6'h07,     // (R /W) right edge of active display window (typically 639 or 847)
+    XR_SCANLINE     = 6'h08,     // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
+    XR_UNUSED_09    = 6'h09,     // (RO  )
+    XR_VERSION      = 6'h0A,     // (RO  ) optional feature bits [15:12] and BCD version code [11:0]  // TODO: define
+    XR_GITHASH_H    = 6'h0B,     // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
+    XR_GITHASH_L    = 6'h0C,     // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
+    XR_VID_HSIZE    = 6'h0D,     // (RO  ) native pixel width of monitor mode (e.g. 640/848)
+    XR_VID_VSIZE    = 6'h0E,     // (RO  ) native pixel height of monitor mode (e.g. 480)
+    XR_VID_VFREQ    = 6'h0F,     // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
     // Playfield A Control XR Registers
-    XR_PA_GFX_CTRL  = 5'h10,     // (R /W) playfield A graphics control
-    XR_PA_TILE_CTRL = 5'h11,     // (R /W) playfield A tile control
-    XR_PA_DISP_ADDR = 5'h12,     // (R /W) playfield A display VRAM start address
-    XR_PA_LINE_LEN  = 5'h13,     // (R /W) playfield A display line width in words
-    XR_PA_HV_SCROLL = 5'h14,     // (R /W) playfield A horizontal and vertical fine scroll
-    XR_PA_LINE_ADDR = 5'h15,     // (R /W) playfield A scanline start address (loaded at start of line)
-    XR_PA_UNUSED_16 = 5'h16,     //
-    XR_PA_UNUSED_17 = 5'h17,     //
+    XR_PA_GFX_CTRL  = 6'h10,     // (R /W) playfield A graphics control
+    XR_PA_TILE_CTRL = 6'h11,     // (R /W) playfield A tile control
+    XR_PA_DISP_ADDR = 6'h12,     // (R /W) playfield A display VRAM start address
+    XR_PA_LINE_LEN  = 6'h13,     // (R /W) playfield A display line width in words
+    XR_PA_HV_SCROLL = 6'h14,     // (R /W) playfield A horizontal and vertical fine scroll
+    XR_PA_LINE_ADDR = 6'h15,     // (R /W) playfield A scanline start address (loaded at start of line)
+    XR_PA_UNUSED_16 = 6'h16,     //
+    XR_PA_UNUSED_17 = 6'h17,     //
     // Playfield B Control XR Registers
-    XR_PB_GFX_CTRL  = 5'h18,     // (R /W) playfield B graphics control
-    XR_PB_TILE_CTRL = 5'h19,     // (R /W) playfield B tile control
-    XR_PB_DISP_ADDR = 5'h1A,     // (R /W) playfield B display VRAM start address
-    XR_PB_LINE_LEN  = 5'h1B,     // (R /W) playfield B display line width in words
-    XR_PB_HV_SCROLL = 5'h1C,     // (R /W) playfield B horizontal and vertical fine scroll
-    XR_PB_LINE_ADDR = 5'h1D,     // (R /W) playfield B scanline start address (loaded at start of line)
-    XR_PB_UNUSED_1E = 5'h1E,     //
-    XR_PB_UNUSED_1F = 5'h1F      //
+    XR_PB_GFX_CTRL  = 6'h18,     // (R /W) playfield B graphics control
+    XR_PB_TILE_CTRL = 6'h19,     // (R /W) playfield B tile control
+    XR_PB_DISP_ADDR = 6'h1A,     // (R /W) playfield B display VRAM start address
+    XR_PB_LINE_LEN  = 6'h1B,     // (R /W) playfield B display line width in words
+    XR_PB_HV_SCROLL = 6'h1C,     // (R /W) playfield B horizontal and vertical fine scroll
+    XR_PB_LINE_ADDR = 6'h1D,     // (R /W) playfield B scanline start address (loaded at start of line)
+    XR_PB_UNUSED_1E = 6'h1E,     //
+    XR_PB_UNUSED_1F = 6'h1F,     //
+    // Blitter Registers (WIP)
+    XR_BLIT_MODE    = 6'h20,
+    XR_BLIT_RD_MOD  = 6'h21,
+    XR_BLIT_WR_MOD  = 6'h22,
+    XR_BLIT_WR_MASK = 6'h23,
+    XR_BLIT_WIDTH   = 6'h24,
+    XR_BLIT_RD_ADDR = 6'h25,
+    XR_BLIT_WR_ADDR = 6'h26,
+    XR_BLIT_COUNT   = 6'h27
+    // TODO: draw registers 0x4x
 } xr_register_t;
 
 typedef enum logic [1:0] {

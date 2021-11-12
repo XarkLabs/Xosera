@@ -234,7 +234,8 @@ end
 
 // playfield A color lookup RAM
 colormem #(
-    .AWIDTH(xv::COLOR_AWIDTH)
+    .AWIDTH(xv::COLOR_AWIDTH),
+    .PLAYFIELD("A")
     ) colormem(
     .clk(clk),
     .rd_en_i(color_rd_en),
@@ -248,7 +249,8 @@ colormem #(
 
 // playfield B color lookup RAM
 colormem #(
-    .AWIDTH(xv::COLOR_AWIDTH)
+    .AWIDTH(xv::COLOR_AWIDTH),
+    .PLAYFIELD("B")
     ) colormem2(
     .clk(clk),
     .rd_en_i(color_rd_en),

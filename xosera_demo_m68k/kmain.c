@@ -21,6 +21,10 @@ extern void xosera_demo();
 
 void kmain()
 {
-    mcDelaymsec10(200);        // wait a bit for terminal window
+    delay(5000);               // wait a bit for terminal window/serial
+    while (checkchar())        // clear any queued input
+    {
+        readchar();
+    }
     xosera_demo();
 }

@@ -21,9 +21,7 @@ module reg_interface(
     output      logic  [7:0]     bus_data_o,        // 8-bit data bus output
     // VRAM/XR access signals
     input  wire logic            vram_ack_i,        // VRAM access ack (true when data read/written)
-/* verilator lint_off UNUSED */
     input  wire logic            xr_ack_i,          // XR bus access ack (true when data read/written)
-/* verilator lint_on UNUSED */
     output      logic            regs_vram_sel_o,   // VRAM select
     output      logic            regs_xr_sel_o,     // XR select
     output      logic            regs_wr_o,         // VRAM/XR read/write

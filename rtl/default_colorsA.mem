@@ -1,4 +1,4 @@
-0000    //   0 (0x00) black
+f000    //   0 (0x00) black
 000a    //   1 (0x01) blue
 00a0    //   2 (0x02) green
 00aa    //   3 (0x03) cyan

@@ -600,7 +600,30 @@ static void test_xr_read()
 
     xcls();
 
+    xreg_setw(PB_GFX_CTRL, 0x0000);
+    xreg_setw(PB_TILE_CTRL, 0x000F);
+    xreg_setw(PB_DISP_ADDR, 0xF000);
     uint16_t vaddr = 0;
+    xm_setw(WR_INCR, 1);
+    for (vaddr = 0xF000; vaddr != 0x0000; vaddr++)
+    {
+        xm_setw(WR_ADDR, vaddr);
+        xm_setw(DATA, vaddr - 0xF000);
+    }
+    xm_setw(WR_ADDR, 0xF000);
+    xm_setw(DATA, 0x1f00 | 'P');
+    xm_setw(DATA, 0x1f00 | 'L');
+    xm_setw(DATA, 0x1f00 | 'A');
+    xm_setw(DATA, 0x1f00 | 'Y');
+    xm_setw(DATA, 0x1f00 | 'F');
+    xm_setw(DATA, 0x1f00 | 'I');
+    xm_setw(DATA, 0x1f00 | 'E');
+    xm_setw(DATA, 0x1f00 | 'L');
+    xm_setw(DATA, 0x1f00 | 'D');
+    xm_setw(DATA, 0x1f00 | '-');
+    xm_setw(DATA, 0x1f00 | 'B');
+
+
     xm_setw(WR_INCR, 1);
     for (vaddr = 0; vaddr < 0x2000; vaddr++)
     {
@@ -621,17 +644,20 @@ static void test_xr_read()
 
     for (uint16_t taddr = XR_TILE_MEM + 0x0800; taddr < XR_TILE_MEM + 0x1400; taddr++)
     {
-        xm_setw(XR_ADDR, taddr);
-        xm_setw(XR_DATA, taddr + 0x0100);
+        if (taddr < 0x0800 || taddr > 0x1000)
+        {
+            xm_setw(XR_ADDR, taddr);
+            xm_setw(XR_DATA, taddr + 0x0100);
+        }
     }
-    xm_setw(XR_ADDR, XR_TILE_MEM + 0x0800);
+    xreg_setw(PA_DISP_ADDR, 0x0C00);
+    xreg_setw(PA_TILE_CTRL, 0x020F);
+    xm_setw(XR_ADDR, XR_TILE_MEM + 0x0C00);
     xm_setw(XR_DATA, 0x1f00 | 'T');
     xm_setw(XR_DATA, 0x1f00 | 'I');
     xm_setw(XR_DATA, 0x1f00 | 'L');
     xm_setw(XR_DATA, 0x1f00 | 'E');
 
-    xreg_setw(PA_DISP_ADDR, 0x0800);
-    xreg_setw(PA_TILE_CTRL, 0x020F);
 
     if (delay_check(DELAY_TIME))
     {
@@ -729,7 +755,8 @@ static void load_sd_colors(const char * filename)
             xm_setw(XR_ADDR, XR_COLOR_MEM);
             for (int i = 0; i < (cnt >> 1); i++)
             {
-                xm_setw(XR_DATA, *maddr++);
+                uint16_t v = *maddr++;
+                xm_setw(XR_DATA, v);
             }
             vaddr += (cnt >> 1);
         }
@@ -740,6 +767,19 @@ static void load_sd_colors(const char * filename)
     else
     {
         dprintf(" - FAILED\n");
+    }
+}
+
+static void set_alpha(int alpha)
+{
+    uint16_t a = (alpha & 0xf) << 12;
+    for (int i = 0; i < 256; i++)
+    {
+        while (xreg_getw(SCANLINE) >= 0x8000)
+            ;
+        xm_setw(XR_ADDR, XR_COLOR_MEM + i);
+        uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
+        xm_setw(XR_DATA, v);
     }
 }
 
@@ -830,6 +870,29 @@ void     xosera_test()
 
         restore_colors();
 
+        xreg_setw(PB_GFX_CTRL, 0x0000);
+        xreg_setw(PB_TILE_CTRL, 0x100F);
+        xreg_setw(PB_DISP_ADDR, 0xF000);
+        uint16_t vaddr = 0;
+        xm_setw(WR_INCR, 1);
+        for (vaddr = 0xF000; vaddr != 0x0000; vaddr++)
+        {
+            xm_setw(WR_ADDR, vaddr);
+            xm_setw(DATA, vaddr);
+        }
+        xm_setw(WR_ADDR, 0xF000);
+        xm_setw(DATA, 0x1f00 | 'P');
+        xm_setw(DATA, 0x1f00 | 'L');
+        xm_setw(DATA, 0x1f00 | 'A');
+        xm_setw(DATA, 0x1f00 | 'Y');
+        xm_setw(DATA, 0x1f00 | 'F');
+        xm_setw(DATA, 0x1f00 | 'I');
+        xm_setw(DATA, 0x1f00 | 'E');
+        xm_setw(DATA, 0x1f00 | 'L');
+        xm_setw(DATA, 0x1f00 | 'D');
+        xm_setw(DATA, 0x1f00 | '-');
+        xm_setw(DATA, 0x1f00 | 'B');
+
 #if COPPER_TEST
         if (test_count & 1)
         {
@@ -898,6 +961,11 @@ void     xosera_test()
             {
                 break;
             }
+            set_alpha(0xf);
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
         }
 
         // 4/8 bpp test
@@ -913,21 +981,33 @@ void     xosera_test()
             {
                 break;
             }
-        }
-
-        if (use_sd)
-        {
-            wait_vsync();
-            xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
-            xreg_setw(PA_LINE_LEN, 80);
-
-            load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw");
-            load_sd_bitmap("/ST_KingTut_Dpaint_16.raw");
+            set_alpha(0xf);
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
         }
+
+        // 4/8 bpp test
+        if (use_sd)
+        {
+            wait_vsync();
+            xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 8-bpp + Hx2 + Vx2
+            xreg_setw(PA_LINE_LEN, 160);
+
+            load_sd_colors("/color_cube_320x240_256_pal.raw");
+            load_sd_bitmap("/color_cube_320x240_256.raw");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            set_alpha(0xf);
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+        }
+
         if (use_sd)
         {
             wait_vsync();
@@ -936,6 +1016,11 @@ void     xosera_test()
 
             load_sd_colors("/escher-relativity_320x240_16_pal.raw");
             load_sd_bitmap("/escher-relativity_320x240_16.raw");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            set_alpha(0xf);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -954,8 +1039,14 @@ void     xosera_test()
             {
                 break;
             }
+            set_alpha(0xf);
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
         }
 
+        set_alpha(0x0);
         if (use_sd)
         {
             wait_vsync();

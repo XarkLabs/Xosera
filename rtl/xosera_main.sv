@@ -114,9 +114,9 @@ logic           blit_reg_wr_en;   // blit XR register 0x002X    // TODO
 logic           draw_reg_wr_en;   // draw XR register 0x003X    // TODO
 /* verilator lint_on UNUSED */
 
-assign vgen_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:5] == 2'h0);   // vgen reg write
-assign blit_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:4] == 3'h2);   // blit reg write
-assign draw_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:4] == 3'h3);   // draw reg write
+assign vgen_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:5] == xv::XR_CONFIG_REGS[6:5]);    // vgen reg write
+assign blit_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:4] == xv::XR_BLIT_REGS[6:4]);      // blit reg write
+assign draw_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:4] == xv::XR_DRAW_REGS[6:4]);      // draw reg write
 
 // XM top-level register signals
 logic [15:0]    xm_regs_addr      /* verilator public */;     // register interface VRAM/XR addr

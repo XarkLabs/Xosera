@@ -21,6 +21,8 @@
 
 // See: https://github.com/XarkLabs/Xosera/blob/master/REFERENCE.md
 
+#error out of date
+
 // Xosera Main Registers (XM Registers, directly CPU accessable)
 #define XM_XR_ADDR   0x0        // (R /W+) XR register number/address for XM_XR_DATA read/write access
 #define XM_XR_DATA   0x1        // (R /W+) read/write XR register/memory at XM_XR_ADDR (XM_XR_ADDR incr. on write)

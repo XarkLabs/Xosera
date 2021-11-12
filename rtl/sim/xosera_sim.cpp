@@ -110,13 +110,12 @@ class BusInterface
         XR_CONFIG_REGS   = 0x0000,        // 0x0000-0x000F 16 config/copper registers
         XR_PA_REGS       = 0x0010,        // 0x0000-0x0017 8 playfield A video registers
         XR_PB_REGS       = 0x0018,        // 0x0000-0x000F 8 playfield B video registers
-        XR_BLIT_REGS     = 0x2000,        // 0x0000-0x000F 16 blit registers [TBD]
-        XR_POLYDRAW_REGS = 0x4000,        // 0x0000-0x000F 16 line/polygon draw registers [TBD]
-        XR_UNUSED_REGS_6 = 0x6000,        // 0x0000-0x000F 16 unused
+        XR_BLIT_REGS     = 0x0030,        // 0x0000-0x000F 16 blit registers [TBD]
+        XR_POLYDRAW_REGS = 0x0040,        // 0x0000-0x000F 16 line/polygon draw registers [TBD]
 
         // XR Memory Regions
         XR_COLOR_MEM  = 0x8000,        // 0x8000-0x81FF 2 x 256 16-bit A & B color lookup table (0xXRGB)
-        XR_TILE_MEM   = 0xA000,        // 0xA000-0xAFFF 4K 16-bit words of tile/font memory
+        XR_TILE_MEM   = 0xA000,        // 0xA000-0xB3FF 5K 16-bit words of tile/font memory
         XR_COPPER_MEM = 0xC000,        // 0xC000-0xC7FF 2K 16-bit words copper program memory
         XR_UNUSED_MEM = 0xE000,        // 0xE000-0xFFFF (currently unused)
     };

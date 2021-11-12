@@ -76,12 +76,11 @@ typedef enum logic [15:0] {
     XR_CONFIG_REGS      = 16'h0000,     // 0x0000-0x000F 16 config/video/copper registers
     XR_PA_REGS          = 16'h0010,     // 0x0010-0x0017 8 playfield A video registers
     XR_PB_REGS          = 16'h0018,     // 0x0000-0x001F 8 playfield B video registers
-    XR_BLIT_REGS        = 16'h2000,     // 0x4000-0x400F 16 polygon blit registers      // TODO: blit
-    XR_DRAW_REGS        = 16'h4000,     // 0x6000-0x600F 16 polygon draw registers      // TODO: draw
-    XR_UNUSED_REGS_6    = 16'h6000,     // 0x6000-0x600F (unused)
+    XR_BLIT_REGS        = 16'h0020,     // 0x0020-0x002F 16 polygon blit registers      // TODO: blit
+    XR_DRAW_REGS        = 16'h0030,     // 0x0030-0x003F 16 polygon draw registers      // TODO: draw
     // XR Memory Regions
     XR_COLOR_MEM        = 16'h8000,     // 0x8000-0x81FF 256 16-bit 0xXRGB color lookup playfield A & B
-    XR_TILE_MEM         = 16'hA000,     // 0xA000-0xAFFF 4K 16-bit words of tile memory
+    XR_TILE_MEM         = 16'hA000,     // 0xA000-0xB3FF 5K 16-bit words of tile memory
     XR_COPPER_MEM       = 16'hC000,     // 0xC000-0xC7FF 2K 16-bit words copper program memory
     XR_UNUSED_MEM_E     = 16'hE000      // 0xE000-0xFFFF (unused)
 } xr_region_t;

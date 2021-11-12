@@ -210,8 +210,8 @@ ___
 | XR_CONFIG_REGS  | 0x0000-0x000F   | R/W | config XR registers                        |
 | XR_PA_REGS      | 0x0010-0x0017   | R/W | playfield A XR registers                   |
 | XR_PB_REGS      | 0x0018-0x001F   | R/W | playfield B XR registers                   |
-| XR_BLIT_REGS    | 0x2000-0x200F   | R/W | 2D-blit XR registers                       |
-| XR_DRAW_REGS    | 0x3000-0x300F   | R/W | line/poly draw XR registers                |
+| XR_BLIT_REGS    | 0x0020-0x002F   | R/W | 2D-blit XR registers                       |
+| XR_DRAW_REGS    | 0x0030-0x003F   | R/W | line/poly draw XR registers                |
 | XR_COLOR_MEM    | 0x8000-0x81FF   | R/W | 2 x 256W 16-bit color lookup memory (XRGB) |
 | XR_TILE_MEM     | 0xA000-0xB3FF   | R/W | 5KW 16-bit tile glyph storage memory       |
 | XR_COPPER_MEM   | 0xC000-0xC7FF   | R/W | 2KW 16-bit copper program memory           |
@@ -636,4 +636,3 @@ for direct embedding into C code.
 Additionally, there are a bunch of handy C macros (in the Xosera m68k API headers) that facilitate
 writing readable copper code directly in C source code. The included examples (in `copper` directory)
 demonstrate the different ways of embedding copper code in C source.
-

@@ -127,10 +127,10 @@
 #define COP_SKIP_V(v_pos)           (0x20000002 | XB_((uint32_t)(v_pos), 26, 16))
 #define COP_SKIP_F()                (0x20000003 | XB_((uint32_t)(0), 14, 4))
 #define COP_JUMP(cop_addr)          (0x40000000 | XB_((uint32_t)(cop_addr), 26, 16))
-#define COP_MOVER(val16, xreg)      (0x90000000 | XB_((uint32_t)(XR_##xreg), 23, 16) | ((uint16)(val16)))
-#define COP_MOVEF(val16, tile_addr) (0xa0000000 | XB_((uint32_t)(tile_addr), 27, 16) | ((uint16)(val16)))
-#define COP_MOVEP(rgb16, color_num) (0xB0000000 | XB_((uint32_t)(color_num), 23, 16) | ((uint16)(rgb16)))
-#define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 26, 16) | ((uint16)(val16)))
+#define COP_MOVER(val16, xreg)      (0x90000000 | XB_((uint32_t)(XR_##xreg), 23, 16) | ((uint16_t)(val16)))
+#define COP_MOVEF(val16, tile_addr) (0xa0000000 | XB_((uint32_t)(tile_addr), 27, 16) | ((uint16_t)(val16)))
+#define COP_MOVEP(rgb16, color_num) (0xB0000000 | XB_((uint32_t)(color_num), 23, 16) | ((uint16_t)(rgb16)))
+#define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 26, 16) | ((uint16_t)(val16)))
 
 // TODO blit and polydraw
 

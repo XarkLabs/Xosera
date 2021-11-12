@@ -1,11 +1,11 @@
 0000    //   0 (0x00) black (transparent)
-f00a    //   1 (0x01) blue
-f0a0    //   2 (0x02) green
-f0aa    //   3 (0x03) cyan
-fa00    //   4 (0x04) red
-fa0a    //   5 (0x05) magenta
-fa50    //   6 (0x06) brown
-faaa    //   7 (0x07) white
+000a    //   1 (0x01) blue
+40a0    //   2 (0x02) green
+40aa    //   3 (0x03) cyan
+8a00    //   4 (0x04) red
+8a0a    //   5 (0x05) magenta
+ca50    //   6 (0x06) brown
+caaa    //   7 (0x07) white
 f555    //   8 (0x08) gray
 f55f    //   9 (0x09) light blue
 f5f5    //  10 (0x0a) light green

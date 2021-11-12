@@ -755,7 +755,8 @@ static void load_sd_colors(const char * filename)
             xm_setw(XR_ADDR, XR_COLOR_MEM);
             for (int i = 0; i < (cnt >> 1); i++)
             {
-                xm_setw(XR_DATA, *maddr++);
+                uint16_t v = *maddr++;
+                xm_setw(XR_DATA, v);
             }
             vaddr += (cnt >> 1);
         }
@@ -766,6 +767,19 @@ static void load_sd_colors(const char * filename)
     else
     {
         dprintf(" - FAILED\n");
+    }
+}
+
+static void set_alpha(int alpha)
+{
+    uint16_t a = (alpha & 0xf) << 12;
+    for (int i = 0; i < 256; i++)
+    {
+        while (xreg_getw(SCANLINE) >= 0x8000)
+            ;
+        xm_setw(XR_ADDR, XR_COLOR_MEM + i);
+        uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
+        xm_setw(XR_DATA, v);
     }
 }
 
@@ -947,6 +961,11 @@ void     xosera_test()
             {
                 break;
             }
+            set_alpha(0xf);
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
         }
 
         // 4/8 bpp test
@@ -962,21 +981,33 @@ void     xosera_test()
             {
                 break;
             }
-        }
-
-        if (use_sd)
-        {
-            wait_vsync();
-            xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
-            xreg_setw(PA_LINE_LEN, 80);
-
-            load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw");
-            load_sd_bitmap("/ST_KingTut_Dpaint_16.raw");
+            set_alpha(0xf);
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
         }
+
+        // 4/8 bpp test
+        if (use_sd)
+        {
+            wait_vsync();
+            xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 8-bpp + Hx2 + Vx2
+            xreg_setw(PA_LINE_LEN, 160);
+
+            load_sd_colors("/color_cube_320x240_256_pal.raw");
+            load_sd_bitmap("/color_cube_320x240_256.raw");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            set_alpha(0xf);
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+        }
+
         if (use_sd)
         {
             wait_vsync();
@@ -985,6 +1016,11 @@ void     xosera_test()
 
             load_sd_colors("/escher-relativity_320x240_16_pal.raw");
             load_sd_bitmap("/escher-relativity_320x240_16.raw");
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+            set_alpha(0xf);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1003,8 +1039,14 @@ void     xosera_test()
             {
                 break;
             }
+            set_alpha(0xf);
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
         }
 
+        set_alpha(0x0);
         if (use_sd)
         {
             wait_vsync();

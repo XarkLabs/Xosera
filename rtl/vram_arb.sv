@@ -109,7 +109,7 @@ vram vram(
     .clk(clk),
     .sel(vram_sel),
     .wr_en(vram_wr),
-    .wr_mask(regs_wr_mask_i),
+    .wr_mask(vram_wr_mask),
     .address_in(vram_addr),
     .data_in(vram_data_in),
     .data_out(vram_data_o)

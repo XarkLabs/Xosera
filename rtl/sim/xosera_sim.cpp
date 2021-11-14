@@ -425,7 +425,13 @@ BusInterface bus;
 int          BusInterface::test_data_len    = 999;
 uint16_t     BusInterface::test_data[16384] = {
     // test data
-    REG_WAITVSYNC(),         // show boot screen
+    REG_WAITVSYNC(),        // show boot screen
+    REG_W(XR_ADDR, XR_PB_GFX_CTRL),
+    REG_W(XR_DATA, 0x0000),                 // set disp in tile
+    REG_W(XR_ADDR, XR_PB_TILE_CTRL),        // set 4-BPP BMAP
+    REG_W(XR_DATA, 0x000F),
+    REG_W(XR_ADDR, XR_PB_DISP_ADDR),        // set 4-BPP BMAP
+    REG_W(XR_DATA, 0x1000),
     REG_WAITVSYNC(),         // show boot screen
     REG_RW(UNUSED_A),        // read LFSR register
     REG_RW(UNUSED_A),        // read LFSR register

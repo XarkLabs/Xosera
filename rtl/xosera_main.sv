@@ -61,9 +61,6 @@ logic [15:0]    vgen_vram_addr;     // video gen vram addr
 logic           dv_de;              // display enable
 logic           hsync;              // hsync
 logic           vsync;              // vsync
-logic           dv_de_1;            // display enable delayed
-logic           hsync_1;            // hsync delayed
-logic           vsync_1;            // vsync delayed
 
 logic  [7:0]    colorA_index     /* verilator public */; // COLORMEM index
 logic [15:0]    colorA_xrgb      /* verilator public */; // COLORMEM XRGB output
@@ -300,9 +297,11 @@ xrmem_arb xrmem_arb
     // color lookup colormem A+B 2 x 16-bit bus (read-only)
     .vgen_color_sel_i(dv_de),
     .vgen_colorA_addr_i(colorA_index),
-    .vgen_colorB_addr_i(colorB_index),
     .vgen_colorA_data_o(colorA_xrgb),
+`ifdef ENABLE_PB
     .vgen_colorB_data_o(colorB_xrgb),
+    .vgen_colorB_addr_i(colorB_index),
+`endif
 
     // video generation tilemem bus (read-only)
     .vgen_tile_sel_i(vgen_tile_sel),
@@ -317,84 +316,23 @@ xrmem_arb xrmem_arb
     .clk(clk)
 );
 
-logic [4:0] r_addAB;
-logic [4:0] g_addAB;
-logic [4:0] b_addAB;
-
-logic [4:0] r_subAB;
-logic [4:0] g_subAB;
-logic [4:0] b_subAB;
-
-always_comb begin
-    r_addAB = colorA_xrgb[11:8] + colorB_xrgb[11:8];
-    g_addAB = colorA_xrgb[7:4]  + colorB_xrgb[7:4];
-    b_addAB = colorA_xrgb[3:0]  + colorB_xrgb[3:0];
-
-    r_subAB = colorA_xrgb[11:8] - colorB_xrgb[11:8];
-    g_subAB = colorA_xrgb[7:4]  - colorB_xrgb[7:4];
-    b_subAB = colorA_xrgb[3:0]  - colorB_xrgb[3:0];
-end
-
-// color RAM lookup (delays video 1 cycle for BRAM)
-always_ff @(posedge clk) begin
-
-    // color lookup happened on dv_de cycle
-    if (dv_de_1) begin
+video_blend video_blend(
+.vsync_i(vsync),
+.hsync_i(hsync),
+.dv_de_i(dv_de),
+.colorA_xrgb_i(colorA_xrgb),
 `ifdef ENABLE_PB
-
-        // Conceptually, A is the bottom "destination" playfield, and B is "source" playfield
-        // rendered on top of it.
-
-        //  A     B
-        // 0xxx  00xx  = A                   [B alpha 0% = fully transparent]
-        // 0xxx  01xx  = A + B (clamped)     [additive blend]
-        // 0xxx  10xx  = (A + B) / 2         [B alpha 50% + A alpha 50%]
-        // 0xxx  11xx  = B                   [B alpha 100% = fully opaque]
-
-        // 1xxx  00xx  = A & B               [logical A AND B]
-        // 1xxx  01xx  = A - B (clamped)     [subtractive blend]
-        // 1xxx  10xx  = A | B               [logical A OR B]
-        // 1xxx  11xx  = A + B (unclamped)   [offset +/- blend]
-
-        case ({colorA_xrgb[15], colorB_xrgb[15:14]})
-        3'b0_00:    { red_o, green_o, blue_o }  <= colorA_xrgb[11:0];                       // 0xxx  00xx  = A
-        3'b0_01:    { red_o, green_o, blue_o }  <= { r_addAB[4] ? 4'hF : r_addAB[3:0],      // 0xxx  01xx  = A + B (clamped)
-                                                     g_addAB[4] ? 4'hF : g_addAB[3:0],
-                                                     b_addAB[4] ? 4'hF : b_addAB[3:0] };
-        3'b0_10:    { red_o, green_o, blue_o }  <= { r_addAB[4:1],                          // 0xxx  10xx  = (A + B) / 2
-                                                     g_addAB[4:1],
-                                                     b_addAB[4:1] };
-        3'b0_11:    { red_o, green_o, blue_o }  <= colorB_xrgb[11:0];                       // 0xxx  11xx  = B
-        3'b1_00:    { red_o, green_o, blue_o }  <= colorA_xrgb[11:0] & colorB_xrgb[11:0];   // 1xxx  00xx  = A & B
-        3'b1_01:    { red_o, green_o, blue_o }  <= { r_subAB[4] ? 4'h0 : r_subAB[3:0],      // 1xxx  01xx  = A - B (clamped)
-                                                     g_subAB[4] ? 4'h0 : g_subAB[3:0],
-                                                     b_subAB[4] ? 4'h0 : b_subAB[3:0] };
-        3'b1_10:    { red_o, green_o, blue_o }  <= colorA_xrgb[11:0] | colorB_xrgb[11:0];   // 1xxx  10xx  = A | B
-        3'b1_11:    { red_o, green_o, blue_o }  <= { r_addAB[3:0],                          // 1xxx  11xx  = A + B (unclamped)
-                                                     g_addAB[3:0],
-                                                     b_addAB[3:0] };
-        endcase
-`else
-        red_o       <= colorA_xrgb[11:8];
-        green_o     <= colorA_xrgb[7:4];
-        blue_o      <= colorA_xrgb[3:0];
+.colorB_xrgb_i(colorB_xrgb),
 `endif
+.red_o(red_o),
+.green_o(green_o),
+.blue_o(blue_o),
+.hsync_o(hsync_o),
+.vsync_o(vsync_o),
+.dv_de_o(dv_de_o),
+.clk(clk)
+);
 
-    end else begin
-        red_o       <= 4'h0;
-        green_o     <= 4'h0;
-        blue_o      <= 4'h0;
-    end
-
-    // delay signals for color lookup
-    vsync_1     <= vsync;
-    hsync_1     <= hsync;
-    dv_de_1     <= dv_de;
-    // output signals
-    dv_de_o     <= dv_de_1;
-    vsync_o     <= vsync_1;
-    hsync_o     <= hsync_1;
-end
 
 // interrupt handling
 always_ff @(posedge clk) begin

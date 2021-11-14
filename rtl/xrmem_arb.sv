@@ -37,9 +37,11 @@ module xrmem_arb
     // color lookup colormem A+B 2 x 16-bit bus (read-only)
     input  wire logic                           vgen_color_sel_i,
     input  wire logic [xv::COLOR_AWIDTH-1:0]    vgen_colorA_addr_i,
-    input  wire logic [xv::COLOR_AWIDTH-1:0]    vgen_colorB_addr_i,
     output      logic [15:0]                    vgen_colorA_data_o,
+`ifdef ENABLE_PB
+    input  wire logic [xv::COLOR_AWIDTH-1:0]    vgen_colorB_addr_i,
     output      logic [15:0]                    vgen_colorB_data_o,
+`endif
 
     // video generation tilemem bus (read-only)
     input  wire logic                           vgen_tile_sel_i,
@@ -58,9 +60,11 @@ module xrmem_arb
 logic                           color_rd_en     /* verilator public */;
 logic                           color_wr_en     /* verilator public */;
 logic [xv::COLOR_AWIDTH-1:0]    colorA_addr     /* verilator public */;
-logic [xv::COLOR_AWIDTH-1:0]    colorB_addr     /* verilator public */;
 logic [15:0]                    colorA_data_out /* verilator public */;
+`ifdef ENABLE_PB
+logic [xv::COLOR_AWIDTH-1:0]    colorB_addr     /* verilator public */;
 logic [15:0]                    colorB_data_out /* verilator public */;
+`endif
 
 // internal TILEMEM signals
 logic                           tile_rd_en      /* verilator public */;
@@ -105,7 +109,9 @@ logic           copp_xr_copp_sel    /* verilator public */;
 
 // assign read outputs
 assign  vgen_colorA_data_o  = colorA_data_out;
+`ifdef ENABLE_PB
 assign  vgen_colorB_data_o  = colorB_data_out;
+`endif
 assign  vgen_tile_data_o    = !tile_addr[xv::TILE_AWIDTH-1] ? tile_data_out : tile2_data_out;
 assign  copp_prog_data_o    = copp_data_out;
 
@@ -151,7 +157,11 @@ end
 always_comb begin
     xr_data_o       = xreg_data_i;
     if (xr_color_sel) begin
+`ifdef ENABLE_PB
         xr_data_o   = !xr_addr_i[8] ? colorA_data_out : colorB_data_out;
+`else
+        xr_data_o   = colorA_data_out;
+`endif
     end
     if (xr_tile_sel) begin
         xr_data_o   = !xr_addr_i[xv::TILE_AWIDTH-1] ? tile_data_out : tile2_data_out;
@@ -181,16 +191,22 @@ always_comb begin
     color_rd_ack_next   = 1'b0;
     color_rd_en         = 1'b0;
     colorA_addr         = vgen_colorA_addr_i;
+`ifdef ENABLE_PB
     colorB_addr         = vgen_colorB_addr_i;
+`endif
     if (vgen_color_sel_i) begin
         color_rd_en         = 1'b1;
         colorA_addr         = vgen_colorA_addr_i;
+`ifdef ENABLE_PB
         colorB_addr         = vgen_colorB_addr_i;
+`endif
     end else if (xr_sel_i & ~xr_ack_o) begin
         color_rd_ack_next   = xr_color_sel & ~xr_wr_i;;
         color_rd_en         = xr_color_sel & ~xr_wr_i;;
         colorA_addr         = xr_addr_i[7:0];
+`ifdef ENABLE_PB
         colorB_addr         = xr_addr_i[7:0];
+`endif
     end
 end
 
@@ -242,11 +258,16 @@ colormem #(
     .rd_address_i(colorA_addr),
     .rd_data_o(colorA_data_out),
     .wr_clk(clk),
+`ifdef ENABLE_PB
     .wr_en_i(color_wr_en & ~xr_addr[xv::COLOR_AWIDTH]),
+`else
+    .wr_en_i(color_wr_en),
+`endif
     .wr_address_i(xr_addr[xv::COLOR_AWIDTH-1:0]),
     .wr_data_i(xr_write_data)
 );
 
+`ifdef ENABLE_PB
 // playfield B color lookup RAM
 colormem #(
     .AWIDTH(xv::COLOR_AWIDTH),
@@ -261,6 +282,7 @@ colormem #(
     .wr_address_i(xr_addr[xv::COLOR_AWIDTH-1:0]),
     .wr_data_i(xr_write_data)
 );
+`endif
 
 // tile RAM
 tilemem #(

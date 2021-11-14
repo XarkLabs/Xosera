@@ -34,7 +34,7 @@
 
 // features under test
 `define ENABLE_LFSR                 // enable XM_UNUSED_A as 19-bit LFSR
-`define ENABLE_PB                   // enable playfield B
+//`define ENABLE_PB                   // enable playfield B
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;

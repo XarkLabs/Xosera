@@ -332,11 +332,20 @@ void wait_vsync()
         ;
 }
 
+static inline void check_vsync()
+{
+    while (xreg_getw(SCANLINE) < 0x8000)
+        ;
+    while ((xreg_getw(SCANLINE) & 0x3ff) > 520)
+        ;
+}
+
 _NOINLINE void restore_colors()
 {
+    wait_vsync();
     xm_setw(XR_ADDR, XR_COLOR_MEM);
     uint16_t * cp = def_colors;
-    for (uint16_t i = 256; i != 0; i--)
+    for (uint16_t i = 0; i < 256; i++)
     {
         xm_setw(XR_DATA, *cp++);
     };
@@ -752,6 +761,7 @@ static void load_sd_colors(const char * filename)
             }
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
+            wait_vsync();
             xm_setw(XR_ADDR, XR_COLOR_MEM);
             for (int i = 0; i < (cnt >> 1); i++)
             {
@@ -773,11 +783,11 @@ static void load_sd_colors(const char * filename)
 static void set_alpha(int alpha)
 {
     uint16_t a = (alpha & 0xf) << 12;
-    for (int i = 0; i < 256; i++)
+    for (int i = XR_COLOR_MEM; i < XR_COLOR_MEM + 256; i++)
     {
-        while (xreg_getw(SCANLINE) >= 0x8000)
-            ;
-        xm_setw(XR_ADDR, XR_COLOR_MEM + i);
+        wait_vsync();
+        xm_setw(XR_ADDR, i);
+        __asm__ __volatile__("nop ; nop ; nop ; nop ; nop ; nop ; nop");
         uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
         xm_setw(XR_DATA, v);
     }
@@ -796,6 +806,7 @@ void     xosera_test()
 
     dprintf("\nxosera_init(0)...");
     bool success = xosera_init(0);
+    xreg_setw(PA_GFX_CTRL, 0x0000);        // text mode (unblank)
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
@@ -897,14 +908,12 @@ void     xosera_test()
         if (test_count & 1)
         {
             dprintf("Copper test disabled for this iteration.\n");
-            wait_vsync();
             restore_colors();
             xreg_setw(COPP_CTRL, 0x0000);
         }
         else
         {
             dprintf("Copper test enabled for this interation.\n");
-            wait_vsync();
             restore_colors();
             xreg_setw(COPP_CTRL, 0x8000);
         }
@@ -992,11 +1001,11 @@ void     xosera_test()
         if (use_sd)
         {
             wait_vsync();
-            xreg_setw(PA_GFX_CTRL, 0x0065);        // bitmap + 8-bpp + Hx2 + Vx2
-            xreg_setw(PA_LINE_LEN, 160);
+            xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
+            xreg_setw(PA_LINE_LEN, 80);
 
-            load_sd_colors("/color_cube_320x240_256_pal.raw");
-            load_sd_bitmap("/color_cube_320x240_256.raw");
+            load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw");
+            load_sd_bitmap("/ST_KingTut_Dpaint_16.raw");
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1026,7 +1035,6 @@ void     xosera_test()
                 break;
             }
         }
-        wait_vsync();
         restore_colors();
         if (use_sd)
         {

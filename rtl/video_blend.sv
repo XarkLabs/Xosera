@@ -119,13 +119,13 @@ always_ff @(posedge clk) begin
                                                      g_subAB[4] ? 4'h0 : g_subAB[3:0],
                                                      b_subAB[4] ? 4'h0 : b_subAB[3:0] };
         // A + signed B
-        3'b1_10:    { red_o, green_o, blue_o }  <= { (r_addAB[4] & colorB_xrgb_i[11]) ? 4'h0 : (r_addAB[4] & ~colorB_xrgb_i[11]) ? 4'hF : r_addAB[3:0],
-                                                     (g_addAB[4] & colorB_xrgb_i[7])  ? 4'h0 : (g_addAB[4] & ~colorB_xrgb_i[7])  ? 4'hF : g_addAB[3:0],
-                                                     (b_addAB[4] & colorB_xrgb_i[3])  ? 4'h0 : (b_addAB[4] & ~colorB_xrgb_i[3])  ? 4'hF : b_addAB[3:0] };
+        3'b1_10:    { red_o, green_o, blue_o }  <= { r_addAB[4] ? (colorB_xrgb_i[11] ? 4'h0 : 4'hF) : r_addAB[3:0],
+                                                     g_addAB[4] ? (colorB_xrgb_i[ 7] ? 4'h0 : 4'hF) : g_addAB[3:0],
+                                                     b_addAB[4] ? (colorB_xrgb_i[ 3] ? 4'h0 : 4'hF) : b_addAB[3:0] };
         // A + signed B*2
-        3'b1_11:    { red_o, green_o, blue_o }  <= { (r_addABx2[4] & colorB_xrgb_i[11]) ? 4'h0 : (r_addABx2[4] & ~colorB_xrgb_i[11]) ? 4'hF : r_addABx2[3:0],
-                                                     (g_addABx2[4] & colorB_xrgb_i[7])  ? 4'h0 : (g_addABx2[4] & ~colorB_xrgb_i[7])  ? 4'hF : g_addABx2[3:0],
-                                                     (b_addABx2[4] & colorB_xrgb_i[3])  ? 4'h0 : (b_addABx2[4] & ~colorB_xrgb_i[3])  ? 4'hF : b_addABx2[3:0] };
+        3'b1_11:    { red_o, green_o, blue_o }  <= { r_addABx2[4] ? (colorB_xrgb_i[11] ? 4'h0 : 4'hF) : r_addABx2[3:0],
+                                                     g_addABx2[4] ? (colorB_xrgb_i[ 7] ? 4'h0 : 4'hF) : g_addABx2[3:0],
+                                                     b_addABx2[4] ? (colorB_xrgb_i[ 3] ? 4'h0 : 4'hF) : b_addABx2[3:0] };
         endcase
 `else
         red_o       <= colorA_xrgb_i[11:8];

@@ -524,7 +524,7 @@ void test_dual_8bpp()
             len = width - x;
         }
 
-        draw8bpp_h_line(addrA, ((y + 1) >> 2) & 0xff, x, y, len);
+        draw8bpp_h_line(addrA, ((y >> 2) + 1) & 0xff, x, y, len);
 
         w--;
         x++;
@@ -553,7 +553,7 @@ void test_dual_8bpp()
             len = height;
         }
 
-        draw8bpp_v_line(addrB, ((x + 1) >> 2) & 0xff, x, y, len);
+        draw8bpp_v_line(addrB, ((x >> 2) + 1) & 0xff, x, y, len);
         w--;
     }
 

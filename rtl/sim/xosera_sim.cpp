@@ -437,6 +437,42 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_RW(UNUSED_A),        // read LFSR register
     REG_RW(UNUSED_A),        // read LFSR register
     REG_RW(UNUSED_A),        // read LFSR register
+
+    REG_W(XR_ADDR, XR_PA_GFX_CTRL),
+    REG_W(XR_DATA, 0x0065),
+    REG_W(XR_ADDR, XR_PA_TILE_CTRL),
+    REG_W(XR_DATA, 0x000F),
+    REG_W(XR_ADDR, XR_PA_DISP_ADDR),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_PA_LINE_LEN),
+    REG_W(XR_DATA, 320 / 2),
+
+    REG_W(XR_ADDR, XR_COLOR_MEM),        // upload color palette
+    REG_UPLOAD_AUX(),
+
+    REG_W(WR_INCR, 0x0001),
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),
+
+    REG_W(XR_ADDR, XR_PB_GFX_CTRL),
+    REG_W(XR_DATA, 0x0065),
+    REG_W(XR_ADDR, XR_PB_TILE_CTRL),
+    REG_W(XR_DATA, 0x000F),
+    REG_W(XR_ADDR, XR_PB_DISP_ADDR),
+    REG_W(XR_DATA, 0x8000),
+    REG_W(XR_ADDR, XR_PB_LINE_LEN),
+    REG_W(XR_DATA, 320 / 2),
+
+    REG_W(XR_ADDR, XR_COLOR_MEM + 0x100),        // upload color palette
+    REG_UPLOAD_AUX(),
+
+    REG_W(WR_INCR, 0x0001),
+    REG_W(WR_ADDR, 0x8000),
+    REG_UPLOAD(),
+
+    REG_WAITVSYNC(),        // show boot screen
+    REG_WAITVSYNC(),        // show boot screen
+
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),
     REG_W(XR_DATA, 0x0040),                 // set disp in tile
     REG_W(XR_ADDR, XR_PA_TILE_CTRL),        // set 4-BPP BMAP

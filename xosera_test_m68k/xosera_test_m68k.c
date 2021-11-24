@@ -176,6 +176,19 @@ const uint32_t copper_list[] = {
 const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
 
 static_assert(NUM_ELEMENTS(copper_list) < 1024, "copper list too long");
+
+// 320x200 copper
+// Copper list
+uint32_t copper_320x200[] = {
+    COP_WAIT_V(40),                        // wait  0, 40                   ; Wait for line 40, H position ignored
+    COP_MOVER(0x0065, PA_GFX_CTRL),        // mover 0x0065, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
+    COP_MOVER(0x0065, PB_GFX_CTRL),        // mover 0x0065, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
+    COP_WAIT_V(440),                       // wait  0, 440                  ; Wait for line 440, H position ignored
+    COP_MOVER(0x00E5, PA_GFX_CTRL),        // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
+    COP_MOVER(0x00E5, PB_GFX_CTRL),        // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
+    COP_END()                              // nextf
+};
+
 #endif
 
 // dummy global variable
@@ -340,6 +353,21 @@ static inline void check_vsync()
         ;
 }
 
+static void install_copper()
+{
+    dprintf("Loading copper list...");
+
+    xm_setw(XR_ADDR, XR_COPPER_MEM);
+
+    for (uint16_t i = 0; i < copper_list_len; i++)
+    {
+        xm_setw(XR_DATA, copper_list[i] >> 16);
+        xm_setw(XR_DATA, copper_list[i] & 0xffff);
+    }
+
+    dprintf("okay\n");
+}
+
 _NOINLINE void restore_colors()
 {
     wait_vsync();
@@ -349,6 +377,248 @@ _NOINLINE void restore_colors()
     {
         xm_setw(XR_DATA, *cp++);
     };
+}
+
+_NOINLINE void restore_colors2(uint8_t alpha)
+{
+    wait_vsync();
+    xm_setw(XR_ADDR, XR_COLOR_MEM + 0x100);
+    uint16_t * cp = def_colors;
+    for (uint16_t i = 0; i < 256; i++)
+    {
+        uint16_t w = *cp++;
+        if (i)
+        {
+            w = ((alpha & 0xf) << 12) | (w & 0xfff);
+        }
+        else
+        {
+            w = 0;
+        }
+        xm_setw(XR_DATA, w);
+    };
+}
+
+#define DRAW_WIDTH  ((uint16_t)320)
+#define DRAW_HEIGHT ((uint16_t)240)
+#define DRAW_WORDS  ((uint16_t)DRAW_WIDTH / 2)
+
+void draw8bpp_h_line(unsigned int base, uint8_t color, int x, int y, int len)
+{
+    if (len < 1)
+    {
+        return;
+    }
+    uint16_t addr = base + (uint16_t)(y * DRAW_WORDS) + (uint16_t)(x >> 1);
+    uint16_t word = (color << 8) | color;
+    xm_setw(WR_INCR, 1);           // set write inc
+    xm_setw(WR_ADDR, addr);        // set write address
+    if (x & 1)
+    {
+        xm_setbl(SYS_CTRL, 0x3);
+        xm_setw(DATA, word);        // set left edge word
+        len -= 1;
+        xm_setbl(SYS_CTRL, 0xf);
+    }
+    while (len >= 2)
+    {
+        xm_setw(DATA, word);        // set full word
+        len -= 2;
+    }
+    if (len)
+    {
+        xm_setbl(SYS_CTRL, 0xc);
+        xm_setw(DATA, word);        // set right edge word
+        xm_setbl(SYS_CTRL, 0xf);
+    }
+}
+
+void draw8bpp_v_line(uint16_t base, uint8_t color, int x, int y, int len)
+{
+    if (len < 1)
+    {
+        return;
+    }
+    uint16_t addr = base + (uint16_t)(y * DRAW_WORDS) + (uint16_t)(x >> 1);
+    uint16_t word = (color << 8) | color;
+    xm_setw(WR_INCR, DRAW_WORDS);        // set write inc
+    xm_setw(WR_ADDR, addr);              // set write address
+    if (x & 1)
+    {
+        xm_setbl(SYS_CTRL, 0x3);
+    }
+    else
+    {
+        xm_setbl(SYS_CTRL, 0xc);
+    }
+    while (len--)
+    {
+        xm_setw(DATA, word);        // set full word
+    }
+    xm_setbl(SYS_CTRL, 0xf);
+}
+
+void test_dual_8bpp()
+{
+    const uint16_t width    = DRAW_WIDTH;
+    const uint16_t height   = 200;
+    uint16_t       old_copp = xreg_getw(COPP_CTRL);
+
+    dprintf("test_dual_8pp\n");
+    restore_colors();            // colormem A normal colors
+    restore_colors2(0x8);        // colormem B normal colors (alpha 50%)
+
+    uint16_t addrA = 0;             // start of VRAM
+    uint16_t addrB = 0x8000;        // 2nd half of VRAM
+    xm_setbl(SYS_CTRL, 0xf);
+
+    // clear all VRAM
+
+    uint16_t vaddr = 0;
+    xm_setw(WR_INCR, 1);
+    xm_setw(WR_ADDR, vaddr);
+    do
+    {
+        xm_setw(DATA, 0);
+    } while (++vaddr != 0);
+
+    wait_vsync();
+    xreg_setw(VID_CTRL, 0x0000);           // border color = black
+    xreg_setw(PA_GFX_CTRL, 0x00FF);        // blank screen
+    xreg_setw(PB_GFX_CTRL, 0x00FF);
+    // install 320x200 "crop" copper list
+    xm_setw(XR_ADDR, XR_COPPER_MEM);
+    for (uint16_t i = 0; i < NUM_ELEMENTS(copper_320x200); i++)
+    {
+        xm_setw(XR_DATA, copper_320x200[i] >> 16);
+        xm_setw(XR_DATA, copper_320x200[i] & 0xffff);
+    }
+    // set pf A 320x240 8bpp (cropped to 320x200)
+    xreg_setw(PA_GFX_CTRL, 0x0065);
+    xreg_setw(PA_TILE_CTRL, 0x000F);
+    xreg_setw(PA_DISP_ADDR, addrA);
+    xreg_setw(PA_LINE_LEN, DRAW_WORDS);
+    xreg_setw(PA_HV_SCROLL, 0x0000);
+
+    // set pf B 320x240 8bpp (cropped to 320x200)
+    xreg_setw(PB_GFX_CTRL, 0x0065);
+    xreg_setw(PB_TILE_CTRL, 0x000F);
+    xreg_setw(PB_DISP_ADDR, addrB);
+    xreg_setw(PB_LINE_LEN, DRAW_WORDS);
+    xreg_setw(PB_HV_SCROLL, 0x0000);
+
+    // enable copper
+    wait_vsync();
+    xmem_setw(XR_COPPER_MEM + (1 * 2) + 1, 0x0065);
+    xmem_setw(XR_COPPER_MEM + (2 * 2) + 1, 0x00E5);
+    xreg_setw(COPP_CTRL, 0x8000);
+
+    uint16_t w = width;
+    uint16_t x, y;
+    x = 0;
+    for (y = 0; y < height; y++)
+    {
+        int16_t len = w - x;
+        if (x + len >= width)
+        {
+            len = width - x;
+        }
+
+        draw8bpp_h_line(addrA, ((y + 1) >> 2) & 0xff, x, y, len);
+
+        w--;
+        x++;
+    }
+
+    dprintf("Playfield A: 320x200 8bpp - horizontal-striped triangle + blanked B\n");
+    dprintf("(press any key)");
+    readchar();
+    dprintf("\n");
+
+    wait_vsync();
+    xmem_setw(XR_COPPER_MEM + (1 * 2) + 1, 0x0065);
+    xmem_setw(XR_COPPER_MEM + (2 * 2) + 1, 0x0065);
+    dprintf("Playfield A: 320x200 8bpp - horizontal-striped triangle + B enabled, but zeroed\n");
+    dprintf("(press any key)");
+    readchar();
+    dprintf("\n");
+
+    w = height;
+    y = 0;
+    for (x = 0; x < width; x++)
+    {
+        int16_t len = w;
+        if (len >= height)
+        {
+            len = height;
+        }
+
+        draw8bpp_v_line(addrB, ((x + 1) >> 2) & 0xff, x, y, len);
+        w--;
+    }
+
+    wait_vsync();
+    xmem_setw(XR_COPPER_MEM + (1 * 2) + 1, 0x00E5);
+    xmem_setw(XR_COPPER_MEM + (2 * 2) + 1, 0x0065);
+    dprintf("Playfield B: 320x200 8bpp - vertical-striped triangle, A blanked\n");
+    dprintf("(press any key)");
+    readchar();
+    dprintf("\n");
+
+    wait_vsync();
+    xmem_setw(XR_COPPER_MEM + (1 * 2) + 1, 0x0065);
+    xmem_setw(XR_COPPER_MEM + (2 * 2) + 1, 0x0065);
+    dprintf("Playfield A&B: mixed (alpha 0x8)\n");
+    dprintf("(press any key)");
+    readchar();
+    dprintf("\n");
+
+    wait_vsync();
+    restore_colors2(0x0);        // colormem B normal colors (alpha 0%)
+
+    dprintf("Playfield A&B: colormap B alpha 0x0\n");
+    dprintf("(press any key)");
+    readchar();
+    dprintf("\n");
+
+    wait_vsync();
+    restore_colors2(0x4);        // colormem B normal colors (alpha 25%)
+
+    dprintf("Playfield A&B: colormap B alpha 0x4\n");
+    dprintf("(press any key)");
+    readchar();
+    dprintf("\n");
+
+    wait_vsync();
+    restore_colors2(0x8);        // colormem B normal colors (alpha 50%)
+
+    dprintf("Playfield A&B: colormap B alpha 0x8\n");
+    dprintf("(press any key)");
+    readchar();
+    dprintf("\n");
+
+    wait_vsync();
+    restore_colors2(0xF);        // colormem B normal colors (alpha 100%)
+
+    dprintf("Playfield A&B: colormap B alpha 0xC\n");
+    dprintf("(press any key)");
+    readchar();
+    dprintf("\n");
+
+    dprintf("restore screen\n");
+    dprintf("(press any key)");
+    readchar();
+    dprintf("\n");
+    restore_colors2(0x8);        // colormem B normal colors (alpha 0%)
+    wait_vsync();
+    xreg_setw(COPP_CTRL, 0x0000);
+#if COPPER_TEST
+    install_copper();
+#endif
+    xreg_setw(COPP_CTRL, old_copp);
+
+    xreg_setw(PA_GFX_CTRL, 0x0000);
+    xreg_setw(PB_GFX_CTRL, 0x0000);
 }
 
 void test_hello()
@@ -826,17 +1096,7 @@ void     xosera_test()
 #endif
 
 #if COPPER_TEST
-    dprintf("Loading copper list...");
-
-    xm_setw(XR_ADDR, XR_COPPER_MEM);
-
-    for (uint16_t i = 0; i < copper_list_len; i++)
-    {
-        xm_setw(XR_DATA, copper_list[i] >> 16);
-        xm_setw(XR_DATA, copper_list[i] & 0xffff);
-    }
-
-    dprintf("okay\n");
+    install_copper();
 #endif
 
     if (delay_check(4000))
@@ -935,6 +1195,8 @@ void     xosera_test()
         {
             break;
         }
+
+        test_dual_8bpp();
 
         test_xr_read();
 

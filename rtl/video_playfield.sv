@@ -492,7 +492,7 @@ always_ff @(posedge clk) begin
         if (h_start_line_fetch) begin       // on line fetch start signal
             pf_initial_buf          <= 1'b1;
             pf_pixels_buf_full      <= 1'b0;
-            scanout_start_hcount    <= scanout_start_hcount + { { 6{pf_fine_hscroll_i[4]} }, pf_fine_hscroll_i };
+            scanout_start_hcount    <= scanout_start_hcount - {5'b0, pf_fine_hscroll_i};
             scanout_end_hcount      <= H_SCANOUT_BEGIN[10:0] + vid_right_i;
 
             pf_addr                 <= pf_line_start;       // set start address for this line

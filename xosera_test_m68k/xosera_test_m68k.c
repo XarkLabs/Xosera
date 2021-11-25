@@ -649,7 +649,7 @@ void test_dual_8bpp()
 
     xreg_setw(PA_GFX_CTRL, 0x0000);
     xreg_setw(PB_GFX_CTRL, 0x0000);
-    xreg_setw(PB_DISP_ADDR, 0x0000);
+    xreg_setw(PB_DISP_ADDR, 0xF000);
 }
 
 void test_hello()

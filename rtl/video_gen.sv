@@ -151,6 +151,19 @@ assign h_count_o    = h_count;
 assign v_count_o    = v_count;
 `endif
 
+`ifdef ENABLE_PB
+assign playfieldB_stall = (vramA_sel && vramB_sel) || (tilememA_sel && tilememB_sel);
+assign vram_sel_o       = vramA_sel ? vramA_sel  : vramB_sel;
+assign vram_addr_o      = vramA_sel ? vramA_addr : vramB_addr;
+assign tilemem_sel_o    = tilememA_sel ? tilememA_sel  : tilememB_sel;
+assign tilemem_addr_o   = tilememA_sel ? tilememA_addr : tilememB_addr;
+`else
+assign vram_sel_o       = vramA_sel;
+assign vram_addr_o      = vramA_addr;
+assign tilemem_sel_o    = tilememA_sel;
+assign tilemem_addr_o   = tilememA_addr;
+`endif
+
 video_playfield video_pf_a(
     .stall_i(1'b0),                             // playfield A never stalls
     .v_visible_i(v_state == STATE_VISIBLE),
@@ -160,12 +173,12 @@ video_playfield video_pf_a(
     .border_color_i(border_color),
     .vid_left_i(vid_left),
     .vid_right_i(vid_right),
-    .vram_sel_o(vramA_sel),                     // vram read select
-    .vram_addr_o(vramA_addr),                     // vram word address out (16x64K)
-    .vram_data_i(vram_data_i),                     // vram word data in
-    .tilemem_sel_o(tilememA_sel),                     // tile mem read select
-    .tilemem_addr_o(tilememA_addr),         // tile mem word address out (16x5K)
-    .tilemem_data_i(tilemem_data_i),                     // tile mem word data in
+    .vram_sel_o(vramA_sel),
+    .vram_addr_o(vramA_addr),
+    .vram_data_i(vram_data_i),
+    .tilemem_sel_o(tilememA_sel),
+    .tilemem_addr_o(tilememA_addr),
+    .tilemem_data_i(tilemem_data_i),
     .pf_blank_i(pa_blank),
     .pf_start_addr_i(pa_start_addr),
     .pf_line_len_i(pa_line_len),
@@ -189,21 +202,52 @@ video_playfield video_pf_a(
 );
 
 `ifdef ENABLE_PB
+logic pb_vram_rd;                                   // last cycle was PB vram read flag
+logic pb_vram_rd_save;                              // PB vram read data saved flag
+logic [15:0] pb_vram_rd_data;                       // PB vram read data
+logic pb_tilemem_rd;                                // last cycle was PB tilemem read flag
+logic pb_tilemem_rd_save;                           // PB tilemem read data saved flag
+logic [15:0] pb_tilemem_rd_data;                    // PB tilemem read data
+
+always_ff @(posedge clk) begin
+    // latch vram read data for playfield B
+    if (pb_vram_rd & ~pb_vram_rd_save) begin        // if was a vram read and result not already saved
+        pb_vram_rd_save <= 1'b1;                    // remember vram read saved
+        pb_vram_rd_data <= vram_data_i;             // save vram data
+    end
+    if (~playfieldB_stall) begin                    // if not stalled, clear saved vram data
+        pb_vram_rd_save <= 1'b0;
+    end
+
+    pb_vram_rd  <= vramB_sel;                       // remember if this cycle was reading vram
+
+    // latch tilemem read data for playfield B
+    if (pb_tilemem_rd & ~pb_tilemem_rd_save) begin  // if was a tilemem read and result not already saved
+        pb_tilemem_rd_save <= 1'b1;                 // remember tilemem read saved
+        pb_tilemem_rd_data <= tilemem_data_i;       // save tilemem data
+    end
+    if (~playfieldB_stall) begin                    // if not stalled, clear saved tilemem data
+        pb_tilemem_rd_save <= 1'b0;
+    end
+
+    pb_tilemem_rd  <= tilememB_sel;                 // remember if this cycle was reading tilemem
+end
+
 video_playfield video_pf_b(
-    .stall_i(playfieldB_stall),                             // playfield A never stalls
+    .stall_i(playfieldB_stall),
     .v_visible_i(v_state == STATE_VISIBLE),
     .h_count_i(h_count),
     .h_line_last_pixel_i(h_line_last_pixel),
     .last_frame_pixel_i(last_frame_pixel),
-    .border_color_i(8'h00),            // TODO: border black on pf_b?
-    .vid_left_i(vid_left),            // TODO: border black on pf_b?
-    .vid_right_i(vid_right),            // TODO: border black on pf_b?
-    .vram_sel_o(vramB_sel),                     // vram read select
-    .vram_addr_o(vramB_addr),                     // vram word address out (16x64K)
-    .vram_data_i(vram_data_i),                     // vram word data in
-    .tilemem_sel_o(tilememB_sel),                     // tile mem read select
-    .tilemem_addr_o(tilememB_addr),         // tile mem word address out (16x5K)
-    .tilemem_data_i(tilemem_data_i),                     // tile mem word data in
+    .border_color_i(8'h00),                     // TODO: border black on pf_b?
+    .vid_left_i(vid_left),
+    .vid_right_i(vid_right),
+    .vram_sel_o(vramB_sel),
+    .vram_addr_o(vramB_addr),
+    .vram_data_i(pb_vram_rd_save ? pb_vram_rd_data : vram_data_i),
+    .tilemem_sel_o(tilememB_sel),
+    .tilemem_addr_o(tilememB_addr),
+    .tilemem_data_i(pb_tilemem_rd_save ? pb_tilemem_rd_data : tilemem_data_i),
     .pf_blank_i(pb_blank),
     .pf_start_addr_i(pb_start_addr),
     .pf_line_len_i(pb_line_len),
@@ -226,19 +270,6 @@ video_playfield video_pf_b(
     .clk(clk)
 );
 
-`endif
-
-`ifndef ENABLE_PB
-assign vram_sel_o = vramA_sel;
-assign vram_addr_o = vramA_addr;
-assign tilemem_sel_o = tilememA_sel;
-assign tilemem_addr_o = tilememA_addr;
-`else
-assign playfieldB_stall = (vramA_sel && vramB_sel) || (tilememA_sel && tilememB_sel);
-assign vram_sel_o       = vramA_sel ? vramA_sel  : vramB_sel;
-assign vram_addr_o      = vramA_sel ? vramA_addr : vramB_addr;
-assign tilemem_sel_o    = tilememA_sel ? tilememA_sel  : tilememB_sel;
-assign tilemem_addr_o   = tilememA_sel ? tilememA_addr : tilememB_addr;
 `endif
 
 // video config registers read/write

@@ -21,9 +21,7 @@ module video_blend(
 `ifdef ENABLE_PB
     input wire  logic  [15:0]   colorB_xrgb_i,
 `endif
-    output      logic  [3:0]    red_o,
-    output      logic  [3:0]    green_o,
-    output      logic  [3:0]    blue_o,
+    output      logic  [11:0]   blend_rgb_o,
     output      logic           hsync_o,
     output      logic           vsync_o,
     output      logic           dv_de_o,
@@ -99,33 +97,33 @@ always_ff @(posedge clk) begin
 
         case ({colorA_xrgb_i[15], colorB_xrgb_i[15:14]})
         // 100% A
-        3'b0_00:    { red_o, green_o, blue_o }  <= colorA_xrgb_i[11:0];
+        3'b0_00:    blend_rgb_o  <= colorA_xrgb_i[11:0];
         // 75% A + 25% B
-        3'b0_01:    { red_o, green_o, blue_o }  <= { r_alpha25[5:2],
-                                                     g_alpha25[5:2],
-                                                     b_alpha25[5:2] };
+        3'b0_01:    blend_rgb_o  <= { r_alpha25[5:2],
+                                      g_alpha25[5:2],
+                                      b_alpha25[5:2] };
         // 50% A + 50% B
-        3'b0_10:    { red_o, green_o, blue_o }  <= { r_addAB[4:1],
-                                                     g_addAB[4:1],
-                                                     b_addAB[4:1] };
+        3'b0_10:    blend_rgb_o  <= { r_addAB[4:1],
+                                      g_addAB[4:1],
+                                      b_addAB[4:1] };
         // 100% B
-        3'b0_11:    { red_o, green_o, blue_o }  <= colorB_xrgb_i[11:0];
+        3'b0_11:    blend_rgb_o  <= colorB_xrgb_i[11:0];
         // A + B
-        3'b1_00:    { red_o, green_o, blue_o }  <= { r_addAB[4] ? 4'hF : r_addAB[3:0],
-                                                     g_addAB[4] ? 4'hF : g_addAB[3:0],
-                                                     b_addAB[4] ? 4'hF : b_addAB[3:0] };
+        3'b1_00:    blend_rgb_o  <= { r_addAB[4] ? 4'hF : r_addAB[3:0],
+                                      g_addAB[4] ? 4'hF : g_addAB[3:0],
+                                      b_addAB[4] ? 4'hF : b_addAB[3:0] };
         // A - B
-        3'b1_01:    { red_o, green_o, blue_o }  <= { r_subAB[4] ? 4'h0 : r_subAB[3:0],
-                                                     g_subAB[4] ? 4'h0 : g_subAB[3:0],
-                                                     b_subAB[4] ? 4'h0 : b_subAB[3:0] };
+        3'b1_01:    blend_rgb_o  <= { r_subAB[4] ? 4'h0 : r_subAB[3:0],
+                                      g_subAB[4] ? 4'h0 : g_subAB[3:0],
+                                      b_subAB[4] ? 4'h0 : b_subAB[3:0] };
         // A + signed B
-        3'b1_10:    { red_o, green_o, blue_o }  <= { r_addAB[4] ? (colorB_xrgb_i[11] ? 4'h0 : 4'hF) : r_addAB[3:0],
-                                                     g_addAB[4] ? (colorB_xrgb_i[ 7] ? 4'h0 : 4'hF) : g_addAB[3:0],
-                                                     b_addAB[4] ? (colorB_xrgb_i[ 3] ? 4'h0 : 4'hF) : b_addAB[3:0] };
+        3'b1_10:    blend_rgb_o  <= { r_addAB[4] ? (colorB_xrgb_i[11] ? 4'h0 : 4'hF) : r_addAB[3:0],
+                                      g_addAB[4] ? (colorB_xrgb_i[ 7] ? 4'h0 : 4'hF) : g_addAB[3:0],
+                                      b_addAB[4] ? (colorB_xrgb_i[ 3] ? 4'h0 : 4'hF) : b_addAB[3:0] };
         // A + signed B*2
-        3'b1_11:    { red_o, green_o, blue_o }  <= { r_addABx2[4] ? (colorB_xrgb_i[11] ? 4'h0 : 4'hF) : r_addABx2[3:0],
-                                                     g_addABx2[4] ? (colorB_xrgb_i[ 7] ? 4'h0 : 4'hF) : g_addABx2[3:0],
-                                                     b_addABx2[4] ? (colorB_xrgb_i[ 3] ? 4'h0 : 4'hF) : b_addABx2[3:0] };
+        3'b1_11:    blend_rgb_o  <= { r_addABx2[4] ? (colorB_xrgb_i[11] ? 4'h0 : 4'hF) : r_addABx2[3:0],
+                                      g_addABx2[4] ? (colorB_xrgb_i[ 7] ? 4'h0 : 4'hF) : g_addABx2[3:0],
+                                      b_addABx2[4] ? (colorB_xrgb_i[ 3] ? 4'h0 : 4'hF) : b_addABx2[3:0] };
         endcase
 `else
         red_o       <= colorA_xrgb_i[11:8];
@@ -134,9 +132,7 @@ always_ff @(posedge clk) begin
 `endif
 
     end else begin
-        red_o       <= 4'h0;
-        green_o     <= 4'h0;
-        blue_o      <= 4'h0;
+        blend_rgb_o <= 12'h0;
     end
 
     // delay signals for color lookup

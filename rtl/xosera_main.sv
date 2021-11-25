@@ -324,9 +324,7 @@ video_blend video_blend(
 `ifdef ENABLE_PB
 .colorB_xrgb_i(colorB_xrgb),
 `endif
-.red_o(red_o),
-.green_o(green_o),
-.blue_o(blue_o),
+.blend_rgb_o({ red_o, green_o, blue_o }),
 .hsync_o(hsync_o),
 .vsync_o(vsync_o),
 .dv_de_o(dv_de_o),

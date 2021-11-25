@@ -425,18 +425,30 @@ BusInterface bus;
 int          BusInterface::test_data_len    = 999;
 uint16_t     BusInterface::test_data[16384] = {
     // test data
-    REG_WAITVSYNC(),        // show boot screen
+    REG_WAITVSYNC(),         // show boot screen
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_RW(UNUSED_A),        // read LFSR register
+    REG_RW(UNUSED_A),        // read LFSR register
+
     REG_W(XR_ADDR, XR_PB_GFX_CTRL),
     REG_W(XR_DATA, 0x0000),                 // set disp in tile
     REG_W(XR_ADDR, XR_PB_TILE_CTRL),        // set 4-BPP BMAP
     REG_W(XR_DATA, 0x000F),
     REG_W(XR_ADDR, XR_PB_DISP_ADDR),        // set 4-BPP BMAP
     REG_W(XR_DATA, 0x1000),
-    REG_WAITVSYNC(),         // show boot screen
-    REG_RW(UNUSED_A),        // read LFSR register
-    REG_RW(UNUSED_A),        // read LFSR register
-    REG_RW(UNUSED_A),        // read LFSR register
-    REG_RW(UNUSED_A),        // read LFSR register
+    REG_WAITVTOP(),         // show boot screen
+    REG_WAITVSYNC(),        // show boot screen
+
+    REG_W(XR_ADDR, XR_PA_GFX_CTRL),
+    REG_W(XR_DATA, 0x0040),                 // set disp in tile
+    REG_W(XR_ADDR, XR_PA_TILE_CTRL),        // set 4-BPP BMAP
+    REG_W(XR_DATA, 0x000F),
+    REG_W(WR_INCR, 0x0001),
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),
+    REG_WAITVTOP(),         // show boot screen
+    REG_WAITVSYNC(),        // show boot screen
 
     REG_W(XR_ADDR, XR_PA_GFX_CTRL),
     REG_W(XR_DATA, 0x0065),
@@ -470,18 +482,9 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(WR_ADDR, 0x8000),
     REG_UPLOAD(),
 
-    REG_WAITVSYNC(),        // show boot screen
+    REG_WAITVTOP(),         // show boot screen
     REG_WAITVSYNC(),        // show boot screen
 
-    REG_W(XR_ADDR, XR_PA_GFX_CTRL),
-    REG_W(XR_DATA, 0x0040),                 // set disp in tile
-    REG_W(XR_ADDR, XR_PA_TILE_CTRL),        // set 4-BPP BMAP
-    REG_W(XR_DATA, 0x000F),
-    REG_W(WR_INCR, 0x0001),
-    REG_W(WR_ADDR, 0x0000),
-    REG_UPLOAD(),
-    REG_WAITVSYNC(),        // show boot screen
-    REG_WAITVTOP(),         // show boot screen
     REG_W(XR_ADDR, XR_TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
     REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
@@ -550,6 +553,7 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_RW(XR_DATA),        // read TILEMEM
     REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
     REG_RW(XR_DATA),                      // read TILEMEM + 0x0a
+    REG_WAITVTOP(),                       // show boot screen
     REG_WAITVSYNC(),                      // show boot screen
     REG_W(XR_ADDR, XR_COPPER_MEM),        // setup copper program
 #if 0

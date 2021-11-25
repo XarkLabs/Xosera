@@ -90,6 +90,9 @@ logic [LFSR_SIZE-1:0]   LFSR            /* verilator public */;
 logic [15:0]            reg_LFSR        /* verilator public */;
 `endif
 
+logic mem_read_wait;
+assign mem_read_wait    = xr_rd | vram_rd | vram_rw_rd;
+
 // output interrupt mask
 assign intr_mask_o = intr_mask;
 
@@ -132,7 +135,7 @@ always_comb begin
         xv::XM_DATA_2:
             bus_data_o  = !bus_bytesel ? reg_rd_data[15:8]     : reg_rd_data[7:0];
         xv::XM_SYS_CTRL:
-            bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { busy_i, 3'b0, regs_wrmask_o };
+            bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { busy_i, mem_read_wait, 2'b0, regs_wrmask_o };
         xv::XM_TIMER:
             bus_data_o  = !bus_bytesel ? reg_timer[15:8]        : reg_timer[7:0];
 `ifdef ENABLE_LFSR

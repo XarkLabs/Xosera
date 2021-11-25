@@ -15,11 +15,21 @@
         },
         {
             "bits": 1,
+            "name": "wait",
+            "type": 3,
+            "attr": [
+                "0=okay",
+                "1=wait",
+                "read"
+            ]
+        },
+        {
+            "bits": 1,
             "name": "busy",
             "type": 6,
             "attr": [
-                "0 = idle",
-                "1 = busy",
+                "0=idle",
+                "1=busy",
                 "drawing"
             ]
         },

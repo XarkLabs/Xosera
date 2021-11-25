@@ -1081,7 +1081,7 @@ static void load_sd_colors(const char * filename)
     }
 }
 
-static void set_alpha(int alpha)
+void set_alpha_slow(int alpha)
 {
     uint16_t a = (alpha & 0xf) << 12;
     for (int i = XR_COLOR_MEM; i < XR_COLOR_MEM + 256; i++)
@@ -1089,6 +1089,19 @@ static void set_alpha(int alpha)
         wait_vsync();
         xm_setw(XR_ADDR, i);
         __asm__ __volatile__("nop ; nop ; nop ; nop ; nop ; nop ; nop");
+        uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
+        xm_setw(XR_DATA, v);
+    }
+}
+
+static void set_alpha(int alpha)
+{
+    uint16_t a = (alpha & 0xf) << 12;
+    for (int i = XR_COLOR_MEM; i < XR_COLOR_MEM + 256; i++)
+    {
+        xm_setw(XR_ADDR, i);
+        while (xm_getbl(SYS_CTRL) & 0x40)
+            ;
         uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
         xm_setw(XR_DATA, v);
     }

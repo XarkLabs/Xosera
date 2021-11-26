@@ -44,7 +44,7 @@ module tilemem
     input  wire word_t             wr_data_i
 );
 // infer 16x4KB tile BRAM
-word_t bram[0 : 2**AWIDTH-1] /* verilator public*/;
+word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 `ifndef SHOW        // yosys show command doesn't like "too long" init string
 initial begin
 

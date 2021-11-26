@@ -41,7 +41,7 @@ localparam [11:0] version = 12'H`VERSION;
 logic [8*8:1]  logostring = "Xosera v";    // boot msg
 `endif
 
-logic [15: 0] memory[0: 65535] /* verilator public*/;
+word_t memory[0: 65535] /* verilator public*/;
 
 // clear RAM to avoid simulation errors
 initial begin
@@ -106,15 +106,15 @@ end
 
 `else
 
-logic         select0;          // bank0 selected
-logic [15: 0] data0;            // data output from bank0
-logic         select1;          // bank1 selected
-logic [15: 0] data1;            // data output from bank1
-logic         select2;          // bank2 selected
-logic [15: 0] data2;            // data output from bank2
-logic         select3;          // bank3 selected
-logic [15: 0] data3;            // data output from bank3
-logic   [1:0] read_bank;      // selected bank from last access for read
+logic           select0;          // bank0 selected
+word_t          data0;            // data output from bank0
+logic           select1;          // bank1 selected
+word_t          data1;            // data output from bank1
+logic           select2;          // bank2 selected
+word_t          data2;            // data output from bank2
+logic           select3;          // bank3 selected
+word_t          data3;            // data output from bank3
+logic   [1:0]   read_bank;      // selected bank from last access for read
 
 assign select0   =  (address_in[15:14] == 2'b00);
 assign select1   =  (address_in[15:14] == 2'b01);

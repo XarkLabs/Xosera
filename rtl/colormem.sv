@@ -27,7 +27,7 @@ module colormem#(
            input  wire word_t               wr_data_i
        );
 // infer 16x256 color BRAM
-logic [15: 0] bram[0 : 2**AWIDTH-1] /* verilator public*/;
+word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 
 initial begin
     if (PLAYFIELD == "A") begin

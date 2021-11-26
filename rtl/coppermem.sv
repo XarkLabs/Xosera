@@ -30,7 +30,7 @@ module coppermem
 // Note this is only half of copper mem - there are two
 // of these memories (odd and even) to give 32-bit
 // interface internally to the copper.
-logic [15: 0] bram[0 : 2**AWIDTH-1] /* verilator public*/;
+word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 
 `ifndef SYNTHESIS
 initial begin

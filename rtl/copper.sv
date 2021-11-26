@@ -153,22 +153,22 @@
 `include "xosera_pkg.sv"
 
 module copper(
-    output       logic          xr_wr_en_o,         // for all XR writes
-    input   wire logic          xr_wr_ack_i,        // for all XR writes
-    output       logic [15:0]   xr_wr_addr_o,       // for all XR writes
-    output       logic [15:0]   xr_wr_data_o,       // for all XR writes
+    output       logic          xr_wr_en_o,             // for all XR writes
+    input   wire logic          xr_wr_ack_i,            // for all XR writes
+    output       addr_t         xr_wr_addr_o,           // for all XR writes
+    output       word_t         xr_wr_data_o,           // for all XR writes
     output       logic [C_PC:0] coppermem_rd_addr_o,
     output       logic          coppermem_rd_en_o,
     input   wire logic [31:0]   coppermem_rd_data_i,    // NOTE: 16-bit even/odd combined
     input   wire logic          copp_reg_wr_i,          // strobe to write internal config register
-    input   wire logic [15:0]   copp_reg_data_i,        // data for internal config register
+    input   wire word_t         copp_reg_data_i,        // data for internal config register
     input   wire logic [10:0]   h_count_i,
     input   wire logic [10:0]   v_count_i,
     input   wire logic          reset_i,
     input   wire logic          clk
     );
 
-localparam C_PC = xv::COPPER_AWIDTH-1;               // short copper PC upper range alias
+localparam C_PC = xv::COPP_W-1;               // short copper PC upper range alias
 
 // instruction register
 typedef enum logic [2:0] {
@@ -205,13 +205,13 @@ logic          copper_en;
 logic [4:0]   reg_reserved;
 /* verilator lint_on UNUSED */
 
-logic         ram_rd_strobe     = 1'b0;
+logic         ram_rd_strobe = 1'b0;
 
-assign coppermem_rd_en_o        = ram_rd_strobe;
-assign coppermem_rd_addr_o      = copper_pc;
+assign coppermem_rd_en_o    = ram_rd_strobe;
+assign coppermem_rd_addr_o  = copper_pc;
 
-logic [15:0]  ram_wr_data_out;
-logic [15:0]  ram_wr_addr_out;
+word_t        ram_wr_data_out;
+addr_t        ram_wr_addr_out;
 
 logic         xr_wr_en;
 
@@ -220,8 +220,8 @@ assign xr_wr_addr_o         = ram_wr_addr_out;
 assign xr_wr_data_o         = ram_wr_data_out;
 
 logic         copp_reset;
-always_comb   copp_reset  = h_count_i == xv::VISIBLE_WIDTH + xv::H_FRONT_PORCH + xv::H_SYNC_PULSE + xv::H_BACK_PORCH - 4 &&
-                            v_count_i == xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH + xv::V_SYNC_PULSE + xv::V_BACK_PORCH - 1;
+always_comb   copp_reset    = (h_count_i == xv::TOTAL_WIDTH - 4) &&
+                              (v_count_i == xv::TOTAL_HEIGHT - 1);
 
 // The following are setup in STATE_PRECOMP for use in
 // STATE_EXEC if needed...
@@ -234,7 +234,7 @@ logic [C_PC:0] copper_pc_skip;
 logic          ignore_v;
 logic          ignore_h;
 logic [C_PC:0] copper_pc_jmp;
-logic [15:0]   move_data;
+word_t         move_data;
 logic  [7:0]   move_r_addr;
 logic  [8:0]   move_p_addr;
 logic [12:0]   move_f_addr;
@@ -242,37 +242,37 @@ logic [10:0]   move_c_addr_v_pos;
 logic [10:0]   h_pos;
 logic  [2:0]   opcode;
 
-assign ignore_v                 = r_insn[0];
-assign ignore_h                 = r_insn[1];
-assign copper_pc_jmp            = r_insn[26:17];
-assign move_data                = r_insn[15:0];
-assign move_r_addr              = r_insn[23:16];
-assign move_p_addr              = r_insn[24:16];
-assign move_f_addr              = r_insn[28:16];
-assign move_c_addr_v_pos        = r_insn[26:16];
-assign h_pos                    = r_insn[14:4];
-assign opcode                   = r_insn[31:29];
+assign ignore_v             = r_insn[0];
+assign ignore_h             = r_insn[1];
+assign copper_pc_jmp        = r_insn[26:17];
+assign move_data            = r_insn[15:0];
+assign move_r_addr          = r_insn[23:16];
+assign move_p_addr          = r_insn[24:16];
+assign move_f_addr          = r_insn[28:16];
+assign move_c_addr_v_pos    = r_insn[26:16];
+assign h_pos                = r_insn[14:4];
+assign opcode               = r_insn[31:29];
 
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        copper_en               <= 1'b0;
-        copper_init_pc          <= 10'h0;
-        copper_pc               <= 10'h0;
+        copper_en           <= 1'b0;
+        copper_init_pc      <= 10'h0;
+        copper_pc           <= 10'h0;
 
-        copper_ex_state         <= STATE_INIT;
-        ram_rd_strobe           <= 1'b0;
+        copper_ex_state     <= STATE_INIT;
+        ram_rd_strobe       <= 1'b0;
 
-        xr_wr_en                <= 1'b0;
+        xr_wr_en            <= 1'b0;
     end
     else begin
-        ram_rd_strobe           <= 1'b0;
+        ram_rd_strobe       <= 1'b0;
 
         // video register write
         if (copp_reg_wr_i) begin
-            copper_en       <= copp_reg_data_i[15];
-            reg_reserved    <= copp_reg_data_i[14:10];
-            copper_init_pc  <= copp_reg_data_i[C_PC:0];
+            copper_en           <= copp_reg_data_i[15];
+            reg_reserved        <= copp_reg_data_i[14:10];
+            copper_init_pc      <= copp_reg_data_i[C_PC:0];
         end
 
         // only clear XR write enable when ack'd
@@ -282,8 +282,8 @@ always_ff @(posedge clk) begin
 
         // Main logic
         if (copp_reset) begin
-            copper_ex_state         <= STATE_INIT;
-            copper_pc               <= copper_init_pc;
+            copper_ex_state     <= STATE_INIT;
+            copper_pc           <= copper_init_pc;
         end
         else begin
             case (copper_ex_state)

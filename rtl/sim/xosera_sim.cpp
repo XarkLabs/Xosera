@@ -930,6 +930,7 @@ int main(int argc, char ** argv)
 
         if (frame_num > 1)
         {
+#if 0
             if (top->xosera_main->vram_arb->regs_ack_o)
             {
                 if (top->xosera_main->vram_arb->regs_wr_i)
@@ -968,6 +969,7 @@ int main(int argc, char ** argv)
                                top->xosera_main->xrmem_arb->copp_xr_addr_i,
                                top->xosera_main->xrmem_arb->copp_xr_data_i);
             }
+#endif
         }
 
         bool hsync = H_SYNC_POLARITY ? top->hsync_o : !top->hsync_o;
@@ -976,7 +978,7 @@ int main(int argc, char ** argv)
 #if SDL_RENDER
         if (sim_render)
         {
-            if (top->xosera_main->dv_de_o)
+            if (top->dv_de_o)
             {
                 // sim_render current VGA output pixel (4 bits per gun)
                 SDL_SetRenderDrawColor(renderer,

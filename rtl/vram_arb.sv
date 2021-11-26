@@ -16,54 +16,66 @@ module vram_arb
 (
     // video generation access (read-only)
     input  wire logic           vgen_sel_i,
-    input  wire logic [15:0]    vgen_addr_i,
+    input  wire addr_t          vgen_addr_i,
 
     // register interface access (read/write)
-    input  wire logic           regs_sel_i        /* verilator public */,
-    output      logic           regs_ack_o        /* verilator public */,
-    input  wire logic           regs_wr_i        /* verilator public */,
+    input  wire logic           regs_sel_i,
+    output      logic           regs_ack_o,
+    input  wire logic           regs_wr_i,
     input  wire logic  [3:0]    regs_wr_mask_i,
-    input  wire logic [15:0]    regs_addr_i        /* verilator public */,
-    input  wire logic [15:0]    regs_data_i        /* verilator public */,
+    input  wire addr_t          regs_addr_i,
+    input  wire word_t          regs_data_i,
 
+`ifdef ENABLE_BLIT
     // TODO: 2D blit access (read/write)
     input  wire logic           blit_sel_i,
     output      logic           blit_ack_o,
     input  wire logic           blit_wr_i,
     input  wire logic  [3:0]    blit_wr_mask_i,
-    input  wire logic [15:0]    blit_addr_i,
-    input  wire logic [15:0]    blit_data_i,
+    input  wire addr_t          blit_addr_i,
+    input  wire word_t          blit_data_i,
+`endif
 
+`ifdef ENABLE_DRAW
     // TODO: polygon draw access (read/write)
     input  wire logic           draw_sel_i,
     output      logic           draw_ack_o,
     input  wire logic           draw_wr_i,
     input  wire logic  [3:0]    draw_wr_mask_i,
-    input  wire logic [15:0]    draw_addr_i,
-    input  wire logic [15:0]    draw_data_i,
+    input  wire addr_t          draw_addr_i,
+    input  wire word_t          draw_data_i,
+`endif
 
     // common VRAM data output
-    output      logic [15:0]    vram_data_o        /* verilator public */,
+    output      word_t          vram_data_o,
 
     input  wire logic           clk
 );
 
 // internal VRAM signals
-logic           vram_sel        /* verilator public */;
-logic           vram_wr         /* verilator public */;
-logic  [3:0]    vram_wr_mask    /* verilator public */;
-logic [15:0]    vram_addr       /* verilator public */;
-logic [15:0]    vram_data_in    /* verilator public */;
+logic           vram_sel;
+logic           vram_wr;
+logic  [3:0]    vram_wr_mask;
+addr_t          vram_addr;
+word_t          vram_data_in;
 
 // ack signals
 logic           regs_ack_next;
+`ifdef ENABLE_BLIT
 logic           blit_ack_next;
+`endif
+`ifdef ENABLE_DRAW
 logic           draw_ack_next;
+`endif
 
 always_comb begin
     regs_ack_next   = 1'b0;
+`ifdef ENABLE_BLIT
     blit_ack_next   = 1'b0;
+`endif
+`ifdef ENABLE_DRAW
     draw_ack_next   = 1'b0;
+`endif
     vram_sel        = 1'b0;
     vram_wr         = 1'b0;
     vram_addr       = regs_addr_i;
@@ -82,14 +94,19 @@ always_comb begin
         vram_addr       = regs_addr_i;
         vram_wr_mask    = regs_wr_mask_i;
         vram_data_in    = regs_data_i;
-    end else if (blit_sel_i & ~blit_ack_o) begin
+    end
+`ifdef ENABLE_BLIT
+    else if (blit_sel_i & ~blit_ack_o) begin
         blit_ack_next   = 1'b1;
         vram_sel        = 1'b1;
         vram_wr         = blit_wr_i;
         vram_addr       = blit_addr_i;
         vram_wr_mask    = blit_wr_mask_i;
         vram_data_in    = blit_data_i;
-    end else if (draw_sel_i & ~draw_ack_o) begin
+    end
+`endif
+`ifdef ENABLE_DRAW
+    else if (draw_sel_i & ~draw_ack_o) begin
         draw_ack_next   = 1'b1;
         vram_sel        = 1'b1;
         vram_wr         = draw_wr_i;
@@ -97,12 +114,17 @@ always_comb begin
         vram_wr_mask    = draw_wr_mask_i;
         vram_data_in    = draw_data_i;
     end
+`endif
 end
 
 always_ff @(posedge clk) begin
     regs_ack_o  <= regs_ack_next;
+`ifdef ENABLE_BLIT
     blit_ack_o  <= blit_ack_next;
+`endif
+`ifdef ENABLE_DRAW
     draw_ack_o  <= draw_ack_next;
+`endif
 end
 
 vram vram(

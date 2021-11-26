@@ -50,13 +50,13 @@ logic [7: 0] bus_data_out;
 
 integer i, j, f;
 integer frame;
-logic [15:0] test_addr;
-logic [15:0] test_inc;
-logic [15:0] test_addr2;
-logic [15:0] test_data0;
-logic [15:0] test_data1;
-logic [15:0] test_data2;
-logic [15:0] test_data3;
+addr_t       test_addr;
+word_t       test_inc;
+addr_t       test_addr2;
+word_t       test_data0;
+word_t       test_data1;
+word_t       test_data2;
+word_t       test_data3;
 
 /* verilator lint_on UNUSED */
 
@@ -85,7 +85,9 @@ xosera_main xosera(
 parameter CLK_PERIOD    = (1000000000.0 / PIXEL_FREQ);
 parameter M68K_PERIOD   = 80;
 
-logic [15:0] readword;
+/* verilator lint_off UNUSED */
+word_t       readword;
+/* verilator lint_on UNUSED */
 
 integer logfile;
 
@@ -161,7 +163,7 @@ endtask
 
 task xvid_setw(
     input  logic [3:0]   r_num,
-    input  logic [15:0]   data
+    input  word_t         data
     );
 
     write_reg(1'b0, r_num, data[15:8]);
@@ -391,7 +393,7 @@ end
 `endif
 
 integer flag = 0;
-logic [15:0] last_rd_addr = 0;
+addr_t       last_rd_addr = 0;
 always @(negedge clk) begin
     if (xosera.reg_interface.regs_vram_sel_o) begin
         if (xosera.reg_interface.regs_wr_o) begin

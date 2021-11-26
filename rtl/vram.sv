@@ -17,9 +17,9 @@ module vram(
            input  wire logic        sel,
            input  wire logic        wr_en,
            input  wire logic  [3:0] wr_mask,
-           input  wire logic [15:0] address_in,
-           input  wire logic [15:0] data_in,
-           output      logic [15:0] data_out
+           input  wire addr_t       address_in,
+           input  wire word_t       data_in,
+           output      word_t       data_out
        );
 
 `ifndef SYNTHESIS
@@ -41,7 +41,7 @@ localparam [11:0] version = 12'H`VERSION;
 logic [8*8:1]  logostring = "Xosera v";    // boot msg
 `endif
 
-logic [15: 0] memory[0: 65535] /* verilator public */;
+logic [15: 0] memory[0: 65535] /* verilator public*/;
 
 // clear RAM to avoid simulation errors
 initial begin
@@ -108,11 +108,11 @@ end
 
 logic         select0;          // bank0 selected
 logic [15: 0] data0;            // data output from bank0
-logic         select1;          // bank1 selected  
+logic         select1;          // bank1 selected
 logic [15: 0] data1;            // data output from bank1
-logic         select2;          // bank2 selected  
+logic         select2;          // bank2 selected
 logic [15: 0] data2;            // data output from bank2
-logic         select3;          // bank3 selected  
+logic         select3;          // bank3 selected
 logic [15: 0] data3;            // data output from bank3
 logic   [1:0] read_bank;      // selected bank from last access for read
 

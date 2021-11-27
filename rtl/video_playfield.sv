@@ -16,24 +16,24 @@ module video_playfield(
     // video control signals
     input  wire logic           stall_i,
     input  wire logic           v_visible_i,
-    input  wire logic [10:0]    h_count_i,
+    input  wire xv::hres_t      h_count_i,
     input  wire logic           h_line_last_pixel_i,
     input  wire logic           last_frame_pixel_i,
-    input  wire logic  [7:0]    border_color_i,
-    input  wire logic  [10:0]   vid_left_i,
-    input  wire logic  [10:0]   vid_right_i,
+    input  wire xv::color_t     border_color_i,
+    input  wire xv::hvisres_t   vid_left_i,
+    input  wire xv::hvisres_t   vid_right_i,
     // video memories
     output      logic           vram_sel_o,                         // vram read select
     output      addr_t          vram_addr_o,                        // vram word address out (16x64K)
     input  wire word_t          vram_data_i,                        // vram word data in
     output      logic           tilemem_sel_o,                      // tile mem read select
-    output      logic [xv::TILE_W-1:0] tilemem_addr_o,              // tile mem word address out (16x5K)
+    output      xv::tile_addr_t tilemem_addr_o,              // tile mem word address out (16x5K)
     input  wire word_t          tilemem_data_i,                     // tile mem word data in
     // playfield generation control signals
     input  wire logic           pf_blank_i,                         // disable plane
     input  wire addr_t          pf_start_addr_i,                    // display data start address (word address)
     input  wire word_t          pf_line_len_i,                      // words per disply line (added to line_addr each line)
-    input  wire logic  [7:0]    pf_colorbase_i,                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+    input  wire xv::color_t     pf_colorbase_i,                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
     input  wire logic  [1:0]    pf_bpp_i,                           // bpp code (bpp_depth_t)
     input  wire logic           pf_bitmap_i,                        // bitmap enable (else text mode)
     input  wire logic  [5:0]    pf_tile_bank_i,                     // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
@@ -47,15 +47,15 @@ module video_playfield(
     input  wire logic           pf_gfx_ctrl_set_i,                  // true if pf_gfx_ctrl_i changed (register write)
     input  wire logic           pf_line_start_set_i,                // true if pf_line_start_i changed (register write)
     input  wire addr_t          pf_line_start_addr_i,               // address of next line display data start
-    output      logic  [7:0]    pf_color_index_o,                   // output color
+    output      xv::color_t     pf_color_index_o,                   // output color
 
     input  wire logic           reset_i,                            // system reset in
     input  wire clk                                                 // pixel clock
 );
 
-localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-64;        // memory prefetch starts early
-localparam H_MEM_END = xv::TOTAL_WIDTH-8;               // memory fetch can end a bit early
-localparam H_SCANOUT_BEGIN = xv::OFFSCREEN_WIDTH-2;     // h count for start line scanout
+localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;        // memory prefetch starts early
+localparam H_MEM_END        = xv::TOTAL_WIDTH-8;               // memory fetch can end a bit early
+localparam H_SCANOUT_BEGIN  = xv::OFFSCREEN_WIDTH-2;     // h count for start line scanout
 
 // display line fetch generation FSM
 typedef enum logic [3:0] {
@@ -82,10 +82,10 @@ typedef enum logic [3:0] {
 logic           scanout;                            // scanout active
 logic           scanout_start;                      // scanout start strobe
 logic           scanout_end;                        // scanout stop strobe
-logic [10:0]    scanout_start_hcount;               // horizontal pixel count to start scanout
-logic [10:0]    scanout_end_hcount;                 // horizontal pixel count to stop scanout
+xv::hres_t      scanout_start_hcount;               // horizontal pixel count to start scanout
+xv::hres_t      scanout_end_hcount;                 // horizontal pixel count to stop scanout
 logic           mem_fetch_active;                   // true when fetching display data
-logic [10:0]    mem_fetch_hcount;                   // horizontal count when mem_fetch_active toggles
+xv::hres_t      mem_fetch_hcount;                   // horizontal count when mem_fetch_active toggles
 logic           mem_fetch_next;
 logic           h_start_line_fetch;
 
@@ -129,9 +129,9 @@ always_comb     mem_fetch_next = (v_visible_i && h_count_i == mem_fetch_hcount) 
 always_comb begin
     // set mem_fetch_active next toggle for video memory access
     if (mem_fetch_active) begin
-        mem_fetch_hcount = H_MEM_END[10:0];
+        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_END);
     end else begin
-        mem_fetch_hcount = H_MEM_BEGIN[10:0];
+        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_BEGIN);
     end
 end
 
@@ -349,8 +349,8 @@ always_ff @(posedge clk) begin
 
         mem_fetch_active    <= 1'b0;            // true enables display memory fetch
         scanout             <= 1'b0;
-        scanout_start_hcount<= 11'b0;
-        scanout_end_hcount  <= 11'b0;
+        scanout_start_hcount<= '0;
+        scanout_end_hcount  <= '0;
 
         pf_fetch            <= FETCH_IDLE;
         fetch_addr          <= 16'h0000;
@@ -394,7 +394,7 @@ always_ff @(posedge clk) begin
         vram_sel_o      <= vram_sel_next;
         vram_addr_o     <= fetch_addr_next;
         tilemem_sel_o   <= tilemem_sel_next;
-        tilemem_addr_o  <= fetch_addr_next[xv::TILE_W-1:0];
+        tilemem_addr_o  <= $bits(tilemem_addr_o)'(fetch_addr_next);
 
         // have display words been fetched?
         if (pf_words_ready) begin
@@ -492,8 +492,8 @@ always_ff @(posedge clk) begin
         if (h_start_line_fetch) begin       // on line fetch start signal
             pf_initial_buf          <= 1'b1;
             pf_pixels_buf_full      <= 1'b0;
-            scanout_start_hcount    <= scanout_start_hcount - {5'b0, pf_fine_hscroll_i};
-            scanout_end_hcount      <= H_SCANOUT_BEGIN[10:0] + vid_right_i;
+            scanout_start_hcount    <= scanout_start_hcount - $bits(scanout_start_hcount)'(pf_fine_hscroll_i);
+            scanout_end_hcount      <= $bits(scanout_end_hcount)'(H_SCANOUT_BEGIN) + vid_right_i;
 
             pf_addr                 <= pf_line_start;       // set start address for this line
 
@@ -540,7 +540,7 @@ always_ff @(posedge clk) begin
                 end
             end
 
-            scanout_start_hcount    <= H_SCANOUT_BEGIN[10:0] + vid_left_i;
+            scanout_start_hcount    <= $bits(scanout_start_hcount)'(H_SCANOUT_BEGIN) + vid_left_i;
         end
 
         // end of frame or blanked, prepare for next frame

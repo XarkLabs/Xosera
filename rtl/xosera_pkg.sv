@@ -405,6 +405,16 @@ localparam PLL_DIVQ    =    3'b011;         // DIVQ =  3
 localparam PCLK_HZ     =    25_175_000;     // standard VGA
 `endif
 
+typedef logic [$clog2(TOTAL_WIDTH)-1:0]   hres_t;
+typedef logic [$clog2(TOTAL_HEIGHT)-1:0]  vres_t;
+
+typedef logic [$clog2(TOTAL_WIDTH)-1:0]   hvisres_t;
+typedef logic [$clog2(TOTAL_HEIGHT)-1:0]  vvisres_t;
+
+typedef logic [TILE_W-1:0]  tile_addr_t;    // tile address
+typedef logic [COPP_W-1:0]  copp_addr_t;    // copper address
+typedef logic [COLOR_W-1:0] color_t;        // color look up index
+
 /* verilator lint_on UNUSED */
 
 endpackage

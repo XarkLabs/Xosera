@@ -38,16 +38,16 @@ module xrmem_arb
 
     // color lookup colormem A+B 2 x 16-bit bus (read-only)
     input  wire logic                           vgen_color_sel_i,
-    input  wire logic [xv::COLOR_W-1:0]         vgen_colorA_addr_i,
+    input  wire xv::color_t                     vgen_colorA_addr_i,
     output      argb_t                          vgen_colorA_data_o,
 `ifdef ENABLE_PF_B
-    input  wire logic [xv::COLOR_W-1:0]         vgen_colorB_addr_i,
+    input  wire xv::color_t                     vgen_colorB_addr_i,
     output      argb_t                          vgen_colorB_data_o,
 `endif
 
     // video generation tilemem bus (read-only)
     input  wire logic                           vgen_tile_sel_i,
-    input  wire logic [xv::TILE_W-1:0]          vgen_tile_addr_i,
+    input  wire xv::tile_addr_t                 vgen_tile_addr_i,
     output      word_t                          vgen_tile_data_o,
 
 `ifdef ENABLE_COPP
@@ -73,8 +73,8 @@ argb_t                          colorB_data_out;
 // internal TILEMEM signals
 logic                           tile_rd_en;
 logic                           tile_wr_en;
-logic [xv::TILE_W-1:0]          tile_addr;
-logic [xv::TILE_W-1:0]          tile_addr_next;
+xv::tile_addr_t                 tile_addr;
+xv::tile_addr_t                 tile_addr_next;
 word_t                          tile_data_out;
 word_t                          tile2_data_out;
 
@@ -240,9 +240,9 @@ always_comb begin
     end else if (xr_sel_i & ~xr_ack_o) begin
         color_rd_ack_next   = xr_color_sel & ~xr_wr_i;;
         color_rd_en         = xr_color_sel & ~xr_wr_i;;
-        colorA_addr         = xr_addr_i[7:0];
+        colorA_addr         = $bits(colorA_addr)'(xr_addr_i);
 `ifdef ENABLE_PF_B
-        colorB_addr         = xr_addr_i[7:0];
+        colorB_addr         = $bits(colorB_addr)'(xr_addr_i);
 `endif
     end
 end
@@ -258,7 +258,7 @@ always_comb begin
     end else if (xr_sel_i & ~xr_ack_o) begin
         tile_rd_ack_next    = xr_tile_sel & ~xr_wr_i;
         tile_rd_en          = xr_tile_sel & ~xr_wr_i;
-        tile_addr_next      = xr_addr_i[xv::TILE_W-1:0];
+        tile_addr_next      = $bits(tile_addr_next)'(xr_addr_i);
     end
 end
 

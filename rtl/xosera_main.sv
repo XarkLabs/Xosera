@@ -62,11 +62,11 @@ logic                   dv_de;              // display enable
 logic                   hsync;              // hsync
 logic                   vsync;              // vsync
 
-logic  [7:0]            colorA_index; // pf A color index
+xv::color_t             colorA_index; // pf A color index
 argb_t                  colorA_xrgb; // pf A ARGB output
 
 `ifdef ENABLE_PF_B
-logic  [7:0]            colorB_index; // pf B color index
+xv::color_t             colorB_index; // pf B color index
 argb_t                  colorB_xrgb; // pf B ARGB output
 `endif
 
@@ -125,8 +125,8 @@ addr_t                  copp_xr_addr;
 word_t                  copp_xr_data_out;
 logic                   copp_reg_wr;
 word_t                  copp_reg_data;
-logic [10:0]            video_h_count;
-logic [10:0]            video_v_count;
+xv::hres_t              video_h_count;
+xv::vres_t              video_v_count;
 `endif
 
 // XR register bus access
@@ -149,7 +149,7 @@ word_t                  xm_regs_data_in;    // register interface bus VRAM/XR da
 
 // vgen tile memory read signals
 logic                   vgen_tile_sel;
-logic [xv::TILE_W-1:0]  vgen_tile_addr;
+xv::tile_addr_t         vgen_tile_addr;
 word_t                  vgen_tile_data;
 
 // interrupt management signals

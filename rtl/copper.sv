@@ -162,8 +162,8 @@ module copper(
     input   wire logic [31:0]   coppermem_rd_data_i,    // NOTE: 16-bit even/odd combined
     input   wire logic          copp_reg_wr_i,          // strobe to write internal config register
     input   wire word_t         copp_reg_data_i,        // data for internal config register
-    input   wire logic [10:0]   h_count_i,
-    input   wire logic [10:0]   v_count_i,
+    input   wire xv::hres_t     h_count_i,
+    input   wire xv::vres_t     v_count_i,
     input   wire logic          reset_i,
     input   wire logic          clk
     );
@@ -238,27 +238,27 @@ word_t         move_data;
 logic  [7:0]   move_r_addr;
 logic  [8:0]   move_p_addr;
 logic [12:0]   move_f_addr;
-logic [10:0]   move_c_addr_v_pos;
-logic [10:0]   h_pos;
+xv::vres_t     move_c_addr_v_pos;
+xv::hres_t     h_pos;
 logic  [2:0]   opcode;
 
 assign ignore_v             = r_insn[0];
 assign ignore_h             = r_insn[1];
-assign copper_pc_jmp        = r_insn[26:17];
+assign copper_pc_jmp        = r_insn[17+:$bits(copper_pc_jmp)];
 assign move_data            = r_insn[15:0];
-assign move_r_addr          = r_insn[23:16];
-assign move_p_addr          = r_insn[24:16];
-assign move_f_addr          = r_insn[28:16];
-assign move_c_addr_v_pos    = r_insn[26:16];
-assign h_pos                = r_insn[14:4];
+assign move_r_addr          = r_insn[16+:$bits(move_r_addr)];
+assign move_p_addr          = r_insn[16+:$bits(move_p_addr)];
+assign move_f_addr          = r_insn[16+:$bits(move_f_addr)];
+assign move_c_addr_v_pos    = r_insn[16+:$bits(move_c_addr_v_pos)];
+assign h_pos                = r_insn[4+:$bits(h_pos)];
 assign opcode               = r_insn[31:29];
 
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
         copper_en           <= 1'b0;
-        copper_init_pc      <= 10'h0;
-        copper_pc           <= 10'h0;
+        copper_init_pc      <= '0;
+        copper_pc           <= '0;
 
         copper_ex_state     <= STATE_INIT;
         ram_rd_strobe       <= 1'b0;
@@ -470,9 +470,9 @@ always_ff @(posedge clk) begin
                         INSN_MOVEC: begin
                             // movec
                             xr_wr_en                <= 1'b1;
-                            ram_wr_addr_out[15:11]  <= xv::XR_COPPER_MEM[15:11];
-                            ram_wr_addr_out[10:0]   <= move_c_addr_v_pos;
-                            ram_wr_data_out         <= move_data;
+                            ram_wr_addr_out[15:xv::COPP_W]  <= xv::XR_COPPER_MEM[15:xv::COPP_W];
+                            ram_wr_addr_out[xv::COPP_W-1:0] <= move_c_addr_v_pos[xv::COPP_W-1:0];
+                            ram_wr_data_out                 <= move_data;
 
                             // Setup fetch next instruction
                             copper_ex_state         <= STATE_WAIT;

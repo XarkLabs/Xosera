@@ -21,54 +21,54 @@
 
 module video_gen(
     // video registers and control
-    input  wire logic            vgen_reg_wr_en_i,      // strobe to write internal config register number
-    input  wire logic  [4:0]     vgen_reg_num_i,        // internal config register number (for reads)
-    input  wire word_t           vgen_reg_data_i,       // data for internal config register
-    output      word_t           vgen_reg_data_o,       // register/status data reads
-    input wire  logic  [3:0]     intr_status_i,         // interrupt pending status
-    output      logic  [3:0]     intr_signal_o,         // generate interrupt signal
+    input  wire logic           vgen_reg_wr_en_i,      // strobe to write internal config register number
+    input  wire logic  [4:0]    vgen_reg_num_i,        // internal config register number (for reads)
+    input  wire word_t          vgen_reg_data_i,       // data for internal config register
+    output      word_t          vgen_reg_data_o,       // register/status data reads
+    input wire  logic  [3:0]    intr_status_i,         // interrupt pending status
+    output      logic  [3:0]    intr_signal_o,         // generate interrupt signal
 `ifdef ENABLE_COPP
     // outputs for copper
-    output      logic            copp_reg_wr_o,         // COPP_CTRL write strobe
-    output      word_t           copp_reg_data_o,       // copper reg data
-    output      logic [10:0]     h_count_o,             // Horizontal video counter
-    output      logic [10:0]     v_count_o,             // Vertical video counter
+    output      logic           copp_reg_wr_o,         // COPP_CTRL write strobe
+    output      word_t          copp_reg_data_o,       // copper reg data
+    output      xv::hres_t      h_count_o,             // Horizontal video counter
+    output      xv::vres_t      v_count_o,             // Vertical video counter
 `endif
     // video memories
-    output      logic            vram_sel_o,            // vram read select
-    output      addr_t           vram_addr_o,           // vram word address out (16x64K)
-    input  wire word_t           vram_data_i,           // vram word data in
-    output      logic            tilemem_sel_o,         // tile mem read select
-    output      logic [xv::TILE_W-1:0] tilemem_addr_o,  // tile mem word address out (16x5K)
-    input  wire word_t           tilemem_data_i,        // tile mem word data in
+    output      logic           vram_sel_o,            // vram read select
+    output      addr_t          vram_addr_o,           // vram word address out (16x64K)
+    input  wire word_t          vram_data_i,           // vram word data in
+    output      logic           tilemem_sel_o,         // tile mem read select
+    output      xv::tile_addr_t tilemem_addr_o,  // tile mem word address out (16x5K)
+    input  wire word_t          tilemem_data_i,        // tile mem word data in
     // video signal outputs
-    output      logic  [7:0]     colorA_index_o,        // color palette index output (16x256)
+    output      xv::color_t     colorA_index_o,        // color palette index output (16x256)
 `ifdef ENABLE_PF_B
-    output      logic  [7:0]     colorB_index_o,        // color palette index output (16x256)
+    output      xv::color_t     colorB_index_o,        // color palette index output (16x256)
 `endif
-    output      logic            vsync_o, hsync_o,      // video sync outputs
-    output      logic            dv_de_o,               // video active signal (needed for HDMI)
+    output      logic           vsync_o, hsync_o,      // video sync outputs
+    output      logic           dv_de_o,               // video active signal (needed for HDMI)
     // standard signals
-    input  wire logic            reset_i,               // system reset in
-    input  wire logic            clk                    // clock (video pixel clock)
+    input  wire logic           reset_i,               // system reset in
+    input  wire logic           clk                    // clock (video pixel clock)
 );
 
 localparam [31:0] githash = 32'H`GITHASH;
 
 // video generation signals
-logic [7:0]         border_color;
-logic [10:0]        cursor_x;
-logic [10:0]        cursor_y;
-logic [10:0]        vid_top;
-logic [10:0]        vid_bottom;
-logic [10:0]        vid_left;
-logic [10:0]        vid_right;
+xv::color_t         border_color;
+xv::hvisres_t       cursor_x;
+xv::vvisres_t       cursor_y;
+xv::vvisres_t       vid_top;
+xv::vvisres_t       vid_bottom;
+xv::hvisres_t       vid_left;
+xv::hvisres_t       vid_right;
 
 // playfield A generation control signals
 logic               pa_blank;                           // disable plane A
 addr_t              pa_start_addr;                      // display data start address (word address)
 word_t              pa_line_len;                        // words per disply line (added to line_addr each line)
-logic  [7:0]        pa_colorbase;                       // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+xv::color_t         pa_colorbase;                       // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
 logic  [1:0]        pa_bpp;                             // bpp code (bpp_depth_t)
 logic               pa_bitmap;                          // bitmap enable (else text mode)
 logic  [5:0]        pa_tile_bank;                       // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
@@ -81,20 +81,20 @@ logic  [4:0]        pa_fine_hscroll;                    // horizontal fine scrol
 logic  [5:0]        pa_fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
 logic               pa_line_start_set;                  // true if pa_line_start changed (register write)
 logic               pa_gfx_ctrl_set;                    // true if pa_gfx_ctrl changed (register write)
-logic  [7:0]        pa_color_index;                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+xv::color_t         pa_color_index;                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
 
 // video memories
 logic               pa_vram_sel;                        // vram read select
 addr_t              pa_vram_addr;                       // vram word address out (16x64K)
 logic               pa_tile_sel;                        // tile mem read select
-logic [xv::TILE_W-1:0] pa_tile_addr;                    // tile mem word address out (16x5K)
+xv::tile_addr_t     pa_tile_addr;                    // tile mem word address out (16x5K)
 
 `ifdef ENABLE_PF_B
 // playfield B generation control signals
 logic               pb_blank;                           // disable plane B
 logic [15:0]        pb_start_addr;                      // display data start address (word address)
 word_t              pb_line_len;                        // words per disply line (added to line_addr each line)
-logic  [7:0]        pb_colorbase;                       // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+xv::color_t         pb_colorbase;                       // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
 logic  [1:0]        pb_bpp;                             // bpp code (bpp_depth_t)
 logic               pb_bitmap;                          // bitmap enable (else text mode)
 logic  [5:0]        pb_tile_bank;                       // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
@@ -107,14 +107,14 @@ logic  [4:0]        pb_fine_hscroll;                    // horizontal fine scrol
 logic  [5:0]        pb_fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
 logic               pb_line_start_set;                  // true if pa_line_start changed (register write)
 logic               pb_gfx_ctrl_set;                    // true if pa_gfx_ctrl changed (register write)
-logic  [7:0]        pb_color_index;                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+xv::color_t         pb_color_index;                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
 
 // video memories
 logic               pb_stall;
 logic               pb_vram_sel;                        // vram read select
 addr_t              pb_vram_addr;                       // vram word address out (16x64K)
 logic               pb_tile_sel;                        // tile mem read select
-logic [xv::TILE_W-1:0] pb_tile_addr;                    // tile mem word address out (16x5K)
+xv::tile_addr_t     pb_tile_addr;                    // tile mem word address out (16x5K)
 `endif
 
 // video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
@@ -127,14 +127,14 @@ typedef enum logic [1:0] {
 
 // sync generation signals (and combinatorial logic "next" versions)
 logic  [1:0]    h_state;
-logic [10:0]    h_count;
-logic [10:0]    h_count_next;
-logic [10:0]    h_count_next_state;
+xv::hres_t      h_count;
+xv::hres_t      h_count_next;
+xv::hres_t      h_count_next_state;
 
 logic  [1:0]    v_state;
-logic [10:0]    v_count;
-logic [10:0]    v_count_next;
-logic [10:0]    v_count_next_state;
+xv::vres_t      v_count;
+xv::vres_t      v_count_next;
+xv::vres_t      v_count_next_state;
 
 addr_t          line_set_addr;                          // address for on-the-fly addr set
 
@@ -279,12 +279,12 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         intr_signal_o       <= 4'b0;
         border_color        <= 8'h08;               // defaulting to dark grey to show operational
-        cursor_x            <= 11'h180;
-        cursor_y            <= 11'h100;
-        vid_top             <= 11'h0;
-        vid_bottom          <= xv::VISIBLE_HEIGHT[10:0];
-        vid_left            <= 11'h0;
-        vid_right           <= xv::VISIBLE_WIDTH[10:0];
+        cursor_x            <= '0;
+        cursor_y            <= '0;
+        vid_top             <= '0;
+        vid_bottom          <= $bits(vid_bottom)'(xv::VISIBLE_HEIGHT);
+        vid_left            <= '0;
+        vid_right           <= $bits(vid_right)'(xv::VISIBLE_WIDTH);
 
         pa_blank            <= 1'b1;                // playfield A starts blanked
         pa_start_addr       <= 16'h0000;
@@ -354,22 +354,22 @@ always_ff @(posedge clk) begin
 `endif
                 end
                 xv::XR_CURSOR_X: begin
-                    cursor_x        <= vgen_reg_data_i[10:0];
+                    cursor_x        <= $bits(cursor_x)'(vgen_reg_data_i);
                 end
                 xv::XR_CURSOR_Y: begin
-                    cursor_y        <= vgen_reg_data_i[10:0];
+                    cursor_y        <= $bits(cursor_y)'(vgen_reg_data_i);
                 end
                 xv::XR_VID_TOP: begin
-                    vid_top        <= vgen_reg_data_i[10:0];
+                    vid_top        <= $bits(vid_top)'(vgen_reg_data_i);
                 end
                 xv::XR_VID_BOTTOM: begin
-                    vid_bottom     <= vgen_reg_data_i[10:0];
+                    vid_bottom     <= $bits(vid_bottom)'(vgen_reg_data_i);;
                 end
                 xv::XR_VID_LEFT: begin
-                    vid_left       <= vgen_reg_data_i[10:0];
+                    vid_left       <= $bits(vid_left)'(vgen_reg_data_i);
                 end
                 xv::XR_VID_RIGHT: begin
-                    vid_right      <= vgen_reg_data_i[10:0];
+                    vid_right      <= $bits(vid_right)'(vgen_reg_data_i);
                 end
                 // playfield A
                 xv::XR_PA_GFX_CTRL: begin
@@ -450,35 +450,35 @@ always_ff @(posedge clk) begin
 `ifdef ENABLE_COPP
         xv::XR_COPP_CTRL:      vgen_reg_data_o <= { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPP_W-1:0]};
 `endif
-        xv::XR_CURSOR_X:       vgen_reg_data_o <= {5'b0, cursor_x };
-        xv::XR_CURSOR_Y:       vgen_reg_data_o <= {5'b0, cursor_y };
-        xv::XR_VID_TOP:        vgen_reg_data_o <= {5'b0, vid_top };
-        xv::XR_VID_BOTTOM:     vgen_reg_data_o <= {5'b0, vid_bottom };
-        xv::XR_VID_LEFT:       vgen_reg_data_o <= {5'b0, vid_left };
-        xv::XR_VID_RIGHT:      vgen_reg_data_o <= {5'b0, vid_right };
-        xv::XR_SCANLINE:       vgen_reg_data_o <= { (v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 3'b000, v_count };
+        xv::XR_CURSOR_X:       vgen_reg_data_o <= 16'(cursor_x);
+        xv::XR_CURSOR_Y:       vgen_reg_data_o <= 16'(cursor_y);
+        xv::XR_VID_TOP:        vgen_reg_data_o <= 16'(vid_top);
+        xv::XR_VID_BOTTOM:     vgen_reg_data_o <= 16'(vid_bottom);
+        xv::XR_VID_LEFT:       vgen_reg_data_o <= 16'(vid_left);
+        xv::XR_VID_RIGHT:      vgen_reg_data_o <= 16'(vid_right);
+        xv::XR_SCANLINE:       vgen_reg_data_o <= { (v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 14'(v_count) };
         xv::XR_VERSION:        vgen_reg_data_o <= { 1'b`GITCLEAN, 3'b000, 12'h`VERSION };
         xv::XR_GITHASH_H:      vgen_reg_data_o <= githash[31:16];
         xv::XR_GITHASH_L:      vgen_reg_data_o <= githash[15:0];
-        xv::XR_VID_HSIZE:      vgen_reg_data_o <= { 6'h0, xv::VISIBLE_WIDTH[9:0]};
-        xv::XR_VID_VSIZE:      vgen_reg_data_o <= { 6'h0, xv::VISIBLE_HEIGHT[9:0]};
+        xv::XR_VID_HSIZE:      vgen_reg_data_o <= 16'(xv::VISIBLE_WIDTH);
+        xv::XR_VID_VSIZE:      vgen_reg_data_o <= 16'(xv::VISIBLE_HEIGHT);
         xv::XR_VID_VFREQ:      vgen_reg_data_o <= xv::REFRESH_FREQ;
         xv::XR_PA_GFX_CTRL:    vgen_reg_data_o <= { pa_colorbase, pa_blank, pa_bitmap, pa_bpp, pa_h_repeat, pa_v_repeat };
         xv::XR_PA_TILE_CTRL:   vgen_reg_data_o <= { pa_tile_bank, pa_disp_in_tile, pa_tile_in_vram, 4'b0, pa_tile_height };
         xv::XR_PA_DISP_ADDR:   vgen_reg_data_o <= pa_start_addr;
         xv::XR_PA_LINE_LEN:    vgen_reg_data_o <= pa_line_len;
-        xv::XR_PA_HV_SCROLL:   vgen_reg_data_o <= { 3'b0, pa_fine_hscroll, 2'b00, pa_fine_vscroll };
-        default:                    vgen_reg_data_o <= 16'h0000;
+        xv::XR_PA_HV_SCROLL:   vgen_reg_data_o <= { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
+        default:               vgen_reg_data_o <= 16'h0000;
     endcase
 end
 
 // video signal generation
-always_comb     hsync = (h_state_next == STATE_SYNC);
-always_comb     vsync = (v_state_next == STATE_SYNC);
-always_comb     dv_display_ena = (h_state_next == STATE_VISIBLE) && (v_state_next == STATE_VISIBLE);
-always_comb     h_line_last_pixel = (h_state_next == STATE_PRE_SYNC) && (h_state == STATE_VISIBLE);
-always_comb     last_visible_pixel = (v_state_next == STATE_PRE_SYNC) && (v_state == STATE_VISIBLE) && h_line_last_pixel;
-always_comb     last_frame_pixel = (v_state_next == STATE_VISIBLE) && (v_state == STATE_POST_SYNC) && h_line_last_pixel;
+always_comb     hsync               = (h_state_next == STATE_SYNC);
+always_comb     vsync               = (v_state_next == STATE_SYNC);
+always_comb     dv_display_ena      = (h_state_next == STATE_VISIBLE) && (v_state_next == STATE_VISIBLE);
+always_comb     h_line_last_pixel   = (h_state_next == STATE_PRE_SYNC) && (h_state == STATE_VISIBLE);
+always_comb     last_visible_pixel  = (v_state_next == STATE_PRE_SYNC) && (v_state == STATE_VISIBLE) && h_line_last_pixel;
+always_comb     last_frame_pixel    = (v_state_next == STATE_VISIBLE) && (v_state == STATE_POST_SYNC) && h_line_last_pixel;
 
 // combinational block for video counters
 always_comb begin
@@ -539,8 +539,8 @@ always_ff @(posedge clk) begin
         dv_de_o             <= 1'b0;
         h_state             <= STATE_PRE_SYNC;
         v_state             <= STATE_PRE_SYNC;  // check STATE_VISIBLE
-        h_count             <= 11'h000;         // horizontal counter
-        v_count             <= 11'h000;         // vertical counter
+        h_count             <= '0;         // horizontal counter
+        v_count             <= '0;         // vertical counter
 
     end else begin
 

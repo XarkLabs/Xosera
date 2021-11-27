@@ -15,10 +15,10 @@
 module blitter(
 /* verilator lint_off UNUSED */
     // video registers and control
-    input  wire logic            xreg_wr_en_i,  // strobe to write internal config register number
-    input  wire logic  [3:0]     xreg_num_i,    // internal config register number (for reads)
-    input  wire word_t           xreg_data_i,   // data for internal config register
-    output      word_t           xreg_data_o,   // register/status data reads
+    input  wire logic            xreg_wr_en_i,      // strobe to write internal config register number
+    input  wire logic  [3:0]     xreg_num_i,        // internal config register number (for reads)
+    input  wire xv::word_t       xreg_data_i,       // data for internal config register
+    output      xv::word_t       xreg_data_o,       // register/status data reads
     // blitter signals
     output      logic            blit_busy_o,       // current status
     output      logic            blit_done_intr_o,  // interrupt signal when done
@@ -29,9 +29,9 @@ module blitter(
     output      logic            blit_wr_o,         // blit write
     output      logic  [3:0]     blit_wr_mask_o,    // blit VRAM nibble mask
 
-    output      addr_t           blit_addr_o,       // address out (vram/XR)
-    input  wire word_t           blit_vram_data_i,  // data word data in
-    output      word_t           blit_data_o,       // data word data out
+    output      xv::addr_t       blit_addr_o,       // address out (vram/XR)
+    input  wire xv::word_t       blit_vram_data_i,  // data word data in
+    output      xv::word_t       blit_data_o,       // data word data out
     // standard signals
     input  wire logic            reset_i,           // system reset in
     input  wire logic            clk                // clock (video pixel clock)

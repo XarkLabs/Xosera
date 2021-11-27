@@ -155,13 +155,13 @@
 module copper(
     output       logic          xr_wr_en_o,             // for all XR writes
     input   wire logic          xr_wr_ack_i,            // for all XR writes
-    output       addr_t         xr_wr_addr_o,           // for all XR writes
-    output       word_t         xr_wr_data_o,           // for all XR writes
+    output       xv::addr_t     xr_wr_addr_o,           // for all XR writes
+    output       xv::word_t     xr_wr_data_o,           // for all XR writes
     output       logic [C_PC:0] coppermem_rd_addr_o,
     output       logic          coppermem_rd_en_o,
     input   wire logic [31:0]   coppermem_rd_data_i,    // NOTE: 16-bit even/odd combined
     input   wire logic          copp_reg_wr_i,          // strobe to write internal config register
-    input   wire word_t         copp_reg_data_i,        // data for internal config register
+    input   wire xv::word_t     copp_reg_data_i,        // data for internal config register
     input   wire xv::hres_t     h_count_i,
     input   wire xv::vres_t     v_count_i,
     input   wire logic          reset_i,
@@ -210,8 +210,8 @@ logic         ram_rd_strobe = 1'b0;
 assign coppermem_rd_en_o    = ram_rd_strobe;
 assign coppermem_rd_addr_o  = copper_pc;
 
-word_t        ram_wr_data_out;
-addr_t        ram_wr_addr_out;
+xv::word_t    ram_wr_data_out;
+xv::addr_t    ram_wr_addr_out;
 
 logic         xr_wr_en;
 
@@ -234,7 +234,7 @@ logic [C_PC:0] copper_pc_skip;
 logic          ignore_v;
 logic          ignore_h;
 logic [C_PC:0] copper_pc_jmp;
-word_t         move_data;
+xv::word_t     move_data;
 logic  [7:0]   move_r_addr;
 logic  [8:0]   move_p_addr;
 logic [12:0]   move_f_addr;

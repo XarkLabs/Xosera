@@ -17,11 +17,11 @@ module video_blend(
     input wire  logic           vsync_i,
     input wire  logic           hsync_i,
     input wire  logic           dv_de_i,
-    input wire  argb_t          colorA_xrgb_i,
+    input wire  xv::argb_t      colorA_xrgb_i,
 `ifdef ENABLE_PF_B
-    input wire  argb_t          colorB_xrgb_i,
+    input wire  xv::argb_t      colorB_xrgb_i,
 `endif
-    output      rgb_t           blend_rgb_o,
+    output      xv::rgb_t       blend_rgb_o,
     output      logic           hsync_o,
     output      logic           vsync_o,
     output      logic           dv_de_o,

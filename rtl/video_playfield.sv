@@ -20,19 +20,19 @@ module video_playfield(
     input  wire logic           h_line_last_pixel_i,
     input  wire logic           last_frame_pixel_i,
     input  wire xv::color_t     border_color_i,
-    input  wire xv::hvisres_t   vid_left_i,
-    input  wire xv::hvisres_t   vid_right_i,
+    input  wire xv::hres_vis_t  vid_left_i,
+    input  wire xv::hres_vis_t  vid_right_i,
     // video memories
     output      logic           vram_sel_o,                         // vram read select
-    output      addr_t          vram_addr_o,                        // vram word address out (16x64K)
-    input  wire word_t          vram_data_i,                        // vram word data in
+    output      xv::addr_t      vram_addr_o,                        // vram word address out (16x64K)
+    input  wire xv::word_t      vram_data_i,                        // vram word data in
     output      logic           tilemem_sel_o,                      // tile mem read select
-    output      xv::tile_addr_t tilemem_addr_o,              // tile mem word address out (16x5K)
-    input  wire word_t          tilemem_data_i,                     // tile mem word data in
+    output      xv::tile_addr_t tilemem_addr_o,                     // tile mem word address out (16x5K)
+    input  wire xv::word_t      tilemem_data_i,                     // tile mem word data in
     // playfield generation control signals
     input  wire logic           pf_blank_i,                         // disable plane
-    input  wire addr_t          pf_start_addr_i,                    // display data start address (word address)
-    input  wire word_t          pf_line_len_i,                      // words per disply line (added to line_addr each line)
+    input  wire xv::addr_t      pf_start_addr_i,                    // display data start address (word address)
+    input  wire xv::word_t      pf_line_len_i,                      // words per disply line (added to line_addr each line)
     input  wire xv::color_t     pf_colorbase_i,                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
     input  wire logic  [1:0]    pf_bpp_i,                           // bpp code (bpp_depth_t)
     input  wire logic           pf_bitmap_i,                        // bitmap enable (else text mode)
@@ -46,7 +46,7 @@ module video_playfield(
     input  wire logic  [5:0]    pf_fine_vscroll_i,                  // vertical fine scroll (16 lines * 4 for repeat)
     input  wire logic           pf_gfx_ctrl_set_i,                  // true if pf_gfx_ctrl_i changed (register write)
     input  wire logic           pf_line_start_set_i,                // true if pf_line_start_i changed (register write)
-    input  wire addr_t          pf_line_start_addr_i,               // address of next line display data start
+    input  wire xv::addr_t      pf_line_start_addr_i,               // address of next line display data start
     output      xv::color_t     pf_color_index_o,                   // output color
 
     input  wire logic           reset_i,                            // system reset in
@@ -94,26 +94,26 @@ logic  [1:0]    pf_v_count;                         // current vertical repeat c
 logic  [2:0]    pf_tile_x;                          // current column of tile cell
 logic  [3:0]    pf_tile_y;                          // current line of tile cell
 
-addr_t          pf_line_start;
+xv::addr_t      pf_line_start;
 
 // fetch fsm outputs
 // scanline generation (registered signals and "_next" combinatorally set signals)
 logic [3:0]     pf_fetch, pf_fetch_next;            // playfield A generation FSM state
 
-addr_t          pf_addr, pf_addr_next;              // address to fetch display bitmap/tilemap
-addr_t          pf_tile_addr;                       // tile start address (VRAM or TILERAM)
+xv::addr_t      pf_addr, pf_addr_next;              // address to fetch display bitmap/tilemap
+xv::addr_t      pf_tile_addr;                       // tile start address (VRAM or TILERAM)
 
 logic           vram_sel, vram_sel_next;            // vram select output
 logic           tilemem_sel, tilemem_sel_next;      // tilemem select output
-addr_t          fetch_addr, fetch_addr_next;        // VRAM or TILERAM address output
+xv::addr_t      fetch_addr, fetch_addr_next;        // VRAM or TILERAM address output
 
 logic           pf_initial_buf, pf_initial_buf_next;// true on first buffer per scanline
 logic           pf_words_ready, pf_words_ready_next;// true if data_words full (8-pixels)
-word_t          pf_tile_attr, pf_tile_attr_next;    // tile attributes and tile index
-word_t          pf_data_word0, pf_data_word0_next;  // 1st fetched display data word buffer
-word_t          pf_data_word1, pf_data_word1_next;  // 2nd fetched display data word buffer
-word_t          pf_data_word2, pf_data_word2_next;  // 3rd fetched display data word buffer
-word_t          pf_data_word3, pf_data_word3_next;  // 4th fetched display data word buffer
+xv::word_t      pf_tile_attr, pf_tile_attr_next;    // tile attributes and tile index
+xv::word_t      pf_data_word0, pf_data_word0_next;  // 1st fetched display data word buffer
+xv::word_t      pf_data_word1, pf_data_word1_next;  // 2nd fetched display data word buffer
+xv::word_t      pf_data_word2, pf_data_word2_next;  // 3rd fetched display data word buffer
+xv::word_t      pf_data_word3, pf_data_word3_next;  // 4th fetched display data word buffer
 
 logic           pf_pixels_buf_full;                 // true when pf_pixel_out needs filling
 logic           pf_pixels_buf_hrev;                 // horizontal reverse flag
@@ -136,7 +136,7 @@ always_comb begin
 end
 
 // generate tile address from index, tile y, bpp and tile size (8x8 or 8x16)
-function automatic addr_t calc_tile_addr(
+function automatic xv::addr_t calc_tile_addr(
         input [9:0] tile_char,
         input [3:0] tile_y,
         input [5:0] tilebank,

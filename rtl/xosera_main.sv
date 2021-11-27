@@ -56,22 +56,22 @@ module xosera_main(
 
 // video generation
 logic                   vgen_vram_sel;      // video gen vram select (read only)
-addr_t                  vgen_vram_addr;     // video gen vram addr
+xv::addr_t              vgen_vram_addr;     // video gen vram addr
 
 logic                   dv_de;              // display enable
 logic                   hsync;              // hsync
 logic                   vsync;              // vsync
 
-xv::color_t             colorA_index; // pf A color index
-argb_t                  colorA_xrgb; // pf A ARGB output
+xv::color_t             colorA_index;       // pf A color index
+xv::argb_t              colorA_xrgb;        // pf A ARGB output
 
 `ifdef ENABLE_PF_B
-xv::color_t             colorB_index; // pf B color index
-argb_t                  colorB_xrgb; // pf B ARGB output
+xv::color_t             colorB_index;       // pf B color index
+xv::argb_t              colorB_xrgb;        // pf B ARGB output
 `endif
 
 //  VRAM read output data (for vgen, regs, blit, draw)
-word_t                  vram_data_out;
+xv::word_t              vram_data_out;
 
 // register interface vram/xr access
 logic                   regs_vram_sel;
@@ -80,22 +80,22 @@ logic                   regs_xr_sel;
 logic                   regs_xr_ack;
 logic                   regs_wr;
 logic  [3:0]            regs_wr_mask;
-//addr_t          regs_vram_addr;
+//xv::addr_t          regs_vram_addr;
 
 `ifdef ENABLE_BLIT
 /* verilator lint_off UNUSED */
 // blit vram/xr access
-word_t                  blit_xreg_data_in;
-word_t                  blit_xreg_data_out;
+xv::word_t              blit_xreg_data_in;
+xv::word_t              blit_xreg_data_out;
 logic                   blit_vram_sel;
 logic                   blit_vram_ack;
 logic                   blit_wr;
 logic  [3:0]            blit_wr_mask;
-addr_t                  blit_vram_addr;
-word_t                  blit_vram_data;
+xv::addr_t              blit_vram_addr;
+xv::word_t              blit_vram_data;
 logic                   blit_busy;
 logic                   blit_intr;
-word_t                  blit_data_out;
+xv::word_t              blit_data_out;
 /* verilator lint_on UNUSED */
 `endif
 
@@ -108,8 +108,8 @@ logic                   draw_xr_sel;
 logic                   draw_xr_ack;
 logic                   draw_wr;
 logic  [3:0]            draw_wr_mask;
-addr_t                  draw_vram_addr;
-word_t                  draw_vram_data;
+xv::addr_t              draw_vram_addr;
+xv::word_t              draw_vram_data;
 /* verilator lint_on UNUSED */
 `endif
 
@@ -121,10 +121,10 @@ logic [xv::COPP_W-1:0]  copper_pc;
 logic [31:0]            copp_prog_data_out;
 logic                   copp_xr_wr_en;
 logic                   copp_xr_ack;
-addr_t                  copp_xr_addr;
-word_t                  copp_xr_data_out;
+xv::addr_t              copp_xr_addr;
+xv::word_t              copp_xr_data_out;
 logic                   copp_reg_wr;
-word_t                  copp_reg_data;
+xv::word_t              copp_reg_data;
 xv::hres_t              video_h_count;
 xv::vres_t              video_v_count;
 `endif
@@ -132,25 +132,25 @@ xv::vres_t              video_v_count;
 // XR register bus access
 logic                   xr_regs_wr_en;
 logic  [6:0]            xr_regs_addr;
-word_t                  xr_regs_data_out;
-word_t                  xr_regs_data_in;
+xv::word_t              xr_regs_data_out;
+xv::word_t              xr_regs_data_in;
 
 // XR register unit select signals
-logic                   vgen_reg_wr_en;   // vgen XR register 0x000X & 0x001X
+logic                   vgen_reg_wr_en;     // vgen XR register 0x000X & 0x001X
 /* verilator lint_off UNUSED */
-logic                   blit_reg_wr_en;   // blit XR register 0x002X    // TODO
-logic                   draw_reg_wr_en;   // draw XR register 0x003X    // TODO
+logic                   blit_reg_wr_en;     // blit XR register 0x002X    // TODO
+logic                   draw_reg_wr_en;     // draw XR register 0x003X    // TODO
 /* verilator lint_on UNUSED */
 
 // XM top-level register signals
-addr_t                  xm_regs_addr;       // register interface VRAM/XR addr
-word_t                  xm_regs_data_out;   // register interface bus VRAM/XR data write
-word_t                  xm_regs_data_in;    // register interface bus VRAM/XR data read
+xv::addr_t              xm_regs_addr;       // register interface VRAM/XR addr
+xv::word_t              xm_regs_data_out;   // register interface bus VRAM/XR data write
+xv::word_t              xm_regs_data_in;    // register interface bus VRAM/XR data read
 
 // vgen tile memory read signals
 logic                   vgen_tile_sel;
 xv::tile_addr_t         vgen_tile_addr;
-word_t                  vgen_tile_data;
+xv::word_t              vgen_tile_data;
 
 // interrupt management signals
 logic  [3:0]            intr_mask;          // true for each enabled interrupt
@@ -163,8 +163,8 @@ logic                   dbug_cs_strobe;     // debug "ack" bus strobe
 `endif
 
 `ifdef BUS_DEBUG_SIGNALS
-assign audio_l_o    =   dbug_cs_strobe;  // debug to see when CS noticed
-assign audio_r_o    =   regs_xr_sel;     // debug to see when XR bus selected
+assign audio_l_o    =   dbug_cs_strobe;     // debug to see when CS noticed
+assign audio_r_o    =   regs_xr_sel;        // debug to see when XR bus selected
 `else
 // TODO: audio generation
 assign audio_l_o    =   1'b0;

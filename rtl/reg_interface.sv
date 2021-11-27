@@ -26,10 +26,10 @@ module reg_interface(
     output      logic            regs_xr_sel_o,     // XR select
     output      logic            regs_wr_o,         // VRAM/XR read/write
     output      logic  [3:0]     regs_wrmask_o,     // VRAM nibble write masks
-    output      addr_t           regs_addr_o,       // VRAM/XR address
-    output      word_t           regs_data_o,       // VRAM/XR write data out
-    input  wire word_t           regs_data_i,       // VRAM read data in
-    input  wire word_t           xr_data_i,         // XR read data in
+    output      xv::addr_t       regs_addr_o,       // VRAM/XR address
+    output      xv::word_t       regs_data_o,       // VRAM/XR write data out
+    input  wire xv::word_t       regs_data_i,       // VRAM read data in
+    input  wire xv::word_t       xr_data_i,         // XR read data in
     // status signals
     input  wire logic            busy_i,            // blit/draw busy status
     // iCE40 reconfigure
@@ -48,19 +48,19 @@ module reg_interface(
 );
 
 // read/write storage for main interface registers
-addr_t          reg_xr_addr;            // XR read/write address (XR_ADDR)
-word_t          reg_xr_data;            // word read from XR bus
+xv::addr_t      reg_xr_addr;            // XR read/write address (XR_ADDR)
+xv::word_t      reg_xr_data;            // word read from XR bus
 
-word_t          reg_rd_incr;            // VRAM read increment
-addr_t          reg_rd_addr;            // VRAM read address
-word_t          reg_rd_data;            // word read from VRAM (for RD_ADDR)
+xv::word_t      reg_rd_incr;            // VRAM read increment
+xv::addr_t      reg_rd_addr;            // VRAM read address
+xv::word_t      reg_rd_data;            // word read from VRAM (for RD_ADDR)
 
-word_t          reg_wr_incr;            // VRAM write increment
-addr_t          reg_wr_addr;            // VRAM write address
+xv::word_t      reg_wr_incr;            // VRAM write increment
+xv::addr_t      reg_wr_addr;            // VRAM write address
 
-word_t          reg_rw_incr;            // VRAM read/write increment
-addr_t          reg_rw_addr;            // VRAM read/write address
-word_t          reg_rw_data;            // word read from VRAM (for RW_ADDR)
+xv::word_t      reg_rw_incr;            // VRAM read/write increment
+xv::addr_t      reg_rw_addr;            // VRAM read/write address
+xv::word_t      reg_rw_data;            // word read from VRAM (for RW_ADDR)
 
 // read flags
 logic           xr_rd;                  // flag for XR_DATA read outstanding
@@ -81,13 +81,13 @@ logic           bus_read_strobe;        // strobe when a word of data read
 logic           bus_bytesel;            // msb/lsb on bus
 logic  [7:0]    bus_data_byte;          // data byte from bus
 
-word_t          reg_timer;              // 1/10 ms timer (visible 16 bits)
+xv::word_t      reg_timer;              // 1/10 ms timer (visible 16 bits)
 logic [11:0]    reg_timer_frac;         // internal clock counter for 1/10 ms
 
 `ifdef ENABLE_LFSR
 parameter               LFSR_SIZE = 19; // NOTE: if changed, must change taps
 logic [LFSR_SIZE-1:0]   LFSR;
-word_t                  reg_LFSR;
+xv::word_t              reg_LFSR;
 `endif
 
 logic mem_read_wait;

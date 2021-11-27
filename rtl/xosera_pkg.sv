@@ -38,12 +38,6 @@
 //`define ENABLE_BLIT                     // enable blitter unit
 //`define ENABLE_DRAW                     // enable draw unit
 
-// Xosera global types (outside of package, so "xv::" not needed)
-typedef logic [15:0]    word_t;         // word size (16-bit)
-typedef logic [15:0]    addr_t;         // vram or xmem address (16-bit)
-typedef logic [15:0]    argb_t;         // ARGB color (16-bit)
-typedef logic [11:0]    rgb_t;          // RGB color (12-bit)
-
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
 
@@ -405,15 +399,21 @@ localparam PLL_DIVQ    =    3'b011;         // DIVQ =  3
 localparam PCLK_HZ     =    25_175_000;     // standard VGA
 `endif
 
-typedef logic [$clog2(TOTAL_WIDTH)-1:0]   hres_t;
-typedef logic [$clog2(TOTAL_HEIGHT)-1:0]  vres_t;
+// Xosera types
+typedef logic [15:0]                        word_t;         // word size (16-bit)
+typedef logic [15:0]                        argb_t;         // ARGB color (16-bit)
+typedef logic [11:0]                        rgb_t;          // RGB color (12-bit)
 
-typedef logic [$clog2(TOTAL_WIDTH)-1:0]   hvisres_t;
-typedef logic [$clog2(TOTAL_HEIGHT)-1:0]  vvisres_t;
+typedef logic [VRAM_W-1:0]                  addr_t;         // vram or xmem address (16-bit)
+typedef logic [TILE_W-1:0]                  tile_addr_t;    // tile address
+typedef logic [COPP_W-1:0]                  copp_addr_t;    // copper address
+typedef logic [COLOR_W-1:0]                 color_t;        // color look up index
 
-typedef logic [TILE_W-1:0]  tile_addr_t;    // tile address
-typedef logic [COPP_W-1:0]  copp_addr_t;    // copper address
-typedef logic [COLOR_W-1:0] color_t;        // color look up index
+typedef logic [$clog2(TOTAL_WIDTH)-1:0]     hres_t;         // horizontal coordinate types
+typedef logic [$clog2(TOTAL_HEIGHT)-1:0]    vres_t;         // vertical coordinate types
+
+typedef logic [$clog2(VISIBLE_WIDTH)-1:0]   hres_vis_t;     // horizontal visible coordinate types
+typedef logic [$clog2(VISIBLE_HEIGHT)-1:0]  vres_vis_t;     // vertical visible coordinate types
 
 /* verilator lint_on UNUSED */
 

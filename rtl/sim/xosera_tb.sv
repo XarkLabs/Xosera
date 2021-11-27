@@ -40,23 +40,25 @@ logic reconfig;
 logic [1:0] boot_select;
 
 // bus interface
-logic bus_intr;
-logic bus_cs_n;
-logic bus_rd_nwr;
-logic bus_bytesel;
-logic [3: 0] bus_reg_num;
-logic [7: 0] bus_data_in;
-logic [7: 0] bus_data_out;
+logic           bus_intr;
+logic           bus_cs_n;
+logic           bus_rd_nwr;
+logic           bus_bytesel;
+logic [3: 0]    bus_reg_num;
+logic [7: 0]    bus_data_in;
+logic [7: 0]    bus_data_out;
 
-integer i, j, f;
-integer frame;
-addr_t       test_addr;
-word_t       test_inc;
-addr_t       test_addr2;
-word_t       test_data0;
-word_t       test_data1;
-word_t       test_data2;
-word_t       test_data3;
+// tb vars
+integer     i, j, f;
+integer     frame;
+
+xv::addr_t  test_addr;
+xv::word_t  test_inc;
+xv::addr_t  test_addr2;
+xv::word_t  test_data0;
+xv::word_t  test_data1;
+xv::word_t  test_data2;
+xv::word_t  test_data3;
 
 /* verilator lint_on UNUSED */
 
@@ -86,7 +88,7 @@ parameter CLK_PERIOD    = (1000000000.0 / PIXEL_FREQ);
 parameter M68K_PERIOD   = 80;
 
 /* verilator lint_off UNUSED */
-word_t       readword;
+xv::word_t       readword;
 /* verilator lint_on UNUSED */
 
 integer logfile;
@@ -163,7 +165,7 @@ endtask
 
 task xvid_setw(
     input  logic [3:0]   r_num,
-    input  word_t         data
+    input  xv::word_t         data
     );
 
     write_reg(1'b0, r_num, data[15:8]);
@@ -393,7 +395,7 @@ end
 `endif
 
 integer flag = 0;
-addr_t       last_rd_addr = 0;
+xv::addr_t       last_rd_addr = 0;
 always @(negedge clk) begin
     if (xosera.reg_interface.regs_vram_sel_o) begin
         if (xosera.reg_interface.regs_wr_o) begin

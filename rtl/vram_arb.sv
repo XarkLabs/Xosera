@@ -16,15 +16,15 @@ module vram_arb
 (
     // video generation access (read-only)
     input  wire logic           vgen_sel_i,
-    input  wire addr_t          vgen_addr_i,
+    input  wire xv::addr_t      vgen_addr_i,
 
     // register interface access (read/write)
     input  wire logic           regs_sel_i,
     output      logic           regs_ack_o,
     input  wire logic           regs_wr_i,
     input  wire logic  [3:0]    regs_wr_mask_i,
-    input  wire addr_t          regs_addr_i,
-    input  wire word_t          regs_data_i,
+    input  wire xv::addr_t      regs_addr_i,
+    input  wire xv::word_t      regs_data_i,
 
 `ifdef ENABLE_BLIT
     // TODO: 2D blit access (read/write)
@@ -32,8 +32,8 @@ module vram_arb
     output      logic           blit_ack_o,
     input  wire logic           blit_wr_i,
     input  wire logic  [3:0]    blit_wr_mask_i,
-    input  wire addr_t          blit_addr_i,
-    input  wire word_t          blit_data_i,
+    input  wire xv::addr_t      blit_addr_i,
+    input  wire xv::word_t      blit_data_i,
 `endif
 
 `ifdef ENABLE_DRAW
@@ -42,12 +42,12 @@ module vram_arb
     output      logic           draw_ack_o,
     input  wire logic           draw_wr_i,
     input  wire logic  [3:0]    draw_wr_mask_i,
-    input  wire addr_t          draw_addr_i,
-    input  wire word_t          draw_data_i,
+    input  wire xv::addr_t      draw_addr_i,
+    input  wire xv::word_t      draw_data_i,
 `endif
 
     // common VRAM data output
-    output      word_t          vram_data_o,
+    output      xv::word_t      vram_data_o,
 
     input  wire logic           clk
 );
@@ -56,8 +56,8 @@ module vram_arb
 logic           vram_sel;
 logic           vram_wr;
 logic  [3:0]    vram_wr_mask;
-addr_t          vram_addr;
-word_t          vram_data_in;
+xv::addr_t      vram_addr;
+xv::word_t      vram_data_in;
 
 // ack signals
 logic           regs_ack_next;

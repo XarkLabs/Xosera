@@ -108,8 +108,6 @@ logic [7:0] bus_data_in;
     // NOTE: No longer need to use iCE40 SB_IO primitive to control tri-state properly here
     assign bus_data     = bus_out_ena ? bus_data_out : 8'bZ;
     assign bus_data_in  = bus_data;
-    assign bus_data     = bus_out_ena ? bus_data_out : 8'bZ;
-    assign bus_data_in  = bus_data;
     assign bus_cs_n     = LED_RED_N;        // RGB LED red as Xosera select=cs_ENABLED (UP_nCS)
     assign bus_rd_nwr   = LED_GRN_N;        // RGB LED green as RnW_WRITE=0, RnW_READ=1, read= (UP_RnW)
     assign bus_bytesel  = LED_BLU_N;        // RGB LED blue for word byte select (UP_bytesel)

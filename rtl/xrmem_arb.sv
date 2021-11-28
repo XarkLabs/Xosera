@@ -18,37 +18,37 @@ module xrmem_arb
     input  wire logic                           xr_sel_i,
     output      logic                           xr_ack_o,
     input  wire logic                           xr_wr_i,
-    input  wire xv::addr_t                      xr_addr_i,
-    input  wire xv::word_t                      xr_data_i,
-    output      xv::word_t                      xr_data_o,
+    input  wire addr_t                          xr_addr_i,
+    input  wire word_t                          xr_data_i,
+    output      word_t                          xr_data_o,
 
 `ifdef ENABLE_COPP
     // copper XR register/memory interface (write-only)
     input  wire logic                           copp_xr_sel_i,
     output      logic                           copp_xr_ack_o,
-    input  wire xv::addr_t                      copp_xr_addr_i,
-    input  wire xv::word_t                      copp_xr_data_i,
+    input  wire addr_t                          copp_xr_addr_i,
+    input  wire word_t                          copp_xr_data_i,
 `endif
 
     // XR register bus (read/write)
     output      logic                           xreg_wr_o,
     output      logic  [6:0]                    xreg_addr_o,
-    input  wire xv::word_t                      xreg_data_i,
-    output      xv::word_t                      xreg_data_o,
+    input  wire word_t                          xreg_data_i,
+    output      word_t                          xreg_data_o,
 
     // color lookup colormem A+B 2 x 16-bit bus (read-only)
     input  wire logic                           vgen_color_sel_i,
-    input  wire xv::color_t                     vgen_colorA_addr_i,
-    output      xv::argb_t                      vgen_colorA_data_o,
+    input  wire color_t                         vgen_colorA_addr_i,
+    output      argb_t                          vgen_colorA_data_o,
 `ifdef ENABLE_PF_B
-    input  wire xv::color_t                     vgen_colorB_addr_i,
-    output      xv::argb_t                      vgen_colorB_data_o,
+    input  wire color_t                         vgen_colorB_addr_i,
+    output      argb_t                          vgen_colorB_data_o,
 `endif
 
     // video generation tilemem bus (read-only)
     input  wire logic                           vgen_tile_sel_i,
-    input  wire xv::tile_addr_t                 vgen_tile_addr_i,
-    output      xv::word_t                      vgen_tile_data_o,
+    input  wire tile_addr_t                     vgen_tile_addr_i,
+    output      word_t                          vgen_tile_data_o,
 
 `ifdef ENABLE_COPP
     // copper program coppermem 32-bit bus (read-only)
@@ -64,19 +64,19 @@ module xrmem_arb
 logic                           color_rd_en;
 logic                           color_wr_en;
 logic [xv::COLOR_W-1:0]         colorA_addr;
-xv::argb_t                      colorA_data_out ;
+argb_t                          colorA_data_out ;
 `ifdef ENABLE_PF_B
 logic [xv::COLOR_W-1:0]         colorB_addr;
-xv::argb_t                      colorB_data_out;
+argb_t                          colorB_data_out;
 `endif
 
 // internal TILEMEM signals
 logic                           tile_rd_en;
 logic                           tile_wr_en;
-xv::tile_addr_t                 tile_addr;
-xv::tile_addr_t                 tile_addr_next;
-xv::word_t                      tile_data_out;
-xv::word_t                      tile2_data_out;
+tile_addr_t                     tile_addr;
+tile_addr_t                     tile_addr_next;
+word_t                          tile_data_out;
+word_t                          tile2_data_out;
 
 `ifdef ENABLE_COPP
 // internal COPPERMEM signals
@@ -87,8 +87,8 @@ logic [31:0]                    copp_data_out;
 `endif
 
 // internal XR write signals
-xv::addr_t                      xr_addr;
-xv::word_t                      xr_write_data;
+addr_t                          xr_addr;
+word_t                          xr_write_data;
 
 // combinatorial write ack signals
 `ifdef ENABLE_COPP

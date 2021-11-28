@@ -23,28 +23,28 @@ module video_gen(
     // video registers and control
     input  wire logic           vgen_reg_wr_en_i,      // strobe to write internal config register number
     input  wire logic  [4:0]    vgen_reg_num_i,        // internal config register number (for reads)
-    input  wire xv::word_t      vgen_reg_data_i,       // data for internal config register
-    output      xv::word_t      vgen_reg_data_o,       // register/status data reads
+    input  wire word_t          vgen_reg_data_i,       // data for internal config register
+    output      word_t          vgen_reg_data_o,       // register/status data reads
     input wire  logic  [3:0]    intr_status_i,         // interrupt pending status
     output      logic  [3:0]    intr_signal_o,         // generate interrupt signal
 `ifdef ENABLE_COPP
     // outputs for copper
     output      logic           copp_reg_wr_o,         // COPP_CTRL write strobe
-    output      xv::word_t      copp_reg_data_o,       // copper reg data
-    output      xv::hres_t      h_count_o,             // Horizontal video counter
-    output      xv::vres_t      v_count_o,             // Vertical video counter
+    output      word_t          copp_reg_data_o,       // copper reg data
+    output      hres_t          h_count_o,             // Horizontal video counter
+    output      vres_t          v_count_o,             // Vertical video counter
 `endif
     // video memories
     output      logic           vram_sel_o,            // vram read select
-    output      xv::addr_t      vram_addr_o,           // vram word address out (16x64K)
-    input  wire xv::word_t      vram_data_i,           // vram word data in
+    output      addr_t          vram_addr_o,           // vram word address out (16x64K)
+    input  wire word_t          vram_data_i,           // vram word data in
     output      logic           tilemem_sel_o,         // tile mem read select
-    output      xv::tile_addr_t tilemem_addr_o,  // tile mem word address out (16x5K)
-    input  wire xv::word_t      tilemem_data_i,        // tile mem word data in
+    output      tile_addr_t     tilemem_addr_o,  // tile mem word address out (16x5K)
+    input  wire word_t          tilemem_data_i,        // tile mem word data in
     // video signal outputs
-    output      xv::color_t     colorA_index_o,        // color palette index output (16x256)
+    output      color_t         colorA_index_o,        // color palette index output (16x256)
 `ifdef ENABLE_PF_B
-    output      xv::color_t     colorB_index_o,        // color palette index output (16x256)
+    output      color_t         colorB_index_o,        // color palette index output (16x256)
 `endif
     output      logic           vsync_o, hsync_o,      // video sync outputs
     output      logic           dv_de_o,               // video active signal (needed for HDMI)
@@ -56,19 +56,19 @@ module video_gen(
 localparam [31:0] githash = 32'H`GITHASH;
 
 // video generation signals
-xv::color_t         border_color;
-xv::hres_vis_t      cursor_x;
-xv::vres_vis_t      cursor_y;
-xv::vres_vis_t      vid_top;
-xv::vres_vis_t      vid_bottom;
-xv::hres_vis_t      vid_left;
-xv::hres_vis_t      vid_right;
+color_t             border_color;
+hres_vis_t          cursor_x;
+vres_vis_t          cursor_y;
+vres_vis_t          vid_top;
+vres_vis_t          vid_bottom;
+hres_vis_t          vid_left;
+hres_vis_t          vid_right;
 
 // playfield A generation control signals
 logic               pa_blank;                           // disable plane A
-xv::addr_t          pa_start_addr;                      // display data start address (word address)
-xv::word_t          pa_line_len;                        // words per disply line (added to line_addr each line)
-xv::color_t         pa_colorbase;                       // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+addr_t              pa_start_addr;                      // display data start address (word address)
+word_t              pa_line_len;                        // words per disply line (added to line_addr each line)
+color_t             pa_colorbase;                       // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
 logic  [1:0]        pa_bpp;                             // bpp code (bpp_depth_t)
 logic               pa_bitmap;                          // bitmap enable (else text mode)
 logic  [5:0]        pa_tile_bank;                       // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
@@ -81,20 +81,20 @@ logic  [4:0]        pa_fine_hscroll;                    // horizontal fine scrol
 logic  [5:0]        pa_fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
 logic               pa_line_start_set;                  // true if pa_line_start changed (register write)
 logic               pa_gfx_ctrl_set;                    // true if pa_gfx_ctrl changed (register write)
-xv::color_t         pa_color_index;                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+color_t             pa_color_index;                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
 
 // video memories
 logic               pa_vram_sel;                        // vram read select
-xv::addr_t          pa_vram_addr;                       // vram word address out (16x64K)
+addr_t              pa_vram_addr;                       // vram word address out (16x64K)
 logic               pa_tile_sel;                        // tile mem read select
-xv::tile_addr_t     pa_tile_addr;                       // tile mem word address out (16x5K)
+tile_addr_t         pa_tile_addr;                       // tile mem word address out (16x5K)
 
 `ifdef ENABLE_PF_B
 // playfield B generation control signals
 logic               pb_blank;                           // disable plane B
 logic [15:0]        pb_start_addr;                      // display data start address (word address)
-xv::word_t          pb_line_len;                        // words per disply line (added to line_addr each line)
-xv::color_t         pb_colorbase;                       // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+word_t              pb_line_len;                        // words per disply line (added to line_addr each line)
+color_t             pb_colorbase;                       // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
 logic  [1:0]        pb_bpp;                             // bpp code (bpp_depth_t)
 logic               pb_bitmap;                          // bitmap enable (else text mode)
 logic  [5:0]        pb_tile_bank;                       // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
@@ -107,14 +107,14 @@ logic  [4:0]        pb_fine_hscroll;                    // horizontal fine scrol
 logic  [5:0]        pb_fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
 logic               pb_line_start_set;                  // true if pa_line_start changed (register write)
 logic               pb_gfx_ctrl_set;                    // true if pa_gfx_ctrl changed (register write)
-xv::color_t         pb_color_index;                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+color_t             pb_color_index;                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
 
 // video memories
 logic               pb_stall;
 logic               pb_vram_sel;                        // vram read select
-xv::addr_t          pb_vram_addr;                       // vram word address out (16x64K)
+addr_t              pb_vram_addr;                       // vram word address out (16x64K)
 logic               pb_tile_sel;                        // tile mem read select
-xv::tile_addr_t     pb_tile_addr;                       // tile mem word address out (16x5K)
+tile_addr_t         pb_tile_addr;                       // tile mem word address out (16x5K)
 `endif
 
 // video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
@@ -127,16 +127,16 @@ typedef enum logic [1:0] {
 
 // sync generation signals (and combinatorial logic "next" versions)
 logic  [1:0]    h_state;
-xv::hres_t      h_count;
-xv::hres_t      h_count_next;
-xv::hres_t      h_count_next_state;
+hres_t          h_count;
+hres_t          h_count_next;
+hres_t          h_count_next_state;
 
 logic  [1:0]    v_state;
-xv::vres_t      v_count;
-xv::vres_t      v_count_next;
-xv::vres_t      v_count_next_state;
+vres_t          v_count;
+vres_t          v_count_next;
+vres_t          v_count_next_state;
 
-xv::addr_t      line_set_addr;                          // address for on-the-fly addr set
+addr_t          line_set_addr;                          // address for on-the-fly addr set
 
 // sync condition indicators (combinatorial)
 logic           hsync;
@@ -206,10 +206,10 @@ video_playfield video_pf_a(
 `ifdef ENABLE_PF_B
 logic       pb_vram_rd;                             // last cycle was PB vram read flag
 logic       pb_vram_rd_save;                        // PB vram read data saved flag
-xv::word_t  pb_vram_rd_data;                        // PB vram read data
+word_t      pb_vram_rd_data;                        // PB vram read data
 logic       pb_tilemem_rd;                          // last cycle was PB tilemem read flag
 logic       pb_tilemem_rd_save;                     // PB tilemem read data saved flag
-xv::word_t  pb_tilemem_rd_data;                     // PB tilemem read data
+word_t      pb_tilemem_rd_data;                     // PB tilemem read data
 
 always_ff @(posedge clk) begin
     // latch vram read data for playfield B

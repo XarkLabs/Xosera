@@ -99,4 +99,15 @@
 #define XR_PB_UNUSED_1E 0x1E        //
 #define XR_PB_UNUSED_1F 0x1F        //
 
+// Blitter Registers (WIP)
+#define XR_BLIT_MODE    0x20
+#define XR_BLIT_RD_MOD  0x21
+#define XR_BLIT_WR_MOD  0x22
+#define XR_BLIT_WR_MASK 0x23
+#define XR_BLIT_WIDTH   0x24
+#define XR_BLIT_RD_ADDR 0x25
+#define XR_BLIT_WR_ADDR 0x26
+#define XR_BLIT_COUNT   0x27
+
+
 #endif        // XOSERA_M68K_DEFS_H

@@ -192,7 +192,7 @@ reg_interface reg_interface(
     .regs_data_i(vram_data_out),        // 16-bit word read from vram
     .xr_data_i(xm_regs_data_in),        // 16-bit word read from XR
     //
-    .busy_i(1'b0),                      // TODO: blit/draw engine busy
+    .busy_i(blit_busy),                 // TODO: draw engine busy
     // reconfig
     .reconfig_o(reconfig_o),
     .boot_select_o(boot_select_o),

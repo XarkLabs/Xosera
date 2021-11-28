@@ -420,6 +420,98 @@ _NOINLINE void restore_colors3()
     };
 }
 
+_NOINLINE void dupe_colors(int alpha)
+{
+    wait_vsync();
+    uint16_t a = (alpha & 0xf) << 12;
+    xm_setw(XR_ADDR, XR_COLOR_MEM);
+    for (uint16_t i = 0; i < 256; i++)
+    {
+        xm_setw(XR_ADDR, XR_COLOR_MEM + i);
+        while (xm_getbl(SYS_CTRL) & 0x40)
+            ;
+
+        uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
+
+        xm_setw(XR_ADDR, XR_COLOR_MEM + 0x100 + i);
+        while (xm_getbl(SYS_CTRL) & 0x40)
+            ;
+        xm_setw(XR_DATA, v);
+    };
+}
+
+static void load_sd_bitmap(const char * filename, int vaddr)
+{
+    dprintf("Loading bitmap: \"%s\"", filename);
+    void * file = fl_fopen(filename, "r");
+
+    if (file != NULL)
+    {
+        int cnt = 0;
+
+        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
+        {
+            if ((vaddr & 0xFFF) == 0)
+            {
+                dprintf(".");
+            }
+
+            uint16_t * maddr = (uint16_t *)mem_buffer;
+            xm_setw(WR_INCR, 1);
+            xm_setw(WR_ADDR, vaddr);
+            for (int i = 0; i < (cnt >> 1); i++)
+            {
+                xm_setw(DATA, *maddr++);
+            }
+            vaddr += (cnt >> 1);
+        }
+
+        fl_fclose(file);
+        dprintf("done!\n");
+    }
+    else
+    {
+        dprintf(" - FAILED\n");
+    }
+}
+
+static void load_sd_colors(const char * filename)
+{
+    dprintf("Loading colormap: \"%s\"", filename);
+    void * file = fl_fopen(filename, "r");
+
+    if (file != NULL)
+    {
+        int cnt   = 0;
+        int vaddr = 0;
+
+        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
+        {
+            if ((vaddr & 0x7) == 0)
+            {
+                dprintf(".");
+            }
+
+            uint16_t * maddr = (uint16_t *)mem_buffer;
+            wait_vsync();
+            xm_setw(XR_ADDR, XR_COLOR_MEM);
+            for (int i = 0; i < (cnt >> 1); i++)
+            {
+                uint16_t v = *maddr++;
+                xm_setw(XR_DATA, v);
+            }
+            vaddr += (cnt >> 1);
+        }
+
+        fl_fclose(file);
+        dprintf("done!\n");
+    }
+    else
+    {
+        dprintf(" - FAILED\n");
+    }
+}
+
 #define DRAW_WIDTH  ((uint16_t)320)
 #define DRAW_HEIGHT ((uint16_t)240)
 #define DRAW_WORDS  ((uint16_t)DRAW_WIDTH / 2)
@@ -477,6 +569,139 @@ void draw8bpp_v_line(uint16_t base, uint8_t color, int x, int y, int len)
         xm_setw(DATA, word);        // set full word
     }
     xm_setbl(SYS_CTRL, 0xf);
+}
+
+static inline void wait_blit()
+{
+    while (xm_getbl(SYS_CTRL) & 0x80)
+        ;
+}
+
+void test_blit()
+{
+    dprintf("test_blit\n");
+
+    do
+    {
+        wait_vsync();
+        xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
+        xreg_setw(PA_LINE_LEN, 80);
+        xreg_setw(PA_DISP_ADDR, 0x4B00);
+
+        xreg_setw(PB_GFX_CTRL, 0x0080);        // bitmap + 4-bpp + Hx2 + Vx2
+
+        load_sd_colors("/pacbox-320x240_pal.raw");
+        dupe_colors(0x8);
+        load_sd_bitmap("/pacbox-320x240.raw", 0x0000);
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
+
+        dprintf("blit from 0x0000 to 0x4B00, 0x%04X bytes\n", 320 * 240 / 4);
+        xreg_setw(BLIT_RD_ADDR, 0x0000);
+        xreg_setw(BLIT_WR_ADDR, 0x4B00);
+        xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 1);
+        wait_blit();
+
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
+
+        dprintf("blit from 0x4B00 to 0x4B01, 0x%04X bytes (clear)\n", 320 * 240 / 4);
+        xreg_setw(BLIT_RD_ADDR, 0x4B00);
+        xreg_setw(BLIT_WR_ADDR, 0x4B01);
+        xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 2);
+        wait_blit();
+
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
+
+        dprintf("blit from 0x0000 to 0x4B00, 0x%04X bytes\n", 320 * 240 / 4);
+        xreg_setw(BLIT_RD_ADDR, 0x0000);
+        xreg_setw(BLIT_WR_ADDR, 0x4B00);
+        xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 2);
+        wait_blit();
+
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
+
+        xm_setw(XR_ADDR, XR_COLOR_MEM + 15);        // set write address
+        xm_setw(XR_DATA, 0x0fff);
+
+        xm_setw(WR_INCR, 0);             // set write inc
+        xm_setw(WR_ADDR, 0x4B00);        // set write address
+
+        for (int i = 0; i < 16; i++)
+        {
+            xm_setw(DATA, 0x0000);        // set write inc
+
+            uint16_t start;
+            wait_vsync();
+            uint16_t go = xm_getw(TIMER);
+            while ((start = xm_getw(TIMER)) == go)
+                ;
+            xreg_setw(BLIT_RD_ADDR, 0x4B00);
+            xreg_setw(BLIT_WR_ADDR, 0x4B01);
+            xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 2);
+            wait_blit();
+            uint16_t stop = xm_getw(TIMER) - start;
+            dprintf("4bpp copy = 0x%04x (%u.%u) 1/10th ms\n", stop, stop / 10, stop % 10);
+            dprintf("4bpp = 0x%04x (%u.%u) 1/10th ms\n", stop, stop / 10, stop % 10);
+            wait_vsync();
+
+            xm_setw(DATA, 0xFFFF);        // set write inc
+            xreg_setw(BLIT_RD_ADDR, 0x4B00);
+            xreg_setw(BLIT_WR_ADDR, 0x4B01);
+            xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 2);
+
+            wait_blit();
+            wait_vsync();
+        }
+
+        xm_setw(WR_INCR, 0);             // set write inc
+        xm_setw(WR_ADDR, 0x0000);        // set write address
+
+        for (int i = 0; i < 16; i++)
+        {
+            uint16_t v = i << 12 | i << 8 | i << 4 | i;
+            xm_setw(DATA, v);        // set write inc
+
+            uint16_t start;
+            wait_vsync();
+            uint16_t go = xm_getw(TIMER);
+            while ((start = xm_getw(TIMER)) == go)
+                ;
+
+            xreg_setw(BLIT_RD_ADDR, 0x0000);
+            xreg_setw(BLIT_WR_ADDR, 0x0001);
+            xreg_setw(BLIT_COUNT, 0xFFFF);
+            wait_blit();
+
+            uint16_t stop = xm_getw(TIMER) - start;
+            dprintf("black 64KW = 0x%04x (%u.%u) 1/10th ms\n", stop, stop / 10, stop % 10);
+
+            xm_setw(DATA, 0x0000);        // set write inc
+
+            go = xm_getw(TIMER);
+            while ((start = xm_getw(TIMER)) == go)
+                ;
+
+            xreg_setw(BLIT_RD_ADDR, 0x0000);
+            xreg_setw(BLIT_WR_ADDR, 0x0001);
+            xreg_setw(BLIT_COUNT, 0xFFFF);
+            wait_blit();
+
+            stop = xm_getw(TIMER) - start;
+            dprintf("white 64KW = 0x%04x (%u.%u) 1/10th ms\n", stop, stop / 10, stop % 10);
+        }
+
+    } while (false);
 }
 
 void test_dual_8bpp()
@@ -1008,79 +1233,6 @@ static void test_xr_read()
     }
 }
 
-static void load_sd_bitmap(const char * filename)
-{
-    dprintf("Loading bitmap: \"%s\"", filename);
-    void * file = fl_fopen(filename, "r");
-
-    if (file != NULL)
-    {
-        int cnt   = 0;
-        int vaddr = 0;
-
-        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
-        {
-            if ((vaddr & 0xFFF) == 0)
-            {
-                dprintf(".");
-            }
-
-            uint16_t * maddr = (uint16_t *)mem_buffer;
-            xm_setw(WR_INCR, 1);
-            xm_setw(WR_ADDR, vaddr);
-            for (int i = 0; i < (cnt >> 1); i++)
-            {
-                xm_setw(DATA, *maddr++);
-            }
-            vaddr += (cnt >> 1);
-        }
-
-        fl_fclose(file);
-        dprintf("done!\n");
-    }
-    else
-    {
-        dprintf(" - FAILED\n");
-    }
-}
-
-static void load_sd_colors(const char * filename)
-{
-    dprintf("Loading colormap: \"%s\"", filename);
-    void * file = fl_fopen(filename, "r");
-
-    if (file != NULL)
-    {
-        int cnt   = 0;
-        int vaddr = 0;
-
-        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
-        {
-            if ((vaddr & 0x7) == 0)
-            {
-                dprintf(".");
-            }
-
-            uint16_t * maddr = (uint16_t *)mem_buffer;
-            wait_vsync();
-            xm_setw(XR_ADDR, XR_COLOR_MEM);
-            for (int i = 0; i < (cnt >> 1); i++)
-            {
-                uint16_t v = *maddr++;
-                xm_setw(XR_DATA, v);
-            }
-            vaddr += (cnt >> 1);
-        }
-
-        fl_fclose(file);
-        dprintf("done!\n");
-    }
-    else
-    {
-        dprintf(" - FAILED\n");
-    }
-}
-
 void set_alpha_slow(int alpha)
 {
     uint16_t a = (alpha & 0xf) << 12;
@@ -1240,10 +1392,6 @@ void     xosera_test()
             break;
         }
 
-        test_dual_8bpp();
-
-        test_xr_read();
-
         if (SD_check_support())
         {
             dprintf("SD card supported: ");
@@ -1263,6 +1411,17 @@ void     xosera_test()
         {
             dprintf("No SD card support.\n");
         }
+
+        if (use_sd)
+        {
+            test_blit();
+        }
+
+        test_dual_8bpp();
+
+        test_xr_read();
+
+
         // 4/8 bpp test
         if (use_sd)
         {
@@ -1271,7 +1430,7 @@ void     xosera_test()
             xreg_setw(PA_LINE_LEN, 160);
 
             load_sd_colors("/xosera_r1_pal.raw");
-            load_sd_bitmap("/xosera_r1.raw");
+            load_sd_bitmap("/xosera_r1.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1291,7 +1450,7 @@ void     xosera_test()
             xreg_setw(PA_LINE_LEN, 160);
 
             load_sd_colors("/color_cube_320x240_256_pal.raw");
-            load_sd_bitmap("/color_cube_320x240_256.raw");
+            load_sd_bitmap("/color_cube_320x240_256.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1311,7 +1470,7 @@ void     xosera_test()
             xreg_setw(PA_LINE_LEN, 80);
 
             load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw");
-            load_sd_bitmap("/ST_KingTut_Dpaint_16.raw");
+            load_sd_bitmap("/ST_KingTut_Dpaint_16.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1330,7 +1489,7 @@ void     xosera_test()
             xreg_setw(PA_LINE_LEN, 80);
 
             load_sd_colors("/escher-relativity_320x240_16_pal.raw");
-            load_sd_bitmap("/escher-relativity_320x240_16.raw");
+            load_sd_bitmap("/escher-relativity_320x240_16.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1348,7 +1507,7 @@ void     xosera_test()
             xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
             xreg_setw(PA_LINE_LEN, 80);
 
-            load_sd_bitmap("/space_shuttle_color_small.raw");
+            load_sd_bitmap("/space_shuttle_color_small.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1367,7 +1526,7 @@ void     xosera_test()
             xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
             xreg_setw(PA_LINE_LEN, 80);
 
-            load_sd_bitmap("/mountains_mono_640x480w.raw");
+            load_sd_bitmap("/mountains_mono_640x480w.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1380,7 +1539,7 @@ void     xosera_test()
             xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
             xreg_setw(PA_LINE_LEN, 80);
 
-            load_sd_bitmap("/escher-relativity_640x480w.raw");
+            load_sd_bitmap("/escher-relativity_640x480w.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;

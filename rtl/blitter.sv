@@ -231,12 +231,8 @@ always_ff @(posedge clk) begin
                 end
             end
             BLIT_DONE: begin
-                if (blit_queued) begin
-                    blit_state          <= BLIT_SETUP;
-                end else begin
-                    blit_done_intr_o    <= 1'b1;
-                    blit_state          <= BLIT_IDLE;
-                end
+                blit_done_intr_o    <= 1'b1;
+                blit_state          <= BLIT_IDLE;
             end
             default: begin
                 blit_state          <= BLIT_IDLE;

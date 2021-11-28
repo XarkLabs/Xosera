@@ -434,15 +434,15 @@ BusInterface bus;
 int          BusInterface::test_data_len    = 999;
 uint16_t     BusInterface::test_data[16384] = {
     // test data
-    REG_WAITVTOP(),         // show boot screen
     REG_WAITVSYNC(),        // show boot screen
+    REG_WAITVTOP(),         // show boot screen
 
     REG_W(XR_ADDR, XR_BLIT_RD_ADDR),
-    REG_W(XR_DATA, 0xF100),
+    REG_W(XR_DATA, 0xE700),
     REG_W(XR_ADDR, XR_BLIT_WR_ADDR),
     REG_W(XR_DATA, 0x0001),
     REG_W(XR_ADDR, XR_BLIT_COUNT),
-    REG_W(XR_DATA, 0x0004),
+    REG_W(XR_DATA, 0x00FF),
 
     REG_WAITVTOP(),         // show boot screen
     REG_WAITVSYNC(),        // show boot screen

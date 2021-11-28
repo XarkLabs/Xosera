@@ -79,7 +79,7 @@ logic [16:0]    blit_count;
 
 logic [15:0]    blit_rd_data;
 
-assign blit_done    = ~blit_count[16];            // count underflow
+assign blit_done    = blit_count[16];            // count underflow
 assign blit_busy_o  = (blit_state != BLIT_IDLE);  // next blit already queued
 
 // blit registers read/write
@@ -107,7 +107,7 @@ always_ff @(posedge clk) begin
 
         // blit register write
         if (xreg_wr_en_i) begin
-            case ({ xv::XR_BLIT_REGS[6:5], xreg_num_i})
+            case ({2'b10, xreg_num_i} )
                 xv::XR_BLIT_MODE: begin
                     xreg_rd_xr      <= xreg_data_i[15];
                     xreg_wr_xr      <= xreg_data_i[14];
@@ -133,7 +133,7 @@ always_ff @(posedge clk) begin
                 end
                 xv::XR_BLIT_COUNT: begin
                     xreg_count      <= xreg_data_i;
-                    blit_queued         <= 1'b1;
+                    blit_queued     <= 1'b1;
                 end
                 default: begin
                 end
@@ -204,9 +204,8 @@ always_ff @(posedge clk) begin
                 if (blit_vram_ack_i) begin
                     blit_rd_data        <= blit_vram_data_i;
                     blit_vram_sel_o     <= 1'b0;
+                    blit_wr_o           <= 1'b0;
                     blit_state          <= BLIT_WRITE;
-                end else begin
-                    blit_state          <= BLIT_WAIT_VRAM_READ;
                 end
             end
             BLIT_WRITE: begin
@@ -222,13 +221,13 @@ always_ff @(posedge clk) begin
             end
             BLIT_WAIT_WRITE: begin
                 if (blit_vram_ack_i) begin
+                    blit_vram_sel_o     <= 1'b0;
+                    blit_wr_o           <= 1'b0;
                     if (blit_done) begin
                         blit_state          <= BLIT_DONE;
                     end else begin
                         blit_state          <= BLIT_READ;
                     end
-                end else begin
-                    blit_state          <= BLIT_WAIT_WRITE;
                 end
             end
             BLIT_DONE: begin

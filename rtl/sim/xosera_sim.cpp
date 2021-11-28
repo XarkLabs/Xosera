@@ -34,8 +34,8 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 10        // video frames to dump to VCD file (and then screen-shot and exit)
-#define MAX_UPLOADS      8         // maximum number of "payload" uploads
+#define MAX_TRACE_FRAMES 2        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_UPLOADS      8        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
 vluint64_t main_time         = 0;
@@ -158,7 +158,16 @@ class BusInterface
         XR_PB_HV_SCROLL = 0x1C,        //  playfield B horizontal and vertical fine scroll
         XR_PB_LINE_ADDR = 0x1D,        //  playfield B scanline start address (loaded at start of line)
         XR_PB_UNUSED_1E = 0x1E,        //
-        XR_PB_UNUSED_1F = 0x1F         //
+        XR_PB_UNUSED_1F = 0x1F,        //
+
+        XR_BLIT_MODE    = 0x20,
+        XR_BLIT_RD_MOD  = 0x21,
+        XR_BLIT_WR_MOD  = 0x22,
+        XR_BLIT_WR_MASK = 0x23,
+        XR_BLIT_WIDTH   = 0x24,
+        XR_BLIT_RD_ADDR = 0x25,
+        XR_BLIT_WR_ADDR = 0x26,
+        XR_BLIT_COUNT   = 0x27
     };
 
     static const char * reg_name[];
@@ -425,7 +434,19 @@ BusInterface bus;
 int          BusInterface::test_data_len    = 999;
 uint16_t     BusInterface::test_data[16384] = {
     // test data
-    REG_WAITVSYNC(),         // show boot screen
+    REG_WAITVTOP(),         // show boot screen
+    REG_WAITVSYNC(),        // show boot screen
+
+    REG_W(XR_ADDR, XR_BLIT_RD_ADDR),
+    REG_W(XR_DATA, 0xF100),
+    REG_W(XR_ADDR, XR_BLIT_WR_ADDR),
+    REG_W(XR_DATA, 0x0001),
+    REG_W(XR_ADDR, XR_BLIT_COUNT),
+    REG_W(XR_DATA, 0x0004),
+
+    REG_WAITVTOP(),         // show boot screen
+    REG_WAITVSYNC(),        // show boot screen
+
     REG_RW(UNUSED_A),        // read LFSR register
     REG_RW(UNUSED_A),        // read LFSR register
     REG_RW(UNUSED_A),        // read LFSR register

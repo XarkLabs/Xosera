@@ -262,7 +262,7 @@ copper copper(
 blitter blitter(
     .xreg_wr_en_i(blit_reg_wr_en),
     .xreg_num_i(xr_regs_addr[3:0]),
-    .xreg_data_i(xm_regs_data_in),
+    .xreg_data_i(xr_regs_data_in),
     .xreg_data_o(blit_xreg_data_out),
     .blit_busy_o(blit_busy),
     .blit_done_intr_o(blit_intr),

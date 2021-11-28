@@ -35,7 +35,7 @@
 `define ENABLE_PF_B                     // enable playfield B
 `define ENABLE_LFSR                     // enable XM_REG 0xA as 19-bit LFSR
 `define ENABLE_COPP                     // enable copper
-//`define ENABLE_BLIT                     // enable blitter unit
+`define ENABLE_BLIT                     // enable blitter unit
 //`define ENABLE_DRAW                     // enable draw unit
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")

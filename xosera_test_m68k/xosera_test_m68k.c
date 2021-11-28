@@ -353,6 +353,12 @@ static inline void check_vsync()
         ;
 }
 
+static inline void wait_read()
+{
+    while (xm_getbl(SYS_CTRL) & 0x40)
+        ;
+}
+
 static void install_copper()
 {
     dprintf("Loading copper list...");
@@ -428,14 +434,13 @@ _NOINLINE void dupe_colors(int alpha)
     for (uint16_t i = 0; i < 256; i++)
     {
         xm_setw(XR_ADDR, XR_COLOR_MEM + i);
-        while (xm_getbl(SYS_CTRL) & 0x40)
-            ;
+        wait_read();
 
         uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
 
         xm_setw(XR_ADDR, XR_COLOR_MEM + 0x100 + i);
-        while (xm_getbl(SYS_CTRL) & 0x40)
-            ;
+        wait_read();
+
         xm_setw(XR_DATA, v);
     };
 }
@@ -598,7 +603,7 @@ void test_blit()
             break;
         }
 
-        dprintf("blit from 0x0000 to 0x4B00, 0x%04X bytes\n", 320 * 240 / 4);
+        dprintf("%d byte copy from 0x0000 to 0x4B00\n", 320 * 240 / 4);
         xreg_setw(BLIT_RD_ADDR, 0x0000);
         xreg_setw(BLIT_WR_ADDR, 0x4B00);
         xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 1);
@@ -609,7 +614,7 @@ void test_blit()
             break;
         }
 
-        dprintf("blit from 0x4B00 to 0x4B01, 0x%04X bytes (clear)\n", 320 * 240 / 4);
+        dprintf("%d byte copy-fill of 0x4B00\n", 320 * 240 / 4);
         xreg_setw(BLIT_RD_ADDR, 0x4B00);
         xreg_setw(BLIT_WR_ADDR, 0x4B01);
         xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 2);
@@ -620,7 +625,7 @@ void test_blit()
             break;
         }
 
-        dprintf("blit from 0x0000 to 0x4B00, 0x%04X bytes\n", 320 * 240 / 4);
+        dprintf("%d byte copy from 0x0000 to 0x4B00\n", 320 * 240 / 4);
         xreg_setw(BLIT_RD_ADDR, 0x0000);
         xreg_setw(BLIT_WR_ADDR, 0x4B00);
         xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 2);
@@ -637,7 +642,7 @@ void test_blit()
         xm_setw(WR_INCR, 0);             // set write inc
         xm_setw(WR_ADDR, 0x4B00);        // set write address
 
-        for (int i = 0; i < 16; i++)
+        for (int i = 0; i < 64; i++)
         {
             xm_setw(DATA, 0x0000);        // set write inc
 
@@ -651,9 +656,7 @@ void test_blit()
             xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 2);
             wait_blit();
             uint16_t stop = xm_getw(TIMER) - start;
-            dprintf("4bpp copy = 0x%04x (%u.%u) 1/10th ms\n", stop, stop / 10, stop % 10);
-            dprintf("4bpp = 0x%04x (%u.%u) 1/10th ms\n", stop, stop / 10, stop % 10);
-            wait_vsync();
+            dprintf("%d byte fill in %u.%u ms\n", (320 * 240 / 4), stop / 10, stop % 10);
 
             xm_setw(DATA, 0xFFFF);        // set write inc
             xreg_setw(BLIT_RD_ADDR, 0x4B00);
@@ -661,19 +664,18 @@ void test_blit()
             xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 2);
 
             wait_blit();
-            wait_vsync();
         }
 
         xm_setw(WR_INCR, 0);             // set write inc
         xm_setw(WR_ADDR, 0x0000);        // set write address
 
-        for (int i = 0; i < 16; i++)
+        for (int i = 0; i < 32; i++)
         {
-            uint16_t v = i << 12 | i << 8 | i << 4 | i;
+            uint16_t a = i & 0xf;
+            uint16_t v = (a << 12) | (a << 8) | (a << 4) | a;
             xm_setw(DATA, v);        // set write inc
 
             uint16_t start;
-            wait_vsync();
             uint16_t go = xm_getw(TIMER);
             while ((start = xm_getw(TIMER)) == go)
                 ;
@@ -684,21 +686,7 @@ void test_blit()
             wait_blit();
 
             uint16_t stop = xm_getw(TIMER) - start;
-            dprintf("black 64KW = 0x%04x (%u.%u) 1/10th ms\n", stop, stop / 10, stop % 10);
-
-            xm_setw(DATA, 0x0000);        // set write inc
-
-            go = xm_getw(TIMER);
-            while ((start = xm_getw(TIMER)) == go)
-                ;
-
-            xreg_setw(BLIT_RD_ADDR, 0x0000);
-            xreg_setw(BLIT_WR_ADDR, 0x0001);
-            xreg_setw(BLIT_COUNT, 0xFFFF);
-            wait_blit();
-
-            stop = xm_getw(TIMER) - start;
-            dprintf("white 64KW = 0x%04x (%u.%u) 1/10th ms\n", stop, stop / 10, stop % 10);
+            dprintf("fill 64KW with 0x%04x in %u.%u ms\n", v, stop / 10, stop % 10);
         }
 
     } while (false);
@@ -1209,9 +1197,7 @@ static void test_xr_read()
         }
         for (int w = XR_TILE_MEM; w < XR_TILE_MEM + 0x1400; w++)
         {
-            //            touching
             xm_setw(XR_ADDR, w);
-            //            __asm__ __volatile__("nop ; nop ; nop ; nop");
             uint16_t v = xm_getw(XR_DATA);           // read tile mem
             xm_setw(XR_DATA, r & 1 ? v : ~v);        // toggle to prove read and set in VRAM
                                                      //            __asm__ __volatile__("nop ; nop ; nop ; nop");
@@ -1252,8 +1238,7 @@ static void set_alpha(int alpha)
     for (int i = XR_COLOR_MEM; i < XR_COLOR_MEM + 256; i++)
     {
         xm_setw(XR_ADDR, i);
-        while (xm_getbl(SYS_CTRL) & 0x40)
-            ;
+        wait_read();
         uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
         xm_setw(XR_DATA, v);
     }

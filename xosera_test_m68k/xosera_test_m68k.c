@@ -245,8 +245,8 @@ _NOINLINE bool delay_check(int ms)
         uint16_t tms = 10;
         do
         {
-            uint8_t tvb = xm_getbl(TIMER);
-            while (tvb == xm_getbl(TIMER))
+            uint16_t tv = xm_getw(TIMER);
+            while (tv == xm_getw(TIMER))
                 ;
         } while (--tms);
     }
@@ -590,7 +590,7 @@ void test_blit()
     {
         wait_vsync();
         xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
-        xreg_setw(PA_LINE_LEN, 80);
+        xreg_setw(PA_LINE_LEN, 320 / 4);
         xreg_setw(PA_DISP_ADDR, 0x4B00);
 
         xreg_setw(PB_GFX_CTRL, 0x0080);        // bitmap + 4-bpp + Hx2 + Vx2
@@ -603,33 +603,24 @@ void test_blit()
             break;
         }
 
-        dprintf("%d byte copy from 0x0000 to 0x4B00\n", 320 * 240 / 4);
+        dprintf("%d byte copy from 0x0000 to 0x4B00\n", (320 * 240) / 4);
+        xreg_setw(BLIT_MODE, 0x0000);
         xreg_setw(BLIT_RD_ADDR, 0x0000);
         xreg_setw(BLIT_WR_ADDR, 0x4B00);
-        xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 1);
         wait_blit();
+        xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
 
         if (delay_check(DELAY_TIME))
         {
             break;
         }
 
-        dprintf("%d byte copy-fill of 0x4B00\n", 320 * 240 / 4);
-        xreg_setw(BLIT_RD_ADDR, 0x4B00);
-        xreg_setw(BLIT_WR_ADDR, 0x4B01);
-        xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 2);
-        wait_blit();
-
-        if (delay_check(DELAY_TIME))
-        {
-            break;
-        }
-
-        dprintf("%d byte copy from 0x0000 to 0x4B00\n", 320 * 240 / 4);
-        xreg_setw(BLIT_RD_ADDR, 0x0000);
+        dprintf("%d byte fill of 0x4B00\n", (320 * 240) / 4);
+        xreg_setw(BLIT_MODE, 0x2000);
+        xreg_setw(BLIT_RD_ADDR, 0x1234);
         xreg_setw(BLIT_WR_ADDR, 0x4B00);
-        xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 2);
         wait_blit();
+        xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
 
         if (delay_check(DELAY_TIME))
         {
@@ -639,50 +630,47 @@ void test_blit()
         xm_setw(XR_ADDR, XR_COLOR_MEM + 15);        // set write address
         xm_setw(XR_DATA, 0x0fff);
 
-        xm_setw(WR_INCR, 0);             // set write inc
-        xm_setw(WR_ADDR, 0x4B00);        // set write address
-
-        for (int i = 0; i < 64; i++)
+        for (int i = 0; i < 16; i++)
         {
-            xm_setw(DATA, 0x0000);        // set write inc
-
             uint16_t start;
-            wait_vsync();
             uint16_t go = xm_getw(TIMER);
             while ((start = xm_getw(TIMER)) == go)
                 ;
-            xreg_setw(BLIT_RD_ADDR, 0x4B00);
-            xreg_setw(BLIT_WR_ADDR, 0x4B01);
-            xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 2);
+
+            xreg_setw(BLIT_MODE, 0x0000);
+            xreg_setw(BLIT_RD_ADDR, 0x0000);
+            xreg_setw(BLIT_WR_ADDR, 0x4B00);
             wait_blit();
+            xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
+
+            xreg_setw(BLIT_MODE, 0x2000);
+            xreg_setw(BLIT_RD_ADDR, 0xFFFF);
+            xreg_setw(BLIT_WR_ADDR, 0x4B00);
+            wait_blit();
+            xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
+
             uint16_t stop = xm_getw(TIMER) - start;
-            dprintf("%d byte fill in %u.%u ms\n", (320 * 240 / 4), stop / 10, stop % 10);
-
-            xm_setw(DATA, 0xFFFF);        // set write inc
-            xreg_setw(BLIT_RD_ADDR, 0x4B00);
-            xreg_setw(BLIT_WR_ADDR, 0x4B01);
-            xreg_setw(BLIT_COUNT, (320 * 240 / 4) - 2);
-
-            wait_blit();
+            dprintf("%d byte fill in %u.%u ms\n", (320 * 240) / 4, stop / 10, stop % 10);
         }
 
-        xm_setw(WR_INCR, 0);             // set write inc
-        xm_setw(WR_ADDR, 0x0000);        // set write address
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
 
-        for (int i = 0; i < 32; i++)
+        for (int i = 0; i < 16; i++)
         {
             uint16_t a = i & 0xf;
             uint16_t v = (a << 12) | (a << 8) | (a << 4) | a;
-            xm_setw(DATA, v);        // set write inc
-
             uint16_t start;
             uint16_t go = xm_getw(TIMER);
             while ((start = xm_getw(TIMER)) == go)
                 ;
 
-            xreg_setw(BLIT_RD_ADDR, 0x0000);
-            xreg_setw(BLIT_WR_ADDR, 0x0001);
-            xreg_setw(BLIT_COUNT, 0xFFFF);
+            xreg_setw(BLIT_MODE, 0x2000);
+            xreg_setw(BLIT_RD_ADDR, v);
+            xreg_setw(BLIT_WR_ADDR, 0x0000);
+            xreg_setw(BLIT_COUNT, 0x10000 - 1);
             wait_blit();
 
             uint16_t stop = xm_getw(TIMER) - start;
@@ -690,6 +678,9 @@ void test_blit()
         }
 
     } while (false);
+    xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
+    xreg_setw(PA_LINE_LEN, 320 / 4);
+    xreg_setw(PA_DISP_ADDR, 0x0000);
 }
 
 void test_dual_8bpp()

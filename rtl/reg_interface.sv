@@ -31,7 +31,8 @@ module reg_interface(
     input  wire word_t           regs_data_i,       // VRAM read data in
     input  wire word_t           xr_data_i,         // XR read data in
     // status signals
-    input  wire logic            busy_i,            // blit/draw busy status
+    input  wire logic            blit_busy_i,       // blit operation in progress
+    input  wire logic            blit_full_i,       // blit register queue full
     // iCE40 reconfigure
     output      logic            reconfig_o,        // reconfigure iCE40 from flash
     output      logic  [1:0]     boot_select_o,     // reconfigure iCE40 flash config number
@@ -94,8 +95,8 @@ logic [LFSR_SIZE-1:0]   LFSR;
 word_t          reg_LFSR;
 `endif
 
-logic mem_read_wait;
-assign mem_read_wait    = xr_rd | vram_rd | vram_rw_rd;
+logic mem_wait;
+assign mem_wait    = xr_rd | vram_rd | vram_rw_rd | regs_wr_o | vram_rw_wr;
 
 // output interrupt mask
 assign intr_mask_o = intr_mask;
@@ -139,7 +140,7 @@ always_comb begin
         xv::XM_DATA_2:
             bus_data_o  = !bus_bytesel ? reg_rd_data[15:8]      : reg_rd_data[7:0];
         xv::XM_SYS_CTRL:
-            bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { busy_i, mem_read_wait, 2'b0, regs_wrmask_o };
+            bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { mem_wait, blit_busy_i, blit_full_i, 1'b0, regs_wrmask_o };
         xv::XM_TIMER:
 `ifdef ENABLE_TIMERLATCH
             bus_data_o  = !bus_bytesel ? reg_timer[15:8]        : timer_latch_val;

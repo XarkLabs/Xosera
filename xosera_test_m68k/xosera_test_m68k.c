@@ -353,9 +353,9 @@ static inline void check_vsync()
         ;
 }
 
-static inline void wait_read()
+static inline void wait_memory()
 {
-    while (xm_getbl(SYS_CTRL) & 0x40)
+    while (xm_getbl(SYS_CTRL) & 0x80)
         ;
 }
 
@@ -434,12 +434,12 @@ _NOINLINE void dupe_colors(int alpha)
     for (uint16_t i = 0; i < 256; i++)
     {
         xm_setw(XR_ADDR, XR_COLOR_MEM + i);
-        wait_read();
+        wait_memory();
 
         uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
 
         xm_setw(XR_ADDR, XR_COLOR_MEM + 0x100 + i);
-        wait_read();
+        wait_memory();
 
         xm_setw(XR_DATA, v);
     };
@@ -576,9 +576,15 @@ void draw8bpp_v_line(uint16_t base, uint8_t color, int x, int y, int len)
     xm_setbl(SYS_CTRL, 0xf);
 }
 
-static inline void wait_blit()
+static inline void wait_blit_done()
 {
-    while (xm_getbl(SYS_CTRL) & 0x80)
+    while (xm_getbl(SYS_CTRL) & 0x40)
+        ;
+}
+
+static inline void wait_blit_ready()
+{
+    while (xm_getbl(SYS_CTRL) & 0x20)
         ;
 }
 
@@ -604,10 +610,10 @@ void test_blit()
         }
 
         dprintf("%d byte copy from 0x0000 to 0x4B00\n", (320 * 240) / 4);
+        wait_blit_ready();
         xreg_setw(BLIT_MODE, 0x0000);
         xreg_setw(BLIT_RD_ADDR, 0x0000);
         xreg_setw(BLIT_WR_ADDR, 0x4B00);
-        wait_blit();
         xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
 
         if (delay_check(DELAY_TIME))
@@ -616,10 +622,10 @@ void test_blit()
         }
 
         dprintf("%d byte fill of 0x4B00\n", (320 * 240) / 4);
+        wait_blit_ready();
         xreg_setw(BLIT_MODE, 0x2000);
         xreg_setw(BLIT_RD_ADDR, 0x1234);
         xreg_setw(BLIT_WR_ADDR, 0x4B00);
-        wait_blit();
         xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
 
         if (delay_check(DELAY_TIME))
@@ -632,6 +638,8 @@ void test_blit()
 
         for (int i = 0; i < 16; i++)
         {
+            wait_blit_ready();
+
             uint16_t start;
             uint16_t go = xm_getw(TIMER);
             while ((start = xm_getw(TIMER)) == go)
@@ -640,17 +648,18 @@ void test_blit()
             xreg_setw(BLIT_MODE, 0x0000);
             xreg_setw(BLIT_RD_ADDR, 0x0000);
             xreg_setw(BLIT_WR_ADDR, 0x4B00);
-            wait_blit();
             xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
 
+            wait_blit_ready();
             xreg_setw(BLIT_MODE, 0x2000);
             xreg_setw(BLIT_RD_ADDR, 0xFFFF);
             xreg_setw(BLIT_WR_ADDR, 0x4B00);
-            wait_blit();
             xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
 
+            wait_blit_done();
+
             uint16_t stop = xm_getw(TIMER) - start;
-            dprintf("%d byte fill in %u.%u ms\n", (320 * 240) / 4, stop / 10, stop % 10);
+            dprintf("%d byte copy + fill in %u.%u ms\n", (320 * 240) / 4, stop / 10, stop % 10);
         }
 
         if (delay_check(DELAY_TIME))
@@ -658,23 +667,45 @@ void test_blit()
             break;
         }
 
-        for (int i = 0; i < 16; i++)
         {
-            uint16_t a = i & 0xf;
-            uint16_t v = (a << 12) | (a << 8) | (a << 4) | a;
+            int      ms_min = 99999;
+            int      ms_max = 0;
             uint16_t start;
             uint16_t go = xm_getw(TIMER);
             while ((start = xm_getw(TIMER)) == go)
                 ;
+            for (int i = 0; i < 16; i++)
+            {
+                uint16_t a = i & 0xf;
+                uint16_t v = (a << 12) | (a << 8) | (a << 4) | a;
 
-            xreg_setw(BLIT_MODE, 0x2000);
-            xreg_setw(BLIT_RD_ADDR, v);
-            xreg_setw(BLIT_WR_ADDR, 0x0000);
-            xreg_setw(BLIT_COUNT, 0x10000 - 1);
-            wait_blit();
+                wait_blit_ready();
+                xreg_setw(BLIT_MODE, 0x2000);
+                xreg_setw(BLIT_RD_ADDR, v);
+                xreg_setw(BLIT_WR_ADDR, 0x0000);
+                xreg_setw(BLIT_COUNT, 0x10000 - 1);
 
+                uint16_t stop = xm_getw(TIMER) - start;
+                if (stop < ms_min)
+                {
+                    ms_min = stop;
+                }
+                if (stop > ms_max)
+                {
+                    ms_max = stop;
+                }
+            }
+            go = xm_getw(TIMER);
+            while ((start = xm_getw(TIMER)) == go)
+                ;
+            wait_blit_done();
             uint16_t stop = xm_getw(TIMER) - start;
-            dprintf("fill 64KW with 0x%04x in %u.%u ms\n", v, stop / 10, stop % 10);
+            dprintf("fill 64KW with 0x%04x in %u.%u ms min, %u.%u ms max\n",
+                    ms_min / 10,
+                    ms_min % 10,
+                    ms_max / 10,
+                    ms_max % 10);
+            dprintf("straggler %u.%u ms\n", stop / 10, stop % 10);
         }
 
     } while (false);
@@ -1229,7 +1260,7 @@ static void set_alpha(int alpha)
     for (int i = XR_COLOR_MEM; i < XR_COLOR_MEM + 256; i++)
     {
         xm_setw(XR_ADDR, i);
-        wait_read();
+        wait_memory();
         uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
         xm_setw(XR_DATA, v);
     }

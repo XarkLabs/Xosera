@@ -254,8 +254,8 @@ extern volatile xmreg_t * const xosera_ptr;
 #define XB_(v, lb, rb) (((v) & ((1 << ((lb) - (rb) + 1)) - 1)) << (rb))
 
 // TODO: repace magic constants with defines for bit positions
-#define MAKE_SYS_CTRL(reboot, bootcfg, wrmask, intena)                                                                 \
-    (XB_(reboot, 15, 15) | XB_(bootcfg, 14, 13) | XB_(wrmask, 11, 8) | XB_(intena, 3, 0))
+#define MAKE_SYS_CTRL(reboot, bootcfg, intena, wrmask)                                                                 \
+    (XB_(reboot, 15, 15) | XB_(bootcfg, 14, 13) | XB_(intena, 11, 8) | XB_(wrmask, 3, 0))
 #define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 15, 8) | XB_(intmask, 3, 0))
 #define MAKE_GFX_CTRL(colbase, blank, bpp, bm, hx, vx)                                                                 \
     (XB_(colbase, 15, 8) | XB_(blank, 7, 7) | XB_(bm, 6, 6) | XB_(bpp, 5, 4) | XB_(hx, 3, 2) | XB_(vx, 1, 0))

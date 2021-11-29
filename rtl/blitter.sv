@@ -21,6 +21,7 @@ module blitter(
     output      word_t          xreg_data_o,       // register/status data reads
     // blitter signals
     output      logic           blit_busy_o,       // current status
+    output      logic           blit_full_o,       // current status
     output      logic           blit_done_intr_o,  // interrupt signal when done
     // VRAM/XR bus signals
     output      logic           blit_vram_sel_o,   // vram select
@@ -80,7 +81,8 @@ logic [15:0]    blit_wr_addr;
 logic [16:0]    blit_count;
 
 assign blit_done    = blit_count[16];               // count underflow
-assign blit_busy_o  = (blit_state != BLIT_IDLE);    // next blit already queued
+assign blit_busy_o  = (blit_state != BLIT_IDLE);    // blit operation in progress
+assign blit_full_o  = blit_queued;                  // blit register queue full
 
 // blit registers read/write
 always_ff @(posedge clk) begin

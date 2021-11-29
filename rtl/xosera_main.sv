@@ -94,6 +94,7 @@ logic  [3:0]            blit_wr_mask;
 addr_t                  blit_vram_addr;
 word_t                  blit_vram_data;
 logic                   blit_busy;
+logic                   blit_full;
 logic                   blit_intr;
 word_t                  blit_data_out;
 /* verilator lint_on UNUSED */
@@ -192,7 +193,8 @@ reg_interface reg_interface(
     .regs_data_i(vram_data_out),        // 16-bit word read from vram
     .xr_data_i(xm_regs_data_in),        // 16-bit word read from XR
     //
-    .busy_i(blit_busy),                 // TODO: draw engine busy
+    .blit_busy_i(blit_busy),            // blit engine busy
+    .blit_full_i(blit_full),            // blit engine
     // reconfig
     .reconfig_o(reconfig_o),
     .boot_select_o(boot_select_o),
@@ -265,6 +267,7 @@ blitter blitter(
     .xreg_data_i(xr_regs_data_in),
     .xreg_data_o(blit_xreg_data_out),
     .blit_busy_o(blit_busy),
+    .blit_full_o(blit_full),
     .blit_done_intr_o(blit_intr),
     .blit_vram_sel_o(blit_vram_sel),
     .blit_vram_ack_i(blit_vram_ack),

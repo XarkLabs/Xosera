@@ -34,6 +34,7 @@
 // features that can be optionally disabled
 `define ENABLE_PF_B                     // enable playfield B
 `define ENABLE_LFSR                     // enable XM_REG 0xA as 19-bit LFSR
+`define ENABLE_TIMERLATCH               // latch timer low byte when high byte read
 `define ENABLE_COPP                     // enable copper
 `define ENABLE_BLIT                     // enable blitter unit
 //`define ENABLE_DRAW                     // enable draw unit
@@ -410,8 +411,10 @@ typedef logic [$clog2(VISIBLE_HEIGHT)-1:0]  vres_vis_t;     // vertical visible 
 
 endpackage
 
-// Xosera types
+// Xosera types (NOTE: in global space, due to iVerilog)
+typedef logic  [7:0]                            byte_t;         // byte size (8-bit)
 typedef logic [15:0]                            word_t;         // word size (16-bit)
+typedef logic [31:0]                            long_t;         // long size (32-bit)
 typedef logic [15:0]                            argb_t;         // ARGB color (16-bit)
 typedef logic [11:0]                            rgb_t;          // RGB color (12-bit)
 
@@ -419,11 +422,6 @@ typedef logic [xv::VRAM_W-1:0]                  addr_t;         // vram or xmem 
 typedef logic [xv::TILE_W-1:0]                  tile_addr_t;    // tile address
 typedef logic [xv::COPP_W-1:0]                  copp_addr_t;    // copper address
 typedef logic [xv::COLOR_W-1:0]                 color_t;        // color look up index
-
-// typedef logic [15:0]                        addr_t;         // vram or xmem address (16-bit)
-// typedef logic [12:0]                        tile_addr_t;    // tile address
-// typedef logic  [9:0]                        copp_addr_t;    // copper address
-// typedef logic  [7:0]                        color_t;        // color look up index
 
 typedef logic [$clog2(xv::TOTAL_WIDTH)-1:0]     hres_t;         // horizontal coordinate types
 typedef logic [$clog2(xv::TOTAL_HEIGHT)-1:0]    vres_t;         // vertical coordinate types

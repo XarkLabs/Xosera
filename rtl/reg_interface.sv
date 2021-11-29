@@ -84,6 +84,10 @@ logic  [7:0]    bus_data_byte;          // data byte from bus
 word_t          reg_timer;              // 1/10 ms timer (visible 16 bits)
 logic [11:0]    reg_timer_frac;         // internal clock counter for 1/10 ms
 
+`ifdef ENABLE_TIMERLATCH
+logic [7:0]     timer_latch_val;
+`endif
+
 `ifdef ENABLE_LFSR
 parameter               LFSR_SIZE = 19; // NOTE: if changed, must change taps
 logic [LFSR_SIZE-1:0]   LFSR;
@@ -137,7 +141,11 @@ always_comb begin
         xv::XM_SYS_CTRL:
             bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { busy_i, mem_read_wait, 2'b0, regs_wrmask_o };
         xv::XM_TIMER:
+`ifdef ENABLE_TIMERLATCH
+            bus_data_o  = !bus_bytesel ? reg_timer[15:8]        : timer_latch_val;
+`else
             bus_data_o  = !bus_bytesel ? reg_timer[15:8]        : reg_timer[7:0];
+`endif
 `ifdef ENABLE_LFSR
         xv::XM_LFSR:
             bus_data_o  = !bus_bytesel ? reg_LFSR[15:8]         : reg_LFSR[7:0];
@@ -214,6 +222,9 @@ always_ff @(posedge clk) begin
         reg_rw_addr     <= 16'h0000;
         reg_rw_incr     <= 16'h0000;
         reg_data_even   <= 8'h00;
+`ifdef ENABLE_TIMERLATCH
+        timer_latch_val <= 8'h00;
+`endif
     end else begin
 
         intr_clear_o    <= 4'b0;
@@ -392,6 +403,11 @@ always_ff @(posedge clk) begin
                 vram_rw_rd          <= 1'b1;            // remember pending vram read request
             end
         end
+`ifdef ENABLE_TIMERLATCH
+        if (bus_read_strobe && !bus_bytesel) begin
+            timer_latch_val <= reg_timer[7:0];
+        end
+`endif
     end
 end
 endmodule

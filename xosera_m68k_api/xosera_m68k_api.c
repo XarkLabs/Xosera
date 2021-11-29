@@ -38,8 +38,8 @@ void xv_delay(uint32_t ms)
         uint16_t tms = 10;
         do
         {
-            uint8_t tvb = xm_getbl(TIMER);
-            while (tvb == xm_getbl(TIMER))
+            uint16_t tv = xm_getw(TIMER);
+            while (tv == xm_getw(TIMER))
                 ;
         } while (--tms);
     }

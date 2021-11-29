@@ -157,7 +157,7 @@ allows corresponding interrupt source to generate CPU interrupt).
 **Read 16-bit timer, increments every 1/10<sup>th</sup> of a millisecond**
 **Write to clear interrupt status**
 Can be used for fairly accurate timing.  When value wraps, internal fractional value is maintined (so as accurate as FPGA PLL
-clock).
+clock). NOTE: To assure an atomic incrementing 16-bit value, when the high byte of TIMER is read, the low byte is saved into an internal register and returned when TIMER low byte is read.  Because of this reading the full 16-bit TIMER register is recommended (or first even byte, then odd byte, or odd byte value may not update).
 
 **0xA `XM_LFSR` (RO) - LFSR pseudo-random number**
 <img src="./pics/wd_XM_LFSR.svg">

@@ -33,24 +33,27 @@ module blitter(
     input  wire word_t          blit_vram_data_i,  // data word data in
     output      word_t          blit_data_o,       // data word data out
     // standard signals
-    input  wire logic            reset_i,           // system reset in
-    input  wire logic            clk                // clock (video pixel clock)
+    input  wire logic           reset_i,           // system reset in
+    input  wire logic           clk                // clock (video pixel clock)
 /* verilator lint_on UNUSED */
 );
 
 typedef enum logic [3:0] {
     BLIT_IDLE,
     BLIT_SETUP,
-    BLIT_READ,
-    BLIT_WAIT_VRAM_READ,
-    BLIT_WRITE,
-    BLIT_WAIT_WRITE,
+    BLIT_COPY,
+    BLIT_COPY_READ,
+    BLIT_COPY_WRITE,
+    BLIT_FILL,
+    BLIT_FILL_WRITE,
+
     BLIT_DONE
 } blit_state_t;
 
 // blitter registers
 logic           xreg_rd_xr;
 logic           xreg_wr_xr;
+logic           xreg_fill;
 logic  [3:0]    xreg_shift;
 logic [15:0]    xreg_rd_mod;
 logic [15:0]    xreg_wr_mod;
@@ -63,7 +66,6 @@ logic [15:0]    xreg_count;
 // blitter internal registers (so main registers can be altered when busy)
 logic           blit_done;
 logic           blit_queued;
-logic           blit_queue_clear;
 
 logic  [3:0]    blit_state;
 
@@ -77,10 +79,8 @@ logic [15:0]    blit_rd_addr;
 logic [15:0]    blit_wr_addr;
 logic [16:0]    blit_count;
 
-logic [15:0]    blit_rd_data;
-
-assign blit_done    = blit_count[16];            // count underflow
-assign blit_busy_o  = (blit_state != BLIT_IDLE);  // next blit already queued
+assign blit_done    = blit_count[16];               // count underflow
+assign blit_busy_o  = (blit_state != BLIT_IDLE);    // next blit already queued
 
 // blit registers read/write
 always_ff @(posedge clk) begin
@@ -89,6 +89,9 @@ always_ff @(posedge clk) begin
         blit_wr_xr      <= '0;
         blit_shift      <= '0;
 
+        xreg_rd_xr      <= 1'b0;
+        xreg_wr_xr      <= 1'b0;
+        xreg_fill       <= 1'b0;
         xreg_rd_mod     <= '0;
         xreg_wr_mod     <= '0;
         xreg_wr_mask    <= '0;
@@ -101,7 +104,7 @@ always_ff @(posedge clk) begin
         blit_wr_mask_o  <= 4'b1111;
 
     end else begin
-        if (blit_queue_clear) begin
+        if (blit_state == BLIT_SETUP) begin
             blit_queued     <= 1'b0;
         end
 
@@ -111,6 +114,7 @@ always_ff @(posedge clk) begin
                 xv::XR_BLIT_MODE: begin
                     xreg_rd_xr      <= xreg_data_i[15];
                     xreg_wr_xr      <= xreg_data_i[14];
+                    xreg_fill       <= xreg_data_i[13];
                     xreg_shift      <= xreg_data_i[3:0];
                 end
                 xv::XR_BLIT_RD_MOD: begin
@@ -167,13 +171,9 @@ always_ff @(posedge clk) begin
 
         blit_state          <= BLIT_IDLE;
         blit_done_intr_o    <= 1'b0;
-        blit_queue_clear    <= 1'b0;
         blit_count          <= 17'h10000;
-
-        blit_rd_data        <= '0;
     end else begin
         blit_done_intr_o    <= 1'b0;
-        blit_queue_clear    <= 1'b0;
 
         case (blit_state)
             BLIT_IDLE: begin
@@ -189,50 +189,83 @@ always_ff @(posedge clk) begin
                 blit_wr_addr        <= xreg_wr_addr;
                 blit_count          <= { 1'b0, xreg_count };
 
-                blit_queue_clear    <= 1'b1;
-                blit_state          <= BLIT_READ;
+                if (xreg_fill) begin
+                    blit_state          <= BLIT_FILL;
+                end else begin
+                    blit_state          <= BLIT_COPY;
+                end
             end
-            BLIT_READ: begin
+            BLIT_COPY: begin
                 blit_vram_sel_o     <= ~blit_rd_xr;
                 blit_wr_o           <= 1'b0;
                 blit_addr_o         <= blit_rd_addr;
                 blit_rd_addr        <= blit_rd_addr + 1'b1;
 
-                blit_state          <= BLIT_WAIT_VRAM_READ;
+                blit_state          <= BLIT_COPY_READ;
             end
-            BLIT_WAIT_VRAM_READ: begin
+            BLIT_COPY_READ: begin
                 if (blit_vram_ack_i) begin
-                    blit_rd_data        <= blit_vram_data_i;
-                    blit_vram_sel_o     <= 1'b0;
-                    blit_wr_o           <= 1'b0;
-                    blit_state          <= BLIT_WRITE;
+                    blit_vram_sel_o     <= ~blit_wr_xr;
+                    blit_wr_o           <= 1'b1;
+                    blit_addr_o         <= blit_wr_addr;
+                    blit_data_o         <= blit_vram_data_i;
+
+                    blit_wr_addr        <= blit_wr_addr + 1'b1;
+                    blit_count          <= blit_count - 1'b1;
+
+                    blit_state          <= BLIT_COPY_WRITE;
                 end
             end
-            BLIT_WRITE: begin
-                blit_vram_sel_o     <= ~blit_wr_xr;
-                blit_wr_o           <= 1'b1;
-                blit_addr_o         <= blit_wr_addr;
-                blit_data_o         <= blit_rd_data;
-                blit_wr_addr        <= blit_wr_addr + 1'b1;
-
-                blit_count          <= blit_count - 1'b1;
-
-                blit_state          <= BLIT_WAIT_WRITE;
-            end
-            BLIT_WAIT_WRITE: begin
+            BLIT_COPY_WRITE: begin
                 if (blit_vram_ack_i) begin
-                    blit_vram_sel_o     <= 1'b0;
-                    blit_wr_o           <= 1'b0;
+                    blit_addr_o         <= blit_rd_addr;
+                    blit_rd_addr        <= blit_rd_addr + 1'b1;
                     if (blit_done) begin
                         blit_state          <= BLIT_DONE;
                     end else begin
-                        blit_state          <= BLIT_READ;
+                        blit_vram_sel_o     <= ~blit_rd_xr;
+                        blit_wr_o           <= 1'b0;
+
+                        blit_state          <= BLIT_COPY_READ;
+                    end
+                end
+            end
+            BLIT_FILL: begin
+                blit_vram_sel_o     <= ~blit_wr_xr;
+                blit_wr_o           <= 1'b1;
+                blit_addr_o         <= blit_wr_addr;
+                blit_data_o         <= blit_rd_addr;
+
+                blit_wr_addr        <= blit_wr_addr + 1'b1;
+                blit_count          <= blit_count - 1'b1;
+
+                blit_state          <= BLIT_FILL_WRITE;
+            end
+            BLIT_FILL_WRITE: begin
+                if (blit_vram_ack_i) begin
+                    blit_addr_o         <= blit_wr_addr;
+                    blit_wr_addr        <= blit_wr_addr + 1'b1;
+                    blit_count          <= blit_count - 1'b1;
+                    if (blit_done) begin
+                        blit_state          <= BLIT_DONE;
+                    end else begin
+                        blit_vram_sel_o     <= ~blit_wr_xr;
+                        blit_wr_o           <= 1'b1;
+
+                        blit_state          <= BLIT_FILL_WRITE;
                     end
                 end
             end
             BLIT_DONE: begin
+                blit_vram_sel_o     <= 1'b0;
+                blit_wr_o           <= 1'b0;
                 blit_done_intr_o    <= 1'b1;
-                blit_state          <= BLIT_IDLE;
+
+                if (blit_queued) begin
+                    blit_state          <= BLIT_SETUP;
+                end else begin
+                    blit_state          <= BLIT_IDLE;
+                end
             end
             default: begin
                 blit_state          <= BLIT_IDLE;

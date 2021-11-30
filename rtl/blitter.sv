@@ -87,24 +87,35 @@ assign blit_full_o  = blit_queued;                  // blit register queue full
 // blit registers read/write
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        blit_rd_xr      <= '0;
-        blit_wr_xr      <= '0;
-        blit_shift      <= '0;
-
         xreg_rd_xr      <= 1'b0;
         xreg_wr_xr      <= 1'b0;
+`ifdef ENABLE_BOOTCLEAR
+        xreg_fill       <= 1'b1;
+`else
         xreg_fill       <= 1'b0;
+`endif
+        xreg_shift      <= '0;
         xreg_rd_mod     <= '0;
         xreg_wr_mod     <= '0;
-        xreg_wr_mask    <= '0;
+        xreg_wr_mask    <= 16'hFFFF;
         xreg_width      <= '0;
+`ifdef ENABLE_BOOTCLEAR
+        xreg_rd_addr    <= 16'h8208;    // gray with green checkmark
+`else
         xreg_rd_addr    <= '0;
+`endif
         xreg_wr_addr    <= '0;
+`ifdef ENABLE_BOOTCLEAR
+        xreg_count      <= 16'hFFFF;
+`else
         xreg_count      <= 16'h0000;
+`endif
 
+`ifdef ENABLE_BOOTCLEAR
+        blit_queued     <= 1'b1;
+`else
         blit_queued     <= 1'b0;
-        blit_wr_mask_o  <= 4'b1111;
-
+`endif
     end else begin
         if (blit_state == BLIT_SETUP) begin
             blit_queued     <= 1'b0;
@@ -166,14 +177,22 @@ end
 // blit state machine
 always_ff @(posedge clk) begin
     if (reset_i) begin
+        blit_done_intr_o    <= 1'b0;
         blit_vram_sel_o     <= 1'b0;
         blit_wr_o           <= 1'b0;
+        blit_wr_mask_o      <= 4'b1111;
         blit_addr_o         <= '0;
         blit_data_o         <= '0;
 
         blit_state          <= BLIT_IDLE;
-        blit_done_intr_o    <= 1'b0;
-        blit_count          <= 17'h10000;
+
+        blit_rd_xr      <= '0;
+        blit_wr_xr      <= '0;
+        blit_shift      <= '0;
+        blit_rd_addr    <= '0;
+        blit_wr_addr    <= '0;
+        blit_count      <= '0;
+
     end else begin
         blit_done_intr_o    <= 1'b0;
 

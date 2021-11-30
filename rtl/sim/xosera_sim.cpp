@@ -34,7 +34,7 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 2        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 3        // video frames to dump to VCD file (and then screen-shot and exit)
 #define MAX_UPLOADS      8        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
@@ -437,6 +437,9 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_WAITVSYNC(),        // show boot screen
     REG_WAITVTOP(),         // show boot screen
 
+    REG_WAITVSYNC(),        // show boot screen
+    REG_WAITVTOP(),         // show boot screen
+
     REG_W(XR_ADDR, XR_BLIT_MODE),
     REG_W(XR_DATA, 0x0000),
     REG_W(XR_ADDR, XR_BLIT_RD_ADDR),
@@ -458,7 +461,7 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(XR_ADDR, XR_BLIT_WR_ADDR),
     REG_W(XR_DATA, 0x0000),
     REG_W(XR_ADDR, XR_BLIT_COUNT),
-    REG_W(XR_DATA, 0x00100 - 1),
+    REG_W(XR_DATA, 0x0010 - 1),
 
     REG_W(XR_ADDR, XR_BLIT_MODE),
     REG_W(XR_DATA, 0x2000),
@@ -467,7 +470,7 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(XR_ADDR, XR_BLIT_WR_ADDR),
     REG_W(XR_DATA, 0x0000),
     REG_W(XR_ADDR, XR_BLIT_COUNT),
-    REG_W(XR_DATA, 0x10000 - 1),
+    REG_W(XR_DATA, 0x0010 - 1),
 
     REG_WAITVTOP(),         // show boot screen
     REG_WAITVSYNC(),        // show boot screen

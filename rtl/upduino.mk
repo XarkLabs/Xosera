@@ -104,7 +104,7 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
-NEXTPNR_ARGS :=  --seed $${RANDOM} --promote-logic --opt-timing --placer heap
+NEXTPNR_ARGS :=  --randomize-seed --promote-logic --opt-timing --placer heap
 
 ifeq ($(strip $(VIDEO_OUTPUT)), PMOD_1B2_DVI12)
 OUTSUFFIX := dvi_$(subst MODE_,,$(VIDEO_MODE))

@@ -441,7 +441,9 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_WAITVTOP(),         // show boot screen
 
     REG_W(XR_ADDR, XR_BLIT_MODE),
-    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_DATA, 0x0002),
+    REG_W(XR_ADDR, XR_BLIT_WR_MASK),
+    REG_W(XR_DATA, 0x03FC),
     REG_W(XR_ADDR, XR_BLIT_RD_ADDR),
     REG_W(XR_DATA, 0xE700),
     REG_W(XR_ADDR, XR_BLIT_WR_ADDR),
@@ -456,24 +458,39 @@ uint16_t     BusInterface::test_data[16384] = {
 
     REG_W(XR_ADDR, XR_BLIT_MODE),
     REG_W(XR_DATA, 0x2000),
+    REG_W(XR_ADDR, XR_BLIT_WR_MASK),
+    REG_W(XR_DATA, 0x03FC),
     REG_W(XR_ADDR, XR_BLIT_RD_ADDR),
     REG_W(XR_DATA, 0x1234),
     REG_W(XR_ADDR, XR_BLIT_WR_ADDR),
     REG_W(XR_DATA, 0x0000),
     REG_W(XR_ADDR, XR_BLIT_COUNT),
-    REG_W(XR_DATA, 0x0010 - 1),
+    REG_W(XR_DATA, 0x0100 - 1),
 
     REG_W(XR_ADDR, XR_BLIT_MODE),
     REG_W(XR_DATA, 0x2000),
+    REG_W(XR_ADDR, XR_BLIT_WR_MASK),
+    REG_W(XR_DATA, 0x07FE),
+    REG_W(XR_ADDR, XR_BLIT_RD_ADDR),
+    REG_W(XR_DATA, 0xFFFF),
+    REG_W(XR_ADDR, XR_BLIT_WR_ADDR),
+    REG_W(XR_DATA, 0x00A0),
+    REG_W(XR_ADDR, XR_BLIT_COUNT),
+    REG_W(XR_DATA, 0x0001 - 1),
+
+    REG_WAITVTOP(),         // show boot screen
+    REG_WAITVSYNC(),        // show boot screen
+
+    REG_W(XR_ADDR, XR_BLIT_MODE),
+    REG_W(XR_DATA, 0x2000),
+    REG_W(XR_ADDR, XR_BLIT_WR_MASK),
+    REG_W(XR_DATA, 0x0C53),
     REG_W(XR_ADDR, XR_BLIT_RD_ADDR),
     REG_W(XR_DATA, 0xABCD),
     REG_W(XR_ADDR, XR_BLIT_WR_ADDR),
     REG_W(XR_DATA, 0x0000),
     REG_W(XR_ADDR, XR_BLIT_COUNT),
     REG_W(XR_DATA, 0x0010 - 1),
-
-    REG_WAITVTOP(),         // show boot screen
-    REG_WAITVSYNC(),        // show boot screen
 
     REG_W(XR_ADDR, XR_PB_GFX_CTRL),
     REG_W(XR_DATA, 0x0000),                 // set disp in tile

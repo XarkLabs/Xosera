@@ -274,7 +274,7 @@ blitter blitter(
     .blit_wr_o(blit_wr),
     .blit_wr_mask_o(blit_wr_mask),
     .blit_addr_o(blit_vram_addr),
-    .blit_vram_data_i(vram_data_out),
+    .blit_data_i(vram_data_out),
     .blit_data_o(blit_vram_data),
     .reset_i(reset_i),
     .clk(clk)

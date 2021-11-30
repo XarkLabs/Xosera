@@ -594,6 +594,13 @@ void test_blit()
 
     do
     {
+        wait_blit_ready();
+        xreg_setw(BLIT_MODE, 0x2000);
+        xreg_setw(BLIT_WR_MASK, 0x0FFF);
+        xreg_setw(BLIT_RD_ADDR, 0x0000);
+        xreg_setw(BLIT_WR_ADDR, 0x0000);
+        xreg_setw(BLIT_COUNT, 0x10000 - 1);
+        wait_blit_done();
         wait_vsync();
         xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
         xreg_setw(PA_LINE_LEN, 320 / 4);
@@ -603,6 +610,10 @@ void test_blit()
 
         load_sd_colors("/pacbox-320x240_pal.raw");
         dupe_colors(0x8);
+
+        xm_setw(XR_ADDR, XR_COLOR_MEM + 15);        // set write address
+        xm_setw(XR_DATA, 0x0fff);
+
         load_sd_bitmap("/pacbox-320x240.raw", 0x0000);
         if (delay_check(DELAY_TIME))
         {
@@ -612,6 +623,7 @@ void test_blit()
         dprintf("%d byte copy from 0x0000 to 0x4B00\n", (320 * 240) / 4);
         wait_blit_ready();
         xreg_setw(BLIT_MODE, 0x0000);
+        xreg_setw(BLIT_WR_MASK, 0x0FFF);
         xreg_setw(BLIT_RD_ADDR, 0x0000);
         xreg_setw(BLIT_WR_ADDR, 0x4B00);
         xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
@@ -624,7 +636,8 @@ void test_blit()
         dprintf("%d byte fill of 0x4B00\n", (320 * 240) / 4);
         wait_blit_ready();
         xreg_setw(BLIT_MODE, 0x2000);
-        xreg_setw(BLIT_RD_ADDR, 0x1234);
+        xreg_setw(BLIT_WR_MASK, 0x0555);
+        xreg_setw(BLIT_RD_ADDR, 0xFFFF);
         xreg_setw(BLIT_WR_ADDR, 0x4B00);
         xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
 
@@ -632,9 +645,6 @@ void test_blit()
         {
             break;
         }
-
-        xm_setw(XR_ADDR, XR_COLOR_MEM + 15);        // set write address
-        xm_setw(XR_DATA, 0x0fff);
 
         for (int i = 0; i < 16; i++)
         {
@@ -646,6 +656,7 @@ void test_blit()
                 ;
 
             xreg_setw(BLIT_MODE, 0x0000);
+            xreg_setw(BLIT_WR_MASK, 0x0FFF);
             xreg_setw(BLIT_RD_ADDR, 0x0000);
             xreg_setw(BLIT_WR_ADDR, 0x4B00);
             xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
@@ -660,6 +671,44 @@ void test_blit()
 
             uint16_t stop = xm_getw(TIMER) - start;
             dprintf("%d byte copy + fill in %u.%u ms\n", (320 * 240) / 4, stop / 10, stop % 10);
+        }
+
+        for (int i = 0; i < 16; i++)
+        {
+            wait_blit_ready();
+
+            uint16_t start;
+            uint16_t go = xm_getw(TIMER);
+            while ((start = xm_getw(TIMER)) == go)
+                ;
+
+            xreg_setw(BLIT_MODE, 0x0000 | (i & 0x3));
+            xreg_setw(BLIT_WR_MASK, 0x0FF0 >> (i & 0x3));
+            xreg_setw(BLIT_RD_ADDR, 0x0000);
+            xreg_setw(BLIT_WR_ADDR, 0x4B00);
+            xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
+
+            wait_blit_done();
+
+            uint16_t stop = xm_getw(TIMER) - start;
+            dprintf("%d byte copy + fill in %u.%u ms\n", (320 * 240) / 4, stop / 10, stop % 10);
+            if (delay_check(DELAY_TIME))
+            {
+                break;
+            }
+        }
+
+        for (int i = 0; i < 256; i++)
+        {
+            wait_blit_ready();                                   // make sure blit ready (previous blit started)
+            xreg_setw(BLIT_MODE, 0x0000 | (i & 0x3));            // set copy mode and 0 - 3 nibble word shift
+            xreg_setw(BLIT_WR_MASK, 0x0FF0 >> (i & 0x3));        // set first, middle, last nibble word mask
+            xreg_setw(BLIT_RD_ADDR, 0x0000);                     // source address (4-bpp pac-man screen)
+            xreg_setw(BLIT_WR_ADDR, 0x4B00);                     // dest address (display buffer)
+            xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);          // set word count and queue blit to start
+            wait_blit_done();                                    // wait until blitter has come to a complete stop
+
+            wait_vsync();
         }
 
         if (delay_check(DELAY_TIME))
@@ -681,6 +730,7 @@ void test_blit()
 
                 wait_blit_ready();
                 xreg_setw(BLIT_MODE, 0x2000);
+                xreg_setw(BLIT_WR_MASK, 0x0FFF);
                 xreg_setw(BLIT_RD_ADDR, v);
                 xreg_setw(BLIT_WR_ADDR, 0x0000);
                 xreg_setw(BLIT_COUNT, 0x10000 - 1);

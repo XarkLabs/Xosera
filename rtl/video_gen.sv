@@ -286,7 +286,7 @@ always_ff @(posedge clk) begin
         vid_left            <= '0;
         vid_right           <= $bits(vid_right)'(xv::VISIBLE_WIDTH);
 
-        pa_blank            <= 1'b0;                // playfield A starts visible
+        pa_blank            <= 1'b1;                // playfield A starts blanked
         pa_start_addr       <= 16'h0000;
         pa_line_len         <= xv::TILES_WIDE[15:0];
         pa_fine_hscroll     <= 5'b0;

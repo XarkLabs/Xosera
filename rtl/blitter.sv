@@ -15,31 +15,31 @@
 module blitter(
 /* verilator lint_off UNUSED */
     // video registers and control
-    input  wire logic           xreg_wr_en_i,      // strobe to write internal config register number
-    input  wire logic  [3:0]    xreg_num_i,        // internal config register number (for reads)
-    input  wire word_t          xreg_data_i,       // data for internal config register
-    output      word_t          xreg_data_o,       // register/status data reads
+    input  wire logic           xreg_wr_en_i,       // strobe to write internal config register number
+    input  wire logic  [3:0]    xreg_num_i,         // internal config register number (for reads)
+    input  wire word_t          xreg_data_i,        // data for internal config register
+    output      word_t          xreg_data_o,        // register/status data reads
     // blitter signals
-    output      logic           blit_busy_o,       // current status
-    output      logic           blit_full_o,       // current status
-    output      logic           blit_done_intr_o,  // interrupt signal when done
+    output      logic           blit_busy_o,        // current status
+    output      logic           blit_full_o,        // current status
+    output      logic           blit_done_intr_o,   // interrupt signal when done
     // VRAM/XR bus signals
-    output      logic           blit_vram_sel_o,   // vram select
-    input  wire logic           blit_vram_ack_i,   // VRAM access ack (true when data read/written)
+    output      logic           blit_vram_sel_o,    // vram select
+    input  wire logic           blit_vram_ack_i,    // VRAM access ack (true when data read/written)
 
-    output      logic           blit_wr_o,         // blit write
-    output      logic  [3:0]    blit_wr_mask_o,    // blit VRAM nibble mask
+    output      logic           blit_wr_o,          // blit write
+    output      logic  [3:0]    blit_wr_mask_o,     // blit VRAM nibble mask
 
-    output      addr_t          blit_addr_o,       // address out (vram/XR)
-    input  wire word_t          blit_vram_data_i,  // data word data in
-    output      word_t          blit_data_o,       // data word data out
+    output      addr_t          blit_addr_o,        // address out (vram/XR)
+    input  wire word_t          blit_data_i,        // data word data in
+    output      word_t          blit_data_o,        // data word data out
     // standard signals
-    input  wire logic           reset_i,           // system reset in
-    input  wire logic           clk                // clock (video pixel clock)
+    input  wire logic           reset_i,            // system reset in
+    input  wire logic           clk                 // clock (video pixel clock)
 /* verilator lint_on UNUSED */
 );
 
-typedef enum logic [3:0] {
+typedef enum logic [2:0] {
     BLIT_IDLE,
     BLIT_SETUP,
     BLIT_COPY,
@@ -55,85 +55,72 @@ typedef enum logic [3:0] {
 logic           xreg_rd_xr;
 logic           xreg_wr_xr;
 logic           xreg_fill;
-logic  [3:0]    xreg_shift;
+logic  [1:0]    xreg_shift;
 logic [15:0]    xreg_rd_mod;
 logic [15:0]    xreg_wr_mod;
-logic [15:0]    xreg_wr_mask;
+logic [11:0]    xreg_wr_mask;
 logic [15:0]    xreg_width;
 logic [15:0]    xreg_rd_addr;
 logic [15:0]    xreg_wr_addr;
 logic [15:0]    xreg_count;
 
-// blitter internal registers (so main registers can be altered when busy)
-logic           blit_done;
-logic           blit_queued;
+logic           xreg_queued;
 
-logic  [3:0]    blit_state;
+// blitter FSM
+logic  [2:0]    blit_state;
 
 logic           blit_rd_xr;
 logic           blit_wr_xr;
-
 /* verilator lint_off UNUSED */
-logic  [3:0]    blit_shift;
+logic  [1:0]    blit_shift;
+logic  [3:0]    blit_wr_mask_left;
+logic  [3:0]    blit_wr_mask_middle;
+logic  [3:0]    blit_wr_mask_right;
 /* verilator lint_on UNUSED */
 logic [15:0]    blit_rd_addr;
 logic [15:0]    blit_wr_addr;
-logic [16:0]    blit_count;
+logic [16:0]    blit_count;                         // extra bit for underflow done flag
 
-assign blit_done    = blit_count[16];               // count underflow
+/* verilator lint_off UNUSED */
+logic           blit_left_edge;
+logic [27:0]    shift_reg, shift_reg_next;
+/* verilator lint_on UNUSED */
+
+logic  blit_done;
+assign blit_done    = blit_count[16];               // count underflow is done flag (on last word)
+
+// assign outputs
 assign blit_busy_o  = (blit_state != BLIT_IDLE);    // blit operation in progress
-assign blit_full_o  = blit_queued;                  // blit register queue full
+assign blit_full_o  = xreg_queued;                  // blit register queue full
 
 // blit registers read/write
 always_ff @(posedge clk) begin
     if (reset_i) begin
         xreg_rd_xr      <= 1'b0;
         xreg_wr_xr      <= 1'b0;
-`ifdef ENABLE_BOOTCLEAR
-        xreg_fill       <= 1'b1;
-`else
         xreg_fill       <= 1'b0;
-`endif
         xreg_shift      <= '0;
         xreg_rd_mod     <= '0;
         xreg_wr_mod     <= '0;
-        xreg_wr_mask    <= 16'hFFFF;
+        xreg_wr_mask    <= '0;
         xreg_width      <= '0;
-`ifdef ENABLE_BOOTCLEAR
-        xreg_rd_addr    <= 16'h8208;    // gray with green checkmark
-`else
         xreg_rd_addr    <= '0;
-`endif
         xreg_wr_addr    <= '0;
-`ifdef ENABLE_BOOTCLEAR
-        xreg_count      <= 16'hFFFF;
-`else
-        xreg_count      <= 16'h0000;
-`endif
-
-`ifdef ENABLE_BOOTCLEAR
-        blit_queued     <= 1'b1;
-`else
-        blit_queued     <= 1'b0;
-`endif
-
-`ifndef SYNTHESIS
-        blit_queued     <= 1'b0;        // don't clear VRAM under simulation
-`endif
-
+        xreg_count      <= '0;
+        xreg_queued     <= 1'b0;
     end else begin
         if (blit_state == BLIT_SETUP) begin
-            blit_queued     <= 1'b0;
+            xreg_queued     <= 1'b0;
         end
 
         // blit register write
         if (xreg_wr_en_i) begin
-            case ({2'b10, xreg_num_i} )
+            case ({ 2'b10, xreg_num_i })
                 xv::XR_BLIT_MODE: begin
                     xreg_rd_xr      <= xreg_data_i[15];
                     xreg_wr_xr      <= xreg_data_i[14];
                     xreg_fill       <= xreg_data_i[13];
-                    xreg_shift      <= xreg_data_i[3:0];
+                    xreg_shift      <= xreg_data_i[1:0];
                 end
                 xv::XR_BLIT_RD_MOD: begin
                     xreg_rd_mod     <= xreg_data_i;
@@ -142,7 +129,7 @@ always_ff @(posedge clk) begin
                     xreg_wr_mod     <= xreg_data_i;
                 end
                 xv::XR_BLIT_WR_MASK: begin
-                    xreg_wr_mask    <= xreg_data_i;
+                    xreg_wr_mask    <= xreg_data_i[11:0];
                 end
                 xv::XR_BLIT_WIDTH: begin
                     xreg_width      <= xreg_data_i;
@@ -155,7 +142,7 @@ always_ff @(posedge clk) begin
                 end
                 xv::XR_BLIT_COUNT: begin
                     xreg_count      <= xreg_data_i;
-                    blit_queued     <= 1'b1;
+                    xreg_queued     <= 1'b1;
                 end
                 default: begin
                 end
@@ -166,11 +153,11 @@ end
 
 // blit registers read
 always_ff @(posedge clk) begin
-    case ({ xv::XR_BLIT_REGS[6:5], xreg_num_i })
-        xv::XR_BLIT_MODE:           xreg_data_o <= { xreg_rd_xr, xreg_wr_xr, 10'b0, xreg_shift };
+    case ({ 2'b10, xreg_num_i })
+        xv::XR_BLIT_MODE:           xreg_data_o <= { xreg_rd_xr, xreg_wr_xr, 12'b0, xreg_shift };
         xv::XR_BLIT_RD_MOD:         xreg_data_o <= xreg_rd_mod;
         xv::XR_BLIT_WR_MOD:         xreg_data_o <= xreg_wr_mod;
-        xv::XR_BLIT_WR_MASK:        xreg_data_o <= xreg_wr_mask;
+        xv::XR_BLIT_WR_MASK:        xreg_data_o <= { 4'h0, xreg_wr_mask };
         xv::XR_BLIT_WIDTH:          xreg_data_o <= xreg_width;
         xv::XR_BLIT_RD_ADDR:        xreg_data_o <= xreg_rd_addr;
         xv::XR_BLIT_WR_ADDR:        xreg_data_o <= xreg_wr_addr;
@@ -179,31 +166,39 @@ always_ff @(posedge clk) begin
     endcase
 end
 
+assign blit_wr_mask_o   = (blit_left_edge ? blit_wr_mask_left : blit_wr_mask_middle) & (blit_done ? blit_wr_mask_right : 4'b1111);
+
 // blit state machine
 always_ff @(posedge clk) begin
     if (reset_i) begin
         blit_done_intr_o    <= 1'b0;
         blit_vram_sel_o     <= 1'b0;
         blit_wr_o           <= 1'b0;
-        blit_wr_mask_o      <= 4'b1111;
         blit_addr_o         <= '0;
         blit_data_o         <= '0;
 
         blit_state          <= BLIT_IDLE;
 
-        blit_rd_xr      <= '0;
-        blit_wr_xr      <= '0;
-        blit_shift      <= '0;
-        blit_rd_addr    <= '0;
-        blit_wr_addr    <= '0;
-        blit_count      <= '0;
+        blit_rd_xr          <= '0;
+        blit_wr_xr          <= '0;
+        blit_shift          <= '0;
+        blit_rd_addr        <= '0;
+        blit_wr_addr        <= '0;
+        blit_count          <= '0;
+
+        blit_left_edge      <= 1'b0;
+
+        blit_wr_mask_left   <= '0;
+        blit_wr_mask_middle <= '0;
+        blit_wr_mask_right  <= '0;
+
 
     end else begin
         blit_done_intr_o    <= 1'b0;
 
         case (blit_state)
             BLIT_IDLE: begin
-                if (blit_queued) begin
+                if (xreg_queued) begin
                     blit_state          <= BLIT_SETUP;
                 end
             end
@@ -213,7 +208,10 @@ always_ff @(posedge clk) begin
                 blit_shift          <= xreg_shift;
                 blit_rd_addr        <= xreg_rd_addr;
                 blit_wr_addr        <= xreg_wr_addr;
-                blit_count          <= { 1'b0, xreg_count };
+                blit_wr_mask_left   <= xreg_wr_mask[11:8];
+                blit_wr_mask_middle <= xreg_wr_mask[7:4];
+                blit_wr_mask_right  <= xreg_wr_mask[3:0];
+                blit_count          <= { 1'b0, xreg_count } - 1'b1;
 
                 if (xreg_fill) begin
                     blit_state          <= BLIT_FILL;
@@ -227,6 +225,8 @@ always_ff @(posedge clk) begin
                 blit_addr_o         <= blit_rd_addr;
                 blit_rd_addr        <= blit_rd_addr + 1'b1;
 
+                blit_left_edge      <= 1'b1;
+
                 blit_state          <= BLIT_COPY_READ;
             end
             BLIT_COPY_READ: begin
@@ -234,18 +234,21 @@ always_ff @(posedge clk) begin
                     blit_vram_sel_o     <= ~blit_wr_xr;
                     blit_wr_o           <= 1'b1;
                     blit_addr_o         <= blit_wr_addr;
-                    blit_data_o         <= blit_vram_data_i;
+                    blit_data_o         <= shift_reg_next[27:12];
+                    shift_reg           <= shift_reg_next;
 
                     blit_wr_addr        <= blit_wr_addr + 1'b1;
-                    blit_count          <= blit_count - 1'b1;
 
                     blit_state          <= BLIT_COPY_WRITE;
                 end
             end
             BLIT_COPY_WRITE: begin
                 if (blit_vram_ack_i) begin
+                    blit_left_edge      <= 1'b0;
                     blit_addr_o         <= blit_rd_addr;
                     blit_rd_addr        <= blit_rd_addr + 1'b1;
+                    blit_count          <= blit_count - 1'b1;
+
                     if (blit_done) begin
                         blit_state          <= BLIT_DONE;
                     end else begin
@@ -263,12 +266,14 @@ always_ff @(posedge clk) begin
                 blit_data_o         <= blit_rd_addr;
 
                 blit_wr_addr        <= blit_wr_addr + 1'b1;
-                blit_count          <= blit_count - 1'b1;
+
+                blit_left_edge      <= 1'b1;
 
                 blit_state          <= BLIT_FILL_WRITE;
             end
             BLIT_FILL_WRITE: begin
                 if (blit_vram_ack_i) begin
+                    blit_left_edge      <= 1'b0;
                     blit_addr_o         <= blit_wr_addr;
                     blit_wr_addr        <= blit_wr_addr + 1'b1;
                     blit_count          <= blit_count - 1'b1;
@@ -287,7 +292,7 @@ always_ff @(posedge clk) begin
                 blit_wr_o           <= 1'b0;
                 blit_done_intr_o    <= 1'b1;
 
-                if (blit_queued) begin
+                if (xreg_queued) begin
                     blit_state          <= BLIT_SETUP;
                 end else begin
                     blit_state          <= BLIT_IDLE;
@@ -298,6 +303,15 @@ always_ff @(posedge clk) begin
             end
         endcase
     end
+end
+
+always_comb begin
+    case (blit_shift)
+        2'b00:   shift_reg_next = { blit_data_i[15:12], blit_data_i[11:8],  blit_data_i[7:4],   blit_data_i[3:0],   4'b0,              4'b0,             4'b0};
+        2'b01:   shift_reg_next = { shift_reg[11:8],    blit_data_i[15:12], blit_data_i[11:8],  blit_data_i[7:4],   blit_data_i[3:0],  4'b0,             4'b0};
+        2'b10:   shift_reg_next = { shift_reg[11:8],    shift_reg[7:4],     blit_data_i[15:12], blit_data_i[11:8],  blit_data_i[7:4],  blit_data_i[3:0], 4'b0};
+        2'b11:   shift_reg_next = { shift_reg[11:8],    shift_reg[7:4],     shift_reg[3:0],     blit_data_i[15:12], blit_data_i[11:8], blit_data_i[7:4], blit_data_i[3:0]};
+    endcase
 end
 
 endmodule

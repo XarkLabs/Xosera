@@ -35,7 +35,6 @@
 `define ENABLE_PF_B                     // enable playfield B
 `define ENABLE_LFSR                     // enable XM_REG 0xA as 19-bit LFSR
 `define ENABLE_TIMERLATCH               // latch timer low byte when high byte read
-`define ENABLE_BOOTCLEAR                // clear VRAM at boot with green on gray checkmark
 `define ENABLE_COPP                     // enable copper
 `define ENABLE_BLIT                     // enable blitter unit
 //`define ENABLE_DRAW                     // enable draw unit

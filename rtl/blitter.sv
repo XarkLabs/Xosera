@@ -83,7 +83,8 @@ logic [16:0]    blit_count;                         // extra bit for underflow d
 
 /* verilator lint_off UNUSED */
 logic           blit_left_edge;
-logic [27:0]    shift_reg, shift_reg_next;
+logic [27:0]    shift_reg_next;                     // combinatorial 7 nibble shift buffer
+logic [11:0]    shift_reg;                          // 3 nibble "carries" to rotate in next word
 /* verilator lint_on UNUSED */
 
 logic  blit_done;
@@ -166,7 +167,7 @@ always_ff @(posedge clk) begin
     endcase
 end
 
-assign blit_wr_mask_o   = (blit_left_edge ? blit_wr_mask_left : blit_wr_mask_middle) & (blit_done ? blit_wr_mask_right : 4'b1111);
+assign blit_wr_mask_o   = (blit_left_edge ? blit_wr_mask_left : blit_wr_mask_middle) & (blit_done ? blit_wr_mask_right : blit_wr_mask_middle);
 
 // blit state machine
 always_ff @(posedge clk) begin
@@ -235,7 +236,7 @@ always_ff @(posedge clk) begin
                     blit_wr_o           <= 1'b1;
                     blit_addr_o         <= blit_wr_addr;
                     blit_data_o         <= shift_reg_next[27:12];
-                    shift_reg           <= shift_reg_next;
+                    shift_reg           <= shift_reg_next[11:0];
 
                     blit_wr_addr        <= blit_wr_addr + 1'b1;
 

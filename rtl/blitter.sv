@@ -116,6 +116,11 @@ always_ff @(posedge clk) begin
 `else
         blit_queued     <= 1'b0;
 `endif
+
+`ifndef SYNTHESIS
+        blit_queued     <= 1'b0;        // don't clear VRAM under simulation
+`endif
+
     end else begin
         if (blit_state == BLIT_SETUP) begin
             blit_queued     <= 1'b0;

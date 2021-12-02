@@ -200,7 +200,7 @@ task inject_file(
     $fclose(fd);
 endtask
 
-function logic [63:0] regname(
+function automatic logic [63:0] regname(
         input logic [3:0] num
     );
     begin

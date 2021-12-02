@@ -24,7 +24,7 @@ module vram(
 
 `ifndef SYNTHESIS
 
-function [7:0] hex_digit(
+function automatic [7:0] hex_digit(
     input logic[3:0]    nib
     );
     if (nib > 9) begin

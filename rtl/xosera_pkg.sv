@@ -127,15 +127,18 @@ typedef enum logic [5:0] {
     XR_PB_UNUSED_1E = 6'h1E,            //
     XR_PB_UNUSED_1F = 6'h1F,            //
     // Blitter Registers (WIP)
-    XR_BLIT_MODE    = 6'h20,
-    XR_BLIT_RD_MOD  = 6'h21,
-    XR_BLIT_WR_MOD  = 6'h22,
-    XR_BLIT_WR_MASK = 6'h23,
-    XR_BLIT_WIDTH   = 6'h24,
-    XR_BLIT_RD_ADDR = 6'h25,
-    XR_BLIT_WR_ADDR = 6'h26,
-    XR_BLIT_COUNT   = 6'h27
-    // TODO: draw registers 0x3x
+    XR_BLIT_CTRL    = 6'h20,            // (R /W) blit control bits (logic ops, A addr/const, B addr/const, transparent/opaque)
+    XR_BLIT_SHIFT   = 6'h21,            // (R /W) blit nibble shift amount (0-3)
+    XR_BLIT_MOD_A   = 6'h22,            // (R /W) blit modulo added to A when width underflows
+    XR_BLIT_MOD_B   = 6'h23,            // (R /W) blit modulo added to B when width underflows
+    XR_BLIT_MOD_C   = 6'h24,            // (R /W) blit modulo added to C when width underflows
+    XR_BLIT_MOD_D   = 6'h25,            // (R /W) blit modulo added to D when width underflows
+    XR_BLIT_SRC_A   = 6'h26,            // (R /W) blit A source read address / constant value
+    XR_BLIT_SRC_B   = 6'h27,            // (R /W) blit B source read address / constant value
+    XR_BLIT_VAL_C   = 6'h28,            // (R /W) blit C source constant value
+    XR_BLIT_DST_D   = 6'h29,            // (R /W) blit D destination write address
+    XR_BLIT_LINES   = 6'h2A,            // (R /W) blit number of lines for rectangular blit
+    XR_BLIT_COUNT   = 6'h2B             // (R /W) blit word count minus 1, starts operation (width when LINES > 0)
 } xr_register_t;
 
 typedef enum integer {

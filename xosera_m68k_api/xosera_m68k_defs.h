@@ -100,14 +100,17 @@
 #define XR_PB_UNUSED_1F 0x1F        //
 
 // Blitter Registers (WIP)
-#define XR_BLIT_MODE    0x20
-#define XR_BLIT_RD_MOD  0x21
-#define XR_BLIT_WR_MOD  0x22
-#define XR_BLIT_WR_MASK 0x23
-#define XR_BLIT_WIDTH   0x24
-#define XR_BLIT_RD_ADDR 0x25
-#define XR_BLIT_WR_ADDR 0x26
-#define XR_BLIT_COUNT   0x27
-
+#define XR_BLIT_CTRL  0x20        // (R /W) blit control bits (logic ops, A addr/const, B addr/const, transparent/opaque)
+#define XR_BLIT_SHIFT 0x21        // (R /W) blit nibble shift (0-3)
+#define XR_BLIT_MOD_A 0x22        // (R /W) blit modulo added to A between lines (rectangular blit)
+#define XR_BLIT_MOD_B 0x23        // (R /W) blit modulo added to B between lines (rectangular blit)
+#define XR_BLIT_MOD_C 0x24        // (R /W) blit modulo added to C between lines (rectangular blit)
+#define XR_BLIT_MOD_D 0x25        // (R /W) blit modulo added to D between lines (rectangular blit)
+#define XR_BLIT_SRC_A 0x26        // (R /W) blit A source VRAM read address / constant value
+#define XR_BLIT_SRC_B 0x27        // (R /W) blit B source VRAM read address / constant value
+#define XR_BLIT_VAL_C 0x28        // (R /W) blit C source constant value
+#define XR_BLIT_DST_D 0x29        // (R /W) blit D destination write address
+#define XR_BLIT_LINES 0x2A        // (R /W) blit number of lines for rectangular blit
+#define XR_BLIT_COUNT 0x2B        // (R /W) blit word count minus 1, starts operation (width when LINES > 0)
 
 #endif        // XOSERA_M68K_DEFS_H

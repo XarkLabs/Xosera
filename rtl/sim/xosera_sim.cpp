@@ -34,7 +34,7 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 4        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 8        // video frames to dump to VCD file (and then screen-shot and exit)
 #define MAX_UPLOADS      8        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
@@ -275,6 +275,8 @@ public:
                 // REG_END
                 if (!data_upload && test_data[index] == 0xffff)
                 {
+                    logonly_printf("[@t=%lu REG_END hit]\n", main_time);
+                    done      = true;
                     enable    = false;
                     last_time = bus_time - 1;
                     return;
@@ -426,6 +428,8 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR ",
 #define REG_W(r, v)                                                                                                    \
     ((BusInterface::XM_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XM_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_RW(r)        (((BusInterface::XM_##r) | 0x80) << 8), (((BusInterface::XM_##r) | 0x90) << 8)
+#define XREG_SETW(xr, v) REG_W(XR_ADDR, XR_##xr), REG_W(XR_DATA, v)
+
 #define REG_UPLOAD()     0xfff0
 #define REG_UPLOAD_AUX() 0xfff1
 #define REG_WAITVTOP()   0xfffd
@@ -438,126 +442,110 @@ BusInterface bus;
 int          BusInterface::test_data_len    = 999;
 uint16_t     BusInterface::test_data[16384] = {
     // test data
-    REG_WAITVSYNC(),        // show boot screen
-    REG_WAITVTOP(),         // show boot screen
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
 
     REG_WAITVSYNC(),        // show boot screen
-    REG_WAITVTOP(),         // show boot screen
+                            //    REG_WAITVTOP(),         // show boot screen
 
-    // 320x240 4bpp
-    REG_W(XR_ADDR, XR_PA_GFX_CTRL),
-    REG_W(XR_DATA, 0x0055),
-    REG_W(XR_ADDR, XR_PA_TILE_CTRL),
-    REG_W(XR_DATA, 0x000F),
-    REG_W(XR_ADDR, XR_PA_DISP_ADDR),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_PA_LINE_LEN),
-    REG_W(XR_DATA, 320 / 4),
+    XREG_SETW(PA_GFX_CTRL, 0x0055),         // bitmap, 4-bpp, Hx2, Vx2
+    XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address
+    XREG_SETW(PA_LINE_LEN, 320 / 4),        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
 
-    REG_WAITVTOP(),         // show boot screen
-    REG_WAITVSYNC(),        // show boot screen
+    //   REG_WAITVTOP(),
+    //    REG_WAITVSYNC(),
 
     // fill screen
-    REG_W(XR_ADDR, XR_BLIT_CTRL),
-    REG_W(XR_DATA, 0x0003),
-    REG_W(XR_ADDR, XR_BLIT_SHIFT),
-    REG_W(XR_DATA, 0xFF00),
-    REG_W(XR_ADDR, XR_BLIT_MOD_A),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_MOD_B),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_MOD_C),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_MOD_D),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_SRC_A),
-    REG_W(XR_DATA, 0xFFFF),
-    REG_W(XR_ADDR, XR_BLIT_SRC_B),
-    REG_W(XR_DATA, 0xFFFF),
-    REG_W(XR_ADDR, XR_BLIT_VAL_C),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_DST_D),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_LINES),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_COUNT),
-    REG_W(XR_DATA, (320 * 240 / 4) - 1),
+    XREG_SETW(BLIT_CTRL, 0x000F),
+    XREG_SETW(BLIT_SHIFT, 0xFF00),
+    XREG_SETW(BLIT_MOD_A, 0x0000),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, 0x0000),
+    XREG_SETW(BLIT_SRC_A, 0xFFFF),
+    XREG_SETW(BLIT_SRC_B, 0xFF00),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000),
+    XREG_SETW(BLIT_LINES, 0x0000),
+    XREG_SETW(BLIT_COUNT, (320 * 240 / 4) - 1),
 
-    // 2D fill screen
-    REG_W(XR_ADDR, XR_BLIT_CTRL),
-    REG_W(XR_DATA, 0x000F),
-    REG_W(XR_ADDR, XR_BLIT_SHIFT),
-    REG_W(XR_DATA, 0xFF00),
-    REG_W(XR_ADDR, XR_BLIT_MOD_A),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_MOD_B),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_MOD_C),
-    REG_W(XR_DATA, 0x0001),
-    REG_W(XR_ADDR, XR_BLIT_MOD_D),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_SRC_A),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_SRC_B),
-    REG_W(XR_DATA, 0xFFFF),
-    REG_W(XR_ADDR, XR_BLIT_VAL_C),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_DST_D),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_LINES),
-    REG_W(XR_DATA, 240),
-    REG_W(XR_ADDR, XR_BLIT_COUNT),
-    REG_W(XR_DATA, (320 / 4) - 1),
-
-#if 0
-    REG_W(XR_ADDR, XR_BLIT_CTRL),
-    REG_W(XR_DATA, 0x0003),
-    REG_W(XR_ADDR, XR_BLIT_SHIFT),
-    REG_W(XR_DATA, 0x7C01),
-    REG_W(XR_ADDR, XR_BLIT_MOD_A),
-    REG_W(XR_DATA, 0x0050 - 4),
-    REG_W(XR_ADDR, XR_BLIT_MOD_B),
-    REG_W(XR_DATA, 0x0001),
-    REG_W(XR_ADDR, XR_BLIT_MOD_C),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_MOD_D),
-    REG_W(XR_DATA, 0x0050 - 4),
-    REG_W(XR_ADDR, XR_BLIT_SRC_A),
-    REG_W(XR_DATA, 0xAAAA),
-    REG_W(XR_ADDR, XR_BLIT_SRC_B),
-    REG_W(XR_DATA, 0xBBBB),
-    REG_W(XR_ADDR, XR_BLIT_VAL_C),
-    REG_W(XR_DATA, 0xCCCC),
-    REG_W(XR_ADDR, XR_BLIT_DST_D),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_LINES),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_COUNT),
-    REG_W(XR_DATA, 0x0000),
-#endif
-    REG_RW(UNUSED_A),        // read LFSR register
-    REG_RW(UNUSED_A),        // read LFSR register
-    REG_RW(UNUSED_A),        // read LFSR register
-    REG_RW(UNUSED_A),        // read LFSR register
-
-    REG_WAITVTOP(),         // show boot screen
     REG_WAITVSYNC(),        // show boot screen
 
-    REG_WAITVTOP(),         // show boot screen
-    REG_WAITVSYNC(),        // show boot screen
+    // 2D fill 1/4 screen
+    XREG_SETW(BLIT_CTRL, 0x000F),
+    XREG_SETW(BLIT_SHIFT, 0xFF00),
+    XREG_SETW(BLIT_MOD_A, 0x0000),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x1111),
+    XREG_SETW(BLIT_MOD_D, (320 / 4) / 2),
+    XREG_SETW(BLIT_SRC_A, 0x0000),
+    XREG_SETW(BLIT_SRC_B, 0xFFFF),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000),
+    XREG_SETW(BLIT_LINES, 240 / 2),
+    XREG_SETW(BLIT_COUNT, (320 / 4) / 2 - 1),
+
+    REG_WAITVSYNC(),
+
+    REG_W(WR_INCR, 0x0001),        // 16x16 moto logo
+    REG_W(WR_ADDR, 0xF000),
+
+    REG_UPLOAD(),
+
+    XREG_SETW(PA_GFX_CTRL, 0x0055),           // BMAP, 4-BPP, Hx2 Vx2
+    XREG_SETW(PA_LINE_LEN, (320 / 4)),        // 320/2/2 wide
+    REG_W(XR_ADDR, XR_COLOR_MEM),             // upload color palette
+    REG_UPLOAD_AUX(),
+    REG_W(WR_INCR, 0x0001),
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),
+
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+
+    // 2D moto blit
+    XREG_SETW(BLIT_CTRL, 0x0002),
+    XREG_SETW(BLIT_SHIFT, 0xFF01),
+    XREG_SETW(BLIT_MOD_A, 0x0000),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, 320 / 4 - 8),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x0000),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (104 * 80) + 35),
+    XREG_SETW(BLIT_LINES, 16 - 1),
+    XREG_SETW(BLIT_COUNT, 8 - 1),
+
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+
+    REG_END()
 #if 0
-    REG_W(XR_ADDR, XR_PB_GFX_CTRL),
-    REG_W(XR_DATA, 0x0000),                 // set disp in tile
-    REG_W(XR_ADDR, XR_PB_TILE_CTRL),        // set 4-BPP BMAP
+    XREG_SETW(BLIT_CTRL, 0x0003),
+    XREG_SETW(BLIT_SHIFT, 0x7C01),
+    XREG_SETW(BLIT_MOD_A, 0x0050 - 4),
+    XREG_SETW(BLIT_MOD_B, 0x0001),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, 0x0050 - 4),
+    XREG_SETW(BLIT_SRC_A, 0xAAAA),
+    XREG_SETW(BLIT_SRC_B, 0xBBBB),
+    XREG_SETW(BLIT_VAL_C, 0xCCCC),
+    XREG_SETW(BLIT_DST_D, 0x0000),
+    XREG_SETW(BLIT_LINES, 0x0000),
+    XREG_SETW(BLIT_COUNT, 0x0000),
+
+    XREG_SETW(PB_GFX_CTRL, 0x0000),                 // set disp in tile
+    XREG_SETW(PB_TILE_CTRL),        // set 4-BPP BMAP
     REG_W(XR_DATA, 0x000F),
-    REG_W(XR_ADDR, XR_PB_DISP_ADDR),        // set 4-BPP BMAP
+    XREG_SETW(PB_DISP_ADDR),        // set 4-BPP BMAP
     REG_W(XR_DATA, 0x1000),
     REG_WAITVTOP(),         // show boot screen
     REG_WAITVSYNC(),        // show boot screen
 
-    REG_W(XR_ADDR, XR_PA_GFX_CTRL),
-    REG_W(XR_DATA, 0x0040),                 // set disp in tile
-    REG_W(XR_ADDR, XR_PA_TILE_CTRL),        // set 4-BPP BMAP
+    XREG_SETW(PA_GFX_CTRL, 0x0040),                 // set disp in tile
+    XREG_SETW(PA_TILE_CTRL),        // set 4-BPP BMAP
     REG_W(XR_DATA, 0x000F),
     REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 0x0000),
@@ -565,14 +553,10 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_WAITVTOP(),         // show boot screen
     REG_WAITVSYNC(),        // show boot screen
 
-    REG_W(XR_ADDR, XR_PA_GFX_CTRL),
-    REG_W(XR_DATA, 0x0065),
-    REG_W(XR_ADDR, XR_PA_TILE_CTRL),
-    REG_W(XR_DATA, 0x000F),
-    REG_W(XR_ADDR, XR_PA_DISP_ADDR),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_PA_LINE_LEN),
-    REG_W(XR_DATA, 320 / 2),
+    XREG_SETW(PA_GFX_CTRL, 0x0065),
+    XREG_SETW(PA_TILE_CTRL, 0x000F),
+    XREG_SETW(PA_DISP_ADDR, 0x0000),
+    XREG_SETW(PA_LINE_LEN, 320 / 2),
 
     REG_W(XR_ADDR, XR_COLOR_MEM),        // upload color palette
     REG_UPLOAD_AUX(),
@@ -581,16 +565,12 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
 
-    REG_W(XR_ADDR, XR_PB_GFX_CTRL),
-    REG_W(XR_DATA, 0x0065),
-    REG_W(XR_ADDR, XR_PB_TILE_CTRL),
-    REG_W(XR_DATA, 0x000F),
-    REG_W(XR_ADDR, XR_PB_DISP_ADDR),
-    REG_W(XR_DATA, 0x8000),
-    REG_W(XR_ADDR, XR_PB_LINE_LEN),
-    REG_W(XR_DATA, 320 / 2),
+    XREG_SETW(PB_GFX_CTRL, 0x0065),
+    XREG_SETW(PB_TILE_CTRL, 0x000F),
+    XREG_SETW(PB_DISP_ADDR, 0x8000),
+    XREG_SETW(PB_LINE_LEN, 320 / 2),
 
-    REG_W(XR_ADDR, XR_COLOR_MEM + 0x100),        // upload color palette
+    XREG_SETW(COLOR_MEM + 0x100),        // upload color palette
     REG_UPLOAD_AUX(),
 
     REG_W(WR_INCR, 0x0001),
@@ -600,172 +580,144 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_WAITVTOP(),         // show boot screen
     REG_WAITVSYNC(),        // show boot screen
 
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),        // read TILEMEM + 0x0a
-    REG_W(XR_ADDR, XR_TILE_MEM),
+    XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
-    REG_W(XR_ADDR, XR_TILE_MEM + 0x0a),
+    XREG_SETW(TILE_MEM + 0x0a),
     REG_RW(XR_DATA),                      // read TILEMEM + 0x0a
     REG_WAITVTOP(),                       // show boot screen
     REG_WAITVSYNC(),                      // show boot screen
-    REG_W(XR_ADDR, XR_COPPER_MEM),        // setup copper program
+    XREG_SETW(COPPER_MEM),        // setup copper program
 #if 0
     // copperlist:
-    REG_W(XR_DATA, 0x20a0),
-    REG_W(XR_DATA, 0x0002),        //     skip  0, 160, 0b00010  ; Skip next if we've hit line 160
-    REG_W(XR_DATA, 0x4014),
-    REG_W(XR_DATA, 0x0000),        //     jmp   .gored           ; ... else, jump to set red
-    REG_W(XR_DATA, 0x2140),
-    REG_W(XR_DATA, 0x0002),        //     skip  0, 320, 0b00010  ; Skip next if we've hit line 320
-    REG_W(XR_DATA, 0x400e),
-    REG_W(XR_DATA, 0x0000),        //     jmp   .gogreen         ; ... else jump to set green
-    REG_W(XR_DATA, 0xb000),
-    REG_W(XR_DATA, 0x000f),        //     movep 0x000F, 0        ; Make background blue
-    REG_W(XR_DATA, 0xb00a),
-    REG_W(XR_DATA, 0x0007),        //     movep 0x0007, 0xA      ; Make foreground dark blue
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_DATA, 0x0003),        //     nextf                  ; and we're done for this frame
+    REG_W(XR_DATA, 0x20a0, 0x0002),        //     skip  0, 160, 0b00010  ; Skip next if we've hit line 160
+    REG_W(XR_DATA, 0x4014, 0x0000),        //     jmp   .gored           ; ... else, jump to set red
+    REG_W(XR_DATA, 0x2140, 0x0002),        //     skip  0, 320, 0b00010  ; Skip next if we've hit line 320
+    REG_W(XR_DATA, 0x400e, 0x0000),        //     jmp   .gogreen         ; ... else jump to set green
+    REG_W(XR_DATA, 0xb000, 0x000f),        //     movep 0x000F, 0        ; Make background blue
+    REG_W(XR_DATA, 0xb00a, 0x0007),        //     movep 0x0007, 0xA      ; Make foreground dark blue
+    REG_W(XR_DATA, 0x0000, 0x0003),        //     nextf                  ; and we're done for this frame
     // .gogreen:
-    REG_W(XR_DATA, 0xb000),
-    REG_W(XR_DATA, 0x00f0),        //     movep 0x00F0, 0        ; Make background green
-    REG_W(XR_DATA, 0xb00a),
-    REG_W(XR_DATA, 0x0070),        //     movep 0x0070, 0xA       ; Make foreground dark green
-    REG_W(XR_DATA, 0x4000),
-    REG_W(XR_DATA, 0x0000),        //     jmp   copperlist       ; and restart
+    REG_W(XR_DATA, 0xb000, 0x00f0),        //     movep 0x00F0, 0        ; Make background green
+    REG_W(XR_DATA, 0xb00a, 0x0070),        //     movep 0x0070, 0xA       ; Make foreground dark green
+    REG_W(XR_DATA, 0x4000, 0x0000),        //     jmp   copperlist       ; and restart
     // .gored:
-    REG_W(XR_DATA, 0xb000),
-    REG_W(XR_DATA, 0x0f00),        //     movep 0x0F00, 0        ; Make background red
-    REG_W(XR_DATA, 0xb00a),
-    REG_W(XR_DATA, 0x0700),        //     movep 0x0700, 0xA      ; Make foreground dark red
-    REG_W(XR_DATA, 0x8002),
-    REG_W(XR_DATA, 0x5A5A),
-    REG_W(XR_DATA, 0x9002),
-    REG_W(XR_DATA, 0x1F42),
-    REG_W(XR_DATA, 0x4000),
-    REG_W(XR_DATA, 0x0000),        //     jmp   copperlist       ; and restart
+    REG_W(XR_DATA, 0xb000, 0x0f00),        //     movep 0x0F00, 0        ; Make background red
+    REG_W(XR_DATA, 0xb00a, 0x0700),        //     movep 0x0700, 0xA      ; Make foreground dark red
+    REG_W(XR_DATA, 0x8002, 0x5A5A, 0x9002, 0x1F42, 0x4000, 0x0000),        //     jmp   copperlist       ; and restart
 #else
-    REG_W(XR_DATA, 0xb000),
-    REG_W(XR_DATA, 0x0000),        //     movep 0x000F, 0        ; Make background blue
+    REG_W(XR_DATA, 0xb000, 0x0000),        //     movep 0x000F, 0        ; Make background blue
 
     REG_W(XR_DATA, 0x6010),        // copper splitscreen test
     REG_W(XR_DATA, 0x0055),
 
-    REG_W(XR_DATA, 0xa00f),
-    REG_W(XR_DATA, 0x0ec6),
+    REG_W(XR_DATA, 0xa00f, 0x0ec6),
 
-    REG_W(XR_DATA, 0x00c8),
-    REG_W(XR_DATA, 0x2782),
+    REG_W(XR_DATA, 0x00c8, 0x2782),
 
-    REG_W(XR_DATA, 0xb000),
-    REG_W(XR_DATA, 0x0f0f),        //     movep 0x000F, 0        ; Make background blue
+    REG_W(XR_DATA, 0xb000, 0x0f0f),        //     movep 0x000F, 0        ; Make background blue
 
-    REG_W(XR_DATA, 0x6010),
-    REG_W(XR_DATA, 0x0040),
-    REG_W(XR_DATA, 0x6015),
-    REG_W(XR_DATA, 0x3e80),
-    REG_W(XR_DATA, 0xa00f),
-    REG_W(XR_DATA, 0x0fff),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_DATA, 0x0003),
+    REG_W(XR_DATA, 0x6010, 0x0040, 0x6015, 0x3e80, 0xa00f, 0x0fff, 0x0000, 0x0003),
 #endif
 
-    REG_W(XR_ADDR, XR_COPP_CTRL),        // do copper test on bootscreen...
+    XREG_SETW(COPP_CTRL),        // do copper test on bootscreen...
     REG_W(XR_DATA, 0x8000),
     REG_WAITVTOP(),
-    REG_W(XR_ADDR, XR_TILE_MEM + 10),
+    XREG_SETW(TILE_MEM + 10),
     REG_RW(XR_DATA),
-    REG_W(XR_ADDR, XR_TILE_MEM + 11),
+    XREG_SETW(TILE_MEM + 11),
     REG_RW(XR_DATA),
-    REG_W(XR_ADDR, XR_TILE_MEM + 12),
+    XREG_SETW(TILE_MEM + 12),
     REG_RW(XR_DATA),
-    REG_W(XR_ADDR, XR_TILE_MEM + 13),
+    XREG_SETW(TILE_MEM + 13),
     REG_RW(XR_DATA),
-    REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 4-BPP BMAP
+    XREG_SETW(PA_GFX_CTRL),        // set 4-BPP BMAP
     REG_W(XR_DATA, 0x0055),
-    REG_W(XR_ADDR, XR_PA_LINE_LEN),        // 320/2/2 wide
+    XREG_SETW(PA_LINE_LEN),        // 320/2/2 wide
     REG_W(XR_DATA, 80),
     REG_W(XR_ADDR, XR_COLOR_MEM),        // upload color palette
     REG_UPLOAD_AUX(),
     REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),
-    REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 1-BPP BMAP
+    XREG_SETW(PA_GFX_CTRL),        // set 1-BPP BMAP
     REG_W(XR_DATA, 0x0040),
     REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 16000),
     REG_UPLOAD(),
     REG_WAITVSYNC(),                     // show 1-BPP BMAP
-    REG_W(XR_ADDR, XR_COPP_CTRL),        // disable copper so as not to ruin color image tests.
+    XREG_SETW(COPP_CTRL),        // disable copper so as not to ruin color image tests.
     REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_VID_CTRL),
+    XREG_SETW(VID_CTRL),
     REG_RW(XR_DATA),
     REG_W(TIMER, 0x0800),
     //    REG_WAITVSYNC(),                       // show 4-BPP BMAP
-    REG_W(XR_ADDR, XR_PA_GFX_CTRL),        // set 8-BPP BMAP
+    XREG_SETW(PA_GFX_CTRL),        // set 8-BPP BMAP
     REG_W(XR_DATA, 0x0065),
-    REG_W(XR_ADDR, XR_PA_LINE_LEN),        // 320/2 wide
+    XREG_SETW(PA_LINE_LEN),        // 320/2 wide
     REG_W(XR_DATA, 160),
     REG_W(XR_ADDR, XR_COLOR_MEM),        // upload color palette
     REG_UPLOAD_AUX(),
@@ -777,8 +729,8 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(WR_ADDR, 16000),
     REG_UPLOAD(),
     REG_WAITVSYNC(),        // show 1-BPP BMAP
-#endif
     REG_END()
+#endif
     // end test data
 };
 

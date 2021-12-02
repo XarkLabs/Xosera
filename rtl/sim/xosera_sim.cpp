@@ -34,7 +34,7 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 3        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 4        // video frames to dump to VCD file (and then screen-shot and exit)
 #define MAX_UPLOADS      8        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
@@ -444,31 +444,97 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_WAITVSYNC(),        // show boot screen
     REG_WAITVTOP(),         // show boot screen
 
-    REG_W(XR_ADDR, XR_BLIT_CTRL),
+    // 320x240 4bpp
+    REG_W(XR_ADDR, XR_PA_GFX_CTRL),
+    REG_W(XR_DATA, 0x0055),
+    REG_W(XR_ADDR, XR_PA_TILE_CTRL),
+    REG_W(XR_DATA, 0x000F),
+    REG_W(XR_ADDR, XR_PA_DISP_ADDR),
     REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_MASK),
-    REG_W(XR_DATA, 0x03FC),
-    REG_W(XR_ADDR, XR_BLIT_MOD_A),
-    REG_W(XR_DATA, 0x0050),
-    REG_W(XR_ADDR, XR_BLIT_MOD_B),
-    REG_W(XR_DATA, 0x0050),
-    REG_W(XR_ADDR, XR_BLIT_MOD_C),
-    REG_W(XR_DATA, 0x0050),
-    REG_W(XR_ADDR, XR_BLIT_MOD_D),
-    REG_W(XR_DATA, 0x0050),
-    REG_W(XR_ADDR, XR_BLIT_SRC_A),
-    REG_W(XR_DATA, 0x0050),
-    REG_W(XR_ADDR, XR_BLIT_SRC_B),
-    REG_W(XR_DATA, 0x0050),
-    REG_W(XR_ADDR, XR_BLIT_VAL_C),
-    REG_W(XR_DATA, 0x0050),
-    REG_W(XR_ADDR, XR_BLIT_DST_D),
-    REG_W(XR_DATA, 0x0050),
-    REG_W(XR_ADDR, XR_BLIT_LINES),
-    REG_W(XR_DATA, 0x0004),
-    REG_W(XR_ADDR, XR_BLIT_COUNT),
-    REG_W(XR_DATA, 0x0004 - 1),
+    REG_W(XR_ADDR, XR_PA_LINE_LEN),
+    REG_W(XR_DATA, 320 / 4),
 
+    REG_WAITVTOP(),         // show boot screen
+    REG_WAITVSYNC(),        // show boot screen
+
+    // fill screen
+    REG_W(XR_ADDR, XR_BLIT_CTRL),
+    REG_W(XR_DATA, 0x0003),
+    REG_W(XR_ADDR, XR_BLIT_SHIFT),
+    REG_W(XR_DATA, 0xFF00),
+    REG_W(XR_ADDR, XR_BLIT_MOD_A),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_MOD_B),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_MOD_C),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_MOD_D),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_SRC_A),
+    REG_W(XR_DATA, 0xFFFF),
+    REG_W(XR_ADDR, XR_BLIT_SRC_B),
+    REG_W(XR_DATA, 0xFFFF),
+    REG_W(XR_ADDR, XR_BLIT_VAL_C),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_DST_D),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_LINES),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_COUNT),
+    REG_W(XR_DATA, (320 * 240 / 4) - 1),
+
+    // 2D fill screen
+    REG_W(XR_ADDR, XR_BLIT_CTRL),
+    REG_W(XR_DATA, 0x000F),
+    REG_W(XR_ADDR, XR_BLIT_SHIFT),
+    REG_W(XR_DATA, 0xFF00),
+    REG_W(XR_ADDR, XR_BLIT_MOD_A),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_MOD_B),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_MOD_C),
+    REG_W(XR_DATA, 0x0001),
+    REG_W(XR_ADDR, XR_BLIT_MOD_D),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_SRC_A),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_SRC_B),
+    REG_W(XR_DATA, 0xFFFF),
+    REG_W(XR_ADDR, XR_BLIT_VAL_C),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_DST_D),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_LINES),
+    REG_W(XR_DATA, 240),
+    REG_W(XR_ADDR, XR_BLIT_COUNT),
+    REG_W(XR_DATA, (320 / 4) - 1),
+
+#if 0
+    REG_W(XR_ADDR, XR_BLIT_CTRL),
+    REG_W(XR_DATA, 0x0003),
+    REG_W(XR_ADDR, XR_BLIT_SHIFT),
+    REG_W(XR_DATA, 0x7C01),
+    REG_W(XR_ADDR, XR_BLIT_MOD_A),
+    REG_W(XR_DATA, 0x0050 - 4),
+    REG_W(XR_ADDR, XR_BLIT_MOD_B),
+    REG_W(XR_DATA, 0x0001),
+    REG_W(XR_ADDR, XR_BLIT_MOD_C),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_MOD_D),
+    REG_W(XR_DATA, 0x0050 - 4),
+    REG_W(XR_ADDR, XR_BLIT_SRC_A),
+    REG_W(XR_DATA, 0xAAAA),
+    REG_W(XR_ADDR, XR_BLIT_SRC_B),
+    REG_W(XR_DATA, 0xBBBB),
+    REG_W(XR_ADDR, XR_BLIT_VAL_C),
+    REG_W(XR_DATA, 0xCCCC),
+    REG_W(XR_ADDR, XR_BLIT_DST_D),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_LINES),
+    REG_W(XR_DATA, 0x0000),
+    REG_W(XR_ADDR, XR_BLIT_COUNT),
+    REG_W(XR_DATA, 0x0000),
+#endif
     REG_RW(UNUSED_A),        // read LFSR register
     REG_RW(UNUSED_A),        // read LFSR register
     REG_RW(UNUSED_A),        // read LFSR register
@@ -477,17 +543,9 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_WAITVTOP(),         // show boot screen
     REG_WAITVSYNC(),        // show boot screen
 
-    REG_W(XR_ADDR, XR_BLIT_MODE),
-    REG_W(XR_DATA, 0x2000),
-    REG_W(XR_ADDR, XR_BLIT_WR_MASK),
-    REG_W(XR_DATA, 0x0C53),
-    REG_W(XR_ADDR, XR_BLIT_RD_ADDR),
-    REG_W(XR_DATA, 0xABCD),
-    REG_W(XR_ADDR, XR_BLIT_WR_ADDR),
-    REG_W(XR_DATA, 0x0000),
-    REG_W(XR_ADDR, XR_BLIT_COUNT),
-    REG_W(XR_DATA, 0x0010 - 1),
-
+    REG_WAITVTOP(),         // show boot screen
+    REG_WAITVSYNC(),        // show boot screen
+#if 0
     REG_W(XR_ADDR, XR_PB_GFX_CTRL),
     REG_W(XR_DATA, 0x0000),                 // set disp in tile
     REG_W(XR_ADDR, XR_PB_TILE_CTRL),        // set 4-BPP BMAP
@@ -719,6 +777,7 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(WR_ADDR, 16000),
     REG_UPLOAD(),
     REG_WAITVSYNC(),        // show 1-BPP BMAP
+#endif
     REG_END()
     // end test data
 };

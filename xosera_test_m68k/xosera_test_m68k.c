@@ -594,19 +594,51 @@ void test_blit()
 
     do
     {
+        // fill VRAM
         wait_blit_ready();
-        xreg_setw(BLIT_MODE, 0x2000);
-        xreg_setw(BLIT_WR_MASK, 0x0FFF);
-        xreg_setw(BLIT_RD_ADDR, 0x0000);
-        xreg_setw(BLIT_WR_ADDR, 0x0000);
-        xreg_setw(BLIT_COUNT, 0x10000 - 1);
+        xreg_setw(BLIT_CTRL, 0x000F);              // use B as 8-bit transparency control, A & B const
+        xreg_setw(BLIT_SHIFT, 0xFF00);             // first, last word nibble masks, and 0-3 shift (low two bits)
+        xreg_setw(BLIT_MOD_A, 0x0000);             // A modulo
+        xreg_setw(BLIT_MOD_B, 0x0000);             // B modulo
+        xreg_setw(BLIT_MOD_C, 0x0000);             // C modulo
+        xreg_setw(BLIT_MOD_D, 0x0000);             // D modulo
+        xreg_setw(BLIT_SRC_A, 0x8888);             // A source VRAM addr/const (const value to store)
+        xreg_setw(BLIT_SRC_B, 0x0101);             // B source VRAM addr/const (non-zero const for non-transparent)
+        xreg_setw(BLIT_VAL_C, 0x0000);             // C const (XOR'd with value stored)
+        xreg_setw(BLIT_DST_D, 0x0000);             // D destination VRAM addr
+        xreg_setw(BLIT_LINES, 0x0000);             // lines (0 for 1-D blit)
+        xreg_setw(BLIT_COUNT, 0x10000 - 1);        // words to write -1
         wait_blit_done();
         wait_vsync();
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
+
         xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
         xreg_setw(PA_LINE_LEN, 320 / 4);
         xreg_setw(PA_DISP_ADDR, 0x4B00);
-
         xreg_setw(PB_GFX_CTRL, 0x0080);        // bitmap + 4-bpp + Hx2 + Vx2
+
+        // 2D screen 1/4 screen clear
+        wait_blit_ready();
+        xreg_setw(BLIT_CTRL, 0x000F);                // use B as 8-bit transparency control, A & B const
+        xreg_setw(BLIT_SHIFT, 0xFF00);               // first, last word nibble masks, and 0-3 shift (low two bits)
+        xreg_setw(BLIT_MOD_A, 0x0000);               // A modulo
+        xreg_setw(BLIT_MOD_B, 0x0000);               // B modulo
+        xreg_setw(BLIT_MOD_C, 0x1111);               // C modulo
+        xreg_setw(BLIT_MOD_D, (320 / 4) / 2);        // D modulo
+        xreg_setw(BLIT_SRC_A, 0x0000);               // A source VRAM addr/const (const value to store)
+        xreg_setw(BLIT_SRC_B, 0x0101);               // B source VRAM addr/const (non-zero const for non-transparent)
+        xreg_setw(BLIT_VAL_C, 0x0000);               // C const (XOR'd with value stored)
+        xreg_setw(BLIT_DST_D, 0x4B00);               // D destination VRAM addr
+        xreg_setw(BLIT_LINES, 120);                  // lines (0 for 1-D blit)
+        xreg_setw(BLIT_COUNT, (320 / 4) / 2 - 1);        // words to write -1
+        wait_blit_done();
+        if (delay_check(DELAY_TIME * 10))
+        {
+            break;
+        }
 
         load_sd_colors("/pacbox-320x240_pal.raw");
         dupe_colors(0x8);
@@ -615,11 +647,28 @@ void test_blit()
         xm_setw(XR_DATA, 0x0fff);
 
         load_sd_bitmap("/pacbox-320x240.raw", 0x0000);
-        if (delay_check(DELAY_TIME))
+
+        // 2D screen screen copy 0x0000 -> 0x4B00 320x240 4-bpp
+        wait_blit_ready();
+        xreg_setw(BLIT_CTRL, 0x000E);         // use B as 8-bit transparency control, B const
+        xreg_setw(BLIT_SHIFT, 0xFF00);        // first, last word nibble masks, and 0-3 shift (low two bits)
+        xreg_setw(BLIT_MOD_A, 0x0000);        // A modulo
+        xreg_setw(BLIT_MOD_B, 0x0000);        // B modulo
+        xreg_setw(BLIT_MOD_C, 0x0000);        // C modulo
+        xreg_setw(BLIT_MOD_D, 0x0000);        // D modulo
+        xreg_setw(BLIT_SRC_A, 0x0000);        // A source VRAM addr/const (const value to store)
+        xreg_setw(BLIT_SRC_B, 0xFFFF);        // B source VRAM addr/const (need non-zero const to force non-transparent)
+        xreg_setw(BLIT_VAL_C, 0x0000);        // C const (XOR'd with value stored)
+        xreg_setw(BLIT_DST_D, 0x4B00);        // D destination VRAM addr
+        xreg_setw(BLIT_LINES, 240);           // lines (0 for 1-D blit)
+        xreg_setw(BLIT_COUNT, (320 / 4) - 1);        // words to write -1
+        wait_blit_done();
+
+        if (delay_check(DELAY_TIME * 10))
         {
             break;
         }
-
+#if 0
         dprintf("%d byte copy from 0x0000 to 0x4B00\n", (320 * 240) / 4);
         wait_blit_ready();
         xreg_setw(BLIT_MODE, 0x0000);
@@ -757,6 +806,7 @@ void test_blit()
                     ms_max % 10);
             dprintf("straggler %u.%u ms\n", stop / 10, stop % 10);
         }
+#endif
 
     } while (false);
     xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2

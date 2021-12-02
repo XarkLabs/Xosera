@@ -47,10 +47,10 @@ typedef enum logic [1:0] {
 } blit_op_t;
 
 typedef enum logic [1:0] {
-    TRANS_A_4B    = 2'b00,
-    TRANS_B_4B    = 2'b01,
-    TRANS_A_8B    = 2'b10,
-    TRANS_B_8B    = 2'b11
+    TRANS_A_4B    = 2'b00,              // zero nibbles in A transparent
+    TRANS_A_8B    = 2'b01,              // zero bytes in A transparent
+    TRANS_B_4B    = 2'b10,              // zero nibbles in B transparent
+    TRANS_B_8B    = 2'b11               // zero bytes in B transparent
 } blit_trans_t;
 
 // blitter xreg register data (holds "queued" blit)
@@ -58,9 +58,10 @@ logic           xreg_ctrl_A_const;
 logic           xreg_ctrl_B_const;
 logic  [1:0]    xreg_ctrl_transp;
 logic  [2:0]    xreg_ctrl_op;
-logic           xreg_ctrl_fast;
 
 logic  [1:0]    xreg_shift;
+logic  [3:0]    xreg_shift_l_mask;
+logic  [3:0]    xreg_shift_r_mask;
 word_t          xreg_mod_A;
 word_t          xreg_mod_B;
 word_t          xreg_mod_C;
@@ -87,8 +88,9 @@ always_ff @(posedge clk) begin
         xreg_ctrl_B_const   <= '0;
         xreg_ctrl_transp    <= '0;
         xreg_ctrl_op        <= '0;
-        xreg_ctrl_fast      <= '0;
         xreg_shift          <= '0;
+        xreg_shift_l_mask   <= '0;
+        xreg_shift_r_mask   <= '0;
         xreg_mod_A          <= '0;
         xreg_mod_B          <= '0;
         xreg_mod_C          <= '0;
@@ -109,14 +111,15 @@ always_ff @(posedge clk) begin
         if (xreg_wr_en_i) begin
             case ({ 2'b10, xreg_num_i })
                 xv::XR_BLIT_CTRL: begin
-                    xreg_ctrl_fast      <= xreg_data_i[7];
                     xreg_ctrl_op        <= xreg_data_i[6:4];
                     xreg_ctrl_transp    <= xreg_data_i[3:2];
                     xreg_ctrl_B_const   <= xreg_data_i[1];
                     xreg_ctrl_A_const   <= xreg_data_i[0];
                 end
                 xv::XR_BLIT_SHIFT: begin
-                    xreg_shift     <= xreg_data_i[1:0];
+                    xreg_shift_l_mask   <= xreg_data_i[15:12];
+                    xreg_shift_r_mask   <= xreg_data_i[11:8];
+                    xreg_shift          <= xreg_data_i[1:0];
                 end
                 xv::XR_BLIT_MOD_A: begin
                     xreg_mod_A          <= xreg_data_i;
@@ -160,10 +163,9 @@ end
 always_ff @(posedge clk) begin
     case ({ 2'b10, xreg_num_i })
         xv::XR_BLIT_CTRL:
-            xreg_data_o     <= { 8'b0, xreg_ctrl_fast, xreg_ctrl_op,
-                                 xreg_ctrl_transp, xreg_ctrl_B_const, xreg_ctrl_A_const };
+            xreg_data_o     <= { 9'b0, xreg_ctrl_op, xreg_ctrl_transp, xreg_ctrl_B_const, xreg_ctrl_A_const };
         xv::XR_BLIT_SHIFT:
-            xreg_data_o     <= { 14'b0, xreg_shift };
+            xreg_data_o     <= { xreg_shift_l_mask, xreg_shift_r_mask, 6'b0, xreg_shift };
         xv::XR_BLIT_MOD_A:
             xreg_data_o     <= xreg_mod_A;
         xv::XR_BLIT_MOD_B:
@@ -198,8 +200,8 @@ logic           blit_ctrl_B_const;
 logic  [1:0]    blit_ctrl_transp;
 logic  [2:0]    blit_ctrl_op;
 logic           blit_ctrl_fast;
-logic  [3:0]    blit_mask_left;
-logic  [2:0]    blit_mask_right;
+logic  [3:0]    blit_shift_l_mask;
+logic  [3:0]    blit_shift_r_mask;
 logic  [1:0]    blit_shift;
 word_t          blit_mod_A;
 word_t          blit_mod_B;
@@ -296,13 +298,14 @@ always_comb begin
                         |val_B[7:0],
                         |val_B[7:0]
                     };
+
     endcase
 end
 
 // output VRAM write mask (for left/right mask and transparency)
-assign blit_wr_mask_o   = (blit_first_word ? blit_mask_left  : 4'b1111) &
-                          (blit_last_word  ? {blit_mask_right, 1'b1 } : 4'b1111) &
-                          blit_mask_trans;
+assign blit_wr_mask_o = (blit_first_word ? blit_shift_l_mask  : 4'b1111) &
+                      (blit_last_word  ? blit_shift_r_mask : 4'b1111) &
+                      blit_mask_trans;
 
 typedef enum logic [3:0] {
     BLIT_IDLE,
@@ -312,11 +315,6 @@ typedef enum logic [3:0] {
     BLIT_WAIT_RD_A,
     BLIT_EXEC_OP,
     BLIT_WAIT_WR_D,
-    FILL_WR_D,
-    FILL_WAIT_WR_D,
-    COPY_RD_A,
-    COPY_WAIT_RD_A,
-    COPY_WAIT_WR_D,
     LINE_DONE,
     BLIT_DONE
 } blit_state_t;
@@ -336,9 +334,8 @@ always_ff @(posedge clk) begin
         blit_ctrl_B_const   <= '0;
         blit_ctrl_transp    <= '0;
         blit_ctrl_op        <= '0;
-        blit_ctrl_fast      <= '0;
-        blit_mask_left      <= '0;
-        blit_mask_right     <= '0;
+        blit_shift_l_mask   <= '0;
+        blit_shift_r_mask   <= '0;
         blit_shift          <= '0;
         blit_mod_A          <= '0;
         blit_mod_B          <= '0;
@@ -370,8 +367,10 @@ always_ff @(posedge clk) begin
                 blit_ctrl_B_const   <= xreg_ctrl_B_const;
                 blit_ctrl_transp    <= xreg_ctrl_transp;
                 blit_ctrl_op        <= xreg_ctrl_op;
-                blit_ctrl_fast      <= xreg_ctrl_fast;
                 blit_shift          <= xreg_shift;
+                blit_shift_l_mask   <= xreg_shift_l_mask;
+                blit_shift_r_mask   <= xreg_shift_r_mask;
+
                 blit_mod_A          <= xreg_mod_A;
                 blit_mod_B          <= xreg_mod_B;
                 blit_mod_C          <= xreg_mod_C;
@@ -384,23 +383,10 @@ always_ff @(posedge clk) begin
                 blit_width          <= xreg_count;
 
                 blit_first_word     <= 1'b1;
-                val_A               <= blit_src_A;
-                val_B               <= blit_src_B;
+                val_A               <= xreg_src_A;
+                val_B               <= xreg_src_B;
 
-                case (xreg_shift)
-                    2'h0:   { blit_mask_left, blit_mask_right } <= 7'b1111000;
-                    2'h1:   { blit_mask_left, blit_mask_right } <= 7'b0111100;
-                    2'h2:   { blit_mask_left, blit_mask_right } <= 7'b0011110;
-                    2'h3:   { blit_mask_left, blit_mask_right } <= 7'b0001111;
-                endcase
-
-                if (xreg_ctrl_fast & xreg_ctrl_A_const) begin
-                    blit_state          <= FILL_WR_D;
-                end else if (xreg_ctrl_fast) begin
-                    blit_state          <= COPY_RD_A;
-                end else begin
-                    blit_state          <= BLIT_RD;
-                end
+                blit_state          <= BLIT_RD;
             end
             BLIT_RD: begin
                 blit_lines          <= blit_lines - 1'b1;
@@ -413,13 +399,15 @@ always_ff @(posedge clk) begin
                     blit_src_B          <= blit_src_B + 1'b1;
 
                     blit_state          <= BLIT_WAIT_RD_B;
-                end else begin
+                end else if (!blit_ctrl_A_const) begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_wr_o           <= 1'b0;
                     blit_addr_o         <= blit_src_A;
                     blit_src_A          <= blit_src_A + 1'b1;
 
                     blit_state          <= BLIT_WAIT_RD_A;
+                end else begin
+                    blit_state          <= BLIT_EXEC_OP;
                 end
             end
             BLIT_WAIT_RD_B: begin
@@ -460,6 +448,8 @@ always_ff @(posedge clk) begin
                     blit_first_word     <= 1'b0;
                     blit_count          <= blit_count - 1'b1;
 
+                    blit_data_o         <= val_D;
+
                     if (blit_last_word) begin
                         blit_vram_sel_o     <= 1'b0;
                         blit_wr_o           <= 1'b0;
@@ -471,99 +461,31 @@ always_ff @(posedge clk) begin
                         blit_src_B          <= blit_src_B + 1'b1;
 
                         blit_state          <= BLIT_WAIT_RD_B;
-                    end else begin
+                    end else if (!blit_ctrl_A_const) begin
                         blit_vram_sel_o     <= 1'b1;
                         blit_wr_o           <= 1'b0;
                         blit_addr_o         <= blit_src_A;
                         blit_src_A          <= blit_src_A + 1'b1;
 
                         blit_state          <= BLIT_WAIT_RD_A;
-                    end
-                end
-            end
-            FILL_WR_D: begin
-                blit_first_word     <= 1'b1;
-                blit_lines          <= blit_lines - 1'b1;
-
-                blit_vram_sel_o     <= 1'b1;
-                blit_wr_o           <= 1'b1;
-                blit_data_o         <= val_A;
-                blit_addr_o         <= blit_dst_D;
-                blit_dst_D          <= blit_dst_D + 1'b1;
-
-                blit_state          <= FILL_WAIT_WR_D;
-            end
-            FILL_WAIT_WR_D: begin
-                if (blit_vram_ack_i) begin
-                    blit_first_word     <= 1'b0;
-                    blit_count          <= blit_count - 1'b1;
-                    blit_vram_sel_o     <= 1'b1;
-                    blit_wr_o           <= 1'b1;
-                    blit_data_o         <= val_A;
-                    blit_addr_o         <= blit_dst_D;
-                    blit_dst_D          <= blit_dst_D + 1'b1;
-                    if (blit_last_word) begin
-                        blit_vram_sel_o     <= 1'b0;
-                        blit_wr_o           <= 1'b0;
-                        blit_state          <= LINE_DONE;
                     end else begin
-                        blit_state          <= FILL_WAIT_WR_D;
-                    end
-                end
-            end
-            COPY_RD_A: begin
-                blit_vram_sel_o     <= 1'b1;
-                blit_wr_o           <= 1'b0;
-                blit_addr_o         <= blit_src_A;
-                blit_src_A          <= blit_src_A + 1'b1;
+                        blit_vram_sel_o     <= 1'b1;
+                        blit_wr_o           <= 1'b1;
+                        blit_addr_o         <= blit_dst_D;
+                        blit_dst_D          <= blit_dst_D + 1'b1;
 
-                blit_first_word     <= 1'b1;
-                blit_lines          <= blit_lines - 1'b1;
-
-                blit_state          <= COPY_RD_A;
-            end
-            COPY_WAIT_RD_A: begin
-                if (blit_vram_ack_i) begin
-                    blit_vram_sel_o     <= 1'b1;
-                    blit_wr_o           <= 1'b1;
-                    blit_data_o         <= lsr_A[27:12] ^ blit_val_C;
-                    lsr_out_A           <= lsr_A[11:0];
-                    blit_addr_o         <= blit_dst_D;
-                    blit_dst_D          <= blit_dst_D + 1'b1;
-                    blit_count          <= blit_count - 1'b1;
-
-                    blit_state          <= COPY_WAIT_WR_D;
-                end
-            end
-            COPY_WAIT_WR_D: begin
-                if (blit_vram_ack_i) begin
-                    blit_first_word     <= 1'b0;
-                    blit_vram_sel_o     <= 1'b1;
-                    blit_wr_o           <= 1'b1;
-                    blit_addr_o         <= blit_dst_D;
-                    blit_dst_D          <= blit_dst_D + 1'b1;
-                    blit_count          <= blit_count - 1'b1;
-                    if (blit_last_word) begin
-                        blit_vram_sel_o     <= 1'b0;
-                        blit_wr_o           <= 1'b0;
-                        blit_state          <= LINE_DONE;
-                    end else begin
-                        blit_state          <= COPY_WAIT_RD_A;
+                        blit_state          <= BLIT_WAIT_WR_D;
                     end
                 end
             end
             LINE_DONE: begin
                 blit_src_A  <= blit_src_A + blit_mod_A;
                 blit_src_B  <= blit_src_B + blit_mod_B;
-//                blit_val_C  <= blit_val_C + blit_mod_C;
+                blit_val_C  <= blit_val_C + blit_mod_C;
                 blit_dst_D  <= blit_dst_D + blit_mod_D;
 
                 if (blit_last_line) begin
                     blit_state          <= BLIT_DONE;
-                end else if (blit_ctrl_fast & blit_ctrl_A_const) begin
-                    blit_state          <= FILL_WR_D;
-                end else if (blit_ctrl_fast) begin
-                    blit_state          <= COPY_RD_A;
                 end else begin
                     blit_state          <= BLIT_RD;
                 end

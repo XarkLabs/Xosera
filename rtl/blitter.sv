@@ -13,7 +13,6 @@
 `include "xosera_pkg.sv"
 
 module blitter(
-/* verilator lint_off UNUSED */
     // video registers and control
     input  wire logic           xreg_wr_en_i,       // strobe to write internal config register number
     input  wire logic  [3:0]    xreg_num_i,         // internal config register number (for reads)
@@ -26,38 +25,22 @@ module blitter(
     // VRAM/XR bus signals
     output      logic           blit_vram_sel_o,    // vram select
     input  wire logic           blit_vram_ack_i,    // VRAM access ack (true when data read/written)
-
     output      logic           blit_wr_o,          // blit write
     output      logic  [3:0]    blit_wr_mask_o,     // blit VRAM nibble write mask
-
     output      addr_t          blit_addr_o,        // VRAM address out
     input  wire word_t          blit_data_i,        // data word data in
     output      word_t          blit_data_o,        // data word data out
     // standard signals
     input  wire logic           reset_i,            // system reset in
     input  wire logic           clk                 // clock
-/* verilator lint_on UNUSED */
 );
 
-typedef enum logic [1:0] {
-    OP_A_XOR_C           = 2'b00,       // D = A ^ C        (B can still be transparency)
-    OP_A_ADD_B_XOR_C     = 2'b01,       // D = (A + B) ^ C  (nibble addition, no carries)
-    OP_A_AND_B_XOR_C     = 2'b10,       // D = A & B ^ C;
-    OP_A_XOR_B_XOR_C     = 2'b11        // D = A ^ B ^ C;
-} blit_op_t;
-
-typedef enum logic [1:0] {
-    TRANS_A_4B    = 2'b00,              // zero nibbles in A transparent
-    TRANS_A_8B    = 2'b01,              // zero bytes in A transparent
-    TRANS_B_4B    = 2'b10,              // zero nibbles in B transparent
-    TRANS_B_8B    = 2'b11               // zero bytes in B transparent
-} blit_trans_t;
-
 // blitter xreg register data (holds "queued" blit)
+logic  [1:0]    xreg_ctrl_op;
 logic           xreg_ctrl_A_const;
 logic           xreg_ctrl_B_const;
+logic           xreg_ctrl_B_XOR_A;
 logic  [1:0]    xreg_ctrl_transp;
-logic  [2:0]    xreg_ctrl_op;
 
 logic  [1:0]    xreg_shift;
 logic  [3:0]    xreg_shift_l_mask;
@@ -70,8 +53,8 @@ word_t          xreg_src_A;
 word_t          xreg_src_B;
 word_t          xreg_val_C;
 word_t          xreg_dst_D;
-word_t          xreg_lines;
-word_t          xreg_count;
+logic [14:0]    xreg_lines;                         // "limitation" of 32768 lines
+word_t          xreg_words;
 
 logic           xreg_blit_queued;                   // blit operation is queued in xreg registers
 
@@ -86,6 +69,7 @@ always_ff @(posedge clk) begin
 
         xreg_ctrl_A_const   <= '0;
         xreg_ctrl_B_const   <= '0;
+        xreg_ctrl_B_XOR_A   <= '0;
         xreg_ctrl_transp    <= '0;
         xreg_ctrl_op        <= '0;
         xreg_shift          <= '0;
@@ -100,7 +84,7 @@ always_ff @(posedge clk) begin
         xreg_val_C          <= '0;
         xreg_dst_D          <= '0;
         xreg_lines          <= '0;
-        xreg_count          <= '0;
+        xreg_words          <= '0;
     end else begin
         // clear queued blit when state machine copies xreg data
         if (blit_state == BLIT_SETUP) begin
@@ -111,10 +95,13 @@ always_ff @(posedge clk) begin
         if (xreg_wr_en_i) begin
             case ({ 2'b10, xreg_num_i })
                 xv::XR_BLIT_CTRL: begin
-                    xreg_ctrl_op        <= xreg_data_i[6:4];
-                    xreg_ctrl_transp    <= xreg_data_i[3:2];
-                    xreg_ctrl_B_const   <= xreg_data_i[1];
-                    xreg_ctrl_A_const   <= xreg_data_i[0];
+                    // [15:10]
+                    xreg_ctrl_transp    <= xreg_data_i[9:8];
+                    xreg_ctrl_B_XOR_A   <= xreg_data_i[6];
+                    xreg_ctrl_B_const   <= xreg_data_i[5];
+                    xreg_ctrl_A_const   <= xreg_data_i[4];
+                    // [3:2]
+                    xreg_ctrl_op        <= xreg_data_i[1:0];
                 end
                 xv::XR_BLIT_SHIFT: begin
                     xreg_shift_l_mask   <= xreg_data_i[15:12];
@@ -146,10 +133,10 @@ always_ff @(posedge clk) begin
                     xreg_dst_D          <= xreg_data_i;
                 end
                 xv::XR_BLIT_LINES: begin
-                    xreg_lines          <= xreg_data_i;
+                    xreg_lines          <= xreg_data_i[14:0];
                 end
-                xv::XR_BLIT_COUNT: begin
-                    xreg_count          <= xreg_data_i;
+                xv::XR_BLIT_WORDS: begin
+                    xreg_words          <= xreg_data_i;
                     xreg_blit_queued    <= 1'b1;
                 end
                 default: begin
@@ -163,7 +150,7 @@ end
 always_ff @(posedge clk) begin
     case ({ 2'b10, xreg_num_i })
         xv::XR_BLIT_CTRL:
-            xreg_data_o     <= { 9'b0, xreg_ctrl_op, xreg_ctrl_transp, xreg_ctrl_B_const, xreg_ctrl_A_const };
+            xreg_data_o     <= { 6'b0, xreg_ctrl_transp, 1'b0, xreg_ctrl_B_XOR_A, xreg_ctrl_B_const, xreg_ctrl_A_const, 2'b0, xreg_ctrl_op };
         xv::XR_BLIT_SHIFT:
             xreg_data_o     <= { xreg_shift_l_mask, xreg_shift_r_mask, 6'b0, xreg_shift };
         xv::XR_BLIT_MOD_A:
@@ -183,23 +170,20 @@ always_ff @(posedge clk) begin
         xv::XR_BLIT_DST_D:
             xreg_data_o     <= xreg_dst_D;
         xv::XR_BLIT_LINES:
-            xreg_data_o     <= xreg_lines;
-        xv::XR_BLIT_COUNT:
-            xreg_data_o     <= xreg_count;
+            xreg_data_o     <= { 1'b0, xreg_lines} ;
+        xv::XR_BLIT_WORDS:
+            xreg_data_o     <= xreg_words;
         default:
-            xreg_data_o     <= 16'h0000;
+            xreg_data_o     <= '0;
     endcase
 end
 
 // blitter operational registers (for blit in progress)
-logic  [3:0]    blit_state;
-
-/* verilator lint_off UNUSED */
+logic  [1:0]    blit_ctrl_op;
 logic           blit_ctrl_A_const;
 logic           blit_ctrl_B_const;
+logic           blit_ctrl_B_XOR_A;
 logic  [1:0]    blit_ctrl_transp;
-logic  [2:0]    blit_ctrl_op;
-logic           blit_ctrl_fast;
 logic  [3:0]    blit_shift_l_mask;
 logic  [3:0]    blit_shift_r_mask;
 logic  [1:0]    blit_shift;
@@ -211,113 +195,140 @@ word_t          blit_src_A;
 word_t          blit_src_B;
 word_t          blit_val_C;
 word_t          blit_dst_D;
-word_t          blit_lines;                 // bit 15 is underflow done flag
-word_t          blit_width;
-logic [16:0]    blit_count;                 // extra bit for underflow done flag
-/* verilator lint_on UNUSED */
+word_t          blit_lines;             // bit 15 is underflow done flag
+word_t          blit_words;
 
-word_t          val_A;
-word_t          val_B;
-word_t          val_D;
-
+logic [16:0]    blit_count;             // width counter (extra bit for underflow line done flag)
 logic           blit_first_word;
 logic           blit_last_word;
 assign          blit_last_word  = blit_count[16];   // underflow flag for last word/last word of line
 logic           blit_last_line;
 assign          blit_last_line  = blit_lines[15];   // underflow flag for last line (for rectangular blit)
 
-// blit shifter // TODO: make a function
-
-function automatic [27:0] lsr(
-        input  [1:0]    nibble_shift,
-        input [11:0]    shift_in,     // nibbles shifted out of previous word
-        input word_t    data        // data word to shift
+// nibble shifter // TODO: see if any savings leaving old data vs setting to zero
+function automatic [27:0] lsr_4(
+        input  [1:0]    nibble_shift,   // 0 to 3 nibbles to shift right
+        input [11:0]    shift_in,       // 3 nibbles shifted in (from previous word shift out)
+        input word_t    data            // data word to shift
     );
     begin
         case (nibble_shift)
-            2'h0:   lsr = { data[15:12], data[11:8], data[7:4], data[3:0],
-                            4'b0, 4'b0, 4'b0};
-            2'h1:   lsr = { shift_in[11:8], data[15:12], data[11:8], data[7:4],
-                            data[3:0], 4'b0, 4'b0};
-            2'h2:   lsr = { shift_in[11:8], shift_in[7:4], data[15:12], data[11:8],
-                            data[7:4], data[3:0], 4'b0};
-            2'h3:   lsr = { shift_in[11:8], shift_in[7:4], shift_in[3:0], data[15:12],
-                            data[11:8], data[7:4], data[3:0] };
+            2'h0:   lsr_4 = { data[15:12],    data[11:8],    data[7:4],     data[3:0],        // word result
+                            4'b0,           4'b0,          4'b0};                           // nibbles shifted out
+            2'h1:   lsr_4 = { shift_in[11:8], data[15:12],   data[11:8],    data[7:4],        // word result
+                            data[3:0],      4'b0,          4'b0};                           // nibbles shifted out
+            2'h2:   lsr_4 = { shift_in[11:8], shift_in[7:4], data[15:12],   data[11:8],       // word result
+                            data[7:4],      data[3:0],     4'b0};                           // nibbles shifted out
+            2'h3:   lsr_4 = { shift_in[11:8], shift_in[7:4], shift_in[3:0], data[15:12],      // word result
+                            data[11:8],     data[7:4],     data[3:0] };                     // nibbles shifted out
         endcase
     end
 endfunction
 
+logic [27:0]    lsr_A;                  // 0 to 3 nibble shifted A value
+logic [27:0]    lsr_B;                  // 0 to 3 nibble shifted A value
+logic [11:0]    lsr_out_A;              // up to 3 nibbles shifted out of A, to shift into next A word
+logic [11:0]    lsr_out_B;              // up to 3 nibbles shifted out of A, to shift into next A word
 
-logic [27:0]    lsr_A;               // 0 to 3 nibble shifted A value
-logic [27:0]    lsr_B;               // 0 to 3 nibble shifted A value
-logic [11:0]    lsr_out_A;           // up to 3 nibbles shifted out of A, to shift into next A word
-logic [11:0]    lsr_out_B;           // up to 3 nibbles shifted out of A, to shift into next A word
+assign  lsr_A = lsr_4(blit_shift, lsr_out_A, blit_data_i);    // shifted value read from blit_src_A
+assign  lsr_B = lsr_4(blit_shift, lsr_out_B, blit_data_i);    // shifted value read from blit_src_B
 
-assign  lsr_A = lsr(blit_shift, lsr_out_A, blit_data_i);
-assign  lsr_B = lsr(blit_shift, lsr_out_B, blit_data_i);
+// logic ops
+typedef enum logic [1:0] {
+    OP_A                = 2'b00,        // D = A
+    OP_A_AND_B_XOR_C    = 2'b01,        // D = A & B ^ C
+    OP_A_OR_B_AND_C     = 2'b10,        // D = A | B & C
+    OP_A_ADD_B_AND_C    = 2'b11         // D = A + B & C    (nibble addition, no carries)
+} blit_op_t;
+
+word_t          val_A;                  // const or value read from blit_src_A
+word_t          val_B;                  // const or value read from blit_src_B
+word_t          val_C;                  // const value blit_val_C
+word_t          val_D;                  // value to write to blit_dst_D
+
+assign val_C        = blit_val_C;       // val_C is alias for blit_val_C register
+assign blit_data_o  = val_D;            // val_D is output to VRAM
 
 always_comb begin : logic_ops
     case (blit_ctrl_op[1:0])
-        2'b00: val_D   = val_A ^ blit_val_C;            // B can be used for transparency
-        2'b01: val_D   = val_A & val_B ^ blit_val_C;
-        2'b10: val_D   = val_A ^ val_B ^ blit_val_C;
-        2'b11: val_D   = {  val_A[15:12] + val_B[15:12],
-                            val_A[11:8]  + val_B[11:8],
-                            val_A[7:4]   + val_B[ 7:4],
-                            val_A[3:0]   + val_B[ 3:0]
-                         } ^ blit_val_C;
+        OP_A:
+            val_D   = val_A;                             // A or A^B can be used for transparency
+        OP_A_AND_B_XOR_C:
+            val_D   = val_A & val_B ^ val_C;
+        OP_A_OR_B_AND_C:
+            val_D   = {
+                        {4{(|val_B[15:12])}},
+                        {4{(|val_B[11:8])}},
+                        {4{(|val_B[7:4])}},
+                        {4{(|val_B[3:0])}}
+                    } & val_A ^ val_C;
+        OP_A_ADD_B_AND_C:
+            val_D   = {  val_A[15:12] + val_B[15:12],    // TODO: check cost of this
+                         val_A[11:8]  + val_B[11:8],
+                         val_A[7:4]   + val_B[ 7:4],
+                         val_A[3:0]   + val_B[ 3:0]
+                      } & val_C;
     endcase
 end
 
 // transparency
-logic  [3:0]    blit_mask_trans;
-
-always_comb begin
-    case (blit_ctrl_transp)
-        TRANS_A_4B: blit_mask_trans = {
-                        |val_A[15:12],
-                        |val_A[11:8],
-                        |val_A[7:4],
-                        |val_A[3:0]
-                    };
-        TRANS_A_8B: blit_mask_trans = {
-                        |val_A[15:8],
-                        |val_A[15:8],
-                        |val_A[7:0],
-                        |val_A[7:0]
-                    };
-        TRANS_B_4B: blit_mask_trans = {
-                        |val_B[15:12],
-                        |val_B[11:8],
-                        |val_B[7:4],
-                        |val_B[3:0]
-                    };
-        TRANS_B_8B: blit_mask_trans = {
-                        |val_B[15:8],
-                        |val_B[15:8],
-                        |val_B[7:0],
-                        |val_B[7:0]
-                    };
-
-    endcase
-end
+typedef enum logic [1:0] {
+    TRANS_A_4BPP  = 2'b00,              // use A 4-bpp for transparency
+    TRANS_B_4BPP  = 2'b01,              // use B 4-bpp for transparency
+    TRANS_A_8BPP  = 2'b10,              // use A 8-bpp for transparent
+    TRANS_B_8BPP  = 2'b11               // use B 8-bpp for transparency
+} blit_trans_t;
 
 // output VRAM write mask (for left/right mask and transparency)
 assign blit_wr_mask_o = (blit_first_word ? blit_shift_l_mask  : 4'b1111) &
                       (blit_last_word  ? blit_shift_r_mask : 4'b1111) &
                       blit_mask_trans;
 
+logic  [3:0]    blit_mask_trans;
+
+// TODO: check cost of blit_ctrl_transp[0] for 0/F transparency
+always_comb begin
+    case (blit_ctrl_transp)
+        TRANS_A_4BPP: blit_mask_trans = {
+                        (|val_A[15:12]),
+                        (|val_A[11:8]),
+                        (|val_A[7:4]),
+                        (|val_A[3:0])
+                    };
+        TRANS_B_4BPP: blit_mask_trans = {
+                        (|val_B[15:12]),
+                        (|val_B[11:8]),
+                        (|val_B[7:4]),
+                        (|val_B[3:0])
+                    };
+        TRANS_A_8BPP: blit_mask_trans = {
+                        (|val_A[15:8]),
+                        (|val_A[15:8]),
+                        (|val_A[7:0]),
+                        (|val_A[7:0])
+                    };
+        TRANS_B_8BPP: blit_mask_trans = {
+                        (|val_B[15:8]),
+                        (|val_B[15:8]),
+                        (|val_B[7:0]),
+                        (|val_B[7:0])
+                    };
+    endcase
+end
+
 typedef enum logic [3:0] {
-    BLIT_IDLE,
-    BLIT_SETUP,
-    BLIT_RD,
-    BLIT_WAIT_RD_B,
-    BLIT_WAIT_RD_A,
-    BLIT_EXEC_OP,
-    BLIT_WAIT_WR_D,
-    LINE_DONE,
+    BLIT_IDLE,          // wait for blit operation (a write to xreg_blit_count)
+    BLIT_SETUP,         // copy xreg registers to blit registers and setup for blit
+    BLIT_LINE_START,    // copy count to width, decrement width, height counters, initiate A/B read as needed
+    BLIT_WAIT_RD_B,     // wait for B read result, initiate A read if needed
+    BLIT_WAIT_RD_A,     // wait for A read result, set logic op calculation input
+    BLIT_EXEC_OP,       // write logic op result D (executed once when A and B are const)
+    BLIT_WAIT_WR_D,     // wait for D write, initiate A/B read or D write as needed, loop if width >= 0
+    BLIT_LINE_FINISH,   // add modulo values, loop if height < 0
     BLIT_DONE
 } blit_state_t;
+
+logic  [3:0]    blit_state;
 
 // blit state machine
 always_ff @(posedge clk) begin
@@ -326,12 +337,12 @@ always_ff @(posedge clk) begin
         blit_vram_sel_o     <= '0;
         blit_wr_o           <= '0;
         blit_addr_o         <= '0;
-        blit_data_o         <= '0;
 
         blit_state          <= BLIT_IDLE;
 
         blit_ctrl_A_const   <= '0;
         blit_ctrl_B_const   <= '0;
+        blit_ctrl_B_XOR_A   <= '0;
         blit_ctrl_transp    <= '0;
         blit_ctrl_op        <= '0;
         blit_shift_l_mask   <= '0;
@@ -346,7 +357,7 @@ always_ff @(posedge clk) begin
         blit_val_C          <= '0;
         blit_dst_D          <= '0;
         blit_lines          <= '0;
-        blit_width          <= '0;
+        blit_words          <= '0;
         blit_count          <= '0;
 
         blit_first_word     <= '0;
@@ -356,6 +367,10 @@ always_ff @(posedge clk) begin
     end else begin
         blit_done_intr_o    <= 1'b0;
 
+        blit_vram_sel_o     <= 1'b0;
+        blit_wr_o           <= 1'b0;
+        blit_addr_o         <= '0;      // TODO: check this
+
         case (blit_state)
             BLIT_IDLE: begin
                 if (xreg_blit_queued) begin
@@ -363,10 +378,11 @@ always_ff @(posedge clk) begin
                 end
             end
             BLIT_SETUP: begin
+                blit_ctrl_op        <= xreg_ctrl_op;
                 blit_ctrl_A_const   <= xreg_ctrl_A_const;
                 blit_ctrl_B_const   <= xreg_ctrl_B_const;
+                blit_ctrl_B_XOR_A   <= xreg_ctrl_B_XOR_A;
                 blit_ctrl_transp    <= xreg_ctrl_transp;
-                blit_ctrl_op        <= xreg_ctrl_op;
                 blit_shift          <= xreg_shift;
                 blit_shift_l_mask   <= xreg_shift_l_mask;
                 blit_shift_r_mask   <= xreg_shift_r_mask;
@@ -379,31 +395,29 @@ always_ff @(posedge clk) begin
                 blit_src_B          <= xreg_src_B;
                 blit_val_C          <= xreg_val_C;
                 blit_dst_D          <= xreg_dst_D;
-                blit_lines          <= xreg_lines;
-                blit_width          <= xreg_count;
+                blit_lines          <= { 1'b0, xreg_lines };
+                blit_words          <= xreg_words - 1'b1;
 
                 blit_first_word     <= 1'b1;
                 val_A               <= xreg_src_A;
                 val_B               <= xreg_src_B;
 
-                blit_state          <= BLIT_RD;
+                blit_state          <= BLIT_LINE_START;
             end
-            BLIT_RD: begin
-                blit_lines          <= blit_lines - 1'b1;
-                blit_count          <= { 1'b0, blit_width } - 1'b1;
+            BLIT_LINE_START: begin
+                blit_lines          <= blit_lines - 1'b1;       // pre-decrement, bit[15] underflow indicates last line (1-32768)
+                blit_count          <= { 1'b0, blit_words };     // pre-decrement, bit[16] underflow indicates last word (1-65536)
 
                 if (!blit_ctrl_B_const) begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_wr_o           <= 1'b0;
                     blit_addr_o         <= blit_src_B;
-                    blit_src_B          <= blit_src_B + 1'b1;
 
                     blit_state          <= BLIT_WAIT_RD_B;
                 end else if (!blit_ctrl_A_const) begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_wr_o           <= 1'b0;
                     blit_addr_o         <= blit_src_A;
-                    blit_src_A          <= blit_src_A + 1'b1;
 
                     blit_state          <= BLIT_WAIT_RD_A;
                 end else begin
@@ -414,80 +428,92 @@ always_ff @(posedge clk) begin
                 if (blit_vram_ack_i) begin
                     val_B               <= lsr_B[27:12];
                     lsr_out_B           <= lsr_B[11:0];
+                    blit_src_B          <= blit_src_B + 1'b1;
 
                     blit_vram_sel_o     <= 1'b1;
                     blit_wr_o           <= 1'b0;
                     blit_addr_o         <= blit_src_A;
-                    blit_src_A          <= blit_src_A + 1'b1;
 
                     blit_state          <= BLIT_WAIT_RD_A;
+                end else begin
+                    blit_vram_sel_o     <= 1'b1;
+                    blit_wr_o           <= 1'b0;
+                    blit_addr_o         <= blit_src_B;
                 end
             end
             BLIT_WAIT_RD_A: begin
                 if (blit_vram_ack_i) begin
                     val_A               <= lsr_A[27:12];
                     lsr_out_A           <= lsr_A[11:0];
+                    blit_src_A          <= blit_src_A + 1'b1;
 
-                    blit_vram_sel_o     <= 1'b0;
-                    blit_wr_o           <= 1'b0;
+                    if (blit_ctrl_B_XOR_A) begin
+                        val_B               <=  lsr_A[27:12] ^ blit_src_B;    // TODO: check this
+                    end
 
                     blit_state          <= BLIT_EXEC_OP;
+                end else begin
+                    blit_vram_sel_o     <= 1'b1;
+                    blit_wr_o           <= 1'b0;
+                    blit_addr_o         <= blit_src_A;
                 end
             end
             BLIT_EXEC_OP: begin
                 blit_vram_sel_o     <= 1'b1;
                 blit_wr_o           <= 1'b1;
-                blit_data_o         <= val_D;
                 blit_addr_o         <= blit_dst_D;
-                blit_dst_D          <= blit_dst_D + 1'b1;
 
                 blit_state          <= BLIT_WAIT_WR_D;
             end
             BLIT_WAIT_WR_D: begin
                 if (blit_vram_ack_i) begin
+                    blit_dst_D          <= blit_dst_D + 1'b1;
+
                     blit_first_word     <= 1'b0;
                     blit_count          <= blit_count - 1'b1;
 
-                    blit_data_o         <= val_D;
-
                     if (blit_last_word) begin
-                        blit_vram_sel_o     <= 1'b0;
-                        blit_wr_o           <= 1'b0;
-                        blit_state          <= LINE_DONE;
+                        blit_state          <= BLIT_LINE_FINISH;
                     end else if (!blit_ctrl_B_const) begin
                         blit_vram_sel_o     <= 1'b1;
                         blit_wr_o           <= 1'b0;
                         blit_addr_o         <= blit_src_B;
-                        blit_src_B          <= blit_src_B + 1'b1;
 
                         blit_state          <= BLIT_WAIT_RD_B;
                     end else if (!blit_ctrl_A_const) begin
                         blit_vram_sel_o     <= 1'b1;
                         blit_wr_o           <= 1'b0;
                         blit_addr_o         <= blit_src_A;
-                        blit_src_A          <= blit_src_A + 1'b1;
 
                         blit_state          <= BLIT_WAIT_RD_A;
                     end else begin
                         blit_vram_sel_o     <= 1'b1;
                         blit_wr_o           <= 1'b1;
-                        blit_addr_o         <= blit_dst_D;
-                        blit_dst_D          <= blit_dst_D + 1'b1;
-
+                        blit_addr_o         <= blit_dst_D + 1'b1;       // NOTE: increment "again" (since blit_dst_D increment in same cycle)
                         blit_state          <= BLIT_WAIT_WR_D;
                     end
+                end else begin
+                    blit_vram_sel_o     <= 1'b1;
+                    blit_wr_o           <= 1'b1;
+                    blit_addr_o         <= blit_dst_D;
                 end
             end
-            LINE_DONE: begin
+            BLIT_LINE_FINISH: begin
+                blit_first_word     <= 1'b1;
+
+
                 blit_src_A  <= blit_src_A + blit_mod_A;
                 blit_src_B  <= blit_src_B + blit_mod_B;
-                blit_val_C  <= blit_val_C + blit_mod_C;
                 blit_dst_D  <= blit_dst_D + blit_mod_D;
+
+                val_A       <= val_A ^ blit_mod_A;
+                val_B       <= val_B ^ blit_mod_B;
+                blit_val_C  <= blit_val_C ^ blit_mod_C;
 
                 if (blit_last_line) begin
                     blit_state          <= BLIT_DONE;
                 end else begin
-                    blit_state          <= BLIT_RD;
+                    blit_state          <= BLIT_LINE_START;
                 end
             end
             BLIT_DONE: begin

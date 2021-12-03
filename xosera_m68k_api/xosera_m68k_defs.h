@@ -111,6 +111,6 @@
 #define XR_BLIT_VAL_C 0x28        // (R /W) blit C source constant value
 #define XR_BLIT_DST_D 0x29        // (R /W) blit D destination write address
 #define XR_BLIT_LINES 0x2A        // (R /W) blit number of lines for rectangular blit
-#define XR_BLIT_COUNT 0x2B        // (R /W) blit word count minus 1, starts operation (width when LINES > 0)
+#define XR_BLIT_WORDS 0x2B        // (R /W) blit word count minus 1, starts operation (width when LINES > 0)
 
 #endif        // XOSERA_M68K_DEFS_H

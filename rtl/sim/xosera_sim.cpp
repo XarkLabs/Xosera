@@ -57,6 +57,8 @@ uint8_t *    upload_payload[MAX_UPLOADS];
 int          upload_size[MAX_UPLOADS];
 uint8_t      upload_buffer[128 * 1024];
 
+uint16_t last_read_val;
+
 static FILE * logfile;
 static char   log_buff[16384];
 
@@ -95,9 +97,9 @@ class BusInterface
         XM_DATA   = 0x6,        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR (and add XM_RD_INCR/XM_WR_INCR)
         XM_DATA_2 = 0x7,        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
         XM_SYS_CTRL  = 0x8,        // (R /W+) busy status, FPGA reconfig, interrupt status/control, write masking
-        XM_TIMER     = 0x9,        // (RO   ) read 1/10th millisecond timer [TODO]
-        XM_UNUSED_A  = 0xA,        // (R /W ) unused direct register 0xA [TODO]
-        XM_UNUSED_B  = 0xB,        // (R /W ) unused direct register 0xB [TODO]
+        XM_TIMER     = 0x9,        // (RO   ) read 1/10th millisecond timer
+        XM_LFSR      = 0xA,        // (R /W ) LFSR pseudo-random register // TODO: keep this?
+        XM_UNUSED_B  = 0xB,        // (R /W ) unused direct register 0xB // TODO: Use for XM_XR_DATA_2
         XM_RW_INCR   = 0xC,        // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
         XM_RW_ADDR   = 0xD,        // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
         XM_RW_DATA   = 0xE,        // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
@@ -171,7 +173,7 @@ class BusInterface
         XR_BLIT_VAL_C = 0x28,        // (R /W) blit C source constant value
         XR_BLIT_DST_D = 0x29,        // (R /W) blit D destination write address
         XR_BLIT_LINES = 0x2A,        // (R /W) blit number of lines for rectangular blit
-        XR_BLIT_COUNT = 0x2B         // (R /W) blit word count minus 1, starts operation (width when LINES > 0)
+        XR_BLIT_WORDS = 0x2B         // (R /W) blit word count minus 1, starts operation (width when LINES > 0)
     };
 
     static const char * reg_name[];
@@ -189,6 +191,7 @@ class BusInterface
     int     index;
     bool    wait_vsync;
     bool    wait_vtop;
+    bool    wait_blit;
     bool    data_upload;
     int     data_upload_mode;
     int     data_upload_num;
@@ -229,8 +232,9 @@ public:
         enable            = _enable;
         index             = 0;
         state             = BUS_START;
-        wait_vsync        = false;        // true;
-        wait_vtop         = false;        // true;
+        wait_vsync        = false;
+        wait_vtop         = false;
+        wait_blit         = false;
         data_upload       = false;
         data_upload_mode  = 0;
         data_upload_num   = 0;
@@ -275,32 +279,72 @@ public:
                 // REG_END
                 if (!data_upload && test_data[index] == 0xffff)
                 {
-                    logonly_printf("[@t=%lu REG_END hit]\n", main_time);
+                    logonly_printf("[@t=%lu] REG_END hit\n", main_time);
                     done      = true;
                     enable    = false;
                     last_time = bus_time - 1;
                     return;
                 }
-                // REG_WAITVTOP
-                if (!data_upload && test_data[index] == 0xfffd)
-                {
-                    logonly_printf("[@t=%lu Wait VTOP...]\n", main_time);
-                    wait_vtop = true;
-                    index++;
-                    return;
-                }
                 // REG_WAITVSYNC
                 if (!data_upload && test_data[index] == 0xfffe)
                 {
-                    logonly_printf("[@t=%lu Wait VSYNC...]\n", main_time);
+                    logonly_printf("[@t=%lu] Wait VSYNC...\n", main_time);
                     wait_vsync = true;
                     index++;
                     return;
                 }
-                else if (!data_upload && (test_data[index] & 0xfff0) == 0xfff0)
+                // REG_WAITVTOP
+                if (!data_upload && test_data[index] == 0xfffd)
+                {
+                    logonly_printf("[@t=%lu] Wait VTOP...\n", main_time);
+                    wait_vtop = true;
+                    index++;
+                    return;
+                }
+                // REG_WAIT_BLIT_READY
+                if (!data_upload && test_data[index] == 0xfffc)
+                {
+                    last_time = bus_time - 1;
+                    if (!(last_read_val & 0x20))        // blit_full bit
+                    {
+                        logonly_printf("[@t=%lu] blit_full clear (SYS_CTRL.L=0x%02x)\n", main_time, last_read_val);
+                        index++;
+                        last_read_val = 0;
+                        wait_blit     = false;
+                        return;
+                    }
+                    else if (!wait_blit)
+                    {
+                        logonly_printf("[@t=%lu] Waiting until SYS_CTRL.L blit_full is clear...\n", main_time);
+                    }
+                    wait_blit = true;
+                    index--;
+                    return;
+                }
+                // REG_WAIT_BLIT_DONE
+                if (!data_upload && test_data[index] == 0xfffb)
+                {
+                    last_time = bus_time - 1;
+                    if (!(last_read_val & 0x40))        // blit_busy bit
+                    {
+                        logonly_printf("[@t=%lu] blit_busy clear (SYS_CTRL.L=0x%02x)\n", main_time, last_read_val);
+                        index++;
+                        last_read_val = 0;
+                        wait_blit     = false;
+                        return;
+                    }
+                    else if (!wait_blit)
+                    {
+                        logonly_printf("[@t=%lu] Waiting until SYS_CTRL.L blit_busy is clear...\n", main_time);
+                    }
+                    wait_blit = true;
+                    index--;
+                    return;
+                }
+                else if (!data_upload && (test_data[index] & 0xfffe) == 0xfff0)
                 {
                     data_upload       = upload_size[data_upload_num] > 0;
-                    data_upload_mode  = test_data[index] & 0xf;
+                    data_upload_mode  = test_data[index] & 0x1;
                     data_upload_count = upload_size[data_upload_num];        // byte count
                     data_upload_index = 0;
                     logonly_printf("[Upload #%d started, %d bytes, mode %s]\n",
@@ -351,14 +395,25 @@ public:
                     case BUS_STROBEOFF:
                         if (rd_wr)
                         {
-                            logonly_printf("[@t=%lu] Read Reg %s (#%02x.%s) => %s%02x%s\n",
-                                           main_time,
-                                           reg_name[reg_num],
-                                           reg_num,
-                                           bytesel ? "L" : "H",
-                                           bytesel ? "__" : "",
-                                           top->bus_data_o,
-                                           bytesel ? "" : "__");
+                            if (!wait_blit)
+                            {
+                                logonly_printf("[@t=%lu] Read  Reg %s (#%02x.%s) => %s%02x%s\n",
+                                               main_time,
+                                               reg_name[reg_num],
+                                               reg_num,
+                                               bytesel ? "L" : "H",
+                                               bytesel ? "__" : "",
+                                               top->bus_data_o,
+                                               bytesel ? "" : "__");
+                            }
+                            if (bytesel)
+                            {
+                                last_read_val = (last_read_val & 0xff00) | top->bus_data_o;
+                            }
+                            else
+                            {
+                                last_read_val = (last_read_val & 0x00ff) | (top->bus_data_o << 8);
+                            }
                         }
                         else if (!data_upload)
                         {
@@ -407,17 +462,17 @@ public:
     }
 };
 
-const char * BusInterface::reg_name[] = {"XM_XR_ADDR ",
-                                         "XM_XR_DATA ",
-                                         "XM_RD_INCR ",
-                                         "XM_RD_ADDR ",
-                                         "XM_WR_INCR ",
-                                         "XM_WR_ADDR ",
+const char * BusInterface::reg_name[] = {"XM_XR_ADDR  ",
+                                         "XM_XR_DATA  ",
+                                         "XM_RD_INCR  ",
+                                         "XM_RD_ADDR  ",
+                                         "XM_WR_INCR  ",
+                                         "XM_WR_ADDR  ",
                                          "XM_DATA     ",
                                          "XM_DATA_2   ",
                                          "XM_SYS_CTRL ",
                                          "XM_TIMER    ",
-                                         "XM_UNUSED_A ",
+                                         "XM_LFSR     ",
                                          "XM_UNUSED_B ",
                                          "XM_RW_INCR  ",
                                          "XM_RW_ADDR  ",
@@ -428,15 +483,22 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR ",
 #define REG_W(r, v)                                                                                                    \
     ((BusInterface::XM_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XM_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_RW(r)        (((BusInterface::XM_##r) | 0x80) << 8), (((BusInterface::XM_##r) | 0x90) << 8)
-#define XREG_SETW(xr, v) REG_W(XR_ADDR, XR_##xr), REG_W(XR_DATA, v)
+#define XREG_SETW(xr, v) REG_W(XR_ADDR, XR_##xr), REG_W(XR_DATA, (v))
 
-#define REG_UPLOAD()     0xfff0
-#define REG_UPLOAD_AUX() 0xfff1
-#define REG_WAITVTOP()   0xfffd
-#define REG_WAITVSYNC()  0xfffe
-#define REG_END()        0xffff
+#define REG_UPLOAD()          0xfff0
+#define REG_UPLOAD_AUX()      0xfff1
+#define REG_WAIT_BLIT_READY() (((BusInterface::XM_SYS_CTRL) | 0x90) << 8), 0xfffc
+#define REG_WAIT_BLIT_DONE()  (((BusInterface::XM_SYS_CTRL) | 0x90) << 8), 0xfffb
+#define REG_WAITVTOP()        0xfffd
+#define REG_WAITVSYNC()       0xfffe
+#define REG_END()             0xffff
 
 #define X_COLS 80
+#define W_4BPP (320 / 4)
+#define H_4BPP (240)
+
+#define W_LOGO (32 / 4)
+#define H_LOGO (16)
 
 BusInterface bus;
 int          BusInterface::test_data_len    = 999;
@@ -444,84 +506,330 @@ uint16_t     BusInterface::test_data[16384] = {
     // test data
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
-
     REG_WAITVSYNC(),        // show boot screen
                             //    REG_WAITVTOP(),         // show boot screen
 
-    XREG_SETW(PA_GFX_CTRL, 0x0055),         // bitmap, 4-bpp, Hx2, Vx2
+    XREG_SETW(PA_GFX_CTRL, 0x005F),         // bitmap, 4-bpp, Hx2, Vx2
     XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
     XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address
     XREG_SETW(PA_LINE_LEN, 320 / 4),        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
 
-    //   REG_WAITVTOP(),
-    //    REG_WAITVSYNC(),
-
     // fill screen
-    XREG_SETW(BLIT_CTRL, 0x000F),
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0FF0),
     XREG_SETW(BLIT_SHIFT, 0xFF00),
     XREG_SETW(BLIT_MOD_A, 0x0000),
     XREG_SETW(BLIT_MOD_B, 0x0000),
     XREG_SETW(BLIT_MOD_C, 0x0000),
-    XREG_SETW(BLIT_MOD_D, 0x0000),
-    XREG_SETW(BLIT_SRC_A, 0xFFFF),
-    XREG_SETW(BLIT_SRC_B, 0xFF00),
+    XREG_SETW(BLIT_MOD_D, W_4BPP),
+    XREG_SETW(BLIT_SRC_A, 0x5858),
+    XREG_SETW(BLIT_SRC_B, 0x8888),
     XREG_SETW(BLIT_VAL_C, 0x0000),
     XREG_SETW(BLIT_DST_D, 0x0000),
-    XREG_SETW(BLIT_LINES, 0x0000),
-    XREG_SETW(BLIT_COUNT, (320 * 240 / 4) - 1),
-
-    REG_WAITVSYNC(),        // show boot screen
-
-    // 2D fill 1/4 screen
-    XREG_SETW(BLIT_CTRL, 0x000F),
+    XREG_SETW(BLIT_LINES, H_4BPP / 2 - 1),
+    XREG_SETW(BLIT_WORDS, W_4BPP - 1),
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0FF0),
     XREG_SETW(BLIT_SHIFT, 0xFF00),
     XREG_SETW(BLIT_MOD_A, 0x0000),
     XREG_SETW(BLIT_MOD_B, 0x0000),
-    XREG_SETW(BLIT_MOD_C, 0x1111),
-    XREG_SETW(BLIT_MOD_D, (320 / 4) / 2),
-    XREG_SETW(BLIT_SRC_A, 0x0000),
-    XREG_SETW(BLIT_SRC_B, 0xFFFF),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP),
+    XREG_SETW(BLIT_SRC_A, 0x8585),
+    XREG_SETW(BLIT_SRC_B, 0x8888),
     XREG_SETW(BLIT_VAL_C, 0x0000),
-    XREG_SETW(BLIT_DST_D, 0x0000),
-    XREG_SETW(BLIT_LINES, 240 / 2),
-    XREG_SETW(BLIT_COUNT, (320 / 4) / 2 - 1),
+    XREG_SETW(BLIT_DST_D, W_4BPP),
+    XREG_SETW(BLIT_LINES, H_4BPP / 2 - 1),
+    XREG_SETW(BLIT_WORDS, W_4BPP - 1),
+    REG_WAIT_BLIT_DONE(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
 
+    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
+    REG_W(WR_ADDR, 0xF000),
+    REG_UPLOAD(),
     REG_WAITVSYNC(),
 
-    REG_W(WR_INCR, 0x0001),        // 16x16 moto logo
-    REG_W(WR_ADDR, 0xF000),
+#if 0
+    // 2D fill 1/4 screen
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0FF0),
+    XREG_SETW(BLIT_SHIFT, 0xFF00),
+    XREG_SETW(BLIT_MOD_A, 0x0000),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - (W_4BPP / 2)),
+    XREG_SETW(BLIT_SRC_A, 0x0000),
+    XREG_SETW(BLIT_SRC_B, 0x8888),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000),
+    XREG_SETW(BLIT_LINES, H_4BPP / 2 - 1),
+    XREG_SETW(BLIT_WORDS, W_4BPP / 2 - 1),
+    REG_WAIT_BLIT_DONE(),
+    REG_WAITVSYNC(),
 
-    REG_UPLOAD(),
-
-    XREG_SETW(PA_GFX_CTRL, 0x0055),           // BMAP, 4-BPP, Hx2 Vx2
-    XREG_SETW(PA_LINE_LEN, (320 / 4)),        // 320/2/2 wide
-    REG_W(XR_ADDR, XR_COLOR_MEM),             // upload color palette
+    REG_W(XR_ADDR, XR_COLOR_MEM),        // upload 4-bpp color palette
     REG_UPLOAD_AUX(),
-    REG_W(WR_INCR, 0x0001),
-    REG_W(WR_ADDR, 0x0000),
+
+    REG_W(WR_INCR, 0x0001),        // upload 4-bpp bitmap
+    REG_W(WR_ADDR, 0x8000),
     REG_UPLOAD(),
 
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
-
-    // 2D moto blit
-    XREG_SETW(BLIT_CTRL, 0x0002),
-    XREG_SETW(BLIT_SHIFT, 0xFF01),
+#if 0
+    // 2D fill 2/3 screen
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0FF0),
+    XREG_SETW(BLIT_SHIFT, 0xFF00),
     XREG_SETW(BLIT_MOD_A, 0x0000),
     XREG_SETW(BLIT_MOD_B, 0x0000),
     XREG_SETW(BLIT_MOD_C, 0x0000),
-    XREG_SETW(BLIT_MOD_D, 320 / 4 - 8),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - (W_4BPP / 3)),
+    XREG_SETW(BLIT_SRC_A, 0x0000),
+    XREG_SETW(BLIT_SRC_B, 0x8888),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000),
+    XREG_SETW(BLIT_LINES, H_4BPP - (H_4BPP / 3) - 1),
+    XREG_SETW(BLIT_WORDS, W_4BPP - (W_4BPP / 3) - 1),
+
+    REG_WAIT_BLIT_DONE(),
+    REG_WAITVSYNC(),
+#endif
+#endif
+    // 2D moto blit
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0060),        // transp A_4BPP, read A, const B, B = A^B, op D=A
+    XREG_SETW(BLIT_SHIFT, 0xFF00),
+    XREG_SETW(BLIT_MOD_A, 0x0000),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x000F),
+    XREG_SETW(BLIT_VAL_C, 0xF000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (20 * W_4BPP) + 1),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO - 1),
+
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0160),         // transp A_4BPP, read A, const B, B = A^B, op D=A
+    XREG_SETW(BLIT_SHIFT, 0x7801),        // mask 1 nibble from left, and 3 nibbles from right, shift 1 nibble
+    XREG_SETW(BLIT_MOD_A, -1),            // compensate for extra word width
+    XREG_SETW(BLIT_MOD_B, 0x0000),        // const B term
+    XREG_SETW(BLIT_MOD_C, 0x0000),        // const C term
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),               // compensate for extra word width
+    XREG_SETW(BLIT_SRC_A, 0xF000),                            // A=source address
+    XREG_SETW(BLIT_SRC_B, 0xFFFF),                            // B=const term (B term will also XOR'd with A)
+    XREG_SETW(BLIT_VAL_C, 0x0000),                            // C=const term (not used)
+    XREG_SETW(BLIT_DST_D, 0x0000 + (40 * W_4BPP) + 1),        // D=destination address
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),        // add extra word width
+
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0160),
+    XREG_SETW(BLIT_SHIFT, 0x3C02),
+    XREG_SETW(BLIT_MOD_A, -1),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x1111),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (60 * W_4BPP) + 1),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),
+
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0120),
+    XREG_SETW(BLIT_SHIFT, 0x1E03),
+    XREG_SETW(BLIT_MOD_A, -1),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x1111),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (80 * W_4BPP) + 1),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO),
+
+    // 2D moto blit #2
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0F20),
+    XREG_SETW(BLIT_SHIFT, 0xFF00),
+    XREG_SETW(BLIT_MOD_A, 0x0000),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x8888),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (20 * W_4BPP) + 10),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO - 1),
+
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0020),
+    XREG_SETW(BLIT_SHIFT, 0x7801),
+    XREG_SETW(BLIT_MOD_A, -1),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0xFFFF),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (40 * W_4BPP) + 10),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO),
+
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0021),
+    XREG_SETW(BLIT_SHIFT, 0x3C02),
+    XREG_SETW(BLIT_MOD_A, -1),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),
     XREG_SETW(BLIT_SRC_A, 0xF000),
     XREG_SETW(BLIT_SRC_B, 0x0000),
     XREG_SETW(BLIT_VAL_C, 0x0000),
-    XREG_SETW(BLIT_DST_D, 0x0000 + (104 * 80) + 35),
-    XREG_SETW(BLIT_LINES, 16 - 1),
-    XREG_SETW(BLIT_COUNT, 8 - 1),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (60 * W_4BPP) + 10),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO),
 
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0060),
+    XREG_SETW(BLIT_SHIFT, 0x1E03),
+    XREG_SETW(BLIT_MOD_A, -1),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x0000),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (80 * W_4BPP) + 10),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO),
+
+    // 2D moto blit #3
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0F20),
+    XREG_SETW(BLIT_SHIFT, 0xFF00),
+    XREG_SETW(BLIT_MOD_A, 0x0000),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x8888),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (20 * W_4BPP) + 20),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO - 1),
+
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0020),
+    XREG_SETW(BLIT_SHIFT, 0x7801),
+    XREG_SETW(BLIT_MOD_A, -1),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0xFFFF),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (40 * W_4BPP) + 20),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO),
+
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0021),
+    XREG_SETW(BLIT_SHIFT, 0x3C02),
+    XREG_SETW(BLIT_MOD_A, -1),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x0000),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (60 * W_4BPP) + 20),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO),
+
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0060),
+    XREG_SETW(BLIT_SHIFT, 0x1E03),
+    XREG_SETW(BLIT_MOD_A, -1),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x0000),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (80 * W_4BPP) + 20),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO),
+
+    // 2D moto blit #4
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0F20),
+    XREG_SETW(BLIT_SHIFT, 0xFF00),
+    XREG_SETW(BLIT_MOD_A, 0x0000),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x8888),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (20 * W_4BPP) + 30),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO - 1),
+
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0020),
+    XREG_SETW(BLIT_SHIFT, 0x7801),
+    XREG_SETW(BLIT_MOD_A, -1),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0xFFFF),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (40 * W_4BPP) + 30),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO),
+
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0021),
+    XREG_SETW(BLIT_SHIFT, 0x3C02),
+    XREG_SETW(BLIT_MOD_A, -1),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x0000),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (60 * W_4BPP) + 30),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO),
+
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0060),
+    XREG_SETW(BLIT_SHIFT, 0x1E03),
+    XREG_SETW(BLIT_MOD_A, -1),
+    XREG_SETW(BLIT_MOD_B, 0x0000),
+    XREG_SETW(BLIT_MOD_C, 0x0000),
+    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),
+    XREG_SETW(BLIT_SRC_A, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x0000),
+    XREG_SETW(BLIT_VAL_C, 0x0000),
+    XREG_SETW(BLIT_DST_D, 0x0000 + (80 * W_4BPP) + 30),
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),
+    XREG_SETW(BLIT_WORDS, W_LOGO),
+
+
+    REG_WAIT_BLIT_DONE(),
     REG_WAITVSYNC(),
-    REG_WAITVTOP(),
 
-    REG_END()
+    REG_END(),
 #if 0
     XREG_SETW(BLIT_CTRL, 0x0003),
     XREG_SETW(BLIT_SHIFT, 0x7C01),
@@ -534,7 +842,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_VAL_C, 0xCCCC),
     XREG_SETW(BLIT_DST_D, 0x0000),
     XREG_SETW(BLIT_LINES, 0x0000),
-    XREG_SETW(BLIT_COUNT, 0x0000),
+    XREG_SETW(BLIT_WORDS, 0x0000),
 
     XREG_SETW(PB_GFX_CTRL, 0x0000),                 // set disp in tile
     XREG_SETW(PB_TILE_CTRL),        // set 4-BPP BMAP
@@ -579,6 +887,7 @@ uint16_t     BusInterface::test_data[16384] = {
 
     REG_WAITVTOP(),         // show boot screen
     REG_WAITVSYNC(),        // show boot screen
+#if 0
 
     XREG_SETW(TILE_MEM),
     REG_RW(XR_DATA),        // read TILEMEM
@@ -731,6 +1040,8 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_WAITVSYNC(),        // show 1-BPP BMAP
     REG_END()
 #endif
+#endif
+    REG_END(),
     // end test data
 };
 

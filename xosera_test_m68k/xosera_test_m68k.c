@@ -607,7 +607,7 @@ void test_blit()
         xreg_setw(BLIT_VAL_C, 0x0000);             // C const (XOR'd with value stored)
         xreg_setw(BLIT_DST_D, 0x0000);             // D destination VRAM addr
         xreg_setw(BLIT_LINES, 0x0000);             // lines (0 for 1-D blit)
-        xreg_setw(BLIT_COUNT, 0x10000 - 1);        // words to write -1
+        xreg_setw(BLIT_WORDS, 0x10000 - 1);        // words to write -1
         wait_blit_done();
         wait_vsync();
         if (delay_check(DELAY_TIME))
@@ -633,7 +633,7 @@ void test_blit()
         xreg_setw(BLIT_VAL_C, 0x0000);               // C const (XOR'd with value stored)
         xreg_setw(BLIT_DST_D, 0x4B00);               // D destination VRAM addr
         xreg_setw(BLIT_LINES, 120);                  // lines (0 for 1-D blit)
-        xreg_setw(BLIT_COUNT, (320 / 4) / 2 - 1);        // words to write -1
+        xreg_setw(BLIT_WORDS, (320 / 4) / 2 - 1);        // words to write -1
         wait_blit_done();
         if (delay_check(DELAY_TIME * 10))
         {
@@ -661,7 +661,7 @@ void test_blit()
         xreg_setw(BLIT_VAL_C, 0x0000);        // C const (XOR'd with value stored)
         xreg_setw(BLIT_DST_D, 0x4B00);        // D destination VRAM addr
         xreg_setw(BLIT_LINES, 240);           // lines (0 for 1-D blit)
-        xreg_setw(BLIT_COUNT, (320 / 4) - 1);        // words to write -1
+        xreg_setw(BLIT_WORDS, (320 / 4) - 1);        // words to write -1
         wait_blit_done();
 
         if (delay_check(DELAY_TIME * 10))
@@ -675,7 +675,7 @@ void test_blit()
         xreg_setw(BLIT_WR_MASK, 0x0FFF);
         xreg_setw(BLIT_RD_ADDR, 0x0000);
         xreg_setw(BLIT_WR_ADDR, 0x4B00);
-        xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
+        xreg_setw(BLIT_WORDS, (320 * 240) / 4 - 1);
 
         if (delay_check(DELAY_TIME))
         {
@@ -688,7 +688,7 @@ void test_blit()
         xreg_setw(BLIT_WR_MASK, 0x0555);
         xreg_setw(BLIT_RD_ADDR, 0xFFFF);
         xreg_setw(BLIT_WR_ADDR, 0x4B00);
-        xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
+        xreg_setw(BLIT_WORDS, (320 * 240) / 4 - 1);
 
         if (delay_check(DELAY_TIME))
         {
@@ -708,13 +708,13 @@ void test_blit()
             xreg_setw(BLIT_WR_MASK, 0x0FFF);
             xreg_setw(BLIT_RD_ADDR, 0x0000);
             xreg_setw(BLIT_WR_ADDR, 0x4B00);
-            xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
+            xreg_setw(BLIT_WORDS, (320 * 240) / 4 - 1);
 
             wait_blit_ready();
             xreg_setw(BLIT_MODE, 0x2000);
             xreg_setw(BLIT_RD_ADDR, 0xFFFF);
             xreg_setw(BLIT_WR_ADDR, 0x4B00);
-            xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
+            xreg_setw(BLIT_WORDS, (320 * 240) / 4 - 1);
 
             wait_blit_done();
 
@@ -735,7 +735,7 @@ void test_blit()
             xreg_setw(BLIT_WR_MASK, 0x0FF0 >> (i & 0x3));
             xreg_setw(BLIT_RD_ADDR, 0x0000);
             xreg_setw(BLIT_WR_ADDR, 0x4B00);
-            xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);
+            xreg_setw(BLIT_WORDS, (320 * 240) / 4 - 1);
 
             wait_blit_done();
 
@@ -754,7 +754,7 @@ void test_blit()
             xreg_setw(BLIT_WR_MASK, 0x0FF0 >> (i & 0x3));        // set first, middle, last nibble word mask
             xreg_setw(BLIT_RD_ADDR, 0x0000);                     // source address (4-bpp pac-man screen)
             xreg_setw(BLIT_WR_ADDR, 0x4B00);                     // dest address (display buffer)
-            xreg_setw(BLIT_COUNT, (320 * 240) / 4 - 1);          // set word count and queue blit to start
+            xreg_setw(BLIT_WORDS, (320 * 240) / 4 - 1);          // set word count and queue blit to start
             wait_blit_done();                                    // wait until blitter has come to a complete stop
 
             wait_vsync();
@@ -782,7 +782,7 @@ void test_blit()
                 xreg_setw(BLIT_WR_MASK, 0x0FFF);
                 xreg_setw(BLIT_RD_ADDR, v);
                 xreg_setw(BLIT_WR_ADDR, 0x0000);
-                xreg_setw(BLIT_COUNT, 0x10000 - 1);
+                xreg_setw(BLIT_WORDS, 0x10000 - 1);
 
                 uint16_t stop = xm_getw(TIMER) - start;
                 if (stop < ms_min)

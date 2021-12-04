@@ -53,7 +53,7 @@ Xosera_intr:
                 ;       interrupt sources, but for now
                 ;       just assume it is vsync [3]
 
-                move.w  #XR_COLOR_MEM+2,D0      ; set color entry #2
+                move.w  #XR_COLOR_ADDR+2,D0      ; set color entry #2
                 movep.w D0,XM_XR_ADDR(A0)
 
                 move.w  NukeColor,D0            ; increment NukeColor

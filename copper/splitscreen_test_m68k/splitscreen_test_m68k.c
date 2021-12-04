@@ -180,7 +180,7 @@ static bool load_sd_colors(const char * filename)
             }
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
-            xm_setw(XR_ADDR, XR_COLOR_MEM);
+            xm_setw(XR_ADDR, XR_COLOR_ADDR);
             for (int i = 0; i < (cnt >> 1); i++)
             {
                 xm_setw(XR_DATA, *maddr++);
@@ -216,7 +216,7 @@ void     xosera_test()
 
     dprintf("Loading copper list...\n");
 
-    xm_setw(XR_ADDR, XR_COPPER_MEM);
+    xm_setw(XR_ADDR, XR_COPPER_ADDR);
     uint16_t * wp = (uint16_t *)copper_list;
     for (uint8_t i = 0; i < sizeof(copper_list) / sizeof(uint32); i++)
     {
@@ -321,7 +321,7 @@ void     xosera_test()
     {
         wait_vsync();
 
-        xm_setw(XR_ADDR, XR_COPPER_MEM + 4);
+        xm_setw(XR_ADDR, XR_COPPER_ADDR + 4);
         if (up)
         {
             xm_setw(XR_DATA, ++current);

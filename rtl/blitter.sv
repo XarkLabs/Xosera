@@ -40,7 +40,8 @@ logic  [1:0]    xreg_ctrl_op;
 logic           xreg_ctrl_A_const;
 logic           xreg_ctrl_B_const;
 logic           xreg_ctrl_B_XOR_A;
-logic  [1:0]    xreg_ctrl_transp;
+logic           xreg_ctrl_transp_8b;
+logic           xreg_ctrl_transp_B;
 
 logic  [1:0]    xreg_shift;
 logic  [3:0]    xreg_shift_l_mask;
@@ -70,7 +71,8 @@ always_ff @(posedge clk) begin
         xreg_ctrl_A_const   <= '0;
         xreg_ctrl_B_const   <= '0;
         xreg_ctrl_B_XOR_A   <= '0;
-        xreg_ctrl_transp    <= '0;
+        xreg_ctrl_transp_8b <= '0;
+        xreg_ctrl_transp_B  <= '0;
         xreg_ctrl_op        <= '0;
         xreg_shift          <= '0;
         xreg_shift_l_mask   <= '0;
@@ -95,13 +97,14 @@ always_ff @(posedge clk) begin
         if (xreg_wr_en_i) begin
             case ({ 2'b10, xreg_num_i })
                 xv::XR_BLIT_CTRL: begin
-                    // [15:10]
-                    xreg_ctrl_transp    <= xreg_data_i[9:8];
-                    xreg_ctrl_B_XOR_A   <= xreg_data_i[6];
-                    xreg_ctrl_B_const   <= xreg_data_i[5];
-                    xreg_ctrl_A_const   <= xreg_data_i[4];
-                    // [3:2]
-                    xreg_ctrl_op        <= xreg_data_i[1:0];
+                    // [15:8]
+                    xreg_ctrl_op        <= xreg_data_i[7:6];
+                    xreg_ctrl_transp_B  <= xreg_data_i[5];
+                    xreg_ctrl_transp_8b <= xreg_data_i[4];
+                    // [3]
+                    xreg_ctrl_B_XOR_A   <= xreg_data_i[2];
+                    xreg_ctrl_B_const   <= xreg_data_i[1];
+                    xreg_ctrl_A_const   <= xreg_data_i[0];
                 end
                 xv::XR_BLIT_SHIFT: begin
                     xreg_shift_l_mask   <= xreg_data_i[15:12];
@@ -150,7 +153,7 @@ end
 always_ff @(posedge clk) begin
     case ({ 2'b10, xreg_num_i })
         xv::XR_BLIT_CTRL:
-            xreg_data_o     <= { 6'b0, xreg_ctrl_transp, 1'b0, xreg_ctrl_B_XOR_A, xreg_ctrl_B_const, xreg_ctrl_A_const, 2'b0, xreg_ctrl_op };
+            xreg_data_o     <= { 8'b0, xreg_ctrl_op, xreg_ctrl_transp_B, xreg_ctrl_transp_8b, 1'b0, xreg_ctrl_B_XOR_A, xreg_ctrl_B_const, xreg_ctrl_A_const};
         xv::XR_BLIT_SHIFT:
             xreg_data_o     <= { xreg_shift_l_mask, xreg_shift_r_mask, 6'b0, xreg_shift };
         xv::XR_BLIT_MOD_A:
@@ -183,7 +186,8 @@ logic  [1:0]    blit_ctrl_op;
 logic           blit_ctrl_A_const;
 logic           blit_ctrl_B_const;
 logic           blit_ctrl_B_XOR_A;
-logic  [1:0]    blit_ctrl_transp;
+logic           blit_ctrl_transp_8b;
+logic           blit_ctrl_transp_B;
 logic  [3:0]    blit_shift_l_mask;
 logic  [3:0]    blit_shift_r_mask;
 logic  [1:0]    blit_shift;
@@ -235,87 +239,60 @@ assign  lsr_B = lsr_4(blit_shift, lsr_out_B, blit_data_i);    // shifted value r
 
 // logic ops
 typedef enum logic [1:0] {
-    OP_A                = 2'b00,        // D = A
-    OP_A_AND_B_XOR_C    = 2'b01,        // D = A & B ^ C
-    OP_A_OR_B_AND_C     = 2'b10,        // D = A | B & C
-    OP_A_ADD_B_AND_C    = 2'b11         // D = A + B & C    (nibble addition, no carries)
+    OP_A_AND_C          = 2'b00,        // D = A & C
+    OP_A_ADD_B_AND_C    = 2'b01,        // D = A + B & C
+    OP_A_XOR_B_AND_C    = 2'b10,        // D = A ^ B & C
+    OP_A_AND_B_XOR_C    = 2'b11         // D = A & B ^ C
 } blit_op_t;
 
-word_t          val_A;                  // const or value read from blit_src_A
-word_t          val_B;                  // const or value read from blit_src_B
-word_t          val_C;                  // const value blit_val_C
-word_t          val_D;                  // value to write to blit_dst_D
+word_t              val_A;              // const or value read from blit_src_A
+word_t              val_B;              // const or value read from blit_src_B
+word_t              val_C;              // const value blit_val_C
+word_t              val_D;              // value to write to blit_dst_D
 
 assign val_C        = blit_val_C;       // val_C is alias for blit_val_C register
 assign blit_data_o  = val_D;            // val_D is output to VRAM
-
-always_comb begin : logic_ops
+always_comb begin : logic_ops           // TODO: check cost of these
     case (blit_ctrl_op[1:0])
-        OP_A:
-            val_D   = val_A;                             // A or A^B can be used for transparency
-        OP_A_AND_B_XOR_C:
-            val_D   = val_A & val_B ^ val_C;
-        OP_A_OR_B_AND_C:
-            val_D   = {
-                        {4{(|val_B[15:12])}},
-                        {4{(|val_B[11:8])}},
-                        {4{(|val_B[7:4])}},
-                        {4{(|val_B[3:0])}}
-                    } & val_A ^ val_C;
-        OP_A_ADD_B_AND_C:
-            val_D   = {  val_A[15:12] + val_B[15:12],    // TODO: check cost of this
-                         val_A[11:8]  + val_B[11:8],
-                         val_A[7:4]   + val_B[ 7:4],
-                         val_A[3:0]   + val_B[ 3:0]
-                      } & val_C;
+        OP_A_AND_C:         val_D   = val_A & val_C;                    // COPY: A AND with const C (A, B or B=A^B can be used for transparency)
+        OP_A_ADD_B_AND_C:   val_D   = { val_A[15:12] + val_B[15:12],    // ADD: add A + B nibbles, AND with const C
+                                        val_A[11:8]  + val_B[11:8],
+                                        val_A[7:4]   + val_B[ 7:4],
+                                        val_A[3:0]   + val_B[ 3:0]
+                                      } & val_C;
+        OP_A_XOR_B_AND_C:   val_D   = val_A ^ val_B & val_C;
+        OP_A_AND_B_XOR_C:   val_D   = val_A & val_B ^ val_C;            // ALTER: A AND B XOR C (clear, set or toggle bits)
     endcase
 end
-
+// Seems too chonky...
+        // OP_A_MASK_B_XOR_C:   val_D   = val_A & { {4{(|val_B[15:12])}},   // MASK: mask out A nibble when B nibble is zero, XOR with const C
+        //                                         {4{(|val_B[11:8])}},
+        //                                         {4{(|val_B[7:4])}},
+        //                                         {4{(|val_B[3:0])}}
+        //                                       }  ^ val_C;
 // transparency
-typedef enum logic [1:0] {
-    TRANS_A_4BPP  = 2'b00,              // use A 4-bpp for transparency
-    TRANS_B_4BPP  = 2'b01,              // use B 4-bpp for transparency
-    TRANS_A_8BPP  = 2'b10,              // use A 8-bpp for transparent
-    TRANS_B_8BPP  = 2'b11               // use B 8-bpp for transparency
-} blit_trans_t;
+logic  [3:0]    blit_mask_trans;
 
-// output VRAM write mask (for left/right mask and transparency)
 assign blit_wr_mask_o = (blit_first_word ? blit_shift_l_mask  : 4'b1111) &
                       (blit_last_word  ? blit_shift_r_mask : 4'b1111) &
                       blit_mask_trans;
-
-logic  [3:0]    blit_mask_trans;
-
-// TODO: check cost of blit_ctrl_transp[0] for 0/F transparency
 always_comb begin
-    case (blit_ctrl_transp)
-        TRANS_A_4BPP: blit_mask_trans = {
-                        (|val_A[15:12]),
-                        (|val_A[11:8]),
-                        (|val_A[7:4]),
-                        (|val_A[3:0])
-                    };
-        TRANS_B_4BPP: blit_mask_trans = {
-                        (|val_B[15:12]),
-                        (|val_B[11:8]),
-                        (|val_B[7:4]),
-                        (|val_B[3:0])
-                    };
-        TRANS_A_8BPP: blit_mask_trans = {
-                        (|val_A[15:8]),
-                        (|val_A[15:8]),
-                        (|val_A[7:0]),
-                        (|val_A[7:0])
-                    };
-        TRANS_B_8BPP: blit_mask_trans = {
-                        (|val_B[15:8]),
-                        (|val_B[15:8]),
-                        (|val_B[7:0]),
-                        (|val_B[7:0])
-                    };
-    endcase
+    if (blit_ctrl_transp_8b) begin
+        if (blit_ctrl_transp_B) begin
+            blit_mask_trans = { |val_B[15:8], |val_B[15:8], |val_B[7:0], |val_B[7:0] };
+        end else begin
+            blit_mask_trans = { |val_A[15:8], |val_A[15:8], |val_A[7:0], |val_A[7:0] };
+        end
+    end else begin
+        if (blit_ctrl_transp_B) begin
+            blit_mask_trans = { |val_B[15:12], |val_B[11:8], |val_B[7:4], |val_B[3:0] };
+        end else begin
+            blit_mask_trans = { |val_A[15:12], |val_A[11:8], |val_A[7:4], |val_A[3:0] };
+        end
+    end
 end
 
+// blit state machine
 typedef enum logic [3:0] {
     BLIT_IDLE,          // wait for blit operation (a write to xreg_blit_count)
     BLIT_SETUP,         // copy xreg registers to blit registers and setup for blit
@@ -330,7 +307,6 @@ typedef enum logic [3:0] {
 
 logic  [3:0]    blit_state;
 
-// blit state machine
 always_ff @(posedge clk) begin
     if (reset_i) begin
         blit_done_intr_o    <= '0;
@@ -343,7 +319,8 @@ always_ff @(posedge clk) begin
         blit_ctrl_A_const   <= '0;
         blit_ctrl_B_const   <= '0;
         blit_ctrl_B_XOR_A   <= '0;
-        blit_ctrl_transp    <= '0;
+        blit_ctrl_transp_8b <= '0;
+        blit_ctrl_transp_B  <= '0;
         blit_ctrl_op        <= '0;
         blit_shift_l_mask   <= '0;
         blit_shift_r_mask   <= '0;
@@ -369,7 +346,7 @@ always_ff @(posedge clk) begin
 
         blit_vram_sel_o     <= 1'b0;
         blit_wr_o           <= 1'b0;
-        blit_addr_o         <= '0;      // TODO: check this
+        blit_addr_o         <= '0;      // TODO: check this cost
 
         case (blit_state)
             BLIT_IDLE: begin
@@ -382,7 +359,8 @@ always_ff @(posedge clk) begin
                 blit_ctrl_A_const   <= xreg_ctrl_A_const;
                 blit_ctrl_B_const   <= xreg_ctrl_B_const;
                 blit_ctrl_B_XOR_A   <= xreg_ctrl_B_XOR_A;
-                blit_ctrl_transp    <= xreg_ctrl_transp;
+                blit_ctrl_transp_8b <= xreg_ctrl_transp_8b;
+                blit_ctrl_transp_B  <= xreg_ctrl_transp_B;
                 blit_shift          <= xreg_shift;
                 blit_shift_l_mask   <= xreg_shift_l_mask;
                 blit_shift_r_mask   <= xreg_shift_r_mask;
@@ -398,7 +376,7 @@ always_ff @(posedge clk) begin
                 blit_lines          <= { 1'b0, xreg_lines };
                 blit_words          <= xreg_words - 1'b1;
 
-                blit_first_word     <= 1'b1;
+                blit_first_word     <= 1'b1;    // first word flag after first write
                 val_A               <= xreg_src_A;
                 val_B               <= xreg_src_B;
 
@@ -447,8 +425,12 @@ always_ff @(posedge clk) begin
                     lsr_out_A           <= lsr_A[11:0];
                     blit_src_A          <= blit_src_A + 1'b1;
 
-                    if (blit_ctrl_B_XOR_A) begin
-                        val_B               <=  lsr_A[27:12] ^ blit_src_B;    // TODO: check this
+                    if (blit_ctrl_B_XOR_A) begin    // TODO: check this ideas cost
+                        if (blit_ctrl_B_const) begin
+                            val_B               <= lsr_A[27:12] ^ blit_src_B;
+                        end else begin
+                            val_B               <= lsr_A[27:12] ^ val_B;
+                        end
                     end
 
                     blit_state          <= BLIT_EXEC_OP;
@@ -506,7 +488,7 @@ always_ff @(posedge clk) begin
                 blit_src_B  <= blit_src_B + blit_mod_B;
                 blit_dst_D  <= blit_dst_D + blit_mod_D;
 
-                val_A       <= val_A ^ blit_mod_A;
+                val_A       <= val_A ^ blit_mod_A;      // TODO: nibble addition expensive?
                 val_B       <= val_B ^ blit_mod_B;
                 blit_val_C  <= blit_val_C ^ blit_mod_C;
 

@@ -44,19 +44,18 @@ XM_RW_DATA_2    equ     $3C         ; (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit
 
 ; XR Extended Register / Region (accessed via XM_XR_ADDR and XM_XR_DATA)
 
-; XR Register Regions
-XR_CONFIG_REGS  equ     $0000       ; $0000-$000F config XR registers
-XR_PA_REGS      equ     $0010       ; $0010-$0017 playfield A XR registers
-XR_PB_REGS      equ     $0018       ; $0018-$001F playfield B XR registers
-XR_BLIT_REGS    equ     $2000       ; $2000-$200F 2D-blit XR registers
-XR_DRAW_REGS    equ     $4000       ; $4000-$400F line/poly draw XR registers
-XR_UNUSED_REG_6 equ     $6000       ; $6000-$600F unused
-
 ; XR Memory Regions
-XR_COLOR_MEM    equ     $8000       ; (R*/W) $8000-$80FF 256 x 16-bit color lookup memory ($xRGB)
-XR_TILE_MEM     equ     $A000       ; (R*/W) $A000-$AFFF 4096 x 16-bit tile glyph storage memory
-XR_COPPER_MEM   equ     $C000       ; (R*/W) $C000-$C7FF 2048 x 16-bit copper program memory
-XR_UNUSED_MEM   equ     $E000       ;        $E000-$FFFF unused
+XR_COLOR_ADDR   equ     $8000       ; (R/W) $8000-$81FF 2 x A & B color lookup memory
+XR_COLOR_SIZE   equ     $0200       ;                   2 x 256 x 16-bit words  ($ARGB)
+XR_COLOR_A_ADDR equ     $8000       ; (R/W) $8000-$80FF A 256 entry color lookup memory
+XR_COLOR_A_SIZE equ     $0100       ;                   256 x 16-bit words ($ARGB)
+XR_COLOR_B_ADDR equ     $8100       ; (R/W) $8100-$81FF B 256 entry color lookup memory
+XR_COLOR_B_SIZE equ     $0100       ;                   256 x 16-bit words ($ARGB)
+XR_TILE_ADDR    equ     $A000       ; (R/W) $A000-$B3FF tile glyph/tile map memory
+XR_TILE_SIZE    equ     $1400       ;                   5120 x 16-bit tile glyph/tile map memory
+XR_COPPER_ADDR  equ     $C000       ; (R/W) $C000-$C7FF copper program memory (32-bit instructions)
+XR_COPPER_SIZE  equ     $0800       ;                   2048 x 16-bit copper program memory addresses
+XR_UNUSED_ADDR  equ     $E000       ; (-/-) $E000-$FFFF unused
 
 ; Video Config and Copper XR Registers
 XR_VID_CTRL     equ     $0000       ; (R /W) display control and border color index

@@ -704,7 +704,7 @@ void xosera_test()
     remove_intr();
 
     wait_vsync();
-    xmem_setw(XR_COLOR_MEM, 0x000);
+    xmem_setw(XR_COLOR_ADDR, 0x000);
     xreg_setw(PA_GFX_CTRL, 0x0000);         // text mode
     xreg_setw(PA_TILE_CTRL, 0x000F);        // text mode
     xreg_setw(COPP_CTRL, 0x0000);           // disable copper

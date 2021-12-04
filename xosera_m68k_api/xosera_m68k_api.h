@@ -250,34 +250,4 @@ extern volatile xmreg_t * const xosera_ptr;
         word_value;                                                                                                    \
     })
 
-// Macros to make bit-fields easier
-#define XB_(v, lb, rb) (((v) & ((1 << ((lb) - (rb) + 1)) - 1)) << (rb))
-
-// TODO: repace magic constants with defines for bit positions
-#define MAKE_SYS_CTRL(reboot, bootcfg, intena, wrmask)                                                                 \
-    (XB_(reboot, 15, 15) | XB_(bootcfg, 14, 13) | XB_(intena, 11, 8) | XB_(wrmask, 3, 0))
-#define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 15, 8) | XB_(intmask, 3, 0))
-#define MAKE_GFX_CTRL(colbase, blank, bpp, bm, hx, vx)                                                                 \
-    (XB_(colbase, 15, 8) | XB_(blank, 7, 7) | XB_(bm, 6, 6) | XB_(bpp, 5, 4) | XB_(hx, 3, 2) | XB_(vx, 1, 0))
-#define MAKE_TILE_CTRL(tilebase, vram, tileheight) (((tilebase)&0xFC00) | XB_(vram, 8, 8) | XB_(((tileheight)-1), 3, 0))
-#define MAKE_HV_SCROLL(h_scrl, v_scrl)             (XB_(h_scrl, 12, 8) | XB_(v_scrl, 5, 0))
-
-// Copper instruction helper macros
-#define COP_WAIT_HV(h_pos, v_pos)   (0x00000000 | XB_((uint32_t)(v_pos), 26, 16) | XB_((uint32_t)(h_pos), 14, 4))
-#define COP_WAIT_H(h_pos)           (0x00000001 | XB_((uint32_t)(h_pos), 14, 4))
-#define COP_WAIT_V(v_pos)           (0x00000002 | XB_((uint32_t)(v_pos), 26, 16))
-#define COP_WAIT_F()                (0x00000003)
-#define COP_END()                   (0x00000003)
-#define COP_SKIP_HV(h_pos, v_pos)   (0x20000000 | XB_((uint32_t)(v_pos), 26, 16) | XB_((uint32_t)(h_pos), 14, 4))
-#define COP_SKIP_H(h_pos)           (0x20000001 | XB_((uint32_t)(h_pos), 14, 4))
-#define COP_SKIP_V(v_pos)           (0x20000002 | XB_((uint32_t)(v_pos), 26, 16))
-#define COP_SKIP_F()                (0x20000003 | XB_((uint32_t)(0), 14, 4))
-#define COP_JUMP(cop_addr)          (0x40000000 | XB_((uint32_t)(cop_addr), 26, 16))
-#define COP_MOVER(val16, xreg)      (0x60000000 | XB_((uint32_t)(XR_##xreg), 23, 16) | ((uint16_t)(val16)))
-#define COP_MOVEF(val16, tile_addr) (0x80000000 | XB_((uint32_t)(tile_addr), 28, 16) | ((uint16_t)(val16)))
-#define COP_MOVEP(rgb16, color_num) (0xA0000000 | XB_((uint32_t)(color_num), 23, 16) | ((uint16_t)(rgb16)))
-#define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 26, 16) | ((uint16_t)(val16)))
-
-// TODO blit and polydraw
-
 #endif        // XOSERA_M68K_API_H

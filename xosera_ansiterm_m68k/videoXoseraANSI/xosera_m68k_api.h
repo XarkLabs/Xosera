@@ -24,14 +24,17 @@
  * ------------------------------------------------------------
  */
 
+#if !defined(XOSERA_M68K_API_H)
+#define XOSERA_M68K_API_H
+
 #include <stdbool.h>
 #include <stdint.h>
 
-#if defined(TEST_FIRMWARE)
-#define cpu_delay(ms) mcBusywait(ms << 9)        // ~500 == 1ms @ 10MHz 68K
-#else
-#define cpu_delay(ms) BUSYWAIT_C(ms << 9)        // ~500 == 1ms @ 10MHz 68K
+#if defined(delay)        // clear out mcBusywait
+#undef delay
 #endif
+#define delay(ms)     xv_delay(ms)
+#define cpu_delay(ms) mcBusywait(ms << 9);        // ~500 == 1ms @ 10MHz 68K
 
 bool xosera_sync();                        // true if Xosera present and responding
 bool xosera_init(int reconfig_num);        // wait a bit for Xosera to respond and optional reconfig (if 0 to 3)
@@ -91,7 +94,15 @@ typedef struct _xreg
     };
 } xmreg_t;
 
-// Required function that saves 8 cycles per function that calls xosera API functions (call once at top).
+// Xosera XM register base ptr
+#if !defined(XV_PREP_REQUIRED)
+extern volatile xmreg_t * const xosera_ptr;
+#endif
+
+// Extra-credit function that saves 8 cycles per function that calls xosera API functions (call once at top).
+// (NOTE: This works by "shadowing" the global xosera_ptr and using asm to load the constant value more efficiently.  If
+// GCC "sees" the constant pointer value, it seems to want to load it over and over as needed.  This method gets GCC to
+// load the pointer once (using more efficient immediate addressing mode) and keep it loaded in an address register.)
 #define xv_prep()                                                                                                      \
     volatile xmreg_t * const xosera_ptr = ({                                                                           \
         xmreg_t * ptr;                                                                                                 \
@@ -238,3 +249,5 @@ typedef struct _xreg
                              :);                                                                                       \
         word_value;                                                                                                    \
     })
+
+#endif        // XOSERA_M68K_API_H

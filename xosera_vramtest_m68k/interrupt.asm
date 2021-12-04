@@ -57,7 +57,7 @@ Xosera_intr:
                 and.b   #$07,D0
                 bne.s   noinc
 
-                move.w  #XR_COLOR_MEM,D0        ; set color entry #0
+                move.w  #XR_COLOR_ADDR,D0        ; set color entry #0
                 movep.w D0,XM_XR_ADDR(A0)
 
                 move.w  NukeColor,D0            ; increment NukeColor

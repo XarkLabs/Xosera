@@ -108,18 +108,17 @@ class BusInterface
 
     enum
     {
-        // XR Register Regions
-        XR_CONFIG_REGS   = 0x0000,        // 0x0000-0x000F 16 config/copper registers
-        XR_PA_REGS       = 0x0010,        // 0x0000-0x0017 8 playfield A video registers
-        XR_PB_REGS       = 0x0018,        // 0x0000-0x000F 8 playfield B video registers
-        XR_BLIT_REGS     = 0x0030,        // 0x0000-0x000F 16 blit registers [TBD]
-        XR_POLYDRAW_REGS = 0x0040,        // 0x0000-0x000F 16 line/polygon draw registers [TBD]
-
-        // XR Memory Regions
-        XR_COLOR_MEM  = 0x8000,        // 0x8000-0x81FF 2 x 256 16-bit A & B color lookup table (0xXRGB)
-        XR_TILE_MEM   = 0xA000,        // 0xA000-0xB3FF 5K 16-bit words of tile/font memory
-        XR_COPPER_MEM = 0xC000,        // 0xC000-0xC7FF 2K 16-bit words copper program memory
-        XR_UNUSED_MEM = 0xE000,        // 0xE000-0xFFFF (currently unused)
+        XR_COLOR_ADDR   = 0x8000,        // (R/W) 0x8000-0x81FF 2 x A & B color lookup memory
+        XR_COLOR_SIZE   = 0x0200,        //                      2 x 256 x 16-bit words  (0xARGB)
+        XR_COLOR_A_ADDR = 0x8000,        // (R/W) 0x8000-0x80FF A 256 entry color lookup memory
+        XR_COLOR_A_SIZE = 0x0100,        //                      256 x 16-bit words (0xARGB)
+        XR_COLOR_B_ADDR = 0x8100,        // (R/W) 0x8100-0x81FF B 256 entry color lookup memory
+        XR_COLOR_B_SIZE = 0x0100,        //                      256 x 16-bit words (0xARGB)
+        XR_TILE_ADDR    = 0xA000,        // (R/W) 0xA000-0xB3FF tile glyph/tile map memory
+        XR_TILE_SIZE    = 0x1400,        //                      5120 x 16-bit tile glyph/tile map memory
+        XR_COPPER_ADDR  = 0xC000,        // (R/W) 0xC000-0xC7FF copper program memory (32-bit instructions)
+        XR_COPPER_SIZE  = 0x0800,        //                      2048 x 16-bit copper program memory addresses
+        XR_UNUSED_ADDR  = 0xE000         // (-/-) 0xE000-0xFFFF unused
     };
 
     enum
@@ -516,31 +515,18 @@ uint16_t     BusInterface::test_data[16384] = {
 
     // fill screen
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0FF0),
-    XREG_SETW(BLIT_SHIFT, 0xFF00),
-    XREG_SETW(BLIT_MOD_A, 0x0000),
-    XREG_SETW(BLIT_MOD_B, 0x0000),
-    XREG_SETW(BLIT_MOD_C, 0x0000),
-    XREG_SETW(BLIT_MOD_D, W_4BPP),
-    XREG_SETW(BLIT_SRC_A, 0x5858),
-    XREG_SETW(BLIT_SRC_B, 0x8888),
-    XREG_SETW(BLIT_VAL_C, 0x0000),
-    XREG_SETW(BLIT_DST_D, 0x0000),
-    XREG_SETW(BLIT_LINES, H_4BPP / 2 - 1),
-    XREG_SETW(BLIT_WORDS, W_4BPP - 1),
-    REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0FF0),
-    XREG_SETW(BLIT_SHIFT, 0xFF00),
-    XREG_SETW(BLIT_MOD_A, 0x0000),
-    XREG_SETW(BLIT_MOD_B, 0x0000),
-    XREG_SETW(BLIT_MOD_C, 0x0000),
-    XREG_SETW(BLIT_MOD_D, W_4BPP),
-    XREG_SETW(BLIT_SRC_A, 0x8585),
-    XREG_SETW(BLIT_SRC_B, 0x8888),
-    XREG_SETW(BLIT_VAL_C, 0x0000),
-    XREG_SETW(BLIT_DST_D, W_4BPP),
-    XREG_SETW(BLIT_LINES, H_4BPP / 2 - 1),
-    XREG_SETW(BLIT_WORDS, W_4BPP - 1),
+    XREG_SETW(BLIT_CTRL, 0x0023),                  // constA, constB, transpB, op D = A & C
+    XREG_SETW(BLIT_SHIFT, 0xFF00),                 // no edge masking or shifting
+    XREG_SETW(BLIT_MOD_A, 0x5858 ^ 0x8585),        // modulo A - toggle dither pattern every line (Kind of cool! 😀)
+    XREG_SETW(BLIT_MOD_B, 0x0000),                 // no modulo B (would be XOR'd to B every line)
+    XREG_SETW(BLIT_MOD_C, 0x0000),                 // no modulo C (would be XOR'd to C every line)
+    XREG_SETW(BLIT_MOD_D, 0x0000),                 // no modulo D (contiguous destination lines)
+    XREG_SETW(BLIT_SRC_A, 0x5858),                 // dither patterh (purple + gray)
+    XREG_SETW(BLIT_SRC_B, 0x8888),                 // with constB & transpB this disables transparency
+    XREG_SETW(BLIT_VAL_C, 0xFFFF),                 // needed with op D = A & C (to not alter A)
+    XREG_SETW(BLIT_DST_D, 0x0000),                 // VRAM display address
+    XREG_SETW(BLIT_LINES, H_4BPP - 1),             // screen height -1
+    XREG_SETW(BLIT_WORDS, W_4BPP - 1),             // screen width in words -1
     REG_WAIT_BLIT_DONE(),
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
@@ -549,11 +535,12 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(WR_ADDR, 0xF000),
     REG_UPLOAD(),
     REG_WAITVSYNC(),
+    REG_WAITVSYNC(),
 
 #if 0
     // 2D fill 1/4 screen
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0FF0),
+    XREG_SETW(BLIT_CTRL, 0x0003),
     XREG_SETW(BLIT_SHIFT, 0xFF00),
     XREG_SETW(BLIT_MOD_A, 0x0000),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -568,7 +555,7 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_WAIT_BLIT_DONE(),
     REG_WAITVSYNC(),
 
-    REG_W(XR_ADDR, XR_COLOR_MEM),        // upload 4-bpp color palette
+    REG_W(XR_ADDR, XR_COLOR_ADDR),        // upload 4-bpp color palette
     REG_UPLOAD_AUX(),
 
     REG_W(WR_INCR, 0x0001),        // upload 4-bpp bitmap
@@ -580,7 +567,7 @@ uint16_t     BusInterface::test_data[16384] = {
 #if 0
     // 2D fill 2/3 screen
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0FF0),
+    XREG_SETW(BLIT_CTRL, 0x0003),
     XREG_SETW(BLIT_SHIFT, 0xFF00),
     XREG_SETW(BLIT_MOD_A, 0x0000),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -599,21 +586,21 @@ uint16_t     BusInterface::test_data[16384] = {
 #endif
     // 2D moto blit
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0060),        // transp A_4BPP, read A, const B, B = A^B, op D=A
+    XREG_SETW(BLIT_CTRL, 0x0002),        // transp A_4BPP, read A, const B, op D=A & C
     XREG_SETW(BLIT_SHIFT, 0xFF00),
     XREG_SETW(BLIT_MOD_A, 0x0000),
     XREG_SETW(BLIT_MOD_B, 0x0000),
     XREG_SETW(BLIT_MOD_C, 0x0000),
     XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO),
     XREG_SETW(BLIT_SRC_A, 0xF000),
-    XREG_SETW(BLIT_SRC_B, 0x000F),
-    XREG_SETW(BLIT_VAL_C, 0xF000),
+    XREG_SETW(BLIT_SRC_B, 0x0000),
+    XREG_SETW(BLIT_VAL_C, 0xFFFF),
     XREG_SETW(BLIT_DST_D, 0x0000 + (20 * W_4BPP) + 1),
     XREG_SETW(BLIT_LINES, H_LOGO - 1),
     XREG_SETW(BLIT_WORDS, W_LOGO - 1),
 
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0160),         // transp A_4BPP, read A, const B, B = A^B, op D=A
+    XREG_SETW(BLIT_CTRL, 0x0006),         // transp A_4BPP, read A, const B, B = A^B, op D=A
     XREG_SETW(BLIT_SHIFT, 0x7801),        // mask 1 nibble from left, and 3 nibbles from right, shift 1 nibble
     XREG_SETW(BLIT_MOD_A, -1),            // compensate for extra word width
     XREG_SETW(BLIT_MOD_B, 0x0000),        // const B term
@@ -626,8 +613,12 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_LINES, H_LOGO - 1),
     XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),        // add extra word width
 
+    REG_WAIT_BLIT_DONE(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0160),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0x3C02),
     XREG_SETW(BLIT_MOD_A, -1),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -641,7 +632,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),
 
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0120),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0x1E03),
     XREG_SETW(BLIT_MOD_A, -1),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -653,10 +644,10 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_DST_D, 0x0000 + (80 * W_4BPP) + 1),
     XREG_SETW(BLIT_LINES, H_LOGO - 1),
     XREG_SETW(BLIT_WORDS, W_LOGO),
-
+#if 0
     // 2D moto blit #2
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0F20),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0xFF00),
     XREG_SETW(BLIT_MOD_A, 0x0000),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -670,7 +661,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_WORDS, W_LOGO - 1),
 
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0020),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0x7801),
     XREG_SETW(BLIT_MOD_A, -1),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -684,7 +675,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_WORDS, W_LOGO),
 
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0021),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0x3C02),
     XREG_SETW(BLIT_MOD_A, -1),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -698,7 +689,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_WORDS, W_LOGO),
 
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0060),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0x1E03),
     XREG_SETW(BLIT_MOD_A, -1),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -713,7 +704,7 @@ uint16_t     BusInterface::test_data[16384] = {
 
     // 2D moto blit #3
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0F20),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0xFF00),
     XREG_SETW(BLIT_MOD_A, 0x0000),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -727,7 +718,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_WORDS, W_LOGO - 1),
 
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0020),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0x7801),
     XREG_SETW(BLIT_MOD_A, -1),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -741,7 +732,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_WORDS, W_LOGO),
 
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0021),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0x3C02),
     XREG_SETW(BLIT_MOD_A, -1),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -755,7 +746,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_WORDS, W_LOGO),
 
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0060),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0x1E03),
     XREG_SETW(BLIT_MOD_A, -1),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -770,7 +761,7 @@ uint16_t     BusInterface::test_data[16384] = {
 
     // 2D moto blit #4
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0F20),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0xFF00),
     XREG_SETW(BLIT_MOD_A, 0x0000),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -784,7 +775,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_WORDS, W_LOGO - 1),
 
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0020),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0x7801),
     XREG_SETW(BLIT_MOD_A, -1),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -798,7 +789,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_WORDS, W_LOGO),
 
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0021),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0x3C02),
     XREG_SETW(BLIT_MOD_A, -1),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -812,7 +803,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_WORDS, W_LOGO),
 
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0060),
+    XREG_SETW(BLIT_CTRL, 0x0006),
     XREG_SETW(BLIT_SHIFT, 0x1E03),
     XREG_SETW(BLIT_MOD_A, -1),
     XREG_SETW(BLIT_MOD_B, 0x0000),
@@ -825,7 +816,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_LINES, H_LOGO - 1),
     XREG_SETW(BLIT_WORDS, W_LOGO),
 
-
+#endif
     REG_WAIT_BLIT_DONE(),
     REG_WAITVSYNC(),
 
@@ -866,7 +857,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(PA_DISP_ADDR, 0x0000),
     XREG_SETW(PA_LINE_LEN, 320 / 2),
 
-    REG_W(XR_ADDR, XR_COLOR_MEM),        // upload color palette
+    REG_W(XR_ADDR, XR_COLOR_ADDR),        // upload color palette
     REG_UPLOAD_AUX(),
 
     REG_W(WR_INCR, 0x0001),
@@ -1007,7 +998,7 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(XR_DATA, 0x0055),
     XREG_SETW(PA_LINE_LEN),        // 320/2/2 wide
     REG_W(XR_DATA, 80),
-    REG_W(XR_ADDR, XR_COLOR_MEM),        // upload color palette
+    REG_W(XR_ADDR, XR_COLOR_ADDR),        // upload color palette
     REG_UPLOAD_AUX(),
     REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 0x0000),
@@ -1028,7 +1019,7 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(XR_DATA, 0x0065),
     XREG_SETW(PA_LINE_LEN),        // 320/2 wide
     REG_W(XR_DATA, 160),
-    REG_W(XR_ADDR, XR_COLOR_MEM),        // upload color palette
+    REG_W(XR_ADDR, XR_COLOR_ADDR),        // upload color palette
     REG_UPLOAD_AUX(),
     REG_W(WR_INCR, 0x0001),
     REG_W(WR_ADDR, 0x0000),

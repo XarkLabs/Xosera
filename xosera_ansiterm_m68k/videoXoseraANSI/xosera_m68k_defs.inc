@@ -58,9 +58,9 @@ XR_DRAW_REGS    equ     $4000       ; $4000-$400F line/poly draw XR registers
 XR_UNUSED_REG_6 equ     $6000       ; $6000-$600F unused
 
 ; XR Memory Regions
-XR_COLOR_MEM    equ     $8000       ; (R*/W) $8000-$80FF 256 x 16-bit color lookup memory ($xRGB)
-XR_TILE_MEM     equ     $A000       ; (R*/W) $A000-$AFFF 4096 x 16-bit tile glyph storage memory
-XR_COPPER_MEM   equ     $C000       ; (R*/W) $C000-$C7FF 2048 x 16-bit copper program memory
+XR_COLOR_ADDR    equ     $8000       ; (R*/W) $8000-$80FF 256 x 16-bit color lookup memory ($xRGB)
+XR_TILE_ADDR     equ     $A000       ; (R*/W) $A000-$AFFF 4096 x 16-bit tile glyph storage memory
+XR_COPPER_ADDR   equ     $C000       ; (R*/W) $C000-$C7FF 2048 x 16-bit copper program memory
 XR_UNUSED_MEM   equ     $E000       ;        $E000-$FFFF unused
 
 ; Video Config and Copper XR Registers

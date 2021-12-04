@@ -31,6 +31,22 @@
 
 #define XM_BASEADDR 0xf80060        // Xosera rosco_m68k register base address
 
+// Xosera XR Memory Regions (size in 16-bit words)
+#define XR_COLOR_ADDR   0x8000        // (R/W) 0x8000-0x81FF 2 x A & B color lookup memory
+#define XR_COLOR_SIZE   0x0200        //                      2 x 256 x 16-bit words  (0xARGB)
+#define XR_COLOR_A_ADDR 0x8000        // (R/W) 0x8000-0x80FF A 256 entry color lookup memory
+#define XR_COLOR_A_SIZE 0x0100        //                      256 x 16-bit words (0xARGB)
+#define XR_COLOR_B_ADDR 0x8100        // (R/W) 0x8100-0x81FF B 256 entry color lookup memory
+#define XR_COLOR_B_SIZE 0x0100        //                      256 x 16-bit words (0xARGB)
+#define XR_TILE_ADDR    0xA000        // (R/W) 0xA000-0xB3FF tile glyph/tile map memory
+#define XR_TILE_SIZE    0x1400        //                      5120 x 16-bit tile glyph/tile map memory
+#define XR_COPPER_ADDR  0xC000        // (R/W) 0xC000-0xC7FF copper program memory (32-bit instructions)
+#define XR_COPPER_SIZE  0x0800        //                      2048 x 16-bit copper program memory addresses
+#define XR_UNUSED_ADDR  0xE000        // (-/-) 0xE000-0xFFFF unused
+
+// Macros to make bit-fields easier (works similar to Verilog "+:" operator, e.g., word[RIGHTMOST_BIT +: BIT_WIDTH])
+#define XB_(v, right_bit, bit_width) (((v) & ((1 << (bit_width)) - 1)) << (right_bit))
+
 // Xosera Main Registers (XM Registers, directly CPU accessable)
 // NOTE: Main register numbers are multiplied by 4 for rosco_m68k, because of even byte 6800 8-bit addressing plus
 // 16-bit registers
@@ -43,38 +59,28 @@
 #define XM_DATA      0x18        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR (and add XM_RD_INCR/XM_WR_INCR)
 #define XM_DATA_2    0x1C        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
 #define XM_SYS_CTRL  0x20        // (R /W+) busy status, FPGA reconfig, interrupt status/control, write masking
-#define XM_TIMER     0x24        // (RO   ) read 1/10th millisecond timer [TODO]
-#define XM_UNUSED_A  0x28        // (R /W ) unused direct register 0xA [TODO]
-#define XM_UNUSED_B  0x2C        // (R /W ) unused direct register 0xB [TODO]
+#define XM_TIMER     0x24        // (R /W+) read 1/10th millisecond timer, write clear interrupt signal
+#define XM_LFSR      0x28        // (RO)    LFSR pseudo-random number // TODO: keep this?
+#define XM_UNUSED_B  0x2C        // (R /W ) unused direct register 0xB // TODO: slated for XR_DATA_2 after reorg
 #define XM_RW_INCR   0x30        // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
 #define XM_RW_ADDR   0x34        // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
 #define XM_RW_DATA   0x38        // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
 #define XM_RW_DATA_2 0x3C        // (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
 
+#define MK_SYS_CTRL(reboot, bootcfg, intena, wrmask)                                                                   \
+    (XB_(reboot, 15, 1) | XB_(bootcfg, 14, 2) | XB_(intena, 11, 4) | XB_(wrmask, 3, 0))
+
 // XR Extended Register / Region (accessed via XM_XR_ADDR and XM_XR_DATA)
-
-// XR Register Regions
-#define XR_CONFIG_REGS   0x0000        // 0x0000-0x000F config XR registers
-#define XR_PA_REGS       0x0010        // 0x0010-0x0017 playfield A XR registers
-#define XR_PB_REGS       0x0018        // 0x0018-0x001F playfield B XR registers
-#define XR_BLIT_REGS     0x0030        // 0x0030-0x003F 2D-blit XR registers
-#define XR_POLYDRAW_REGS 0x0040        // 0x0040-0x004F line/poly draw XR registers
-
-// XR Memory Regions
-#define XR_COLOR_MEM  0x8000        // (R*/W) 0x8000-0x81FF 2 x 256 x 16-bit A & B color lookup memory ($xRGB)
-#define XR_TILE_MEM   0xA000        // (R*/W) 0xA000-0xB3FF 5120 x 16-bit tile glyph storage memory
-#define XR_COPPER_MEM 0xC000        // (R*/W) 0xC000-0xC7FF 2048 x 16-bit copper program memory
-#define XR_UNUSED_MEM 0xE000        //        0xE000-0xFFFF unused
 
 //  Video Config and Copper XR Registers
 #define XR_VID_CTRL   0x00        // (R /W) display control and border color index
 #define XR_COPP_CTRL  0x01        // (R /W) display synchronized coprocessor control
-#define XR_CURSOR_X   0x02        // (R /W) sprite cursor X position
-#define XR_CURSOR_Y   0x03        // (R /W) sprite cursor Y position
-#define XR_VID_TOP    0x04        // (R /W) top line of active display window (typically 0)
-#define XR_VID_BOTTOM 0x05        // (R /W) bottom line of active display window (typically 479)
+#define XR_CURSOR_X   0x02        // (R /W) sprite cursor X position // TODO: to be refactored
+#define XR_CURSOR_Y   0x03        // (R /W) sprite cursor Y position // TODO: to be refactored
+#define XR_VID_TOP    0x04        // (R /W) // TODO: to be refactored
+#define XR_VID_BOTTOM 0x05        // (R /W) // TODO: to be refactored
 #define XR_VID_LEFT   0x06        // (R /W) left edge of active display window (typically 0)
-#define XR_VID_RIGHT  0x07        // (R /W) right edge of active display window (typically 639 or 847)
+#define XR_VID_RIGHT  0x07        // (R /W) right edge +1 of active display window (typically 640 or 848)
 #define XR_SCANLINE   0x08        // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
 #define XR_UNUSED_09  0x09        // (RO  )
 #define XR_VERSION    0x0A        // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
@@ -83,6 +89,8 @@
 #define XR_VID_HSIZE  0x0D        // (RO  ) native pixel width of monitor mode (e.g. 640/848)
 #define XR_VID_VSIZE  0x0E        // (RO  ) native pixel height of monitor mode (e.g. 480)
 #define XR_VID_VFREQ  0x0F        // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+
+#define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 8, 8) | XB_(intmask, 0, 4))
 
 // Playfield A Control XR Registers
 #define XR_PA_GFX_CTRL  0x10        // (R /W) playfield A graphics control
@@ -104,33 +112,48 @@
 #define XR_PB_UNUSED_1E 0x1E        //
 #define XR_PB_UNUSED_1F 0x1F        //
 
-// Macros to make bit-fields easier
-#define XB_(v, lb, rb) (((v) & ((1 << ((lb) - (rb) + 1)) - 1)) << (rb))
+#define XR_GFX_BPP_1 0        // Px_GFX_CTRL.bpp
+#define XR_GFX_BPP_4 1        // Px_GFX_CTRL.bpp
+#define XR_GFX_BPP_8 2        // Px_GFX_CTRL.bpp
+#define XR_GFX_BPP_X 3        // Px_GFX_CTRL.bpp
 
-#define MAKE_SYS_CTRL(reboot, bootcfg, intena, wrmask)                                                                 \
-    (XB_(reboot, 15, 15) | XB_(bootcfg, 14, 13) | XB_(intena, 11, 8) | XB_(wrmask, 3, 0))
-#define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 15, 8) | XB_(intmask, 3, 0))
 #define MAKE_GFX_CTRL(colbase, blank, bpp, bm, hx, vx)                                                                 \
-    (XB_(colbase, 15, 8) | XB_(blank, 7, 7) | XB_(bm, 6, 6) | XB_(bpp, 5, 4) | XB_(hx, 3, 2) | XB_(vx, 1, 0))
-#define MAKE_TILE_CTRL(tilebase, vram, tileheight) (((tilebase)&0xFC00) | XB_(vram, 8, 8) | XB_(((tileheight)-1), 3, 0))
-#define MAKE_HV_SCROLL(h_scrl, v_scrl)             (XB_(h_scrl, 12, 8) | XB_(v_scrl, 5, 0))
+    (XB_(colbase, 8, 8) | XB_(blank, 7, 1) | XB_(bm, 6, 1) | XB_(bpp, 4, 2) | XB_(hx, 2, 2) | XB_(vx, 0, 2))
+#define MAKE_TILE_CTRL(tilebase, map_in_tile, glyph_in_vram, tileheight)                                               \
+    (((tilebase)&0xFC00) | XB_(map_in_tile, 9, 1) | XB_(glyph_in_vram, 8, 1) | XB_(((tileheight)-1), 0, 3))
+#define MAKE_HV_SCROLL(h_scrl, v_scrl) (XB_(h_scrl, 8, 8) | XB_(v_scrl, 0, 8))
+
+// Blitter Registers (WIP)
+#define XR_BLIT_CTRL  0x20        // (R /W) blit control bits (logic ops, A addr/const, B addr/const, transparent/opaque)
+#define XR_BLIT_SHIFT 0x21        // (R /W) blit nibble shift (0-3)
+#define XR_BLIT_MOD_A 0x22        // (R /W) blit modulo added to A between lines (rectangular blit)
+#define XR_BLIT_MOD_B 0x23        // (R /W) blit modulo added to B between lines (rectangular blit)
+#define XR_BLIT_MOD_C 0x24        // (R /W) blit modulo added to C between lines (rectangular blit)
+#define XR_BLIT_MOD_D 0x25        // (R /W) blit modulo added to D between lines (rectangular blit)
+#define XR_BLIT_SRC_A 0x26        // (R /W) blit A source VRAM read address / constant value
+#define XR_BLIT_SRC_B 0x27        // (R /W) blit B source VRAM read address / constant value
+#define XR_BLIT_VAL_C 0x28        // (R /W) blit C source constant value
+#define XR_BLIT_DST_D 0x29        // (R /W) blit D destination write address
+#define XR_BLIT_LINES 0x2A        // (R /W) blit number of lines for rectangular blit
+#define XR_BLIT_WORDS 0x2B        // (R /W) blit word count minus 1, starts operation (width when LINES > 0)
 
 // Copper instruction helper macros
-#define COP_WAIT_HV(h_pos, v_pos)   (0x00000000 | XB_((uint32_t)(v_pos), 26, 16) | XB_((uint32_t)(h_pos), 14, 4))
-#define COP_WAIT_H(h_pos)           (0x00000001 | XB_((uint32_t)(h_pos), 14, 4))
-#define COP_WAIT_V(v_pos)           (0x00000002 | XB_((uint32_t)(v_pos), 26, 16))
+#define COP_WAIT_HV(h_pos, v_pos)   (0x00000000 | XB_((uint32_t)(v_pos), 16, 12) | XB_((uint32_t)(h_pos), 4, 12))
+#define COP_WAIT_H(h_pos)           (0x00000001 | XB_((uint32_t)(h_pos), 4, 12))
+#define COP_WAIT_V(v_pos)           (0x00000002 | XB_((uint32_t)(v_pos), 16, 12))
 #define COP_WAIT_F()                (0x00000003)
 #define COP_END()                   (0x00000003)
-#define COP_SKIP_HV(h_pos, v_pos)   (0x20000000 | XB_((uint32_t)(v_pos), 26, 16) | XB_((uint32_t)(h_pos), 14, 4))
-#define COP_SKIP_H(h_pos)           (0x20000001 | XB_((uint32_t)(h_pos), 14, 4))
-#define COP_SKIP_V(v_pos)           (0x20000002 | XB_((uint32_t)(v_pos), 26, 16))
-#define COP_SKIP_F()                (0x20000003 | XB_((uint32_t)(0), 14, 4))
-#define COP_JUMP(cop_addr)          (0x40000000 | XB_((uint32_t)(cop_addr), 26, 16))
-#define COP_MOVER(val16, xreg)      (0x90000000 | XB_((uint32_t)(XR_##xreg), 23, 16) | ((uint16_t)(val16)))
-#define COP_MOVEF(val16, tile_addr) (0xa0000000 | XB_((uint32_t)(tile_addr), 27, 16) | ((uint16_t)(val16)))
-#define COP_MOVEP(rgb16, color_num) (0xB0000000 | XB_((uint32_t)(color_num), 23, 16) | ((uint16_t)(rgb16)))
-#define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 26, 16) | ((uint16_t)(val16)))
+#define COP_SKIP_HV(h_pos, v_pos)   (0x20000000 | XB_((uint32_t)(v_pos), 16, 12) | XB_((uint32_t)(h_pos), 4, 12))
+#define COP_SKIP_H(h_pos)           (0x20000001 | XB_((uint32_t)(h_pos), 4, 12))
+#define COP_SKIP_V(v_pos)           (0x20000002 | XB_((uint32_t)(v_pos), 16, 12))
+#define COP_SKIP_F()                (0x20000003)
+#define COP_JUMP(cop_addr)          (0x40000000 | XB_((uint32_t)(cop_addr), 16, 13))
+#define COP_MOVER(val16, xreg)      (0x60000000 | XB_((uint32_t)(XR_##xreg), 16, 13) | ((uint16_t)(val16)))
+#define COP_MOVEF(val16, tile_addr) (0x80000000 | XB_((uint32_t)(tile_addr), 16, 13) | ((uint16_t)(val16)))
+#define COP_MOVEP(rgb16, color_num) (0xA0000000 | XB_((uint32_t)(color_num), 16, 13) | ((uint16_t)(rgb16)))
+#define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 16, 13) | ((uint16_t)(val16)))
 
-// TODO blit and polydraw
+// TODO: repace more magic constants with defines for bit positions
+
 
 #endif        // XOSERA_M68K_DEFS_H

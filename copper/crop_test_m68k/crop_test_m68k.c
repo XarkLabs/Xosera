@@ -64,7 +64,7 @@ void xosera_test()
 
     xreg_setw(VID_CTRL, 0x0000);        // set border black
 
-    xm_setw(XR_ADDR, XR_COPPER_MEM);
+    xm_setw(XR_ADDR, XR_COPPER_ADDR);
 
     for (uint8_t i = 0; i < (sizeof(copper_list) / sizeof(uint32_t)); i++)
     {
@@ -95,7 +95,7 @@ void xosera_test()
 
     xreg_setw(VID_CTRL, 0x0000);        // set border black
 
-    xm_setw(XR_ADDR, XR_COPPER_MEM);
+    xm_setw(XR_ADDR, XR_COPPER_ADDR);
 
     for (uint8_t i = 0; i < (sizeof(copper_list) / sizeof(uint32_t)); i++)
     {

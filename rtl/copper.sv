@@ -123,17 +123,17 @@
 //
 //      MOVEF - [100A AAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
-//          Move 16-bit data to XR_TILE_MEM memory.
+//          Move 16-bit data to XR_TILE_ADDR memory.
 //
 //
 //      MOVEP - [101o oooA AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
-//          Move 16-bit data to XR_COLOR_MEM (palette) memory.
+//          Move 16-bit data to XR_COLOR_ADDR (palette) memory.
 //
 //
 //      MOVEC - [110o oAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]
 //
-//          Move 16-bit data to XR_COPPER_MEM memory.
+//          Move 16-bit data to XR_COPPER_ADDR memory.
 //
 //      Y - Y position (11 bits)
 //      X - X position (11 bits)
@@ -448,7 +448,7 @@ always_ff @(posedge clk) begin
                         INSN_MOVEF: begin
                             // movef
                             xr_wr_en                <= 1'b1;
-                            ram_wr_addr_out[15:13]  <= xv::XR_TILE_MEM[15:13];
+                            ram_wr_addr_out[15:13]  <= xv::XR_TILE_ADDR[15:13];
                             ram_wr_addr_out[12:0]   <= move_f_addr;
                             ram_wr_data_out         <= move_data;
 
@@ -459,7 +459,7 @@ always_ff @(posedge clk) begin
                         INSN_MOVEP: begin
                             // movep
                             xr_wr_en                <= 1'b1;
-                            ram_wr_addr_out[15:9]   <= xv::XR_COLOR_MEM[15:9];
+                            ram_wr_addr_out[15:9]   <= xv::XR_COLOR_ADDR[15:9];
                             ram_wr_addr_out[8:0]    <= move_p_addr;
                             ram_wr_data_out         <= move_data;
 
@@ -470,7 +470,7 @@ always_ff @(posedge clk) begin
                         INSN_MOVEC: begin
                             // movec
                             xr_wr_en                <= 1'b1;
-                            ram_wr_addr_out[15:xv::COPP_W]  <= xv::XR_COPPER_MEM[15:xv::COPP_W];
+                            ram_wr_addr_out[15:xv::COPP_W]  <= xv::XR_COPPER_ADDR[15:xv::COPP_W];
                             ram_wr_addr_out[xv::COPP_W-1:0] <= move_c_addr_v_pos[xv::COPP_W-1:0];
                             ram_wr_data_out                 <= move_data;
 

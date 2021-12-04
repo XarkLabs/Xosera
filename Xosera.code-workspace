@@ -232,7 +232,8 @@
 			"chrono": "c",
 			"queue": "c",
 			"random": "c",
-			"machine.h": "c"
+			"machine.h": "c",
+			"bit": "c"
 		},
 		"workbench.colorCustomizations": {
 			"terminal.foreground": "#20DB20",

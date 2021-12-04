@@ -1,0 +1,15 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "modulo added to B SRC_B after each line",
+            "type": 4,
+            "attr": [
+                "NOTE: TODO nibble addition or XOR when const?"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

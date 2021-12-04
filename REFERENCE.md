@@ -21,7 +21,7 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
       - [Playfield A & B Control XR Registers Summary](#playfield-a--b-control-xr-registers-summary)
       - [Playfield A & B Control XR Registers Details](#playfield-a--b-control-xr-registers-details)
       - [2D Blitter Engine XR Registers Summary](#2d-blitter-engine-xr-registers-summary)
-      - [Polygon / Line Draw Engine XR Registers Summary](#polygon--line-draw-engine-xr-registers-summary)
+      - [2D Blitter Engine XR Registers Details](#2d-blitter-engine-xr-registers-details)
   - [Video Synchronized Co-Processor Details](#video-synchronized-co-processor-details)
     - [Programming the Co-processor](#programming-the-co-processor)
     - [Co-processor Instruction Set](#co-processor-instruction-set)
@@ -211,9 +211,9 @@ ___
 | XR_PB_REGS      | 0x0018-0x001F   | R/W | playfield B XR registers                   |
 | XR_BLIT_REGS    | 0x0020-0x002F   | R/W | 2D-blit XR registers                       |
 | XR_DRAW_REGS    | 0x0030-0x003F   | R/W | line/poly draw XR registers                |
-| XR_COLOR_MEM    | 0x8000-0x81FF   | R/W | 2 x 256W 16-bit color lookup memory (XRGB) |
-| XR_TILE_MEM     | 0xA000-0xB3FF   | R/W | 5KW 16-bit tile glyph storage memory       |
-| XR_COPPER_MEM   | 0xC000-0xC7FF   | R/W | 2KW 16-bit copper program memory           |
+| XR_COLOR_ADDR   | 0x8000-0x81FF   | R/W | 2 x 256W 16-bit color lookup memory (XRGB) |
+| XR_TILE_ADDR    | 0xA000-0xB3FF   | R/W | 5KW 16-bit tile glyph storage memory       |
+| XR_COPPER_ADDR  | 0xC000-0xC7FF   | R/W | 2KW 16-bit copper program memory           |
 | (unused region) | 0xE000-0xFFFF   | -/- | (unused region)                            |
 
 To access an XR register or XR memory address, write the XR register number or address to `XM_XR_ADDR`, then read or write to
@@ -418,47 +418,107 @@ ___
 
 #### 2D Blitter Engine XR Registers Summary
 
-| Reg # | Name  | R/W | Description |
-| ----- | ----- | --- | ----------- |
-| 0x20  | [TBD] | R/W |             |
-| 0x21  | [TBD] | R/W |             |
-| 0x22  | [TBD] | R/W |             |
-| 0x23  | [TBD] | R/W |             |
-| 0x24  | [TBD] | R/W |             |
-| 0x25  | [TBD] | R/W |             |
-| 0x26  | [TBD] | R/W |             |
-| 0x27  | [TBD] | R/W |             |
-| 0x28  | [TBD] | R/W |             |
-| 0x29  | [TBD] | R/W |             |
-| 0x2A  | [TBD] | R/W |             |
-| 0x2B  | [TBD] | R/W |             |
-| 0x2C  | [TBD] | R/W |             |
-| 0x2D  | [TBD] | R/W |             |
-| 0x2E  | [TBD] | R/W |             |
-| 0x2F  | [TBD] | R/W |             |
-___
+| Reg # | Name            | R/W  | Description                                                                   |
+| ----- | --------------- | ---- | ----------------------------------------------------------------------------- |
+| 0x20  | `XR_BLIT_CTRL`  | R/W  | control bits (logic ops, A addr/const, B addr/const, transparent/opaque)      |
+| 0x21  | `XR_BLIT_SHIFT` | R/W  | first and last word nibble masks and nibble shift (0-3)                       |
+| 0x22  | `XR_BLIT_MOD_A` | R/W  | modulo added to A address or constant XOR'd with A at end of line             |
+| 0x23  | `XR_BLIT_MOD_B` | R/W  | modulo added to B address or constant XOR'd with B at end of line             |
+| 0x24  | `XR_BLIT_MOD_C` | R/W  | constant XOR'd with C at end of line                                          |
+| 0x25  | `XR_BLIT_MOD_D` | R/W  | modulo added to D address at end of line                                      |
+| 0x26  | `XR_BLIT_SRC_A` | R/W  | source term A (read from VRAM or constant value with `constA` flag)           |
+| 0x27  | `XR_BLIT_SRC_B` | R/W  | source term B (read from VRAM or constant value with `constB` flag)           |
+| 0x28  | `XR_BLIT_VAL_C` | R/W  | source term C (constant value)                                                |
+| 0x29  | `XR_BLIT_DST_D` | R/W  | D destination (VRAM write address)                                            |
+| 0x2A  | `XR_BLIT_LINES` | R/W  | 15-bit number of lines high - 1 (1 to 32768)                                  |
+| 0x2B  | `XR_BLIT_WORDS` | R/W+ | write starts blit, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times) |
+| 0x2C  | [TBD]           | R/W  |                                                                               |
+| 0x2D  | [TBD]           | R/W  |                                                                               |
+| 0x2E  | [TBD]           | R/W  |                                                                               |
+| 0x2F  | [TBD]           | R/W  |                                                                               |
 
-#### Polygon / Line Draw Engine XR Registers Summary
+#### 2D Blitter Engine XR Registers Details
 
-| Reg # | Name  | R/W | Description |
-| ----- | ----- | --- | ----------- |
-| 0x30  | [TBD] | R/W |             |
-| 0x31  | [TBD] | R/W |             |
-| 0x32  | [TBD] | R/W |             |
-| 0x33  | [TBD] | R/W |             |
-| 0x34  | [TBD] | R/W |             |
-| 0x35  | [TBD] | R/W |             |
-| 0x36  | [TBD] | R/W |             |
-| 0x37  | [TBD] | R/W |             |
-| 0x38  | [TBD] | R/W |             |
-| 0x39  | [TBD] | R/W |             |
-| 0x3A  | [TBD] | R/W |             |
-| 0x3B  | [TBD] | R/W |             |
-| 0x3C  | [TBD] | R/W |             |
-| 0x3D  | [TBD] | R/W |             |
-| 0x3E  | [TBD] | R/W |             |
-| 0x3F  | [TBD] | R/W |             |
-___
+**0x20 `XR_BLIT_CTRL` (R/W) - control bits (logic ops, A addr/const, B addr/const, transparent/opaque)**
+<img src="./pics/wd_XR_BLIT_CTRL.svg">
+**blitter operation control**
+`constA` selects source term A to be a constant loaded from `XR_BLIT_SRC_A` instead of being read from VRAM.
+Similarly `constB` selects source term B to be a constant loaded from `XR_BLIT_SRC_B`  instead of being read from VRAM.
+Source term B also has the flag `BxorA` which, when `A` is not a constant will cause B to effectively take on the value of `A ^ B` (using the original B constant value specified).  This can be quite handy to generate a logic term based on A (e.g., for transparency or compositing).
+
+logic op selects among the following operations:
+| Logic Op | Name    | Operation       | Description                                         |
+| -------- | ------- | --------------- | --------------------------------------------------- |
+| 00       | COPY    | `D = A & C`     | Copying with mask                                   |
+| 01       | ADD     | `D = A + B & C` | Adds A + B nibbles with mask                        |
+| 10       | XOR_AND | `D = A ^ B & C` | XOR and mask constant  to set, clear or toggle bits |
+| 11       | AND_XOR | `D = A & B ^ C` | Mask and XOR constant to set, clear or toggle bits  |
+
+Note that the above is applied _in conjunction and independently_ to the transparency test described below (transparency testing can not be outright disabled, but you can test against a non-transparent constant to effectively disable it).
+A "transparent" pixel is one that will not be altered or overwritten in destination memory (and Xosera VRAM can selectively "mask" the nibbles written, so it is no slower than a normal opaque full word write).  For the Xosera blitter a zero value pixel (either 4-bit or 8-bit) is considered transparent, however there are several ways to alter the value that is tested for transparency (it doesn't necessarily have to match the logic op result pixel value).  The transparency test occurs using the A or source term B and can be set to treat pixels as either 4-bit or 8-bit. When `pixel_8b` is set, only pairs of nibbles will be considered transparent when both are zero (i.e. a zero 8-bit pixel).  The transparency test can be done on either source term A or source term B values (when `transp_B` bit is set).
+
+**Some useful tips**:
+
+- If transparency is not desired (all pixels opaque), one way is to set source term `B` to an opaque const (one with no zero nibbles) and enable source term `B` as the transparency source.
+- If a transparent pixel value other than zero is desired, one way is to set source term `B` to a const and set the `B=A^B` bit.  This will cause the effective source term B to be the same as A XOR'd with the initial B const value which can convert any arbitrary value into all zero.  For example, to make nibble value `3` transparent (instead of `0`), set `constB` and `BxorA` flags and set `BLIT_SRC_B` to `0x3333` (e.g, `A=0x1234 XOR B=0x3333` makes B effectively `B'=0x2107`, now the 3rd `3` is a `0` and will be considered transparent for the transparency test if `B` is selected as the transparency source in `BLIT_CTRL`).
+
+**0x21 `XR_BLIT_SHIFT` (R/W) - first and last word nibble masks and nibble shift**
+<img src="./pics/wd_XR_BLIT_SHIFT.svg">
+**first and last word nibble masks and nibble shift**
+The left nibble mask will unconditionally mask out (make transparent) any zero nibbles on the first word of each line.
+Similarly, the right nibble mask will unconditionally mask out (make transparent) any zero nibbles on the last word of each line.
+The nibble shift specifies a 0 to 3 nibble right shift on all words drawn.  Nibbles shifted out the right of a word will be shifted into the left for the next word (to provide a seamless pixel shift with word aligned writes).  In "normal" use, when the nibble shift is non-zero, the left and right nibble mask would typically contain the value `0xF0` nibble shifted (e.g., `0xF0 >> nibble_shift * 4`). The right edge mask hides "garbage" pixlels wrapping from left edge, and right edge mask hides excess pixels when images is not a exact word width.  When shifting, typically also you need to add an extra word to `BLIT_WORDS` and subtract one from `BLIT_MOD_A` (to avoid skewing the image).  When not shifting (nibble shift of zero) and your source image width is word aligned, you typically want the complete last word so both left and right mask `0xFF` (no edge masking).  If your source image is not an exact multiple word width, you would typically want to trim the excess pixels from the right edge (e.g., for a 7 nibble wide image, `0xFE`).  For images 1 word wide, both left and right edge masks will be AND'd together.  Also this masking is AND'd with the normal transparency control (so if a pixel is masked by either the left mask, right mask or is considered transparent it will not be drawn).
+
+**0x22 `XR_BLIT_MOD_A` (R/W) - modulo added to `BLIT_SRC_A` address or XOR'd with `constA` at end of line**
+<img src="./pics/wd_XR_BLIT_MOD_A.svg">
+**modulo added to `BLIT_SRC_A` address or XOR'd with `constA` at end of line**
+Arbitrary twos complement value.  Typically zero or -1 (if shifting) when `BLIT_SRC_A` image data is contiguous.
+
+**0x23 `XR_BLIT_MOD_B` (R/W) - modulo added to `BLIT_SRC_B` address or XOR'd with `constB` at end of line**
+<img src="./pics/wd_XR_BLIT_MOD_B.svg">
+**modulo added to `BLIT_SRC_B` address or XOR'd with `constB` at end of line**
+Arbitrary twos complement value.
+
+**0x24 `XR_BLIT_MOD_C` (R/W) - XOR'd with `BLIT_VAL_C` at end of line**
+<img src="./pics/wd_XR_BLIT_MOD_C.svg">
+**XOR'd with `BLIT_VAL_C` at end of line**
+Arbitrary twos complement value.
+
+**0x25 `XR_BLIT_MOD_D` (R/W) - modulo added to `BLIT_DST_D` address at end of line**
+<img src="./pics/wd_XR_BLIT_MOD_D.svg">
+**modulo added to `BLIT_DST_D` address at end of line**
+Arbitrary twos complement value.  Typically `BLIT_DST_D` destination image words per line minus the source image width in words, so that after completing a line this value would adjust `BLIT_DST_D` to point to the starting address for the next line.
+
+**0x26 `XR_BLIT_SRC_A` (R/W) - source term A (read from VRAM address or constant value)**
+<img src="./pics/wd_XR_BLIT_SRC_A.svg">
+**source term A (read from VRAM address or constant value)**
+Address of source VRAM image data or arbitary constant if `constA` set.  Source term A is also one of the terms that is used for transparency (when `transp_B` is 0).
+
+**0x27 `XR_BLIT_SRC_B` (R/W) - source term B (read from VRAM address or constant value)**
+<img src="./pics/wd_XR_BLIT_SRC_B.svg">
+**source term A (read from VRAM address or constant value)**
+Address of source VRAM image data or arbitary constant if `constB` set.  It can also be set to change when A is read from VRAM (without incurring an additional VRAM read) with `BxorA` flag (`B'` will effectively be the same as `A` XOR'd with the original `B` const value).  Source term B is also one of the terms that is used for transparency (when `transp_B` is 1).
+
+**0x28 `XR_BLIT_VAL_C` (R/W) - source term C (constant value)**
+<img src="./pics/wd_XR_BLIT_MOD_C.svg">
+**source term C (constant value)**
+Arbitrary value.
+
+**0x29 `XR_BLIT_DST_D` (R/W) - destination D VRAM write address**
+<img src="./pics/wd_XR_BLIT_DST_D.svg">
+**destination D VRAM write address**
+Destination VRAM address.
+
+**0x2A `XR_BLIT_LINES` (R/W) - 15-bit number of lines heigh - 1 (1 to 32768)**
+<img src="./pics/wd_XR_BLIT_LINES.svg">
+**15-bit number of lines high - 1 (1 to 32768)**
+Number of times to repeat blit operation minus one.  Typically source image height with modulo values advancing addresses for the next line to be drawn).
+
+**0x2B `XR_BLIT_WORDS` (R/W+) - write starts blit, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times)**
+<img src="./pics/wd_XR_BLIT_LINES.svg">
+**write starts blit, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times))**
+Write starts blit operation, you should check `blit_full` bit in `XM_SYS_CTRL` to make sure the blitter is ready to accept a new operation (it supports one operation in progress and one operation queued to start - after that it reports `blit_full` true and you should wait before altering any BLIT registers).
+To check if all blit operation has completely finished (and no operations queued), you can check the `blit_busy` bit in `XM_SYS_CTRL` which will read true until the blit operation has come to a complete stop.
 
 ## Video Synchronized Co-Processor Details
 
@@ -471,10 +531,10 @@ otherwise be possible.
 Interaction with the copper involves two Xosera memory areas:
 
 - XR Register 0x01 - The **`XR_COPP_CTRL`** register
-- Xosera XR memory area **`0xC000-0xC7FF`** - The **`XR_COPPER_MEM`** area
+- Xosera XR memory area **`0xC000-0xC7FF`** - The **`XR_COPPER_ADDR`** area
 
 In general, programming the copper comprises loading a copper program (or 'copper list') into
-the `XR_COPPER_MEM` area, and then setting the starting PC (if necessary) and enable bit in
+the `XR_COPPER_ADDR` area, and then setting the starting PC (if necessary) and enable bit in
 the `XR_COPP_CTRL` register.
 
 > **Note:** The PC contained in the control register is the _initial_ PC, used to initialize
@@ -566,15 +626,15 @@ Move 16-bit data to XR register specified by 8-bit address.
 
 **`MOVEF` - [100A AAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
 
-Move 16-bit data to `XR_TILE_MEM` (or 'font') memory.
+Move 16-bit data to `XR_TILE_ADDR` (or 'font') memory.
 
 **`MOVEP` - [101o oooA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
 
-Move 16-bit data to `XR_COLOR_MEM` (or 'palette') memory.
+Move 16-bit data to `XR_COLOR_ADDR` (or 'palette') memory.
 
 **`MOVEC` - [110o oAAA AAAA AAAA],[DDDD DDDD DDDD DDDD]**
 
-Move 16-bit data to `XR_COPPER_MEM` memory.
+Move 16-bit data to `XR_COPPER_ADDR` memory.
 
 Key:
 

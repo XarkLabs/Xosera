@@ -1,0 +1,73 @@
+{
+    "reg": [
+        {
+            "bits": 1,
+            "name": "constA",
+            "type": 3,
+            "attr": [
+                "A term",
+                "0=mem",
+                "1=const"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "constB",
+            "type": 6,
+            "attr": [
+                "B term",
+                "0=mem",
+                "1=const"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "B=A^B",
+            "type": 6,
+            "attr": [
+                "BxorA",
+                "B const",
+                "0=norm",
+                "1=A^B"
+            ]
+        },
+        {
+            "bits": 1,
+            "type": 1
+        },
+        {
+            "bits": 1,
+            "name": "4/8 bpp",
+            "type": 4,
+            "attr": [
+                "transp.",
+                "pixel",
+                "0=4-bpp",
+                "1=8-bpp"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "A/B",
+            "type": 4,
+            "attr": [
+                "transp.",
+                "source",
+                "0=A",
+                "1=B"
+            ]
+        },
+        {
+            "bits": 2,
+            "name": "logic op",
+            "type": 4
+        },
+        {
+            "bits": 8,
+            "type": 1
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

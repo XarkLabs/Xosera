@@ -1,0 +1,17 @@
+{
+    "reg": [
+        {
+            "bits": 15,
+            "name": "number of times to repeat blit minus one (1-32768 lines to blit)",
+            "type": 4,
+            "attr": []
+        },
+        {
+            "bits": 1,
+            "type": 1
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

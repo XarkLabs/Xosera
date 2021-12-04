@@ -1,0 +1,13 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "destination D VRAM address",
+            "type": 4,
+            "attr": []
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

@@ -36,23 +36,20 @@ module blitter(
 );
 
 // blitter xreg register data (holds "queued" blit)
-logic  [1:0]    xreg_ctrl_op;
 logic           xreg_ctrl_A_const;
 logic           xreg_ctrl_B_const;
-logic           xreg_ctrl_B_XOR_A;
 logic           xreg_ctrl_transp_8b;
-logic           xreg_ctrl_transp_B;
 
 logic  [1:0]    xreg_shift;
 logic  [3:0]    xreg_shift_l_mask;
 logic  [3:0]    xreg_shift_r_mask;
 word_t          xreg_mod_A;
 word_t          xreg_mod_B;
-word_t          xreg_mod_C;
+word_t          xreg_and_C;
 word_t          xreg_mod_D;
 word_t          xreg_src_A;
 word_t          xreg_src_B;
-word_t          xreg_val_C;
+word_t          xreg_xor_C;
 word_t          xreg_dst_D;
 logic [14:0]    xreg_lines;                         // "limitation" of 32768 lines
 word_t          xreg_words;
@@ -70,20 +67,17 @@ always_ff @(posedge clk) begin
 
         xreg_ctrl_A_const   <= '0;
         xreg_ctrl_B_const   <= '0;
-        xreg_ctrl_B_XOR_A   <= '0;
         xreg_ctrl_transp_8b <= '0;
-        xreg_ctrl_transp_B  <= '0;
-        xreg_ctrl_op        <= '0;
         xreg_shift          <= '0;
         xreg_shift_l_mask   <= '0;
         xreg_shift_r_mask   <= '0;
         xreg_mod_A          <= '0;
         xreg_mod_B          <= '0;
-        xreg_mod_C          <= '0;
+        xreg_and_C          <= '0;
         xreg_mod_D          <= '0;
         xreg_src_A          <= '0;
         xreg_src_B          <= '0;
-        xreg_val_C          <= '0;
+        xreg_xor_C          <= '0;
         xreg_dst_D          <= '0;
         xreg_lines          <= '0;
         xreg_words          <= '0;
@@ -97,40 +91,38 @@ always_ff @(posedge clk) begin
         if (xreg_wr_en_i) begin
             case ({ 2'b10, xreg_num_i })
                 xv::XR_BLIT_CTRL: begin
-                    // [15:8]
-                    xreg_ctrl_op        <= xreg_data_i[7:6];
-                    xreg_ctrl_transp_B  <= xreg_data_i[5];
-                    xreg_ctrl_transp_8b <= xreg_data_i[4];
-                    // [3]
-                    xreg_ctrl_B_XOR_A   <= xreg_data_i[2];
+                    // [15:4]
+                    xreg_ctrl_transp_8b <= xreg_data_i[3];
+                    // [2]
+
                     xreg_ctrl_B_const   <= xreg_data_i[1];
                     xreg_ctrl_A_const   <= xreg_data_i[0];
+                end
+                xv::XR_BLIT_AND_C: begin
+                    xreg_and_C          <= xreg_data_i;
+                end
+                xv::XR_BLIT_XOR_C: begin
+                    xreg_xor_C          <= xreg_data_i;
+                end
+                xv::XR_BLIT_MOD_B: begin
+                    xreg_mod_B          <= xreg_data_i;
+                end
+                xv::XR_BLIT_SRC_B: begin
+                    xreg_src_B          <= xreg_data_i;
+                end
+                xv::XR_BLIT_MOD_D: begin
+                    xreg_mod_D          <= xreg_data_i;
+                end
+                xv::XR_BLIT_MOD_A: begin
+                    xreg_mod_A          <= xreg_data_i;
+                end
+                xv::XR_BLIT_SRC_A: begin
+                    xreg_src_A          <= xreg_data_i;
                 end
                 xv::XR_BLIT_SHIFT: begin
                     xreg_shift_l_mask   <= xreg_data_i[15:12];
                     xreg_shift_r_mask   <= xreg_data_i[11:8];
                     xreg_shift          <= xreg_data_i[1:0];
-                end
-                xv::XR_BLIT_MOD_A: begin
-                    xreg_mod_A          <= xreg_data_i;
-                end
-                xv::XR_BLIT_MOD_B: begin
-                    xreg_mod_B          <= xreg_data_i;
-                end
-                xv::XR_BLIT_MOD_C: begin
-                    xreg_mod_C          <= xreg_data_i;
-                end
-                xv::XR_BLIT_MOD_D: begin
-                    xreg_mod_D          <= xreg_data_i;
-                end
-                xv::XR_BLIT_SRC_A: begin
-                    xreg_src_A          <= xreg_data_i;
-                end
-                xv::XR_BLIT_SRC_B: begin
-                    xreg_src_B          <= xreg_data_i;
-                end
-                xv::XR_BLIT_VAL_C: begin
-                    xreg_val_C          <= xreg_data_i;
                 end
                 xv::XR_BLIT_DST_D: begin
                     xreg_dst_D          <= xreg_data_i;
@@ -153,23 +145,23 @@ end
 always_ff @(posedge clk) begin
     case ({ 2'b10, xreg_num_i })
         xv::XR_BLIT_CTRL:
-            xreg_data_o     <= { 8'b0, xreg_ctrl_op, xreg_ctrl_transp_B, xreg_ctrl_transp_8b, 1'b0, xreg_ctrl_B_XOR_A, xreg_ctrl_B_const, xreg_ctrl_A_const};
-        xv::XR_BLIT_SHIFT:
-            xreg_data_o     <= { xreg_shift_l_mask, xreg_shift_r_mask, 6'b0, xreg_shift };
-        xv::XR_BLIT_MOD_A:
-            xreg_data_o     <= xreg_mod_A;
+            xreg_data_o     <= { 12'b0, xreg_ctrl_transp_8b, 1'b0, xreg_ctrl_B_const, xreg_ctrl_A_const};
+        xv::XR_BLIT_AND_C:
+            xreg_data_o     <= xreg_and_C;
+        xv::XR_BLIT_XOR_C:
+            xreg_data_o     <= xreg_xor_C;
         xv::XR_BLIT_MOD_B:
             xreg_data_o     <= xreg_mod_B;
-        xv::XR_BLIT_MOD_C:
-            xreg_data_o     <= xreg_mod_C;
-        xv::XR_BLIT_MOD_D:
-            xreg_data_o     <= xreg_mod_D;
-        xv::XR_BLIT_SRC_A:
-            xreg_data_o     <= xreg_src_A;
         xv::XR_BLIT_SRC_B:
             xreg_data_o     <= xreg_src_B;
-        xv::XR_BLIT_VAL_C:
-            xreg_data_o     <= xreg_val_C;
+        xv::XR_BLIT_MOD_D:
+            xreg_data_o     <= xreg_mod_D;
+        xv::XR_BLIT_MOD_A:
+            xreg_data_o     <= xreg_mod_A;
+        xv::XR_BLIT_SRC_A:
+            xreg_data_o     <= xreg_src_A;
+        xv::XR_BLIT_SHIFT:
+            xreg_data_o     <= { xreg_shift_l_mask, xreg_shift_r_mask, 6'b0, xreg_shift };
         xv::XR_BLIT_DST_D:
             xreg_data_o     <= xreg_dst_D;
         xv::XR_BLIT_LINES:
@@ -182,22 +174,19 @@ always_ff @(posedge clk) begin
 end
 
 // blitter operational registers (for blit in progress)
-logic  [1:0]    blit_ctrl_op;
 logic           blit_ctrl_A_const;
 logic           blit_ctrl_B_const;
-logic           blit_ctrl_B_XOR_A;
 logic           blit_ctrl_transp_8b;
-logic           blit_ctrl_transp_B;
 logic  [3:0]    blit_shift_l_mask;
 logic  [3:0]    blit_shift_r_mask;
 logic  [1:0]    blit_shift;
 word_t          blit_mod_A;
 word_t          blit_mod_B;
-word_t          blit_mod_C;
+word_t          blit_and_C;
 word_t          blit_mod_D;
 word_t          blit_src_A;
 word_t          blit_src_B;
-word_t          blit_val_C;
+word_t          blit_xor_C;
 word_t          blit_dst_D;
 word_t          blit_lines;             // bit 15 is underflow done flag
 word_t          blit_words;
@@ -229,47 +218,23 @@ function automatic [27:0] lsr_4(
     end
 endfunction
 
-logic [27:0]    lsr_A;                  // 0 to 3 nibble shifted A value
-logic [27:0]    lsr_B;                  // 0 to 3 nibble shifted A value
-logic [11:0]    lsr_out_A;              // up to 3 nibbles shifted out of A, to shift into next A word
-logic [11:0]    lsr_out_B;              // up to 3 nibbles shifted out of A, to shift into next A word
+logic [27:0]    lsr_A;                  // 0 to 3 nibble right shifted A value
+logic [11:0]    lsr_out_A;              // up to 3 nibbles right shifted out of A, to shift into next A word
+always_comb     lsr_A       = lsr_4(blit_shift, lsr_out_A, blit_data_i);    // shifted value read from blit_src_A
 
-assign  lsr_A = lsr_4(blit_shift, lsr_out_A, blit_data_i);    // shifted value read from blit_src_A
-assign  lsr_B = lsr_4(blit_shift, lsr_out_B, blit_data_i);    // shifted value read from blit_src_B
+logic [27:0]    lsr_B;                  // 0 to 3 nibble right shifted B value
+logic [11:0]    lsr_out_B;              // up to 3 nibbles right shifted out of B, to shift into next B word
+always_comb     lsr_B       = lsr_4(blit_shift, lsr_out_B, blit_data_i);    // shifted value read from blit_src_B
 
-// logic ops
-typedef enum logic [1:0] {
-    OP_A_AND_C          = 2'b00,        // D = A & C
-    OP_A_ADD_B_AND_C    = 2'b01,        // D = A + B & C
-    OP_A_XOR_B_AND_C    = 2'b10,        // D = A ^ B & C
-    OP_A_AND_B_XOR_C    = 2'b11         // D = A & B ^ C
-} blit_op_t;
+// logic op
+word_t          val_A;                  // const or value read from blit_src_A
+word_t          val_B;                  // const or value read from blit_src_B
+word_t          val_D;                  // value to write to blit_dst_D
 
-word_t              val_A;              // const or value read from blit_src_A
-word_t              val_B;              // const or value read from blit_src_B
-word_t              val_C;              // const value blit_val_C
-word_t              val_D;              // value to write to blit_dst_D
+assign          blit_data_o = val_D;        // val_D is output to VRAM
 
-assign val_C        = blit_val_C;       // val_C is alias for blit_val_C register
-assign blit_data_o  = val_D;            // val_D is output to VRAM
-always_comb begin : logic_ops           // TODO: check cost of these
-    case (blit_ctrl_op[1:0])
-        OP_A_AND_C:         val_D   = val_A & val_C;                    // COPY: A AND with const C (A, B or B=A^B can be used for transparency)
-        OP_A_ADD_B_AND_C:   val_D   = { val_A[15:12] + val_B[15:12],    // ADD: add A + B nibbles, AND with const C
-                                        val_A[11:8]  + val_B[11:8],
-                                        val_A[7:4]   + val_B[ 7:4],
-                                        val_A[3:0]   + val_B[ 3:0]
-                                      } & val_C;
-        OP_A_XOR_B_AND_C:   val_D   = val_A ^ val_B & val_C;
-        OP_A_AND_B_XOR_C:   val_D   = val_A & val_B ^ val_C;            // ALTER: A AND B XOR C (clear, set or toggle bits)
-    endcase
-end
-// Seems too chonky...
-        // OP_A_MASK_B_XOR_C:   val_D   = val_A & { {4{(|val_B[15:12])}},   // MASK: mask out A nibble when B nibble is zero, XOR with const C
-        //                                         {4{(|val_B[11:8])}},
-        //                                         {4{(|val_B[7:4])}},
-        //                                         {4{(|val_B[3:0])}}
-        //                                       }  ^ val_C;
+always_comb     val_D       = val_A & val_B & blit_and_C ^ blit_xor_C;   // calc logic op
+
 // transparency
 logic  [3:0]    blit_mask_trans;
 
@@ -278,17 +243,9 @@ assign blit_wr_mask_o = (blit_first_word ? blit_shift_l_mask  : 4'b1111) &
                       blit_mask_trans;
 always_comb begin
     if (blit_ctrl_transp_8b) begin
-        if (blit_ctrl_transp_B) begin
-            blit_mask_trans = { |val_B[15:8], |val_B[15:8], |val_B[7:0], |val_B[7:0] };
-        end else begin
-            blit_mask_trans = { |val_A[15:8], |val_A[15:8], |val_A[7:0], |val_A[7:0] };
-        end
+        blit_mask_trans = { |val_B[15:8], |val_B[15:8], |val_B[7:0], |val_B[7:0] };
     end else begin
-        if (blit_ctrl_transp_B) begin
-            blit_mask_trans = { |val_B[15:12], |val_B[11:8], |val_B[7:4], |val_B[3:0] };
-        end else begin
-            blit_mask_trans = { |val_A[15:12], |val_A[11:8], |val_A[7:4], |val_A[3:0] };
-        end
+        blit_mask_trans = { |val_B[15:12], |val_B[11:8], |val_B[7:4], |val_B[3:0] };
     end
 end
 
@@ -318,20 +275,17 @@ always_ff @(posedge clk) begin
 
         blit_ctrl_A_const   <= '0;
         blit_ctrl_B_const   <= '0;
-        blit_ctrl_B_XOR_A   <= '0;
         blit_ctrl_transp_8b <= '0;
-        blit_ctrl_transp_B  <= '0;
-        blit_ctrl_op        <= '0;
         blit_shift_l_mask   <= '0;
         blit_shift_r_mask   <= '0;
         blit_shift          <= '0;
         blit_mod_A          <= '0;
         blit_mod_B          <= '0;
-        blit_mod_C          <= '0;
+        blit_and_C          <= '0;
         blit_mod_D          <= '0;
         blit_src_A          <= '0;
         blit_src_B          <= '0;
-        blit_val_C          <= '0;
+        blit_xor_C          <= '0;
         blit_dst_D          <= '0;
         blit_lines          <= '0;
         blit_words          <= '0;
@@ -355,36 +309,33 @@ always_ff @(posedge clk) begin
                 end
             end
             BLIT_SETUP: begin
-                blit_ctrl_op        <= xreg_ctrl_op;
                 blit_ctrl_A_const   <= xreg_ctrl_A_const;
                 blit_ctrl_B_const   <= xreg_ctrl_B_const;
-                blit_ctrl_B_XOR_A   <= xreg_ctrl_B_XOR_A;
                 blit_ctrl_transp_8b <= xreg_ctrl_transp_8b;
-                blit_ctrl_transp_B  <= xreg_ctrl_transp_B;
                 blit_shift          <= xreg_shift;
                 blit_shift_l_mask   <= xreg_shift_l_mask;
                 blit_shift_r_mask   <= xreg_shift_r_mask;
 
                 blit_mod_A          <= xreg_mod_A;
                 blit_mod_B          <= xreg_mod_B;
-                blit_mod_C          <= xreg_mod_C;
+                blit_and_C          <= xreg_and_C;
                 blit_mod_D          <= xreg_mod_D;
                 blit_src_A          <= xreg_src_A;
                 blit_src_B          <= xreg_src_B;
-                blit_val_C          <= xreg_val_C;
+                blit_xor_C          <= xreg_xor_C;
                 blit_dst_D          <= xreg_dst_D;
                 blit_lines          <= { 1'b0, xreg_lines };
-                blit_words          <= xreg_words - 1'b1;
+                blit_words          <= xreg_words;
 
-                blit_first_word     <= 1'b1;    // first word flag after first write
-                val_A               <= xreg_src_A;
-                val_B               <= xreg_src_B;
+                blit_first_word     <= 1'b1;
+                val_A               <= xreg_src_B & xreg_mod_A ^ xreg_src_A;
+                val_B               <= xreg_src_A & xreg_mod_B ^ xreg_src_B;
 
                 blit_state          <= BLIT_LINE_START;
             end
             BLIT_LINE_START: begin
-                blit_lines          <= blit_lines - 1'b1;       // pre-decrement, bit[15] underflow indicates last line (1-32768)
-                blit_count          <= { 1'b0, blit_words };     // pre-decrement, bit[16] underflow indicates last word (1-65536)
+                blit_lines          <= blit_lines - 1'b1;               // pre-decrement, bit[15] underflow indicates last line (1-32768)
+                blit_count          <= { 1'b0, blit_words }  - 1'b1;    // pre-decrement bit[16] underflow indicates last word (1-65536)
 
                 if (!blit_ctrl_B_const) begin
                     blit_vram_sel_o     <= 1'b1;
@@ -408,11 +359,19 @@ always_ff @(posedge clk) begin
                     lsr_out_B           <= lsr_B[11:0];
                     blit_src_B          <= blit_src_B + 1'b1;
 
-                    blit_vram_sel_o     <= 1'b1;
-                    blit_wr_o           <= 1'b0;
-                    blit_addr_o         <= blit_src_A;
+                    if (blit_ctrl_A_const) begin
+                        val_A               <= lsr_B[27:12] & blit_mod_A ^ blit_src_A;
+                    end
 
-                    blit_state          <= BLIT_WAIT_RD_A;
+                    if (!blit_ctrl_A_const) begin
+                        blit_vram_sel_o     <= 1'b1;
+                        blit_wr_o           <= 1'b0;
+                        blit_addr_o         <= blit_src_A;
+
+                        blit_state          <= BLIT_WAIT_RD_A;
+                    end else begin
+                        blit_state          <= BLIT_EXEC_OP;
+                    end
                 end else begin
                     blit_vram_sel_o     <= 1'b1;
                     blit_wr_o           <= 1'b0;
@@ -425,12 +384,8 @@ always_ff @(posedge clk) begin
                     lsr_out_A           <= lsr_A[11:0];
                     blit_src_A          <= blit_src_A + 1'b1;
 
-                    if (blit_ctrl_B_XOR_A) begin    // TODO: check this ideas cost
-                        if (blit_ctrl_B_const) begin
-                            val_B               <= lsr_A[27:12] ^ blit_src_B;
-                        end else begin
-                            val_B               <= lsr_A[27:12] ^ val_B;
-                        end
+                    if (blit_ctrl_B_const) begin
+                        val_B               <= lsr_A[27:12] & blit_mod_B ^ blit_src_B;
                     end
 
                     blit_state          <= BLIT_EXEC_OP;
@@ -483,14 +438,10 @@ always_ff @(posedge clk) begin
             BLIT_LINE_FINISH: begin
                 blit_first_word     <= 1'b1;
 
-
                 blit_src_A  <= blit_src_A + blit_mod_A;
                 blit_src_B  <= blit_src_B + blit_mod_B;
                 blit_dst_D  <= blit_dst_D + blit_mod_D;
 
-                val_A       <= val_A ^ blit_mod_A;      // TODO: nibble addition expensive?
-                val_B       <= val_B ^ blit_mod_B;
-                blit_val_C  <= blit_val_C ^ blit_mod_C;
 
                 if (blit_last_line) begin
                     blit_state          <= BLIT_DONE;

@@ -161,18 +161,18 @@ class BusInterface
         XR_PB_UNUSED_1E = 0x1E,        //
         XR_PB_UNUSED_1F = 0x1F,        //
 
-        XR_BLIT_CTRL  = 0x20,        // (R /W) blit control bits (logic ops, A addr/const, B addr/const, transparent)
-        XR_BLIT_SHIFT = 0x21,        // (R /W) blit nibble shift (0-3)
-        XR_BLIT_MOD_A = 0x22,        // (R /W) blit modulo added to A between lines (rectangular blit)
-        XR_BLIT_MOD_B = 0x23,        // (R /W) blit modulo added to B between lines (rectangular blit)
-        XR_BLIT_MOD_C = 0x24,        // (R /W) blit modulo added to C between lines (rectangular blit)
-        XR_BLIT_MOD_D = 0x25,        // (R /W) blit modulo added to D between lines (rectangular blit)
-        XR_BLIT_SRC_A = 0x26,        // (R /W) blit A source VRAM read address / constant value
-        XR_BLIT_SRC_B = 0x27,        // (R /W) blit B source VRAM read address / constant value
-        XR_BLIT_VAL_C = 0x28,        // (R /W) blit C source constant value
+        XR_BLIT_CTRL  = 0x20,        // (R /W) blit control bits (transparency control, logic op and op input flags)
+        XR_BLIT_AND_C = 0x21,        // (R /W) blit C source constant AND value
+        XR_BLIT_XOR_C = 0x22,        // (R /W) blit C source constant XOR value
+        XR_BLIT_MOD_B = 0x23,        // (R /W) blit modulo added to B source after each line
+        XR_BLIT_SRC_B = 0x24,        // (R /W) blit B source read address / constant value
+        XR_BLIT_MOD_D = 0x25,        // (R /W) blit modulo added to D destination after each line
+        XR_BLIT_MOD_A = 0x26,        // (R /W) blit modulo added to A source after each line
+        XR_BLIT_SRC_A = 0x27,        // (R /W) blit A source read address / constant value
+        XR_BLIT_SHIFT = 0x28,        // (R /W) blit first and last word nibble masks and nibble right shift (0-3)
         XR_BLIT_DST_D = 0x29,        // (R /W) blit D destination write address
-        XR_BLIT_LINES = 0x2A,        // (R /W) blit number of lines for rectangular blit
-        XR_BLIT_WORDS = 0x2B         // (R /W) blit word count minus 1, starts operation (width when LINES > 0)
+        XR_BLIT_LINES = 0x2A,        // (R /W) blit number of lines minus 1, (repeats blit word count after modulo calc)
+        XR_BLIT_WORDS = 0x2B         // (R /W) blit word count minus 1 per line (write starts blit operation)
     };
 
     static const char * reg_name[];
@@ -515,18 +515,31 @@ uint16_t     BusInterface::test_data[16384] = {
 
     // fill screen
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0023),                  // constA, constB, transpB, op D = A & C
-    XREG_SETW(BLIT_SHIFT, 0xFF00),                 // no edge masking or shifting
-    XREG_SETW(BLIT_MOD_A, 0x5858 ^ 0x8585),        // modulo A - toggle dither pattern every line (Kind of cool! 😀)
-    XREG_SETW(BLIT_MOD_B, 0x0000),                 // no modulo B (would be XOR'd to B every line)
-    XREG_SETW(BLIT_MOD_C, 0x0000),                 // no modulo C (would be XOR'd to C every line)
-    XREG_SETW(BLIT_MOD_D, 0x0000),                 // no modulo D (contiguous destination lines)
-    XREG_SETW(BLIT_SRC_A, 0x5858),                 // dither patterh (purple + gray)
-    XREG_SETW(BLIT_SRC_B, 0x8888),                 // with constB & transpB this disables transparency
-    XREG_SETW(BLIT_VAL_C, 0xFFFF),                 // needed with op D = A & C (to not alter A)
-    XREG_SETW(BLIT_DST_D, 0x0000),                 // VRAM display address
-    XREG_SETW(BLIT_LINES, H_4BPP - 1),             // screen height -1
-    XREG_SETW(BLIT_WORDS, W_4BPP - 1),             // screen width in words -1
+    XREG_SETW(BLIT_CTRL, 0x0003),                 // constA, constB, transpB, op D = A & C
+    XREG_SETW(BLIT_SHIFT, 0xFF00),                // no edge masking or shifting
+    XREG_SETW(BLIT_MOD_A, 0x0000),                // modulo or const A AND
+    XREG_SETW(BLIT_MOD_B, 0x0000),                // no modulo B (would be XOR'd to B every line)
+    XREG_SETW(BLIT_AND_C, 0xFFFF),                // no modulo C (would be XOR'd to C every line)
+    XREG_SETW(BLIT_MOD_D, W_4BPP),                // no modulo D (contiguous destination lines)
+    XREG_SETW(BLIT_SRC_A, 0x0808),                // dither patterh (purple + gray)
+    XREG_SETW(BLIT_SRC_B, 0xFFFF),                // with constB & transpB this disables transparency
+    XREG_SETW(BLIT_XOR_C, 0x0000),                // needed with op D = A & C (to not alter A)
+    XREG_SETW(BLIT_DST_D, 0x0000),                // VRAM display address
+    XREG_SETW(BLIT_LINES, H_4BPP / 2 - 1),        // screen height -1
+    XREG_SETW(BLIT_WORDS, W_4BPP - 1),            // screen width in words -1
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0003),                 // constA, constB, transpB, op D = A & C
+    XREG_SETW(BLIT_SHIFT, 0xFF00),                // no edge masking or shifting
+    XREG_SETW(BLIT_MOD_A, 0x0000),                // modulo or const A AND
+    XREG_SETW(BLIT_MOD_B, 0x0000),                // no modulo B (would be XOR'd to B every line)
+    XREG_SETW(BLIT_AND_C, 0xFFFF),                // no modulo C (would be XOR'd to C every line)
+    XREG_SETW(BLIT_MOD_D, W_4BPP),                // no modulo D (contiguous destination lines)
+    XREG_SETW(BLIT_SRC_A, 0x8080),                // dither patterh (purple + gray)
+    XREG_SETW(BLIT_SRC_B, 0xFFF0),                // with constB & transpB this disables transparency
+    XREG_SETW(BLIT_XOR_C, 0x0000),                // needed with op D = A & C (to not alter A)
+    XREG_SETW(BLIT_DST_D, W_4BPP),                // VRAM display address
+    XREG_SETW(BLIT_LINES, H_4BPP / 2 - 1),        // screen height -1
+    XREG_SETW(BLIT_WORDS, W_4BPP - 1),            // screen width in words -1
     REG_WAIT_BLIT_DONE(),
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
@@ -582,7 +595,6 @@ uint16_t     BusInterface::test_data[16384] = {
 
     REG_WAIT_BLIT_DONE(),
     REG_WAITVSYNC(),
-#endif
 #endif
     // 2D moto blit
     REG_WAIT_BLIT_READY(),
@@ -644,6 +656,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_DST_D, 0x0000 + (80 * W_4BPP) + 1),
     XREG_SETW(BLIT_LINES, H_LOGO - 1),
     XREG_SETW(BLIT_WORDS, W_LOGO),
+#endif
 #if 0
     // 2D moto blit #2
     REG_WAIT_BLIT_READY(),

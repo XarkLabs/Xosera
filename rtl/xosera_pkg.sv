@@ -128,16 +128,16 @@ typedef enum logic [5:0] {
     XR_PB_UNUSED_1F = 6'h1F,            //
     // Blitter Registers (WIP)
     XR_BLIT_CTRL    = 6'h20,            // (R /W) blit control bits (transparency control, logic op and op input flags)
-    XR_BLIT_SHIFT   = 6'h21,            // (R /W) blit first and last word nibble masks and nibble right shift (0-3)
-    XR_BLIT_MOD_A   = 6'h22,            // (R /W) blit modulo added to A source after each line
+    XR_BLIT_AND_C   = 6'h21,            // (R /W) blit C source constant AND value
+    XR_BLIT_XOR_C   = 6'h22,            // (R /W) blit C source constant XOR value
     XR_BLIT_MOD_B   = 6'h23,            // (R /W) blit modulo added to B source after each line
-    XR_BLIT_MOD_C   = 6'h24,            // (R /W) blit modulo added to C value after each line
+    XR_BLIT_SRC_B   = 6'h24,            // (R /W) blit B source read address / constant value
     XR_BLIT_MOD_D   = 6'h25,            // (R /W) blit modulo added to D destination after each line
-    XR_BLIT_SRC_A   = 6'h26,            // (R /W) blit A source read address / constant value
-    XR_BLIT_SRC_B   = 6'h27,            // (R /W) blit B source read address / constant value
-    XR_BLIT_VAL_C   = 6'h28,            // (R /W) blit C source constant value
+    XR_BLIT_MOD_A   = 6'h26,            // (R /W) blit modulo added to A source after each line
+    XR_BLIT_SRC_A   = 6'h27,            // (R /W) blit A source read address / constant value
+    XR_BLIT_SHIFT   = 6'h28,            // (R /W) blit first and last word nibble masks and nibble right shift (0-3)
     XR_BLIT_DST_D   = 6'h29,            // (R /W) blit D destination write address
-    XR_BLIT_LINES   = 6'h2A,            // (R /W) blit number of lines minus 1 (repeats word count blit with modulo calc)
+    XR_BLIT_LINES   = 6'h2A,            // (R /W) blit number of lines minus 1, (repeats blit word count after modulo calc)
     XR_BLIT_WORDS   = 6'h2B             // (R /W) blit word count minus 1 per line (write starts blit operation)
 } xr_register_t;
 

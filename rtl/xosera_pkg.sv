@@ -24,12 +24,13 @@
 `define GITHASH 00000000                // unknown Git hash (not using Git)
 `endif
 
-`define VERSION 0_25                    // BCD version code (x.xx)
+`define VERSION 0_26                    // BCD version code (x.xx)
 
 //`define USE_HEXFONT                     // use hex font instead of default fonts
 //`define NO_TESTPATTERN                  // don't initialize VRAM with test pattern and fonts in simulation
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
 //`define NO_CS_BUS_DELAY                 // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
+`define ENABLE_BLIT_REG_READ            // without this, blit registers only read zero
 
 // features that can be optionally disabled
 `define ENABLE_PF_B                     // enable playfield B

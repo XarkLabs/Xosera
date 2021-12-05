@@ -141,6 +141,7 @@ always_ff @(posedge clk) begin
     end
 end
 
+`ifdef ENABLE_BLIT_REG_READ
 // blit registers read
 always_ff @(posedge clk) begin
     case ({ 2'b10, xreg_num_i })
@@ -172,6 +173,9 @@ always_ff @(posedge clk) begin
             xreg_data_o     <= '0;
     endcase
 end
+`else
+assign xreg_data_o     = '0;
+`endif
 
 // blitter operational registers (for blit in progress)
 logic           blit_ctrl_A_const;

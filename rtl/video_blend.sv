@@ -52,6 +52,11 @@ logic [4:0] b_addABx2;
 logic unused_bits;  // NOTE: Verilator recognizes "unused" prefix
 assign unused_bits = &{ 1'b0, colorA_xrgb_i[14:12], colorB_xrgb_i[13:12], r_alpha25[1:0], g_alpha25[1:0], b_alpha25[1:0] } ;
 
+`ifdef SIMPLE_VIDEO_BLEND
+logic unused_bits2;
+assign unused_bits2 = &{ 1'b0, r_addAB[0], g_addAB[0], b_addAB[0], r_subAB, g_subAB, b_subAB, r_addABx2, g_addABx2, b_addABx2 } ;
+`endif
+
 always_comb begin
     r_addAB = colorA_xrgb_i[11:8] + colorB_xrgb_i[11:8];
     g_addAB = colorA_xrgb_i[7:4]  + colorB_xrgb_i[7:4];
@@ -108,6 +113,7 @@ always_ff @(posedge clk) begin
                                      b_addAB[4:1] };
         // 100% B
         3'b0_11:    blend_rgb_o <= colorB_xrgb_i[11:0];
+`ifndef SIMPLE_VIDEO_BLEND
         // A + B
         3'b1_00:    blend_rgb_o <= { r_addAB[4] ? 4'hF : r_addAB[3:0],
                                      g_addAB[4] ? 4'hF : g_addAB[3:0],
@@ -124,11 +130,13 @@ always_ff @(posedge clk) begin
         3'b1_11:    blend_rgb_o <= { r_addABx2[4] ? (colorB_xrgb_i[11] ? 4'h0 : 4'hF) : r_addABx2[3:0],
                                      g_addABx2[4] ? (colorB_xrgb_i[ 7] ? 4'h0 : 4'hF) : g_addABx2[3:0],
                                      b_addABx2[4] ? (colorB_xrgb_i[ 3] ? 4'h0 : 4'hF) : b_addABx2[3:0] };
+`else
+        default:    blend_rgb_o <= colorB_xrgb_i[11:0];
+`endif
         endcase
 `else
         blend_rgb_o             <=  colorA_xrgb_i[11:0];
 `endif
-
     end else begin
         blend_rgb_o <= 12'h0;
     end

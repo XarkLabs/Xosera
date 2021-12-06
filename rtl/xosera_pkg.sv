@@ -30,7 +30,11 @@
 //`define NO_TESTPATTERN                  // don't initialize VRAM with test pattern and fonts in simulation
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
 //`define NO_CS_BUS_DELAY                 // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
-`define ENABLE_BLIT_REG_READ            // without this, blit registers only read zero
+//`define SIMPLE_VIDEO_BLEND              // only simple compositing
+//`define ENABLE_BLIT_REG_READ            // without this, blit registers only read zero
+`define BLIT_ENABLE_CONST_MOD           // use MOD values to XOR constants each line
+`define BLIT_ENABLE_CONST_ADD_A         // if above set, use nibble add for A const (vs XOR)
+
 
 // features that can be optionally disabled
 `define ENABLE_PF_B                     // enable playfield B
@@ -129,15 +133,15 @@ typedef enum logic [5:0] {
     XR_PB_UNUSED_1F = 6'h1F,            //
     // Blitter Registers (WIP)
     XR_BLIT_CTRL    = 6'h20,            // (R /W) blit control bits (transparency control, logic op and op input flags)
-    XR_BLIT_AND_C   = 6'h21,            // (R /W) blit C source constant AND value
-    XR_BLIT_XOR_C   = 6'h22,            // (R /W) blit C source constant XOR value
-    XR_BLIT_MOD_B   = 6'h23,            // (R /W) blit modulo added to B source after each line
-    XR_BLIT_SRC_B   = 6'h24,            // (R /W) blit B source read address / constant value
-    XR_BLIT_MOD_D   = 6'h25,            // (R /W) blit modulo added to D destination after each line
+    XR_BLIT_VAL_T   = 6'h21,            // (R /W) blit transparency constant (XOR'd with B and used for 4/8-bit zero tests)
+    XR_BLIT_MOD_B   = 6'h22,            // (R /W) blit modulo added to B source after each line
+    XR_BLIT_SRC_B   = 6'h23,            // (R /W) blit B source VRAM read address / constant value
+    XR_BLIT_MOD_D   = 6'h24,            // (R /W) blit modulo added to D destination after each line
+    XR_BLIT_VAL_C   = 6'h25,            // (R /W) blit C source XOR constant value
     XR_BLIT_MOD_A   = 6'h26,            // (R /W) blit modulo added to A source after each line
-    XR_BLIT_SRC_A   = 6'h27,            // (R /W) blit A source read address / constant value
+    XR_BLIT_SRC_A   = 6'h27,            // (R /W) blit A source VRAM read address / constant value
     XR_BLIT_SHIFT   = 6'h28,            // (R /W) blit first and last word nibble masks and nibble right shift (0-3)
-    XR_BLIT_DST_D   = 6'h29,            // (R /W) blit D destination write address
+    XR_BLIT_DST_D   = 6'h29,            // (R /W) blit D VRAM destination write address
     XR_BLIT_LINES   = 6'h2A,            // (R /W) blit number of lines minus 1, (repeats blit word count after modulo calc)
     XR_BLIT_WORDS   = 6'h2B             // (R /W) blit word count minus 1 per line (write starts blit operation)
 } xr_register_t;
@@ -153,7 +157,7 @@ typedef enum logic [1:0] {
     BPP_1_ATTR      = 2'b00,
     BPP_4           = 2'b01,
     BPP_8           = 2'b10,
-    BPP_XX          = 2'b11             // TODO: maybe YUYV or RL7 mode?
+    BPP_XX          = 2'b11             // TODO: maybe RL7 mode?
 } bpp_depth_t;
 
 typedef enum {

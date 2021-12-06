@@ -1,16 +1,5 @@
 # Xosera - Xark's Open Source Embedded Retro Adapter
 
-```text
-  Y - Y position (11 bits)
-  X - X position (11 bits)
-  F - Flags
-  R - Register
-  A - Address
-  D - Data
-  o - Not used / don't care
-
-```
-
 Xosera is a Verilog design currently for iCE40UltraPlus5K FPGA that implements an "Embedded Retro Adapter"
 designed primarily for the rosco_m68K series of retro computers (but adaptable to others).  It provides
 color video text and graphics generation similar to late 80s 68K era home computers (along with other
@@ -680,6 +669,17 @@ Move 16-bit data to `XR_COLOR_ADDR` (or 'palette') memory.
 Move 16-bit data to `XR_COPPER_ADDR` memory.
 
 Key:
+
+```text
+  Y - Y position (11 bits)
+  X - X position (11 bits)
+  F - Flags
+  R - Register
+  A - Address
+  D - Data
+  o - Not used / don't care
+
+```
 
 ___
 

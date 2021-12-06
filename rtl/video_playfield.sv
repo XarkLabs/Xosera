@@ -53,9 +53,9 @@ module video_playfield(
     input  wire clk                                                 // pixel clock
 );
 
-localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;        // memory prefetch starts early
-localparam H_MEM_END        = xv::TOTAL_WIDTH-8;               // memory fetch can end a bit early
-localparam H_SCANOUT_BEGIN  = xv::OFFSCREEN_WIDTH-2;     // h count for start line scanout
+localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;               // memory prefetch starts early
+localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fetch can end a bit early
+localparam H_SCANOUT_BEGIN  = xv::OFFSCREEN_WIDTH-2;                // h count for start line scanout
 
 // display line fetch generation FSM
 typedef enum logic [3:0] {

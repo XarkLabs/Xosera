@@ -31,9 +31,6 @@
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
 //`define NO_CS_BUS_DELAY                 // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
 `define SIMPLE_VIDEO_BLEND              // only simple compositing
-//`define BLIT_ENABLE_REG_READ            // without this, blit registers only read zero
-`define BLIT_ENABLE_CONST_MOD           // use MOD values to XOR constants each line
-//`define BLIT_ENABLE_CONST_ADD_A         // if above set, use nibble add for A const (vs XOR)
 
 
 // features that can be optionally disabled

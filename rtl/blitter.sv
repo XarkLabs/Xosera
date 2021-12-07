@@ -146,7 +146,7 @@ always_ff @(posedge clk) begin
     end
 end
 
-`ifdef ENABLE_BLIT_REG_READ
+`ifdef BLIT_ENABLE_REG_READ
 // blit registers read
 always_ff @(posedge clk) begin
     case ({ 2'b10, xreg_num_i })
@@ -247,7 +247,7 @@ word_t          result_C;               // value read from blit_src_B VRAM or co
 word_t          result_D;               // value to write to blit_dst_D
 
 always_comb     result_B        = blit_ctrl_B_useA ? val_A : val_B;         // effective B term
-always_comb     result_C        = blit_ctrl_C_useB ? blit_val_C : val_B;    // effective C term
+always_comb     result_C        = blit_ctrl_C_useB ? val_B : blit_val_C;    // effective C term
 always_comb     result_D        = val_A & result_B ^ result_C;              // calc logic op result
 
 assign          blit_data_o = result_D; // result_D is output to VRAM
@@ -439,8 +439,8 @@ always_ff @(posedge clk) begin
                     blit_addr_o         <= blit_dst_D;
                 end else begin
                     if (blit_ctrl_decrement) begin
-                        blit_dst_D          <= blit_dst_D + 1'b1;       // update D addr
-                        blit_addr_o         <= blit_dst_D + 1'b1;       // setup VRAM addr for constant write
+                        blit_dst_D          <= blit_dst_D - 1'b1;       // update D addr
+                        blit_addr_o         <= blit_dst_D - 1'b1;       // setup VRAM addr for constant write
                     end else begin
                         blit_dst_D          <= blit_dst_D + 1'b1;       // update D addr
                         blit_addr_o         <= blit_dst_D + 1'b1;       // setup VRAM addr for constant write

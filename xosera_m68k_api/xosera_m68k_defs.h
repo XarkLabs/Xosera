@@ -62,6 +62,10 @@
 #define XM_RW_DATA   0x38        // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
 #define XM_RW_DATA_2 0x3C        // (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
 
+#define SYS_CTRL_MEMWAIT_B  7
+#define SYS_CTRL_BLITBUSY_B 6
+#define SYS_CTRL_BLITFULL_B 5
+
 #define MK_SYS_CTRL(reboot, bootcfg, intena, wrmask)                                                                   \
     (XB_(reboot, 15, 1) | XB_(bootcfg, 14, 2) | XB_(intena, 11, 4) | XB_(wrmask, 3, 0))
 

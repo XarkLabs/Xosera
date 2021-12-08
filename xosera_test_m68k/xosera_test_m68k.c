@@ -608,14 +608,12 @@ void draw8bpp_v_line(uint16_t base, uint8_t color, int x, int y, int len)
 
 static inline void wait_blit_done()
 {
-    while (xm_getbl(SYS_CTRL) & 0x40)
-        ;
+    xm_wait_blitbusy();
 }
 
 static inline void wait_blit_ready()
 {
-    while (xm_getbl(SYS_CTRL) & 0x20)
-        ;
+    xm_wait_blitfull();
 }
 #define NUM_BOBS 20
 struct bob

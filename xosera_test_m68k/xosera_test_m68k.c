@@ -608,12 +608,12 @@ void draw8bpp_v_line(uint16_t base, uint8_t color, int x, int y, int len)
 
 static inline void wait_blit_done()
 {
-    xm_wait_blitbusy();
+    xwait_blit_busy();
 }
 
 static inline void wait_blit_ready()
 {
-    xm_wait_blitfull();
+    xwait_blit_full();
 }
 #define NUM_BOBS 20
 struct bob
@@ -1413,10 +1413,8 @@ static void test_xr_read()
         }
         for (int w = XR_TILE_ADDR; w < XR_TILE_ADDR + 0x1400; w++)
         {
-            xm_setw(XR_ADDR, w);
-            uint16_t v = xm_getw(XR_DATA);           // read tile mem
+            uint16_t v = xmem_getw_wait(w);
             xm_setw(XR_DATA, r & 1 ? v : ~v);        // toggle to prove read and set in VRAM
-                                                     //            __asm__ __volatile__("nop ; nop ; nop ; nop");
         }
 
         if (delay_check(10))

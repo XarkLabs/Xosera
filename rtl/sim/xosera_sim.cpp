@@ -1420,10 +1420,10 @@ int main(int argc, char ** argv)
                 // sim_render dithered border area
                 if (((current_x ^ current_y) & 1) == 1)        // non-visible
                 {
-                    // dither with dimmed color 0
-                    auto       vmem    = top->xosera_main->xrmem_arb->colormem->bram;
-                    uint16_t * color0p = &vmem[0];
-                    uint16_t   color0  = *color0p;
+                    // dither with dimmed color 0 // TODO: fix border
+                    //                    auto       vmem    = top->xosera_main->xrmem_arb->colormem->bram;
+                    //                    uint16_t * color0p = &vmem[0];
+                    uint16_t color0 = 0;        //*color0p;
                     SDL_SetRenderDrawColor(
                         renderer, ((color0 & 0x0f00) >> 5), ((color0 & 0x00f0) >> 1), ((color0 & 0x000f) << 7), 255);
                 }

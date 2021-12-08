@@ -19,7 +19,10 @@
 
 `include "xosera_pkg.sv"
 
-module video_gen(
+module video_gen #(
+    parameter EN_VID_PF_B       = 1
+)
+(
     // video registers and control
     input  wire logic           vgen_reg_wr_en_i,      // strobe to write internal config register number
     input  wire logic  [4:0]    vgen_reg_num_i,        // internal config register number (for reads)
@@ -43,9 +46,7 @@ module video_gen(
     input  wire word_t          tilemem_data_i,        // tile mem word data in
     // video signal outputs
     output      color_t         colorA_index_o,        // color palette index output (16x256)
-`ifdef ENABLE_PF_B
     output      color_t         colorB_index_o,        // color palette index output (16x256)
-`endif
     output      logic           vsync_o, hsync_o,      // video sync outputs
     output      logic           dv_de_o,               // video active signal (needed for HDMI)
     // standard signals
@@ -89,7 +90,6 @@ addr_t              pa_vram_addr;                       // vram word address out
 logic               pa_tile_sel;                        // tile mem read select
 tile_addr_t         pa_tile_addr;                       // tile mem word address out (16x5K)
 
-`ifdef ENABLE_PF_B
 // playfield B generation control signals
 logic               pb_blank;                           // disable plane B
 logic [15:0]        pb_start_addr;                      // display data start address (word address)
@@ -115,7 +115,6 @@ logic               pb_vram_sel;                        // vram read select
 addr_t              pb_vram_addr;                       // vram word address out (16x64K)
 logic               pb_tile_sel;                        // tile mem read select
 tile_addr_t         pb_tile_addr;                       // tile mem word address out (16x5K)
-`endif
 
 // video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
 typedef enum logic [1:0] {
@@ -153,18 +152,11 @@ assign h_count_o    = h_count;
 assign v_count_o    = v_count;
 `endif
 
-`ifdef ENABLE_PF_B
 assign pb_stall = (pa_vram_sel && pb_vram_sel) || (pa_tile_sel && pb_tile_sel);
 assign vram_sel_o       = pa_vram_sel ? pa_vram_sel  : pb_vram_sel;
 assign vram_addr_o      = pa_vram_sel ? pa_vram_addr : pb_vram_addr;
 assign tilemem_sel_o    = pa_tile_sel ? pa_tile_sel  : pb_tile_sel;
 assign tilemem_addr_o   = pa_tile_sel ? pa_tile_addr : pb_tile_addr;
-`else
-assign vram_sel_o       = pa_vram_sel;
-assign vram_addr_o      = pa_vram_addr;
-assign tilemem_sel_o    = pa_tile_sel;
-assign tilemem_addr_o   = pa_tile_addr;
-`endif
 
 video_playfield video_pf_a(
     .stall_i(1'b0),                             // playfield A never stalls
@@ -203,76 +195,103 @@ video_playfield video_pf_a(
     .clk(clk)
 );
 
-`ifdef ENABLE_PF_B
-logic       pb_vram_rd;                             // last cycle was PB vram read flag
-logic       pb_vram_rd_save;                        // PB vram read data saved flag
-word_t      pb_vram_rd_data;                        // PB vram read data
-logic       pb_tilemem_rd;                          // last cycle was PB tilemem read flag
-logic       pb_tilemem_rd_save;                     // PB tilemem read data saved flag
-word_t      pb_tilemem_rd_data;                     // PB tilemem read data
+generate
+    if (EN_VID_PF_B) begin
+        logic       pb_vram_rd;                             // last cycle was PB vram read flag
+        logic       pb_vram_rd_save;                        // PB vram read data saved flag
+        word_t      pb_vram_rd_data;                        // PB vram read data
+        logic       pb_tilemem_rd;                          // last cycle was PB tilemem read flag
+        logic       pb_tilemem_rd_save;                     // PB tilemem read data saved flag
+        word_t      pb_tilemem_rd_data;                     // PB tilemem read data
 
-always_ff @(posedge clk) begin
-    // latch vram read data for playfield B
-    if (pb_vram_rd & ~pb_vram_rd_save) begin        // if was a vram read and result not already saved
-        pb_vram_rd_save <= 1'b1;                    // remember vram read saved
-        pb_vram_rd_data <= vram_data_i;             // save vram data
+        always_ff @(posedge clk) begin
+            // latch vram read data for playfield B
+            if (pb_vram_rd & ~pb_vram_rd_save) begin        // if was a vram read and result not already saved
+                pb_vram_rd_save <= 1'b1;                    // remember vram read saved
+                pb_vram_rd_data <= vram_data_i;             // save vram data
+            end
+            if (~pb_stall) begin                            // if not stalled, clear saved vram data
+                pb_vram_rd_save <= 1'b0;
+            end
+
+            pb_vram_rd  <= pb_vram_sel;                     // remember if this cycle was reading vram
+
+            // latch tilemem read data for playfield B
+            if (pb_tilemem_rd & ~pb_tilemem_rd_save) begin  // if was a tilemem read and result not already saved
+                pb_tilemem_rd_save <= 1'b1;                 // remember tilemem read saved
+                pb_tilemem_rd_data <= tilemem_data_i;       // save tilemem data
+            end
+            if (~pb_stall) begin                            // if not stalled, clear saved tilemem data
+                pb_tilemem_rd_save <= 1'b0;
+            end
+
+            pb_tilemem_rd  <= pb_tile_sel;                 // remember if this cycle was reading tilemem
+        end
+
+        video_playfield video_pf_b(
+            .stall_i(pb_stall),
+            .v_visible_i(v_state == STATE_VISIBLE),
+            .h_count_i(h_count),
+            .h_line_last_pixel_i(h_line_last_pixel),
+            .last_frame_pixel_i(last_frame_pixel),
+            .border_color_i(8'h00),                         // TODO: set border color index for pf_b?
+            .vid_left_i(vid_left),
+            .vid_right_i(vid_right),
+            .vram_sel_o(pb_vram_sel),
+            .vram_addr_o(pb_vram_addr),
+            .vram_data_i(pb_vram_rd_save ? pb_vram_rd_data : vram_data_i),
+            .tilemem_sel_o(pb_tile_sel),
+            .tilemem_addr_o(pb_tile_addr),
+            .tilemem_data_i(pb_tilemem_rd_save ? pb_tilemem_rd_data : tilemem_data_i),
+            .pf_blank_i(pb_blank),
+            .pf_start_addr_i(pb_start_addr),
+            .pf_line_len_i(pb_line_len),
+            .pf_colorbase_i(pb_colorbase),
+            .pf_bpp_i(pb_bpp),
+            .pf_bitmap_i(pb_bitmap),
+            .pf_tile_bank_i(pb_tile_bank),
+            .pf_disp_in_tile_i(pb_disp_in_tile),
+            .pf_tile_in_vram_i(pb_tile_in_vram),
+            .pf_tile_height_i(pb_tile_height),
+            .pf_h_repeat_i(pb_h_repeat),
+            .pf_v_repeat_i(pb_v_repeat),
+            .pf_fine_hscroll_i(pb_fine_hscroll),
+            .pf_fine_vscroll_i(pb_fine_vscroll),
+            .pf_line_start_set_i(pb_line_start_set),
+            .pf_line_start_addr_i(line_set_addr),
+            .pf_gfx_ctrl_set_i(pb_gfx_ctrl_set),
+            .pf_color_index_o(pb_color_index),
+            .reset_i(reset_i),
+            .clk(clk)
+        );
+    end else begin
+        logic unused_pf_b;
+        assign unused_pf_b = &{ 1'b0,
+            pb_stall,
+            pb_blank,
+            pb_start_addr,
+            pb_line_len,
+            pb_colorbase,
+            pb_bpp,
+            pb_bitmap,
+            pb_tile_bank,
+            pb_disp_in_tile,
+            pb_tile_in_vram,
+            pb_tile_height,
+            pb_h_repeat,
+            pb_v_repeat,
+            pb_fine_hscroll,
+            pb_fine_vscroll,
+            pb_line_start_set,
+            pb_gfx_ctrl_set
+        };
+        assign pb_color_index   = '0;
+        assign pb_vram_sel      = '0;
+        assign pb_vram_addr     = '0;
+        assign pb_tile_sel      = '0;
+        assign pb_tile_addr     = '0;
     end
-    if (~pb_stall) begin                            // if not stalled, clear saved vram data
-        pb_vram_rd_save <= 1'b0;
-    end
-
-    pb_vram_rd  <= pb_vram_sel;                     // remember if this cycle was reading vram
-
-    // latch tilemem read data for playfield B
-    if (pb_tilemem_rd & ~pb_tilemem_rd_save) begin  // if was a tilemem read and result not already saved
-        pb_tilemem_rd_save <= 1'b1;                 // remember tilemem read saved
-        pb_tilemem_rd_data <= tilemem_data_i;       // save tilemem data
-    end
-    if (~pb_stall) begin                            // if not stalled, clear saved tilemem data
-        pb_tilemem_rd_save <= 1'b0;
-    end
-
-    pb_tilemem_rd  <= pb_tile_sel;                 // remember if this cycle was reading tilemem
-end
-
-video_playfield video_pf_b(
-    .stall_i(pb_stall),
-    .v_visible_i(v_state == STATE_VISIBLE),
-    .h_count_i(h_count),
-    .h_line_last_pixel_i(h_line_last_pixel),
-    .last_frame_pixel_i(last_frame_pixel),
-    .border_color_i(8'h00),                         // TODO: set border color index for pf_b?
-    .vid_left_i(vid_left),
-    .vid_right_i(vid_right),
-    .vram_sel_o(pb_vram_sel),
-    .vram_addr_o(pb_vram_addr),
-    .vram_data_i(pb_vram_rd_save ? pb_vram_rd_data : vram_data_i),
-    .tilemem_sel_o(pb_tile_sel),
-    .tilemem_addr_o(pb_tile_addr),
-    .tilemem_data_i(pb_tilemem_rd_save ? pb_tilemem_rd_data : tilemem_data_i),
-    .pf_blank_i(pb_blank),
-    .pf_start_addr_i(pb_start_addr),
-    .pf_line_len_i(pb_line_len),
-    .pf_colorbase_i(pb_colorbase),
-    .pf_bpp_i(pb_bpp),
-    .pf_bitmap_i(pb_bitmap),
-    .pf_tile_bank_i(pb_tile_bank),
-    .pf_disp_in_tile_i(pb_disp_in_tile),
-    .pf_tile_in_vram_i(pb_tile_in_vram),
-    .pf_tile_height_i(pb_tile_height),
-    .pf_h_repeat_i(pb_h_repeat),
-    .pf_v_repeat_i(pb_v_repeat),
-    .pf_fine_hscroll_i(pb_fine_hscroll),
-    .pf_fine_vscroll_i(pb_fine_vscroll),
-    .pf_line_start_set_i(pb_line_start_set),
-    .pf_line_start_addr_i(line_set_addr),
-    .pf_gfx_ctrl_set_i(pb_gfx_ctrl_set),
-    .pf_color_index_o(pb_color_index),
-    .reset_i(reset_i),
-    .clk(clk)
-);
-
-`endif
+endgenerate
 
 // video config registers read/write
 always_ff @(posedge clk) begin
@@ -303,7 +322,6 @@ always_ff @(posedge clk) begin
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_gfx_ctrl_set     <= 1'b0;
 
-`ifdef ENABLE_PF_B
         pb_blank            <= 1'b1;            // playfield B starts blanked
         pb_start_addr       <= 16'h0000;
         pb_line_len         <= xv::TILES_WIDE[15:0];
@@ -320,7 +338,6 @@ always_ff @(posedge clk) begin
         pb_v_repeat         <= 2'b0;
         pb_line_start_set   <= 1'b0;            // indicates user line address set
         pb_gfx_ctrl_set     <= 1'b0;
-`endif
 
         line_set_addr       <= 16'h0000;        // user set display addr
 `ifdef ENABLE_COPP
@@ -401,7 +418,6 @@ always_ff @(posedge clk) begin
                     pa_line_start_set <= 1'b1;               // changed flag
                     line_set_addr   <= vgen_reg_data_i;
                 end
-`ifdef ENABLE_PF_B
                 // playfield B
                 xv::XR_PB_GFX_CTRL: begin
                     pb_colorbase    <= vgen_reg_data_i[15:8];
@@ -431,7 +447,6 @@ always_ff @(posedge clk) begin
                     pb_line_start_set   <= 1'b1;
                     line_set_addr       <= vgen_reg_data_i;
                 end
-`endif
                 default: begin
                 end
             endcase
@@ -531,9 +546,7 @@ end
 always_ff @(posedge clk) begin
     if (reset_i) begin
         colorA_index_o      <= 8'b0;
-`ifdef ENABLE_PF_B
         colorB_index_o      <= 8'b0;
-`endif
         hsync_o             <= 1'b0;
         vsync_o             <= 1'b0;
         dv_de_o             <= 1'b0;
@@ -546,9 +559,7 @@ always_ff @(posedge clk) begin
 
         // set output pixel index from pixel shift-out
         colorA_index_o <= pa_color_index;
-`ifdef ENABLE_PF_B
         colorB_index_o <= pb_color_index;
-`endif
 
         // update registered signals from combinatorial "next" versions
         h_state <= h_state_next;

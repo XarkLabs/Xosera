@@ -12,7 +12,9 @@
 
 `include "xosera_pkg.sv"
 
-module vram_arb
+module vram_arb#(
+    parameter EN_BLIT   = 1
+)
 (
     // video generation access (read-only)
     input  wire logic           vgen_sel_i,
@@ -26,7 +28,6 @@ module vram_arb
     input  wire addr_t          regs_addr_i,
     input  wire word_t          regs_data_i,
 
-`ifdef ENABLE_BLIT
     // TODO: 2D blit access (read/write)
     input  wire logic           blit_sel_i,
     output      logic           blit_ack_o,
@@ -34,7 +35,6 @@ module vram_arb
     input  wire logic  [3:0]    blit_wr_mask_i,
     input  wire addr_t          blit_addr_i,
     input  wire word_t          blit_data_i,
-`endif
 
 `ifdef ENABLE_DRAW
     // TODO: polygon draw access (read/write)
@@ -61,18 +61,14 @@ word_t          vram_data_in;
 
 // ack signals
 logic           regs_ack_next;
-`ifdef ENABLE_BLIT
 logic           blit_ack_next;
-`endif
 `ifdef ENABLE_DRAW
 logic           draw_ack_next;
 `endif
 
 always_comb begin
     regs_ack_next   = 1'b0;
-`ifdef ENABLE_BLIT
     blit_ack_next   = 1'b0;
-`endif
 `ifdef ENABLE_DRAW
     draw_ack_next   = 1'b0;
 `endif
@@ -95,8 +91,7 @@ always_comb begin
         vram_wr_mask    = regs_wr_mask_i;
         vram_data_in    = regs_data_i;
     end
-`ifdef ENABLE_BLIT
-    else if (blit_sel_i & ~blit_ack_o) begin
+    else if (EN_BLIT && (blit_sel_i & ~blit_ack_o)) begin
         blit_ack_next   = 1'b1;
         vram_sel        = 1'b1;
         vram_wr         = blit_wr_i;
@@ -104,7 +99,6 @@ always_comb begin
         vram_wr_mask    = blit_wr_mask_i;
         vram_data_in    = blit_data_i;
     end
-`endif
 `ifdef ENABLE_DRAW
     else if (draw_sel_i & ~draw_ack_o) begin
         draw_ack_next   = 1'b1;
@@ -119,9 +113,7 @@ end
 
 always_ff @(posedge clk) begin
     regs_ack_o  <= regs_ack_next;
-`ifdef ENABLE_BLIT
     blit_ack_o  <= blit_ack_next;
-`endif
 `ifdef ENABLE_DRAW
     draw_ack_o  <= draw_ack_next;
 `endif

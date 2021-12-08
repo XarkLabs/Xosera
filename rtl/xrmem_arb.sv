@@ -12,7 +12,9 @@
 
 `include "xosera_pkg.sv"
 
-module xrmem_arb
+module xrmem_arb#(
+    parameter EN_VID_PF_B       = 1
+)
 (
     // regs XR register/memory interface (read/write)
     input  wire logic                           xr_sel_i,
@@ -40,10 +42,8 @@ module xrmem_arb
     input  wire logic                           vgen_color_sel_i,
     input  wire color_t                         vgen_colorA_addr_i,
     output      argb_t                          vgen_colorA_data_o,
-`ifdef ENABLE_PF_B
     input  wire color_t                         vgen_colorB_addr_i,
     output      argb_t                          vgen_colorB_data_o,
-`endif
 
     // video generation tilemem bus (read-only)
     input  wire logic                           vgen_tile_sel_i,
@@ -65,10 +65,8 @@ logic                           color_rd_en;
 logic                           color_wr_en;
 logic [xv::COLOR_W-1:0]         colorA_addr;
 argb_t                          colorA_data_out ;
-`ifdef ENABLE_PF_B
 logic [xv::COLOR_W-1:0]         colorB_addr;
 argb_t                          colorB_data_out;
-`endif
 
 // internal TILEMEM signals
 logic                           tile_rd_en;
@@ -122,9 +120,7 @@ logic           copp_xr_copp_sel;
 
 // assign read outputs
 assign  vgen_colorA_data_o  = colorA_data_out;
-`ifdef ENABLE_PF_B
 assign  vgen_colorB_data_o  = colorB_data_out;
-`endif
 assign  vgen_tile_data_o    = !tile_addr[xv::TILE_W-1] ? tile_data_out : tile2_data_out;
 `ifdef ENABLE_COPP
 assign  copp_prog_data_o    = copp_data_out;
@@ -189,11 +185,7 @@ end
 always_comb begin
     xr_data_o       = xreg_data_i;
     if (xr_color_sel) begin
-`ifdef ENABLE_PF_B
         xr_data_o   = !xr_addr_i[8] ? colorA_data_out : colorB_data_out;
-`else
-        xr_data_o   = colorA_data_out;
-`endif
     end
     if (xr_tile_sel) begin
         xr_data_o   = !xr_addr_i[xv::TILE_W-1] ? tile_data_out : tile2_data_out;
@@ -228,22 +220,22 @@ always_comb begin
     color_rd_ack_next   = 1'b0;
     color_rd_en         = 1'b0;
     colorA_addr         = vgen_colorA_addr_i;
-`ifdef ENABLE_PF_B
-    colorB_addr         = vgen_colorB_addr_i;
-`endif
+    if (EN_VID_PF_B) begin
+        colorB_addr         = vgen_colorB_addr_i;
+    end
     if (vgen_color_sel_i) begin
         color_rd_en         = 1'b1;
         colorA_addr         = vgen_colorA_addr_i;
-`ifdef ENABLE_PF_B
-        colorB_addr         = vgen_colorB_addr_i;
-`endif
+        if (EN_VID_PF_B) begin
+            colorB_addr         = vgen_colorB_addr_i;
+        end
     end else if (xr_sel_i & ~xr_ack_o) begin
         color_rd_ack_next   = xr_color_sel & ~xr_wr_i;;
         color_rd_en         = xr_color_sel & ~xr_wr_i;;
         colorA_addr         = $bits(colorA_addr)'(xr_addr_i);
-`ifdef ENABLE_PF_B
-        colorB_addr         = $bits(colorB_addr)'(xr_addr_i);
-`endif
+        if (EN_VID_PF_B) begin
+            colorB_addr         = $bits(colorB_addr)'(xr_addr_i);
+        end
     end
 end
 
@@ -303,31 +295,36 @@ colormem #(
     .rd_address_i(colorA_addr),
     .rd_data_o(colorA_data_out),
     .wr_clk(clk),
-`ifdef ENABLE_PF_B
     .wr_en_i(color_wr_en & ~xr_addr[xv::COLOR_W]),
-`else
-    .wr_en_i(color_wr_en),
-`endif
     .wr_address_i(xr_addr[xv::COLOR_W-1:0]),
     .wr_data_i(xr_write_data)
 );
 
-`ifdef ENABLE_PF_B
 // playfield B color lookup RAM
-colormem #(
-    .AWIDTH(xv::COLOR_W),
-    .PLAYFIELD("B")
-    ) colormem2(
-    .clk(clk),
-    .rd_en_i(color_rd_en),
-    .rd_address_i(colorB_addr),
-    .rd_data_o(colorB_data_out),
-    .wr_clk(clk),
-    .wr_en_i(color_wr_en & xr_addr[xv::COLOR_W]),
-    .wr_address_i(xr_addr[xv::COLOR_W-1:0]),
-    .wr_data_i(xr_write_data)
-);
-`endif
+generate
+    if (EN_VID_PF_B) begin
+        colormem #(
+            .AWIDTH(xv::COLOR_W),
+            .PLAYFIELD("B")
+            ) colormem2(
+            .clk(clk),
+            .rd_en_i(color_rd_en),
+            .rd_address_i(colorB_addr),
+            .rd_data_o(colorB_data_out),
+            .wr_clk(clk),
+            .wr_en_i(color_wr_en & xr_addr[xv::COLOR_W]),
+            .wr_address_i(xr_addr[xv::COLOR_W-1:0]),
+            .wr_data_i(xr_write_data)
+        );
+    end else begin
+        logic unused_pf_b;
+        assign unused_pf_b = &{1'b0,
+            colorB_addr
+        };
+
+        assign colorB_data_out = '0;
+    end
+endgenerate
 
 // tile RAM
 tilemem #(

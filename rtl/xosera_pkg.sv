@@ -30,15 +30,12 @@
 //`define NO_TESTPATTERN                  // don't initialize VRAM with test pattern and fonts in simulation
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
 //`define NO_CS_BUS_DELAY                 // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
-`define SIMPLE_VIDEO_BLEND              // only simple compositing
 
 
 // features that can be optionally disabled
-`define ENABLE_PF_B                     // enable playfield B
 `define ENABLE_LFSR                     // enable XM_REG 0xA as 19-bit LFSR
 `define ENABLE_TIMERLATCH               // latch timer low byte when high byte read
 `define ENABLE_COPP                     // enable copper
-`define ENABLE_BLIT                     // enable blitter unit
 //`define ENABLE_DRAW                     // enable draw unit
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")

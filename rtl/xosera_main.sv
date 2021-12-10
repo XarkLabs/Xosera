@@ -40,10 +40,7 @@ module xosera_main#(
     parameter   EN_VID_PF_B             = 1,        // enable playfield B overly
     parameter   EN_VID_PF_B_BLEND_A8    = 0,
     parameter   EN_VID_PF_B_BLEND_EXTRA = 0,        // enable fancy blending modes for playfield B
-    parameter   EN_BLIT                 = 1,        // enable blit unit
-    parameter   EN_BLIT_DECREMENT       = 1,        // enable blit unit "decrement" bit to decrement addresses
-    parameter   EN_BLIT_TRANSP_8BIT     = 1,        // enable blit unit "transp8" bit for 8-bit transparency check
-    parameter   EN_BLIT_CONST_XOR_AB    = 1         // enable blit unit when A or B is a constant, use MOD value for XOR at end of line
+    parameter   EN_BLIT                 = 1         // enable blit unit
 )
 (
     input  wire logic         bus_cs_n_i,           // register select strobe (active low)
@@ -261,11 +258,7 @@ copper copper(
 
 generate
     if (EN_BLIT) begin
-        blitter #(
-            .EN_BLIT_DECREMENT(EN_BLIT_DECREMENT),
-            .EN_BLIT_TRANSP_8BIT(EN_BLIT_TRANSP_8BIT),
-            .EN_BLIT_CONST_XOR_AB(EN_BLIT_CONST_XOR_AB)
-        ) blitter(
+        blitter blitter(
             .xreg_wr_en_i(blit_reg_wr_en),
             .xreg_num_i(xr_regs_addr[3:0]),
             .xreg_data_i(xr_regs_data_in),

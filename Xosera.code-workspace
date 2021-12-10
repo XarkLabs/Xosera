@@ -106,6 +106,7 @@
 			"libftdi",
 			"localparam",
 			"LVCMOS",
+			"moto",
 			"MOVEC",
 			"MOVEF",
 			"movem",
@@ -246,6 +247,12 @@
 		"rewrap.autoWrap.enabled": true,
 		"rewrap.wrappingColumn": 120,
 		"markdown.extension.italic.indicator": "*",
-		"rewrap.reformat": true
+		"rewrap.reformat": true,
+		"todo-tree.general.tags": [
+			"BUG",
+			"HACK",
+			"FIXME",
+			"TODO"
+		]
 	}
 }

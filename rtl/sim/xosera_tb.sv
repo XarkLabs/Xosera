@@ -255,10 +255,10 @@ always begin
     #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h8000);
     // TODO end
 
-`ifdef ENABLE_LFSR
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_LFSR, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
-    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+    // TODO hacked in blit test
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, 16'(XR_BLIT_WORDS));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h0007);
+    // TODO end
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_LFSR, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
@@ -271,7 +271,10 @@ always begin
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_LFSR, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
     $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
-`endif
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_LFSR, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
 
 `ifdef LOAD_MONOBM

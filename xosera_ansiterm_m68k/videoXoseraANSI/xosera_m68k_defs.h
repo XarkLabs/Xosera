@@ -120,12 +120,12 @@
 
 // Blitter Registers
 #define XR_BLIT_CTRL  0x20        // (R /W) blit control bits (transparency control, logic op and op input flags)
-#define XR_BLIT_VAL_T 0x21        // (R /W) blit transparency constant (XOR'd with B and used for 4/8-bit zero tests)
-#define XR_BLIT_MOD_B 0x22        // (R /W) blit modulo added to B source after each line
-#define XR_BLIT_SRC_B 0x23        // (R /W) blit B source VRAM read address / constant value
-#define XR_BLIT_MOD_D 0x24        // (R /W) blit modulo added to D destination after each line
-#define XR_BLIT_VAL_C 0x25        // (R /W) blit C source XOR constant value
-#define XR_BLIT_MOD_A 0x26        // (R /W) blit modulo added to A source after each line
+#define XR_BLIT_MOD_C 0x21        // (R /W) blit value XOR'd to C const after each line
+#define XR_BLIT_VAL_C 0x22        // (R /W) blit C constant value
+#define XR_BLIT_MOD_B 0x23        // (R /W) blit modulo added to B addr after each line, or XOR'd if B const
+#define XR_BLIT_SRC_B 0x24        // (R /W) blit B source VRAM read address / constant value
+#define XR_BLIT_MOD_D 0x25        // (R /W) blit modulo added to D destination after each line
+#define XR_BLIT_MOD_A 0x26        // (R /W) blit modulo added to A addr after each line, or XOR'd if A const
 #define XR_BLIT_SRC_A 0x27        // (R /W) blit A source VRAM read address / constant value
 #define XR_BLIT_SHIFT 0x28        // (R /W) blit first and last word nibble masks and nibble right shift (0-3)
 #define XR_BLIT_DST_D 0x29        // (R /W) blit D VRAM destination write address

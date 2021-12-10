@@ -97,14 +97,14 @@ XR_PB_UNUSED_1F equ     $001F       ;
 
 ; Blitter XR Registers
 XR_BLIT_CTRL    equ     $0020       ; (R /W) blit control bits (transparency control, logic op and op input flags)
-XR_BLIT_AND_C   equ     $0021       ; (R /W) blit C source constant AND value
-XR_BLIT_XOR_C   equ     $0022       ; (R /W) blit C source constant XOR value
-XR_BLIT_MOD_B   equ     $0023       ; (R /W) blit modulo added to B source after each line
-XR_BLIT_SRC_B   equ     $0024       ; (R /W) blit B source read address / constant value
-XR_BLIT_MOD_D   equ     $0025       ; (R /W) blit modulo added to D destination after each line
+XR_BLIT_VAL_T   equ     $0021       ; (R /W) blit transparency constant (XOR'd with B and used for 4/8-bit zero tests)
+XR_BLIT_MOD_B   equ     $0022       ; (R /W) blit modulo added to B source after each line
+XR_BLIT_SRC_B   equ     $0023       ; (R /W) blit B source VRAM read address / constant value
+XR_BLIT_MOD_D   equ     $0024       ; (R /W) blit modulo added to D destination after each line
+XR_BLIT_VAL_C   equ     $0025       ; (R /W) blit C source XOR constant value
 XR_BLIT_MOD_A   equ     $0026       ; (R /W) blit modulo added to A source after each line
-XR_BLIT_SRC_A   equ     $0027       ; (R /W) blit A source read address / constant value
+XR_BLIT_SRC_A   equ     $0027       ; (R /W) blit A source VRAM read address / constant value
 XR_BLIT_SHIFT   equ     $0028       ; (R /W) blit first and last word nibble masks and nibble right shift (0-3)
-XR_BLIT_DST_D   equ     $0029       ; (R /W) blit D destination write address
+XR_BLIT_DST_D   equ     $0029       ; (R /W) blit D VRAM destination write address
 XR_BLIT_LINES   equ     $002A       ; (R /W) blit number of lines minus 1, (repeats blit word count after modulo calc)
 XR_BLIT_WORDS   equ     $002B       ; (R /W) blit word count minus 1 per line (write starts blit operation)

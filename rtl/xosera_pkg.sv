@@ -73,6 +73,12 @@ typedef enum logic [3:0] {
     XM_RW_DATA_2    = 4'hF              // (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
 } xm_register_t;
 
+typedef enum {
+    SYS_CTRL_MEM_WAIT_B = 7,
+    SYS_CTRL_BLIT_BUSY_B = 6,
+    SYS_CTRL_BLIT_FULL_B = 5
+} xm_sys_ctrl_t;
+
 // XR register / memory regions
 typedef enum logic [15:0] {
     // XR Register Regions
@@ -127,12 +133,12 @@ typedef enum logic [5:0] {
     XR_PB_UNUSED_1F = 6'h1F,            //
     // Blitter Registers (WIP)
     XR_BLIT_CTRL    = 6'h20,            // (R /W) blit control bits (transparency control, logic op and op input flags)
-    XR_BLIT_VAL_T   = 6'h21,            // (R /W) blit transparency constant (XOR'd with B and used for 4/8-bit zero tests)
-    XR_BLIT_MOD_B   = 6'h22,            // (R /W) blit modulo added to B source after each line
-    XR_BLIT_SRC_B   = 6'h23,            // (R /W) blit B source VRAM read address / constant value
-    XR_BLIT_MOD_D   = 6'h24,            // (R /W) blit modulo added to D destination after each line
-    XR_BLIT_VAL_C   = 6'h25,            // (R /W) blit C source XOR constant value
-    XR_BLIT_MOD_A   = 6'h26,            // (R /W) blit modulo added to A source after each line
+    XR_BLIT_MOD_C   = 6'h21,            // (R /W) blit value XOR'd to C const after each line
+    XR_BLIT_VAL_C   = 6'h22,            // (R /W) blit C constant value
+    XR_BLIT_MOD_B   = 6'h23,            // (R /W) blit modulo added to B addr after each line, or XOR'd if B const
+    XR_BLIT_SRC_B   = 6'h24,            // (R /W) blit B source VRAM read address / constant value
+    XR_BLIT_MOD_D   = 6'h25,            // (R /W) blit modulo added to D destination after each line
+    XR_BLIT_MOD_A   = 6'h26,            // (R /W) blit modulo added to A addr after each line, or XOR'd if A const
     XR_BLIT_SRC_A   = 6'h27,            // (R /W) blit A source VRAM read address / constant value
     XR_BLIT_SHIFT   = 6'h28,            // (R /W) blit first and last word nibble masks and nibble right shift (0-3)
     XR_BLIT_DST_D   = 6'h29,            // (R /W) blit D VRAM destination write address

@@ -53,31 +53,15 @@ Xosera_intr:
                 ;       interrupt sources, but for now
                 ;       just assume it is vsync [3]
 
-                move.l  XFrameCount,D0          ; clear any interrupts in status
-                and.b   #$07,D0
-                bne.s   noinc
-
-                move.w  #XR_COLOR_ADDR,D0        ; set color entry #0
+                move.w  #XR_COLOR_ADDR,D0       ; set color entry #0
                 movep.w D0,XM_XR_ADDR(A0)
 
                 move.w  NukeColor,D0            ; increment NukeColor
-                addq.l  #1,D0
+                addq.w  #1,D0
+                and.w   #$fff,D0
                 move.w  D0,NukeColor
 
                 movep.w D0,XM_XR_DATA(A0)       ; to NukeColor
-
-                move.w  #XR_CURSOR_X,D0         ; move cursor
-                movep.w D0,XM_XR_ADDR(A0)
-                movep.w XM_XR_DATA(A0),D0
-                addq.l  #3,D0
-                and.w   #$7ff,D0
-                movep.w D0,XM_XR_DATA(A0)
-                move.w  #XR_CURSOR_Y,D0         ; move cursor
-                movep.w D0,XM_XR_ADDR(A0)
-                movep.w XM_XR_DATA(A0),D0
-                addq.l  #1,D0
-                and.w   #$1ff,D0
-                movep.w D0,XM_XR_DATA(A0)
 
 noinc:          add.l   #1,XFrameCount          ; increment frame counter
 

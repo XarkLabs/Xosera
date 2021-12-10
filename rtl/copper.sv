@@ -193,7 +193,7 @@ typedef enum logic [2:0] {
     STATE_EXEC      = 3'b100
 } copper_ex_state_t;
 
-logic  [2:0]  copper_ex_state   = STATE_INIT;
+logic  [2:0]  copper_ex_state;
 
 // init PC is the initial PC value after vblank
 // It comes from the copper control register.

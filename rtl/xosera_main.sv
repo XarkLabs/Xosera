@@ -41,7 +41,8 @@ module xosera_main#(
     parameter   EN_VID_PF_B_NO_BLEND    = 0,        // enable pf B overlay only, no blending
     parameter   EN_VID_PF_B_BLEND_A8    = 0,        // enable pf B 8-level alpha (otherwise 4-level)
     parameter   EN_VID_PF_B_BLEND_EXTRA = 0,        // enable pf B fancy blending modes for playfield B
-    parameter   EN_BLIT                 = 1         // enable blit unit
+    parameter   EN_BLIT                 = 1,        // enable blit unit
+    parameter   EN_BLIT_DECREMENT       = 0         // enable blit decrement bit
 )
 (
     input  wire logic         bus_cs_n_i,           // register select strobe (active low)
@@ -209,7 +210,7 @@ reg_interface reg_interface(
 //  video generation
 video_gen#(
     .EN_VID_PF_B(EN_VID_PF_B)
-) video_gen(
+    ) video_gen(
     .vgen_reg_wr_en_i(vgen_reg_wr_en),
     .vgen_reg_num_i(xr_regs_addr[4:0]),
     .vgen_reg_data_i(xr_regs_data_in),
@@ -259,7 +260,9 @@ copper copper(
 
 generate
     if (EN_BLIT) begin
-        blitter blitter(
+        blitter#(
+            .EN_BLIT_DECREMENT(EN_BLIT_DECREMENT)
+            ) blitter(
             .xreg_wr_en_i(blit_reg_wr_en),
             .xreg_num_i(xr_regs_addr[3:0]),
             .xreg_data_i(xr_regs_data_in),

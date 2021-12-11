@@ -161,16 +161,17 @@ class BusInterface
         XR_PB_UNUSED_1E = 0x1E,        //
         XR_PB_UNUSED_1F = 0x1F,        //
 
-        XR_BLIT_CTRL  = 0x20,        // (R /W) blit control bits (transparency control, logic op and op input flags)
-        XR_BLIT_MOD_C = 0x21,        // (R /W) blit value XOR'd to C const after each line
-        XR_BLIT_VAL_C = 0x22,        // (R /W) blit C constant value
-        XR_BLIT_MOD_B = 0x23,        // (R /W) blit modulo added to B addr after each line, or XOR'd if B const
-        XR_BLIT_SRC_B = 0x24,        // (R /W) blit B source VRAM read address / constant value
-        XR_BLIT_MOD_D = 0x25,        // (R /W) blit modulo added to D destination after each line
-        XR_BLIT_MOD_A = 0x26,        // (R /W) blit modulo added to A addr after each line, or XOR'd if A const
-        XR_BLIT_SRC_A = 0x27,        // (R /W) blit A source VRAM read address / constant value
-        XR_BLIT_SHIFT = 0x28,        // (R /W) blit first and last word nibble masks and nibble right shift (0-3)
-        XR_BLIT_DST_D = 0x29,        // (R /W) blit D VRAM destination write address
+        // Blitter Registers
+        XR_BLIT_CTRL  = 0x20,        // (R /W) blit control (transparency control, logic op and op input flags)
+        XR_BLIT_MOD_A = 0x21,        // (R /W) blit line modulo added to SRC_A (XOR if A const)
+        XR_BLIT_SRC_A = 0x22,        // (R /W) blit A source VRAM read address / constant value
+        XR_BLIT_MOD_B = 0x23,        // (R /W) blit line modulo added to SRC_B (XOR if B const)
+        XR_BLIT_SRC_B = 0x24,        // (R /W) blit B AND source VRAM read address / constant value
+        XR_BLIT_MOD_C = 0x25,        // (R /W) blit line XOR modifier for C_VAL const
+        XR_BLIT_VAL_C = 0x26,        // (R /W) blit C XOR constant value
+        XR_BLIT_MOD_D = 0x27,        // (R /W) blit modulo added to D destination after each line
+        XR_BLIT_DST_D = 0x28,        // (R /W) blit D VRAM destination write address
+        XR_BLIT_SHIFT = 0x29,        // (R /W) blit first and last word nibble masks and nibble right shift (0-3)
         XR_BLIT_LINES = 0x2A,        // (R /W) blit number of lines minus 1, (repeats blit word count after modulo calc)
         XR_BLIT_WORDS = 0x2B         // (R /W) blit word count minus 1 per line (write starts blit operation)
     };

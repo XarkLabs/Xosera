@@ -622,11 +622,12 @@ static inline void wait_blit_ready()
 {
     xwait_blit_full();
 }
-#define NUM_BOBS 20
+#define NUM_BOBS 12        // number of sprites (ideally no "red" border)
 struct bob
 {
-    uint32_t pos;
-    int16_t  delta;
+    int16_t  x_pos, y_pos;
+    uint16_t w_offset;
+    int8_t   x_delta, y_delta;
 };
 
 struct bob      bobs[NUM_BOBS];
@@ -649,15 +650,15 @@ void test_blit()
         {
             wait_blit_ready();
             xreg_setw(BLIT_CTRL, 0x0013);              // constA, constB, decrement
-            xreg_setw(BLIT_SHIFT, 0xFF00);             // no edge masking or shifting
             xreg_setw(BLIT_MOD_A, 0x0000);             // no modulo A
-            xreg_setw(BLIT_MOD_B, 0x0000);             // no modulo B
-            xreg_setw(BLIT_MOD_C, 0x0000);             // no modulo C
-            xreg_setw(BLIT_MOD_D, 0x0000);             // no modulo D
             xreg_setw(BLIT_SRC_A, i << 8 | i);         // A = fill pattern
+            xreg_setw(BLIT_MOD_B, 0x0000);             // no modulo B
             xreg_setw(BLIT_SRC_B, 0xFFFF);             // AND with B (and disable transparency)
+            xreg_setw(BLIT_MOD_C, 0x0000);             // no modulo C
             xreg_setw(BLIT_VAL_C, 0x0000);             // XOR with C
+            xreg_setw(BLIT_MOD_D, 0x0000);             // no modulo D
             xreg_setw(BLIT_DST_D, 0xFFFF);             // VRAM display end address
+            xreg_setw(BLIT_SHIFT, 0xFF00);             // no edge masking or shifting
             xreg_setw(BLIT_LINES, 0x0000);             // 1D
             xreg_setw(BLIT_WORDS, 0x10000 - 1);        // 64KW VRAM
             wait_blit_done();
@@ -665,6 +666,8 @@ void test_blit()
         }
 
         uint16_t daddr = 0x1000;
+
+        xreg_setw(VID_CTRL, 0x0800);        // border color 8
 
         xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
         xreg_setw(PA_LINE_LEN, 320 / 4);
@@ -717,15 +720,15 @@ void test_blit()
         // 2D screen screen copy 0x0000 -> 0x4B00 320x240 4-bpp
         wait_blit_ready();
         xreg_setw(BLIT_CTRL, 0x0002);             // constB
-        xreg_setw(BLIT_SHIFT, 0xFF00);            // no edge masking or shifting
         xreg_setw(BLIT_MOD_A, 0x0000);            // no modulo A
-        xreg_setw(BLIT_MOD_B, 0x0000);            // no modulo B
-        xreg_setw(BLIT_MOD_C, 0x0000);            // no modulo C
-        xreg_setw(BLIT_MOD_D, 0x0000);            // no modulo D
         xreg_setw(BLIT_SRC_A, paddr);             // A = source
+        xreg_setw(BLIT_MOD_B, 0x0000);            // no modulo B
         xreg_setw(BLIT_SRC_B, 0xFFFF);            // AND with B (and disable transparency)
+        xreg_setw(BLIT_MOD_C, 0x0000);            // no modulo C
         xreg_setw(BLIT_VAL_C, 0x0000);            // XOR with C
+        xreg_setw(BLIT_MOD_D, 0x0000);            // no modulo D
         xreg_setw(BLIT_DST_D, daddr);             // VRAM display end address
+        xreg_setw(BLIT_SHIFT, 0xFF00);            // no edge masking or shifting
         xreg_setw(BLIT_LINES, H_4BPP - 1);        // lines (0 for 1-D blit)
         xreg_setw(BLIT_WORDS, W_4BPP - 1);        // words to write -1
         wait_blit_done();
@@ -737,43 +740,55 @@ void test_blit()
 
         for (int i = 0; i < 320; i++)
         {
-            wait_blit_ready();                   // make sure blit ready (previous blit started)
-            xreg_setw(BLIT_CTRL, 0x0002);        // constB
+            wait_blit_ready();                              // make sure blit ready (previous blit started)
+            xreg_setw(BLIT_CTRL, 0x0002);                   // constB
+            xreg_setw(BLIT_MOD_A, -1);                      // A modulo
+            xreg_setw(BLIT_SRC_A, paddr);                   // A source VRAM addr (pacman)
+            xreg_setw(BLIT_MOD_B, 0x0000);                  // B modulo
+            xreg_setw(BLIT_SRC_B, 0xFFFF);                  // B const (non-zero to disable transparency)
+            xreg_setw(BLIT_MOD_C, 0x0000);                  // C trans term
+            xreg_setw(BLIT_VAL_C, 0x0000);                  // C const (XOR'd with value stored)
+            xreg_setw(BLIT_MOD_D, -1);                      // D modulo
+            xreg_setw(BLIT_DST_D, daddr + (i >> 2));        // D destination VRAM addr
             xreg_setw(BLIT_SHIFT,
                       (0xF000 >> (i & 0x3)) |
-                          (i & 0x3));             // first, last word nibble masks, and 0-3 shift (low two bits)
-            xreg_setw(BLIT_MOD_A, -1);            // A modulo
-            xreg_setw(BLIT_MOD_B, 0x0000);        // B modulo
-            xreg_setw(BLIT_MOD_C, 0x0000);        // C trans term
-            xreg_setw(BLIT_MOD_D, -1);            // D modulo
-            xreg_setw(BLIT_SRC_A, paddr);         // A source VRAM addr (pacman)
-            xreg_setw(BLIT_SRC_B, 0xFFFF);        // B const (non-zero to disable transparency)
-            xreg_setw(BLIT_VAL_C, 0x0000);        // C const (XOR'd with value stored)
-            xreg_setw(BLIT_DST_D, daddr + (i >> 2));        // D destination VRAM addr
-            xreg_setw(BLIT_LINES, H_4BPP - 1);              // lines (0 for 1-D blit)
-            xreg_setw(BLIT_WORDS, W_4BPP);                  // words to write -1
+                          (i & 0x3));                   // first, last word nibble masks, and 0-3 shift (low two bits)
+            xreg_setw(BLIT_LINES, H_4BPP - 1);          // lines (0 for 1-D blit)
+            xreg_setw(BLIT_WORDS, W_4BPP);              // words to write -1
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x00ff0);
             wait_blit_done();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x000f0);
             wait_vsync();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x00f00);
         }
         for (int i = 319; i >= 0; i--)
         {
-            wait_blit_ready();                   // make sure blit ready (previous blit started)
-            xreg_setw(BLIT_CTRL, 0x0002);        // constB
+            wait_blit_ready();                              // make sure blit ready (previous blit started)
+            xreg_setw(BLIT_CTRL, 0x0002);                   // constB
+            xreg_setw(BLIT_MOD_A, -1);                      // A modulo
+            xreg_setw(BLIT_SRC_A, paddr);                   // A source VRAM addr (pacman)
+            xreg_setw(BLIT_MOD_B, 0x0000);                  // B modulo
+            xreg_setw(BLIT_SRC_B, 0xFFFF);                  // B const (non-zero to disable transparency)
+            xreg_setw(BLIT_MOD_C, 0x0000);                  // C trans term
+            xreg_setw(BLIT_VAL_C, 0x0000);                  // C const (XOR'd with value stored)
+            xreg_setw(BLIT_MOD_D, -1);                      // D modulo
+            xreg_setw(BLIT_DST_D, daddr + (i >> 2));        // D destination VRAM addr
             xreg_setw(BLIT_SHIFT,
                       (0xF000 >> (i & 0x3)) |
-                          (i & 0x3));             // first, last word nibble masks, and 0-3 shift (low two bits)
-            xreg_setw(BLIT_MOD_A, -1);            // A modulo
-            xreg_setw(BLIT_MOD_B, 0x0000);        // B modulo
-            xreg_setw(BLIT_MOD_C, 0x0000);        // C trans term
-            xreg_setw(BLIT_MOD_D, -1);            // D modulo
-            xreg_setw(BLIT_SRC_A, paddr);         // A source VRAM addr (pacman)
-            xreg_setw(BLIT_SRC_B, 0xFFFF);        // B const (non-zero to disable transparency)
-            xreg_setw(BLIT_VAL_C, 0x0000);        // C const (XOR'd with value stored)
-            xreg_setw(BLIT_DST_D, daddr + (i >> 2));        // D destination VRAM addr
-            xreg_setw(BLIT_LINES, H_4BPP - 1);              // lines (0 for 1-D blit)
-            xreg_setw(BLIT_WORDS, W_4BPP);                  // words to write -1
+                          (i & 0x3));                   // first, last word nibble masks, and 0-3 shift (low two bits)
+            xreg_setw(BLIT_LINES, H_4BPP - 1);          // lines (0 for 1-D blit)
+            xreg_setw(BLIT_WORDS, W_4BPP);              // words to write -1
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x00ff0);
             wait_blit_done();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x000f0);
             wait_vsync();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x00f00);
         }
 
         if (delay_check(DELAY_TIME))
@@ -791,24 +806,25 @@ void test_blit()
 
         for (int b = 0; b < NUM_BOBS; b++)
         {
-            bobs[b].pos   = (120 * W_4BPP) + (W_4BPP * (b + 1 * 3)) + (10 * b + 1);
-            uint16_t r    = xm_getw(LFSR);
-            bobs[b].delta = r & 0x8 ? -((r & 3) - 1) : ((r & 3) + 1);
-            r             = xm_getw(LFSR);
-            bobs[b].delta += (r & 0x8 ? -((r & 3) - 1) : ((r & 3) + 1)) * (W_4BPP * 4);
+            bobs[b].x_pos   = b * 8;
+            bobs[b].y_pos   = (b / 8) * 8;
+            uint16_t r      = xm_getw(LFSR);
+            bobs[b].x_delta = r & 0x8 ? -((r & 3) - 1) : ((r & 3) + 1);
+            r               = xm_getw(LFSR);
+            bobs[b].y_delta = r & 0x8 ? -((r & 3) - 1) : ((r & 3) + 1);
         }
 
         wait_blit_ready();
-        xreg_setw(BLIT_CTRL, 0xEE03);             // constA, constB
-        xreg_setw(BLIT_SHIFT, 0xFF00);            // first, last word nibble masks, and 0-3 shift (low two bits)
+        xreg_setw(BLIT_CTRL, 0xEE02);             // constB, 4bpp transp=E
         xreg_setw(BLIT_MOD_A, 0x0000);            // A mod (XOR)
+        xreg_setw(BLIT_SRC_A, paddr);             // A source const word
         xreg_setw(BLIT_MOD_B, 0x0000);            // B mod (XOR)
+        xreg_setw(BLIT_SRC_B, 0xFFFF);            // B AND const (non-zero to disable transparency)
         xreg_setw(BLIT_MOD_C, 0x0000);            // C mod (XOR)
-        xreg_setw(BLIT_MOD_D, 0x0000);            // D mod (ADD)
-        xreg_setw(BLIT_SRC_A, 0xFFFF);            // A source const word
-        xreg_setw(BLIT_SRC_B, 0x0101);            // B AND const (non-zero to disable transparency)
         xreg_setw(BLIT_VAL_C, 0x0000);            // C XOR const
+        xreg_setw(BLIT_MOD_D, 0x0000);            // D mod (ADD)
         xreg_setw(BLIT_DST_D, daddr);             // D destination VRAM addr
+        xreg_setw(BLIT_SHIFT, 0xFF00);            // first, last word nibble masks, and 0-3 shift (low two bits)
         xreg_setw(BLIT_LINES, H_4BPP - 1);        // lines (0 for 1-D blit)
         xreg_setw(BLIT_WORDS, W_4BPP - 1);        // words to write -1
 
@@ -817,47 +833,57 @@ void test_blit()
         {
             for (int b = 0; b < nb; b++)
             {
-                struct bob * bp    = &bobs[b];
-                uint8_t      shift = bp->pos & 3;
+                struct bob * bp = &bobs[b];
+                wait_blit_ready();                                  // make sure blit ready (previous blit started)
+                xreg_setw(BLIT_CTRL, 0xEE02);                       // constB, 4bpp transp=E
+                xreg_setw(BLIT_MOD_A, W_4BPP - W_LOGO - 1);         // A modulo
+                xreg_setw(BLIT_SRC_A, paddr + bp->w_offset);        // A initial term (not used)
+                xreg_setw(BLIT_MOD_B, 0x0000);                      // B modulo
+                xreg_setw(BLIT_SRC_B, 0xFFFF);                      // B source+transp VRAM addr (moto_m)
+                xreg_setw(BLIT_MOD_C, 0x0000);                      // C modulo
+                xreg_setw(BLIT_VAL_C, 0x0000);                      // C XOR const
+                xreg_setw(BLIT_MOD_D, W_4BPP - W_LOGO - 1);         // D modulo
+                xreg_setw(BLIT_DST_D, daddr + bp->w_offset);        // D destination VRAM addr
+                xreg_setw(BLIT_SHIFT, 0xFF00);            // first, last word nibble masks, and 0-3 shift (low two bits)
+                xreg_setw(BLIT_LINES, H_LOGO - 1);        // lines (0 for 1-D blit)
+                xreg_setw(BLIT_WORDS, W_LOGO - 1 + 1);        // words to write -1
 
-                wait_blit_ready();                   // make sure blit ready (previous blit started)
-                xreg_setw(BLIT_CTRL, 0xEE03);        // constA
+                bp->x_pos += bp->x_delta;
+                if (bp->x_pos < -16)
+                    bp->x_pos += 320 + 16;
+                else if (bp->x_pos > 320)
+                    bp->x_pos -= 320;
+
+                bp->y_pos += bp->y_delta;
+                if (bp->y_pos < -16)
+                    bp->y_pos += 240 + 16;
+                else if (bp->y_pos > 240)
+                    bp->y_pos -= 240;
+
+                uint16_t off  = (uint16_t)(bp->x_pos >> 2) + (uint16_t)((uint16_t)W_4BPP * bp->y_pos);
+                bp->w_offset  = off;
+                uint8_t shift = bp->x_pos & 3;
+
+                wait_blit_ready();                                 // make sure blit ready (previous blit started)
+                xreg_setw(BLIT_CTRL, 0x0001);                      // constA
+                xreg_setw(BLIT_MOD_A, 0x0000);                     // A modulo
+                xreg_setw(BLIT_SRC_A, 0xFFFF);                     // A initial term (not used)
+                xreg_setw(BLIT_MOD_B, -1);                         // B modulo
+                xreg_setw(BLIT_SRC_B, maddr);                      // B source+transp VRAM addr (moto_m)
+                xreg_setw(BLIT_MOD_C, 0x0000);                     // C modulo
+                xreg_setw(BLIT_VAL_C, 0x0000);                     // C XOR const
+                xreg_setw(BLIT_MOD_D, W_4BPP - W_LOGO - 1);        // D modulo
+                xreg_setw(BLIT_DST_D, daddr + off);                // D destination VRAM addr
                 xreg_setw(BLIT_SHIFT,
-                          blit_shift[shift]);         // first, last word nibble masks, and 0-3 shift (low two bits)
-                xreg_setw(BLIT_MOD_A, 0x0000);        // A modulo
-                xreg_setw(BLIT_MOD_B, 0x0000);        // B modulo
-                xreg_setw(BLIT_MOD_C, 0x0000);        // C modulo
-                xreg_setw(BLIT_MOD_D, W_4BPP - W_LOGO - 1);           // D modulo
-                xreg_setw(BLIT_SRC_A, 0xFFFF);                        // A initial term (not used)
-                xreg_setw(BLIT_SRC_B, 0x0101);                        // B source+transp VRAM addr (moto_m)
-                xreg_setw(BLIT_VAL_C, 0x0000);                        // C XOR const
-                xreg_setw(BLIT_DST_D, daddr + (bp->pos >> 2));        // D destination VRAM addr
-                xreg_setw(BLIT_LINES, H_LOGO - 1);                    // lines (0 for 1-D blit)
-                xreg_setw(BLIT_WORDS, W_LOGO - 1 + 1);                // words to write -1
-
-                bp->pos = (bp->pos + bp->delta) & 0x1ffff;
+                          blit_shift[shift]);             // first, last word nibble masks, and 0-3 shift (low two bits)
+                xreg_setw(BLIT_LINES, H_LOGO - 1);        // lines (0 for 1-D blit)
+                xreg_setw(BLIT_WORDS, W_LOGO - 1 + 1);        // words to write -1
             }
-            for (int b = 0; b < nb; b++)
-            {
-                struct bob * bp    = &bobs[b];
-                uint8_t      shift = bp->pos & 3;
-
-                wait_blit_ready();                   // make sure blit ready (previous blit started)
-                xreg_setw(BLIT_CTRL, 0x0001);        // constA
-                xreg_setw(BLIT_SHIFT,
-                          blit_shift[shift]);         // first, last word nibble masks, and 0-3 shift (low two bits)
-                xreg_setw(BLIT_MOD_A, 0x0000);        // A modulo
-                xreg_setw(BLIT_MOD_B, -1);            // B modulo
-                xreg_setw(BLIT_MOD_C, 0x0000);        // C modulo
-                xreg_setw(BLIT_MOD_D, W_4BPP - W_LOGO - 1);           // D modulo
-                xreg_setw(BLIT_SRC_A, 0xFFFF);                        // A initial term (not used)
-                xreg_setw(BLIT_SRC_B, maddr);                         // B source+transp VRAM addr (moto_m)
-                xreg_setw(BLIT_VAL_C, 0x0000);                        // C XOR const
-                xreg_setw(BLIT_DST_D, daddr + (bp->pos >> 2));        // D destination VRAM addr
-                xreg_setw(BLIT_LINES, H_LOGO - 1);                    // lines (0 for 1-D blit)
-                xreg_setw(BLIT_WORDS, W_LOGO - 1 + 1);                // words to write -1
-            }
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x000f0);
             wait_vsync();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x00f00);
         }
 
         dprintf("Num bobs = %d", nb);
@@ -1585,8 +1611,8 @@ void     xosera_test()
 
 #if LR_MARGIN_TEST
         // crop left and right 10 pixels
-        xreg_setw(VID_LEFT, 10);
-        xreg_setw(VID_RIGHT, monwidth - 10);
+        xreg_setw(VID_LEFT, 4);
+        xreg_setw(VID_RIGHT, monwidth - 4);
 #endif
 
         for (int y = 0; y < 30; y += 3)

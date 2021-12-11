@@ -32,7 +32,7 @@
 //#define DELAY_TIME 500        // machine speed
 
 #define COPPER_TEST    1
-#define LR_MARGIN_TEST 0
+#define LR_MARGIN_TEST 1
 
 #if !defined(NUM_ELEMENTS)
 #define NUM_ELEMENTS(a) (sizeof(a) / sizeof(a[0]))
@@ -412,6 +412,13 @@ _NOINLINE void restore_colors()
     for (uint16_t i = 0; i < 256; i++)
     {
         xm_setw(XR_DATA, *cp++);
+    };
+    // set B colors to same, alpha 0x8 (with color fully transparent)
+    xm_setw(XR_DATA, 0x0000);
+    cp = def_colors + 1;
+    for (uint16_t i = 1; i < 256; i++)
+    {
+        xm_setw(XR_DATA, 0x8000 | *cp++);
     };
 }
 

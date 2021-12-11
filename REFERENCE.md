@@ -13,15 +13,18 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
 - [Xosera - Xark's Open Source Embedded Retro Adapter](#xosera---xarks-open-source-embedded-retro-adapter)
   - [Xosera Reference Information](#xosera-reference-information)
     - [Xosera Main Registers (XM Registers) Summary](#xosera-main-registers-xm-registers-summary)
-  - [Xosera Main Register Details (XM Registers)](#xosera-main-register-details-xm-registers)
-    - [Xosera Extended Register / Extended Memory Region Summary](#xosera-extended-register--extended-memory-region-summary)
+    - [Xosera Main Register Details (XM Registers)](#xosera-main-register-details-xm-registers)
+  - [Xosera Extended Register / Extended Memory Region Summary](#xosera-extended-register--extended-memory-region-summary)
     - [Xosera Extended Registers Details (XR Registers)](#xosera-extended-registers-details-xr-registers)
-      - [Video Config and Copper XR Registers Summary](#video-config-and-copper-xr-registers-summary)
-      - [Video Config and Copper XR Registers Details](#video-config-and-copper-xr-registers-details)
-      - [Playfield A & B Control XR Registers Summary](#playfield-a--b-control-xr-registers-summary)
-      - [Playfield A & B Control XR Registers Details](#playfield-a--b-control-xr-registers-details)
-      - [2D Blitter Engine XR Registers Summary](#2d-blitter-engine-xr-registers-summary)
-        - [Basic blitter operation](#basic-blitter-operation)
+    - [Video Config and Copper XR Registers Summary](#video-config-and-copper-xr-registers-summary)
+    - [Video Config and Copper XR Registers Details](#video-config-and-copper-xr-registers-details)
+    - [Playfield A & B Control XR Registers Summary](#playfield-a--b-control-xr-registers-summary)
+    - [Playfield A & B Control XR Registers Details](#playfield-a--b-control-xr-registers-details)
+    - [2D Blitter Engine Operation](#2d-blitter-engine-operation)
+      - [Logic Operation Applied to Blitter Operations](#logic-operation-applied-to-blitter-operations)
+      - [Transparency Testing nd Masking Applied to Blitter Operations](#transparency-testing-nd-masking-applied-to-blitter-operations)
+      - [Blitter Operation Status](#blitter-operation-status)
+    - [2D Blitter Engine XR Registers Summary](#2d-blitter-engine-xr-registers-summary)
       - [2D Blitter Engine XR Registers Details](#2d-blitter-engine-xr-registers-details)
   - [Video Synchronized Co-Processor Details](#video-synchronized-co-processor-details)
     - [Programming the Co-processor](#programming-the-co-processor)
@@ -74,7 +77,7 @@ provide more efficient access to Xosera status flags (like busy and timeout)]
 (`R+` or `W+` indicates that reading or writing this register has additional "side effects", respectively)
 ___
 
-## Xosera Main Register Details (XM Registers)
+### Xosera Main Register Details (XM Registers)
 
 **0x0 `XM_XR_ADDR` (R/W+) - XR Register / Memory Address**
 <img src="./pics/wd_XM_XR_ADDR.svg">
@@ -203,7 +206,7 @@ NOTE: This register is identical to `XM_RW_DATA` to allow for 32-bit "long" MOVE
 speed.
 ___
 
-### Xosera Extended Register / Extended Memory Region Summary
+## Xosera Extended Register / Extended Memory Region Summary
 
 | XR Region Name   | XR Region Range | R/W | Description                                |
 | ---------------- | --------------- | --- | ------------------------------------------ |
@@ -234,30 +237,32 @@ control functions (which accessed directly via the main registers).
 To access these XR registers, first write the register address to `XM_XR_ADDR`, then read or write register data to `XM_XR_DATA`
 (and when *writing only*, the low 13-bits of `XM_XR_DATA` will be auto-incremented for each word written).
 
-#### Video Config and Copper XR Registers Summary
+### Video Config and Copper XR Registers Summary
 
-| Reg # | Reg Name        | R /W | Description                                                                             |
-| ----- | --------------- | ---- | --------------------------------------------------------------------------------------- |
-| 0x00  | `XR_VID_CTRL`   | R /W | display control and border color index                                                  |
-| 0x01  | `XR_COPP_CTRL`  | R /W | display synchronized coprocessor control                                                |
-| 0x02  | `XR_CURSOR_X`   | R /W | sprite cursor X position [#TODO]                                                        |
-| 0x03  | `XR_CURSOR_Y`   | R /W | sprite cursor Y position [#TODO]                                                        |
-| 0x04  | `XR_VID_TOP`    | R /W | top line of active display window (typically 0) [#TODO repurpose reg] for sprites       |
-| 0x05  | `XR_VID_BOTTOM` | R /W | bottom line of active display window (typically 479)  [#TODO repurpose reg for sprites] |
-| 0x06  | `XR_VID_LEFT`   | R /W | left edge start of active display window (normally 0)                                   |
-| 0x07  | `XR_VID_RIGHT`  | R /W | right edge + 1 end of active display window (normally 640 or 848)                       |
-| 0x08  | `XR_SCANLINE`   | RO   | [15] in V blank, [14] in H blank [10:0] V scanline                                      |
-| 0x09  | `XR_UNUSED_09`  | RO   | [#TODO]                                                                                 |
-| 0x0A  | `XR_VERSION`    | RO   | optional feature bits [15:12] and 3 digit BCD version [11:0]                            |
-| 0x0B  | `XR_GITHASH_H`  | RO   | [15:0] high 16-bits of 32-bit Git hash build identifier                                 |
-| 0x0C  | `XR_GITHASH_L`  | RO   | [15:0] low 16-bits of 32-bit Git hash build identifier                                  |
-| 0x0D  | `XR_VID_HSIZE`  | RO   | native pixel width of monitor mode (e.g. 640/848)                                       |
-| 0x0E  | `XR_VID_VSIZE`  | RO   | native pixel height of monitor mode (e.g. 480)                                          |
-| 0x0F  | `XR_VID_VFREQ`  | RO   | update frequency of monitor mode in BCD 1/100<sup>th</sup> Hz (e.g., 0x5997 = 59.97 Hz) |
+| Reg # | Reg Name       | R /W | Description                                                                             |
+| ----- | -------------- | ---- | --------------------------------------------------------------------------------------- |
+| 0x00  | `XR_VID_CTRL`  | R /W | display control and border color index                                                  |
+| 0x01  | `XR_COPP_CTRL` | R /W | display synchronized coprocessor control                                                |
+| 0x02  | `XR_UNUSED_02` | R /W | [#TODO]                                                                                 |
+| 0x03  | `XR_UNUSED_03` | R /W | [#TODO]                                                                                 |
+| 0x04  | `XR_UNUSED_04` | R /W | [#TODO]                                                                                 |
+| 0x05  | `XR_UNUSED_05` | R /W | [#TODO]                                                                                 |
+| 0x06  | `XR_VID_LEFT`  | R /W | left edge start of active display window (normally 0)                                   |
+| 0x07  | `XR_VID_RIGHT` | R /W | right edge + 1 end of active display window (normally 640 or 848)                       |
+| 0x08  | `XR_SCANLINE`  | RO   | [15] in V blank, [14] in H blank [10:0] V scanline                                      |
+| 0x09  | `XR_UNUSED_09` | RO   | [#TODO]                                                                                 |
+| 0x0A  | `XR_VERSION`   | RO   | optional feature bits [15:12] and 3 digit BCD version [11:0]                            |
+| 0x0B  | `XR_GITHASH_H` | RO   | [15:0] high 16-bits of 32-bit Git hash build identifier                                 |
+| 0x0C  | `XR_GITHASH_L` | RO   | [15:0] low 16-bits of 32-bit Git hash build identifier                                  |
+| 0x0D  | `XR_VID_HSIZE` | RO   | native pixel width of monitor mode (e.g. 640/848)                                       |
+| 0x0E  | `XR_VID_VSIZE` | RO   | native pixel height of monitor mode (e.g. 480)                                          |
+| 0x0F  | `XR_VID_VFREQ` | RO   | update frequency of monitor mode in BCD 1/100<sup>th</sup> Hz (e.g., 0x5997 = 59.97 Hz) |
 
 (`R+` or `W+` indicates that reading or writing this register has additional "side effects", respectively)
 
-#### Video Config and Copper XR Registers Details
+___
+
+### Video Config and Copper XR Registers Details
 
 **0x00 `XR_VID_CTRL` (R/W) - interrupt status/signal and border color**
 <img src="./pics/wd_XR_VID_CTRL.svg">
@@ -270,21 +275,17 @@ clear writing to `XM_TIMER`).
 <img src="./pics/wd_XR_COPP_CTRL.svg">
 Display synchronized co-processor enable and starting PC address for each video frame within copper XR memory region.
 
-**0x02 `XR_CURSOR_X` (R/W) - sprite cursor X position**
-<img src="./pics/wd_XR_CURSOR_X.svg">
-Sprite cursor X native pixel position (left-edge).  Can be fully or partially offscreen.
+**0x02 `XR_UNUSED_02` (--) - unused XR register 0x02**
+Unused XR register 0x02
 
-**0x03 `XR_CURSOR_Y` (R/W) - sprite cursor Y position**
-<img src="./pics/wd_XR_CURSOR_Y.svg">
-Sprite cursor Y native pixel position (top-edge).  Can be fully or partially offscreen.
+**0x03 `XR_UNUSED_03` (--) - unused XR register 0x03**
+Unused XR register 0x03
 
-**0x04 `XR_VID_TOP` (R/W) - video display window top line**
-<img src="./pics/wd_XR_VID_TOP.svg">
-Defines top-most line of video display window (normally 0 for full-screen).
+**0x04 `XR_UNUSED_04` (--) - unused XR register 0x04**
+Unused XR register 0x04
 
-**0x05 `XR_VID_BOTTOM` (R/W) - video display window bottom line**
-<img src="./pics/wd_XR_VID_BOTTOM.svg">
-Defines bottom-most line of video display window (normally 479 for full-screen).
+**0x05 `XR_UNUSED_05` (--) - unused XR register 0x05**
+Unused XR register 0x05
 
 **0x06 `XR_VID_LEFT` (R/W) - video display window left edge**
 <img src="./pics/wd_XR_VID_LEFT.svg">
@@ -298,8 +299,8 @@ Defines right-most native pixel of video display window (normally 639 or 847 for
 <img src="./pics/wd_XR_SCANLINE.svg">
 Continuously updated with the scanline and blanking status during display scanning. Read-only.
 
-**0x09 `XR_UNUSED_09` (RO) - unused XR register 0x09**
-Unused XR register  0x09
+**0x09 `XR_UNUSED_09` (--) - unused XR register 0x09**
+Unused XR register 0x09
 
 **0x0A `XR_VERSION` (RO) - Xosera version and optional feature bits**
 <img src="./pics/wd_XR_VERSION.svg">
@@ -328,7 +329,7 @@ Monitor display mode native vertical resolution (e.g., 480). Read-only.
 Monitor display mode update frequency in BCD 1/100<sup>th</sup> Hz (e.g., 0x5997 = 59.97 Hz). Read-only.
 ___
 
-#### Playfield A & B Control XR Registers Summary
+### Playfield A & B Control XR Registers Summary
 
 | Reg # | Name              | R/W | Description                                                  |
 | ----- | ----------------- | --- | ------------------------------------------------------------ |
@@ -350,7 +351,7 @@ ___
 | 0x1F  | `XR_PB_UNUSED_1F` | -/- |                                                              |
 ___
 
-#### Playfield A & B Control XR Registers Details
+### Playfield A & B Control XR Registers Details
 
 **0x10 `XR_PA_GFX_CTRL` (R/W) - playfield A (foreground) graphics control**
 **0x18 `XR_PB_GFX_CTRL` (R/W) - playfield B (background) graphics control**
@@ -413,144 +414,154 @@ Unused XR playfield registers 0x16, 0x1E
 Unused XR playfield registers 0x17, 0x1F
 ___
 
-#### 2D Blitter Engine XR Registers Summary
+### 2D Blitter Engine Operation
 
-| Reg # | Name            | R/W  | Description                                                             |
-| ----- | --------------- | ---- | ----------------------------------------------------------------------- |
-| 0x20  | `XR_BLIT_CTRL`  | R/W  | control bits (transparency control, logic op and op input flags)        |
-| 0x21  | `XR_BLIT_VAL_T` | R/W  | transparency constant `T` (XOR'd with `B` for transparency test)        |
-| 0x22  | `XR_BLIT_MOD_B` | R/W  | modulo added to `B` source address after each line                      |
-| 0x23  | `XR_BLIT_SRC_B` | R/W  | `B` source VRAM read address / constant value with `constB`             |
-| 0x24  | `XR_BLIT_MOD_D` | R/W  | modulo added to `D` destination address after each line                 |
-| 0x25  | `XR_BLIT_VAL_C` | R/W  | `C` source XOR constant value                                           |
-| 0x26  | `XR_BLIT_MOD_A` | R/W  | modulo added to `A` source address after each line                      |
-| 0x27  | `XR_BLIT_SRC_A` | R/W  | `A` source VRAM read address / constant value with `constA`             |
-| 0x28  | `XR_BLIT_SHIFT` | R/W  | first and last word nibble masks and nibble right shift (0-3)           |
-| 0x29  | `XR_BLIT_DST_D` | R/W  | `D` VRAM destination write address                                      |
-| 0x2A  | `XR_BLIT_LINES` | R/W  | number of lines minus 1 (1-32768 lines, repeats line after modulo calc) |
-| 0x2B  | `XR_BLIT_WORDS` | R/W+ | write starts operation, word count minus 1 (1-65536 words per line)     |
-| 0x2C  | `XR_BLIT_2C`    | -/-  | RESERVED                                                                |
-| 0x2D  | `XR_BLIT_2D`    | -/-  | RESERVED                                                                |
-| 0x2E  | `XR_BLIT_2E`    | -/-  | RESERVED                                                                |
-| 0x2F  | `XR_BLIT_2F`    | -/-  | RESERVED                                                                |
+The Xosera blitter is a VRAM data read/write "engine" that operates on 16-bit words in VRAM to copy, fill and do logic operations on arbitrary two-dimensional rectangular areas of Xosera VRAM (i.e., to draw, copy and manipulate "chunky" 4/8 bit pixel bitmap images).  It supports a VRAM destination and up to three data sources.  Two of which can be (optionally) read from VRAM and one set to a constant (and it can operate either incrementing or decrementing VRAM addresses).  It repeats a basic word length operation for each "line" of a rectanglar area, and at the end of each line adds "modulo" values to source and destination addresses (to position source and destination for next line).  It also has a "nibble shifter" that can shift a line of word data 0 to 3 nibbles to allow for pixel level positioning and drawing.  There are also first and last word edge transparency masks, to remove unwanted pixels from the words at the start end end line allowing for arbitrary pixel sized rectangular operations.  There is a fixed logic equation, but with a few flags to vary input terms in conjunction with "transparency" testing that can mask-out specified 4-bit or 8-bit pixel values when writing.  This transparency masking allows specified nibbles in a word to remain unaltered when the word is overwritten (without read-modify-write VRAM access, so no speed penalty).  It has several options and configurations that allow for many useful graphical "pixel" operations to be performed in a single pass (copy, masking, shifting, logical operations AND, OR, XOR etc.).
 
-NOTE: The registers are ordered the way they are such that when doing repeated blits, registers most likely to need updating are located near the `XR_BLIT_WORDS` register at the end.  This allows for repeated blit operations to be setup more efficiently using the `XR_DATA` auto-increment feature and writing to a smaller number of contiguous registers per operation (ending with `XR_BLIT_WORDS` and starting the blit operation).
+___
 
-##### Basic blitter operation
-
-The Xosera blitter is a state machine that operates on 16-bit words to copy or fill an arbitrary two-dimensional rectangular area in VRAM.  It repeats a basic word length fill/copy operation for each "line" of the rectanglar area (after adding a "modulo" values to source and destination addresses).  It operates using a single flexible logic operation in conjunction with "transparency" testing that can mask-out 4-bit nibbles when writing for transparency and edge masking (i.e., leave specified nibbles unaltered when the word is overwritten - without needing read-modify-write VRAM access).  It has several options and configurations that allow for many useful graphical "pixel" operations to be performed in a single pass.
-
-**Logic operation applied to all blit operations:**
+#### Logic Operation Applied to Blitter Operations
 
 &nbsp;&nbsp;&nbsp;`D = A & B ^ C`    (or destination word `D` = word `A` AND'd with word `B` and XOR'd with word `C`)
 
 - `D` result word
-  - written to VRAM (starting address set by `XR_BLIT_DST_D` and incrementing)
+  - written to VRAM (starting address set by `XR_BLIT_DST_D` and incrementing/decrementing)
 - `A` primary source word, can be one of:
-  - word read from VRAM (starting VRAM address set by `XR_BLIT_SRC_A` and incrementing)
-  - word constant (set by `XR_BLIT_SRC_A` when `constA` set in `XR_BLIT_CTRL`)
-- `B` secondary source word, can be one of:
-  - word read from VRAM (starting at VRAM address set by `XR_BLIT_SRC_B` and incrementing)
-  - word constant (set by `XR_BLIT_SRC_B` when `constB` set in `XR_BLIT_CTRL`)
-  - the same word value as source term `A` (when `BuseA` set in `XR_BLIT_CTRL`)
-    - makes effective operation: `D = A ^ C` (`B` still used for transparency)
-- `C` constant word, can be one of:
+  - word read from VRAM (starting VRAM address set by `XR_BLIT_SRC_A` and incrementing/decrementing)
+  - word constant (set by `XR_BLIT_SRC_A` when `A_CONST` set in `XR_BLIT_CTRL`)
+- `B` secondary AND source word and word used for transparecy test, can be one of:
+  - word read from VRAM (starting at VRAM address set by `XR_BLIT_SRC_B` and incrementing/decrementing)
+  - word constant (set by `XR_BLIT_SRC_B` when `B_CONST` set in `XR_BLIT_CTRL`)
+  - if `NOT_B` flag set in `XR_BLIT_CTRL`, then B will inverted for effective operation: `D = A & ~B ^ C`
+- `C` constant XOR source word:
   - word constant set by `XR_BLIT_VAL_C`
-  - the same word value as source term `B` (when `CuseB` set in `XR_BLIT_CTRL`).
-    - makes effective operation: `D = A & ~B`
+  - if `C_USE_B` set in `XR_BLIT_CTRL` and `B_CONST` is not set, `C` will assume value of source term `B` (unaffected by `NOT_B`).
+    - `C_USE_B` makes effective operation: `D = ~A & B` and using both `C_USE_B` and `NOT_B` gives: `D = A | B` (logical OR)
 
-When both `BuseA` and `CuseB` are set, `C` will use the value that `B` would have had without `BuseA` (allowing an XOR term read from VRAM, without AND of `B` term): effective operation: `D = A ^ C`
+When set as constants, address values (`XR_BLIT_SRC_A` , `XR_BLIT_SRC_B` , `XR_BLIT_DST_D`) with be incremented when used unless the `DECREMENT` flag set in `XR_BLIT_CTRL` (in which case they will instead be decremented).  This allows blit operations where source and destination VRAM addresses overlap to be handled appropriately (otherwise source may be overwritten mid-operation).
 
-**Transparency testing applied to all blit operations:**
+#### Transparency Testing nd Masking Applied to Blitter Operations
 
 &nbsp;&nbsp;&nbsp;4-bit mask `M = (B ^ T) != 0` for four 4-bit pixels (paired up for 8-bit pixel mode)
 
 - `M` transparency result is 0 for transparent nibbles (ones that will not be altered in the destination word).
 - `B` secondary source word used in logical operation above
-  - Either read from VRAM or a constant (but ignoring `BuseA` flag)
-- `T` transparency constant word set by `XR_BLIT_VAL_T`
+  - Either read from VRAM or a constant (and `NOT_B` flag does not affect transparency test)
+- `T` transparency constant nibble pair/byte set in upper byte of `XR_BLIT_CTRL`
 
-The 4-bit mask will be set in two-bit pairs for 8-bit pixels when `transp8` set in `XR_BLIT_CTRL` (both bits zero only when both nibbles of the transparency test are zero, otherwise both one).  This allows any 4-bit or 8-bit pixel value in `B` to be considered transparent (by beng XOR'd with a constant value `T` that makes it produce zero).
-Transparency testing cannot be disabled, but if it is not desired (all pixels values opaque), one method is to set `B` to a constant (`constB` in `XR_BLIT_CTRL`) that when XOR'd with `XR_BLIT_VAL_T` produces a value with no 4-bit or 8-bit pixels that have a zero value.  Typically you would also set `BuseA` in `XR_BLIT_CTRL` so the non-transparent constant value will not be AND'd with `A` pixel data (but by setting both `B` and the `T` XOR constant you can get an arbitrary constant AND value along with no transparency).
+The 4-bit mask will be set in two-bit pairs for 8-bit pixels when `TRANSP_8B` set in `XR_BLIT_CTRL` (both bits zero only when both nibbles of the transparency test are zero, otherwise both one).  This allows any 4-bit or 8-bit pixel value in `B` to be considered transparent (by beng XOR'd with a constant value `T` that makes it produce zero).
+Transparency testing cannot be disabled, but if it is not desired (all pixels values opaque), one method is to set `B` to a constant (`B_CONST` in `XR_BLIT_CTRL`) that when XOR'd with `T` byte value (to both bytes of word) from `XR_BLIT_CTRL` produces a value with no 4-bit or 8-bit pixels that have a zero value.
+
+#### Blitter Operation Status
+
+The blitter provides two bits of status information that can be read from the XM register `XM_SYS_CTRL`.
+
+- `BLIT_BUSY` set when blitter is busy with an operation (or has an operaion queued).  Use this bit to check if blitter has completed all operations.
+- `BLIT_FULL` set when the blitter queue is full and it cannot accept new operations.  The blitter supports one blit operation in progress and one queued in registers.  Use this bit to check if the blitter is ready to have a new operation stored into its registers (so it can stay busy, without idle pauses while a new operation is setup).
+
+The biltter will also generate an Xosera interrupt with interrupt source #1 each time each blit operation is completed (when interrupt source #1 mask is 1 in `XM_SYS_CTRL`).
+
+### 2D Blitter Engine XR Registers Summary
+
+| Reg # | Name            | R/W  | Description                                                          |
+| ----- | --------------- | ---- | -------------------------------------------------------------------- |
+| 0x20  | `XR_BLIT_CTRL`  | R/W  | control (transparency control, logic op and op input flags)          |
+| 0x21  | `XR_BLIT_MOD_A` | R/W  | line modulo added to SRC_A (XOR if A const)                          |
+| 0x22  | `XR_BLIT_SRC_A` | R/W  | A source VRAM read address / constant value                          |
+| 0x23  | `XR_BLIT_MOD_B` | R/W  | line modulo added to SRC_B (XOR if B const)                          |
+| 0x24  | `XR_BLIT_SRC_B` | R/W  | B AND source VRAM read address / constant value                      |
+| 0x25  | `XR_BLIT_MOD_C` | R/W  | line XOR modifier for C_VAL const                                    |
+| 0x26  | `XR_BLIT_VAL_C` | R/W  | C XOR constant value                                                 |
+| 0x27  | `XR_BLIT_MOD_D` | R/W  | modulo added to D destination after each line                        |
+| 0x28  | `XR_BLIT_DST_D` | R/W  | D VRAM destination write address                                     |
+| 0x29  | `XR_BLIT_SHIFT` | R/W  | first and last word nibble masks and nibble right shift (0-3)        |
+| 0x2A  | `XR_BLIT_LINES` | R/W  | number of lines minus 1, (repeats blit word count after modulo calc) |
+| 0x2B  | `XR_BLIT_WORDS` | R/W+ | word count minus 1 per line (write starts blit operation)            |
+| 0x2C  | `XR_BLIT_2C`    | -/-  | RESERVED                                                             |
+| 0x2D  | `XR_BLIT_2D`    | -/-  | RESERVED                                                             |
+| 0x2E  | `XR_BLIT_2E`    | -/-  | RESERVED                                                             |
+| 0x2F  | `XR_BLIT_2F`    | -/-  | RESERVED                                                             |
+
+NOTE: The registers are ordered the way they are such that when doing repeated blits, registers most likely to need updating are located near the `XR_BLIT_WORDS` register at the end.  This allows for repeated blit operations to be setup more efficiently using the `XR_DATA` auto-increment feature and writing to a smaller number of contiguous registers per operation (ending with `XR_BLIT_WORDS` and starting the blit operation).
 
 #### 2D Blitter Engine XR Registers Details
 
-**0x20 `XR_BLIT_CTRL` (R/W) - control bits (logic ops, A addr/const, B addr/const, transparent/opaque)**
+**0x20 `XR_BLIT_CTRL` (WO) - control bits (logic ops, A addr/const, B addr/const, transparent/opaque)**
 <img src="./pics/wd_XR_BLIT_CTRL.svg">
 **blitter operation control**
 The basic logic operation applied to all operations: `D = A & B ^ C`
 The operation has four options that can be independently specified in `XR_BLIT_CTRL`:
 
-- `constA` specifies `A` term is a constant (`XR_BLIT_SRC_A` used as constant instead of VRAM address to read)
-- `constB` specifies `B` term is a constant (`XR_BLIT_SRC_B` used as constant instead of VRAM address to read)
-- `BuseA` specifies that `B` term takes on same value as `A` term (this does not affect transparency testing or `CuseB`)
-  - Effective operation: `D = A ^ C` (which cancels out `B` term, but it can still affect transparency)
-- `CuseB` specifies that `C` term takes on same value as `B` term (the value it would have ignoring the `BuseA` setting)
-  - Effective operation `D = A & ~B` (`A` AND'd with complement of `B`)
-- Both `BuseA` and `CuseB` can be used together
-  - Effective operation: `D = A ^ B` (which can XOR data from VRAM)
+- `A_CONST` specifies `A` term is a constant (`XR_BLIT_SRC_A` used as constant instead of VRAM address to read)
+  - When `A` is a constant the value of `XR_BLIT_MOD_A` will be XORed with `XR_BLIT_SRC_A` instead of added and then end of each line.
+- `B_CONST` specifies `B` term is a constant (`XR_BLIT_SRC_B` used as constant instead of VRAM address to read)
+- `NOT_B` specifies that `B` term takes on an inverted value in the 2nd term (this does not affect transparency using `B`)
+  - When `B` is a constant the value of `XR_BLIT_MOD_B` will be XORed with `XR_BLIT_SRC_B` instead of added and then end of each line.
+- `C_USE_B` specifies that `C` term takes on same value as `B` term (unaffected by `NOT_B` flag)
+- `DECREMENT` specifies the blit operation will be carried out with all address decrementing.  Source and destination addresses would be set to start at the last word (highest address) of image buffers and will decrement during each word of the operation (instead of incrementing)
 
 Additionally, a transparency test is applied to all operations: `4-bit mask M = (B ^ T) != 0` (per nibble, zero is transparent)
 
-- `transp8` can be set so 8-bit pixels are masked only when the both nibbles are zero (for 8-bit transparency values)
+- `TRANSP_8B` can be set so 8-bit pixels are masked only when the both nibbles are zero (for 8-bit transparency values)
+- `T` byte which sets the effective transparent nibbles/byte for `B` transparency test.  When `TRANSP_8B` not set (4-it pixels), each nibble of the pair would typically be set to the same value, but do allow different a transparency value for even and odd nibbles.
 
-**0x21 `XR_BLIT_VAL_T` (R/W) - XOR'd with `B` source term for transparency test**
+**0x21 `XR_BLIT_VAL_T` (WO) - XOR'd with `B` source term for transparency test**
 <img src="./pics/wd_XR_BLIT_VAL_T.svg">
 **XOR'd with `B` source term for 4-bit or 8-bit zero pixel transparency test (depending on `transp8` bit in `XR_BLIT_CTRL`)**
 Arbitrary 16-bit word value.
 
-**0x21 `XR_BLIT_MOD_B` (R/W) - modulo added to `BLIT_SRC_B` address or XOR'd with `constB` at end of line**
+**0x21 `XR_BLIT_MOD_B` (WO) - modulo added to `BLIT_SRC_B` address or XOR'd with `constB` at end of line**
 <img src="./pics/wd_XR_BLIT_MOD_B.svg">
 **modulo added to `BLIT_SRC_B` address or XOR'd with `constB` at end of line**
 Arbitrary twos complement value.
 
-**0x22 `XR_BLIT_SRC_B` (R/W) - source term B (read from VRAM address or constant value)**
+**0x22 `XR_BLIT_SRC_B` (WO) - source term B (read from VRAM address or constant value)**
 <img src="./pics/wd_XR_BLIT_SRC_B.svg">
 **source term `A` (read from VRAM address or constant value)**
 Address of source VRAM image data or arbitrary constant if `constB` set.
 
-**0x23 `XR_BLIT_MOD_D` (R/W) - modulo added to `BLIT_DST_D` address at end of line**
+**0x23 `XR_BLIT_MOD_D` (WO) - modulo added to `BLIT_DST_D` address at end of line**
 <img src="./pics/wd_XR_BLIT_MOD_D.svg">
 **modulo added to `BLIT_DST_D` address at end of line**
 Arbitrary twos complement value.  Typically `BLIT_DST_D` destination image words per line minus the source image width in words, so that after completing a line this value would adjust `BLIT_DST_D` to point to the starting address for the next line.
 
-**0x21 `XR_BLIT_SHIFT` (R/W) - first and last word nibble masks and nibble shift**
+**0x21 `XR_BLIT_SHIFT` (WO - first and last word nibble masks and nibble shift**
 <img src="./pics/wd_XR_BLIT_SHIFT.svg">
 **first and last word nibble masks and nibble shift**
-The left nibble mask will unconditionally mask out (make transparent) any zero nibbles on the first word of each line.
-Similarly, the right nibble mask will unconditionally mask out (make transparent) any zero nibbles on the last word of each line.
-The nibble shift specifies a 0 to 3 nibble right shift on all words drawn.  Nibbles shifted out the right of a word will be shifted into the left for the next word (to provide a seamless pixel shift with word aligned writes).  In "normal" use, when the nibble shift is non-zero, the left and right nibble mask would typically contain the value `0xF0` nibble shifted (e.g., `0xF0 >> nibble_shift * 4`). The right edge mask hides "garbage" pixlels wrapping from left edge, and right edge mask hides excess pixels when images is not a exact word width.  When shifting, typically also you need to add an extra word to `BLIT_WORDS` and subtract one from `BLIT_MOD_A` (to avoid skewing the image).  When not shifting (nibble shift of zero) and your source image width is word aligned, you typically want the complete last word so both left and right mask `0xFF` (no edge masking).  If your source image is not an exact multiple word width, you would typically want to trim the excess pixels from the right edge (e.g., for a 7 nibble wide image, `0xFE`).  For images 1 word wide, both left and right edge masks will be AND'd together.  Also this masking is AND'd with the normal transparency control (so if a pixel is masked by either the left mask, right mask or is considered transparent it will not be drawn).
+The first word nibble mask will unconditionally mask out (make transparent) any zero nibbles on the first word of each line (left edge incrementing, right decrementing).  Similarly, the last word nibble mask will unconditionally mask out (make transparent) any zero nibbles on the last word of each line (the right edge incrementing, left decrementing). The nibble shift specifies a 0 to 3 nibble right shift on all words drawn.  Nibbles shifted out the right of a word will be shifted into the the next word (to provide a seamless pixel shift with word aligned writes).  In "normal" use, when the nibble shift is non-zero, the left and right nibble mask would typically contain the value `0xF0` nibble shifted (e.g., `0xF0 >> nibble_shift * 4`). The right edge mask hides "garbage" pixlels wrapping from left edge, and right edge mask hides excess pixels when images is not a exact word width.  When shifting, typically also you need to add an extra word to `BLIT_WORDS` and subtract one from `BLIT_MOD_A` (to avoid skewing the image).  When not shifting (nibble shift of zero) and your source image width is word aligned, you typically want the complete last word so both left and right mask `0xFF` (no edge masking).  If your source image is not an exact multiple word width, you would typically want to trim the excess pixels from the right edge (e.g., for a 7 nibble wide image, `0xFE`).  For images 1 word wide, both left and right edge masks will be AND'd together.  Also this masking is AND'd with the normal transparency control (so if a pixel is masked by either the left mask, right mask or is considered transparent it will not be drawn).
 
-**0x22 `XR_BLIT_MOD_A` (R/W) - modulo added to `BLIT_SRC_A` address or XOR'd with `constA` at end of line**
+**0x22 `XR_BLIT_MOD_A` (WO) - modulo added to `BLIT_SRC_A` address or XOR'd with `constA` at end of line**
 <img src="./pics/wd_XR_BLIT_MOD_A.svg">
 **modulo added to `BLIT_SRC_A` address or XOR'd with `constA` at end of line**
 Arbitrary twos complement value.  Typically zero or -1 (if shifting) when `BLIT_SRC_A` image data is contiguous.
 
-**0x26 `XR_BLIT_SRC_A` (R/W) - source term A (read from VRAM address or constant value)**
+**0x26 `XR_BLIT_SRC_A` (WO) - source term A (read from VRAM address or constant value)**
 <img src="./pics/wd_XR_BLIT_SRC_A.svg">
 **source term A (read from VRAM address or constant value)**
 Address of source VRAM image data or arbitary constant if `constA` set.  Source term A is also one of the terms that is used for transparency (when `transp_B` is 0).
 
-**0x28 `XR_BLIT_VAL_C` (R/W) - source term C (constant value)**
+**0x28 `XR_BLIT_VAL_C` (WO) - source term C (constant value)**
 <img src="./pics/wd_XR_BLIT_MOD_C.svg">
 **source term C (constant value)**
 Arbitrary value.
 
-**0x29 `XR_BLIT_DST_D` (R/W) - destination D VRAM write address**
+**0x29 `XR_BLIT_DST_D` (WO) - destination D VRAM write address**
 <img src="./pics/wd_XR_BLIT_DST_D.svg">
 **destination D VRAM write address**
 Destination VRAM address.
 
-**0x2A `XR_BLIT_LINES` (R/W) - 15-bit number of lines heigh - 1 (1 to 32768)**
+**0x2A `XR_BLIT_LINES` (WO) - 15-bit number of lines heigh - 1 (1 to 32768)**
 <img src="./pics/wd_XR_BLIT_LINES.svg">
 **15-bit number of lines high - 1 (1 to 32768)**
 Number of times to repeat blit operation minus one.  Typically source image height with modulo values advancing addresses for the next line to be drawn).
 
-**0x2B `XR_BLIT_WORDS` (R/W+) - write starts blit, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times)**
+**0x2B `XR_BLIT_WORDS` (WO) - write starts operation, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times)**
 <img src="./pics/wd_XR_BLIT_LINES.svg">
 **write starts blit, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times))**
 Write starts blit operation, you should check `blit_full` bit in `XM_SYS_CTRL` to make sure the blitter is ready to accept a new operation (it supports one operation in progress and one operation queued to start - after that it reports `blit_full` true and you should wait before altering any BLIT registers).
 To check if all blit operation has completely finished (and no operations queued), you can check the `blit_busy` bit in `XM_SYS_CTRL` which will read true until the blit operation has come to a complete stop.
+
+___
 
 ## Video Synchronized Co-Processor Details
 

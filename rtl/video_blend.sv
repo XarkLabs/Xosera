@@ -13,9 +13,10 @@
 `include "xosera_pkg.sv"
 
 module video_blend#(
-    parameter EN_VID_PF_B               = 1,
-    parameter EN_VID_PF_B_BLEND_A8      = 1,
-    parameter EN_VID_PF_B_BLEND_EXTRA   = 1
+    parameter EN_VID_PF_B               = 1,        // 2nd overlay playfield
+    parameter EN_VID_PF_B_NO_BLEND      = 0,        // only super-impose, no blending
+    parameter EN_VID_PF_B_BLEND_A8      = 0,        // blend with 8 levels vs 4
+    parameter EN_VID_PF_B_BLEND_EXTRA   = 0         // blend with fancy modes
 )
 (
     // video RGB inputs
@@ -150,7 +151,13 @@ always_ff @(posedge clk) begin
         // rendered on top of it.
 
         if (EN_VID_PF_B) begin
-            if (EN_VID_PF_B_BLEND_EXTRA && (colorA_xrgb_i[15] | colorB_xrgb_i[12])) begin
+            if (EN_VID_PF_B_NO_BLEND) begin
+                if (colorB_xrgb_i[15]) begin
+                    blend_rgb_o     <= colorB_xrgb_i[11:0];
+                end else begin
+                    blend_rgb_o     <= colorA_xrgb_i[11:0];
+                end
+            end else if (EN_VID_PF_B_BLEND_EXTRA && (colorA_xrgb_i[15] | colorB_xrgb_i[12])) begin
                 case (colorA_xrgb_i[15:14])
                     // // A + signed B
                     // 2'b10:    blend_rgb_o <= { r_alpha50[4] ? (colorB_xrgb_i[11] ? 4'h0 : 4'hF) : r_alpha50[3:0],

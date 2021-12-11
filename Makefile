@@ -28,10 +28,9 @@ info:
 	@echo "   make irun            - build and run Icarus Verilog simulation"
 	@echo "   make vsim            - build Verilator C++ & SDL2 native visual simulation files"
 	@echo "   make vrun            - build and run Verilator C++ & SDL2 native visual simulation"
+	@echo "   make count           - build Xosera VGA with Yosys count (for module resource usage)
 	@echo "   make utils           - build utilities (currently image_to_mem font converter)"
-	@echo "   make m68k	       - build rosco_m68k test programs"
-	@echo "   make host_spi        - build PC side of FTDI SPI test utility (needs libftdi1)"
-	@echo "   make xvid_spi        - build PC XVID API over FTDI SPI test utility (needs libftdi1)"
+	@echo "   make m68k	           - build rosco_m68k test programs"
 	@echo "   make clean           - clean files that can be rebuilt"
 
 # Build all project targets
@@ -103,6 +102,10 @@ vsim:
 # Build and run Verilator simulation targets
 vrun:
 	cd rtl && $(MAKE) vrun
+
+# build Xosera VGA with Yosys count (for module resource usage)
+count:
+	cd rtl && $(MAKE) -f upduino.mk count
 
 # Build image/font mem utility
 utils:

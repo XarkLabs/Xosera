@@ -133,7 +133,8 @@ show: $(DOT) upduino.mk
 # run Yosys with "noflatten", which will produce a resource count per module
 count: $(SRC) $(INC) $(FONTFILES) upduino.mk
 	@mkdir -p $(LOGS)
-	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
+	@-cp $(LOGS)/$(OUTNAME)_yosys_count.log $(LOGS)/$(OUTNAME)_yosys_count_last.log
+	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 
 # run Verilator to check for Verilog issues
 lint: $(SRC) $(INC) $(FONTFILES) upduino.mk

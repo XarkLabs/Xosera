@@ -99,10 +99,10 @@ typedef enum logic [5:0] {
     // Video Config / Copper XR Registers
     XR_VID_CTRL     = 6'h00,            // (R /W) display control and border color index
     XR_COPP_CTRL    = 6'h01,            // (R /W) display synchronized coprocessor control
-    XR_CURSOR_X     = 6'h02,            // (R /W) sprite cursor X position  // TODO: replace
-    XR_CURSOR_Y     = 6'h03,            // (R /W) sprite cursor Y position  // TODO: replace
-    XR_VID_TOP      = 6'h04,            // (R /W) top line of active display window (typically 0)  // TODO: replace
-    XR_VID_BOTTOM   = 6'h05,            // (R /W) bottom line of active display window (typically 479)  // TODO: replace
+    XR_UNUSED_02    = 6'h02,            // (R /W) // TODO: replace
+    XR_UNUSED_03    = 6'h03,            // (R /W) // TODO: replace
+    XR_UNUSED_04    = 6'h04,            // (R /W) // TODO: replace
+    XR_UNUSED_05    = 6'h05,            // (R /W) // TODO: replace
     XR_VID_LEFT     = 6'h06,            // (R /W) left edge of active display window (typically 0)
     XR_VID_RIGHT    = 6'h07,            // (R /W) right edge of active display window (typically 639 or 847)
     XR_SCANLINE     = 6'h08,            // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline

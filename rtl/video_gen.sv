@@ -58,10 +58,6 @@ localparam [31:0] githash = 32'H`GITHASH;
 
 // video generation signals
 color_t             border_color;
-hres_vis_t          cursor_x;
-vres_vis_t          cursor_y;
-vres_vis_t          vid_top;
-vres_vis_t          vid_bottom;
 hres_vis_t          vid_left;
 hres_vis_t          vid_right;
 
@@ -298,10 +294,6 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         intr_signal_o       <= 4'b0;
         border_color        <= 8'h08;               // defaulting to dark grey to show operational
-        cursor_x            <= '0;
-        cursor_y            <= '0;
-        vid_top             <= '0;
-        vid_bottom          <= $bits(vid_bottom)'(xv::VISIBLE_HEIGHT);
         vid_left            <= '0;
         vid_right           <= $bits(vid_right)'(xv::VISIBLE_WIDTH);
 
@@ -370,17 +362,13 @@ always_ff @(posedge clk) begin
                     copp_reg_data_o[xv::COPP_W-1:0]  <= vgen_reg_data_i[xv::COPP_W-1:0];
 `endif
                 end
-                xv::XR_CURSOR_X: begin
-                    cursor_x        <= $bits(cursor_x)'(vgen_reg_data_i);
+                xv::XR_UNUSED_02: begin
                 end
-                xv::XR_CURSOR_Y: begin
-                    cursor_y        <= $bits(cursor_y)'(vgen_reg_data_i);
+                xv::XR_UNUSED_03: begin
                 end
-                xv::XR_VID_TOP: begin
-                    vid_top        <= $bits(vid_top)'(vgen_reg_data_i);
+                xv::XR_UNUSED_04: begin
                 end
-                xv::XR_VID_BOTTOM: begin
-                    vid_bottom     <= $bits(vid_bottom)'(vgen_reg_data_i);;
+                xv::XR_UNUSED_05: begin
                 end
                 xv::XR_VID_LEFT: begin
                     vid_left       <= $bits(vid_left)'(vgen_reg_data_i);
@@ -465,10 +453,6 @@ always_ff @(posedge clk) begin
 `ifdef ENABLE_COPP
         xv::XR_COPP_CTRL:      vgen_reg_data_o <= { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPP_W-1:0]};
 `endif
-        xv::XR_CURSOR_X:       vgen_reg_data_o <= 16'(cursor_x);
-        xv::XR_CURSOR_Y:       vgen_reg_data_o <= 16'(cursor_y);
-        xv::XR_VID_TOP:        vgen_reg_data_o <= 16'(vid_top);
-        xv::XR_VID_BOTTOM:     vgen_reg_data_o <= 16'(vid_bottom);
         xv::XR_VID_LEFT:       vgen_reg_data_o <= 16'(vid_left);
         xv::XR_VID_RIGHT:      vgen_reg_data_o <= 16'(vid_right);
         xv::XR_SCANLINE:       vgen_reg_data_o <= { (v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 14'(v_count) };

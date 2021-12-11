@@ -485,7 +485,7 @@ always_ff @(posedge clk) begin
 `ifdef SYNTHESIS
                 blit_state          <= IDLE;
 `else
-                $fatal(1);
+                blit_state          <= 'X;
 `endif
             end
         endcase

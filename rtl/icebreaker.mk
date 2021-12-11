@@ -87,11 +87,11 @@ ICEPROG := iceprog
 ICEMULTI := icemulti
 
 # Yosys synthesis arguments
-FLOW3 :=
-YOSYS_SYNTH_ARGS := -device u -dsp -abc2 -relut -retime -top $(TOP)
+#FLOW3 :=
+#YOSYS_SYNTH_ARGS := -device u -dsp -abc2 -relut -retime -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -relut -top $(TOP)
-#YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -relut -top $(TOP)
-#FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
+YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -relut -top $(TOP)
+FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DICEBREAKER -DSPI_INTERFACE
@@ -103,7 +103,7 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
-NEXTPNR_ARGS := --seed $${RANDOM} --promote-logic --opt-timing --placer heap
+NEXTPNR_ARGS :=  --randomize-seed --promote-logic --opt-timing --placer heap
 
 ifeq ($(strip $(VIDEO_OUTPUT)), PMOD_1B2_DVI12)
 OUTSUFFIX := dvi_$(subst MODE_,,$(VIDEO_MODE))
@@ -132,7 +132,7 @@ show: $(DOT) icebreaker.mk
 # run Yosys with "noflatten", which will produce a resource count per module
 count: $(SRC) $(INC) $(FONTFILES) icebreaker.mk
 	@mkdir -p $(LOGS)
-	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
+	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 
 # run Verilator to check for Verilog issues
 lint: $(SRC) $(INC) $(FONTFILES) icebreaker.mk

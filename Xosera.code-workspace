@@ -19,10 +19,12 @@
 			"MD033": false // no inline HTML
 		},
 		"cSpell.words": [
+			"addq",
 			"AFAICT",
 			"ARGB",
 			"AWIDTH",
 			"Bamford",
+			"BASEADDR",
 			"behaviour",
 			"bhval",
 			"bitstream",
@@ -111,6 +113,7 @@
 			"MOVEF",
 			"movem",
 			"MOVEP",
+			"moveq",
 			"MPSSE",
 			"nettype",
 			"nextpnr",

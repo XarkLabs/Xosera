@@ -60,10 +60,10 @@ XR_UNUSED_ADDR  equ     $E000       ; (-/-) $E000-$FFFF unused
 ; Video Config and Copper XR Registers
 XR_VID_CTRL     equ     $0000       ; (R /W) display control and border color index
 XR_COPP_CTRL    equ     $0001       ; (R /W) display synchronized coprocessor control
-XR_CURSOR_X     equ     $0002       ; (R /W) sprite cursor X position
-XR_CURSOR_Y     equ     $0003       ; (R /W) sprite cursor Y position
-XR_VID_TOP      equ     $0004       ; (R /W) top line of active display window (typically 0)
-XR_VID_BOTTOM   equ     $0005       ; (R /W) bottom line of active display window (typically 479)
+XR_UNUSED_02    equ     $0002       ; (R /W) #TODO
+XR_UNUSED_03    equ     $0003       ; (R /W) #TODO
+XR_UNUSED_04    equ     $0004       ; (R /W) #TODO
+XR_UNUSED_05    equ     $0005       ; (R /W) #TODO
 XR_VID_LEFT     equ     $0006       ; (R /W) left edge of active display window (typically 0)
 XR_VID_RIGHT    equ     $0007       ; (R /W) right edge of active display window (typically 639 or 847)
 XR_SCANLINE     equ     $0008       ; (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline

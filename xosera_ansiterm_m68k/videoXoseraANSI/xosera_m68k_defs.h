@@ -68,22 +68,22 @@
 // XR Extended Register / Region (accessed via XM_XR_ADDR and XM_XR_DATA)
 
 //  Video Config and Copper XR Registers
-#define XR_VID_CTRL   0x00        // (R /W) display control and border color index
-#define XR_COPP_CTRL  0x01        // (R /W) display synchronized coprocessor control
-#define XR_CURSOR_X   0x02        // (R /W) sprite cursor X position // TODO: to be refactored
-#define XR_CURSOR_Y   0x03        // (R /W) sprite cursor Y position // TODO: to be refactored
-#define XR_VID_TOP    0x04        // (R /W) // TODO: to be refactored
-#define XR_VID_BOTTOM 0x05        // (R /W) // TODO: to be refactored
-#define XR_VID_LEFT   0x06        // (R /W) left edge of active display window (typically 0)
-#define XR_VID_RIGHT  0x07        // (R /W) right edge +1 of active display window (typically 640 or 848)
-#define XR_SCANLINE   0x08        // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
-#define XR_UNUSED_09  0x09        // (RO  )
-#define XR_VERSION    0x0A        // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
-#define XR_GITHASH_H  0x0B        // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
-#define XR_GITHASH_L  0x0C        // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
-#define XR_VID_HSIZE  0x0D        // (RO  ) native pixel width of monitor mode (e.g. 640/848)
-#define XR_VID_VSIZE  0x0E        // (RO  ) native pixel height of monitor mode (e.g. 480)
-#define XR_VID_VFREQ  0x0F        // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+#define XR_VID_CTRL  0x00        // (R /W) display control and border color index
+#define XR_COPP_CTRL 0x01        // (R /W) display synchronized coprocessor control
+#define XR_UNUSED_02 0x02        // (R /W) // TODO: to be refactored
+#define XR_UNUSED_03 0x03        // (R /W) // TODO: to be refactored
+#define XR_UNUSED_04 0x04        // (R /W) // TODO: to be refactored
+#define XR_UNUSED_05 0x05        // (R /W) // TODO: to be refactored
+#define XR_VID_LEFT  0x06        // (R /W) left edge of active display window (typically 0)
+#define XR_VID_RIGHT 0x07        // (R /W) right edge +1 of active display window (typically 640 or 848)
+#define XR_SCANLINE  0x08        // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
+#define XR_UNUSED_09 0x09        // (RO  )
+#define XR_VERSION   0x0A        // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
+#define XR_GITHASH_H 0x0B        // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
+#define XR_GITHASH_L 0x0C        // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
+#define XR_VID_HSIZE 0x0D        // (RO  ) native pixel width of monitor mode (e.g. 640/848)
+#define XR_VID_VSIZE 0x0E        // (RO  ) native pixel height of monitor mode (e.g. 480)
+#define XR_VID_VFREQ 0x0F        // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
 
 #define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 8, 8) | XB_(intmask, 0, 4))
 

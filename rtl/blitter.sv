@@ -229,23 +229,15 @@ word_t          val_B;                  // value read from blit_src_B VRAM (or N
 assign          blit_data_o = val_A &  val_B ^ blit_val_C;// calc logic op result as data out
 
 // transparency testing
-word_t          val_T;                  // transparency test word (val_B ^ T)
-logic  [3:0]    result_T;               // transparency result (4 bit nibble mask)
-
-always_comb begin
-    if (blit_ctrl_transp_8b) begin
-        result_T = { |val_T[15:8],  |val_T[15:8], |val_T[7:0], |val_T[7:0] };   // 8-bpp test
-    end else begin
-        result_T = { |val_T[15:12], |val_T[11:8], |val_T[7:4], |val_T[3:0] };   // 4-bpp test
-    end
-end
+logic  [3:0]    result_T4;               // transparency result (4 bit nibble mask)
+logic  [3:0]    result_T8;               // transparency result (4 bit nibble mask)
 
 assign blit_wr_mask_o   = (blit_first_word ? blit_shift_l_mask : 4'b1111) &     // output VRAM write mask
                           (blit_last_word  ? blit_shift_r_mask : 4'b1111) &
-                          result_T;
+                          (blit_ctrl_transp_8b ? result_T8 : result_T4);
 
 // blit state machine
-typedef enum logic [2:0] { //logic [2:0] {
+typedef enum logic [2:0] {
     IDLE,           // wait for blit operation (a write to xreg_blit_count)
     SETUP,          // copy xreg registers to blit registers and setup for blit
     LINE_BEG,       // copy update counters, initiate A/B read or D write
@@ -291,6 +283,8 @@ always_ff @(posedge clk) begin
         blit_first_word     <= '0;
         val_A               <= '0;
         val_B               <= '0;
+        result_T4           <= '0;
+        result_T8           <= '0;
 
     end else begin
         blit_done_intr_o    <= 1'b0;
@@ -333,13 +327,21 @@ always_ff @(posedge clk) begin
                 blit_first_word     <= 1'b1;
                 val_A               <= xreg_src_A;                      // setup for possible use as const
                 val_B               <= xreg_src_B;                      // setup for possible use as const
-                val_T               <= xreg_src_B ^ { xreg_ctrl_transp_T, xreg_ctrl_transp_T }; // const T value
 
                 blit_state          <= LINE_BEG;
             end
             LINE_BEG: begin
                 blit_lines          <= blit_lines - 1'b1;               // pre-decrement, bit[15] underflow indicates last line (1-32768)
                 blit_count          <= { 1'b0, blit_words }  - 1'b1;    // pre-decrement, bit[16] underflow indicates last word (1-65536)
+
+                result_T8 <= {  (val_B[8+:8] != blit_ctrl_transp_T),
+                                (val_B[8+:8] != blit_ctrl_transp_T),
+                                (val_B[0+:8] != blit_ctrl_transp_T),
+                                (val_B[0+:8] != blit_ctrl_transp_T)    };   // 8-bpp test
+                result_T4 <= {  (val_B[12+:4] != blit_ctrl_transp_T[7:4]),
+                                (val_B[8+:4] != blit_ctrl_transp_T[3:0]),
+                                (val_B[4+:4] != blit_ctrl_transp_T[7:4]),
+                                (val_B[0+:4] != blit_ctrl_transp_T[3:0])    };   // 4-bpp test
 
                 if (!blit_ctrl_A_const) begin
                     blit_vram_sel_o     <= 1'b1;                        // setup A addr for read
@@ -404,8 +406,16 @@ always_ff @(posedge clk) begin
                     if (blit_ctrl_C_use_B) begin
                         blit_val_C          <= lsr_B[27:12];
                     end
-                    val_T               <= lsr_B[27:12] ^ { blit_ctrl_transp_T, blit_ctrl_transp_T };
                     lsr_spill_B         <= lsr_B[11:0];                 // save any nibbles shifted out
+
+                    result_T8 <= {  (lsr_B[20+:8] != blit_ctrl_transp_T),
+                                    (lsr_B[20+:8] != blit_ctrl_transp_T),
+                                    (lsr_B[12+:8] != blit_ctrl_transp_T),
+                                    (lsr_B[12+:8] != blit_ctrl_transp_T)    };   // 8-bpp test
+                    result_T4 <= {  (lsr_B[24+:4] != blit_ctrl_transp_T[7:4]),
+                                    (lsr_B[20+:4] != blit_ctrl_transp_T[3:0]),
+                                    (lsr_B[16+:4] != blit_ctrl_transp_T[7:4]),
+                                    (lsr_B[12+:4] != blit_ctrl_transp_T[3:0])    };   // 4-bpp test
 
                     if (EN_BLIT_DECREMENT && blit_ctrl_decrement) begin
                         blit_src_B          <= blit_src_B - 1'b1;       // update B addr
@@ -469,9 +479,8 @@ always_ff @(posedge clk) begin
                 blit_dst_D      <= blit_dst_D + blit_mod_D;
                 // update constants using modulo value as XOR
                 val_A           <= val_A ^ blit_mod_A;
-                blit_val_C      <= blit_val_C ^ blit_mod_C;
                 val_B           <= val_B ^ blit_mod_B;
-                val_T           <= val_B ^ blit_mod_B ^ { blit_ctrl_transp_T, blit_ctrl_transp_T };
+                blit_val_C      <= blit_val_C ^ blit_mod_C;
 
                 if (blit_last_line) begin
                     blit_done_intr_o    <= 1'b1;

@@ -19,6 +19,9 @@ rtl/**/*.json
 # dot directories
 **/dot/*
 
+# keep xosera_gateware files
+!xosera_gateware/**
+
 # Verilator output
 rtl/sim/obj_dir/*
 

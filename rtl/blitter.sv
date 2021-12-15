@@ -47,8 +47,8 @@ logic           xreg_ctrl_transp_8b;                // 4-bit/8-bit transparency 
 logic [7:0]     xreg_ctrl_transp_T;                 // 8-bit transparency value
 
 logic  [1:0]    xreg_shift_count;
+logic  [3:0]    xreg_shift_f_mask;
 logic  [3:0]    xreg_shift_l_mask;
-logic  [3:0]    xreg_shift_r_mask;
 word_t          xreg_mod_A;
 word_t          xreg_src_A;
 word_t          xreg_mod_B;
@@ -77,8 +77,8 @@ always_ff @(posedge clk) begin
         xreg_ctrl_transp_8b <= '0;
         xreg_ctrl_transp_T  <= '0;
         xreg_shift_count    <= '0;
+        xreg_shift_f_mask   <= '0;
         xreg_shift_l_mask   <= '0;
-        xreg_shift_r_mask   <= '0;
         xreg_mod_A          <= '0;
         xreg_mod_B          <= '0;
         xreg_mod_C          <= '0;
@@ -109,8 +109,8 @@ always_ff @(posedge clk) begin
                     xreg_ctrl_A_const   <= xreg_data_i[0];
                 end
                 xv::XR_BLIT_SHIFT: begin
-                    xreg_shift_l_mask   <= xreg_data_i[15:12];
-                    xreg_shift_r_mask   <= xreg_data_i[11:8];
+                    xreg_shift_f_mask   <= xreg_data_i[15:12];
+                    xreg_shift_l_mask   <= xreg_data_i[11:8];
                     xreg_shift_count    <= xreg_data_i[1:0];
                 end
                 xv::XR_BLIT_MOD_A: begin
@@ -160,8 +160,8 @@ logic           blit_ctrl_decrement;
 logic           blit_ctrl_transp_8b;
 logic  [7:0]    blit_ctrl_transp_T;
 logic  [1:0]    blit_shift_count;
+logic  [3:0]    blit_shift_f_mask;
 logic  [3:0]    blit_shift_l_mask;
-logic  [3:0]    blit_shift_r_mask;
 word_t          blit_mod_A;
 word_t          blit_mod_B;
 word_t          blit_mod_C;
@@ -175,39 +175,32 @@ word_t          blit_words;
 
 // blitter flags and word counter
 logic [16:0]    blit_count;             // word counter (extra underflow bit used line done flag)
-logic           blit_first_word;
+logic [ 3:0]    blit_first_word;
 logic           blit_last_word;
 assign          blit_last_word  = blit_count[16];   // underflow flag for last word/last word of line
 logic           blit_last_line;
 assign          blit_last_line  = blit_lines[15];   // underflow flag for last line (for rectangular blit)
 
 // nibble shifter
-function automatic [27:0] lsr_4(
-        input  [1:0]    nibble_shift,   // 0 to 3 nibbles to shift right
-        input [11:0]    shift_in,       // 3 nibbles shifted in (from previous word shift out)
-        input word_t    data            // data word to shift
-    );
-    begin
-        case (nibble_shift)
-            2'h0:   lsr_4 = { data[15:12],    data[11:8],    data[7:4],     data[3:0],      // word result
-                            4'b0,           4'b0,          4'b0};                           // nibbles shifted out
-            2'h1:   lsr_4 = { shift_in[11:8], data[15:12],   data[11:8],    data[7:4],      // word result
-                            data[3:0],      4'b0,          4'b0};                           // nibbles shifted out
-            2'h2:   lsr_4 = { shift_in[11:8], shift_in[7:4], data[15:12],   data[11:8],     // word result
-                            data[7:4],      data[3:0],     4'b0};                           // nibbles shifted out
-            2'h3:   lsr_4 = { shift_in[11:8], shift_in[7:4], shift_in[3:0], data[15:12],    // word result
-                            data[11:8],     data[7:4],     data[3:0] };                     // nibbles shifted out
-        endcase
-    end
-endfunction
+word_t      last_A;         // last A word save
+word_t      last_B;         // last B word save
+word_t      last_word;      // last word to shift in
+word_t      shift_out;      // word 0 to 3 nibble rotated ()
 
-logic [27:0]    lsr_A;                  // 0 to 3 nibble right shifted A value
-logic [11:0]    lsr_spill_A;            // up to 3 nibbles right shifted out of A, to shift in with next A word
-always_comb     lsr_A           = lsr_4(blit_shift_count, lsr_spill_A, blit_data_i);    // shift value read from memory
-
-logic [27:0]    lsr_B;                  // 0 to 3 nibble right shifted B value
-logic [11:0]    lsr_spill_B;            // up to 3 nibbles right shifted out of B, to shift in with next B word
-always_comb     lsr_B           = lsr_4(blit_shift_count, lsr_spill_B, blit_data_i);    // shift value read from memory
+always_comb begin
+    case ({ EN_BLIT_DECREMENT ? blit_ctrl_decrement : 1'b0, blit_shift_count })
+        // right shift
+        3'b000:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
+        3'b001:   shift_out = {   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4]  };
+        3'b010:   shift_out = {   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4]  };
+        3'b011:   shift_out = {   last_word[ 8+:4],   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4]  };
+        // left shift (decrement)
+        3'b100:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
+        3'b101:   shift_out = { blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4],   last_word[ 4+:4]  };
+        3'b110:   shift_out = { blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4]  };
+        3'b111:   shift_out = { blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4]  };
+    endcase
+end
 
 // logic op calculation
 
@@ -232,8 +225,8 @@ assign          blit_data_o = val_A &  val_B ^ blit_val_C;// calc logic op resul
 logic  [3:0]    result_T4;               // transparency result (4 bit nibble mask)
 logic  [3:0]    result_T8;               // transparency result (4 bit nibble mask)
 
-assign blit_wr_mask_o   = (blit_first_word ? blit_shift_l_mask : 4'b1111) &     // output VRAM write mask
-                          (blit_last_word  ? blit_shift_r_mask : 4'b1111) &
+assign blit_wr_mask_o   = blit_first_word &     // output VRAM write mask
+                          (blit_last_word  ? blit_shift_l_mask : 4'b1111) &
                           (blit_ctrl_transp_8b ? result_T8 : result_T4);
 
 // blit state machine
@@ -265,8 +258,8 @@ always_ff @(posedge clk) begin
         blit_ctrl_decrement <= '0;
         blit_ctrl_transp_8b <= '0;
         blit_ctrl_transp_T  <= '0;
+        blit_shift_f_mask   <= '0;
         blit_shift_l_mask   <= '0;
-        blit_shift_r_mask   <= '0;
         blit_shift_count    <= '0;
         blit_mod_A          <= '0;
         blit_mod_B          <= '0;
@@ -286,13 +279,17 @@ always_ff @(posedge clk) begin
         result_T4           <= '0;
         result_T8           <= '0;
 
+        last_word           <= '0;
+        last_A              <= '0;
+        last_B              <= '0;
+
     end else begin
         blit_done_intr_o    <= 1'b0;
 
         blit_vram_sel_o     <= 1'b0;
         blit_wr_o           <= 1'b0;
-        blit_addr_o         <= 'X;      // TODO: check this cost
         blit_state          <= 'X;
+        last_word           <= 'X;
 
         case (blit_state)
             IDLE: begin
@@ -311,8 +308,8 @@ always_ff @(posedge clk) begin
                 blit_ctrl_transp_8b <= xreg_ctrl_transp_8b;
                 blit_ctrl_transp_T  <= xreg_ctrl_transp_T;
                 blit_shift_count    <= xreg_shift_count;
+                blit_shift_f_mask   <= xreg_shift_f_mask;
                 blit_shift_l_mask   <= xreg_shift_l_mask;
-                blit_shift_r_mask   <= xreg_shift_r_mask;
                 blit_mod_A          <= xreg_mod_A;
                 blit_mod_B          <= xreg_mod_B;
                 blit_mod_C          <= xreg_mod_C;
@@ -324,35 +321,40 @@ always_ff @(posedge clk) begin
                 blit_lines          <= { 1'b0, xreg_lines };
                 blit_words          <= xreg_words;
 
-                blit_first_word     <= 1'b1;
                 val_A               <= xreg_src_A;                      // setup for possible use as const
                 val_B               <= xreg_src_B;                      // setup for possible use as const
 
                 blit_state          <= LINE_BEG;
             end
             LINE_BEG: begin
+                blit_first_word     <= blit_shift_f_mask;
+
                 blit_lines          <= blit_lines - 1'b1;               // pre-decrement, bit[15] underflow indicates last line (1-32768)
                 blit_count          <= { 1'b0, blit_words }  - 1'b1;    // pre-decrement, bit[16] underflow indicates last word (1-65536)
 
-                result_T8 <= {  (val_B[8+:8] != blit_ctrl_transp_T),
-                                (val_B[8+:8] != blit_ctrl_transp_T),
-                                (val_B[0+:8] != blit_ctrl_transp_T),
-                                (val_B[0+:8] != blit_ctrl_transp_T)    };   // 8-bpp test
-                result_T4 <= {  (val_B[12+:4] != blit_ctrl_transp_T[7:4]),
-                                (val_B[8+:4] != blit_ctrl_transp_T[3:0]),
-                                (val_B[4+:4] != blit_ctrl_transp_T[7:4]),
-                                (val_B[0+:4] != blit_ctrl_transp_T[3:0])    };   // 4-bpp test
+                result_T8   <= { (val_B[8+:8] != blit_ctrl_transp_T),
+                                 (val_B[8+:8] != blit_ctrl_transp_T),
+                                 (val_B[0+:8] != blit_ctrl_transp_T),
+                                 (val_B[0+:8] != blit_ctrl_transp_T)    };
+                result_T4   <= { (val_B[12+:4] != blit_ctrl_transp_T[7:4]),
+                                 (val_B[ 8+:4] != blit_ctrl_transp_T[3:0]),
+                                 (val_B[ 4+:4] != blit_ctrl_transp_T[7:4]),
+                                 (val_B[ 0+:4] != blit_ctrl_transp_T[3:0])    };
 
                 if (!blit_ctrl_A_const) begin
                     blit_vram_sel_o     <= 1'b1;                        // setup A addr for read
                     blit_wr_o           <= 1'b0;
                     blit_addr_o         <= blit_src_A;
 
+                    last_word           <= last_A;
+
                     blit_state          <= WAIT_RD_A;
                 end else if (!blit_ctrl_B_const) begin
                     blit_vram_sel_o     <= 1'b1;                        // setup B addr for read
                     blit_wr_o           <= 1'b0;
                     blit_addr_o         <= blit_src_B;
+
+                    last_word           <= last_B;
 
                     blit_state          <= WAIT_RD_B;
                 end else begin
@@ -369,20 +371,24 @@ always_ff @(posedge clk) begin
                     blit_wr_o           <= 1'b0;
                     blit_addr_o         <= blit_src_A;
 
+                    last_word           <= last_A;
+
                     blit_state          <= WAIT_RD_A;
                 end else begin
-                    val_A               <= lsr_A[27:12];                // set A to shifted read result
-                    lsr_spill_A         <= lsr_A[11:0];                 // save any nibbles shifted out
+                    val_A               <= shift_out;               // set A to shifted read result
+                    last_A              <= blit_data_i;             // save any nibbles shifted out
                     if (EN_BLIT_DECREMENT && blit_ctrl_decrement) begin
-                        blit_src_A          <= blit_src_A - 1'b1;       // update A addr
+                        blit_src_A          <= blit_addr_o - 1'b1;      // update A addr
                     end else begin
-                        blit_src_A          <= blit_src_A + 1'b1;       // update A addr
+                        blit_src_A          <= blit_addr_o + 1'b1;      // update A addr
                     end
 
                     if (!blit_ctrl_B_const) begin
                         blit_vram_sel_o     <= 1'b1;                    // setup B addr for read
                         blit_wr_o           <= 1'b0;
                         blit_addr_o         <= blit_src_B;
+
+                        last_word           <= last_B;
 
                         blit_state          <= WAIT_RD_B;
                     end else begin
@@ -400,27 +406,29 @@ always_ff @(posedge clk) begin
                     blit_wr_o           <= 1'b0;
                     blit_addr_o         <= blit_src_B;
 
+                    last_word           <= last_B;
+
                     blit_state          <= WAIT_RD_B;
                 end else begin
-                    val_B               <= blit_ctrl_B_not ? ~lsr_B[27:12] : lsr_B[27:12];                // set B to shifted read result
+                    val_B               <= blit_ctrl_B_not ? ~shift_out : shift_out;
+                    last_B              <= blit_data_i;
                     if (blit_ctrl_C_use_B) begin
-                        blit_val_C          <= lsr_B[27:12];
+                        blit_val_C          <= shift_out;
                     end
-                    lsr_spill_B         <= lsr_B[11:0];                 // save any nibbles shifted out
 
-                    result_T8 <= {  (lsr_B[20+:8] != blit_ctrl_transp_T),
-                                    (lsr_B[20+:8] != blit_ctrl_transp_T),
-                                    (lsr_B[12+:8] != blit_ctrl_transp_T),
-                                    (lsr_B[12+:8] != blit_ctrl_transp_T)    };   // 8-bpp test
-                    result_T4 <= {  (lsr_B[24+:4] != blit_ctrl_transp_T[7:4]),
-                                    (lsr_B[20+:4] != blit_ctrl_transp_T[3:0]),
-                                    (lsr_B[16+:4] != blit_ctrl_transp_T[7:4]),
-                                    (lsr_B[12+:4] != blit_ctrl_transp_T[3:0])    };   // 4-bpp test
+                    result_T8    <= { (shift_out[8+:8] != blit_ctrl_transp_T),
+                                      (shift_out[8+:8] != blit_ctrl_transp_T),
+                                      (shift_out[0+:8] != blit_ctrl_transp_T),
+                                      (shift_out[0+:8] != blit_ctrl_transp_T)    };
+                    result_T4    <= { (shift_out[12+:4] != blit_ctrl_transp_T[7:4]),
+                                      (shift_out[ 8+:4] != blit_ctrl_transp_T[3:0]),
+                                      (shift_out[ 4+:4] != blit_ctrl_transp_T[7:4]),
+                                      (shift_out[ 0+:4] != blit_ctrl_transp_T[3:0])    };
 
                     if (EN_BLIT_DECREMENT && blit_ctrl_decrement) begin
-                        blit_src_B          <= blit_src_B - 1'b1;       // update B addr
+                        blit_src_B          <= blit_addr_o - 1'b1;       // update B addr
                     end else begin
-                        blit_src_B          <= blit_src_B + 1'b1;       // update B addr
+                        blit_src_B          <= blit_addr_o + 1'b1;       // update B addr
                     end
 
                     blit_vram_sel_o     <= 1'b1;                        // setup D addr for write
@@ -439,15 +447,15 @@ always_ff @(posedge clk) begin
                     blit_state          <= WAIT_WR_D;
                 end else begin
                     if (EN_BLIT_DECREMENT && blit_ctrl_decrement) begin
-                        blit_dst_D          <= blit_dst_D - 1'b1;       // update D addr
-                        blit_addr_o         <= blit_dst_D - 1'b1;       // setup VRAM addr for constant write
+                        blit_dst_D          <= blit_addr_o - 1'b1;       // update D addr
+                        blit_addr_o         <= blit_addr_o - 1'b1;       // setup VRAM addr for constant write
                     end else begin
-                        blit_dst_D          <= blit_dst_D + 1'b1;       // update D addr
-                        blit_addr_o         <= blit_dst_D + 1'b1;       // setup VRAM addr for constant write
+                        blit_dst_D          <= blit_addr_o + 1'b1;       // update D addr
+                        blit_addr_o         <= blit_addr_o + 1'b1;       // setup VRAM addr for constant write
                     end
                     blit_count          <= blit_count - 1'b1;           // decrement word count
 
-                    blit_first_word     <= 1'b0;                        // clear first word flag
+                    blit_first_word     <= '1;                          // clear first word mask
 
                     if (blit_last_word) begin                           // was that the last word?
                         blit_state          <= LINE_END;                // we are finshed with this line
@@ -456,11 +464,15 @@ always_ff @(posedge clk) begin
                         blit_wr_o           <= 1'b0;
                         blit_addr_o         <= blit_src_A;
 
+                        last_word           <= last_A;
+
                         blit_state          <= WAIT_RD_A;
                     end else if (!blit_ctrl_B_const) begin
                         blit_vram_sel_o     <= 1'b1;                    // setup B addr for read
                         blit_wr_o           <= 1'b0;
                         blit_addr_o         <= blit_src_B;
+
+                        last_word           <= last_B;
 
                         blit_state          <= WAIT_RD_B;
                     end else begin
@@ -472,7 +484,6 @@ always_ff @(posedge clk) begin
                 end
             end
             LINE_END: begin
-                blit_first_word <= 1'b1;
                 // update addresses with end of line modulo value
                 blit_src_A      <= blit_src_A + blit_mod_A;
                 blit_src_B      <= blit_src_B + blit_mod_B;

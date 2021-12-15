@@ -628,7 +628,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_SRC_A, 0xF000),                             // moto graphic src A
     XREG_SETW(BLIT_SRC_B, 0xFFFF),                             // nop B const (w/o transparent nibble)
     XREG_SETW(BLIT_VAL_C, 0x0000),                             // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000 + (20 * W_4BPP) + 11),        // D = start dest address
+    XREG_SETW(BLIT_DST_D, 0x0000 + (20 * W_4BPP) + 10),        // D = start dest address
     XREG_SETW(BLIT_LINES, H_LOGO - 1),                         // moto graphic height
     XREG_SETW(BLIT_WORDS, W_LOGO - 1),                         // moto graphic width
 
@@ -643,7 +643,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_SRC_A, 0xF000),                             // moto graphic src A
     XREG_SETW(BLIT_SRC_B, 0xFFFF),                             // nop B const (w/o transparent nibble)
     XREG_SETW(BLIT_VAL_C, 0x0000),                             // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000 + (40 * W_4BPP) + 11),        // D = start dest address
+    XREG_SETW(BLIT_DST_D, 0x0000 + (40 * W_4BPP) + 10),        // D = start dest address
     XREG_SETW(BLIT_LINES, H_LOGO - 1),                         // moto graphic height
     XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                     // moto graphic width
 
@@ -658,7 +658,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_SRC_A, 0xF000),                             // moto graphic src A
     XREG_SETW(BLIT_SRC_B, 0xFFFF),                             // nop B const (w/o transparent nibble)
     XREG_SETW(BLIT_VAL_C, 0x0000),                             // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000 + (60 * W_4BPP) + 11),        // D = start dest address
+    XREG_SETW(BLIT_DST_D, 0x0000 + (60 * W_4BPP) + 10),        // D = start dest address
     XREG_SETW(BLIT_LINES, H_LOGO - 1),                         // moto graphic height
     XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                     // moto graphic width
 
@@ -673,7 +673,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_SRC_A, 0xF000),                             // moto graphic src A
     XREG_SETW(BLIT_SRC_B, 0xFFFF),                             // nop B const (w/o transparent nibble)
     XREG_SETW(BLIT_VAL_C, 0x0000),                             // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000 + (80 * W_4BPP) + 11),        // D = start dest address
+    XREG_SETW(BLIT_DST_D, 0x0000 + (80 * W_4BPP) + 10),        // D = start dest address
     XREG_SETW(BLIT_LINES, H_LOGO - 1),                         // moto graphic height
     XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                     // moto graphic width
 
@@ -688,7 +688,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_SRC_A, 0xFFFF),                             // nop A const
     XREG_SETW(BLIT_SRC_B, 0xF000),                             // moto graphic src B
     XREG_SETW(BLIT_VAL_C, 0x0000),                             // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000 + (20 * W_4BPP) + 21),        // D = start dest address
+    XREG_SETW(BLIT_DST_D, 0x0000 + (20 * W_4BPP) + 19),        // D = start dest address
     XREG_SETW(BLIT_LINES, H_LOGO - 1),                         // moto graphic height
     XREG_SETW(BLIT_WORDS, W_LOGO - 1),                         // moto graphic width
 
@@ -703,7 +703,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_SRC_A, 0xFFFF),                             // nop A const
     XREG_SETW(BLIT_SRC_B, 0xF000),                             // moto graphic src B
     XREG_SETW(BLIT_VAL_C, 0x0000),                             // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000 + (40 * W_4BPP) + 21),        // D = start dest address
+    XREG_SETW(BLIT_DST_D, 0x0000 + (40 * W_4BPP) + 19),        // D = start dest address
     XREG_SETW(BLIT_LINES, H_LOGO - 1),                         // moto graphic height
     XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                     // moto graphic width
 
@@ -718,7 +718,7 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_SRC_A, 0xFFFF),                             // nop A const
     XREG_SETW(BLIT_SRC_B, 0xF000),                             // moto graphic src B
     XREG_SETW(BLIT_VAL_C, 0x0000),                             // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000 + (60 * W_4BPP) + 21),        // D = start dest address
+    XREG_SETW(BLIT_DST_D, 0x0000 + (60 * W_4BPP) + 19),        // D = start dest address
     XREG_SETW(BLIT_LINES, H_LOGO - 1),                         // moto graphic height
     XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                     // moto graphic width
 
@@ -733,70 +733,74 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_SRC_A, 0xFFFF),                             // nop A const
     XREG_SETW(BLIT_SRC_B, 0xF000),                             // moto graphic src B
     XREG_SETW(BLIT_VAL_C, 0x0000),                             // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000 + (80 * W_4BPP) + 21),        // D = start dest address
+    XREG_SETW(BLIT_DST_D, 0x0000 + (80 * W_4BPP) + 19),        // D = start dest address
     XREG_SETW(BLIT_LINES, H_LOGO - 1),                         // moto graphic height
     XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                     // moto graphic width
 
 
     // 2D moto blit 0, 3
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x3321),                              // const A, read B, 8-bit trans=33
-    XREG_SETW(BLIT_SHIFT, 0xFF00),                             // no masking or shifting
-    XREG_SETW(BLIT_MOD_A, 0x0000),                             // no A line modulo (contiguous source)
-    XREG_SETW(BLIT_MOD_B, 0x0000),                             // no B line XOR
-    XREG_SETW(BLIT_MOD_C, 0x0000),                             // no C line XOR
-    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO),                    // D modulo = dest width - source width
-    XREG_SETW(BLIT_SRC_A, 0xFFFF),                             // nop A const
-    XREG_SETW(BLIT_SRC_B, 0xF000),                             // moto graphic src B
-    XREG_SETW(BLIT_VAL_C, 0x0000),                             // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000 + (20 * W_4BPP) + 31),        // D = start dest address
-    XREG_SETW(BLIT_LINES, H_LOGO - 1),                         // moto graphic height
-    XREG_SETW(BLIT_WORDS, W_LOGO - 1),                         // moto graphic width
+    XREG_SETW(BLIT_CTRL, 0x0011),                                 // const A, read B, 8-bit trans=33
+    XREG_SETW(BLIT_SHIFT, 0xFF00),                                // no masking or shifting
+    XREG_SETW(BLIT_MOD_A, 0x0000),                                // no A line modulo (contiguous source)
+    XREG_SETW(BLIT_MOD_B, 0x0000),                                // no B line XOR
+    XREG_SETW(BLIT_MOD_C, 0x0000),                                // no C line XOR
+    XREG_SETW(BLIT_MOD_D, -(W_4BPP - W_LOGO)),                    // D modulo = dest width - source width
+    XREG_SETW(BLIT_SRC_A, 0xFFFF),                                // nop A const
+    XREG_SETW(BLIT_SRC_B, 0xF000 + (H_LOGO * W_LOGO) - 1),        // moto graphic src B
+    XREG_SETW(BLIT_VAL_C, 0x0000),                                // nop C const
+    XREG_SETW(BLIT_DST_D,
+              0x0000 + ((20 + (H_LOGO - 1)) * W_4BPP) + (W_LOGO - 1) + 28),        // D = start dest address
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),                                             // moto graphic height
+    XREG_SETW(BLIT_WORDS, W_LOGO - 1),                                             // moto graphic width
 
     // 2D moto blit 1, 3
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x3321),                              // const A, read B, 8-bit trans=33
-    XREG_SETW(BLIT_SHIFT, 0x7801),                             // shift/mask 1 nibble
-    XREG_SETW(BLIT_MOD_A, 0x000),                              // no A line XOR
-    XREG_SETW(BLIT_MOD_B, -1),                                 // line A modulo adjust for added width
-    XREG_SETW(BLIT_MOD_C, 0x0000),                             // no C line XOR
-    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),                // D modulo = dest width - source width
-    XREG_SETW(BLIT_SRC_A, 0xFFFF),                             // nop A const
-    XREG_SETW(BLIT_SRC_B, 0xF000),                             // moto graphic src B
-    XREG_SETW(BLIT_VAL_C, 0x0000),                             // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000 + (40 * W_4BPP) + 31),        // D = start dest address
-    XREG_SETW(BLIT_LINES, H_LOGO - 1),                         // moto graphic height
-    XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                     // moto graphic width
+    XREG_SETW(BLIT_CTRL, 0x0011),                                 // const A, read B, 8-bit trans=33
+    XREG_SETW(BLIT_SHIFT, 0x8701),                                // shift/mask 3 nibbles
+    XREG_SETW(BLIT_MOD_A, 0x000),                                 // no A line XOR
+    XREG_SETW(BLIT_MOD_B, +1),                                    // line A modulo adjust for added width
+    XREG_SETW(BLIT_MOD_C, 0x0000),                                // no C line XOR
+    XREG_SETW(BLIT_MOD_D, -(W_4BPP - W_LOGO - 1)),                // D modulo = dest width - source width
+    XREG_SETW(BLIT_SRC_A, 0xFFFF),                                // nop A const
+    XREG_SETW(BLIT_SRC_B, 0xF000 + (H_LOGO * W_LOGO) - 1),        // moto graphic src B
+    XREG_SETW(BLIT_VAL_C, 0x0000),                                // nop C const
+    XREG_SETW(BLIT_DST_D,
+              0x0000 + ((40 + (H_LOGO - 1)) * W_4BPP) + (W_LOGO - 1) + 28 + 1),        // D = start dest address
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),                                                 // moto graphic height
+    XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                                             // moto graphic width
 
     // 2D moto blit 2, 3
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x3321),                              // const A, read B, 8-bit trans=33
-    XREG_SETW(BLIT_SHIFT, 0x3C02),                             // shift/mask 2 nibbles
-    XREG_SETW(BLIT_MOD_A, 0x000),                              // no A line XOR
-    XREG_SETW(BLIT_MOD_B, -1),                                 // line A modulo adjust for added width
-    XREG_SETW(BLIT_MOD_C, 0x0000),                             // no C line XOR
-    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),                // D modulo = dest width - source width
-    XREG_SETW(BLIT_SRC_A, 0xFFFF),                             // nop A const
-    XREG_SETW(BLIT_SRC_B, 0xF000),                             // moto graphic src B
-    XREG_SETW(BLIT_VAL_C, 0x0000),                             // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000 + (60 * W_4BPP) + 31),        // D = start dest address
-    XREG_SETW(BLIT_LINES, H_LOGO - 1),                         // moto graphic height
-    XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                     // moto graphic width
+    XREG_SETW(BLIT_CTRL, 0x0011),                                 // const A, read B, 8-bit trans=33
+    XREG_SETW(BLIT_SHIFT, 0xC302),                                // shift/mask 2 nibbles
+    XREG_SETW(BLIT_MOD_A, 0x000),                                 // no A line XOR
+    XREG_SETW(BLIT_MOD_B, +1),                                    // line A modulo adjust for added width
+    XREG_SETW(BLIT_MOD_C, 0x0000),                                // no C line XOR
+    XREG_SETW(BLIT_MOD_D, -(W_4BPP - W_LOGO - 1)),                // D modulo = dest width - source width
+    XREG_SETW(BLIT_SRC_A, 0xFFFF),                                // nop A const
+    XREG_SETW(BLIT_SRC_B, 0xF000 + (H_LOGO * W_LOGO) - 1),        // moto graphic src B
+    XREG_SETW(BLIT_VAL_C, 0x0000),                                // nop C const
+    XREG_SETW(BLIT_DST_D,
+              0x0000 + ((60 + (H_LOGO - 1)) * W_4BPP) + (W_LOGO - 1) + 28 + 1),        // D = start dest address
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),                                                 // moto graphic height
+    XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                                             // moto graphic width
 
     // 2D moto blit 3, 3
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x3321),                              // const A, read B, 8-bit trans=33
-    XREG_SETW(BLIT_SHIFT, 0x1E03),                             // shift/mask 3 nibbles
-    XREG_SETW(BLIT_MOD_A, 0x000),                              // no A line XOR
-    XREG_SETW(BLIT_MOD_B, -1),                                 // line A modulo adjust for added width
-    XREG_SETW(BLIT_MOD_C, 0x0000),                             // no C line XOR
-    XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO - 1),                // D modulo = dest width - source width
-    XREG_SETW(BLIT_SRC_A, 0xFFFF),                             // nop A const
-    XREG_SETW(BLIT_SRC_B, 0xF000),                             // moto graphic src B
-    XREG_SETW(BLIT_VAL_C, 0x0000),                             // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000 + (80 * W_4BPP) + 31),        // D = start dest address
-    XREG_SETW(BLIT_LINES, H_LOGO - 1),                         // moto graphic height
-    XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                     // moto graphic width
+    XREG_SETW(BLIT_CTRL, 0x0011),                                 // const A, read B, 4-bit trans=0
+    XREG_SETW(BLIT_SHIFT, 0xE103),                                // shift/mask 1 nibble
+    XREG_SETW(BLIT_MOD_A, 0),                                     // no A line XOR
+    XREG_SETW(BLIT_MOD_B, +1),                                    // line A modulo adjust for added width
+    XREG_SETW(BLIT_MOD_C, 0x0000),                                // no C line XOR
+    XREG_SETW(BLIT_MOD_D, -(W_4BPP - W_LOGO - 1)),                // D modulo = dest width - source width
+    XREG_SETW(BLIT_SRC_A, 0xFFFF),                                // nop A const
+    XREG_SETW(BLIT_SRC_B, 0xF000 + (H_LOGO * W_LOGO) - 1),        // moto graphic src B
+    XREG_SETW(BLIT_VAL_C, 0x0000),                                // nop C const
+    XREG_SETW(BLIT_DST_D,
+              0x0000 + ((80 + (H_LOGO - 1)) * W_4BPP) + (W_LOGO - 1) + 28 + 1),        // D = start dest address
+    XREG_SETW(BLIT_LINES, H_LOGO - 1),                                                 // moto graphic height
+    XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                                             // moto graphic width
 
     REG_WAIT_BLIT_DONE(),
     REG_WAITVTOP(),

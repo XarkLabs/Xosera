@@ -42,7 +42,7 @@ module xosera_main#(
     parameter   EN_VID_PF_B_BLEND_A8    = 0,        // enable pf B 8-level alpha (otherwise 4-level)
     parameter   EN_VID_PF_B_BLEND_EXTRA = 0,        // enable pf B fancy blending modes for playfield B
     parameter   EN_BLIT                 = 1,        // enable blit unit
-    parameter   EN_BLIT_DECREMENT       = 0         // enable blit decrement bit
+    parameter   EN_BLIT_DECREMENT       = 1         // enable blit decrement bit
 )
 (
     input  wire logic         bus_cs_n_i,           // register select strobe (active low)

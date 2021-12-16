@@ -2,7 +2,7 @@
     "reg": [
         {
             "bits": 1,
-            "name": "constA",
+            "name": "Aconst",
             "type": 3,
             "attr": [
                 "A term",
@@ -12,7 +12,7 @@
         },
         {
             "bits": 1,
-            "name": "constB",
+            "name": "Bconst",
             "type": 6,
             "attr": [
                 "B term",
@@ -22,50 +22,59 @@
         },
         {
             "bits": 1,
-            "name": "B=A^B",
+            "name": "notB",
             "type": 6,
             "attr": [
-                "BxorA",
-                "B const",
-                "0=norm",
-                "1=A^B"
+                "NOT B",
+                "0= B",
+                "1=~B"
             ]
         },
         {
             "bits": 1,
-            "type": 1
-        },
-        {
-            "bits": 1,
-            "name": "4/8 bpp",
-            "type": 4,
+            "name": "CuseB",
+            "type": 6,
             "attr": [
-                "transp.",
-                "pixel",
-                "0=4-bpp",
-                "1=8-bpp"
-            ]
-        },
-        {
-            "bits": 1,
-            "name": "A/B",
-            "type": 4,
-            "attr": [
-                "transp.",
-                "source",
-                "0=A",
+                "C term",
+                "0=C",
                 "1=B"
             ]
         },
         {
+            "bits": 1,
+            "name": "decr",
+            "type": 4,
+            "attr": [
+                "direction",
+                "0=incr",
+                "1=decr"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "transp8",
+            "type": 4,
+            "attr": [
+                "transp.",
+                "mode",
+                "0=4-bit",
+                "1=8-bit"
+            ]
+        },
+        {
             "bits": 2,
-            "name": "logic op",
-            "type": 4
+            "type": 1
         },
         {
             "bits": 8,
-            "type": 1
-        }
+            "name": "4/8-bit transparency value(s) T",
+            "type": 4,
+            "attr": [
+                "even/odd 4-bit transparent values for 4-bit mode",
+                "or 8-bit transparent value for 8-bit mode",
+                "(tested against B term value with notB ignored)"
+            ]
+        },
     ],
     "config": {
         "bits": 16

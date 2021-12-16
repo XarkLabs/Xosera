@@ -2,11 +2,8 @@
     "reg": [
         {
             "bits": 16,
-            "name": "modulo added to C VAL_C after each line",
-            "type": 4,
-            "attr": [
-                "NOTE: TODO nibble addition or XOR when const?"
-            ]
+            "name": "modulo value XOR'd with <tt>C</tt> constant at end of each line",
+            "type": 4
         }
     ],
     "config": {

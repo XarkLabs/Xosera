@@ -5,9 +5,11 @@
             "name": "nibble shift",
             "type": 3,
             "attr": [
-                "shift all words",
-                "right 0 to 3",
-                "4-bit nibbles"
+                "shift word from",
+                "VRAM 0 to 3",
+                "4-bit nibbles",
+                "to the right",
+                "(or left if </tt>DECR</tt>"
             ]
         },
         {
@@ -16,7 +18,7 @@
         },
         {
             "bits": 4,
-            "name": "right nibble mask",
+            "name": "last word nibble mask",
             "type": 4,
             "attr": [
                 "on last word of line",
@@ -26,7 +28,7 @@
         },
         {
             "bits": 4,
-            "name": "left nibble mask",
+            "name": "first word nibble mask",
             "type": 4,
             "attr": [
                 "on first word of line",

@@ -13,7 +13,8 @@
 `include "xosera_pkg.sv"
 
 module blitter#(
-    parameter EN_BLIT_DECREMENT = 1
+    parameter   EN_BLIT_DECR_MODE       = 1,        // enable blit pointer decrementing
+    parameter   EN_BLIT_DECR_LSHIFT     = 1         // enable blit left shift when decrementing
 )
 (
     // video registers and control
@@ -102,7 +103,7 @@ always_ff @(posedge clk) begin
                 xv::XR_BLIT_CTRL: begin
                     xreg_ctrl_transp_T  <= xreg_data_i[15:8];
                     xreg_ctrl_transp_8b <= xreg_data_i[5];
-                    xreg_ctrl_decrement <= EN_BLIT_DECREMENT ? xreg_data_i[4] : '0;
+                    xreg_ctrl_decrement <= EN_BLIT_DECR_MODE ? xreg_data_i[4] : '0;
                     xreg_ctrl_C_use_B   <= xreg_data_i[3];
                     xreg_ctrl_B_not     <= xreg_data_i[2];
                     xreg_ctrl_B_const   <= xreg_data_i[1];
@@ -187,20 +188,36 @@ word_t      last_B;         // last B word save
 word_t      last_word;      // last word to shift in
 word_t      shift_out;      // word 0 to 3 nibble rotated ()
 
-always_comb begin
-    case ({ EN_BLIT_DECREMENT ? blit_ctrl_decrement : 1'b0, blit_shift_count })
-        // right shift
-        3'b000:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
-        3'b001:   shift_out = {   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4]  };
-        3'b010:   shift_out = {   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4]  };
-        3'b011:   shift_out = {   last_word[ 8+:4],   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4]  };
-        // left shift (decrement)
-        3'b100:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
-        3'b101:   shift_out = { blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4],   last_word[ 4+:4]  };
-        3'b110:   shift_out = { blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4]  };
-        3'b111:   shift_out = { blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4]  };
-    endcase
-end
+generate
+    if (EN_BLIT_DECR_LSHIFT) begin
+        always_comb begin
+            case ({ blit_ctrl_decrement, blit_shift_count })
+                // right shift
+                3'b000:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
+                3'b001:   shift_out = {   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4]  };
+                3'b010:   shift_out = {   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4]  };
+                3'b011:   shift_out = {   last_word[ 8+:4],   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4]  };
+                // left shift (decrement)
+                3'b100:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
+                3'b101:   shift_out = { blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4],   last_word[ 4+:4]  };
+                3'b110:   shift_out = { blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4]  };
+                3'b111:   shift_out = { blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4]  };
+            endcase
+        end
+    end else begin
+        logic unused_bits;
+        assign unused_bits = &{1'b0, last_word};
+        always_comb begin
+            case (blit_shift_count)
+                // right shift
+                2'b00:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
+                2'b01:   shift_out = {   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4]  };
+                2'b10:   shift_out = {   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4]  };
+                2'b11:   shift_out = {   last_word[ 8+:4],   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4]  };
+            endcase
+        end
+    end
+endgenerate
 
 // logic op calculation
 
@@ -219,7 +236,8 @@ end
 word_t          val_A;                  // value read from blit_src_A VRAM or const
 word_t          val_B;                  // value read from blit_src_B VRAM (or NOT of value if notB) or const
 
-assign          blit_data_o = val_A &  val_B ^ blit_val_C;// calc logic op result as data out
+assign          blit_data_o = blit_ctrl_B_not ? (val_A & ~val_B ^ blit_val_C) :
+                                                (val_A & val_B ^ blit_val_C);  // calc logic op result as data out
 
 // transparency testing
 logic  [3:0]    result_T4;               // transparency result (4 bit nibble mask)
@@ -288,8 +306,8 @@ always_ff @(posedge clk) begin
 
         blit_vram_sel_o     <= 1'b0;
         blit_wr_o           <= 1'b0;
-        blit_state          <= 'X;
-        last_word           <= 'X;
+        blit_addr_o         <= '0;
+        last_word           <= '0;
 
         case (blit_state)
             IDLE: begin
@@ -304,7 +322,7 @@ always_ff @(posedge clk) begin
                 blit_ctrl_B_const   <= xreg_ctrl_B_const;
                 blit_ctrl_B_not     <= xreg_ctrl_B_not;
                 blit_ctrl_C_use_B   <= xreg_ctrl_C_use_B;
-                blit_ctrl_decrement <= EN_BLIT_DECREMENT ? xreg_ctrl_decrement : '0;
+                blit_ctrl_decrement <= EN_BLIT_DECR_MODE ? xreg_ctrl_decrement : '0;
                 blit_ctrl_transp_8b <= xreg_ctrl_transp_8b;
                 blit_ctrl_transp_T  <= xreg_ctrl_transp_T;
                 blit_shift_count    <= xreg_shift_count;
@@ -377,7 +395,7 @@ always_ff @(posedge clk) begin
                 end else begin
                     val_A               <= shift_out;               // set A to shifted read result
                     last_A              <= blit_data_i;             // save any nibbles shifted out
-                    if (EN_BLIT_DECREMENT && blit_ctrl_decrement) begin
+                    if (EN_BLIT_DECR_MODE && blit_ctrl_decrement) begin
                         blit_src_A          <= blit_addr_o - 1'b1;      // update A addr
                     end else begin
                         blit_src_A          <= blit_addr_o + 1'b1;      // update A addr
@@ -410,7 +428,7 @@ always_ff @(posedge clk) begin
 
                     blit_state          <= WAIT_RD_B;
                 end else begin
-                    val_B               <= blit_ctrl_B_not ? ~shift_out : shift_out;
+                    val_B               <= shift_out;
                     last_B              <= blit_data_i;
                     if (blit_ctrl_C_use_B) begin
                         blit_val_C          <= shift_out;
@@ -425,7 +443,7 @@ always_ff @(posedge clk) begin
                                       (shift_out[ 4+:4] != blit_ctrl_transp_T[7:4]),
                                       (shift_out[ 0+:4] != blit_ctrl_transp_T[3:0])    };
 
-                    if (EN_BLIT_DECREMENT && blit_ctrl_decrement) begin
+                    if (EN_BLIT_DECR_MODE && blit_ctrl_decrement) begin
                         blit_src_B          <= blit_addr_o - 1'b1;       // update B addr
                     end else begin
                         blit_src_B          <= blit_addr_o + 1'b1;       // update B addr
@@ -446,7 +464,7 @@ always_ff @(posedge clk) begin
 
                     blit_state          <= WAIT_WR_D;
                 end else begin
-                    if (EN_BLIT_DECREMENT && blit_ctrl_decrement) begin
+                    if (EN_BLIT_DECR_MODE && blit_ctrl_decrement) begin
                         blit_dst_D          <= blit_addr_o - 1'b1;       // update D addr
                         blit_addr_o         <= blit_addr_o - 1'b1;       // setup VRAM addr for constant write
                     end else begin

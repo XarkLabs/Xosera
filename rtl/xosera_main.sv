@@ -42,7 +42,8 @@ module xosera_main#(
     parameter   EN_VID_PF_B_BLEND_A8    = 0,        // enable pf B 8-level alpha (otherwise 4-level)
     parameter   EN_VID_PF_B_BLEND_EXTRA = 0,        // enable pf B fancy blending modes for playfield B
     parameter   EN_BLIT                 = 1,        // enable blit unit
-    parameter   EN_BLIT_DECREMENT       = 1         // enable blit decrement bit
+    parameter   EN_BLIT_DECR_MODE       = 1,        // enable blit pointer decrementing
+    parameter   EN_BLIT_DECR_LSHIFT     = 1         // enable blit left shift when decrementing
 )
 (
     input  wire logic         bus_cs_n_i,           // register select strobe (active low)
@@ -210,7 +211,7 @@ reg_interface reg_interface(
 //  video generation
 video_gen#(
     .EN_VID_PF_B(EN_VID_PF_B)
-    ) video_gen(
+) video_gen(
     .vgen_reg_wr_en_i(vgen_reg_wr_en),
     .vgen_reg_num_i(xr_regs_addr[4:0]),
     .vgen_reg_data_i(xr_regs_data_in),
@@ -261,8 +262,9 @@ copper copper(
 generate
     if (EN_BLIT) begin
         blitter#(
-            .EN_BLIT_DECREMENT(EN_BLIT_DECREMENT)
-            ) blitter(
+            .EN_BLIT_DECR_MODE(EN_BLIT_DECR_MODE),
+            .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT)
+        ) blitter(
             .xreg_wr_en_i(blit_reg_wr_en),
             .xreg_num_i(xr_regs_addr[3:0]),
             .xreg_data_i(xr_regs_data_in),
@@ -294,8 +296,7 @@ assign  draw_vram_data  = '0;
 // VRAM memory arbitration
 vram_arb #(
     .EN_BLIT(EN_BLIT)
-) vram_arb
-(
+) vram_arb(
     // video gen
     .vram_data_o(vram_data_out),
     .vgen_sel_i(vgen_vram_sel),
@@ -335,8 +336,7 @@ assign blit_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:4] == xv::XR_BLIT_REGS[
 assign draw_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:4] == xv::XR_DRAW_REGS[6:4]);      // draw reg write
 xrmem_arb#(
     .EN_VID_PF_B(EN_VID_PF_B)
-) xrmem_arb
-(
+) xrmem_arb(
     // regs XR register/memory interface (read/write)
     .xr_sel_i(regs_xr_sel),
     .xr_ack_o(regs_xr_ack),

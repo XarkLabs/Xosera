@@ -32,7 +32,7 @@
 //#define DELAY_TIME 500        // machine speed
 
 #define COPPER_TEST    1
-#define LR_MARGIN_TEST 1
+#define LR_MARGIN_TEST 0
 
 #if !defined(NUM_ELEMENTS)
 #define NUM_ELEMENTS(a) (sizeof(a) / sizeof(a[0]))
@@ -564,7 +564,7 @@ static void load_sd_colors(const char * filename)
         int cnt   = 0;
         int vaddr = 0;
 
-        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
+        while ((cnt = fl_fread(mem_buffer, 1, 256 * 2 * 2, file)) > 0)
         {
             if ((vaddr & 0x7) == 0)
             {
@@ -680,6 +680,11 @@ void test_blit()
     static const int H_LOGO = 16;
 
     dprintf("test_blit\n");
+
+    // crop left and right 2 pixels
+    xreg_setw(VID_LEFT, 2);
+    xreg_setw(VID_RIGHT, 640 - 2);
+
 
     do
     {
@@ -975,6 +980,41 @@ void test_blit()
     xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
     xreg_setw(PA_LINE_LEN, 320 / 4);
     xreg_setw(PA_DISP_ADDR, 0x0000);
+
+    // crop left and right 2 pixels
+    xreg_setw(VID_LEFT, 0);
+    xreg_setw(VID_RIGHT, 640);
+}
+
+void test_true_color()
+{
+
+    xm_setw(SYS_CTRL, 0x000F);        // disable Xosera vsync interrupt
+
+    xreg_setw(PA_GFX_CTRL, 0x0065);         // bitmap, 8-bpp, Hx2, Vx2
+    xreg_setw(PA_TILE_CTRL, 0x000F);        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    xreg_setw(PA_DISP_ADDR, 0x0000);        // display start address
+    xreg_setw(PA_LINE_LEN, 320 / 2);        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
+
+    xreg_setw(PB_GFX_CTRL, 0x0055);         // bitmap, 4-bpp, Hx2, Vx2
+    xreg_setw(PB_TILE_CTRL, 0x000F);        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    xreg_setw(PB_DISP_ADDR, 0x9600);        // display start address
+    xreg_setw(PB_LINE_LEN, 320 / 4);        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
+
+    xm_setw(XR_ADDR, XR_COLOR_ADDR + 15);        // set write address
+    xm_setw(XR_DATA, 0x0fff);
+
+    uint16_t rgaddr = 0x0000;
+    load_sd_colors("/true_color_pal.raw");
+    load_sd_bitmap("/parrot_320x240_tc_RG8.raw", rgaddr);
+    load_sd_bitmap("/parrot_320x240_tc_B4.raw", 0x9600);
+
+    if (delay_check(DELAY_TIME * 20))
+    {
+        return;
+    }
+
+    xm_setw(SYS_CTRL, 0x0F0F);        // disable Xosera vsync interrupt
 }
 
 void test_dual_8bpp()
@@ -1646,8 +1686,8 @@ void     xosera_test()
 
 #if LR_MARGIN_TEST
         // crop left and right 2 pixels
-        xreg_setw(VID_LEFT, 2);
-        xreg_setw(VID_RIGHT, monwidth - 2);
+        xreg_setw(VID_LEFT, 4);
+        xreg_setw(VID_RIGHT, monwidth - 4);
 #endif
 
         for (int y = 0; y < 30; y += 3)
@@ -1683,6 +1723,8 @@ void     xosera_test()
         if (use_sd)
         {
             test_blit();
+
+            test_true_color();
         }
 
         test_dual_8bpp();

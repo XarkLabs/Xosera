@@ -509,7 +509,7 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_WAITVSYNC(),        // show boot screen
                             //    REG_WAITVTOP(),         // show boot screen
 
-    XREG_SETW(PA_GFX_CTRL, 0x005F),         // bitmap, 4-bpp, Hx2, Vx2
+    XREG_SETW(PA_GFX_CTRL, 0x005F),         // bitmap, 4-bpp, Hx4, Vx4
     XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
     XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address
     XREG_SETW(PA_LINE_LEN, 320 / 4),        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
@@ -805,6 +805,34 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_WAIT_BLIT_DONE(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+
+    // true color hack test
+
+    XREG_SETW(PA_GFX_CTRL, 0x0065),         // bitmap, 8-bpp, Hx2, Vx2
+    XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address
+    XREG_SETW(PA_LINE_LEN, 320 / 2),        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
+
+    XREG_SETW(PB_GFX_CTRL, 0x0055),         // bitmap, 4-bpp, Hx2, Vx2
+    XREG_SETW(PB_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    XREG_SETW(PB_DISP_ADDR, 0x9600),        // display start address
+    XREG_SETW(PB_LINE_LEN, 320 / 4),        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
+
+    REG_W(XR_ADDR, XR_COLOR_ADDR),        // upload color palette
+    REG_UPLOAD_AUX(),
+
+    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),        // 8-bpp RG
+
+    REG_UPLOAD(),        // 4-bpp B
+
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+
 
 #if 0
 #if 0

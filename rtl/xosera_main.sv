@@ -39,6 +39,7 @@
 module xosera_main#(
     parameter   EN_VID_PF_B             = 1,        // enable playfield B
     parameter   EN_VID_PF_B_NO_BLEND    = 0,        // enable pf B overlay only, no blending
+    parameter   EN_VID_PF_B_BLEND_MIX   = 1,        // enable additive mixing if pf A alpha > 7
     parameter   EN_VID_PF_B_BLEND_A8    = 0,        // enable pf B 8-level alpha (otherwise 4-level)
     parameter   EN_VID_PF_B_BLEND_EXTRA = 0,        // enable pf B fancy blending modes for playfield B
     parameter   EN_BLIT                 = 1,        // enable blit unit
@@ -384,6 +385,7 @@ xrmem_arb#(
 video_blend#(
     .EN_VID_PF_B(EN_VID_PF_B),
     .EN_VID_PF_B_NO_BLEND(EN_VID_PF_B_NO_BLEND),
+    .EN_VID_PF_B_BLEND_MIX(EN_VID_PF_B_BLEND_MIX),
     .EN_VID_PF_B_BLEND_A8(EN_VID_PF_B_BLEND_A8),
     .EN_VID_PF_B_BLEND_EXTRA(EN_VID_PF_B_BLEND_EXTRA)
 ) video_blend(

@@ -15,6 +15,7 @@
 module video_blend#(
     parameter EN_VID_PF_B               = 1,        // 2nd overlay playfield
     parameter EN_VID_PF_B_NO_BLEND      = 0,        // only super-impose, no blending
+    parameter EN_VID_PF_B_BLEND_MIX     = 1,        // add when A high bit set
     parameter EN_VID_PF_B_BLEND_A8      = 0,        // blend with 8 levels vs 4
     parameter EN_VID_PF_B_BLEND_EXTRA   = 0         // blend with fancy modes
 )
@@ -205,16 +206,22 @@ always_ff @(posedge clk) begin
                     3'h7:    blend_rgb_o <= colorB_xrgb_i[11:0];
                     endcase
                 end else begin
-                    case (colorB_xrgb_i[15:14])
-                    // 8/8 A + 0/8 B    (A 100% + B 0%)
-                    2'h0:    blend_rgb_o <= colorA_xrgb_i[11:0];
-                    // 6/8 A + 2/8 B    (A 75% + B 25%)
-                    2'h1:    blend_rgb_o <= { r_alpha25[5:2], g_alpha25[5:2], b_alpha25[5:2] };
-                    // 4/8 A + 4/8 B    (A 50% + B 50%)
-                    2'h2:    blend_rgb_o <= { r_alpha50[4:1], g_alpha50[4:1], b_alpha50[4:1] };
-                    // 0/8 A + 8/8 B    (A 0% + B 100%)
-                    2'h3:    blend_rgb_o <= colorB_xrgb_i[11:0];
-                    endcase
+                    if (EN_VID_PF_B_BLEND_MIX && colorA_xrgb_i[15]) begin
+                        blend_rgb_o <= {  r_alpha50[3:0],
+                                          g_alpha50[3:0],
+                                          b_alpha50[3:0] };
+                    end else begin
+                        case (colorB_xrgb_i[15:14])
+                        // 8/8 A + 0/8 B    (A 100% + B 0%)
+                        2'h0:    blend_rgb_o <= colorA_xrgb_i[11:0];
+                        // 6/8 A + 2/8 B    (A 75% + B 25%)
+                        2'h1:    blend_rgb_o <= { r_alpha25[5:2], g_alpha25[5:2], b_alpha25[5:2] };
+                        // 4/8 A + 4/8 B    (A 50% + B 50%)
+                        2'h2:    blend_rgb_o <= { r_alpha50[4:1], g_alpha50[4:1], b_alpha50[4:1] };
+                        // 0/8 A + 8/8 B    (A 0% + B 100%)
+                        2'h3:    blend_rgb_o <= colorB_xrgb_i[11:0];
+                        endcase
+                    end
                 end
             end
         end else begin

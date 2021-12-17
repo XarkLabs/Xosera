@@ -8,6 +8,7 @@
 		"[markdown]": {
 			"editor.wordWrap": "wordWrapColumn",
 			"editor.wordWrapColumn": 131,
+			"files.trimTrailingWhitespace": false
 		},
 		"editor.formatOnSave": true,
 		"editor.dragAndDrop": false,

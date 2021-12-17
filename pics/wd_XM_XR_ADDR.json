@@ -5,13 +5,14 @@
             "name": "XR register number / 13-bit XR offset",
             "type": 4,
             "attr": [
-                "config/video registers (0000-001F)",
-                "blit registers (2000-200F)",
-                "draw/poly registers (4000-400F)",
-                "unused (6000-7FFF)",
-                "512-word color memory (8000-81FF)",
-                "5K-word tile memory (A000-B3FF)",
-                "2K-word copper memory (C000-C7FF)",
+                "video/config xregs",
+                "video playfield A xregs",
+                "video playfield B xregs",
+                "blitter unit xregs",
+                "256-word color A look-up memory",
+                "256-word color B look-up memory",
+                "5K-word tile/tilemap memory",
+                "2K-word copper program memory",
                 "unused (E000-FFFF)"
             ]
         },
@@ -20,14 +21,15 @@
             "name": "region",
             "type": 2,
             "attr": [
-                "000",
-                "001",
-                "010",
-                "011",
-                "100",
-                "101",
-                "110",
-                "111"
+                "<tt>$0000-$000F</tt>",
+                "<tt>$0010-$0017</tt>",
+                "<tt>$0018-$001F</tt>",
+                "<tt>$0020-$002F</tt>",
+                "<tt>$8000-$80FF</tt>",
+                "<tt>$8100-$81FF</tt>",
+                "<tt>$A000-$B3FF</tt>",
+                "<tt>$C000-$C7FF</tt>",
+                "<tt>$E000-$FFFF</tt>"
             ]
         }
     ],

@@ -262,7 +262,7 @@ copper copper(
 
 generate
     if (EN_BLIT) begin
-        blitter#(
+        blitter2#(
             .EN_BLIT_DECR_MODE(EN_BLIT_DECR_MODE),
             .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT)
         ) blitter(
@@ -286,7 +286,7 @@ generate
 endgenerate
 
 `ifdef ENABLE_DRAW
-// TODO: blit
+// TODO: draw?
 assign  draw_vram_sel   = 1'b0;
 assign  draw_wr         = 1'b0;
 assign  draw_wr_mask    = '0;

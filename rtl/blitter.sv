@@ -198,10 +198,10 @@ generate
                 3'b010:   shift_out = {   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4]  };
                 3'b011:   shift_out = {   last_word[ 8+:4],   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4]  };
                 // left shift (decrement)
-                3'b100:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
-                3'b101:   shift_out = { blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4],   last_word[ 4+:4]  };
-                3'b110:   shift_out = { blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4]  };
-                3'b111:   shift_out = { blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4]  };
+                3'b100:   shift_out = { blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4],   last_word[ 4+:4]  };
+                3'b101:   shift_out = { blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4]  };
+                3'b110:   shift_out = { blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4]  };
+                3'b111:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
             endcase
         end
     end else begin

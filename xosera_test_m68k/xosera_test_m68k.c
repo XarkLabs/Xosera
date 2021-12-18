@@ -669,7 +669,7 @@ struct bob
 
 struct bob      bobs[NUM_BOBS];
 static uint16_t blit_shift[4]  = {0xF000, 0x7801, 0x3C02, 0x1E03};
-static uint16_t blit_rshift[4] = {0xF000, 0xE101, 0xC302, 0x8703};
+static uint16_t blit_rshift[4] = {0x8700, 0xC301, 0xE102, 0xF003};
 
 void test_blit()
 {
@@ -811,7 +811,7 @@ void test_blit()
             xreg_setw(BLIT_VAL_C, 0x0000);                           // C const (XOR'd with value stored)
             xreg_setw(BLIT_MOD_D, 1);                                // D modulo
             xreg_setw(BLIT_DST_D,
-                      (daddr + (H_4BPP * W_4BPP)) + (i >> 2) + ((i & 3) ? 0 : -1));        // D destination VRAM addr
+                      (daddr + (H_4BPP * W_4BPP)) + (i >> 2));        // D destination VRAM addr
             xreg_setw(BLIT_SHIFT,
                       blit_rshift[i & 0x3]);            // first, last word nibble masks, and 0-3 shift (low two bits)
             xreg_setw(BLIT_LINES, H_4BPP - 1);          // lines (0 for 1-D blit)

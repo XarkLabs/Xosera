@@ -991,25 +991,35 @@ void test_true_color()
 
     xm_setw(SYS_CTRL, 0x000F);        // disable Xosera vsync interrupt
 
+    uint16_t saddr = 0x0000;
+
     xreg_setw(PA_GFX_CTRL, 0x0065);         // bitmap, 8-bpp, Hx2, Vx2
     xreg_setw(PA_TILE_CTRL, 0x000F);        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
-    xreg_setw(PA_DISP_ADDR, 0x0000);        // display start address
-    xreg_setw(PA_LINE_LEN, 320 / 2);        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
+    xreg_setw(PA_DISP_ADDR, saddr);         // display start address
+    xreg_setw(PA_LINE_LEN,
+              (320 / 2) + (320 / 4));        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
 
-    xreg_setw(PB_GFX_CTRL, 0x0055);         // bitmap, 4-bpp, Hx2, Vx2
-    xreg_setw(PB_TILE_CTRL, 0x000F);        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
-    xreg_setw(PB_DISP_ADDR, 0x9600);        // display start address
-    xreg_setw(PB_LINE_LEN, 320 / 4);        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
+    xreg_setw(PB_GFX_CTRL, 0x0055);                    // bitmap, 4-bpp, Hx2, Vx2
+    xreg_setw(PB_TILE_CTRL, 0x000F);                   // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    xreg_setw(PB_DISP_ADDR, saddr + (320 / 2));        // display start address
+    xreg_setw(PB_LINE_LEN,
+              (320 / 2) + (320 / 4));        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
 
     xm_setw(XR_ADDR, XR_COLOR_ADDR + 15);        // set write address
     xm_setw(XR_DATA, 0x0fff);
 
-    uint16_t rgaddr = 0x0000;
-    load_sd_colors("/true_color_pal.raw");
-    load_sd_bitmap("/parrot_320x240_tc_RG8.raw", rgaddr);
-    load_sd_bitmap("/parrot_320x240_tc_B4.raw", 0x9600);
+    load_sd_colors("/true_color_pal.raw");        // loads 256 + 16 colors (256 RG and 16 B)
 
-    if (delay_check(DELAY_TIME * 20))
+    load_sd_bitmap("/parrot_320x240_RG8B4.raw", saddr);
+
+    if (delay_check(DELAY_TIME * 10))
+    {
+        return;
+    }
+
+    load_sd_bitmap("/fractal_320x240_RG8B4.raw", saddr);
+
+    if (delay_check(DELAY_TIME * 10))
     {
         return;
     }

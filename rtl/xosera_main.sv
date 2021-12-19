@@ -260,7 +260,7 @@ copper copper(
 // blitter - blit block transfer unit
 generate
     if (EN_BLIT) begin : opt_EN_BLIT
-        blitter#(
+        blitter2#(
             .EN_BLIT_DECR_MODE(EN_BLIT_DECR_MODE),
             .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT)
         ) blitter(

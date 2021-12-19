@@ -91,7 +91,7 @@ ICEMULTI := icemulti
 #FLOW3 :=
 #YOSYS_SYNTH_ARGS := -device u -dsp -abc2 -relut -retime -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -relut -top $(TOP)
-YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -relut -top $(TOP)
+YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -top $(TOP)
 FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules

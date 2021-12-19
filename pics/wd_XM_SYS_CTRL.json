@@ -10,27 +10,37 @@
             ]
         },
         {
-            "bits": 3,
+            "bits": 1,
             "type": 1
         },
         {
             "bits": 1,
-            "name": "wait",
+            "name": "full",
             "type": 3,
             "attr": [
-                "0=okay",
-                "1=wait",
-                "read"
+                "blit",
+                "0 ready",
+                "1 full"
             ]
         },
         {
             "bits": 1,
             "name": "busy",
+            "type": 3,
+            "attr": [
+                "blit",
+                "0 done",
+                "1 busy"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "wait",
             "type": 6,
             "attr": [
-                "0=idle",
-                "1=busy",
-                "drawing"
+                "memory",
+                "0 ready",
+                "1 wait"
             ]
         },
         {

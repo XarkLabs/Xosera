@@ -4,8 +4,8 @@
 # Copyright (c) 2021 Xark
 # MIT LICENSE
 
-ifeq (, $(shell command -v m68k-elf-gcc))
-$(info No m68k-elf-* build tools found in path)
+ifeq (, $(shell m68k-elf-gcc --version))
+$(info info No m68k-elf-* build tools found in path)
 else
 ifndef ROSCO_M68K_DIR
 $(info Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)

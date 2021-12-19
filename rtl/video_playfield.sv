@@ -16,76 +16,76 @@ module video_playfield(
     // video control signals
     input  wire logic           stall_i,
     input  wire logic           v_visible_i,
-    input  wire logic [10:0]    h_count_i,
+    input  wire hres_t          h_count_i,
     input  wire logic           h_line_last_pixel_i,
     input  wire logic           last_frame_pixel_i,
-    input  wire logic  [7:0]    border_color_i,
-    input  wire logic  [10:0]   vid_left_i,
-    input  wire logic  [10:0]   vid_right_i,
+    input  wire color_t         border_color_i,
+    input  wire hres_vis_t      vid_left_i,
+    input  wire hres_vis_t      vid_right_i,
     // video memories
     output      logic           vram_sel_o,                         // vram read select
-    output      logic [15:0]    vram_addr_o,                        // vram word address out (16x64K)
-    input  wire logic [15:0]    vram_data_i,                        // vram word data in
+    output      addr_t          vram_addr_o,                        // vram word address out (16x64K)
+    input  wire word_t          vram_data_i,                        // vram word data in
     output      logic           tilemem_sel_o,                      // tile mem read select
-    output      logic [xv::TILE_AWIDTH-1:0] tilemem_addr_o,         // tile mem word address out (16x5K)
-    input  wire logic [15:0]    tilemem_data_i,                     // tile mem word data in
+    output      tile_addr_t     tilemem_addr_o,                     // tile mem word address out (16x5K)
+    input  wire word_t          tilemem_data_i,                     // tile mem word data in
     // playfield generation control signals
-    input  wire logic           pf_blank_i,                           // disable plane
-    input  wire logic [15:0]    pf_start_addr_i,                      // display data start address (word address)
-    input  wire logic [15:0]    pf_line_len_i,                        // words per disply line (added to line_addr each line)
-    input  wire logic  [7:0]    pf_colorbase_i,                       // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
-    input  wire logic  [1:0]    pf_bpp_i,                             // bpp code (bpp_depth_t)
-    input  wire logic           pf_bitmap_i,                          // bitmap enable (else text mode)
-    input  wire logic  [5:0]    pf_tile_bank_i,                       // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
-    input  wire logic           pf_disp_in_tile_i,                    // display memory 0=vram, 1=tileram
-    input  wire logic           pf_tile_in_vram_i,                    // tile memory 0=tilemem, 1=vram
-    input  wire logic  [3:0]    pf_tile_height_i,                     // max height of tile cell
-    input  wire logic  [1:0]    pf_h_repeat_i,                        // horizontal pixel repeat
-    input  wire logic  [1:0]    pf_v_repeat_i,                        // vertical pixel repeat
-    input  wire logic  [4:0]    pf_fine_hscroll_i,                    // horizontal fine scroll (8 pixel * 4 for repeat)
-    input  wire logic  [5:0]    pf_fine_vscroll_i,                    // vertical fine scroll (16 lines * 4 for repeat)
-    input  wire logic           pf_gfx_ctrl_set_i,                    // true if pf_gfx_ctrl_i changed (register write)
-    input  wire logic           pf_line_start_set_i,                  // true if pf_line_start_i changed (register write)
-    input  wire logic [15:0]    pf_line_start_addr_i,                 // address of next line display data start
-    output      logic  [7:0]    pf_color_index_o,                   // output color
+    input  wire logic           pf_blank_i,                         // disable plane
+    input  wire addr_t          pf_start_addr_i,                    // display data start address (word address)
+    input  wire word_t          pf_line_len_i,                      // words per disply line (added to line_addr each line)
+    input  wire color_t         pf_colorbase_i,                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+    input  wire logic  [1:0]    pf_bpp_i,                           // bpp code (bpp_depth_t)
+    input  wire logic           pf_bitmap_i,                        // bitmap enable (else text mode)
+    input  wire logic  [5:0]    pf_tile_bank_i,                     // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
+    input  wire logic           pf_disp_in_tile_i,                  // display memory 0=vram, 1=tileram
+    input  wire logic           pf_tile_in_vram_i,                  // tile memory 0=tilemem, 1=vram
+    input  wire logic  [3:0]    pf_tile_height_i,                   // max height of tile cell
+    input  wire logic  [1:0]    pf_h_repeat_i,                      // horizontal pixel repeat
+    input  wire logic  [1:0]    pf_v_repeat_i,                      // vertical pixel repeat
+    input  wire logic  [4:0]    pf_fine_hscroll_i,                  // horizontal fine scroll (8 pixel * 4 for repeat)
+    input  wire logic  [5:0]    pf_fine_vscroll_i,                  // vertical fine scroll (16 lines * 4 for repeat)
+    input  wire logic           pf_gfx_ctrl_set_i,                  // true if pf_gfx_ctrl_i changed (register write)
+    input  wire logic           pf_line_start_set_i,                // true if pf_line_start_i changed (register write)
+    input  wire addr_t          pf_line_start_addr_i,               // address of next line display data start
+    output      color_t         pf_color_index_o,                   // output color
 
     input  wire logic           reset_i,                            // system reset in
     input  wire clk                                                 // pixel clock
 );
 
-localparam H_MEM_BEGIN = xv::OFFSCREEN_WIDTH-64;    // memory prefetch starts early
-localparam H_MEM_END = xv::TOTAL_WIDTH-8;           // memory fetch can end a bit early
-localparam H_SCANOUT_BEGIN = xv::OFFSCREEN_WIDTH-2; // h count for start line scanout
+localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;               // memory prefetch starts early
+localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fetch can end a bit early
+localparam H_SCANOUT_BEGIN  = xv::OFFSCREEN_WIDTH-2;                // h count for start line scanout
 
 // display line fetch generation FSM
 typedef enum logic [3:0] {
-    FETCH_IDLE          =   4'h0,   // idle, waiting for line start
+    FETCH_IDLE          =   4'h0,       // idle, waiting for line start
     // bitmap
-    FETCH_ADDR_DISP     =   4'h1,   // output bitmap VRAM address (and read tile word3 data)
-    FETCH_WAIT_DISP     =   4'h2,   // wait for bitmap data
-    FETCH_READ_DISP_0   =   4'h3,   // read bitmap word0/tilemap from VRAM
-    FETCH_READ_DISP_1   =   4'h4,   // read bitmap word1 data from VRAM
-    FETCH_READ_DISP_2   =   4'h5,   // read bitmap word2 data from VRAM
-    FETCH_READ_DISP_3   =   4'h6,   // read bitmap word3 data from VRAM
+    FETCH_ADDR_DISP     =   4'h1,       // output bitmap VRAM address (and read tile word3 data)
+    FETCH_WAIT_DISP     =   4'h2,       // wait for bitmap data
+    FETCH_READ_DISP_0   =   4'h3,       // read bitmap word0/tilemap from VRAM
+    FETCH_READ_DISP_1   =   4'h4,       // read bitmap word1 data from VRAM
+    FETCH_READ_DISP_2   =   4'h5,       // read bitmap word2 data from VRAM
+    FETCH_READ_DISP_3   =   4'h6,       // read bitmap word3 data from VRAM
     // tiled
-    FETCH_ADDR_TILEMAP  =   4'h7,   // output tilemap VRAM address (and read tile word3 data)
-    FETCH_WAIT_TILEMAP  =   4'h8,   // wait for tilemap data
-    FETCH_READ_TILEMAP  =   4'h9,   // read tilemap from VRAM
-    FETCH_ADDR_TILE     =   4'hA,   // output tile word0 VRAM/TILE address
-    FETCH_WAIT_TILE     =   4'hB,   // wait for tilemap data, output word1 tile addr
-    FETCH_READ_TILE_0   =   4'hC,   // read tile word0 data from bus, output word2 tile addr
-    FETCH_READ_TILE_1   =   4'hD,   // read tile word1 data from bus, output word3 tile addr
-    FETCH_READ_TILE_2   =   4'hE    // read tile word2 data from bus
+    FETCH_ADDR_TILEMAP  =   4'h7,       // output tilemap VRAM address (and read tile word3 data)
+    FETCH_WAIT_TILEMAP  =   4'h8,       // wait for tilemap data
+    FETCH_READ_TILEMAP  =   4'h9,       // read tilemap from VRAM
+    FETCH_ADDR_TILE     =   4'hA,       // output tile word0 VRAM/TILE address
+    FETCH_WAIT_TILE     =   4'hB,       // wait for tilemap data, output word1 tile addr
+    FETCH_READ_TILE_0   =   4'hC,       // read tile word0 data from bus, output word2 tile addr
+    FETCH_READ_TILE_1   =   4'hD,       // read tile word1 data from bus, output word3 tile addr
+    FETCH_READ_TILE_2   =   4'hE        // read tile word2 data from bus
 } vgen_fetch_st;
 
 
-logic           scanout;                                // scanout active
-logic           scanout_start;                          // scanout start strobe
-logic           scanout_end;                            // scanout stop strobe
-logic [10:0]    scanout_start_hcount;                   // horizontal pixel count to start scanout
-logic [10:0]    scanout_end_hcount;                     // horizontal pixel count to stop scanout
-logic           mem_fetch_active;                       // true when fetching display data
-logic [10:0]    mem_fetch_hcount;                       // horizontal count when mem_fetch_active toggles
+logic           scanout;                            // scanout active
+logic           scanout_start;                      // scanout start strobe
+logic           scanout_end;                        // scanout stop strobe
+hres_t          scanout_start_hcount;               // horizontal pixel count to start scanout
+hres_t          scanout_end_hcount;                 // horizontal pixel count to stop scanout
+logic           mem_fetch_active;                   // true when fetching display data
+hres_t          mem_fetch_hcount;                   // horizontal count when mem_fetch_active toggles
 logic           mem_fetch_next;
 logic           h_start_line_fetch;
 
@@ -94,26 +94,26 @@ logic  [1:0]    pf_v_count;                         // current vertical repeat c
 logic  [2:0]    pf_tile_x;                          // current column of tile cell
 logic  [3:0]    pf_tile_y;                          // current line of tile cell
 
-logic [15:0]    pf_line_start;
+addr_t          pf_line_start;
 
 // fetch fsm outputs
 // scanline generation (registered signals and "_next" combinatorally set signals)
 logic [3:0]     pf_fetch, pf_fetch_next;            // playfield A generation FSM state
 
-logic [15:0]    pf_addr, pf_addr_next;              // address to fetch display bitmap/tilemap
-logic [15:0]    pf_tile_addr;                       // tile start address (VRAM or TILERAM)
+addr_t          pf_addr, pf_addr_next;              // address to fetch display bitmap/tilemap
+addr_t          pf_tile_addr;                       // tile start address (VRAM or TILERAM)
 
 logic           vram_sel, vram_sel_next;            // vram select output
 logic           tilemem_sel, tilemem_sel_next;      // tilemem select output
-logic [15:0]    fetch_addr, fetch_addr_next;        // VRAM or TILERAM address output
+addr_t          fetch_addr, fetch_addr_next;        // VRAM or TILERAM address output
 
 logic           pf_initial_buf, pf_initial_buf_next;// true on first buffer per scanline
 logic           pf_words_ready, pf_words_ready_next;// true if data_words full (8-pixels)
-logic [15:0]    pf_tile_attr, pf_tile_attr_next;    // tile attributes and tile index
-logic [15:0]    pf_data_word0, pf_data_word0_next;  // 1st fetched display data word buffer
-logic [15:0]    pf_data_word1, pf_data_word1_next;  // 2nd fetched display data word buffer
-logic [15:0]    pf_data_word2, pf_data_word2_next;  // 3rd fetched display data word buffer
-logic [15:0]    pf_data_word3, pf_data_word3_next;  // 4th fetched display data word buffer
+word_t          pf_tile_attr, pf_tile_attr_next;    // tile attributes and tile index
+word_t          pf_data_word0, pf_data_word0_next;  // 1st fetched display data word buffer
+word_t          pf_data_word1, pf_data_word1_next;  // 2nd fetched display data word buffer
+word_t          pf_data_word2, pf_data_word2_next;  // 3rd fetched display data word buffer
+word_t          pf_data_word3, pf_data_word3_next;  // 4th fetched display data word buffer
 
 logic           pf_pixels_buf_full;                 // true when pf_pixel_out needs filling
 logic           pf_pixels_buf_hrev;                 // horizontal reverse flag
@@ -129,14 +129,14 @@ always_comb     mem_fetch_next = (v_visible_i && h_count_i == mem_fetch_hcount) 
 always_comb begin
     // set mem_fetch_active next toggle for video memory access
     if (mem_fetch_active) begin
-        mem_fetch_hcount = H_MEM_END[10:0];
+        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_END);
     end else begin
-        mem_fetch_hcount = H_MEM_BEGIN[10:0];
+        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_BEGIN);
     end
 end
 
 // generate tile address from index, tile y, bpp and tile size (8x8 or 8x16)
-function automatic [15:0] calc_tile_addr(
+function automatic addr_t calc_tile_addr(
         input [9:0] tile_char,
         input [3:0] tile_y,
         input [5:0] tilebank,
@@ -182,160 +182,158 @@ always_comb begin
 
     pf_tile_addr        = calc_tile_addr(pf_tile_attr_next[xv::TILE_INDEX+:10], pf_tile_y, pf_tile_bank_i, pf_bpp_i, pf_tile_height_i[3], pf_tile_attr_next[xv::TILE_ATTR_VREV]);
 
-    if (!stall_i) begin
-        pf_words_ready_next = 1'b0;
-        vram_sel_next       = 1'b0;
-        tilemem_sel_next    = 1'b0;
+    pf_words_ready_next = 1'b0;
+    vram_sel_next       = 1'b0;
+    tilemem_sel_next    = 1'b0;
 
-        case (pf_fetch)
-            FETCH_IDLE: begin
-                if (mem_fetch_active) begin                     // delay scanline until mem_fetch_active
-                    if (pf_bitmap_i) begin
-                        pf_fetch_next   = FETCH_ADDR_DISP;
-                    end else begin
-                        pf_fetch_next   = FETCH_ADDR_TILEMAP;
-                    end
-                end
-            end
-            FETCH_ADDR_DISP: begin
-                if (!mem_fetch_active) begin                    // stop if no longer fetching
-                    pf_fetch_next   = FETCH_IDLE;
+    case (pf_fetch)
+        FETCH_IDLE: begin
+            if (mem_fetch_active) begin                     // delay scanline until mem_fetch_active
+                if (pf_bitmap_i) begin
+                    pf_fetch_next   = FETCH_ADDR_DISP;
                 end else begin
-                    if (!pf_pixels_buf_full) begin              // if room in buffer
-                        vram_sel_next   = 1'b1;                 // VO0: select vram
-                        fetch_addr_next = pf_addr;              // put display address on vram bus
-                        pf_addr_next    = pf_addr + 1'b1;       // increment display address
-                        pf_fetch_next   = FETCH_WAIT_DISP;
-                    end
+                    pf_fetch_next   = FETCH_ADDR_TILEMAP;
                 end
             end
-            FETCH_WAIT_DISP: begin
-                if (pf_bpp_i != xv::BPP_1_ATTR) begin
-                    vram_sel_next   = 1'b1;                     // VO1: select vram
-                    fetch_addr_next = pf_addr;                  // put display address on vram bus
-                    pf_addr_next    = pf_addr + 1'b1;           // increment display address
+        end
+        FETCH_ADDR_DISP: begin
+            if (!mem_fetch_active) begin                    // stop if no longer fetching
+                pf_fetch_next   = FETCH_IDLE;
+            end else begin
+                if (!pf_pixels_buf_full) begin              // if room in buffer
+                    vram_sel_next   = 1'b1;                 // VO0: select vram
+                    fetch_addr_next = pf_addr;              // put display address on vram bus
+                    pf_addr_next    = pf_addr + 1'b1;       // increment display address
+                    pf_fetch_next   = FETCH_WAIT_DISP;
                 end
-                pf_words_ready_next = !pf_initial_buf;          // set buffer ready
-                pf_initial_buf_next = 1'b0;
-                pf_fetch_next   = FETCH_READ_DISP_0;
             end
-            FETCH_READ_DISP_0: begin
-                pf_data_word0_next  = vram_data_i;              // VI0: read vram data
-                pf_tile_attr_next   = vram_data_i;              // set attributes for 1_BPP_ATTR
+        end
+        FETCH_WAIT_DISP: begin
+            if (pf_bpp_i != xv::BPP_1_ATTR) begin
+                vram_sel_next   = 1'b1;                     // VO1: select vram
+                fetch_addr_next = pf_addr;                  // put display address on vram bus
+                pf_addr_next    = pf_addr + 1'b1;           // increment display address
+            end
+            pf_words_ready_next = !pf_initial_buf;          // set buffer ready
+            pf_initial_buf_next = 1'b0;
+            pf_fetch_next   = FETCH_READ_DISP_0;
+        end
+        FETCH_READ_DISP_0: begin
+            pf_data_word0_next  = vram_data_i;              // VI0: read vram data
+            pf_tile_attr_next   = vram_data_i;              // set attributes for 1_BPP_ATTR
 
-                if (pf_bpp_i == xv::BPP_1_ATTR) begin
-                    pf_fetch_next   = FETCH_ADDR_DISP;          // done if BPP_1 bitmap
-                end else begin
-                    if (pf_bpp_i != xv::BPP_4) begin
-                        vram_sel_next   = 1'b1;                 // VO2: select vram
-                        fetch_addr_next = pf_addr;              // put display address on vram bus
-                        pf_addr_next    = pf_addr + 1'b1;       // increment display address
-                    end
-                    pf_fetch_next   = FETCH_READ_DISP_1;        // else read more bitmap words
+            if (pf_bpp_i == xv::BPP_1_ATTR) begin
+                pf_fetch_next   = FETCH_ADDR_DISP;          // done if BPP_1 bitmap
+            end else begin
+                if (pf_bpp_i != xv::BPP_4) begin
+                    vram_sel_next   = 1'b1;                 // VO2: select vram
+                    fetch_addr_next = pf_addr;              // put display address on vram bus
+                    pf_addr_next    = pf_addr + 1'b1;       // increment display address
                 end
+                pf_fetch_next   = FETCH_READ_DISP_1;        // else read more bitmap words
             end
-            FETCH_READ_DISP_1: begin
-                pf_data_word1_next  = vram_data_i;              // VI1: read vram data
-                pf_tile_attr_next[15:11] = 5'b00000;            // clear color and hrev attributes (vrev ignored)
+        end
+        FETCH_READ_DISP_1: begin
+            pf_data_word1_next  = vram_data_i;              // VI1: read vram data
+            pf_tile_attr_next[15:11] = 5'b00000;            // clear color and hrev attributes (vrev ignored)
 
-                if (pf_bpp_i == xv::BPP_4) begin
-                    pf_fetch_next   = FETCH_ADDR_DISP;          // done if BPP_4 bitmap
-                end else begin
-                    vram_sel_next   = 1'b1;                     // VO3: select vram
-                    fetch_addr_next = pf_addr;                  // put display address on vram bus
-                    pf_addr_next    = pf_addr + 1'b1;           // increment display address
-                    pf_fetch_next   = FETCH_READ_DISP_2;        // read more bitmap words
-                end
+            if (pf_bpp_i == xv::BPP_4) begin
+                pf_fetch_next   = FETCH_ADDR_DISP;          // done if BPP_4 bitmap
+            end else begin
+                vram_sel_next   = 1'b1;                     // VO3: select vram
+                fetch_addr_next = pf_addr;                  // put display address on vram bus
+                pf_addr_next    = pf_addr + 1'b1;           // increment display address
+                pf_fetch_next   = FETCH_READ_DISP_2;        // read more bitmap words
             end
-            FETCH_READ_DISP_2: begin
-                pf_data_word2_next  = vram_data_i;              // VI2: read vram data
-                pf_fetch_next       = FETCH_READ_DISP_3;        // read last bitmap word
-            end
-            FETCH_READ_DISP_3: begin
-                pf_data_word3_next  = vram_data_i;              // VI3: read vram data
-                pf_fetch_next       = FETCH_ADDR_DISP;          // done
-            end
+        end
+        FETCH_READ_DISP_2: begin
+            pf_data_word2_next  = vram_data_i;              // VI2: read vram data
+            pf_fetch_next       = FETCH_READ_DISP_3;        // read last bitmap word
+        end
+        FETCH_READ_DISP_3: begin
+            pf_data_word3_next  = vram_data_i;              // VI3: read vram data
+            pf_fetch_next       = FETCH_ADDR_DISP;          // done
+        end
 
-            FETCH_ADDR_TILEMAP: begin
-                // read pre-loaded font word3
-                if (pf_bpp_i[1:1] == xv::BPP_8[1:1]) begin
-                    pf_data_word3_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI3: read tile data
-                end
-                if (!mem_fetch_active) begin                    // stop if no longer fetching
-                    pf_fetch_next   = FETCH_IDLE;
-                end else begin
-                    if (!pf_pixels_buf_full) begin              // if room in buffer
-                        vram_sel_next   = ~pf_disp_in_tile_i;     // VO0: select either vram
-                        tilemem_sel_next= pf_disp_in_tile_i;      // VO0: or select tilemem
-                        fetch_addr_next = pf_addr;              // put display address on vram bus
-                        pf_addr_next    = pf_addr + 1'b1;       // increment display address
-                        pf_fetch_next   = FETCH_WAIT_TILEMAP;
-                    end
+        FETCH_ADDR_TILEMAP: begin
+            // read pre-loaded font word3
+            if (pf_bpp_i[1:1] == xv::BPP_8[1:1]) begin
+                pf_data_word3_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI3: read tile data
+            end
+            if (!mem_fetch_active) begin                    // stop if no longer fetching
+                pf_fetch_next   = FETCH_IDLE;
+            end else begin
+                if (!pf_pixels_buf_full) begin              // if room in buffer
+                    vram_sel_next   = ~pf_disp_in_tile_i;   // VO0: select either vram
+                    tilemem_sel_next= pf_disp_in_tile_i;    // VO0: or select tilemem
+                    fetch_addr_next = pf_addr;              // put display address on vram bus
+                    pf_addr_next    = pf_addr + 1'b1;       // increment display address
+                    pf_fetch_next   = FETCH_WAIT_TILEMAP;
                 end
             end
-            FETCH_WAIT_TILEMAP: begin
-                pf_words_ready_next = !pf_initial_buf;          // set buffer ready
-                pf_initial_buf_next = 1'b0;
-                pf_fetch_next   = FETCH_READ_TILEMAP;
-            end
+        end
+        FETCH_WAIT_TILEMAP: begin
+            pf_words_ready_next = !pf_initial_buf;          // set buffer ready
+            pf_initial_buf_next = 1'b0;
+            pf_fetch_next   = FETCH_READ_TILEMAP;
+        end
 
-            FETCH_READ_TILEMAP: begin
-                pf_tile_attr_next   = pf_disp_in_tile_i ? tilemem_data_i : vram_data_i;   // save attribute+tile
-                pf_fetch_next       = FETCH_ADDR_TILE;          // read tile bitmap words
-            end
-            FETCH_ADDR_TILE: begin
-                vram_sel_next       = pf_tile_in_vram_i;          // TO0: select either vram
-                fetch_addr_next     = pf_tile_addr;             // will have been calculated from pf_tile_attr_next
-                tilemem_sel_next    = ~pf_tile_in_vram_i;         // TO0: or select tilemem
+        FETCH_READ_TILEMAP: begin
+            pf_tile_attr_next   = pf_disp_in_tile_i ? tilemem_data_i : vram_data_i;   // save attribute+tile
+            pf_fetch_next       = FETCH_ADDR_TILE;          // read tile bitmap words
+        end
+        FETCH_ADDR_TILE: begin
+            vram_sel_next       = pf_tile_in_vram_i;        // TO0: select either vram
+            fetch_addr_next     = pf_tile_addr;             // will have been calculated from pf_tile_attr_next
+            tilemem_sel_next    = ~pf_tile_in_vram_i;       // TO0: or select tilemem
 
-                pf_fetch_next       = FETCH_WAIT_TILE;
+            pf_fetch_next       = FETCH_WAIT_TILE;
+        end
+        FETCH_WAIT_TILE: begin
+            if (pf_bpp_i != xv::BPP_1_ATTR) begin
+                vram_sel_next       = pf_tile_in_vram_i;      // TO1: select either vram
+                tilemem_sel_next    = ~pf_tile_in_vram_i;     // TO1: or select tilemem
+                fetch_addr_next     = { fetch_addr[15:1], 1'b1 };
             end
-            FETCH_WAIT_TILE: begin
-                if (pf_bpp_i != xv::BPP_1_ATTR) begin
-                    vram_sel_next       = pf_tile_in_vram_i;      // TO1: select either vram
-                    tilemem_sel_next    = ~pf_tile_in_vram_i;     // TO1: or select tilemem
-                    fetch_addr_next     = { fetch_addr[15:1], 1'b1 };
-                end
-                pf_fetch_next   = FETCH_READ_TILE_0;
-            end
-            FETCH_READ_TILE_0: begin
-                pf_data_word0_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI0: read tile data
+            pf_fetch_next   = FETCH_READ_TILE_0;
+        end
+        FETCH_READ_TILE_0: begin
+            pf_data_word0_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI0: read tile data
 
-                if (pf_bpp_i == xv::BPP_1_ATTR) begin             // in BPP_1 select even/odd byte from tile word
-                    if (!pf_tile_y[0]) begin
-                        pf_data_word0_next[7:0] = pf_tile_in_vram_i ? vram_data_i[15:8] : tilemem_data_i[15:8];
-                    end
-                    pf_fetch_next = FETCH_ADDR_TILEMAP;         // done if BPP_1 bitmap
-                end else begin
-                    if (pf_bpp_i != xv::BPP_4) begin
-                        vram_sel_next       = pf_tile_in_vram_i;  // TO2: select either vram
-                        tilemem_sel_next    = ~pf_tile_in_vram_i; // TO2: or select tilemem
-                        fetch_addr_next     = { fetch_addr[15:2], 2'b10 };
-                    end
-                    pf_fetch_next = FETCH_READ_TILE_1;          // else read more bitmap words
+            if (pf_bpp_i == xv::BPP_1_ATTR) begin           // in BPP_1 select even/odd byte from tile word
+                if (!pf_tile_y[0]) begin
+                    pf_data_word0_next[7:0] = pf_tile_in_vram_i ? vram_data_i[15:8] : tilemem_data_i[15:8];
                 end
+                pf_fetch_next = FETCH_ADDR_TILEMAP;         // done if BPP_1 bitmap
+            end else begin
+                if (pf_bpp_i != xv::BPP_4) begin
+                    vram_sel_next       = pf_tile_in_vram_i;  // TO2: select either vram
+                    tilemem_sel_next    = ~pf_tile_in_vram_i; // TO2: or select tilemem
+                    fetch_addr_next     = { fetch_addr[15:2], 2'b10 };
+                end
+                pf_fetch_next = FETCH_READ_TILE_1;          // else read more bitmap words
             end
-            FETCH_READ_TILE_1: begin
-                pf_data_word1_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI1: read tile data
+        end
+        FETCH_READ_TILE_1: begin
+            pf_data_word1_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI1: read tile data
 
-                if (pf_bpp_i == xv::BPP_4) begin
-                    pf_fetch_next = FETCH_ADDR_TILEMAP;         // done if BPP_4 bitmap
-                end else begin
-                    vram_sel_next       = pf_tile_in_vram_i;      // TO3: select either vram
-                    tilemem_sel_next    = ~pf_tile_in_vram_i;     // TO3: or select tilemem
-                    fetch_addr_next     = { fetch_addr[15:2], 2'b11 };
-                    pf_fetch_next       = FETCH_READ_TILE_2;    // else read more tile data words
-                end
+            if (pf_bpp_i == xv::BPP_4) begin
+                pf_fetch_next = FETCH_ADDR_TILEMAP;         // done if BPP_4 bitmap
+            end else begin
+                vram_sel_next       = pf_tile_in_vram_i;    // TO3: select either vram
+                tilemem_sel_next    = ~pf_tile_in_vram_i;   // TO3: or select tilemem
+                fetch_addr_next     = { fetch_addr[15:2], 2'b11 };
+                pf_fetch_next       = FETCH_READ_TILE_2;    // else read more tile data words
             end
-            FETCH_READ_TILE_2: begin
-                pf_data_word2_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI2: read tile data
-                pf_fetch_next       = FETCH_ADDR_TILEMAP;       // NOTE will read TI3 also
-            end
-            default: begin
-                pf_fetch_next = FETCH_IDLE;
-            end
-        endcase
-    end
+        end
+        FETCH_READ_TILE_2: begin
+            pf_data_word2_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI2: read tile data
+            pf_fetch_next       = FETCH_ADDR_TILEMAP;       // NOTE will read TI3 also
+        end
+        default: begin
+            pf_fetch_next = FETCH_IDLE;
+        end
+    endcase
 end
 
 assign  pf_color_index_o    = pf_pixels[63:56] ^ pf_colorbase_i;   // XOR colorbase bits here
@@ -349,8 +347,8 @@ always_ff @(posedge clk) begin
 
         mem_fetch_active    <= 1'b0;            // true enables display memory fetch
         scanout             <= 1'b0;
-        scanout_start_hcount<= 11'b0;
-        scanout_end_hcount  <= 11'b0;
+        scanout_start_hcount<= '0;
+        scanout_end_hcount  <= '0;
 
         pf_fetch            <= FETCH_IDLE;
         fetch_addr          <= 16'h0000;
@@ -376,25 +374,25 @@ always_ff @(posedge clk) begin
         // register fetch combinitorial signals
         if (!stall_i) begin
             pf_fetch        <= pf_fetch_next;
+
+            fetch_addr      <= fetch_addr_next;
+            pf_addr         <= pf_addr_next;
+            pf_tile_attr    <= pf_tile_attr_next;
+            pf_data_word0   <= pf_data_word0_next;
+            pf_data_word1   <= pf_data_word1_next;
+            pf_data_word2   <= pf_data_word2_next;
+            pf_data_word3   <= pf_data_word3_next;
+            pf_initial_buf  <= pf_initial_buf_next;
+            pf_words_ready  <= pf_words_ready_next;
+
+            vram_sel        <= vram_sel_next;
+            tilemem_sel     <= tilemem_sel_next;
+
+            vram_sel_o      <= vram_sel_next;
+            vram_addr_o     <= fetch_addr_next;
+            tilemem_sel_o   <= tilemem_sel_next;
+            tilemem_addr_o  <= $bits(tilemem_addr_o)'(fetch_addr_next);
         end
-
-        fetch_addr      <= fetch_addr_next;
-        pf_addr         <= pf_addr_next;
-        pf_tile_attr    <= pf_tile_attr_next;
-        pf_data_word0   <= pf_data_word0_next;
-        pf_data_word1   <= pf_data_word1_next;
-        pf_data_word2   <= pf_data_word2_next;
-        pf_data_word3   <= pf_data_word3_next;
-        pf_initial_buf  <= pf_initial_buf_next;
-        pf_words_ready  <= pf_words_ready_next;
-
-        vram_sel        <= vram_sel_next;
-        tilemem_sel     <= tilemem_sel_next;
-
-        vram_sel_o      <= vram_sel_next;
-        vram_addr_o     <= fetch_addr_next;
-        tilemem_sel_o   <= tilemem_sel_next;
-        tilemem_addr_o  <= fetch_addr_next[xv::TILE_AWIDTH-1:0];
 
         // have display words been fetched?
         if (pf_words_ready) begin
@@ -492,8 +490,8 @@ always_ff @(posedge clk) begin
         if (h_start_line_fetch) begin       // on line fetch start signal
             pf_initial_buf          <= 1'b1;
             pf_pixels_buf_full      <= 1'b0;
-            scanout_start_hcount    <= scanout_start_hcount - {5'b0, pf_fine_hscroll_i};
-            scanout_end_hcount      <= H_SCANOUT_BEGIN[10:0] + vid_right_i;
+            scanout_start_hcount    <= scanout_start_hcount - $bits(scanout_start_hcount)'(pf_fine_hscroll_i);
+            scanout_end_hcount      <= $bits(scanout_end_hcount)'(H_SCANOUT_BEGIN) + vid_right_i;
 
             pf_addr                 <= pf_line_start;       // set start address for this line
 
@@ -513,8 +511,8 @@ always_ff @(posedge clk) begin
         if (scanout_start) begin
             scanout             <= 1'b1;
             pf_tile_x           <= 3'h0;
-            pf_h_count          <= pf_h_repeat_i;     // TODO: fine scroll?
-            pf_pixels           <= pf_pixels_buf;   // get initial 8 pixels from buffer
+            pf_h_count          <= pf_h_repeat_i;
+            pf_pixels           <= pf_pixels_buf;       // get initial 8 pixels from buffer
             pf_pixels_buf_full  <= 1'b0;
         end
 
@@ -540,7 +538,7 @@ always_ff @(posedge clk) begin
                 end
             end
 
-            scanout_start_hcount    <= H_SCANOUT_BEGIN[10:0] + vid_left_i;
+            scanout_start_hcount    <= $bits(scanout_start_hcount)'(H_SCANOUT_BEGIN) + vid_left_i;
         end
 
         // end of frame or blanked, prepare for next frame

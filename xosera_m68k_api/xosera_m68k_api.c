@@ -38,8 +38,8 @@ void xv_delay(uint32_t ms)
         uint16_t tms = 10;
         do
         {
-            uint8_t tvb = xm_getbl(TIMER);
-            while (tvb == xm_getbl(TIMER))
+            uint16_t tv = xm_getw(TIMER);
+            while (tv == xm_getw(TIMER))
                 ;
         } while (--tms);
     }
@@ -62,12 +62,10 @@ bool xosera_init(int reconfig_num)
     // done if configuration if not valid (0 to 3)
     if ((reconfig_num & 3) == reconfig_num)
     {
+        uint16_t sys_ctrl_save = xm_getw(SYS_CTRL) & 0x0F0F;
         // set reconfig bit, along with reconfig values
         xm_setw(SYS_CTRL, 0x800F | (uint16_t)(reconfig_num << 13));        // reboot FPGA to config_num
-        if (xosera_sync())                                                 // should not sync right away...
-        {
-            return false;
-        }
+
         // wait for Xosera to regain consciousness (takes ~80 milliseconds)
         for (int r = 0; r < 200; r++)
         {
@@ -77,6 +75,8 @@ bool xosera_init(int reconfig_num)
                 break;
             }
         }
+
+        xm_setw(SYS_CTRL, sys_ctrl_save);
     }
 
     return xosera_sync();

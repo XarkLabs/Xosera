@@ -69,6 +69,24 @@ uint16_t def_colors[256] = {
     0x0f9f, 0x0fbf, 0x0000, 0x0111, 0x0222, 0x0333, 0x0444, 0x0555, 0x0666, 0x0777, 0x0888, 0x0999, 0x0aaa, 0x0bbb,
     0x0ccc, 0x0ddd, 0x0eee, 0x0fff};
 
+// 32x16 nibble test sprite "programmer art"
+uint8_t moto_m[] = {
+    0x33, 0x30, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00, 0x03, 0x33, 0x30, 0x00, 0x00,
+    0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x11, 0x11, 0x11, 0xFF,
+    0x11, 0x11, 0x11, 0xFF, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0xFF, 0x11, 0x11, 0x11,
+    0xFF, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0x11, 0x11,
+    0x11, 0x11, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0x11,
+    0x00, 0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0x11, 0x00, 0x11, 0x11,
+    0x11, 0x11, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0x11, 0x00, 0x11, 0x11, 0x11, 0xFF, 0xFF,
+    0x11, 0xFF, 0xFF, 0xFF, 0x11, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0x00, 0x11, 0x11, 0x11, 0xFF, 0x11, 0x11, 0x11, 0xFF,
+    0x11, 0x11, 0x11, 0xFF, 0x11, 0x11, 0x11, 0x00, 0x00, 0x11, 0x11, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0x11, 0x11, 0x11,
+    0xFF, 0x11, 0x11, 0x00, 0x00, 0x00, 0x11, 0x11, 0xFF, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0xFF, 0x11, 0x11,
+    0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x00, 0x00, 0x00, 0x00,
+    0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x30, 0x11, 0x22, 0x33,
+    0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xF3, 0x33, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x33};
+
+
 #if COPPER_TEST
 // Copper list
 const uint32_t copper_list[] = {
@@ -245,8 +263,8 @@ _NOINLINE bool delay_check(int ms)
         uint16_t tms = 10;
         do
         {
-            uint8_t tvb = xm_getbl(TIMER);
-            while (tvb == xm_getbl(TIMER))
+            uint16_t tv = xm_getw(TIMER);
+            while (tv == xm_getw(TIMER))
                 ;
         } while (--tms);
     }
@@ -337,7 +355,56 @@ static const char * xmsg(int x, int y, int color, const char * msg)
     return msg;
 }
 
-void wait_vsync()
+static const char * xr_msg(uint16_t base, uint16_t w, int x, int y, uint8_t color, const char * msg)
+{
+    uint16_t cw = color << 8;
+    char     c;
+    do
+    {
+        while ((c = *msg) != '\0')
+        {
+            msg++;
+            if (c == '\n')
+            {
+                while (x < w)
+                {
+                    xm_setw(XR_ADDR, base + (y * w) + x);
+                    xm_setw(XR_DATA, cw | ' ');
+                    x++;
+                }
+                x = 0;
+                y++;
+
+                continue;
+            }
+            xm_setw(XR_ADDR, base + (y * w) + x);
+            xm_setw(XR_DATA, cw | c);
+            x++;
+            if (x > w)
+            {
+                x = 0;
+                y++;
+            }
+        }
+    } while (c != 0);
+
+    return msg;
+}
+
+
+static inline void wait_vsync()
+{
+    while (xreg_getw(SCANLINE) < 0x8000)
+        ;
+}
+
+void wait_not_vsync()
+{
+    while (xreg_getw(SCANLINE) < 0x8000)
+        ;
+}
+
+void wait_vsync_full()
 {
     while (xreg_getw(SCANLINE) >= 0x8000)
         ;
@@ -353,11 +420,17 @@ static inline void check_vsync()
         ;
 }
 
+static inline void wait_memory()
+{
+    while (xm_getbl(SYS_CTRL) & 0x80)
+        ;
+}
+
 static void install_copper()
 {
     dprintf("Loading copper list...");
 
-    xm_setw(XR_ADDR, XR_COPPER_MEM);
+    xm_setw(XR_ADDR, XR_COPPER_ADDR);
 
     for (uint16_t i = 0; i < copper_list_len; i++)
     {
@@ -371,18 +444,25 @@ static void install_copper()
 _NOINLINE void restore_colors()
 {
     wait_vsync();
-    xm_setw(XR_ADDR, XR_COLOR_MEM);
+    xm_setw(XR_ADDR, XR_COLOR_ADDR);
     uint16_t * cp = def_colors;
     for (uint16_t i = 0; i < 256; i++)
     {
         xm_setw(XR_DATA, *cp++);
+    };
+    // set B colors to same, alpha 0x8 (with color fully transparent)
+    xm_setw(XR_DATA, 0x0000);
+    cp = def_colors + 1;
+    for (uint16_t i = 1; i < 256; i++)
+    {
+        xm_setw(XR_DATA, 0x8000 | *cp++);
     };
 }
 
 _NOINLINE void restore_colors2(uint8_t alpha)
 {
     wait_vsync();
-    xm_setw(XR_ADDR, XR_COLOR_MEM + 0x100);
+    xm_setw(XR_ADDR, XR_COLOR_ADDR + 0x100);
     uint16_t * cp = def_colors;
     for (uint16_t i = 0; i < 256; i++)
     {
@@ -403,7 +483,7 @@ _NOINLINE void restore_colors2(uint8_t alpha)
 _NOINLINE void restore_colors3()
 {
     wait_vsync();
-    xm_setw(XR_ADDR, XR_COLOR_MEM + 0x100);
+    xm_setw(XR_ADDR, XR_COLOR_ADDR + 0x100);
     uint16_t * cp = def_colors;
     for (uint16_t i = 0; i < 256; i++)
     {
@@ -418,6 +498,97 @@ _NOINLINE void restore_colors3()
         }
         xm_setw(XR_DATA, w);
     };
+}
+
+_NOINLINE void dupe_colors(int alpha)
+{
+    wait_vsync();
+    uint16_t a = (alpha & 0xf) << 12;
+    xm_setw(XR_ADDR, XR_COLOR_ADDR);
+    for (uint16_t i = 0; i < 256; i++)
+    {
+        xm_setw(XR_ADDR, XR_COLOR_ADDR + i);
+        wait_memory();
+
+        uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
+
+        xm_setw(XR_ADDR, XR_COLOR_ADDR + 0x100 + i);
+        wait_memory();
+
+        xm_setw(XR_DATA, v);
+    };
+}
+
+static void load_sd_bitmap(const char * filename, int vaddr)
+{
+    dprintf("Loading bitmap: \"%s\"", filename);
+    void * file = fl_fopen(filename, "r");
+
+    if (file != NULL)
+    {
+        int cnt = 0;
+
+        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
+        {
+            if ((vaddr & 0xFFF) == 0)
+            {
+                dprintf(".");
+            }
+
+            uint16_t * maddr = (uint16_t *)mem_buffer;
+            xm_setw(WR_INCR, 1);
+            xm_setw(WR_ADDR, vaddr);
+            for (int i = 0; i < (cnt >> 1); i++)
+            {
+                xm_setw(DATA, *maddr++);
+            }
+            vaddr += (cnt >> 1);
+        }
+
+        fl_fclose(file);
+        dprintf("done!\n");
+    }
+    else
+    {
+        dprintf(" - FAILED\n");
+    }
+}
+
+static void load_sd_colors(const char * filename)
+{
+    dprintf("Loading colormap: \"%s\"", filename);
+    void * file = fl_fopen(filename, "r");
+
+    if (file != NULL)
+    {
+        int cnt   = 0;
+        int vaddr = 0;
+
+        while ((cnt = fl_fread(mem_buffer, 1, 256 * 2 * 2, file)) > 0)
+        {
+            if ((vaddr & 0x7) == 0)
+            {
+                dprintf(".");
+            }
+
+            uint16_t * maddr = (uint16_t *)mem_buffer;
+            wait_vsync();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR);
+            for (int i = 0; i < (cnt >> 1); i++)
+            {
+                uint16_t v = *maddr++;
+                xm_setw(XR_DATA, v);
+            }
+            vaddr += (cnt >> 1);
+        }
+
+        fl_fclose(file);
+        dprintf("done!\n");
+    }
+    else
+    {
+        dprintf(" - FAILED\n");
+    }
 }
 
 #define DRAW_WIDTH  ((uint16_t)320)
@@ -479,6 +650,383 @@ void draw8bpp_v_line(uint16_t base, uint8_t color, int x, int y, int len)
     xm_setbl(SYS_CTRL, 0xf);
 }
 
+static inline void wait_blit_done()
+{
+    xwait_blit_busy();
+}
+
+static inline void wait_blit_ready()
+{
+    xwait_blit_full();
+}
+#define NUM_BOBS 12        // number of sprites (ideally no "red" border)
+struct bob
+{
+    int16_t  x_pos, y_pos;
+    uint16_t w_offset;
+    int8_t   x_delta, y_delta;
+};
+
+struct bob      bobs[NUM_BOBS];
+static uint16_t blit_shift[4]  = {0xF000, 0x7801, 0x3C02, 0x1E03};
+static uint16_t blit_rshift[4] = {0x8700, 0xC301, 0xE102, 0xF003};
+
+void test_blit()
+{
+    static const int W_4BPP = 320 / 4;
+    static const int H_4BPP = 240;
+
+    static const int W_LOGO = 32 / 4;
+    static const int H_LOGO = 16;
+
+    dprintf("test_blit\n");
+
+    // crop left and right 2 pixels
+    xreg_setw(VID_LEFT, 2);
+    xreg_setw(VID_RIGHT, 640 - 2);
+
+
+    do
+    {
+        // fill VRAM
+        for (int i = 0x100; i >= 0; i -= 16)
+        {
+            wait_blit_ready();
+            xreg_setw(BLIT_CTRL, 0x0013);               // constA, constB, decrement
+            xreg_setw(BLIT_MOD_A, 0x0000);              // no modulo A
+            xreg_setw(BLIT_SRC_A, i << 8 | i);          // A = fill pattern
+            xreg_setw(BLIT_MOD_B, 0x0000);              // no modulo B
+            xreg_setw(BLIT_SRC_B, 0xFFFF);              // AND with B (and disable transparency)
+            xreg_setw(BLIT_MOD_C, 0x0000);              // no modulo C
+            xreg_setw(BLIT_VAL_C, 0x0000);              // XOR with C
+            xreg_setw(BLIT_MOD_D, 0x0000);              // no modulo D
+            xreg_setw(BLIT_DST_D, 0xFFFF);              // VRAM display end address
+            xreg_setw(BLIT_SHIFT, 0xFF00);              // no edge masking or shifting
+            xreg_setw(BLIT_LINES, 0x0000);              // 1D
+            xreg_setw(BLIT_WORDS, 0x10000 - 1);         // 64KW VRAM
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x00ff0);
+            wait_blit_done();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x000f0);
+            wait_vsync();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x00f00);
+        }
+
+        uint16_t daddr = 0x1000;
+
+        xreg_setw(VID_CTRL, 0x0800);        // border color 8
+
+        xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
+        xreg_setw(PA_LINE_LEN, 320 / 4);
+        xreg_setw(PA_DISP_ADDR, daddr);
+
+        uint16_t taddr = XR_TILE_ADDR + 0x1000;
+        uint16_t tw    = 28;
+
+        xreg_setw(PB_GFX_CTRL, 0x0009);         // tiled + 1-bpp + Hx3 + Vx2
+        xreg_setw(PB_TILE_CTRL, 0x020F);        // tile=0x0800,tile=tile_mem, map=tile_mem, 8x8 tiles
+        xreg_setw(PB_LINE_LEN, tw);
+        xreg_setw(PB_DISP_ADDR, taddr);
+
+        xm_setw(XR_ADDR, XR_COLOR_ADDR + 0x100);        // set write address
+        xm_setw(XR_DATA, 0x0000);
+        xm_setw(XR_DATA, 0x8FFF);
+        xm_setw(XR_ADDR, XR_TILE_ADDR + 0x1000);        // set write address
+        for (int i = 0; i < 0x1000; i++)
+        {
+            xm_setw(XR_DATA, 0x0100);
+        }
+
+        xr_msg(taddr, tw, 0, 0, 0x01, "Blit 320x240 16 color\nLoading...\n");        // set write address
+
+#if 0
+        load_sd_colors("/pacbox-320x240_pal.raw");
+        dupe_colors(0x8);
+#endif
+        xm_setw(XR_ADDR, XR_COLOR_ADDR + 15);        // set write address
+        xm_setw(XR_DATA, 0x0fff);
+
+        uint16_t paddr = 0x9B00;
+        load_sd_bitmap("/pacbox-320x240.raw", paddr);
+
+        xr_msg(taddr, tw, 0, 0, 0x01, "Blit 320x240 16 color\n\n");        // set write address
+        // 2D screen screen copy 0x0000 -> 0x4B00 320x240 4-bpp
+        wait_blit_ready();
+        xreg_setw(BLIT_CTRL, 0x0002);             // constB
+        xreg_setw(BLIT_MOD_A, 0x0000);            // no modulo A
+        xreg_setw(BLIT_SRC_A, paddr);             // A = source
+        xreg_setw(BLIT_MOD_B, 0x0000);            // no modulo B
+        xreg_setw(BLIT_SRC_B, 0xFFFF);            // AND with B (and disable transparency)
+        xreg_setw(BLIT_MOD_C, 0x0000);            // no modulo C
+        xreg_setw(BLIT_VAL_C, 0x0000);            // XOR with C
+        xreg_setw(BLIT_MOD_D, 0x0000);            // no modulo D
+        xreg_setw(BLIT_DST_D, daddr);             // VRAM display end address
+        xreg_setw(BLIT_SHIFT, 0xFF00);            // no edge masking or shifting
+        xreg_setw(BLIT_LINES, H_4BPP - 1);        // lines (0 for 1-D blit)
+        xreg_setw(BLIT_WORDS, W_4BPP - 1);        // words to write -1
+        wait_blit_done();
+
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
+        xr_msg(taddr, tw, 0, 0, 0x01, "Blit 320x240 16 color\nShift right\n");        // set write address
+        for (int i = 0; i < 320; i++)
+        {
+            wait_blit_ready();                              // make sure blit ready (previous blit started)
+            xreg_setw(BLIT_CTRL, 0x0002);                   // constB
+            xreg_setw(BLIT_MOD_A, -1);                      // A modulo
+            xreg_setw(BLIT_SRC_A, paddr);                   // A source VRAM addr (pacman)
+            xreg_setw(BLIT_MOD_B, 0x0000);                  // B modulo
+            xreg_setw(BLIT_SRC_B, 0xFFFF);                  // B const (non-zero to disable transparency)
+            xreg_setw(BLIT_MOD_C, 0x0000);                  // C trans term
+            xreg_setw(BLIT_VAL_C, 0x0000);                  // C const (XOR'd with value stored)
+            xreg_setw(BLIT_MOD_D, -1);                      // D modulo
+            xreg_setw(BLIT_DST_D, daddr + (i >> 2));        // D destination VRAM addr
+            xreg_setw(BLIT_SHIFT,
+                      blit_shift[i & 0x3]);             // first, last word nibble masks, and 0-3 shift (low two bits)
+            xreg_setw(BLIT_LINES, H_4BPP - 1);          // lines (0 for 1-D blit)
+            xreg_setw(BLIT_WORDS, W_4BPP);              // words to write -1
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x00ff0);
+            wait_blit_done();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x000f0);
+            wait_vsync();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x00f00);
+        }
+        xr_msg(taddr, tw, 0, 0, 0x01, "Blit 320x240 16 color\nShift left (decrement)\n");        // set write address
+        for (int i = 319; i >= 0; i--)
+        {
+            wait_blit_ready();                                       // make sure blit ready (previous blit started)
+            xreg_setw(BLIT_CTRL, 0x0012);                            // constB
+            xreg_setw(BLIT_MOD_A, 1);                                // A modulo
+            xreg_setw(BLIT_SRC_A, paddr + (H_4BPP * W_4BPP));        // A source VRAM addr (pacman)
+            xreg_setw(BLIT_MOD_B, 0x0000);                           // B modulo
+            xreg_setw(BLIT_SRC_B, 0xFFFF);                           // B const (non-zero to disable transparency)
+            xreg_setw(BLIT_MOD_C, 0x0000);                           // C trans term
+            xreg_setw(BLIT_VAL_C, 0x0000);                           // C const (XOR'd with value stored)
+            xreg_setw(BLIT_MOD_D, 1);                                // D modulo
+            xreg_setw(BLIT_DST_D,
+                      (daddr + (H_4BPP * W_4BPP)) + (i >> 2));        // D destination VRAM addr
+            xreg_setw(BLIT_SHIFT,
+                      blit_rshift[i & 0x3]);            // first, last word nibble masks, and 0-3 shift (low two bits)
+            xreg_setw(BLIT_LINES, H_4BPP - 1);          // lines (0 for 1-D blit)
+            xreg_setw(BLIT_WORDS, W_4BPP);              // words to write -1
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x00ff0);
+            wait_blit_done();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x000f0);
+            wait_vsync();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x00f00);
+        }
+
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
+        // upload moto sprite
+        uint16_t maddr = 0xf000;
+        xm_setw(WR_INCR, 1);
+        xm_setw(WR_ADDR, maddr);
+        for (size_t i = 0; i < sizeof(moto_m); i += 2)
+        {
+            xm_setw(DATA, moto_m[i] << 8 | moto_m[i + 1]);
+        }
+
+        for (int b = 0; b < NUM_BOBS; b++)
+        {
+            bobs[b].x_pos   = b * 8;
+            bobs[b].y_pos   = (b / 8) * 8;
+            uint16_t r      = xm_getw(LFSR);
+            bobs[b].x_delta = r & 0x8 ? -((r & 3) - 1) : ((r & 3) + 1);
+            r               = xm_getw(LFSR);
+            bobs[b].y_delta = r & 0x8 ? -((r & 3) - 1) : ((r & 3) + 1);
+        }
+
+        wait_blit_ready();
+        xreg_setw(BLIT_CTRL, 0xEE02);             // constB, 4bpp transp=E
+        xreg_setw(BLIT_MOD_A, 0x0000);            // A mod (XOR)
+        xreg_setw(BLIT_SRC_A, paddr);             // A source const word
+        xreg_setw(BLIT_MOD_B, 0x0000);            // B mod (XOR)
+        xreg_setw(BLIT_SRC_B, 0xFFFF);            // B AND const (non-zero to disable transparency)
+        xreg_setw(BLIT_MOD_C, 0x0000);            // C mod (XOR)
+        xreg_setw(BLIT_VAL_C, 0x0000);            // C XOR const
+        xreg_setw(BLIT_MOD_D, 0x0000);            // D mod (ADD)
+        xreg_setw(BLIT_DST_D, daddr);             // D destination VRAM addr
+        xreg_setw(BLIT_SHIFT, 0xFF00);            // first, last word nibble masks, and 0-3 shift (low two bits)
+        xreg_setw(BLIT_LINES, H_4BPP - 1);        // lines (0 for 1-D blit)
+        xreg_setw(BLIT_WORDS, W_4BPP - 1);        // words to write -1
+
+        xr_msg(
+            taddr, tw, 0, 0, 0x01, "Blit 320x240 16 color\nBOB test (single buffered)\n");        // set write address
+        int nb = NUM_BOBS;
+        dprintf("Num bobs = %d", nb);
+        for (int i = 0; i < 1024; i++)
+        {
+            for (int b = 0; b < nb; b++)
+            {
+                struct bob * bp = &bobs[b];
+                wait_blit_ready();                             // make sure blit ready (previous blit started)
+                xreg_setw(BLIT_CTRL, 0xEE02);                  // constB, 4bpp transp=E
+                xm_setw(XR_DATA, W_4BPP - W_LOGO - 1);         // A modulo
+                xm_setw(XR_DATA, paddr + bp->w_offset);        // A initial term (not used)
+                xm_setw(XR_DATA, 0x0000);                      // B modulo
+                xm_setw(XR_DATA, 0xFFFF);                      // B source+transp VRAM addr (moto_m)
+                xm_setw(XR_DATA, 0x0000);                      // C modulo
+                xm_setw(XR_DATA, 0x0000);                      // C XOR const
+                xm_setw(XR_DATA, W_4BPP - W_LOGO - 1);         // D modulo
+                xm_setw(XR_DATA, daddr + bp->w_offset);        // D destination VRAM addr
+                xm_setw(XR_DATA, 0xFF00);                // first, last word nibble masks, and 0-3 shift (low two bits)
+                xm_setw(XR_DATA, H_LOGO - 1);            // lines (0 for 1-D blit)
+                xm_setw(XR_DATA, W_LOGO - 1 + 1);        // words to write -1
+
+                bp->x_pos += bp->x_delta;
+                if (bp->x_pos < -16)
+                    bp->x_pos += 320 + 16;
+                else if (bp->x_pos > 320)
+                    bp->x_pos -= 320;
+
+                bp->y_pos += bp->y_delta;
+                if (bp->y_pos < -16)
+                    bp->y_pos += 240 + 16;
+                else if (bp->y_pos > 240)
+                    bp->y_pos -= 240;
+            }
+            for (int b = 0; b < nb; b++)
+            {
+                struct bob * bp  = &bobs[b];
+                uint16_t     off = (uint16_t)(bp->x_pos >> 2) + (uint16_t)((uint16_t)W_4BPP * bp->y_pos);
+                bp->w_offset     = off;
+                uint8_t shift    = bp->x_pos & 3;
+
+                wait_blit_ready();                            // make sure blit ready (previous blit started)
+                xreg_setw(BLIT_CTRL, 0x0001);                 // constA
+                xm_setw(XR_DATA, 0x0000);                     // A modulo
+                xm_setw(XR_DATA, 0xFFFF);                     // A initial term (not used)
+                xm_setw(XR_DATA, -1);                         // B modulo
+                xm_setw(XR_DATA, maddr);                      // B source+transp VRAM addr (moto_m)
+                xm_setw(XR_DATA, 0x0000);                     // C modulo
+                xm_setw(XR_DATA, 0x0000);                     // C XOR const
+                xm_setw(XR_DATA, W_4BPP - W_LOGO - 1);        // D modulo
+                xm_setw(XR_DATA, daddr + off);                // D destination VRAM addr
+                xm_setw(XR_DATA,
+                        blit_shift[shift]);              // first, last word nibble masks, and 0-3 shift (low two bits)
+                xm_setw(XR_DATA, H_LOGO - 1);            // lines (0 for 1-D blit)
+                xm_setw(XR_DATA, W_LOGO - 1 + 1);        // words to write -1
+            }
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x000f0);
+            wait_vsync();
+            xm_setw(XR_ADDR, XR_COLOR_ADDR + 8);        // set write address
+            xm_setw(XR_DATA, 0x00f00);
+        }
+
+        if (delay_check(DELAY_TIME))
+        {
+            break;
+        }
+
+
+#if 0
+        {
+            int      ms_min = 99999;
+            int      ms_max = 0;
+            uint16_t start;
+            uint16_t go = xm_getw(TIMER);
+            while ((start = xm_getw(TIMER)) == go)
+                ;
+            for (int i = 0; i < 16; i++)
+            {
+                uint16_t a = i & 0xf;
+                uint16_t v = (a << 12) | (a << 8) | (a << 4) | a;
+
+                wait_blit_ready();
+                xreg_setw(BLIT_MODE, 0x2000);
+                xreg_setw(BLIT_WR_MASK, 0x0FFF);
+                xreg_setw(BLIT_RD_ADDR, v);
+                xreg_setw(BLIT_WR_ADDR, 0x0000);
+                xreg_setw(BLIT_WORDS, 0x10000 - 1);
+
+                uint16_t stop = xm_getw(TIMER) - start;
+                if (stop < ms_min)
+                {
+                    ms_min = stop;
+                }
+                if (stop > ms_max)
+                {
+                    ms_max = stop;
+                }
+            }
+            go = xm_getw(TIMER);
+            while ((start = xm_getw(TIMER)) == go)
+                ;
+            wait_blit_done();
+            uint16_t stop = xm_getw(TIMER) - start;
+            dprintf("fill 64KW with 0x%04x in %u.%u ms min, %u.%u ms max\n",
+                    ms_min / 10,
+                    ms_min % 10,
+                    ms_max / 10,
+                    ms_max % 10);
+            dprintf("straggler %u.%u ms\n", stop / 10, stop % 10);
+        }
+#endif
+    } while (false);
+    xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
+    xreg_setw(PA_LINE_LEN, 320 / 4);
+    xreg_setw(PA_DISP_ADDR, 0x0000);
+
+    // crop left and right 2 pixels
+    xreg_setw(VID_LEFT, 0);
+    xreg_setw(VID_RIGHT, 640);
+}
+
+void test_true_color()
+{
+
+    xm_setw(SYS_CTRL, 0x000F);        // disable Xosera vsync interrupt
+
+    uint16_t saddr = 0x0000;
+
+    xreg_setw(PA_GFX_CTRL, 0x0065);         // bitmap, 8-bpp, Hx2, Vx2
+    xreg_setw(PA_TILE_CTRL, 0x000F);        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    xreg_setw(PA_DISP_ADDR, saddr);         // display start address
+    xreg_setw(PA_LINE_LEN,
+              (320 / 2) + (320 / 4));        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
+
+    xreg_setw(PB_GFX_CTRL, 0x0055);                    // bitmap, 4-bpp, Hx2, Vx2
+    xreg_setw(PB_TILE_CTRL, 0x000F);                   // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    xreg_setw(PB_DISP_ADDR, saddr + (320 / 2));        // display start address
+    xreg_setw(PB_LINE_LEN,
+              (320 / 2) + (320 / 4));        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
+
+    xm_setw(XR_ADDR, XR_COLOR_ADDR + 15);        // set write address
+    xm_setw(XR_DATA, 0x0fff);
+
+    load_sd_colors("/true_color_pal.raw");        // loads 256 + 16 colors (256 RG and 16 B)
+
+    load_sd_bitmap("/parrot_320x240_RG8B4.raw", saddr);
+
+    if (delay_check(DELAY_TIME * 10))
+    {
+        return;
+    }
+
+    load_sd_bitmap("/fractal_320x240_RG8B4.raw", saddr);
+
+    if (delay_check(DELAY_TIME * 10))
+    {
+        return;
+    }
+
+    xm_setw(SYS_CTRL, 0x0F0F);        // disable Xosera vsync interrupt
+}
+
 void test_dual_8bpp()
 {
     const uint16_t width    = DRAW_WIDTH;
@@ -511,7 +1059,7 @@ void test_dual_8bpp()
         xreg_setw(PA_GFX_CTRL, 0x00FF);        // blank screen
         xreg_setw(PB_GFX_CTRL, 0x00FF);
         // install 320x200 "crop" copper list
-        xm_setw(XR_ADDR, XR_COPPER_MEM);
+        xm_setw(XR_ADDR, XR_COPPER_ADDR);
         for (uint16_t i = 0; i < NUM_ELEMENTS(copper_320x200); i++)
         {
             xm_setw(XR_DATA, copper_320x200[i] >> 16);
@@ -533,8 +1081,8 @@ void test_dual_8bpp()
 
         // enable copper
         wait_vsync();
-        xmem_setw(XR_COPPER_MEM + (1 * 2) + 1, 0x0065);
-        xmem_setw(XR_COPPER_MEM + (2 * 2) + 1, 0x00E5);
+        xmem_setw(XR_COPPER_ADDR + (1 * 2) + 1, 0x0065);
+        xmem_setw(XR_COPPER_ADDR + (2 * 2) + 1, 0x00E5);
         xreg_setw(COPP_CTRL, 0x8000);
 
         uint16_t w = width;
@@ -561,8 +1109,8 @@ void test_dual_8bpp()
         }
 
         wait_vsync();
-        xmem_setw(XR_COPPER_MEM + (1 * 2) + 1, 0x0065);
-        xmem_setw(XR_COPPER_MEM + (2 * 2) + 1, 0x0065);
+        xmem_setw(XR_COPPER_ADDR + (1 * 2) + 1, 0x0065);
+        xmem_setw(XR_COPPER_ADDR + (2 * 2) + 1, 0x0065);
         dprintf("Playfield A: 320x200 8bpp - horizontal-striped triangle + B enabled, but zeroed\n");
         if (delay_check(DELAY_TIME))
         {
@@ -584,8 +1132,8 @@ void test_dual_8bpp()
         }
 
         wait_vsync();
-        xmem_setw(XR_COPPER_MEM + (1 * 2) + 1, 0x00E5);
-        xmem_setw(XR_COPPER_MEM + (2 * 2) + 1, 0x0065);
+        xmem_setw(XR_COPPER_ADDR + (1 * 2) + 1, 0x00E5);
+        xmem_setw(XR_COPPER_ADDR + (2 * 2) + 1, 0x0065);
         dprintf("Playfield B: 320x200 8bpp - vertical-striped triangle, A blanked\n");
         if (delay_check(DELAY_TIME))
         {
@@ -593,8 +1141,8 @@ void test_dual_8bpp()
         }
 
         wait_vsync();
-        xmem_setw(XR_COPPER_MEM + (1 * 2) + 1, 0x0065);
-        xmem_setw(XR_COPPER_MEM + (2 * 2) + 1, 0x0065);
+        xmem_setw(XR_COPPER_ADDR + (1 * 2) + 1, 0x0065);
+        xmem_setw(XR_COPPER_ADDR + (2 * 2) + 1, 0x0065);
         dprintf("Playfield A&B: mixed (alpha 0x8)\n");
         if (delay_check(DELAY_TIME))
         {
@@ -952,7 +1500,7 @@ static void test_xr_read()
         return;
     }
 
-    for (uint16_t taddr = XR_TILE_MEM + 0x0800; taddr < XR_TILE_MEM + 0x1400; taddr++)
+    for (uint16_t taddr = XR_TILE_ADDR + 0x0800; taddr < XR_TILE_ADDR + 0x1400; taddr++)
     {
         if (taddr < 0x0800 || taddr > 0x1000)
         {
@@ -962,7 +1510,7 @@ static void test_xr_read()
     }
     xreg_setw(PA_DISP_ADDR, 0x0C00);
     xreg_setw(PA_TILE_CTRL, 0x020F);
-    xm_setw(XR_ADDR, XR_TILE_MEM + 0x0C00);
+    xm_setw(XR_ADDR, XR_TILE_ADDR + 0x0C00);
     xm_setw(XR_DATA, 0x1f00 | 'T');
     xm_setw(XR_DATA, 0x1f00 | 'I');
     xm_setw(XR_DATA, 0x1f00 | 'L');
@@ -975,21 +1523,17 @@ static void test_xr_read()
     }
 
     //    uint8_t oldint = mcDisableInterrupts();        // NOTE: should not be needed (and doesn't "solve" issues)
-    for (int r = 0; r < 100; r++)
+    for (int r = 0; r < 10; r++)
     {
         if (r == 50)
         {
             xreg_setw(PA_DISP_ADDR, 0x0000);
             xreg_setw(PA_TILE_CTRL, 0x000F);
         }
-        for (int w = XR_TILE_MEM; w < XR_TILE_MEM + 0x1400; w++)
+        for (int w = XR_TILE_ADDR; w < XR_TILE_ADDR + 0x1400; w++)
         {
-            //            touching
-            xm_setw(XR_ADDR, w);
-            //            __asm__ __volatile__("nop ; nop ; nop ; nop");
-            uint16_t v = xm_getw(XR_DATA);           // read tile mem
+            uint16_t v = xmem_getw_wait(w);
             xm_setw(XR_DATA, r & 1 ? v : ~v);        // toggle to prove read and set in VRAM
-                                                     //            __asm__ __volatile__("nop ; nop ; nop ; nop");
         }
 
         if (delay_check(10))
@@ -1008,83 +1552,10 @@ static void test_xr_read()
     }
 }
 
-static void load_sd_bitmap(const char * filename)
-{
-    dprintf("Loading bitmap: \"%s\"", filename);
-    void * file = fl_fopen(filename, "r");
-
-    if (file != NULL)
-    {
-        int cnt   = 0;
-        int vaddr = 0;
-
-        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
-        {
-            if ((vaddr & 0xFFF) == 0)
-            {
-                dprintf(".");
-            }
-
-            uint16_t * maddr = (uint16_t *)mem_buffer;
-            xm_setw(WR_INCR, 1);
-            xm_setw(WR_ADDR, vaddr);
-            for (int i = 0; i < (cnt >> 1); i++)
-            {
-                xm_setw(DATA, *maddr++);
-            }
-            vaddr += (cnt >> 1);
-        }
-
-        fl_fclose(file);
-        dprintf("done!\n");
-    }
-    else
-    {
-        dprintf(" - FAILED\n");
-    }
-}
-
-static void load_sd_colors(const char * filename)
-{
-    dprintf("Loading colormap: \"%s\"", filename);
-    void * file = fl_fopen(filename, "r");
-
-    if (file != NULL)
-    {
-        int cnt   = 0;
-        int vaddr = 0;
-
-        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
-        {
-            if ((vaddr & 0x7) == 0)
-            {
-                dprintf(".");
-            }
-
-            uint16_t * maddr = (uint16_t *)mem_buffer;
-            wait_vsync();
-            xm_setw(XR_ADDR, XR_COLOR_MEM);
-            for (int i = 0; i < (cnt >> 1); i++)
-            {
-                uint16_t v = *maddr++;
-                xm_setw(XR_DATA, v);
-            }
-            vaddr += (cnt >> 1);
-        }
-
-        fl_fclose(file);
-        dprintf("done!\n");
-    }
-    else
-    {
-        dprintf(" - FAILED\n");
-    }
-}
-
 void set_alpha_slow(int alpha)
 {
     uint16_t a = (alpha & 0xf) << 12;
-    for (int i = XR_COLOR_MEM; i < XR_COLOR_MEM + 256; i++)
+    for (int i = XR_COLOR_ADDR; i < XR_COLOR_ADDR + 256; i++)
     {
         wait_vsync();
         xm_setw(XR_ADDR, i);
@@ -1097,11 +1568,10 @@ void set_alpha_slow(int alpha)
 static void set_alpha(int alpha)
 {
     uint16_t a = (alpha & 0xf) << 12;
-    for (int i = XR_COLOR_MEM; i < XR_COLOR_MEM + 256; i++)
+    for (int i = XR_COLOR_ADDR; i < XR_COLOR_ADDR + 256; i++)
     {
         xm_setw(XR_ADDR, i);
-        while (xm_getbl(SYS_CTRL) & 0x40)
-            ;
+        wait_memory();
         uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
         xm_setw(XR_DATA, v);
     }
@@ -1225,9 +1695,9 @@ void     xosera_test()
 #endif
 
 #if LR_MARGIN_TEST
-        // crop left and right 10 pixels
-        xreg_setw(VID_LEFT, 10);
-        xreg_setw(VID_RIGHT, monwidth - 10);
+        // crop left and right 2 pixels
+        xreg_setw(VID_LEFT, 4);
+        xreg_setw(VID_RIGHT, monwidth - 4);
 #endif
 
         for (int y = 0; y < 30; y += 3)
@@ -1239,10 +1709,6 @@ void     xosera_test()
         {
             break;
         }
-
-        test_dual_8bpp();
-
-        test_xr_read();
 
         if (SD_check_support())
         {
@@ -1263,6 +1729,19 @@ void     xosera_test()
         {
             dprintf("No SD card support.\n");
         }
+
+        if (use_sd)
+        {
+            test_blit();
+
+            test_true_color();
+        }
+
+        test_dual_8bpp();
+
+        test_xr_read();
+
+
         // 4/8 bpp test
         if (use_sd)
         {
@@ -1271,7 +1750,7 @@ void     xosera_test()
             xreg_setw(PA_LINE_LEN, 160);
 
             load_sd_colors("/xosera_r1_pal.raw");
-            load_sd_bitmap("/xosera_r1.raw");
+            load_sd_bitmap("/xosera_r1.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1291,7 +1770,7 @@ void     xosera_test()
             xreg_setw(PA_LINE_LEN, 160);
 
             load_sd_colors("/color_cube_320x240_256_pal.raw");
-            load_sd_bitmap("/color_cube_320x240_256.raw");
+            load_sd_bitmap("/color_cube_320x240_256.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1311,7 +1790,7 @@ void     xosera_test()
             xreg_setw(PA_LINE_LEN, 80);
 
             load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw");
-            load_sd_bitmap("/ST_KingTut_Dpaint_16.raw");
+            load_sd_bitmap("/ST_KingTut_Dpaint_16.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1330,7 +1809,7 @@ void     xosera_test()
             xreg_setw(PA_LINE_LEN, 80);
 
             load_sd_colors("/escher-relativity_320x240_16_pal.raw");
-            load_sd_bitmap("/escher-relativity_320x240_16.raw");
+            load_sd_bitmap("/escher-relativity_320x240_16.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1348,7 +1827,7 @@ void     xosera_test()
             xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
             xreg_setw(PA_LINE_LEN, 80);
 
-            load_sd_bitmap("/space_shuttle_color_small.raw");
+            load_sd_bitmap("/space_shuttle_color_small.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1361,13 +1840,14 @@ void     xosera_test()
         }
 
         set_alpha(0x0);
+#if 0
         if (use_sd)
         {
             wait_vsync();
             xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
             xreg_setw(PA_LINE_LEN, 80);
 
-            load_sd_bitmap("/mountains_mono_640x480w.raw");
+            load_sd_bitmap("/mountains_mono_640x480w.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
@@ -1380,13 +1860,13 @@ void     xosera_test()
             xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 1-bpp + Hx1 + Vx1
             xreg_setw(PA_LINE_LEN, 80);
 
-            load_sd_bitmap("/escher-relativity_640x480w.raw");
+            load_sd_bitmap("/escher-relativity_640x480w.raw", 0x0000);
             if (delay_check(DELAY_TIME))
             {
                 break;
             }
         }
-
+#endif
         wait_vsync();
         xreg_setw(PA_GFX_CTRL, 0x0000);
         test_hello();

@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "macos",
+            "name": "Mac",
             "includePath": [
                 "${default}",
                 "/Users/kenj/Dev/oss-cad-suite/share/verilator/include",
@@ -24,7 +24,7 @@
             ]
         },
         {
-            "name": "linux",
+            "name": "Linux",
             "includePath": [
                 "${default}",
                 "/home/kenj/oss-cad-suite/share/verilator/include/",
@@ -50,14 +50,14 @@
             "name": "rosco_m68k",
             "includePath": [
                 "${default}",
-                "/Users/kenj/Dev/Rosco_Dev/rosco_m68k/code/software/libs/build/include",
+                "${env:ROSCO_M68K_DIR}/code/software/libs/build/include",
                 "${workspaceFolder}/xosera_m68k_api"
             ],
             "defines": [
                 "ROSCO_M68K"
             ],
             "macFrameworkPath": [],
-            "compilerPath": "/usr/local/bin/m68k-elf-gcc",
+            "compilerPath": "${env:ROSCO_M68K_CC}/m68k-elf-gcc",
             "cStandard": "gnu11",
             "cppStandard": "gnu++17",
             "intelliSenseMode": "macos-gcc-arm64",
@@ -67,7 +67,7 @@
                 "-Wextra",
                 "-pedantic",
                 "-Wno-unused-function",
-                "-I/Users/kenj/Dev/Rosco_Dev/rosco_m68k/code/software/libs/build/include"
+                "-I${env:ROSCO_M68K_DIR}/code/software/libs/build/include"
             ]
         }
     ],

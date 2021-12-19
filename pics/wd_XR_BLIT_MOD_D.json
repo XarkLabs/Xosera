@@ -1,0 +1,13 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "modulo added to D DST_C after each line",
+            "type": 4,
+            "attr": []
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

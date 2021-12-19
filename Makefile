@@ -4,22 +4,23 @@
 ICEPROG := iceprog
 
 # Build all project targets
+# NOTE: Xosera DVI PMOD not officially supported yet (image stability issues)
 info:
 	@echo "NOTE: Requires YosysHQ tools."
 	@echo "      (e.g. https://github.com/YosysHQ/oss-cad-suite-build/releases/latest)"
 	@echo "      (Sadly, brew and distribution versions seem sadly outdated)"
 	@echo "      Simulation requires Icarus Verilog and/or Verilator"
 	@echo "      Utilities and Verilator simulation require C++ compiler"
-	@echo "      SDL2 and SDL2_Image required for Verilator visual simulation"
+	@echo "      SDL2 and SDL2_Image required for Verilator visual simulation and utils"
 	@echo " "
 	@echo "Xosera make targets:"
 	@echo "   make all             - build everything (RTL, simulation, uitls and host_spi)"
 	@echo "   make upduino         - build Xosera for UPduino v3 (see rtl/upduino.mk for options)"
 	@echo "   make upd_prog        - build Xosera and program UPduino v3 (see rtl/upduino.mk for options)"
 	@echo "   make xosera_vga      - build Xosera VGA Rosco_m68k board firmware"
-	@echo "   make xosera_dvi      - build Xosera DVI Rosco_m68k board firmware"
+#	@echo "   make xosera_dvi      - build Xosera DVI Rosco_m68k board firmware"
 	@echo "   make xosera_vga_prog - build & program Xosera VGA Rosco_m68k board firmware"
-	@echo "   make xosera_dvi_prog - build & program Xosera DVI Rosco_m68k board firmware"
+#	@echo "   make xosera_dvi_prog - build & program Xosera DVI Rosco_m68k board firmware"
 	@echo "   make icebreaker      - build Xosera for iCEBreaker (see rtl/icebreaker.mk for options)"
 	@echo "   make iceb_prog       - build Xosera and program iCEBreaker (see rtl/icebreaker.mk for options)"
 	@echo "   make rtl             - build UPduino, iCEBreaker bitstreams and simulation targets"
@@ -28,11 +29,10 @@ info:
 	@echo "   make irun            - build and run Icarus Verilog simulation"
 	@echo "   make vsim            - build Verilator C++ & SDL2 native visual simulation files"
 	@echo "   make vrun            - build and run Verilator C++ & SDL2 native visual simulation"
-	@echo "   make utils           - build utilities (currently image_to_mem font converter)"
-	@echo "   make m68k	       - build rosco_m68k test programs"
-	@echo "   make host_spi        - build PC side of FTDI SPI test utility (needs libftdi1)"
-	@echo "   make xvid_spi        - build PC XVID API over FTDI SPI test utility (needs libftdi1)"
-	@echo "   make clean           - clean files that can be rebuilt"
+	@echo "   make count           - build Xosera VGA with Yosys count for module resource usage"
+	@echo "   make utils           - build misc C++ image utilities"
+	@echo "   make m68k            - build rosco_m68k Xosera test programs"
+	@echo "   make clean           - clean most files that can be rebuilt"
 
 # Build all project targets
 all: rtl utils host_spi xvid_spi
@@ -104,6 +104,10 @@ vsim:
 vrun:
 	cd rtl && $(MAKE) vrun
 
+# build Xosera VGA with Yosys count (for module resource usage)
+count:
+	cd rtl && $(MAKE) -f upduino.mk count
+
 # Build image/font mem utility
 utils:
 	cd utils && $(MAKE)
@@ -125,6 +129,23 @@ host_spi:
 xvid_spi:
 	cd xvid_spi && $(MAKE)
 
+golden:
+	@echo === Last 640x480 bitstream stats:
+	@cat rtl/xosera_upd_vga_640x480_stats.txt
+	@echo === Last 848x480 bitstream stats:
+	@cat rtl/xosera_upd_vga_848x480_stats.txt
+	@echo Enshrine these bitstreams [y/N]?
+	@read ans && if [ $${ans:-'N'} = 'y' ] ; then \
+		echo === Copying xosera bitstreams to xosera_gateware... ; \
+		cp -v rtl/xosera_upd_vga_*_stats.txt ./xosera_gateware && \
+		cp -v rtl/upduino/logs/xosera_upd_vga_*_yosys.log ./xosera_gateware && \
+		cp -v rtl/upduino/logs/xosera_upd_vga_*_nextpnr.log ./xosera_gateware && \
+		cp -v rtl/upduino/xosera_upd_vga_*.json ./xosera_gateware && \
+		cp -v rtl/upduino/xosera_upd_vga_*.asc ./xosera_gateware && \
+		cp -v rtl/upduino/xosera_upd_vga_*.bin ./xosera_gateware ; \
+		cp -v rtl/xosera_board_vga.bin ./xosera_gateware ; \
+	fi
+	@echo === Done
 # Clean all project targets
 clean:
 	cd rtl && $(MAKE) clean

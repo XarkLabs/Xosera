@@ -490,7 +490,7 @@ static void set_default_colors(volatile xmreg_t * const xosera_ptr)
                                               0x0f5f,         // light magenta
                                               0x0ff5,         // yellow
                                               0x0fff};        // bright white
-    xm_setw(XR_ADDR, XR_COLOR_MEM);
+    xm_setw(XR_ADDR, XR_COLOR_ADDR);
     for (uint16_t i = 0; i < 16; i++)
     {
         xm_setw(XR_DATA, def_colors16[i]);
@@ -1368,7 +1368,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                                                        ((uint16_t)(td->csi_parms[i + 1] & 0xf0) << 0) |
                                                        ((uint16_t)(td->csi_parms[i + 2] & 0xf0) >> 4);
 
-                                        xmem_setw(XR_COLOR_MEM + n, rgb);
+                                        xmem_setw(XR_COLOR_ADDR + n, rgb);
                                         LOGF(" COLOR_MEM[%u]=0x%03x", n, rgb);
                                         rosco_cmd_good = true;
                                     }
@@ -1791,12 +1791,12 @@ bool xansiterm_INIT()
     // default values (others will be zero or computed)
     td->device_recvchar  = _EFP_RECVCHAR;
     td->device_checkchar = _EFP_CHECKCHAR;
-    td->gfx_ctrl = MAKE_GFX_CTRL(0x00, 0, 0, 0, 0, 0);        // 16-colors 0-15, 1-BPP tiled, H repeat x1, V repeat x1
-    td->tile_ctrl[0] = MAKE_TILE_CTRL(0x0000, 0, 16);         // 1st font in tile RAM 8x16 (initial default)
-    td->tile_ctrl[1] = MAKE_TILE_CTRL(0x0800, 0, 8);          // 2nd font in tile RAM 8x8
-    td->tile_ctrl[2] = MAKE_TILE_CTRL(0x0C00, 0, 8);          // 3rd font in tile RAM 8x8
-    td->tile_ctrl[3] = MAKE_TILE_CTRL(0x0000, 0, 16);         // same as 0 (for user defined)
-    td->def_color    = DEFAULT_COLOR;                         // default dark-green on black
+    td->gfx_ctrl = MAKE_GFX_CTRL(0x00, 0, 0, 0, 0, 0);          // 16-colors 0-15, 1-BPP tiled, H repeat x1, V repeat x1
+    td->tile_ctrl[0] = MAKE_TILE_CTRL(0x0000, 0, 0, 16);        // 1st font in tile RAM 8x16 (initial default)
+    td->tile_ctrl[1] = MAKE_TILE_CTRL(0x0800, 0, 0, 8);         // 2nd font in tile RAM 8x8
+    td->tile_ctrl[2] = MAKE_TILE_CTRL(0x0C00, 0, 0, 8);         // 3rd font in tile RAM 8x8
+    td->tile_ctrl[3] = MAKE_TILE_CTRL(0x0000, 0, 0, 16);        // same as 0 (for user defined)
+    td->def_color    = DEFAULT_COLOR;                           // default dark-green on black
     td->send_index   = -1;
 
     xansi_reset(true);

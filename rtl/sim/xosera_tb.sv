@@ -40,23 +40,25 @@ logic reconfig;
 logic [1:0] boot_select;
 
 // bus interface
-logic bus_intr;
-logic bus_cs_n;
-logic bus_rd_nwr;
-logic bus_bytesel;
-logic [3: 0] bus_reg_num;
-logic [7: 0] bus_data_in;
-logic [7: 0] bus_data_out;
+logic           bus_intr;
+logic           bus_cs_n;
+logic           bus_rd_nwr;
+logic           bus_bytesel;
+logic [3: 0]    bus_reg_num;
+logic [7: 0]    bus_data_in;
+logic [7: 0]    bus_data_out;
 
-integer i, j, f;
-integer frame;
-logic [15:0] test_addr;
-logic [15:0] test_inc;
-logic [15:0] test_addr2;
-logic [15:0] test_data0;
-logic [15:0] test_data1;
-logic [15:0] test_data2;
-logic [15:0] test_data3;
+// tb vars
+integer     i, j, f;
+integer     frame;
+
+addr_t      test_addr;
+word_t      test_inc;
+addr_t      test_addr2;
+word_t      test_data0;
+word_t      test_data1;
+word_t      test_data2;
+word_t      test_data3;
 
 /* verilator lint_on UNUSED */
 
@@ -85,7 +87,9 @@ xosera_main xosera(
 parameter CLK_PERIOD    = (1000000000.0 / PIXEL_FREQ);
 parameter M68K_PERIOD   = 80;
 
-logic [15:0] readword;
+/* verilator lint_off UNUSED */
+word_t       readword;
+/* verilator lint_on UNUSED */
 
 integer logfile;
 
@@ -161,7 +165,7 @@ endtask
 
 task xvid_setw(
     input  logic [3:0]   r_num,
-    input  logic [15:0]   data
+    input  word_t         data
     );
 
     write_reg(1'b0, r_num, data[15:8]);
@@ -196,7 +200,7 @@ task inject_file(
     $fclose(fd);
 endtask
 
-function logic [63:0] regname(
+function automatic logic [63:0] regname(
         input logic [3:0] num
     );
     begin
@@ -251,10 +255,10 @@ always begin
     #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h8000);
     // TODO end
 
-`ifdef ENABLE_LFSR
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_LFSR, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
-    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+    // TODO hacked in blit test
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, 16'(XR_BLIT_WORDS));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h0007);
+    // TODO end
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_LFSR, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
@@ -267,7 +271,10 @@ always begin
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_LFSR, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
     $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
-`endif
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_LFSR, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
 
 `ifdef LOAD_MONOBM
@@ -391,7 +398,7 @@ end
 `endif
 
 integer flag = 0;
-logic [15:0] last_rd_addr = 0;
+addr_t       last_rd_addr = 0;
 always @(negedge clk) begin
     if (xosera.reg_interface.regs_vram_sel_o) begin
         if (xosera.reg_interface.regs_wr_o) begin

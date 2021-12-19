@@ -105,6 +105,12 @@ logic       vga_hs;                     // vga hsync
 logic       vga_vs;                     // vga vsync
 logic       dv_de;                      // DV display enable
 logic       bus_intr;                   // interrupt signal
+logic       bus_intr_r;                 // registered signal, to improve timing
+logic       reconfig;                   // set to 1 to force reconfigure of FPGA
+logic       reconfig_r;                 // registered signal, to improve timing
+logic [1:0] boot_select;                // two bit number for flash configuration to load on reconfigure
+logic [1:0] boot_select_r;              // registered signal, to improve timing
+
 
 // assign gpio pins to bus signals
 assign bus_cs_n     = led_red;          // RGB red as active low select
@@ -117,11 +123,11 @@ assign bus_data     = { gpio_28, gpio_38, gpio_42, gpio_36, gpio_43, gpio_34, gp
 assign gpio_32      = audio_l;          // left audio channel gpio
 assign gpio_35      = audio_r;          // right audio channel gpio
 
-assign gpio_10      = bus_intr;         // interrupt signal
+assign gpio_10      = bus_intr_r;         // interrupt signal
 
 // split tri-state data lines into in/out signals for inside FPGA
 logic bus_out_ena;
-logic [7:0] bus_data_out_r;             // registered bus_data_out signal, this greatly helps timing
+logic [7:0] bus_data_out_r;             // registered bus_data_out signal, this helps timing
 logic [7:0] bus_data_out;               // bus out from Xosera
 logic [7:0] bus_data_in;                // bus input to Xosera
 
@@ -135,9 +141,12 @@ assign bus_out_ena  = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ)
 assign bus_data     = bus_out_ena ? bus_data_out_r : 8'bZ;
 assign bus_data_in  = bus_data;
 
-// update registered bus_data_out_r signal each clock
+// update registered signals each clock
 always_ff @(posedge pclk) begin
     bus_data_out_r  <= bus_data_out;
+    bus_intr_r      <= bus_intr;
+    reconfig_r      <= reconfig;
+    boot_select_r   <= boot_select;
 end
 
 // PLL to derive proper video frequency from 12MHz oscillator (gpio_20 with OSC jumper shorted)
@@ -220,19 +229,16 @@ assign { gpio_44,  gpio_4,   gpio_3,   gpio_48,  gpio_45,  gpio_47  } =
 assign gpio_2   = pclk;    // output HDMI clk
 `endif
 
-logic           reconfig;                   // set to 1 to force reconfigure of FPGA
-logic   [1:0]   boot_select;                // two bit number for flash configuration to load on reconfigure
-
 `ifdef SYNTHESIS
 SB_WARMBOOT boot(
-                .BOOT(reconfig),
-                .S0(boot_select[0]),
-                .S1(boot_select[1])
-            );
+    .BOOT(reconfig_r),
+    .S0(boot_select_r[0]),
+    .S1(boot_select_r[1])
+);
 `else
 always @* begin
-    if (reconfig) begin
-        $display("XOSERA REBOOT: To flash config #0x%x", boot_select);
+    if (reconfig_r) begin
+        $display("XOSERA REBOOT: To flash config #0x%x", boot_select_r);
         $finish;
     end
 end

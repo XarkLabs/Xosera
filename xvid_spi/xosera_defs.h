@@ -51,29 +51,36 @@
 #define XR_POLYDRAW_REGS 0x0030        // 0x0000-0x000F 16 line/polygon draw registers [TBD]
 
 // XR Memory Regions
-#define XR_COLOR_MEM  0x8000        // 0x8000-0x80FF 256 16-bit word color lookup table (0xXRGB)
-#define XR_TILE_MEM   0x9000        // 0x9000-0x9FFF 4K 16-bit words of tile/font memory
-#define XR_COPPER_MEM 0xA000        // 0xA000-0xA7FF 2K 16-bit words copper program memory
-#define XR_SPRITE_MEM 0xB000        // 0xB000-0xB0FF 256 16-bit word sprite/cursor memory
-#define XR_UNUSED_MEM 0xC000        // 0xC000-0xFFFF (currently unused)
+// Xosera XR Memory Regions (size in 16-bit words)
+#define XR_COLOR_ADDR   0x8000        // (R/W) 0x8000-0x81FF 2 x A & B color lookup memory
+#define XR_COLOR_SIZE   0x0200        //                      2 x 256 x 16-bit words  (0xARGB)
+#define XR_COLOR_A_ADDR 0x8000        // (R/W) 0x8000-0x80FF A 256 entry color lookup memory
+#define XR_COLOR_A_SIZE 0x0100        //                      256 x 16-bit words (0xARGB)
+#define XR_COLOR_B_ADDR 0x8100        // (R/W) 0x8100-0x81FF B 256 entry color lookup memory
+#define XR_COLOR_B_SIZE 0x0100        //                      256 x 16-bit words (0xARGB)
+#define XR_TILE_ADDR    0xA000        // (R/W) 0xA000-0xB3FF tile glyph/tile map memory
+#define XR_TILE_SIZE    0x1400        //                      5120 x 16-bit tile glyph/tile map memory
+#define XR_COPPER_ADDR  0xC000        // (R/W) 0xC000-0xC7FF copper program memory (32-bit instructions)
+#define XR_COPPER_SIZE  0x0800        //                      2048 x 16-bit copper program memory addresses
+#define XR_UNUSED_ADDR  0xE000        // (-/-) 0xE000-0xFFFF unused
 
 // Video Config / Copper XR Registers
-#define XR_VID_CTRL   0x00        // (R /W) display control and border color index
-#define XR_COPP_CTRL  0x01        // (R /W) display synchronized coprocessor control
-#define XR_CURSOR_X   0x02        // (R /W) sprite cursor X position
-#define XR_CURSOR_Y   0x03        // (R /W) sprite cursor Y position
-#define XR_VID_TOP    0x04        // (R /W) top line of active display window (typically 0)
-#define XR_VID_BOTTOM 0x05        // (R /W) bottom line of active display window (typically 479)
-#define XR_VID_LEFT   0x06        // (R /W) left edge of active display window (typically 0)
-#define XR_VID_RIGHT  0x07        // (R /W) right edge of active display window (typically 639 or 847)
-#define XR_SCANLINE   0x08        // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
-#define XR_UNUSED_09  0x09        // (RO  )
-#define XR_VERSION    0x0A        // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
-#define XR_GITHASH_H  0x0B        // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
-#define XR_GITHASH_L  0x0C        // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
-#define XR_VID_HSIZE  0x0D        // (RO  ) native pixel width of monitor mode (e.g. 640/848)
-#define XR_VID_VSIZE  0x0E        // (RO  ) native pixel height of monitor mode (e.g. 480)
-#define XR_VID_VFREQ  0x0F        // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+#define XR_VID_CTRL  0x00        // (R /W) display control and border color index
+#define XR_COPP_CTRL 0x01        // (R /W) display synchronized coprocessor control
+#define XR_UNUSED_02 0x02        // (R /W) // TODO:
+#define XR_UNUSED_03 0x03        // (R /W) // TODO:
+#define XR_UNUSED_04 0x04        // (R /W) // TODO:
+#define XR_UNUSED_05 0x05        // (R /W) // TODO:
+#define XR_VID_LEFT  0x06        // (R /W) left edge of active display window (typically 0)
+#define XR_VID_RIGHT 0x07        // (R /W) right edge of active display window (typically 639 or 847)
+#define XR_SCANLINE  0x08        // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
+#define XR_UNUSED_09 0x09        // (RO  )
+#define XR_VERSION   0x0A        // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
+#define XR_GITHASH_H 0x0B        // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
+#define XR_GITHASH_L 0x0C        // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
+#define XR_VID_HSIZE 0x0D        // (RO  ) native pixel width of monitor mode (e.g. 640/848)
+#define XR_VID_VSIZE 0x0E        // (RO  ) native pixel height of monitor mode (e.g. 480)
+#define XR_VID_VFREQ 0x0F        // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
 
 // Playfield A Control XR Registers
 #define XR_PA_GFX_CTRL  0x10        //  playfield A graphics control

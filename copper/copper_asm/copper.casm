@@ -13,10 +13,10 @@
 #subruledef reg {
     VID_CTRL        => 0x00
     COPP_CTRL       => 0x01
-    CURSOR_X        => 0x02
-    CURSOR_Y        => 0x03
-    VID_TOP         => 0x04
-    VID_BOTTOM      => 0x05
+    UNUSED_02       => 0x02
+    UNUSED_03       => 0x03
+    UNUSED_04       => 0x04
+    UNUSED_05       => 0x05
     VID_LEFT        => 0x06
     VID_RIGHT       => 0x07
     PA_GFX_CTRL     => 0x10
@@ -31,7 +31,7 @@
     PB_LINE_LEN     => 0x1B
     PB_HV_SCROLL    => 0x1C
     PB_LINE_ADDR    => 0x1D
-    
+
 }
 
 #ruledef {
@@ -47,8 +47,8 @@
     movec {addr: u11}, {data: u16}              => 0b1100 @ 0b0     @ addr`11 @ data`16
     movet {addr: u11}, {data: u16}              => 0b111  @ addr`13 @ data`16
 
-    ; nextf (wait next frame) is a pseudo-instruction, 
+    ; nextf (wait next frame) is a pseudo-instruction,
     ; it just generates a wait with both X and Y ignored.
     nextf                                       => asm { wait 0, 0, 0b0011 }
 }
- 
+

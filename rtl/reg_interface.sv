@@ -26,12 +26,13 @@ module reg_interface(
     output      logic            regs_xr_sel_o,     // XR select
     output      logic            regs_wr_o,         // VRAM/XR read/write
     output      logic  [3:0]     regs_wrmask_o,     // VRAM nibble write masks
-    output      logic [15:0]     regs_addr_o,       // VRAM/XR address
-    output      logic [15:0]     regs_data_o,       // VRAM/XR write data out
-    input  wire logic [15:0]     regs_data_i,       // VRAM read data in
-    input  wire logic [15:0]     xr_data_i,         // XR read data in
+    output      addr_t           regs_addr_o,       // VRAM/XR address
+    output      word_t           regs_data_o,       // VRAM/XR write data out
+    input  wire word_t           regs_data_i,       // VRAM read data in
+    input  wire word_t           xr_data_i,         // XR read data in
     // status signals
-    input  wire logic            busy_i,            // blit/draw busy status
+    input  wire logic            blit_busy_i,       // blit operation in progress
+    input  wire logic            blit_full_i,       // blit register queue full
     // iCE40 reconfigure
     output      logic            reconfig_o,        // reconfigure iCE40 from flash
     output      logic  [1:0]     boot_select_o,     // reconfigure iCE40 flash config number
@@ -48,19 +49,19 @@ module reg_interface(
 );
 
 // read/write storage for main interface registers
-logic [15:0]    reg_xr_addr;            // XR read/write address (XR_ADDR)
-logic [15:0]    reg_xr_data;            // word read from XR bus
+addr_t          reg_xr_addr;            // XR read/write address (XR_ADDR)
+word_t          reg_xr_data;            // word read from XR bus
 
-logic [15:0]    reg_rd_incr;            // VRAM read increment
-logic [15:0]    reg_rd_addr;            // VRAM read address
-logic [15:0]    reg_rd_data;            // word read from VRAM (for RD_ADDR)
+word_t          reg_rd_incr;            // VRAM read increment
+addr_t          reg_rd_addr;            // VRAM read address
+word_t          reg_rd_data;            // word read from VRAM (for RD_ADDR)
 
-logic [15:0]    reg_wr_incr;            // VRAM write increment
-logic [15:0]    reg_wr_addr;            // VRAM write address
+word_t          reg_wr_incr;            // VRAM write increment
+addr_t          reg_wr_addr;            // VRAM write address
 
-logic [15:0]    reg_rw_incr;            // VRAM read/write increment
-logic [15:0]    reg_rw_addr;            // VRAM read/write address
-logic [15:0]    reg_rw_data;            // word read from VRAM (for RW_ADDR)
+word_t          reg_rw_incr;            // VRAM read/write increment
+addr_t          reg_rw_addr;            // VRAM read/write address
+word_t          reg_rw_data;            // word read from VRAM (for RW_ADDR)
 
 // read flags
 logic           xr_rd;                  // flag for XR_DATA read outstanding
@@ -81,17 +82,21 @@ logic           bus_read_strobe;        // strobe when a word of data read
 logic           bus_bytesel;            // msb/lsb on bus
 logic  [7:0]    bus_data_byte;          // data byte from bus
 
-logic [15:0]    reg_timer;               // 1/10 ms timer (visible 16 bits)
-logic [11:0]    reg_timer_frac;          // internal clock counter for 1/10 ms
+word_t          reg_timer;              // 1/10 ms timer (visible 16 bits)
+logic [11:0]    reg_timer_frac;         // internal clock counter for 1/10 ms
+
+`ifdef ENABLE_TIMERLATCH
+logic [7:0]     timer_latch_val;
+`endif
 
 `ifdef ENABLE_LFSR
 parameter               LFSR_SIZE = 19; // NOTE: if changed, must change taps
-logic [LFSR_SIZE-1:0]   LFSR            /* verilator public */;
-logic [15:0]            reg_LFSR        /* verilator public */;
+logic [LFSR_SIZE-1:0]   LFSR;
+word_t          reg_LFSR;
 `endif
 
-logic mem_read_wait;
-assign mem_read_wait    = xr_rd | vram_rd | vram_rw_rd;
+logic mem_wait;
+assign mem_wait    = xr_rd | vram_rd | vram_rw_rd | regs_wr_o | vram_rw_wr;
 
 // output interrupt mask
 assign intr_mask_o = intr_mask;
@@ -122,7 +127,7 @@ always_comb begin
         xv::XM_XR_ADDR:
             bus_data_o  = !bus_bytesel ? reg_xr_addr[15:8]      : reg_xr_addr[7:0];
         xv::XM_XR_DATA:
-            bus_data_o  = !bus_bytesel ? reg_xr_data[15:8]       : reg_xr_data[7:0];
+            bus_data_o  = !bus_bytesel ? reg_xr_data[15:8]      : reg_xr_data[7:0];
         xv::XM_RD_INCR:
             bus_data_o  = !bus_bytesel ? reg_rd_incr[15:8]      : reg_rd_incr[7:0];
         xv::XM_RD_ADDR:
@@ -133,11 +138,15 @@ always_comb begin
             bus_data_o  = !bus_bytesel ? reg_wr_addr[15:8]      : reg_wr_addr[7:0];
         xv::XM_DATA,
         xv::XM_DATA_2:
-            bus_data_o  = !bus_bytesel ? reg_rd_data[15:8]     : reg_rd_data[7:0];
+            bus_data_o  = !bus_bytesel ? reg_rd_data[15:8]      : reg_rd_data[7:0];
         xv::XM_SYS_CTRL:
-            bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { busy_i, mem_read_wait, 2'b0, regs_wrmask_o };
+            bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { mem_wait, blit_busy_i, blit_full_i, 1'b0, regs_wrmask_o };
         xv::XM_TIMER:
+`ifdef ENABLE_TIMERLATCH
+            bus_data_o  = !bus_bytesel ? reg_timer[15:8]        : timer_latch_val;
+`else
             bus_data_o  = !bus_bytesel ? reg_timer[15:8]        : reg_timer[7:0];
+`endif
 `ifdef ENABLE_LFSR
         xv::XM_LFSR:
             bus_data_o  = !bus_bytesel ? reg_LFSR[15:8]         : reg_LFSR[7:0];
@@ -214,6 +223,9 @@ always_ff @(posedge clk) begin
         reg_rw_addr     <= 16'h0000;
         reg_rw_incr     <= 16'h0000;
         reg_data_even   <= 8'h00;
+`ifdef ENABLE_TIMERLATCH
+        timer_latch_val <= 8'h00;
+`endif
     end else begin
 
         intr_clear_o    <= 4'b0;
@@ -263,8 +275,6 @@ always_ff @(posedge clk) begin
             regs_wr_o       <= 1'b0;            // clear write
             xr_rd           <= 1'b0;            // clear pending xr read
         end
-
-        // TODO: overrun check?
 
         // even register byte write
         if (bus_write_strobe && !bus_bytesel) begin
@@ -394,6 +404,11 @@ always_ff @(posedge clk) begin
                 vram_rw_rd          <= 1'b1;            // remember pending vram read request
             end
         end
+`ifdef ENABLE_TIMERLATCH
+        if (bus_read_strobe && !bus_bytesel) begin
+            timer_latch_val <= reg_timer[7:0];
+        end
+`endif
     end
 end
 endmodule

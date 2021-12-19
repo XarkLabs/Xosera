@@ -33,29 +33,42 @@
 #include "xosera_m68k_api.h"
 
 const uint8_t  copper_list_len = 26;
-const uint16_t copper_list[] = {
-    /* 
-     * This is a convoluted way to do this, but does serve as a useful test 
-     * of the copper instructions... 
+const uint16_t copper_list[]   = {
+    /*
+     * This is a convoluted way to do this, but does serve as a useful test
+     * of the copper instructions...
      */
 
     // copperlist:
-    0x20a0, 0x0002, //     skip  0, 160, 0b00010  ; Skip next if we've hit line 160
-    0x4014, 0x0000, //     jmp   .gored           ; ... else, jump to set red
-    0x2140, 0x0002, //     skip  0, 320, 0b00010  ; Skip next if we've hit line 320
-    0x400e, 0x0000, //     jmp   .gogreen         ; ... else jump to set green
-    0xa000, 0x000f, //     movep 0x000F, 0        ; Make background blue
-    0xa00a, 0x0004, //     movep 0x0004, 0xA      ; Make foreground dark blue
-    0x0000, 0x0003, //     nextf                  ; and we're done for this frame
-                    // .gogreen:
-    0xa000, 0x00f0, //     movep 0x00F0, 0        ; Make background green
-    0xa00a, 0x0040, //     movep 0x0040, 0xA      ; Make foreground dark green 
-    0x4000, 0x0000, //     jmp   copperlist       ; and restart
-                    // .gored:
-    0xa000, 0x0f00, //     movep 0x0F00, 0        ; Make background red
-    0xa00a, 0x0400, //     movep 0x0400, 0xA      ; Make foreground dark red
-    0x4000, 0x0000  //     jmp   copperlist       ; and restart
-    
+    0x20a0,
+    0x0002,        //     skip  0, 160, 0b00010  ; Skip next if we've hit line 160
+    0x4014,
+    0x0000,        //     jmp   .gored           ; ... else, jump to set red
+    0x2140,
+    0x0002,        //     skip  0, 320, 0b00010  ; Skip next if we've hit line 320
+    0x400e,
+    0x0000,        //     jmp   .gogreen         ; ... else jump to set green
+    0xa000,
+    0x000f,        //     movep 0x000F, 0        ; Make background blue
+    0xa00a,
+    0x0004,        //     movep 0x0004, 0xA      ; Make foreground dark blue
+    0x0000,
+    0x0003,        //     nextf                  ; and we're done for this frame
+                   // .gogreen:
+    0xa000,
+    0x00f0,        //     movep 0x00F0, 0        ; Make background green
+    0xa00a,
+    0x0040,        //     movep 0x0040, 0xA      ; Make foreground dark green
+    0x4000,
+    0x0000,        //     jmp   copperlist       ; and restart
+                   // .gored:
+    0xa000,
+    0x0f00,        //     movep 0x0F00, 0        ; Make background red
+    0xa00a,
+    0x0400,        //     movep 0x0400, 0xA      ; Make foreground dark red
+    0x4000,
+    0x0000        //     jmp   copperlist       ; and restart
+
     /* This is a saner way to do the above!
     0xb000, 0x0f00, // movep 0, 0x0F00            ; Make background red
     0xb00a, 0x0400, // movep 0xA, 0x0F00          ; Make foreground dark red
@@ -105,13 +118,14 @@ static void dprintf(const char * fmt, ...)
     va_end(args);
 }
 
-void     xosera_copper_test()
+void xosera_copper_test()
 {
     dprintf("Xosera_copper_test\n");
 
-    xm_setw(XR_ADDR, XR_COPPER_MEM);
+    xm_setw(XR_ADDR, XR_COPPER_ADDR);
 
-    for (uint8_t i = 0; i < copper_list_len; i++) {
+    for (uint8_t i = 0; i < copper_list_len; i++)
+    {
         xm_setw(XR_DATA, copper_list[i]);
     }
 
@@ -129,8 +143,7 @@ void     xosera_copper_test()
     uint16_t linelen  = xreg_getw(PA_LINE_LEN);
     uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
 
-    dprintf(
-        "Xosera v%1x.%02x #%08x Features:0x%02x\n", (version >> 8) & 0xf, (version & 0xff), githash, version >> 8);
+    dprintf("Xosera v%1x.%02x #%08x Features:0x%02x\n", (version >> 8) & 0xf, (version & 0xff), githash, version >> 8);
     dprintf("Monitor Mode: %dx%d@%2x.%02xHz\n", monwidth, monheight, monfreq >> 8, monfreq & 0xff);
     dprintf("\nPlayfield A:\n");
     dprintf("PA_GFX_CTRL : 0x%04x PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);

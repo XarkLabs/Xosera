@@ -1,11 +1,6 @@
 ;
 ;  vim: set et ts=8 sw=4
 ; ------------------------------------------------------------
-;                                   ___ ___ _
-;   ___ ___ ___ ___ ___       _____|  _| . | |_
-;  |  _| . |_ -|  _| . |     |     | . | . | '_|
-;  |_| |___|___|___|___|_____|_|_|_|___|___|_,_|
-;                      |_____|
 ;   __ __
 ;  |  |  |___ ___ ___ ___ ___
 ;  |-   -| . |_ -| -_|  _| .'|
@@ -49,27 +44,26 @@ XM_RW_DATA_2    equ     $3C         ; (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit
 
 ; XR Extended Register / Region (accessed via XM_XR_ADDR and XM_XR_DATA)
 
-; XR Register Regions
-XR_CONFIG_REGS  equ     $0000       ; $0000-$000F config XR registers
-XR_PA_REGS      equ     $0010       ; $0010-$0017 playfield A XR registers
-XR_PB_REGS      equ     $0018       ; $0018-$001F playfield B XR registers
-XR_BLIT_REGS    equ     $2000       ; $2000-$200F 2D-blit XR registers
-XR_DRAW_REGS    equ     $4000       ; $4000-$400F line/poly draw XR registers
-XR_UNUSED_REG_6 equ     $6000       ; $6000-$600F unused
-
 ; XR Memory Regions
-XR_COLOR_MEM    equ     $8000       ; (R*/W) $8000-$80FF 256 x 16-bit color lookup memory ($xRGB)
-XR_TILE_MEM     equ     $A000       ; (R*/W) $A000-$AFFF 4096 x 16-bit tile glyph storage memory
-XR_COPPER_MEM   equ     $C000       ; (R*/W) $C000-$C7FF 2048 x 16-bit copper program memory
-XR_UNUSED_MEM   equ     $E000       ;        $E000-$FFFF unused
+XR_COLOR_ADDR   equ     $8000       ; (R/W) $8000-$81FF 2 x A & B color lookup memory
+XR_COLOR_SIZE   equ     $0200       ;                   2 x 256 x 16-bit words  ($ARGB)
+XR_COLOR_A_ADDR equ     $8000       ; (R/W) $8000-$80FF A 256 entry color lookup memory
+XR_COLOR_A_SIZE equ     $0100       ;                   256 x 16-bit words ($ARGB)
+XR_COLOR_B_ADDR equ     $8100       ; (R/W) $8100-$81FF B 256 entry color lookup memory
+XR_COLOR_B_SIZE equ     $0100       ;                   256 x 16-bit words ($ARGB)
+XR_TILE_ADDR    equ     $A000       ; (R/W) $A000-$B3FF tile glyph/tile map memory
+XR_TILE_SIZE    equ     $1400       ;                   5120 x 16-bit tile glyph/tile map memory
+XR_COPPER_ADDR  equ     $C000       ; (R/W) $C000-$C7FF copper program memory (32-bit instructions)
+XR_COPPER_SIZE  equ     $0800       ;                   2048 x 16-bit copper program memory addresses
+XR_UNUSED_ADDR  equ     $E000       ; (-/-) $E000-$FFFF unused
 
 ; Video Config and Copper XR Registers
 XR_VID_CTRL     equ     $0000       ; (R /W) display control and border color index
 XR_COPP_CTRL    equ     $0001       ; (R /W) display synchronized coprocessor control
-XR_CURSOR_X     equ     $0002       ; (R /W) sprite cursor X position
-XR_CURSOR_Y     equ     $0003       ; (R /W) sprite cursor Y position
-XR_VID_TOP      equ     $0004       ; (R /W) top line of active display window (typically 0)
-XR_VID_BOTTOM   equ     $0005       ; (R /W) bottom line of active display window (typically 479)
+XR_UNUSED_02    equ     $0002       ; (R /W) #TODO
+XR_UNUSED_03    equ     $0003       ; (R /W) #TODO
+XR_UNUSED_04    equ     $0004       ; (R /W) #TODO
+XR_UNUSED_05    equ     $0005       ; (R /W) #TODO
 XR_VID_LEFT     equ     $0006       ; (R /W) left edge of active display window (typically 0)
 XR_VID_RIGHT    equ     $0007       ; (R /W) right edge of active display window (typically 639 or 847)
 XR_SCANLINE     equ     $0008       ; (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
@@ -101,4 +95,16 @@ XR_PB_LINE_ADDR equ     $001D       ; (R /W) playfield B scanline start address 
 XR_PB_UNUSED_1E equ     $001E       ;
 XR_PB_UNUSED_1F equ     $001F       ;
 
-; TODO blit and polydraw
+; Blitter Registers
+XR_BLIT_CTRL    equ     $0020       ; (R /W) blit control (transparency control, logic op and op input flags)
+XR_BLIT_MOD_A   equ     $0021       ; (R /W) blit line modulo added to SRC_A (XOR if A const)
+XR_BLIT_SRC_A   equ     $0022       ; (R /W) blit A source VRAM read address / constant value
+XR_BLIT_MOD_B   equ     $0023       ; (R /W) blit line modulo added to SRC_B (XOR if B const)
+XR_BLIT_SRC_B   equ     $0024       ; (R /W) blit B AND source VRAM read address / constant value
+XR_BLIT_MOD_C   equ     $0025       ; (R /W) blit line XOR modifier for C_VAL const
+XR_BLIT_VAL_C   equ     $0026       ; (R /W) blit C XOR constant value
+XR_BLIT_MOD_D   equ     $0027       ; (R /W) blit modulo added to D destination after each line
+XR_BLIT_DST_D   equ     $0028       ; (R /W) blit D VRAM destination write address
+XR_BLIT_SHIFT   equ     $0029       ; (R /W) blit first and last word nibble masks and nibble right shift (0-3)
+XR_BLIT_LINES   equ     $002A       ; (R /W) blit number of lines minus 1, (repeats blit word count after modulo calc)
+XR_BLIT_WORDS   equ     $002B       ; (R /W) blit word count minus 1 per line (write starts blit operation)

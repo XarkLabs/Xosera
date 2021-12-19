@@ -1,0 +1,43 @@
+{
+    "reg": [
+        {
+            "bits": 2,
+            "name": "nibble shift",
+            "type": 3,
+            "attr": [
+                "shift word from",
+                "VRAM 0 to 3",
+                "4-bit nibbles",
+                "to the right",
+                "(or left if </tt>DECR</tt>"
+            ]
+        },
+        {
+            "bits": 6,
+            "type": 1
+        },
+        {
+            "bits": 4,
+            "name": "last word nibble mask",
+            "type": 4,
+            "attr": [
+                "on last word of line",
+                "0=nibble unmodified",
+                "1=nibble overwritten"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "first word nibble mask",
+            "type": 4,
+            "attr": [
+                "on first word of line",
+                "0=nibble unmodified",
+                "1=nibble overwritten"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

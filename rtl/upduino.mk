@@ -88,11 +88,11 @@ ICEPROG := iceprog
 ICEMULTI := icemulti
 
 # Yosys synthesis arguments
-FLOW3 :=
-YOSYS_SYNTH_ARGS := -device u -dsp -abc2 -relut -retime -top $(TOP)
+#FLOW3 :=
+#YOSYS_SYNTH_ARGS := -device u -dsp -abc2 -relut -retime -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -relut -top $(TOP)
-#YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -relut -top $(TOP)
-#FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
+YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -top $(TOP)
+FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
@@ -104,7 +104,7 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
-NEXTPNR_ARGS :=  --seed $${RANDOM} --promote-logic --opt-timing --placer heap
+NEXTPNR_ARGS :=  --randomize-seed --promote-logic --opt-timing --placer heap
 
 ifeq ($(strip $(VIDEO_OUTPUT)), PMOD_1B2_DVI12)
 OUTSUFFIX := dvi_$(subst MODE_,,$(VIDEO_MODE))
@@ -133,7 +133,8 @@ show: $(DOT) upduino.mk
 # run Yosys with "noflatten", which will produce a resource count per module
 count: $(SRC) $(INC) $(FONTFILES) upduino.mk
 	@mkdir -p $(LOGS)
-	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
+	@-cp $(LOGS)/$(OUTNAME)_yosys_count.log $(LOGS)/$(OUTNAME)_yosys_count_last.log
+	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 
 # run Verilator to check for Verilog issues
 lint: $(SRC) $(INC) $(FONTFILES) upduino.mk
@@ -184,6 +185,9 @@ ifdef FMAX_TEST	# run nextPNR FMAX_TEST times to determine "Max frequency" range
 	@echo === fMAX after $(FMAX_TEST) runs: ===
 	@awk '{ total += $$2 ; minv = (minv == 0 || minv > $$2 ? $$2 : minv) ; maxv = (maxv < $$2 ? $$2 : maxv) ; count++ } END \
 	  { print "fMAX: Minimum frequency:", minv ; print "fMAX: Average frequency:", total/count ; print "fMAX: Maximum frequency:", maxv, "   <== selected as best" ; }' $(LOGS)/fmax/$(OUTNAME)_list.log
+	@echo === fMAX after $(FMAX_TEST) runs: === > $(LOGS)/$(OUTNAME)_fmax.txt
+	@awk '{ total += $$2 ; minv = (minv == 0 || minv > $$2 ? $$2 : minv) ; maxv = (maxv < $$2 ? $$2 : maxv) ; count++ } END \
+	  { print "fMAX: Minimum frequency:", minv ; print "fMAX: Average frequency:", total/count ; print "fMAX: Maximum frequency:", maxv, "   <== selected as best" ; }' $(LOGS)/fmax/$(OUTNAME)_list.log >> $(LOGS)/$(OUTNAME)_fmax.txt
 	@awk '{ if (maxv < $$2) { best = $$1 ; maxv = $$2 ; } ; } END { print best, maxv ; }' $(LOGS)/fmax/$(OUTNAME)_list.log  > "$(LOGS)/fmax/fmax_temp.txt"
 	@BEST=$$(cut -d " " -f1 "$(LOGS)/fmax/fmax_temp.txt") FMAX=$$(cut -d " " -f2 "$(LOGS)/fmax/fmax_temp.txt") ; \
 	  cp "$(LOGS)/fmax/$(OUTNAME)_$${BEST}_nextpnr.log" "$(LOGS)/$(OUTNAME)_nextpnr.log" ; \

@@ -58,7 +58,7 @@ word_t          xreg_mod_C;
 word_t          xreg_val_C;
 word_t          xreg_mod_D;
 word_t          xreg_dst_D;
-logic [14:0]    xreg_lines;                         // "limitation" of 32768 lines
+word_t          xreg_lines;                         // "limitation" of 32768 lines
 word_t          xreg_words;
 
 logic           xreg_blit_queued;                   // blit operation is queued in xreg registers
@@ -140,7 +140,7 @@ always_ff @(posedge clk) begin
                     xreg_dst_D          <= xreg_data_i;
                 end
                 xv::XR_BLIT_LINES: begin
-                    xreg_lines          <= xreg_data_i[14:0];
+                    xreg_lines          <= xreg_data_i;
                 end
                 xv::XR_BLIT_WORDS: begin
                     xreg_words          <= xreg_data_i;
@@ -363,7 +363,7 @@ always_ff @(posedge clk) begin
             blit_src_B          <= xreg_src_B;
             blit_val_C          <= xreg_val_C;
             blit_dst_D          <= xreg_dst_D;
-            blit_lines          <= { 1'b0, xreg_lines };
+            blit_lines          <= xreg_lines;
             blit_words          <= xreg_words;
 
             val_A               <= xreg_src_A;                      // setup for possible use as const

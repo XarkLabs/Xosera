@@ -88,9 +88,9 @@ typedef enum logic [15:0] {
     XR_BLIT_REGS        = 16'h0020,     // 0x0020-0x002F 16 polygon blit registers      // TODO: blit
     XR_DRAW_REGS        = 16'h0030,     // 0x0030-0x003F 16 polygon draw registers      // TODO: draw
     // XR Memory Regions
-    XR_COLOR_ADDR        = 16'h8000,     // 0x8000-0x81FF 256 16-bit 0xXRGB color lookup playfield A & B
-    XR_TILE_ADDR         = 16'hA000,     // 0xA000-0xB3FF 5K 16-bit words of tile memory
-    XR_COPPER_ADDR       = 16'hC000,     // 0xC000-0xC7FF 2K 16-bit words copper program memory
+    XR_COLOR_ADDR       = 16'h8000,     // 0x8000-0x81FF 256 16-bit 0xXRGB color lookup playfield A & B
+    XR_TILE_ADDR        = 16'hA000,     // 0xA000-0xB3FF 5K 16-bit words of tile memory
+    XR_COPPER_ADDR      = 16'hC000,     // 0xC000-0xC7FF 2K 16-bit words copper program memory
     XR_UNUSED_MEM_E     = 16'hE000      // 0xE000-0xFFFF (unused)
 } xr_region_t;
 
@@ -413,7 +413,6 @@ typedef logic [$clog2(TOTAL_HEIGHT)-1:0]    vres_t;         // vertical coordina
 
 typedef logic [$clog2(VISIBLE_WIDTH)-1:0]   hres_vis_t;     // horizontal visible coordinate types
 typedef logic [$clog2(VISIBLE_HEIGHT)-1:0]  vres_vis_t;     // vertical visible coordinate types
-
 
 /* verilator lint_on UNUSED */
 

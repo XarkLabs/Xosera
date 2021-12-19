@@ -38,10 +38,8 @@
 
 module xosera_main#(
     parameter   EN_VID_PF_B             = 1,        // enable playfield B
-    parameter   EN_VID_PF_B_NO_BLEND    = 0,        // enable pf B overlay only, no blending
-    parameter   EN_VID_PF_B_BLEND_MIX   = 1,        // enable additive mixing if pf A alpha > 7
-    parameter   EN_VID_PF_B_BLEND_A8    = 0,        // enable pf B 8-level alpha (otherwise 4-level)
-    parameter   EN_VID_PF_B_BLEND_EXTRA = 0,        // enable pf B fancy blending modes for playfield B
+    parameter   EN_BLEND                = 1,        // enable pf B blending (else overlay only)
+    parameter   EN_BLEND_ADDCLAMP       = 1,        // enable pf B clamped RGB blending
     parameter   EN_BLIT                 = 1,        // enable blit unit
     parameter   EN_BLIT_DECR_MODE       = 1,        // enable blit pointer decrementing
     parameter   EN_BLIT_DECR_LSHIFT     = 1         // enable blit left shift when decrementing
@@ -241,7 +239,7 @@ video_gen#(
 );
 
 `ifdef ENABLE_COPP
-// Copper
+// copper - video synchronized co-processor
 copper copper(
     .xr_wr_en_o(copp_xr_wr_en),
     .xr_wr_ack_i(copp_xr_ack),
@@ -257,12 +255,12 @@ copper copper(
     .reset_i(reset_i),
     .clk(clk)
 );
-`else
 `endif
 
+// blitter - blit block transfer unit
 generate
     if (EN_BLIT) begin : opt_EN_BLIT
-        blitter2#(
+        blitter#(
             .EN_BLIT_DECR_MODE(EN_BLIT_DECR_MODE),
             .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT)
         ) blitter(
@@ -282,6 +280,18 @@ generate
             .reset_i(reset_i),
             .clk(clk)
         );
+    end else begin
+
+        logic unused_blit;
+        assign unused_blit = &{1'b0, blit_vram_ack };
+        assign blit_vram_sel    = '0;
+        assign blit_wr          = '0;
+        assign blit_wr_mask     = '0;
+        assign blit_vram_addr   = '0;
+        assign blit_vram_data   = '0;
+        assign blit_busy        = '0;
+        assign blit_full        = '0;
+        assign blit_intr        = '0;
     end
 endgenerate
 
@@ -382,24 +392,26 @@ xrmem_arb#(
     .clk(clk)
 );
 
-video_blend#(
-    .EN_VID_PF_B(EN_VID_PF_B),
-    .EN_VID_PF_B_NO_BLEND(EN_VID_PF_B_NO_BLEND),
-    .EN_VID_PF_B_BLEND_MIX(EN_VID_PF_B_BLEND_MIX),
-    .EN_VID_PF_B_BLEND_A8(EN_VID_PF_B_BLEND_A8),
-    .EN_VID_PF_B_BLEND_EXTRA(EN_VID_PF_B_BLEND_EXTRA)
-) video_blend(
-    .vsync_i(vsync),
-    .hsync_i(hsync),
-    .dv_de_i(dv_de),
-    .colorA_xrgb_i(colorA_xrgb),
-    .colorB_xrgb_i(colorB_xrgb),
-    .blend_rgb_o({ red_o, green_o, blue_o }),
-    .hsync_o(hsync_o),
-    .vsync_o(vsync_o),
-    .dv_de_o(dv_de_o),
-    .clk(clk)
-);
+// video blending - alpha and other color belding between playfield A and B
+generate
+    if (EN_VID_PF_B) begin : opt_PF_B_BLEND
+        video_blend#(
+            .EN_BLEND(EN_BLEND),
+            .EN_BLEND_ADDCLAMP(EN_BLEND_ADDCLAMP)
+        ) video_blend(
+            .vsync_i(vsync),
+            .hsync_i(hsync),
+            .dv_de_i(dv_de),
+            .colorA_xrgb_i(colorA_xrgb),
+            .colorB_xrgb_i(colorB_xrgb),
+            .blend_rgb_o({ red_o, green_o, blue_o }),
+            .hsync_o(hsync_o),
+            .vsync_o(vsync_o),
+            .dv_de_o(dv_de_o),
+            .clk(clk)
+        );
+    end
+endgenerate
 
 // interrupt handling
 always_ff @(posedge clk) begin

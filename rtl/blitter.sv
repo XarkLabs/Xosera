@@ -47,7 +47,7 @@ logic           xreg_ctrl_decrement;
 logic           xreg_ctrl_transp_8b;                // 4-bit/8-bit transparency zero check
 logic [7:0]     xreg_ctrl_transp_T;                 // 8-bit transparency value
 
-logic  [1:0]    xreg_shift_count;
+logic  [1:0]    xreg_shift_amount;
 logic  [3:0]    xreg_shift_f_mask;
 logic  [3:0]    xreg_shift_l_mask;
 word_t          xreg_mod_A;
@@ -77,7 +77,7 @@ always_ff @(posedge clk) begin
         xreg_ctrl_decrement <= '0;
         xreg_ctrl_transp_8b <= '0;
         xreg_ctrl_transp_T  <= '0;
-        xreg_shift_count    <= '0;
+        xreg_shift_amount    <= '0;
         xreg_shift_f_mask   <= '0;
         xreg_shift_l_mask   <= '0;
         xreg_mod_A          <= '0;
@@ -112,7 +112,7 @@ always_ff @(posedge clk) begin
                 xv::XR_BLIT_SHIFT: begin
                     xreg_shift_f_mask   <= xreg_data_i[15:12];
                     xreg_shift_l_mask   <= xreg_data_i[11:8];
-                    xreg_shift_count    <= xreg_data_i[1:0];
+                    xreg_shift_amount    <= xreg_data_i[1:0];
                 end
                 xv::XR_BLIT_MOD_A: begin
                     xreg_mod_A          <= xreg_data_i;
@@ -160,7 +160,7 @@ logic           blit_ctrl_C_use_B;
 logic           blit_ctrl_decrement;
 logic           blit_ctrl_transp_8b;
 logic  [7:0]    blit_ctrl_transp_T;
-logic  [1:0]    blit_shift_count;
+logic  [1:0]    blit_shift_amount;
 logic  [3:0]    blit_shift_f_mask;
 logic  [3:0]    blit_shift_l_mask;
 word_t          blit_mod_A;
@@ -191,7 +191,7 @@ word_t      shift_out;      // word 0 to 3 nibble rotated ()
 generate
     if (EN_BLIT_DECR_LSHIFT) begin : opt_LSHIFT
         always_comb begin
-            case ({ blit_ctrl_decrement, blit_shift_count })
+            case ({ blit_ctrl_decrement, blit_shift_amount })
                 // right shift
                 3'b000:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
                 3'b001:   shift_out = {   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4]  };
@@ -212,7 +212,7 @@ generate
         logic unused_bits;
         assign unused_bits = &{1'b0, last_word};
         always_comb begin
-            case (blit_shift_count)
+            case (blit_shift_amount)
                 // right shift
                 2'b00:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
                 2'b01:   shift_out = {   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4]  };
@@ -282,7 +282,7 @@ always_ff @(posedge clk) begin
         blit_ctrl_transp_T  <= '0;
         blit_shift_f_mask   <= '0;
         blit_shift_l_mask   <= '0;
-        blit_shift_count    <= '0;
+        blit_shift_amount    <= '0;
         blit_mod_A          <= '0;
         blit_mod_B          <= '0;
         blit_mod_C          <= '0;
@@ -329,7 +329,7 @@ always_ff @(posedge clk) begin
                 blit_ctrl_decrement <= EN_BLIT_DECR_MODE ? xreg_ctrl_decrement : '0;
                 blit_ctrl_transp_8b <= xreg_ctrl_transp_8b;
                 blit_ctrl_transp_T  <= xreg_ctrl_transp_T;
-                blit_shift_count    <= xreg_shift_count;
+                blit_shift_amount    <= xreg_shift_amount;
                 blit_shift_f_mask   <= xreg_shift_f_mask;
                 blit_shift_l_mask   <= xreg_shift_l_mask;
                 blit_mod_A          <= xreg_mod_A;
@@ -527,11 +527,7 @@ always_ff @(posedge clk) begin
                 end
             end
             default: begin
-`ifdef SYNTHESIS
                 blit_state          <= IDLE;
-`else
-                blit_state          <= 'X;
-`endif
             end
         endcase
     end

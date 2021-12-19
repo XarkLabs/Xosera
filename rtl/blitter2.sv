@@ -387,8 +387,6 @@ blit_state_t    blit_state, blit_state_next;
 
 always_comb begin
 
-//    blit_state_next     = blit_state;
-
     blit_vram_sel_next  = '0;               // vram select
     blit_wr_next        = '0;               // blit write
     blit_addr_next      = blit_addr;        // VRAM address out
@@ -542,11 +540,7 @@ always_comb begin
             end
         end
         default: begin
-`ifndef SYNTHESIS
-            blit_state_next = 'X;
-`else
             blit_state_next = IDLE;
-`endif
         end
     endcase
 end

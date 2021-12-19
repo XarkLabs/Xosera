@@ -189,7 +189,7 @@ word_t      last_word;      // last word to shift in
 word_t      shift_out;      // word 0 to 3 nibble rotated ()
 
 generate
-    if (EN_BLIT_DECR_LSHIFT) begin
+    if (EN_BLIT_DECR_LSHIFT) begin : opt_LSHIFT
         always_comb begin
             case ({ blit_ctrl_decrement, blit_shift_count })
                 // right shift
@@ -204,7 +204,11 @@ generate
                 3'b111:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
             endcase
         end
-    end else begin
+    end
+endgenerate
+
+generate
+    if (!EN_BLIT_DECR_LSHIFT) begin : no_LSHIFT
         logic unused_bits;
         assign unused_bits = &{1'b0, last_word};
         always_comb begin

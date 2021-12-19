@@ -192,7 +192,7 @@ video_playfield video_pf_a(
 );
 
 generate
-    if (EN_VID_PF_B) begin
+    if (EN_VID_PF_B) begin : opt_PF_B
         logic       pb_vram_rd;                             // last cycle was PB vram read flag
         logic       pb_vram_rd_save;                        // PB vram read data saved flag
         word_t      pb_vram_rd_data;                        // PB vram read data
@@ -260,7 +260,7 @@ generate
             .reset_i(reset_i),
             .clk(clk)
         );
-    end else begin
+    end else begin : no_PF_B
         logic unused_pf_b;
         assign unused_pf_b = &{ 1'b0,
             pb_stall,

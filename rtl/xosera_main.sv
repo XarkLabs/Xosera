@@ -261,7 +261,7 @@ copper copper(
 `endif
 
 generate
-    if (EN_BLIT) begin
+    if (EN_BLIT) begin : opt_EN_BLIT
         blitter2#(
             .EN_BLIT_DECR_MODE(EN_BLIT_DECR_MODE),
             .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT)

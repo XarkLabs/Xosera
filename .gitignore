@@ -57,3 +57,4 @@ utils/image_pal
 # Vim swaps
 **/*.swp
 
+utils/true_color_hack

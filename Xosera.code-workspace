@@ -134,6 +134,7 @@
 			"posedge",
 			"PRINTLN",
 			"PULLUP",
+			"rdinc",
 			"REFERENCECLK",
 			"regs",
 			"regw",

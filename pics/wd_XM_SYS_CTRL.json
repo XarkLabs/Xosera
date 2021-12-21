@@ -5,13 +5,24 @@
             "name": "VRAM nibble write mask",
             "type": 4,
             "attr": [
-                "[3:0] for XM_DATA/XM_DATA_2",
-                "(1 = allow write to nibble)"
+                "<tt>XM_DATA</tt>/<tt>XM_DATA_2</tt>",
+                "VRAM word nibble mask",
+                "<tt>0</tt>=mask write to nibble",
+                "<tt>1</tt>=allow write to nibble"
             ]
         },
         {
             "bits": 1,
-            "type": 1
+            "name": "rwrdinc",
+            "type": 6,
+            "attr": [
+                "read of",
+                "<tt>RW_DATA</tt>",
+                "adds",
+                "<tt>RW_INCR</tt>",
+                "<tt>0=no</tt>",
+                "<tt>1=yes</tt>"
+            ]
         },
         {
             "bits": 1,
@@ -19,8 +30,9 @@
             "type": 3,
             "attr": [
                 "blit",
-                "0 ready",
-                "1 full"
+                "queue:",
+                "<tt>0</tt> ready",
+                "<tt>1</tt> full"
             ]
         },
         {
@@ -29,8 +41,9 @@
             "type": 3,
             "attr": [
                 "blit",
-                "0 done",
-                "1 busy"
+                "working",
+                "<tt>0</tt> done",
+                "<tt>1</tt> busy"
             ]
         },
         {
@@ -39,19 +52,21 @@
             "type": 6,
             "attr": [
                 "memory",
-                "0 ready",
-                "1 wait"
+                "ready",
+                "<tt>0</tt> ready",
+                "<tt>1</tt> wait"
             ]
         },
         {
             "bits": 4,
-            "name": "intrrupt enable",
+            "name": "interrupt enable mask",
             "type": 5,
             "attr": [
-                "[3] = vsync",
-                "[2] = copper",
-                "[1] = draw done",
-                "[0] = audio"
+                "<tt>0=mask</tt>, <tt>1=allow</tt>",
+                "[11]=vsync",
+                "[10]=copper",
+                "[9]=draw done",
+                "[8]=audio"
             ]
         },
         {
@@ -63,10 +78,10 @@
             "name": "boot config",
             "type": 2,
             "attr": [
-                "00 = 640x480",
-                "01 = 848x480",
-                "10 = custom2",
-                "11 = custom3"
+                "<tt>00=640x480</tt>",
+                "<tt>01=848x480</tt>",
+                "<tt>10=custom2 </tt>",
+                "<tt>11=custom3 </tt>"
             ]
         },
         {
@@ -74,9 +89,11 @@
             "name": "boot",
             "type": 2,
             "attr": [
-                "1 =",
+                "write",
+                "<tt>1</tt> to",
                 "reboot",
-                "FPGA"
+                "FPGA",
+                "to config"
             ]
         }
     ],

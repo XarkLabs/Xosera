@@ -509,6 +509,16 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_WAITVSYNC(),        // show boot screen
                             //    REG_WAITVTOP(),         // show boot screen
 
+    REG_W(RW_INCR, 0x1),
+    REG_W(RW_ADDR, 0x1234),
+    REG_RW(RW_DATA),
+    REG_RW(RW_DATA),
+    REG_B(SYS_CTRL, 0x1F),
+    REG_W(RW_INCR, 0x1),
+    REG_W(RW_ADDR, 0x1234),
+    REG_RW(RW_DATA),
+    REG_RW(RW_DATA),
+
     XREG_SETW(PA_GFX_CTRL, 0x005F),         // bitmap, 4-bpp, Hx4, Vx4
     XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
     XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address

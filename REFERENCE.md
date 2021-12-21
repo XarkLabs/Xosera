@@ -155,22 +155,24 @@ When `XM_DATA_2` is read data from VRAM at `XM_RD_ADDR` is returned and `XM_RD_I
 new VRAM address begins.  
 When `XM_DATA_2` is written, begins writing value to VRAM at `XM_WR_ADDR` and adds `XM_WR_INCR` to `XM_WR_ADDR`.  
 **NOTE:** This register is identical to `XM_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from `XM_DATA` for
-additional speed (however, it does have its own nibble write mask).
+additional transfer speed.
 
 **0x8 `XM_SYS_CTRL` (R/W+) - draw busy status, read wait, reconfigure, interrupt control and write masking control**  
-<img src="./pics/wd_XM_SYS_CTRL.svg">
-
+<img src="./pics/wd_XM_SYS_CTRL.svg">  
 **Read draw busy, read wait, write to reboot FPGA or read/write interrupt control/status and `XM_DATA` nibble write mask.**  
 Read:  
-[11:8] `XM_DATA`/`XM_DATA_2` nibble write masks  
-[7] memory operation pending (memory contention)  
-[6] blit busy  
-[5] blit queue full  
-[3:0] interrupt enables  
+&nbsp;&nbsp;&nbsp;&nbsp;`[11:8]`  interrupt enables  
+&nbsp;&nbsp;&nbsp;&nbsp;`[7]` memory operation pending (when memory contention)  
+&nbsp;&nbsp;&nbsp;&nbsp;`[6]` blit busy  (operation in progress or queued)
+&nbsp;&nbsp;&nbsp;&nbsp;`[5]` blit queue full (don't write to blit registers)  
+&nbsp;&nbsp;&nbsp;&nbsp;`[4]` value of flag `RW_RD_INC` flag
+&nbsp;&nbsp;&nbsp;&nbsp;`[3:0]` `XM_DATA`/`XM_DATA_2`/`RW_DATA` nibble write masks  
 Write:  
-[15] reboot FPGA to [14:13] configuration  
-[11:8] `XM_DATA`/`XM_DATA_2` nibble write masks  
-[3:0] interrupt mask (1 allows corresponding interrupt source to generate CPU interrupt).  
+&nbsp;&nbsp;&nbsp;&nbsp;`[15]` reboot FPGA to `[14:13]` configuration 0-3
+&nbsp;&nbsp;&nbsp;&nbsp;`[14:13]` reboot configuration
+&nbsp;&nbsp;&nbsp;&nbsp;`[11:8]` `XM_DATA`/`XM_DATA_2` nibble write masks  
+&nbsp;&nbsp;&nbsp;&nbsp;`[4]` set `RW_RD_INC` flag (controls if a *read* of  `RW_DATA` adds `RW_INCR` to `RW_ADDR`)
+&nbsp;&nbsp;&nbsp;&nbsp;`[3:0]` interrupt mask (1 allows corresponding interrupt source to generate CPU interrupt).  
 [#TODO optimize layout for 68k status polling]
 
 **0x9 `XM_TIMER` (R/W) - 1/10<sup>th</sup> of millisecond timer (0 - 6553.5 ms) / interrupt clear**  
@@ -197,9 +199,9 @@ Unused direct register 0xB
 **0xC `XM_RW_INCR` (R/W) - increment value for `XM_RW_ADDR` when `XM_RW_DATA`/`XM_RW_DATA_2`is read or written**  
 <img src="./pics/wd_XM_RW_INCR.svg">
 
-**Read or write twos-complement value added to`XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2`is read from or written to.**  
+**Read or write twos-complement value added to`XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2`is written to (or read if `RW_RD_INC` flag set).**  
 Allows quickly reading/writing Xosera VRAM from`XM_RW_DATA`/`XM_RW_DATA_2` when using a fixed `XM_RW_ADDR` increment.
-Added to `XM_RW_ADDR` when `XM_RW_DATA` or`XM_RW_DATA_2` is read from (twos complement so value can be negative).
+Added to `XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2` is written (twos complement so value can be negative).   If the `RW_RD_INC` flag is set in `XM_SYS_CTRL`, then a read of `XM_RW_DATA` or`XM_RW_DATA_2` will also add `XM_RW_INCR` to `XM_RW_ADDR` (this is useful when using `XM_RW_DATA` *only* for reading).
 
 **0xD `XM_RW_ADDR` (R/W+) - VRAM read/write address for accessed at `XM_RW_DATA`/`XM_RW_DATA_2`**  
 <img src="./pics/wd_XM_RW_ADDR.svg">
@@ -207,29 +209,28 @@ Added to `XM_RW_ADDR` when `XM_RW_DATA` or`XM_RW_DATA_2` is read from (twos comp
 **Read or write VRAM address read when`XM_RW_DATA` or `XM_RW_DATA_2`is read from or written to.**  
 Specifies VRAM address used when reading or writing from VRAM via`XM_RW_DATA`/`XM_RW_DATA_2`.
 When `XM_RW_ADDR` is written (or incremented by `XM_RW_INCR`) the corresponding word in VRAM is read and made available for
-reading at `WR_DATA` or `WR_DATA_2`.  
-Since this read always happens (even when only intending to write), prefer using RW_ADDR for
-reading (but fairly small VRAM access overhead).
+reading at `XM_RW_DATA` or `XM_RW_DATA_2`.  
+Since this read always happens (even when only a write was intended), prefer using `RW_ADDR` only when
+reading is needed (however, it is a *tiny* VRAM access overhead).  The `RW_RD_INC` flag in `XM_SYS_CTRL` controls if `XM_RW_INCR` is added to `XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2` are *read* (it is always added on a *write*).
 
 **0xE `XM_RW_DATA` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**  
 <img src="./pics/wd_XM_RW_DATA.svg">
 
 **Read or write VRAM value in VRAM at`XM_RW_ADDR` and add `XM_RW_INCR` to `XM_RW_ADDR`.**  
-When`XM_RW_DATA`is read, returns data from VRAM at `XM_RW_ADDR`, adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM
-value.  
+When`XM_RW_DATA`is read, returns data from VRAM at `XM_RW_ADDR`.  If `RW_RD_INC` flag in `XM_SYS_CTRL`is set it also adds `XM_RW_INCR` to `XM_RW_ADDR` and immediately begins pre-reading new the new VRAM address.  
 When `XM_RW_DATA` is written, begins writing value to VRAM at `XM_RW_ADDR` and adds `XM_RW_INCR` to `XM_RW_ADDR` and begins
-reading new VRAM value.
+reading new VRAM value.  
+The `RW_RD_INC` flag in `XM_SYS_CTRL` controls if `XM_RW_INCR` is added to `XM_RW_ADDR` when `XM_RW_DATA` is *read* (it is always added on a *write*).
 
 **0xF `XM_RW_DATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**  
 <img src="./pics/wd_XM_RW_DATA.svg">
 
 **Read or write VRAM value in VRAM at`XM_RW_ADDR` and add `XM_RW_INCR` to `XM_RW_ADDR`.**  
-When`XM_RW_DATA_2`is read, returns data from VRAM at `XM_RW_ADDR`, adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM
-value.  
+When`XM_RW_DATA_2`is read, returns data from VRAM at `XM_RW_ADDR`.  If `RW_RD_INC` flag in `XM_SYS_CTRL`is set it also adds `XM_RW_INCR` to `XM_RW_ADDR` and immediately begins pre-reading new the new VRAM address.
 When `XM_RW_DATA_2` is written, begins writing value to VRAM at `XM_RW_ADDR` and adds `XM_RW_INCR` to `XM_RW_ADDR` and begins
 reading new VRAM value.  
-**NOTE:** This register is identical to `XM_RW_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from`XM_RW_DATA`
-for additional speed.
+The `RW_RD_INC` flag in `XM_SYS_CTRL` controls if `XM_RW_INCR` is added to `XM_RW_ADDR` when `XM_RW_DATA_2` is *read* (it is always added on a *write*).  
+**NOTE:** This register is identical to `XM_RW_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from`XM_RW_DATA` for additional transfer speed.
 ___
 
 ## Xosera Extended Register / Extended Memory Region Summary
@@ -510,15 +511,10 @@ right and left edges respectively, sicne each line will be drawn right to left).
 `XR_BLIT_MOD_A`, `XR_BLIT_MOD_B` and `XR_BLIT_MOD_D` values will still be added each line (so typically they would be
 negated).
 
-`DECR` mode can be useful for overlapping blitter operations and "scrolling" VRAM, when the destination would overwrite
-the source mid-operation. For example, when copying an overlapping source and destination image rectangle a few pixels
-directly to the right (where the first pixels of each line copied would overwrite uncopied source pixels on each line).
-If lines of an image operation don't overlap, then the `XR_BLIT_MOD_A`, `XR_BLIT_MOD_B` and `XR_BLIT_MOD_D` can be
-negated to copy lines in reverse order, but keeping pixels right to left).
+`DECR` mode can be useful for overlapping blitter operations and "scrolling" VRAM, when the destination would overwrite the source mid-operation. For example, when copying an overlapping source and destination image rectangle a few pixels directly to the right (where the first pixels of each line copied would overwrite uncopied source pixels on each line).  
+If lines of an image operation don't overlap, then the `XR_BLIT_MOD_A`, `XR_BLIT_MOD_B` and `XR_BLIT_MOD_D` can be negated to copy lines in reverse order, but keeping pixels right to left).
 
-**NOTE:** Full `DECR` mode has turned out to be rather "expensive" (in area and speed) in the FPGA implementation. If
-this continues to be an issue, then the ability to "left shift" in `DECR` mode may be removed. This is only strictly
-needed in cases similar to the example outlined above, with overlap on each line (and there are workarounds).
+**NOTE:** Full `DECR` mode, with a left-shift has turned out to be rather "expensive" (in area and speed) in the FPGA implementation. If this continues to be an issue, then the ability to "left shift" in `DECR` mode may be removed. This is only strictly needed in cases similar to the example outlined above, with overlap on each line (and there are workarounds).  The ability to decrement `XR_BLIT_SRC_A`, `XR_BLIT_SRC_B` and `XR_BLIT_DST_D` pointers each word is planned to be retained.
 
 #### Blitter Operation Status
 

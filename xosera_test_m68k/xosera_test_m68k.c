@@ -1012,14 +1012,14 @@ void test_true_color()
 
     load_sd_bitmap("/parrot_320x240_RG8B4.raw", saddr);
 
-    if (delay_check(DELAY_TIME * 10))
+    if (delay_check(DELAY_TIME * 2))
     {
         return;
     }
 
     load_sd_bitmap("/fractal_320x240_RG8B4.raw", saddr);
 
-    if (delay_check(DELAY_TIME * 10))
+    if (delay_check(DELAY_TIME * 2))
     {
         return;
     }
@@ -1788,6 +1788,7 @@ void     xosera_test()
             wait_vsync();
             xreg_setw(PA_GFX_CTRL, 0x0055);        // bitmap + 4-bpp + Hx2 + Vx2
             xreg_setw(PA_LINE_LEN, 80);
+            xreg_setw(PA_HV_FSCALE, 0x0005);        // vertical scale 400 lines (320x200 with HVx2)
 
             load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw");
             load_sd_bitmap("/ST_KingTut_Dpaint_16.raw", 0x0000);
@@ -1801,6 +1802,7 @@ void     xosera_test()
                 break;
             }
         }
+        xreg_setw(PA_HV_FSCALE, 0x0000);        // vertical scale 480 lines (no scale)
 
         if (use_sd)
         {

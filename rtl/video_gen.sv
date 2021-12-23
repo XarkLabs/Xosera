@@ -74,6 +74,8 @@ logic               pa_tile_in_vram;                    // tile memory 0=tilemem
 logic  [3:0]        pa_tile_height;                     // max height of tile cell
 logic  [1:0]        pa_h_repeat;                        // horizontal pixel repeat
 logic  [1:0]        pa_v_repeat;                        // vertical pixel repeat
+logic  [2:0]        pa_h_frac_repeat;                   // horizontal fractional pixel repeat count
+logic  [2:0]        pa_v_frac_repeat;                   // vertical fractional pixel repeat count
 logic  [4:0]        pa_fine_hscroll;                    // horizontal fine scroll (8 pixel * 4 for repeat)
 logic  [5:0]        pa_fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
 logic               pa_line_start_set;                  // true if pa_line_start changed (register write)
@@ -99,6 +101,8 @@ logic               pb_tile_in_vram;                    // 0=tilemem, 1=vram
 logic  [3:0]        pb_tile_height;                     // max height of tile cell
 logic  [1:0]        pb_h_repeat;                        // horizontal pixel repeat
 logic  [1:0]        pb_v_repeat;                        // vertical pixel repeat
+logic  [2:0]        pb_h_frac_repeat;                   // horizontal fractional pixel repeat
+logic  [2:0]        pb_v_frac_repeat;                   // vertical fractional pixel repeat
 logic  [4:0]        pb_fine_hscroll;                    // horizontal fine scroll (8 pixel * 4 for repeat)
 logic  [5:0]        pb_fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
 logic               pb_line_start_set;                  // true if pa_line_start changed (register write)
@@ -181,6 +185,8 @@ video_playfield video_pf_a(
     .pf_tile_height_i(pa_tile_height),
     .pf_h_repeat_i(pa_h_repeat),
     .pf_v_repeat_i(pa_v_repeat),
+    .pf_h_frac_repeat_i(pa_h_frac_repeat),
+    .pf_v_frac_repeat_i(pa_v_frac_repeat),
     .pf_fine_hscroll_i(pa_fine_hscroll),
     .pf_fine_vscroll_i(pa_fine_vscroll),
     .pf_line_start_set_i(pa_line_start_set),
@@ -251,6 +257,8 @@ generate
             .pf_tile_height_i(pb_tile_height),
             .pf_h_repeat_i(pb_h_repeat),
             .pf_v_repeat_i(pb_v_repeat),
+            .pf_h_frac_repeat_i(pb_h_frac_repeat),
+            .pf_v_frac_repeat_i(pb_v_frac_repeat),
             .pf_fine_hscroll_i(pb_fine_hscroll),
             .pf_fine_vscroll_i(pb_fine_vscroll),
             .pf_line_start_set_i(pb_line_start_set),
@@ -311,6 +319,8 @@ always_ff @(posedge clk) begin
         pa_colorbase        <= 8'h00;
         pa_h_repeat         <= 2'b0;
         pa_v_repeat         <= 2'b0;
+        pa_h_frac_repeat    <= '0;
+        pa_v_frac_repeat    <= '0;
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_gfx_ctrl_set     <= 1'b0;
 
@@ -328,6 +338,8 @@ always_ff @(posedge clk) begin
         pb_colorbase        <= 8'h00;
         pb_h_repeat         <= 2'b0;
         pb_v_repeat         <= 2'b0;
+        pb_h_frac_repeat    <= '0;
+        pb_v_frac_repeat    <= '0;
         pb_line_start_set   <= 1'b0;            // indicates user line address set
         pb_gfx_ctrl_set     <= 1'b0;
 
@@ -406,6 +418,10 @@ always_ff @(posedge clk) begin
                     pa_line_start_set <= 1'b1;               // changed flag
                     line_set_addr   <= vgen_reg_data_i;
                 end
+                xv::XR_PA_HV_FSCALE: begin
+                    pa_h_frac_repeat    <= vgen_reg_data_i[6:4];
+                    pa_v_frac_repeat    <= vgen_reg_data_i[2:0];
+                end
                 // playfield B
                 xv::XR_PB_GFX_CTRL: begin
                     pb_colorbase    <= vgen_reg_data_i[15:8];
@@ -434,6 +450,10 @@ always_ff @(posedge clk) begin
                 xv::XR_PB_LINE_ADDR: begin
                     pb_line_start_set   <= 1'b1;
                     line_set_addr       <= vgen_reg_data_i;
+                end
+                xv::XR_PB_HV_FSCALE: begin
+                    pb_h_frac_repeat    <= vgen_reg_data_i[6:4];
+                    pb_v_frac_repeat    <= vgen_reg_data_i[2:0];
                 end
                 default: begin
                 end

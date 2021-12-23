@@ -368,7 +368,7 @@ ___
 | 0x13  | `XR_PA_LINE_LEN`  | R/W | playfield A display line width in words                      |
 | 0x14  | `XR_PA_HV_SCROLL` | R/W | playfield A horizontal and vertical fine scroll              |
 | 0x15  | `XR_PA_LINE_ADDR` | WO  | playfield A scanline start address (loaded at start of line) |
-| 0x16  | `XR_PA_UNUSED_16` | -/- |                                                              |
+| 0x16  | `XR_PA_HV_FSCALE` | R/W | playfield A horizontal and vertical fractional scaling       |
 | 0x17  | `XR_PA_UNUSED_17` | -/- |                                                              |
 | 0x18  | `XR_PB_GFX_CTRL`  | R/W | playfield B graphics control                                 |
 | 0x19  | `XR_PB_TILE_CTRL` | R/W | playfield B tile control                                     |
@@ -376,14 +376,14 @@ ___
 | 0x1B  | `XR_PB_LINE_LEN`  | R/W | playfield B display line width in words                      |
 | 0x1C  | `XR_PB_HV_SCROLL` | R/W | playfield B horizontal and vertical fine scroll              |
 | 0x1D  | `XR_PB_LINE_ADDR` | WO  | playfield B scanline start address (loaded at start of line) |
-| 0x1E  | `XR_PB_UNUSED_1E` | -/- |                                                              |
+| 0x16  | `XR_PB_HV_FSCALE` | R/W | playfield B horizontal and vertical fractional scaling       |
 | 0x1F  | `XR_PB_UNUSED_1F` | -/- |                                                              |
 ___
 
 ### Playfield A & B Control XR Registers Details
 
-**0x10 `XR_PA_GFX_CTRL` (R/W) - playfield A (foreground) graphics control**  
-**0x18 `XR_PB_GFX_CTRL` (R/W) - playfield B (background) graphics control**  
+**0x10 `XR_PA_GFX_CTRL` (R/W) - playfield A (base) graphics control**  
+**0x18 `XR_PB_GFX_CTRL` (R/W) - playfield B (overlay) graphics control**  
 <img src="./pics/wd_XR_Px_GFX_CTRL.svg">
 
 **playfield A/B graphics control**  
@@ -395,8 +395,8 @@ bpp selects bits-per-pixel or the number of color index bits per pixel (see "Gra
 H repeat selects the number of native pixels wide an Xosera pixel will be (1-4).  
 V repeat selects the number of native pixels tall an Xosera pixel will be (1-4).  
 
-**0x11 `XR_PA_TILE_CTRL` (R/W) - playfield A (foreground) tile control**  
-**0x19 `XR_PB_TILE_CTRL` (R/W) - playfield B (background) tile control**  
+**0x11 `XR_PA_TILE_CTRL` (R/W) - playfield A (base) tile control**  
+**0x19 `XR_PB_TILE_CTRL` (R/W) - playfield B (overlay) tile control**  
 <img src="./pics/wd_XR_Px_TILE_CTRL.svg">
 
 **playfield A/B tile control**  
@@ -407,15 +407,15 @@ tile selects tile definitions in XR TILEMAP memory or VRAM (5KW of tile XR memor
 tile height selects the tile height-1 from (0-15 for up to 8x16). Tiles are stored as either 8 or 16 lines high. Tile lines past
 height are truncated when displayed (e.g., tile height of 11 would display 8x12 of 8x16 tile).
 
-**0x12 `XR_PA_DISP_ADDR` (R/W) - playfield A (foreground) display VRAM start address**  
-**0x1A `XR_PB_DISP_ADDR` (R/W) - playfield B (background) display VRAM start address**  
+**0x12 `XR_PA_DISP_ADDR` (R/W) - playfield A (base) display VRAM start address**  
+**0x1A `XR_PB_DISP_ADDR` (R/W) - playfield B (overlay) display VRAM start address**  
 <img src="./pics/wd_XR_Px_DISP_ADDR.svg">
 
 **playfield A/B display start address**  
 Address in VRAM for start of playfield display (tiled or bitmap).
 
-**0x13 `XR_PA_LINE_LEN` (R/W) - playfield A (foreground) display line word length**  
-**0x1B `XR_PB_LINE_LEN` (R/W) - playfield B (background) display line word length**  
+**0x13 `XR_PA_LINE_LEN` (R/W) - playfield A (base) display line word length**  
+**0x1B `XR_PB_LINE_LEN` (R/W) - playfield B (overlay) display line word length**  
 <img src="./pics/wd_XR_Px_LINE_LEN.svg">
 
 **playfield A/B display line word length**  
@@ -423,27 +423,34 @@ Length in words for each display line (i.e., the amount added to line start addr
 of the display).  
 Twos complement, so negative values are okay (for reverse scan line order in memory).
 
-**0x14 `XR_PA_HV_SCROLL` (R/W) - playfield A (foreground) horizontal and vertical fine scroll**  
-**0x1C `XR_PB_HV_SCROLL` (R/W) - playfield B (background) horizontal and vertical fine scroll**  
+**0x14 `XR_PA_HV_SCROLL` (R/W) - playfield A (base) horizontal and vertical fine scroll**  
+**0x1C `XR_PB_HV_SCROLL` (R/W) - playfield B (overlay) horizontal and vertical fine scroll**  
 <img src="./pics/wd_XR_Px_HV_SCROLL.svg">
 
 **playfield A/B  horizontal and vertical fine scroll**  
-horizontal fine scroll should be constrained to the scaled width of 8 pixels or 1 tile (e.g., HSCALE 1x = 0-7, 2x = 0-15, 3x =
+Horizontal fine scroll should be constrained to the scaled width of 8 pixels or 1 tile (e.g., `H_REPEAT` 1x = 0-7, 2x = 0-15, 3x =
 0-23 and 4x = 0-31).  
-vertical fine scroll should be constrained to the scaled height of a tile or (one less than the tile-height times VSCALE).
+vertical fine scroll should be constrained to the scaled height of a tile or (one less than the tile-height times `V_REPEAT`).
 (But hey, we will see what happens, it might be fine...)
 
-**0x15 `XR_PA_LINE_ADDR` (WO) - playfield A (foreground) display VRAM line address**  
-**0x1D `XR_PB_LINE_ADDR` (WO) - playfield B (background) display VRAM line address**  
+**0x15 `XR_PA_LINE_ADDR` (WO) - playfield A (base) display VRAM line address**  
+**0x1D `XR_PB_LINE_ADDR` (WO) - playfield B (overlay) display VRAM line address**  
 <img src="./pics/wd_XR_Px_LINE_ADDR.svg">
 
 **playfield A/B display line address**  
 Address in VRAM for start of next scanline (tiled or bitmap). This is generally used to allow the copper to change the display
 address per scanline. Write-only.
 
-**0x16 `XR_PA_UNUSED_16` (-/-) - unused XR PA register 0x16**  
-**0x1E `XR_PB_UNUSED_1E` (-/-) - unused XR PB register 0x1E**  
-Unused XR playfield registers 0x16, 0x1E
+**0x16 `XR_PA_HV_FSCALE` (R/W) - playfield A (base) horizontal and vertical fractional scale 0x16**  
+**0x1E `XR_PB_HV_FSCALE` (R/W) - playfield B (overlay) horizontal and vertical fractional scale 0x1E**  
+<img src="./pics/wd_XR_Px_HV_FSCALE.svg">  
+Fractional scale factor to *repeat* a native pixel column and/or scanline to reduce pixel resolution (the "fractional" part accumulates until an entire row/column is repeated).  
+Will repeat the color of a native column or scan-line every N+1<sup>th</sup> column or line (see native resolution scaling table above, values rounded to integer values).  
+This repeat scaling is applied in addition to the integer pixel repeat (so a repeat value of 3x and fractional scale of 1 [repeat every line], would make 6x effective scale).  
+NOTE: Handy to reduce VRAM consumption a bit and to get the correct aspect ratio on "classic" 320x200 or 640x400 artwork.
+
+vertical fine scroll should be constrained to the scaled height of a tile or (one less than the tile-height times VSCALE).
+(But hey, we will see what happens, it might be fine...)
 
 **0x17 `XR_PA_UNUSED_17` (-/-) - unused XR PA register 0x17**  
 **0x1F `XR_PB_UNUSED_1F` (-/-) - unused XR PB register 0x1F**  

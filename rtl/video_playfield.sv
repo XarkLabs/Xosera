@@ -42,6 +42,8 @@ module video_playfield(
     input  wire logic  [3:0]    pf_tile_height_i,                   // max height of tile cell
     input  wire logic  [1:0]    pf_h_repeat_i,                      // horizontal pixel repeat
     input  wire logic  [1:0]    pf_v_repeat_i,                      // vertical pixel repeat
+    input  wire logic  [2:0]    pf_h_frac_repeat_i,                 // horizontal fractional pixel repeat
+    input  wire logic  [2:0]    pf_v_frac_repeat_i,                 // vertical fractional pixel repeat
     input  wire logic  [4:0]    pf_fine_hscroll_i,                  // horizontal fine scroll (8 pixel * 4 for repeat)
     input  wire logic  [5:0]    pf_fine_vscroll_i,                  // vertical fine scroll (16 lines * 4 for repeat)
     input  wire logic           pf_gfx_ctrl_set_i,                  // true if pf_gfx_ctrl_i changed (register write)
@@ -91,6 +93,8 @@ logic           h_start_line_fetch;
 
 logic  [1:0]    pf_h_count;                         // current horizontal repeat countdown
 logic  [1:0]    pf_v_count;                         // current vertical repeat countdown
+logic  [2:0]    pf_h_frac_count;                    // current horizontal skip countdown
+logic  [2:0]    pf_v_frac_count;                    // current vertical skip countdown
 logic  [2:0]    pf_tile_x;                          // current column of tile cell
 logic  [3:0]    pf_tile_y;                          // current line of tile cell
 
@@ -448,7 +452,10 @@ always_ff @(posedge clk) begin
 
         if (scanout) begin
             // shift-in next pixel
-            if (pf_h_count != 2'b00) begin
+            pf_h_frac_count <= pf_h_frac_count - 1'b1;                      // update fractional pixel repeat counter
+            if (pf_h_frac_repeat_i != '0 && pf_h_frac_count == '0) begin    // repeat last pixel?
+                pf_h_frac_count <= pf_h_frac_repeat_i;                      // reset repeat counter, repeat pixel
+            end else if (pf_h_count != '0) begin
                 pf_h_count              <= pf_h_count - 1'b1;
             end else begin
                 pf_h_count              <= pf_h_repeat_i;
@@ -469,10 +476,10 @@ always_ff @(posedge clk) begin
                             pf_pixels_buf[63:56]
                         };
                     end else begin
-                        pf_pixels   <= pf_pixels_buf; // next 8 pixels from buffer
+                        pf_pixels   <= pf_pixels_buf;                       // next 8 pixels from buffer
                     end
                 end else begin
-                    pf_pixels   <= { pf_pixels[55:0], border_color_i };  // shift for next pixel
+                    pf_pixels   <= { pf_pixels[55:0], border_color_i };     // shift for next pixel
                 end
             end
         end
@@ -523,18 +530,21 @@ always_ff @(posedge clk) begin
 
         // end of line
         if (h_line_last_pixel_i) begin
-            scanout     <= 1'b0;
-            pf_addr     <= pf_line_start;                   // addr back to line start (for tile lines, or v repeat)
-            if (pf_v_count != 2'b00) begin                  // is line repeating
-                pf_v_count  <= pf_v_count - 1'b1;               // keep decrementing
+            scanout         <= 1'b0;                                        // force scanout off
+            pf_addr         <= pf_line_start;                               // addr back to line start (for tile lines, or v repeat)
+            pf_h_frac_count <= '0;                                          // reset horizontal fractional pixel repeat counter
+            pf_v_frac_count <= pf_v_frac_count - 1'b1;                      // update vertical fractional line repeat counter
+            if (pf_v_frac_repeat_i != '0 && pf_v_frac_count == '0) begin    // repeat last line?
+                pf_v_frac_count <= pf_v_frac_repeat_i;                      // reset repeat count, repeat line
+            end else if (pf_v_count != 2'b00) begin                         // is line repeating?
+                pf_v_count      <= pf_v_count - 1'b1;                       // keep decrementing
             end else begin
-                pf_v_count  <= pf_v_repeat_i;                     // reset v repeat
-                if (pf_bitmap_i || (pf_tile_y == pf_tile_height_i)) begin // is bitmap mode or last line of tile cell?
-                    pf_tile_y       <= 4'h0;                              // reset tile cell line
+                pf_v_count      <= pf_v_repeat_i;                           // reset v repeat
+                if (pf_bitmap_i || (pf_tile_y == pf_tile_height_i)) begin   // is bitmap mode or last line of tile cell?
+                    pf_tile_y       <= 4'h0;                                // reset tile cell line
                     pf_line_start   <= pf_line_start + pf_line_len_i;       // calculate next line start address
-                end
-                else begin
-                    pf_tile_y <= pf_tile_y + 1;                     // next line of tile cell
+                end else begin
+                    pf_tile_y       <= pf_tile_y + 1;                       // next line of tile cell
                 end
             end
 
@@ -542,12 +552,13 @@ always_ff @(posedge clk) begin
         end
 
         // end of frame or blanked, prepare for next frame
-        if (pf_blank_i || last_frame_pixel_i) begin     // is last pixel of frame?
-            pf_addr         <= pf_start_addr_i;           // set start of display data
-            pf_line_start   <= pf_start_addr_i;           // set line to start of display data
+        if (pf_blank_i || last_frame_pixel_i) begin         // is last pixel of frame?
+            pf_addr         <= pf_start_addr_i;             // set start of display data
+            pf_line_start   <= pf_start_addr_i;             // set line to start of display data
 
-            pf_v_count      <= pf_v_repeat_i - pf_fine_vscroll_i[1:0];    // fine scroll within scaled line (v repeat)
-            pf_tile_y       <= pf_fine_vscroll_i[5:2];    // fine scroll tile line
+            pf_v_count      <= pf_v_repeat_i - pf_fine_vscroll_i[1:0];  // fine scroll within scaled line (v repeat)
+            pf_tile_y       <= pf_fine_vscroll_i[5:2];      // fine scroll tile line
+            pf_v_frac_count <= '0;
         end
 
         mem_fetch_active <= mem_fetch_next & ~pf_blank_i;

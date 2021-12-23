@@ -148,7 +148,7 @@ class BusInterface
         XR_PA_LINE_LEN  = 0x13,        //  playfield A display line width in words
         XR_PA_HV_SCROLL = 0x14,        //  playfield A horizontal and vertical fine scroll
         XR_PA_LINE_ADDR = 0x15,        //  playfield A scanline start address (loaded at start of line)
-        XR_PA_UNUSED_16 = 0x16,        //
+        XR_PA_HV_FSCALE = 0x16,        //  playfield A horizontal and vertical fractional scale
         XR_PA_UNUSED_17 = 0x17,        //
 
         // Playfield B Control XR Registers
@@ -158,7 +158,7 @@ class BusInterface
         XR_PB_LINE_LEN  = 0x1B,        //  playfield B display line width in words
         XR_PB_HV_SCROLL = 0x1C,        //  playfield B horizontal and vertical fine scroll
         XR_PB_LINE_ADDR = 0x1D,        //  playfield B scanline start address (loaded at start of line)
-        XR_PB_UNUSED_1E = 0x1E,        //
+        XR_PB_HV_FSCALE = 0x1E,        //  playfield B horizontal and vertical fractional scale
         XR_PB_UNUSED_1F = 0x1F,        //
 
         // Blitter Registers
@@ -521,8 +521,14 @@ BusInterface bus;
 int          BusInterface::test_data_len    = 32767;
 uint16_t     BusInterface::test_data[32768] = {
     // test data
+
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
+
+    REG_RW(LFSR),
+    REG_RW(LFSR),
+
+
     REG_WAITVSYNC(),        // show boot screen
                             //    REG_WAITVTOP(),         // show boot screen
 
@@ -536,7 +542,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_RW(RW_DATA),
     REG_RW(RW_DATA),
 
-    XREG_SETW(PA_GFX_CTRL, 0x0050),         // bitmap, 4-bpp, Hx4, Vx4
+    XREG_SETW(PA_GFX_CTRL, 0x005F),         // bitmap, 4-bpp, Hx4, Vx4
     XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
     XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address
     XREG_SETW(PA_LINE_LEN, 320 / 4),        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
@@ -858,6 +864,7 @@ uint16_t     BusInterface::test_data[32768] = {
 #endif
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+    XREG_SETW(PA_HV_FSCALE, 0x0005),        // 400 line scale
 
     XREG_SETW(PA_GFX_CTRL, 0x0055),           // bitmap, 8-bpp, Hx2, Vx2
     XREG_SETW(PA_TILE_CTRL, 0x000F),          // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font

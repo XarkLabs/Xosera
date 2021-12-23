@@ -81,8 +81,8 @@ XR_PA_TILE_CTRL equ     $0011       ; (R /W) playfield A tile control
 XR_PA_DISP_ADDR equ     $0012       ; (R /W) playfield A display VRAM start address
 XR_PA_LINE_LEN  equ     $0013       ; (R /W) playfield A display line width in words
 XR_PA_HV_SCROLL equ     $0014       ; (R /W) playfield A horizontal and vertical fine scroll
-XR_PA_LINE_ADDR equ     $0015       ; (R /W) playfield A scanline start address (loaded at start of line)
-XR_PA_UNUSED_16 equ     $0016       ;
+XR_PA_LINE_ADDR equ     $0015       ; (- /W) playfield A scanline start address (loaded at start of line)
+XR_PA_HV_FSCALE  equ     $0016      ; (R /W) playfield A horizontal and vertical fractional scale
 XR_PA_UNUSED_17 equ     $0017       ;
 
 ; Playfield B Control XR Registers
@@ -91,8 +91,8 @@ XR_PB_TILE_CTRL equ     $0019       ; (R /W) playfield B tile control
 XR_PB_DISP_ADDR equ     $001A       ; (R /W) playfield B display VRAM start address
 XR_PB_LINE_LEN  equ     $001B       ; (R /W) playfield B display line width in words
 XR_PB_HV_SCROLL equ     $001C       ; (R /W) playfield B horizontal and vertical fine scroll
-XR_PB_LINE_ADDR equ     $001D       ; (R /W) playfield B scanline start address (loaded at start of line)
-XR_PB_UNUSED_1E equ     $001E       ;
+XR_PB_LINE_ADDR equ     $001D       ; (- /W) playfield B scanline start address (loaded at start of line)
+XR_PB_HV_FSCALE  equ     $001E      ; (R /W) playfield B horizontal and vertical fractional scale
 XR_PB_UNUSED_1F equ     $001F       ;
 
 ; Blitter Registers

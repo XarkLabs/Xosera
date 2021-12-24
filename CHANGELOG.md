@@ -1,5 +1,28 @@
 # Informal list of notable Xosera changes
 
+2021-12-22+ Xark
+
+* Still badly neglecting this file. :sweat_smile:
+* Xosera is nearing completion, main things still needed:
+  * mouse cursor sprite (and probably some others)
+  * audio playback with mixing (aiming for similar to Amiga, but stereo samples [so 8 channels])
+* Stretch goals - some things that might be doable
+  * UART support
+    * to give another fast serial port to rosco_m68k
+    * allow iCEBreaker and debug control via easy UART
+  * Draw support - add as much Danoidus stuff as will fix :)
+    * Line draw
+    * Maybe add "poly render" focused config?
+      * Rosco_pro changes equation (maybe with '882)
+  * Fix memory arbitration to not need "ACK" cycle
+    * This would pretty much double blitter speed
+  * Treat 4 VRAM banks separately to allow parallel access
+    * Avoid scanout/blitter contention
+  * Unify all memory VRAM and XR memories in one address space
+    * Might reduce redundancy and make most memories "orthagonal"
+    * Better for larger versions in future (ECP5)
+  * RL7 video mode for simple decompress from VRAM
+
 2021-10-25+ Xark
 
 * I have not been good about updating this. Sorry. :)  Here are some recent ones...

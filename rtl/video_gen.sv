@@ -356,6 +356,10 @@ always_ff @(posedge clk) begin
     end else begin
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_gfx_ctrl_set     <= 1'b0;
+
+        pb_line_start_set   <= 1'b0;            // indicates user line address set
+        pb_gfx_ctrl_set     <= 1'b0;
+
         intr_signal_o       <= 4'b0;
 `ifdef ENABLE_COPP
         copp_reg_wr_o       <= 1'b0;
@@ -383,10 +387,10 @@ always_ff @(posedge clk) begin
                 xv::XR_UNUSED_05: begin
                 end
                 xv::XR_VID_LEFT: begin
-                    vid_left       <= $bits(vid_left)'(vgen_reg_data_i);
+                    vid_left        <= $bits(vid_left)'(vgen_reg_data_i);
                 end
                 xv::XR_VID_RIGHT: begin
-                    vid_right      <= $bits(vid_right)'(vgen_reg_data_i);
+                    vid_right       <= $bits(vid_right)'(vgen_reg_data_i);
                 end
                 // playfield A
                 xv::XR_PA_GFX_CTRL: begin
@@ -408,7 +412,7 @@ always_ff @(posedge clk) begin
                     pa_start_addr   <= vgen_reg_data_i;
                 end
                 xv::XR_PA_LINE_LEN: begin
-                    pa_line_len   <= vgen_reg_data_i;
+                    pa_line_len     <= vgen_reg_data_i;
                 end
                 xv::XR_PA_HV_SCROLL: begin
                     pa_fine_hscroll <= vgen_reg_data_i[12:8];
@@ -419,8 +423,8 @@ always_ff @(posedge clk) begin
                     line_set_addr   <= vgen_reg_data_i;
                 end
                 xv::XR_PA_HV_FSCALE: begin
-                    pa_h_frac_repeat    <= vgen_reg_data_i[6:4];
-                    pa_v_frac_repeat    <= vgen_reg_data_i[2:0];
+                    pa_h_frac_repeat <= vgen_reg_data_i[6:4];
+                    pa_v_frac_repeat <= vgen_reg_data_i[2:0];
                 end
                 // playfield B
                 xv::XR_PB_GFX_CTRL: begin
@@ -441,19 +445,19 @@ always_ff @(posedge clk) begin
                     pb_start_addr   <= vgen_reg_data_i;
                 end
                 xv::XR_PB_LINE_LEN: begin
-                    pb_line_len   <= vgen_reg_data_i;
+                    pb_line_len     <= vgen_reg_data_i;
                 end
                 xv::XR_PB_HV_SCROLL: begin
                     pb_fine_hscroll <= vgen_reg_data_i[12:8];
                     pb_fine_vscroll <= vgen_reg_data_i[5:0];
                 end
                 xv::XR_PB_LINE_ADDR: begin
-                    pb_line_start_set   <= 1'b1;
-                    line_set_addr       <= vgen_reg_data_i;
+                    pb_line_start_set <= 1'b1;
+                    line_set_addr   <= vgen_reg_data_i;
                 end
                 xv::XR_PB_HV_FSCALE: begin
-                    pb_h_frac_repeat    <= vgen_reg_data_i[6:4];
-                    pb_v_frac_repeat    <= vgen_reg_data_i[2:0];
+                    pb_h_frac_repeat <= vgen_reg_data_i[6:4];
+                    pb_v_frac_repeat <= vgen_reg_data_i[2:0];
                 end
                 default: begin
                 end
@@ -482,11 +486,18 @@ always_ff @(posedge clk) begin
         xv::XR_VID_HSIZE:      vgen_reg_data_o <= 16'(xv::VISIBLE_WIDTH);
         xv::XR_VID_VSIZE:      vgen_reg_data_o <= 16'(xv::VISIBLE_HEIGHT);
         xv::XR_VID_VFREQ:      vgen_reg_data_o <= xv::REFRESH_FREQ;
+`ifdef ZZNOREAD
         xv::XR_PA_GFX_CTRL:    vgen_reg_data_o <= { pa_colorbase, pa_blank, pa_bitmap, pa_bpp, pa_h_repeat, pa_v_repeat };
         xv::XR_PA_TILE_CTRL:   vgen_reg_data_o <= { pa_tile_bank, pa_disp_in_tile, pa_tile_in_vram, 4'b0, pa_tile_height };
         xv::XR_PA_DISP_ADDR:   vgen_reg_data_o <= pa_start_addr;
         xv::XR_PA_LINE_LEN:    vgen_reg_data_o <= pa_line_len;
         xv::XR_PA_HV_SCROLL:   vgen_reg_data_o <= { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
+        xv::XR_PB_GFX_CTRL:    vgen_reg_data_o <= { pb_colorbase, pb_blank, pb_bitmap, pb_bpp, pb_h_repeat, pb_v_repeat };
+        xv::XR_PB_TILE_CTRL:   vgen_reg_data_o <= { pb_tile_bank, pb_disp_in_tile, pb_tile_in_vram, 4'b0, pb_tile_height };
+        xv::XR_PB_DISP_ADDR:   vgen_reg_data_o <= pb_start_addr;
+        xv::XR_PB_LINE_LEN:    vgen_reg_data_o <= pb_line_len;
+        xv::XR_PB_HV_SCROLL:   vgen_reg_data_o <= { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
+`endif
         default:               vgen_reg_data_o <= 16'h0000;
     endcase
 end

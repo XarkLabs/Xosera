@@ -479,7 +479,7 @@ always_ff @(posedge clk) begin
                         pf_pixels   <= pf_pixels_buf;                       // next 8 pixels from buffer
                     end
                 end else begin
-                    pf_pixels   <= { pf_pixels[55:0], border_color_i ^ pf_colorbase_i };     // shift for next pixel
+                    pf_pixels   <= { pf_pixels[55:0], border_color_i };     // shift for next pixel
                 end
             end
         end
@@ -511,7 +511,7 @@ always_ff @(posedge clk) begin
             pf_pixels               <= 64'he3e3e3e3e3e3e3e3;
             pf_pixels_buf           <= 64'he3e3e3e3e3e3e3e3;
 `endif
-            pf_pixels[63:56]        <= border_color_i ^ pf_colorbase_i;        // set border_color_i (in case blanked)
+            pf_pixels[63:56]        <= border_color_i;        // set border_color_i (in case blanked)
         end
 
         // when "scrolled" scanline starts outputting (before display if scrolled)

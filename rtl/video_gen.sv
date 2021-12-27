@@ -54,7 +54,7 @@ module video_gen #(
     input  wire logic           clk                     // clock (video pixel clock)
 );
 
-localparam [31:0] githash = 32'H`GITHASH;
+//localparam [31:0] githash = 32'H`GITHASH;
 
 // video generation signals
 color_t             border_color;
@@ -164,7 +164,7 @@ video_playfield video_pf_a(
     .h_count_i(h_count),
     .h_line_last_pixel_i(h_line_last_pixel),
     .last_frame_pixel_i(last_frame_pixel),
-    .border_color_i(border_color),
+    .border_color_i(border_color),   // pre-XOR so colorbase doesn't affect border
     .vid_left_i(vid_left),
     .vid_right_i(vid_right),
     .vram_sel_o(pa_vram_sel),
@@ -368,7 +368,7 @@ always_ff @(posedge clk) begin
         if (vgen_reg_wr_en_i) begin
             case ({1'b0, vgen_reg_num_i})
                 xv::XR_VID_CTRL: begin
-                    border_color    <= vgen_reg_data_i[15:8];
+                    border_color    <= vgen_reg_data_i[15:8] ^ pa_colorbase;
                     intr_signal_o   <= vgen_reg_data_i[3:0];
                 end
                 xv::XR_COPP_CTRL: begin
@@ -481,19 +481,19 @@ end
 // video registers read
 always_comb begin
     case (vgen_reg_num_i[3:0])
-        xv::XR_VID_CTRL[3:0]:       rd_vid_regs = { border_color, 4'b0, intr_status_i };
+        xv::XR_VID_CTRL[3:0]:       rd_vid_regs = { border_color ^ pa_colorbase, 4'b0, intr_status_i };
 `ifdef ENABLE_COPP
         xv::XR_COPP_CTRL[3:0]:      rd_vid_regs = { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPP_W-1:0]};
 `endif
-        xv::XR_VID_LEFT[3:0]:       rd_vid_regs = 16'(vid_left);
-        xv::XR_VID_RIGHT[3:0]:      rd_vid_regs = 16'(vid_right);
+//        xv::XR_VID_LEFT[3:0]:       rd_vid_regs = 16'(vid_left);
+//        xv::XR_VID_RIGHT[3:0]:      rd_vid_regs = 16'(vid_right);
         xv::XR_SCANLINE[3:0]:       rd_vid_regs = { (v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 14'(v_count) };
-        xv::XR_VERSION[3:0]:        rd_vid_regs = { 1'b`GITCLEAN, 3'b000, 12'h`VERSION };
-        xv::XR_GITHASH_H[3:0]:      rd_vid_regs = githash[31:16];
-        xv::XR_GITHASH_L[3:0]:      rd_vid_regs = githash[15:0];
+//        xv::XR_VERSION[3:0]:        rd_vid_regs = { 1'b`GITCLEAN, 3'b000, 12'h`VERSION };
+//        xv::XR_GITHASH_H[3:0]:      rd_vid_regs = githash[31:16];
+//        xv::XR_GITHASH_L[3:0]:      rd_vid_regs = githash[15:0];
         xv::XR_VID_HSIZE[3:0]:      rd_vid_regs = 16'(xv::VISIBLE_WIDTH);
         xv::XR_VID_VSIZE[3:0]:      rd_vid_regs = 16'(xv::VISIBLE_HEIGHT);
-        xv::XR_VID_VFREQ[3:0]:      rd_vid_regs = xv::REFRESH_FREQ;
+//        xv::XR_VID_VFREQ[3:0]:      rd_vid_regs = xv::REFRESH_FREQ;
         default:                    rd_vid_regs = 16'h0000;
     endcase
 end
@@ -505,12 +505,12 @@ always_comb begin
         xv::XR_PA_TILE_CTRL[3:0]:   rd_pf_regs = { pa_tile_bank, pa_disp_in_tile, pa_tile_in_vram, 4'b0, pa_tile_height };
         xv::XR_PA_DISP_ADDR[3:0]:   rd_pf_regs = pa_start_addr;
         xv::XR_PA_LINE_LEN[3:0]:    rd_pf_regs = pa_line_len;
-        xv::XR_PA_HV_SCROLL[3:0]:   rd_pf_regs = { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
+//        xv::XR_PA_HV_SCROLL[3:0]:   rd_pf_regs = { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
         xv::XR_PB_GFX_CTRL[3:0]:    rd_pf_regs = { pb_colorbase, pb_blank, pb_bitmap, pb_bpp, pb_h_repeat, pb_v_repeat };
         xv::XR_PB_TILE_CTRL[3:0]:   rd_pf_regs = { pb_tile_bank, pb_disp_in_tile, pb_tile_in_vram, 4'b0, pb_tile_height };
         xv::XR_PB_DISP_ADDR[3:0]:   rd_pf_regs = pb_start_addr;
         xv::XR_PB_LINE_LEN[3:0]:    rd_pf_regs = pb_line_len;
-        xv::XR_PB_HV_SCROLL[3:0]:   rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
+//        xv::XR_PB_HV_SCROLL[3:0]:   rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
         default:                    rd_pf_regs = 16'h0000;
     endcase
 end

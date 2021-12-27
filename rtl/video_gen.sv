@@ -24,34 +24,34 @@ module video_gen #(
 )
 (
     // video registers and control
-    input  wire logic           vgen_reg_wr_en_i,      // strobe to write internal config register number
-    input  wire logic  [4:0]    vgen_reg_num_i,        // internal config register number (for reads)
-    input  wire word_t          vgen_reg_data_i,       // data for internal config register
-    output      word_t          vgen_reg_data_o,       // register/status data reads
-    input wire  logic  [3:0]    intr_status_i,         // interrupt pending status
-    output      logic  [3:0]    intr_signal_o,         // generate interrupt signal
+    input  wire logic           vgen_reg_wr_en_i,       // strobe to write internal config register number
+    input  wire logic  [4:0]    vgen_reg_num_i,         // internal config register number (for reads)
+    input  wire word_t          vgen_reg_data_i,        // data for internal config register
+    output      word_t          vgen_reg_data_o,        // register/status data reads
+    input wire  logic  [3:0]    intr_status_i,          // interrupt pending status
+    output      logic  [3:0]    intr_signal_o,          // generate interrupt signal
 `ifdef ENABLE_COPP
     // outputs for copper
-    output      logic           copp_reg_wr_o,         // COPP_CTRL write strobe
-    output      word_t          copp_reg_data_o,       // copper reg data
-    output      hres_t          h_count_o,             // Horizontal video counter
-    output      vres_t          v_count_o,             // Vertical video counter
+    output      logic           copp_reg_wr_o,          // COPP_CTRL write strobe
+    output      word_t          copp_reg_data_o,        // copper reg data
+    output      hres_t          h_count_o,              // Horizontal video counter
+    output      vres_t          v_count_o,              // Vertical video counter
 `endif
     // video memories
-    output      logic           vram_sel_o,            // vram read select
-    output      addr_t          vram_addr_o,           // vram word address out (16x64K)
-    input  wire word_t          vram_data_i,           // vram word data in
-    output      logic           tilemem_sel_o,         // tile mem read select
-    output      tile_addr_t     tilemem_addr_o,  // tile mem word address out (16x5K)
-    input  wire word_t          tilemem_data_i,        // tile mem word data in
+    output      logic           vram_sel_o,             // vram read select
+    output      addr_t          vram_addr_o,            // vram word address out (16x64K)
+    input  wire word_t          vram_data_i,            // vram word data in
+    output      logic           tilemem_sel_o,          // tile mem read select
+    output      tile_addr_t     tilemem_addr_o,         // tile mem word address out (16x5K)
+    input  wire word_t          tilemem_data_i,         // tile mem word data in
     // video signal outputs
-    output      color_t         colorA_index_o,        // color palette index output (16x256)
-    output      color_t         colorB_index_o,        // color palette index output (16x256)
-    output      logic           vsync_o, hsync_o,      // video sync outputs
-    output      logic           dv_de_o,               // video active signal (needed for HDMI)
+    output      color_t         colorA_index_o,         // color palette index output (16x256)
+    output      color_t         colorB_index_o,         // color palette index output (16x256)
+    output      logic           vsync_o, hsync_o,       // video sync outputs
+    output      logic           dv_de_o,                // video active signal (needed for HDMI)
     // standard signals
-    input  wire logic           reset_i,               // system reset in
-    input  wire logic           clk                    // clock (video pixel clock)
+    input  wire logic           reset_i,                // system reset in
+    input  wire logic           clk                     // clock (video pixel clock)
 );
 
 localparam [31:0] githash = 32'H`GITHASH;
@@ -159,7 +159,7 @@ assign tilemem_sel_o    = pa_tile_sel ? pa_tile_sel  : pb_tile_sel;
 assign tilemem_addr_o   = pa_tile_sel ? pa_tile_addr : pb_tile_addr;
 
 video_playfield video_pf_a(
-    .stall_i(1'b0),                             // playfield A never stalls
+    .stall_i(1'b0),                                     // playfield A never stalls
     .v_visible_i(v_state == STATE_VISIBLE),
     .h_count_i(h_count),
     .h_line_last_pixel_i(h_line_last_pixel),
@@ -199,35 +199,35 @@ video_playfield video_pf_a(
 
 generate
     if (EN_VID_PF_B) begin : opt_PF_B
-        logic       pb_vram_rd;                             // last cycle was PB vram read flag
-        logic       pb_vram_rd_save;                        // PB vram read data saved flag
-        word_t      pb_vram_rd_data;                        // PB vram read data
-        logic       pb_tilemem_rd;                          // last cycle was PB tilemem read flag
-        logic       pb_tilemem_rd_save;                     // PB tilemem read data saved flag
-        word_t      pb_tilemem_rd_data;                     // PB tilemem read data
+        logic       pb_vram_rd;                         // last cycle was PB vram read flag
+        logic       pb_vram_rd_save;                    // PB vram read data saved flag
+        word_t      pb_vram_rd_data;                    // PB vram read data
+        logic       pb_tilemem_rd;                      // last cycle was PB tilemem read flag
+        logic       pb_tilemem_rd_save;                 // PB tilemem read data saved flag
+        word_t      pb_tilemem_rd_data;                 // PB tilemem read data
 
         always_ff @(posedge clk) begin
             // latch vram read data for playfield B
-            if (pb_vram_rd & ~pb_vram_rd_save) begin        // if was a vram read and result not already saved
-                pb_vram_rd_save <= 1'b1;                    // remember vram read saved
-                pb_vram_rd_data <= vram_data_i;             // save vram data
+            if (pb_vram_rd & ~pb_vram_rd_save) begin    // if was a vram read and result not already saved
+                pb_vram_rd_save <= 1'b1;                // remember vram read saved
+                pb_vram_rd_data <= vram_data_i;         // save vram data
             end
-            if (~pb_stall) begin                            // if not stalled, clear saved vram data
+            if (~pb_stall) begin                        // if not stalled, clear saved vram data
                 pb_vram_rd_save <= 1'b0;
             end
 
-            pb_vram_rd  <= pb_vram_sel;                     // remember if this cycle was reading vram
+            pb_vram_rd  <= pb_vram_sel;                 // remember if this cycle was reading vram
 
             // latch tilemem read data for playfield B
-            if (pb_tilemem_rd & ~pb_tilemem_rd_save) begin  // if was a tilemem read and result not already saved
-                pb_tilemem_rd_save <= 1'b1;                 // remember tilemem read saved
-                pb_tilemem_rd_data <= tilemem_data_i;       // save tilemem data
+            if (pb_tilemem_rd & ~pb_tilemem_rd_save) begin // if was a tilemem read and result not already saved
+                pb_tilemem_rd_save <= 1'b1;             // remember tilemem read saved
+                pb_tilemem_rd_data <= tilemem_data_i;   // save tilemem data
             end
-            if (~pb_stall) begin                            // if not stalled, clear saved tilemem data
+            if (~pb_stall) begin                        // if not stalled, clear saved tilemem data
                 pb_tilemem_rd_save <= 1'b0;
             end
 
-            pb_tilemem_rd  <= pb_tile_sel;                 // remember if this cycle was reading tilemem
+            pb_tilemem_rd  <= pb_tile_sel;              // remember if this cycle was reading tilemem
         end
 
         video_playfield video_pf_b(
@@ -236,7 +236,7 @@ generate
             .h_count_i(h_count),
             .h_line_last_pixel_i(h_line_last_pixel),
             .last_frame_pixel_i(last_frame_pixel),
-            .border_color_i(border_color),
+            .border_color_i('0),
             .vid_left_i(vid_left),
             .vid_right_i(vid_right),
             .vram_sel_o(pb_vram_sel),

@@ -204,17 +204,17 @@ static_assert(NUM_ELEMENTS(copper_list) < 1024, "copper list too long");
 // 320x200 copper
 // Copper list
 uint32_t copper_320x200[] = {
-    COP_WAIT_V(40),                         // wait  0, 40                   ; Wait for line 40, H position ignored
-    COP_MOVER(0x0065, PA_GFX_CTRL),         // mover 0x0065, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
-    COP_MOVER(0x0065, PB_GFX_CTRL),         // mover 0x0065, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
-    COP_WAIT_V(440),                        // wait  0, 440                  ; Wait for line 440, H position ignored
-    COP_MOVER(0x00E5, PA_GFX_CTRL),         // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
-    COP_MOVER(0x00E5, PB_GFX_CTRL),         // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
+    COP_WAIT_V(40),                        // wait  0, 40                   ; Wait for line 40, H position ignored
+    COP_MOVER(0x0065, PA_GFX_CTRL),        // mover 0x0065, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
+    COP_MOVER(0x0065, PB_GFX_CTRL),        // mover 0x0065, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
+    COP_WAIT_V(440),                       // wait  0, 440                  ; Wait for line 440, H position ignored
+    COP_MOVER(0x00E5, PA_GFX_CTRL),        // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
+    //    COP_MOVER(0x00E5, PB_GFX_CTRL),         // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
+    COP_MOVER((XR_TILE_ADDR + 0x1000), PB_LINE_ADDR),
+    COP_MOVER(0xF009, PB_GFX_CTRL),         // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
     COP_MOVER(0x0E07, PB_TILE_CTRL),        // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
     COP_MOVER(28, PB_LINE_LEN),
-    COP_MOVER((XR_TILE_ADDR + 0x1000), PB_LINE_ADDR),
-    COP_MOVER(0xF009, PB_GFX_CTRL),        // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
-    COP_WAIT_V(480),                       // wait  0, 440                  ; Wait for line 440, H position ignored
+    COP_WAIT_V(480),        // wait  0, 440                  ; Wait for line 440, H position ignored
     COP_MOVER(160, PB_LINE_LEN),
     COP_MOVER(0x000F, PB_TILE_CTRL),
     COP_MOVER(0x00E5, PA_GFX_CTRL),        // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
@@ -482,7 +482,7 @@ static inline void checkbail()
         xreg_setw(PB_GFX_CTRL, 0x0080);                                // text mode
         xreg_setw(PB_TILE_CTRL, 0x000F);                               // text mode
         xreg_setw(PB_LINE_LEN, xreg_getw_wait(VID_HSIZE) >> 3);        // line len
-
+        xreg_setw(PA_HV_FSCALE, 0x0000);
         restore_colors();
         print("\33c");
 
@@ -533,30 +533,26 @@ static void xr_textmode_pb()
     xr_text_columns = 28;
     xr_text_rows    = 20;
 
-    wait_vsync_start();
-
-    xmem_setw(XR_COLOR_A_ADDR, 0x0000);
+    wait_vsync();
+    xreg_setw(PB_GFX_CTRL, 0x0080);
     for (int i = 1; i < 256; i++)
     {
         uint16_t c = xmem_getw_wait(XR_COLOR_A_ADDR + i) & 0x0fff;
         xm_setw(XR_DATA, 0x0000 | c);
     }
-    for (int i = 0; i < 16; i++)
+    xr_cls();
+    xmem_setw(XR_COLOR_B_ADDR + 0xf0, 0x0000);        // set write address
+    for (int i = 1; i < 16; i++)
     {
-        xmem_setw(XR_COLOR_B_ADDR + 0xf0 + i, 0x8000 | i << 4);
+        xmem_setw(XR_COLOR_B_ADDR + 0xf0 + i, 0xf000 | i << 4);
     }
-    xmem_setw(XR_COLOR_B_ADDR, 0x0000);              // set write address
-    xreg_setw(VID_CTRL, 0xFF00);                     // set write address
-    xmem_setw(XR_COLOR_A_ADDR + 255, 0x0000);        // set write address
+    xmem_setw(XR_COLOR_B_ADDR, 0x0000);        // set write address
 
-    xreg_setw(VID_RIGHT, xreg_getw_wait(VID_HSIZE) - 1);        // set write address
-
+    wait_vsync();
     xreg_setw(PB_GFX_CTRL, 0xF00A);         // colorbase = 0xF0 tiled + 1-bpp + Hx3 + Vx2
     xreg_setw(PB_TILE_CTRL, 0x0E07);        // tile=0x0C00,tile=tile_mem, map=tile_mem, 8x8 tiles
     xreg_setw(PB_LINE_LEN, xr_text_columns);
     xreg_setw(PB_DISP_ADDR, xr_screen_addr);
-
-    xr_cls();
 }
 
 static void xr_msg_color(uint8_t c)
@@ -795,7 +791,7 @@ void show_test_pic(int pic_num, uint16_t addr)
     test_image * ti = &test_images[pic_num];
 
     uint16_t gfx_ctrl  = 0;
-    uint16_t gfx_ctrlb = xreg_getw_wait(PB_GFX_CTRL);
+    uint16_t gfx_ctrlb = 0x0080;
     uint16_t wpl       = 640 / 8;
     uint16_t wplb      = 0;
     uint16_t frac      = 0;
@@ -804,7 +800,7 @@ void show_test_pic(int pic_num, uint16_t addr)
     {
         case BM_MONO_ATTR:
             gfx_ctrl = 0x0040;
-            wpl      = (640 / 8) * 2;
+            wpl      = (640 / 8);
             break;
         case BM_4_BIT:
             gfx_ctrl = 0x0055;
@@ -882,9 +878,18 @@ void show_test_pic(int pic_num, uint16_t addr)
     {
         xm_setw(SYS_CTRL, 0x0F0F);        // enable Xosera vsync interrupt
     }
+
     wait_vsync();
-    xreg_setw(PA_GFX_CTRL, gfx_ctrl);
-    xreg_setw(PB_GFX_CTRL, gfx_ctrlb);
+    if (wplb == 0)
+    {
+        xreg_setw(PA_GFX_CTRL, gfx_ctrl);
+        xr_textmode_pb();
+    }
+    else
+    {
+        xreg_setw(PA_GFX_CTRL, gfx_ctrl);
+        xreg_setw(PB_GFX_CTRL, gfx_ctrlb);
+    }
 }
 
 static void load_sd_bitmap(const char * filename, int vaddr)
@@ -1029,7 +1034,7 @@ static inline void wait_blit_ready()
 {
     xwait_blit_full();
 }
-#define NUM_BOBS 11        // number of sprites (ideally no "red" border)
+#define NUM_BOBS 10        // number of sprites (ideally no "red" border)
 struct bob
 {
     int8_t   x_delta, y_delta;
@@ -1064,32 +1069,43 @@ void test_blit()
         xr_printfxy(0, 0, "Blit VRAM 128KB fill\n");        // set write address
 
         // fill VRAM
+        wait_vsync();
+        xmem_setw(XR_COLOR_B_ADDR + 250, 0xC000);        // set write address
+        xmem_setw(XR_COLOR_A_ADDR + 255, 0xf000);        // set write address
+
         for (int i = 0x100; i >= 0; i--)
         {
+            xmem_setw(XR_COLOR_A_ADDR + 255, 0xf000);        // set write address
             wait_blit_ready();
-            xreg_setw(BLIT_CTRL, 0x0013);                    // constA, constB, decrement
-            xreg_setw(BLIT_MOD_A, 0x0000);                   // no modulo A
-            xreg_setw(BLIT_SRC_A, i << 8 | i);               // A = fill pattern
-            xreg_setw(BLIT_MOD_B, 0x0000);                   // no modulo B
-            xreg_setw(BLIT_SRC_B, 0xFFFF);                   // AND with B (and disable transparency)
-            xreg_setw(BLIT_MOD_C, 0x0000);                   // no modulo C
-            xreg_setw(BLIT_VAL_C, 0x0000);                   // XOR with C
-            xreg_setw(BLIT_MOD_D, 0x0000);                   // no modulo D
-            xreg_setw(BLIT_DST_D, 0xFFFF);                   // VRAM display end address
-            xreg_setw(BLIT_SHIFT, 0xFF00);                   // no edge masking or shifting
-            xreg_setw(BLIT_LINES, 0x0000);                   // 1D
-            xreg_setw(BLIT_WORDS, 0x10000 - 1);              // 64KW VRAM
-            xmem_setw(XR_COLOR_A_ADDR + 255, 0xfff0);        // set write address
-            wait_blit_done();
-            xmem_setw(XR_COLOR_A_ADDR + 255, 0xf0f0);        // set write address
             wait_vsync();
+            wait_not_vsync();
+            while (xreg_getw_wait(SCANLINE) != 20)
+                ;
+            xmem_setw(XR_COLOR_A_ADDR + 255, 0xf0f0);        // set write address
+
+            xreg_setw(BLIT_CTRL, 0x0013);              // constA, constB, decrement
+            xreg_setw(BLIT_MOD_A, 0x0000);             // no modulo A
+            xreg_setw(BLIT_SRC_A, i << 8 | i);         // A = fill pattern
+            xreg_setw(BLIT_MOD_B, 0x0000);             // no modulo B
+            xreg_setw(BLIT_SRC_B, 0xFFFF);             // AND with B (and disable transparency)
+            xreg_setw(BLIT_MOD_C, 0x0000);             // no modulo C
+            xreg_setw(BLIT_VAL_C, 0x0000);             // XOR with C
+            xreg_setw(BLIT_MOD_D, 0x0000);             // no modulo D
+            xreg_setw(BLIT_DST_D, 0xFFFF);             // VRAM display end address
+            xreg_setw(BLIT_SHIFT, 0xFF00);             // no edge masking or shifting
+            xreg_setw(BLIT_LINES, 0x0000);             // 1D
+            xreg_setw(BLIT_WORDS, 0x10000 - 1);        // 64KW VRAM
+            wait_blit_done();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xff00);        // set write address
+            wait_vsync();
         }
 
         uint16_t daddr = 0x1000;
 
         uint16_t paddr = 0x9b00;
         show_test_pic(0, paddr);
+        xreg_setw(VID_RIGHT, xreg_getw_wait(VID_HSIZE) - 4);
+        xreg_setw(VID_CTRL, 0xFF00);
         xmem_setw(XR_COLOR_A_ADDR + 255, 0x0000);        // set write address
 
         xr_printfxy(0, 0, "Blit 320x240 16 color\n");        // set write address
@@ -1110,9 +1126,9 @@ void test_blit()
         xreg_setw(BLIT_WORDS, W_4BPP - 1);        // words to write -1
         wait_blit_done();
         xreg_setw(PA_DISP_ADDR, daddr);
-        wait_vsync();
 
         xr_printfxy(0, 0, "Blit 320x240 16 color\nShift right\n");        // set write address
+        wait_vsync_start();
         for (int i = 0; i < 64; i++)
         {
             wait_blit_ready();                              // make sure blit ready (previous blit started)
@@ -1133,13 +1149,14 @@ void test_blit()
 
             wait_blit_done();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xf0f0);        // set write address
-            wait_vsync();
+            wait_vsync_start();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xff00);        // set write address
-            checkbail();
         }
+        checkbail();
         xmem_setw(XR_COLOR_A_ADDR + 255, 0xFF0F);        // set write address
         delay_check(DELAY_TIME);
         xr_printfxy(0, 0, "Blit 320x240 16 color\nShift left (decrement)\n");        // set write address
+        wait_vsync_start();
         for (int i = 63; i >= 3; i--)
         {
             wait_blit_ready();                                       // make sure blit ready (previous blit started)
@@ -1160,10 +1177,10 @@ void test_blit()
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xfff0);        // set write address
             wait_blit_done();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xf0f0);        // set write address
-            wait_vsync();
+            wait_vsync_start();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xff00);        // set write address
-            checkbail();
         }
+        checkbail();
 
         xmem_setw(XR_COLOR_A_ADDR + 255, 0xFF0F);        // set write address
         delay_check(DELAY_TIME);
@@ -1326,7 +1343,9 @@ void test_dual_8bpp()
 
         dprintf("test_dual_8pp\n");
         xr_textmode_pb();
-        restore_colors();            // colormem A normal colors
+        xreg_setw(PA_GFX_CTRL, 0x0080);
+        restore_colors();        // colormem A normal colors
+
         restore_colors2(0x8);        // colormem B normal colors (alpha 50%)
         xr_printf("Dual 8-BPP blending\n");
 
@@ -1826,8 +1845,10 @@ void     xosera_test()
     dprintf("\nxosera_init(0)...");
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw_wait(VID_HSIZE), xreg_getw_wait(VID_VSIZE));
-    xreg_setw(PA_GFX_CTRL, 0x0000);        // border 0
     cpu_delay(1000);
+    wait_vsync();
+    xreg_setw(VID_CTRL, 0x0000);               // border color #0
+    xmem_setw(XR_COLOR_A_ADDR, 0x0000);        // color # = black
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
 
@@ -1982,7 +2003,6 @@ void     xosera_test()
             delay_check(DELAY_TIME);
             show_test_pic(TUT_PIC, 0x0000);
             delay_check(DELAY_TIME);
-            restore_colors();
             show_test_pic(SHUTTLE_PIC, 0x0000);
             delay_check(DELAY_TIME);
         }

@@ -487,7 +487,7 @@ always_comb begin
 `endif
 //        xv::XR_VID_LEFT[3:0]:       rd_vid_regs = 16'(vid_left);
 //        xv::XR_VID_RIGHT[3:0]:      rd_vid_regs = 16'(vid_right);
-        xv::XR_SCANLINE[3:0]:       rd_vid_regs = { (v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 14'(v_count) };
+        xv::XR_SCANLINE[3:0]:       rd_vid_regs = { (v_state != STATE_VISIBLE), /* (h_state != STATE_VISIBLE), 14'(v_count) */ 15'(v_count)};
 //        xv::XR_VERSION[3:0]:        rd_vid_regs = { 1'b`GITCLEAN, 3'b000, 12'h`VERSION };
 //        xv::XR_GITHASH_H[3:0]:      rd_vid_regs = githash[31:16];
 //        xv::XR_GITHASH_L[3:0]:      rd_vid_regs = githash[15:0];

@@ -95,107 +95,23 @@ uint8_t moto_m[] = {
 
 #if COPPER_TEST
 // Copper list
-const uint32_t copper_list[] = {
-    // change color 0 every 30 lines
-    COP_WAIT_V(30 * 0),
-    // color dot test
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-    COP_MOVEP(0xfff, 0),
-    COP_MOVEP(0x000, 0),
-
-    COP_WAIT_V(30 * 1),
-    COP_MOVEP(0x111, 0),
-    COP_WAIT_V(30 * 2),
-    COP_MOVEP(0x222, 0),
-    COP_WAIT_V(30 * 3),
-    COP_MOVEP(0x333, 0),
-    COP_WAIT_V(30 * 4),
-    COP_MOVEP(0x444, 0),
-    COP_WAIT_V(30 * 5),
-    COP_MOVEP(0x555, 0),
-    COP_WAIT_V(30 * 6),
-    COP_MOVEP(0x666, 0),
-    COP_WAIT_V(30 * 7),
-    COP_MOVEP(0x777, 0),
-    COP_WAIT_V(30 * 8),
-    COP_MOVEP(0x888, 0),
-    COP_WAIT_V(30 * 9),
-    COP_MOVEP(0x999, 0),
-    COP_WAIT_V(30 * 10),
-    COP_MOVEP(0xaaa, 0),
-    COP_WAIT_V(30 * 11),
-    COP_MOVEP(0xbbb, 0),
-    COP_WAIT_V(30 * 12),
-    COP_MOVEP(0xccc, 0),
-    COP_WAIT_V(30 * 13),
-    COP_MOVEP(0xddd, 0),
-    COP_WAIT_V(30 * 14),
-    COP_MOVEP(0xeee, 0),
-    COP_WAIT_V(30 * 15),
-    COP_MOVEP(0xfff, 0),
-    COP_WAIT_V(30 * 16),
-    COP_END()};
+const uint32_t copper_list[] = {COP_WAIT_V(30 * 0),  COP_MOVEP(0x000, 0),
+                                COP_WAIT_V(30 * 1),  COP_MOVEP(0x111, 0),
+                                COP_WAIT_V(30 * 2),  COP_MOVEP(0x222, 0),
+                                COP_WAIT_V(30 * 3),  COP_MOVEP(0x333, 0),
+                                COP_WAIT_V(30 * 4),  COP_MOVEP(0x444, 0),
+                                COP_WAIT_V(30 * 5),  COP_MOVEP(0x555, 0),
+                                COP_WAIT_V(30 * 6),  COP_MOVEP(0x666, 0),
+                                COP_WAIT_V(30 * 7),  COP_MOVEP(0x777, 0),
+                                COP_WAIT_V(30 * 8),  COP_MOVEP(0x888, 0),
+                                COP_WAIT_V(30 * 9),  COP_MOVEP(0x999, 0),
+                                COP_WAIT_V(30 * 10), COP_MOVEP(0xaaa, 0),
+                                COP_WAIT_V(30 * 11), COP_MOVEP(0xbbb, 0),
+                                COP_WAIT_V(30 * 12), COP_MOVEP(0xccc, 0),
+                                COP_WAIT_V(30 * 13), COP_MOVEP(0xddd, 0),
+                                COP_WAIT_V(30 * 14), COP_MOVEP(0xeee, 0),
+                                COP_WAIT_V(30 * 15), COP_MOVEP(0xfff, 0),
+                                COP_WAIT_V(30 * 16), COP_END()};
 
 const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
 
@@ -544,7 +460,7 @@ static void xr_textmode_pb()
     xmem_setw(XR_COLOR_B_ADDR + 0xf0, 0x0000);        // set write address
     for (int i = 1; i < 16; i++)
     {
-        xmem_setw(XR_COLOR_B_ADDR + 0xf0 + i, 0xf000 | i << 4);
+        xmem_setw(XR_COLOR_B_ADDR + 0xf0 + i, 0xf202 | i << 4);
     }
     xmem_setw(XR_COLOR_B_ADDR, 0x0000);        // set write address
 
@@ -1070,7 +986,7 @@ void test_blit()
 
         // fill VRAM
         wait_vsync();
-        xmem_setw(XR_COLOR_B_ADDR + 250, 0xC000);        // set write address
+        xmem_setw(XR_COLOR_B_ADDR + 250, 0x8000);        // set write address
         xmem_setw(XR_COLOR_A_ADDR + 255, 0xf000);        // set write address
 
         for (int i = 0x100; i >= 0; i--)
@@ -1129,7 +1045,7 @@ void test_blit()
 
         xr_printfxy(0, 0, "Blit 320x240 16 color\nShift right\n");        // set write address
         wait_vsync_start();
-        for (int i = 0; i < 64; i++)
+        for (int i = 0; i < 128; i++)
         {
             wait_blit_ready();                              // make sure blit ready (previous blit started)
             xreg_setw(BLIT_CTRL, 0x0002);                   // constB
@@ -1157,7 +1073,7 @@ void test_blit()
         delay_check(DELAY_TIME);
         xr_printfxy(0, 0, "Blit 320x240 16 color\nShift left (decrement)\n");        // set write address
         wait_vsync_start();
-        for (int i = 63; i >= 3; i--)
+        for (int i = 127; i >= 3; i--)
         {
             wait_blit_ready();                                       // make sure blit ready (previous blit started)
             xreg_setw(BLIT_CTRL, 0x0012);                            // constB
@@ -1343,11 +1259,10 @@ void test_dual_8bpp()
 
         dprintf("test_dual_8pp\n");
         xr_textmode_pb();
-        xreg_setw(PA_GFX_CTRL, 0x0080);
-        restore_colors();        // colormem A normal colors
-
-        restore_colors2(0x8);        // colormem B normal colors (alpha 50%)
         xr_printf("Dual 8-BPP blending\n");
+        xreg_setw(PA_GFX_CTRL, 0x0080);
+        restore_colors();            // colormem A normal colors
+        restore_colors2(0x8);        // colormem B normal colors (alpha 50%)
 
         uint16_t addrA = 0;             // start of VRAM
         uint16_t addrB = 0x8000;        // 2nd half of VRAM
@@ -1374,6 +1289,7 @@ void test_dual_8bpp()
             xm_setw(XR_DATA, copper_320x200[i] >> 16);
             xm_setw(XR_DATA, copper_320x200[i] & 0xffff);
         }
+        xreg_setw(COPP_CTRL, 0x8000);
         // set pf A 320x240 8bpp (cropped to 320x200)
         xreg_setw(PA_GFX_CTRL, 0x0065);
         xreg_setw(PA_TILE_CTRL, 0x000F);
@@ -1392,7 +1308,6 @@ void test_dual_8bpp()
         wait_vsync();
         xmem_setw(XR_COPPER_ADDR + (1 * 2) + 1, 0x0065);
         xmem_setw(XR_COPPER_ADDR + (2 * 2) + 1, 0x00E5);
-        xreg_setw(COPP_CTRL, 0x8000);
 
         uint16_t w = width;
         uint16_t x, y;

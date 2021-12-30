@@ -20,11 +20,33 @@
 
 ; See: https://github.com/XarkLabs/Xosera/blob/master/REFERENCE.md
 
+        ifd ROSCO_M68K_PRO
+XM_BASEADDR     equ     $ff800020   ; Xosera rosco_m68k register base address
+        else
 XM_BASEADDR     equ     $f80060     ; Xosera rosco_m68k register base address
+        endif
 
 ; Xosera Main Registers (XM Registers, directly CPU accessable)
 ; NOTE: Main register numbers are multiplied by 4 for rosco_m68k, because of even byte 6800 8-bit addressing plus
 ; 16-bit registers
+        ifd ROSCO_M68K_PRO
+XM_XR_ADDR      equ     $0          ; (R /W+) XR register number/address for XM_XR_DATA read/write access
+XM_XR_DATA      equ     $2          ; (R /W+) read/write XR register/memory at XM_XR_ADDR (XM_XR_ADDR incr. on write)
+XM_RD_INCR      equ     $4          ; (R /W ) increment value for XM_RD_ADDR read from XM_DATA/XM_DATA_2
+XM_RD_ADDR      equ     $6          ; (R /W+) VRAM address for reading from VRAM when XM_DATA/XM_DATA_2 is read
+XM_WR_INCR      equ     $8          ; (R /W ) increment value for XM_WR_ADDR on write to XM_DATA/XM_DATA_2
+XM_WR_ADDR      equ     $A          ; (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
+XM_DATA         equ     $C          ; (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR (and add XM_RD_INCR/XM_WR_INCR)
+XM_DATA_2       equ     $E          ; (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
+XM_SYS_CTRL     equ     $10         ; (R /W+) busy status, FPGA reconfig, interrupt status/control, write masking
+XM_TIMER        equ     $12         ; (RO   ) read 1/10th millisecond timer [TODO]
+XM_UNUSED_A     equ     $14         ; (R /W ) unused direct register 0xA [TODO]
+XM_UNUSED_B     equ     $16         ; (R /W ) unused direct register 0xB [TODO]
+XM_RW_INCR      equ     $18         ; (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
+XM_RW_ADDR      equ     $1A         ; (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
+XM_RW_DATA      equ     $1C         ; (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
+XM_RW_DATA_2    equ     $1E         ; (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
+        else
 XM_XR_ADDR      equ     $0          ; (R /W+) XR register number/address for XM_XR_DATA read/write access
 XM_XR_DATA      equ     $4          ; (R /W+) read/write XR register/memory at XM_XR_ADDR (XM_XR_ADDR incr. on write)
 XM_RD_INCR      equ     $8          ; (R /W ) increment value for XM_RD_ADDR read from XM_DATA/XM_DATA_2
@@ -41,7 +63,7 @@ XM_RW_INCR      equ     $30         ; (R /W ) XM_RW_ADDR increment value on read
 XM_RW_ADDR      equ     $34         ; (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
 XM_RW_DATA      equ     $38         ; (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
 XM_RW_DATA_2    equ     $3C         ; (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
-
+        endif
 ; XR Extended Register / Region (accessed via XM_XR_ADDR and XM_XR_DATA)
 
 ; XR Memory Regions

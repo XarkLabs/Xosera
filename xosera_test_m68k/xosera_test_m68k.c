@@ -1851,7 +1851,6 @@ void     xosera_test()
     xmem_setw(XR_COLOR_A_ADDR, 0x0000);        // color # = black
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
-
     xr_textmode_pb();
     xr_printf("Xosera Test for rosco_m68k\n");
 

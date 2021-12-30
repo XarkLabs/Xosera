@@ -48,6 +48,10 @@ KERMIT=kermit
 SERIAL?=/dev/modem
 BAUD?=9600
 
+ifeq ($(ROSCO_M68K_PRO),true)
+DEFINES+=-DROSCO_M68K_PRO
+endif
+
 # Output config (assume name of directory)
 PROGRAM_BASENAME=$(shell basename $(CURDIR))
 

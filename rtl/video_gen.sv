@@ -118,10 +118,10 @@ tile_addr_t         pb_tile_addr;                       // tile mem word address
 
 // video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
 typedef enum logic [1:0] {
-    STATE_PRE_SYNC  = 2'b00,
-    STATE_SYNC      = 2'b01,
-    STATE_POST_SYNC = 2'b10,
-    STATE_VISIBLE   = 2'b11
+    STATE_VISIBLE   = 2'b00,
+    STATE_PRE_SYNC  = 2'b01,
+    STATE_SYNC      = 2'b10,
+    STATE_POST_SYNC = 2'b11
 } video_signal_st;
 
 // sync generation signals (and combinatorial logic "next" versions)
@@ -164,7 +164,7 @@ video_playfield video_pf_a(
     .h_count_i(h_count),
     .h_line_last_pixel_i(h_line_last_pixel),
     .last_frame_pixel_i(last_frame_pixel),
-    .border_color_i(border_color),   // pre-XOR so colorbase doesn't affect border
+    .border_color_i(border_color ^ pa_colorbase),   // pre-XOR so colorbase doesn't affect border
     .vid_left_i(vid_left),
     .vid_right_i(vid_right),
     .vram_sel_o(pa_vram_sel),
@@ -236,7 +236,7 @@ generate
             .h_count_i(h_count),
             .h_line_last_pixel_i(h_line_last_pixel),
             .last_frame_pixel_i(last_frame_pixel),
-            .border_color_i('0),
+            .border_color_i(pb_colorbase),
             .vid_left_i(vid_left),
             .vid_right_i(vid_right),
             .vram_sel_o(pb_vram_sel),
@@ -368,7 +368,7 @@ always_ff @(posedge clk) begin
         if (vgen_reg_wr_en_i) begin
             case ({1'b0, vgen_reg_num_i})
                 xv::XR_VID_CTRL: begin
-                    border_color    <= vgen_reg_data_i[15:8] ^ pa_colorbase;
+                    border_color    <= vgen_reg_data_i[15:8];
                     intr_signal_o   <= vgen_reg_data_i[3:0];
                 end
                 xv::XR_COPP_CTRL: begin
@@ -481,13 +481,13 @@ end
 // video registers read
 always_comb begin
     case (vgen_reg_num_i[3:0])
-        xv::XR_VID_CTRL[3:0]:       rd_vid_regs = { border_color ^ pa_colorbase, 4'b0, intr_status_i };
+        xv::XR_VID_CTRL[3:0]:       rd_vid_regs = { border_color, 4'b0, intr_status_i };
 `ifdef ENABLE_COPP
         xv::XR_COPP_CTRL[3:0]:      rd_vid_regs = { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPP_W-1:0]};
 `endif
 //        xv::XR_VID_LEFT[3:0]:       rd_vid_regs = 16'(vid_left);
 //        xv::XR_VID_RIGHT[3:0]:      rd_vid_regs = 16'(vid_right);
-        xv::XR_SCANLINE[3:0]:       rd_vid_regs = { (v_state != STATE_VISIBLE), /* (h_state != STATE_VISIBLE), 14'(v_count) */ 15'(v_count)};
+        xv::XR_SCANLINE[3:0]:       rd_vid_regs = { (v_state != STATE_VISIBLE), 15'(v_count) };
 //        xv::XR_VERSION[3:0]:        rd_vid_regs = { 1'b`GITCLEAN, 3'b000, 12'h`VERSION };
 //        xv::XR_GITHASH_H[3:0]:      rd_vid_regs = githash[31:16];
 //        xv::XR_GITHASH_L[3:0]:      rd_vid_regs = githash[15:0];
@@ -543,14 +543,14 @@ always_comb h_state_next = (h_count == h_count_next_state) ? h_state + 1'b1 : h_
 always_comb begin
     // scanning horizontally left to right, offscreen pixels are on left before visible pixels
     case (h_state)
+        STATE_VISIBLE:
+            h_count_next_state = xv::TOTAL_WIDTH - 1;
         STATE_PRE_SYNC:
             h_count_next_state = xv::H_FRONT_PORCH - 1;
         STATE_SYNC:
             h_count_next_state = xv::H_FRONT_PORCH + xv::H_SYNC_PULSE - 1;
         STATE_POST_SYNC:
             h_count_next_state = xv::OFFSCREEN_WIDTH - 1;
-        STATE_VISIBLE:
-            h_count_next_state = xv::TOTAL_WIDTH - 1;
     endcase
 end
 
@@ -559,14 +559,14 @@ always_comb v_state_next = (h_line_last_pixel && v_count == v_count_next_state) 
 always_comb begin
     // scanning vertically top to bottom, offscreen lines are on bottom after visible lines
     case (v_state)
+        STATE_VISIBLE:
+            v_count_next_state = xv::VISIBLE_HEIGHT - 1;
         STATE_PRE_SYNC:
             v_count_next_state = xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH - 1;
         STATE_SYNC:
             v_count_next_state = xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH + xv::V_SYNC_PULSE - 1;
         STATE_POST_SYNC:
             v_count_next_state = xv::TOTAL_HEIGHT - 1;
-        STATE_VISIBLE:
-            v_count_next_state = xv::VISIBLE_HEIGHT - 1;
     endcase
 end
 
@@ -578,8 +578,8 @@ always_ff @(posedge clk) begin
         hsync_o             <= 1'b0;
         vsync_o             <= 1'b0;
         dv_de_o             <= 1'b0;
-        h_state             <= STATE_PRE_SYNC;
-        v_state             <= STATE_PRE_SYNC;  // check STATE_VISIBLE
+        h_state             <= STATE_VISIBLE;
+        v_state             <= STATE_VISIBLE;  // check STATE_VISIBLE
         h_count             <= '0;         // horizontal counter
         v_count             <= '0;         // vertical counter
 

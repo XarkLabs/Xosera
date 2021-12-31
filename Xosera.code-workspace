@@ -261,6 +261,7 @@
 			"HACK",
 			"FIXME",
 			"TODO"
-		]
+		],
+		"explorer.sortOrder": "type"
 	}
 }

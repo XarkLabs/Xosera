@@ -39,9 +39,6 @@
 bool xosera_sync();                        // true if Xosera present and responding
 bool xosera_init(int reconfig_num);        // wait a bit for Xosera to respond and optional reconfig (if 0 to 3)
 void xv_delay(uint32_t ms);                // delay milliseconds using Xosera TIMER
-void xv_vram_fill(uint32_t vram_addr, uint32_t numwords, uint32_t word_value);           // fill VRAM with word
-void xv_copy_to_vram(uint16_t * source, uint32_t vram_dest, uint32_t numbytes);          // copy to VRAM
-void xv_copy_from_vram(uint32_t vram_source, uint16_t * dest, uint32_t numbytes);        // copy from VRAM
 
 // Low-level C API reference:
 //
@@ -55,17 +52,36 @@ void xv_copy_from_vram(uint32_t vram_source, uint16_t * dest, uint32_t numbytes)
 // uint8_t  xm_getbh(xmreg)         (omit XM_ from xmreg name)
 // uint8_t  xm_getbl(xmreg)         (omit XM_ from xmreg name)
 //
+// XM status checks: (busy wait if condition true)
+// xwait_mem_busy()
+// xwait_blit_busy()
+// xwait_blit_full()
+//
 // set/get XR registers (extended registers):
 // void     xreg_setw(xreg, wval)  (omit XR_ from xreg name)
 // uint16_t xreg_getw(xreg)        (omit XR_ from xreg name)
 // uint8_t  xreg_getbh(xreg)       (omit XR_ from xreg name)
 // uint8_t  xreg_getbl(xreg)       (omit XR_ from xreg name)
+// void     xreg_setw_wait(xreg, wval)  (omit XR_ from xreg name)
+// uint16_t xreg_getw_wait(xreg)        (omit XR_ from xreg name)
+// uint8_t  xreg_getbh_wait(xreg)       (omit XR_ from xreg name)
+// uint8_t  xreg_getbl_wait(xreg)       (omit XR_ from xreg name)
 //
 // set/get XR memory region address:
 // void     xmem_setw(xrmem, wval)
 // uint16_t xmem_getw(xrmem)
 // uint8_t  xmem_getbh(xrmem)
 // uint8_t  xmem_getbl(xrmem)
+// void     xmem_setw_wait(xrmem, wval)
+// uint16_t xmem_getw_wait(xrmem)
+// uint8_t  xmem_getbh_wait(xrmem)
+// uint8_t  xmem_getbl_wait(xrmem)
+
+// NOTE: "wait" functions check for and will wait if there is memory contention.
+// In most cases, other than reading COLOR_MEM, wait will not be needed as
+// there will be enough free XR or VRAM memory cycles.  However, with certain video
+// modes (or with Copper doing lots of writes) the wait may be needed
+// for reliable operation (especially when reading).
 
 #include "xosera_m68k_defs.h"
 

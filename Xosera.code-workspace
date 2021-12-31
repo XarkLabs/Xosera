@@ -197,6 +197,7 @@
 			"XRGB",
 			"xrmem",
 			"xvid",
+			"xwait",
 			"Yosys"
 		],
 		"cSpell.allowCompoundWords": true,

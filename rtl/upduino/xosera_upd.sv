@@ -43,7 +43,7 @@
 //          [BUS_DATA4]   gpio_36 | 21           28 | gpio_45   [VGA_G0]
 //          [BUS_DATA5]   gpio_42 | 22           27 | gpio_47   [VGA_B0]
 //          [BUS_DATA6]   gpio_38 | 23           26 | gpio_46   [DV_DE]
-//          [BUS_DATA7]   gpio_28 | 24           25 | gpio_24   [DV_CLK]
+//          [BUS_DATA7]   gpio_28 | 24           25 | gpio_2    [DV_CLK]
 //                                -------------------
 // NOTE: Xosera assumes 12MHz OSC jumper is shorted, and R28 RGB LED jumper is cut (using RGB for input)
 

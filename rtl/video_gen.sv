@@ -24,37 +24,37 @@ module video_gen #(
 )
 (
     // video registers and control
-    input  wire logic           vgen_reg_wr_en_i,      // strobe to write internal config register number
-    input  wire logic  [4:0]    vgen_reg_num_i,        // internal config register number (for reads)
-    input  wire word_t          vgen_reg_data_i,       // data for internal config register
-    output      word_t          vgen_reg_data_o,       // register/status data reads
-    input wire  logic  [3:0]    intr_status_i,         // interrupt pending status
-    output      logic  [3:0]    intr_signal_o,         // generate interrupt signal
+    input  wire logic           vgen_reg_wr_en_i,       // strobe to write internal config register number
+    input  wire logic  [4:0]    vgen_reg_num_i,         // internal config register number (for reads)
+    input  wire word_t          vgen_reg_data_i,        // data for internal config register
+    output      word_t          vgen_reg_data_o,        // register/status data reads
+    input wire  logic  [3:0]    intr_status_i,          // interrupt pending status
+    output      logic  [3:0]    intr_signal_o,          // generate interrupt signal
 `ifdef ENABLE_COPP
     // outputs for copper
-    output      logic           copp_reg_wr_o,         // COPP_CTRL write strobe
-    output      word_t          copp_reg_data_o,       // copper reg data
-    output      hres_t          h_count_o,             // Horizontal video counter
-    output      vres_t          v_count_o,             // Vertical video counter
+    output      logic           copp_reg_wr_o,          // COPP_CTRL write strobe
+    output      word_t          copp_reg_data_o,        // copper reg data
+    output      hres_t          h_count_o,              // Horizontal video counter
+    output      vres_t          v_count_o,              // Vertical video counter
 `endif
     // video memories
-    output      logic           vram_sel_o,            // vram read select
-    output      addr_t          vram_addr_o,           // vram word address out (16x64K)
-    input  wire word_t          vram_data_i,           // vram word data in
-    output      logic           tilemem_sel_o,         // tile mem read select
-    output      tile_addr_t     tilemem_addr_o,  // tile mem word address out (16x5K)
-    input  wire word_t          tilemem_data_i,        // tile mem word data in
+    output      logic           vram_sel_o,             // vram read select
+    output      addr_t          vram_addr_o,            // vram word address out (16x64K)
+    input  wire word_t          vram_data_i,            // vram word data in
+    output      logic           tilemem_sel_o,          // tile mem read select
+    output      tile_addr_t     tilemem_addr_o,         // tile mem word address out (16x5K)
+    input  wire word_t          tilemem_data_i,         // tile mem word data in
     // video signal outputs
-    output      color_t         colorA_index_o,        // color palette index output (16x256)
-    output      color_t         colorB_index_o,        // color palette index output (16x256)
-    output      logic           vsync_o, hsync_o,      // video sync outputs
-    output      logic           dv_de_o,               // video active signal (needed for HDMI)
+    output      color_t         colorA_index_o,         // color palette index output (16x256)
+    output      color_t         colorB_index_o,         // color palette index output (16x256)
+    output      logic           vsync_o, hsync_o,       // video sync outputs
+    output      logic           dv_de_o,                // video active signal (needed for HDMI)
     // standard signals
-    input  wire logic           reset_i,               // system reset in
-    input  wire logic           clk                    // clock (video pixel clock)
+    input  wire logic           reset_i,                // system reset in
+    input  wire logic           clk                     // clock (video pixel clock)
 );
 
-localparam [31:0] githash = 32'H`GITHASH;
+//localparam [31:0] githash = 32'H`GITHASH;
 
 // video generation signals
 color_t             border_color;
@@ -74,6 +74,8 @@ logic               pa_tile_in_vram;                    // tile memory 0=tilemem
 logic  [3:0]        pa_tile_height;                     // max height of tile cell
 logic  [1:0]        pa_h_repeat;                        // horizontal pixel repeat
 logic  [1:0]        pa_v_repeat;                        // vertical pixel repeat
+logic  [2:0]        pa_h_frac_repeat;                   // horizontal fractional pixel repeat count
+logic  [2:0]        pa_v_frac_repeat;                   // vertical fractional pixel repeat count
 logic  [4:0]        pa_fine_hscroll;                    // horizontal fine scroll (8 pixel * 4 for repeat)
 logic  [5:0]        pa_fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
 logic               pa_line_start_set;                  // true if pa_line_start changed (register write)
@@ -99,6 +101,8 @@ logic               pb_tile_in_vram;                    // 0=tilemem, 1=vram
 logic  [3:0]        pb_tile_height;                     // max height of tile cell
 logic  [1:0]        pb_h_repeat;                        // horizontal pixel repeat
 logic  [1:0]        pb_v_repeat;                        // vertical pixel repeat
+logic  [2:0]        pb_h_frac_repeat;                   // horizontal fractional pixel repeat
+logic  [2:0]        pb_v_frac_repeat;                   // vertical fractional pixel repeat
 logic  [4:0]        pb_fine_hscroll;                    // horizontal fine scroll (8 pixel * 4 for repeat)
 logic  [5:0]        pb_fine_vscroll;                    // vertical fine scroll (16 lines * 4 for repeat)
 logic               pb_line_start_set;                  // true if pa_line_start changed (register write)
@@ -114,10 +118,10 @@ tile_addr_t         pb_tile_addr;                       // tile mem word address
 
 // video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
 typedef enum logic [1:0] {
-    STATE_PRE_SYNC  = 2'b00,
-    STATE_SYNC      = 2'b01,
-    STATE_POST_SYNC = 2'b10,
-    STATE_VISIBLE   = 2'b11
+    STATE_VISIBLE   = 2'b00,
+    STATE_PRE_SYNC  = 2'b01,
+    STATE_SYNC      = 2'b10,
+    STATE_POST_SYNC = 2'b11
 } video_signal_st;
 
 // sync generation signals (and combinatorial logic "next" versions)
@@ -155,12 +159,12 @@ assign tilemem_sel_o    = pa_tile_sel ? pa_tile_sel  : pb_tile_sel;
 assign tilemem_addr_o   = pa_tile_sel ? pa_tile_addr : pb_tile_addr;
 
 video_playfield video_pf_a(
-    .stall_i(1'b0),                             // playfield A never stalls
+    .stall_i(1'b0),                                     // playfield A never stalls
     .v_visible_i(v_state == STATE_VISIBLE),
     .h_count_i(h_count),
     .h_line_last_pixel_i(h_line_last_pixel),
     .last_frame_pixel_i(last_frame_pixel),
-    .border_color_i(border_color),
+    .border_color_i(border_color ^ pa_colorbase),   // pre-XOR so colorbase doesn't affect border
     .vid_left_i(vid_left),
     .vid_right_i(vid_right),
     .vram_sel_o(pa_vram_sel),
@@ -181,6 +185,8 @@ video_playfield video_pf_a(
     .pf_tile_height_i(pa_tile_height),
     .pf_h_repeat_i(pa_h_repeat),
     .pf_v_repeat_i(pa_v_repeat),
+    .pf_h_frac_repeat_i(pa_h_frac_repeat),
+    .pf_v_frac_repeat_i(pa_v_frac_repeat),
     .pf_fine_hscroll_i(pa_fine_hscroll),
     .pf_fine_vscroll_i(pa_fine_vscroll),
     .pf_line_start_set_i(pa_line_start_set),
@@ -193,35 +199,35 @@ video_playfield video_pf_a(
 
 generate
     if (EN_VID_PF_B) begin : opt_PF_B
-        logic       pb_vram_rd;                             // last cycle was PB vram read flag
-        logic       pb_vram_rd_save;                        // PB vram read data saved flag
-        word_t      pb_vram_rd_data;                        // PB vram read data
-        logic       pb_tilemem_rd;                          // last cycle was PB tilemem read flag
-        logic       pb_tilemem_rd_save;                     // PB tilemem read data saved flag
-        word_t      pb_tilemem_rd_data;                     // PB tilemem read data
+        logic       pb_vram_rd;                         // last cycle was PB vram read flag
+        logic       pb_vram_rd_save;                    // PB vram read data saved flag
+        word_t      pb_vram_rd_data;                    // PB vram read data
+        logic       pb_tilemem_rd;                      // last cycle was PB tilemem read flag
+        logic       pb_tilemem_rd_save;                 // PB tilemem read data saved flag
+        word_t      pb_tilemem_rd_data;                 // PB tilemem read data
 
         always_ff @(posedge clk) begin
             // latch vram read data for playfield B
-            if (pb_vram_rd & ~pb_vram_rd_save) begin        // if was a vram read and result not already saved
-                pb_vram_rd_save <= 1'b1;                    // remember vram read saved
-                pb_vram_rd_data <= vram_data_i;             // save vram data
+            if (pb_vram_rd & ~pb_vram_rd_save) begin    // if was a vram read and result not already saved
+                pb_vram_rd_save <= 1'b1;                // remember vram read saved
+                pb_vram_rd_data <= vram_data_i;         // save vram data
             end
-            if (~pb_stall) begin                            // if not stalled, clear saved vram data
+            if (~pb_stall) begin                        // if not stalled, clear saved vram data
                 pb_vram_rd_save <= 1'b0;
             end
 
-            pb_vram_rd  <= pb_vram_sel;                     // remember if this cycle was reading vram
+            pb_vram_rd  <= pb_vram_sel;                 // remember if this cycle was reading vram
 
             // latch tilemem read data for playfield B
-            if (pb_tilemem_rd & ~pb_tilemem_rd_save) begin  // if was a tilemem read and result not already saved
-                pb_tilemem_rd_save <= 1'b1;                 // remember tilemem read saved
-                pb_tilemem_rd_data <= tilemem_data_i;       // save tilemem data
+            if (pb_tilemem_rd & ~pb_tilemem_rd_save) begin // if was a tilemem read and result not already saved
+                pb_tilemem_rd_save <= 1'b1;             // remember tilemem read saved
+                pb_tilemem_rd_data <= tilemem_data_i;   // save tilemem data
             end
-            if (~pb_stall) begin                            // if not stalled, clear saved tilemem data
+            if (~pb_stall) begin                        // if not stalled, clear saved tilemem data
                 pb_tilemem_rd_save <= 1'b0;
             end
 
-            pb_tilemem_rd  <= pb_tile_sel;                 // remember if this cycle was reading tilemem
+            pb_tilemem_rd  <= pb_tile_sel;              // remember if this cycle was reading tilemem
         end
 
         video_playfield video_pf_b(
@@ -230,7 +236,7 @@ generate
             .h_count_i(h_count),
             .h_line_last_pixel_i(h_line_last_pixel),
             .last_frame_pixel_i(last_frame_pixel),
-            .border_color_i(8'h00),                         // TODO: set border color index for pf_b?
+            .border_color_i(pb_colorbase),
             .vid_left_i(vid_left),
             .vid_right_i(vid_right),
             .vram_sel_o(pb_vram_sel),
@@ -251,6 +257,8 @@ generate
             .pf_tile_height_i(pb_tile_height),
             .pf_h_repeat_i(pb_h_repeat),
             .pf_v_repeat_i(pb_v_repeat),
+            .pf_h_frac_repeat_i(pb_h_frac_repeat),
+            .pf_v_frac_repeat_i(pb_v_frac_repeat),
             .pf_fine_hscroll_i(pb_fine_hscroll),
             .pf_fine_vscroll_i(pb_fine_vscroll),
             .pf_line_start_set_i(pb_line_start_set),
@@ -311,6 +319,8 @@ always_ff @(posedge clk) begin
         pa_colorbase        <= 8'h00;
         pa_h_repeat         <= 2'b0;
         pa_v_repeat         <= 2'b0;
+        pa_h_frac_repeat    <= '0;
+        pa_v_frac_repeat    <= '0;
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_gfx_ctrl_set     <= 1'b0;
 
@@ -328,6 +338,8 @@ always_ff @(posedge clk) begin
         pb_colorbase        <= 8'h00;
         pb_h_repeat         <= 2'b0;
         pb_v_repeat         <= 2'b0;
+        pb_h_frac_repeat    <= '0;
+        pb_v_frac_repeat    <= '0;
         pb_line_start_set   <= 1'b0;            // indicates user line address set
         pb_gfx_ctrl_set     <= 1'b0;
 
@@ -344,6 +356,10 @@ always_ff @(posedge clk) begin
     end else begin
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_gfx_ctrl_set     <= 1'b0;
+
+        pb_line_start_set   <= 1'b0;            // indicates user line address set
+        pb_gfx_ctrl_set     <= 1'b0;
+
         intr_signal_o       <= 4'b0;
 `ifdef ENABLE_COPP
         copp_reg_wr_o       <= 1'b0;
@@ -371,10 +387,10 @@ always_ff @(posedge clk) begin
                 xv::XR_UNUSED_05: begin
                 end
                 xv::XR_VID_LEFT: begin
-                    vid_left       <= $bits(vid_left)'(vgen_reg_data_i);
+                    vid_left        <= $bits(vid_left)'(vgen_reg_data_i);
                 end
                 xv::XR_VID_RIGHT: begin
-                    vid_right      <= $bits(vid_right)'(vgen_reg_data_i);
+                    vid_right       <= $bits(vid_right)'(vgen_reg_data_i);
                 end
                 // playfield A
                 xv::XR_PA_GFX_CTRL: begin
@@ -396,7 +412,7 @@ always_ff @(posedge clk) begin
                     pa_start_addr   <= vgen_reg_data_i;
                 end
                 xv::XR_PA_LINE_LEN: begin
-                    pa_line_len   <= vgen_reg_data_i;
+                    pa_line_len     <= vgen_reg_data_i;
                 end
                 xv::XR_PA_HV_SCROLL: begin
                     pa_fine_hscroll <= vgen_reg_data_i[12:8];
@@ -405,6 +421,10 @@ always_ff @(posedge clk) begin
                 xv::XR_PA_LINE_ADDR: begin
                     pa_line_start_set <= 1'b1;               // changed flag
                     line_set_addr   <= vgen_reg_data_i;
+                end
+                xv::XR_PA_HV_FSCALE: begin
+                    pa_h_frac_repeat <= vgen_reg_data_i[6:4];
+                    pa_v_frac_repeat <= vgen_reg_data_i[2:0];
                 end
                 // playfield B
                 xv::XR_PB_GFX_CTRL: begin
@@ -425,15 +445,19 @@ always_ff @(posedge clk) begin
                     pb_start_addr   <= vgen_reg_data_i;
                 end
                 xv::XR_PB_LINE_LEN: begin
-                    pb_line_len   <= vgen_reg_data_i;
+                    pb_line_len     <= vgen_reg_data_i;
                 end
                 xv::XR_PB_HV_SCROLL: begin
                     pb_fine_hscroll <= vgen_reg_data_i[12:8];
                     pb_fine_vscroll <= vgen_reg_data_i[5:0];
                 end
                 xv::XR_PB_LINE_ADDR: begin
-                    pb_line_start_set   <= 1'b1;
-                    line_set_addr       <= vgen_reg_data_i;
+                    pb_line_start_set <= 1'b1;
+                    line_set_addr   <= vgen_reg_data_i;
+                end
+                xv::XR_PB_HV_FSCALE: begin
+                    pb_h_frac_repeat <= vgen_reg_data_i[6:4];
+                    pb_v_frac_repeat <= vgen_reg_data_i[2:0];
                 end
                 default: begin
                 end
@@ -446,28 +470,48 @@ always_ff @(posedge clk) begin
     end
 end
 
-// video registers read
+word_t  rd_vid_regs;
+word_t  rd_pf_regs;
+
+// video config registers read/write
 always_ff @(posedge clk) begin
-    case ({ 1'b0, vgen_reg_num_i})
-        xv::XR_VID_CTRL:       vgen_reg_data_o <= { border_color, 4'b0, intr_status_i };
+    vgen_reg_data_o  <= vgen_reg_num_i[4] ? rd_pf_regs : rd_vid_regs;
+end
+
+// video registers read
+always_comb begin
+    case (vgen_reg_num_i[3:0])
+        xv::XR_VID_CTRL[3:0]:       rd_vid_regs = { border_color, 4'b0, intr_status_i };
 `ifdef ENABLE_COPP
-        xv::XR_COPP_CTRL:      vgen_reg_data_o <= { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPP_W-1:0]};
+        xv::XR_COPP_CTRL[3:0]:      rd_vid_regs = { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPP_W-1:0]};
 `endif
-        xv::XR_VID_LEFT:       vgen_reg_data_o <= 16'(vid_left);
-        xv::XR_VID_RIGHT:      vgen_reg_data_o <= 16'(vid_right);
-        xv::XR_SCANLINE:       vgen_reg_data_o <= { (v_state != STATE_VISIBLE), (h_state != STATE_VISIBLE), 14'(v_count) };
-        xv::XR_VERSION:        vgen_reg_data_o <= { 1'b`GITCLEAN, 3'b000, 12'h`VERSION };
-        xv::XR_GITHASH_H:      vgen_reg_data_o <= githash[31:16];
-        xv::XR_GITHASH_L:      vgen_reg_data_o <= githash[15:0];
-        xv::XR_VID_HSIZE:      vgen_reg_data_o <= 16'(xv::VISIBLE_WIDTH);
-        xv::XR_VID_VSIZE:      vgen_reg_data_o <= 16'(xv::VISIBLE_HEIGHT);
-        xv::XR_VID_VFREQ:      vgen_reg_data_o <= xv::REFRESH_FREQ;
-        xv::XR_PA_GFX_CTRL:    vgen_reg_data_o <= { pa_colorbase, pa_blank, pa_bitmap, pa_bpp, pa_h_repeat, pa_v_repeat };
-        xv::XR_PA_TILE_CTRL:   vgen_reg_data_o <= { pa_tile_bank, pa_disp_in_tile, pa_tile_in_vram, 4'b0, pa_tile_height };
-        xv::XR_PA_DISP_ADDR:   vgen_reg_data_o <= pa_start_addr;
-        xv::XR_PA_LINE_LEN:    vgen_reg_data_o <= pa_line_len;
-        xv::XR_PA_HV_SCROLL:   vgen_reg_data_o <= { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
-        default:               vgen_reg_data_o <= 16'h0000;
+//        xv::XR_VID_LEFT[3:0]:       rd_vid_regs = 16'(vid_left);
+//        xv::XR_VID_RIGHT[3:0]:      rd_vid_regs = 16'(vid_right);
+        xv::XR_SCANLINE[3:0]:       rd_vid_regs = { (v_state != STATE_VISIBLE), 15'(v_count) };
+//        xv::XR_VERSION[3:0]:        rd_vid_regs = { 1'b`GITCLEAN, 3'b000, 12'h`VERSION };
+//        xv::XR_GITHASH_H[3:0]:      rd_vid_regs = githash[31:16];
+//        xv::XR_GITHASH_L[3:0]:      rd_vid_regs = githash[15:0];
+        xv::XR_VID_HSIZE[3:0]:      rd_vid_regs = 16'(xv::VISIBLE_WIDTH);
+        xv::XR_VID_VSIZE[3:0]:      rd_vid_regs = 16'(xv::VISIBLE_HEIGHT);
+//        xv::XR_VID_VFREQ[3:0]:      rd_vid_regs = xv::REFRESH_FREQ;
+        default:                    rd_vid_regs = 16'h0000;
+    endcase
+end
+
+// video registers read
+always_comb begin
+    case (vgen_reg_num_i[3:0])
+        xv::XR_PA_GFX_CTRL[3:0]:    rd_pf_regs = { pa_colorbase, pa_blank, pa_bitmap, pa_bpp, pa_h_repeat, pa_v_repeat };
+        xv::XR_PA_TILE_CTRL[3:0]:   rd_pf_regs = { pa_tile_bank, pa_disp_in_tile, pa_tile_in_vram, 4'b0, pa_tile_height };
+        xv::XR_PA_DISP_ADDR[3:0]:   rd_pf_regs = pa_start_addr;
+        xv::XR_PA_LINE_LEN[3:0]:    rd_pf_regs = pa_line_len;
+//        xv::XR_PA_HV_SCROLL[3:0]:   rd_pf_regs = { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
+        xv::XR_PB_GFX_CTRL[3:0]:    rd_pf_regs = { pb_colorbase, pb_blank, pb_bitmap, pb_bpp, pb_h_repeat, pb_v_repeat };
+        xv::XR_PB_TILE_CTRL[3:0]:   rd_pf_regs = { pb_tile_bank, pb_disp_in_tile, pb_tile_in_vram, 4'b0, pb_tile_height };
+        xv::XR_PB_DISP_ADDR[3:0]:   rd_pf_regs = pb_start_addr;
+        xv::XR_PB_LINE_LEN[3:0]:    rd_pf_regs = pb_line_len;
+//        xv::XR_PB_HV_SCROLL[3:0]:   rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
+        default:                    rd_pf_regs = 16'h0000;
     endcase
 end
 
@@ -499,14 +543,14 @@ always_comb h_state_next = (h_count == h_count_next_state) ? h_state + 1'b1 : h_
 always_comb begin
     // scanning horizontally left to right, offscreen pixels are on left before visible pixels
     case (h_state)
+        STATE_VISIBLE:
+            h_count_next_state = xv::TOTAL_WIDTH - 1;
         STATE_PRE_SYNC:
             h_count_next_state = xv::H_FRONT_PORCH - 1;
         STATE_SYNC:
             h_count_next_state = xv::H_FRONT_PORCH + xv::H_SYNC_PULSE - 1;
         STATE_POST_SYNC:
             h_count_next_state = xv::OFFSCREEN_WIDTH - 1;
-        STATE_VISIBLE:
-            h_count_next_state = xv::TOTAL_WIDTH - 1;
     endcase
 end
 
@@ -515,14 +559,14 @@ always_comb v_state_next = (h_line_last_pixel && v_count == v_count_next_state) 
 always_comb begin
     // scanning vertically top to bottom, offscreen lines are on bottom after visible lines
     case (v_state)
+        STATE_VISIBLE:
+            v_count_next_state = xv::VISIBLE_HEIGHT - 1;
         STATE_PRE_SYNC:
             v_count_next_state = xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH - 1;
         STATE_SYNC:
             v_count_next_state = xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH + xv::V_SYNC_PULSE - 1;
         STATE_POST_SYNC:
             v_count_next_state = xv::TOTAL_HEIGHT - 1;
-        STATE_VISIBLE:
-            v_count_next_state = xv::VISIBLE_HEIGHT - 1;
     endcase
 end
 
@@ -534,8 +578,8 @@ always_ff @(posedge clk) begin
         hsync_o             <= 1'b0;
         vsync_o             <= 1'b0;
         dv_de_o             <= 1'b0;
-        h_state             <= STATE_PRE_SYNC;
-        v_state             <= STATE_PRE_SYNC;  // check STATE_VISIBLE
+        h_state             <= STATE_VISIBLE;
+        v_state             <= STATE_VISIBLE;  // check STATE_VISIBLE
         h_count             <= '0;         // horizontal counter
         v_count             <= '0;         // vertical counter
 

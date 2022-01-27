@@ -155,22 +155,24 @@ When `XM_DATA_2` is read data from VRAM at `XM_RD_ADDR` is returned and `XM_RD_I
 new VRAM address begins.  
 When `XM_DATA_2` is written, begins writing value to VRAM at `XM_WR_ADDR` and adds `XM_WR_INCR` to `XM_WR_ADDR`.  
 **NOTE:** This register is identical to `XM_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from `XM_DATA` for
-additional speed (however, it does have its own nibble write mask).
+additional transfer speed.
 
 **0x8 `XM_SYS_CTRL` (R/W+) - draw busy status, read wait, reconfigure, interrupt control and write masking control**  
-<img src="./pics/wd_XM_SYS_CTRL.svg">
-
+<img src="./pics/wd_XM_SYS_CTRL.svg">  
 **Read draw busy, read wait, write to reboot FPGA or read/write interrupt control/status and `XM_DATA` nibble write mask.**  
 Read:  
-[11:8] `XM_DATA`/`XM_DATA_2` nibble write masks  
-[7] memory operation pending (memory contention)  
-[6] blit busy  
-[5] blit queue full  
-[3:0] interrupt enables  
+&nbsp;&nbsp;&nbsp;&nbsp;`[11:8]`  interrupt enables  
+&nbsp;&nbsp;&nbsp;&nbsp;`[7]` memory operation pending (when memory contention)  
+&nbsp;&nbsp;&nbsp;&nbsp;`[6]` blit busy  (operation in progress or queued)
+&nbsp;&nbsp;&nbsp;&nbsp;`[5]` blit queue full (don't write to blit registers)  
+&nbsp;&nbsp;&nbsp;&nbsp;`[4]` value of flag `RW_RD_INC` flag
+&nbsp;&nbsp;&nbsp;&nbsp;`[3:0]` `XM_DATA`/`XM_DATA_2`/`RW_DATA` nibble write masks  
 Write:  
-[15] reboot FPGA to [14:13] configuration  
-[11:8] `XM_DATA`/`XM_DATA_2` nibble write masks  
-[3:0] interrupt mask (1 allows corresponding interrupt source to generate CPU interrupt).  
+&nbsp;&nbsp;&nbsp;&nbsp;`[15]` reboot FPGA to `[14:13]` configuration 0-3
+&nbsp;&nbsp;&nbsp;&nbsp;`[14:13]` reboot configuration
+&nbsp;&nbsp;&nbsp;&nbsp;`[11:8]` `XM_DATA`/`XM_DATA_2` nibble write masks  
+&nbsp;&nbsp;&nbsp;&nbsp;`[4]` set `RW_RD_INC` flag (controls if a *read* of  `RW_DATA` adds `RW_INCR` to `RW_ADDR`)
+&nbsp;&nbsp;&nbsp;&nbsp;`[3:0]` interrupt mask (1 allows corresponding interrupt source to generate CPU interrupt).  
 [#TODO optimize layout for 68k status polling]
 
 **0x9 `XM_TIMER` (R/W) - 1/10<sup>th</sup> of millisecond timer (0 - 6553.5 ms) / interrupt clear**  
@@ -197,9 +199,9 @@ Unused direct register 0xB
 **0xC `XM_RW_INCR` (R/W) - increment value for `XM_RW_ADDR` when `XM_RW_DATA`/`XM_RW_DATA_2`is read or written**  
 <img src="./pics/wd_XM_RW_INCR.svg">
 
-**Read or write twos-complement value added to`XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2`is read from or written to.**  
+**Read or write twos-complement value added to`XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2`is written to (or read if `RW_RD_INC` flag set).**  
 Allows quickly reading/writing Xosera VRAM from`XM_RW_DATA`/`XM_RW_DATA_2` when using a fixed `XM_RW_ADDR` increment.
-Added to `XM_RW_ADDR` when `XM_RW_DATA` or`XM_RW_DATA_2` is read from (twos complement so value can be negative).
+Added to `XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2` is written (twos complement so value can be negative).   If the `RW_RD_INC` flag is set in `XM_SYS_CTRL`, then a read of `XM_RW_DATA` or`XM_RW_DATA_2` will also add `XM_RW_INCR` to `XM_RW_ADDR` (this is useful when using `XM_RW_DATA` *only* for reading).
 
 **0xD `XM_RW_ADDR` (R/W+) - VRAM read/write address for accessed at `XM_RW_DATA`/`XM_RW_DATA_2`**  
 <img src="./pics/wd_XM_RW_ADDR.svg">
@@ -207,29 +209,28 @@ Added to `XM_RW_ADDR` when `XM_RW_DATA` or`XM_RW_DATA_2` is read from (twos comp
 **Read or write VRAM address read when`XM_RW_DATA` or `XM_RW_DATA_2`is read from or written to.**  
 Specifies VRAM address used when reading or writing from VRAM via`XM_RW_DATA`/`XM_RW_DATA_2`.
 When `XM_RW_ADDR` is written (or incremented by `XM_RW_INCR`) the corresponding word in VRAM is read and made available for
-reading at `WR_DATA` or `WR_DATA_2`.  
-Since this read always happens (even when only intending to write), prefer using RW_ADDR for
-reading (but fairly small VRAM access overhead).
+reading at `XM_RW_DATA` or `XM_RW_DATA_2`.  
+Since this read always happens (even when only a write was intended), prefer using `RW_ADDR` only when
+reading is needed (however, it is a *tiny* VRAM access overhead).  The `RW_RD_INC` flag in `XM_SYS_CTRL` controls if `XM_RW_INCR` is added to `XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2` are *read* (it is always added on a *write*).
 
 **0xE `XM_RW_DATA` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**  
 <img src="./pics/wd_XM_RW_DATA.svg">
 
 **Read or write VRAM value in VRAM at`XM_RW_ADDR` and add `XM_RW_INCR` to `XM_RW_ADDR`.**  
-When`XM_RW_DATA`is read, returns data from VRAM at `XM_RW_ADDR`, adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM
-value.  
+When`XM_RW_DATA`is read, returns data from VRAM at `XM_RW_ADDR`.  If `RW_RD_INC` flag in `XM_SYS_CTRL`is set it also adds `XM_RW_INCR` to `XM_RW_ADDR` and immediately begins pre-reading new the new VRAM address.  
 When `XM_RW_DATA` is written, begins writing value to VRAM at `XM_RW_ADDR` and adds `XM_RW_INCR` to `XM_RW_ADDR` and begins
-reading new VRAM value.
+reading new VRAM value.  
+The `RW_RD_INC` flag in `XM_SYS_CTRL` controls if `XM_RW_INCR` is added to `XM_RW_ADDR` when `XM_RW_DATA` is *read* (it is always added on a *write*).
 
 **0xF `XM_RW_DATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**  
 <img src="./pics/wd_XM_RW_DATA.svg">
 
 **Read or write VRAM value in VRAM at`XM_RW_ADDR` and add `XM_RW_INCR` to `XM_RW_ADDR`.**  
-When`XM_RW_DATA_2`is read, returns data from VRAM at `XM_RW_ADDR`, adds `XM_RW_INCR` to `XM_RW_ADDR` and begins reading new VRAM
-value.  
+When`XM_RW_DATA_2`is read, returns data from VRAM at `XM_RW_ADDR`.  If `RW_RD_INC` flag in `XM_SYS_CTRL`is set it also adds `XM_RW_INCR` to `XM_RW_ADDR` and immediately begins pre-reading new the new VRAM address.
 When `XM_RW_DATA_2` is written, begins writing value to VRAM at `XM_RW_ADDR` and adds `XM_RW_INCR` to `XM_RW_ADDR` and begins
 reading new VRAM value.  
-**NOTE:** This register is identical to `XM_RW_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from`XM_RW_DATA`
-for additional speed.
+The `RW_RD_INC` flag in `XM_SYS_CTRL` controls if `XM_RW_INCR` is added to `XM_RW_ADDR` when `XM_RW_DATA_2` is *read* (it is always added on a *write*).  
+**NOTE:** This register is identical to `XM_RW_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from`XM_RW_DATA` for additional transfer speed.
 ___
 
 ## Xosera Extended Register / Extended Memory Region Summary
@@ -367,7 +368,7 @@ ___
 | 0x13  | `XR_PA_LINE_LEN`  | R/W | playfield A display line width in words                      |
 | 0x14  | `XR_PA_HV_SCROLL` | R/W | playfield A horizontal and vertical fine scroll              |
 | 0x15  | `XR_PA_LINE_ADDR` | WO  | playfield A scanline start address (loaded at start of line) |
-| 0x16  | `XR_PA_UNUSED_16` | -/- |                                                              |
+| 0x16  | `XR_PA_HV_FSCALE` | R/W | playfield A horizontal and vertical fractional scaling       |
 | 0x17  | `XR_PA_UNUSED_17` | -/- |                                                              |
 | 0x18  | `XR_PB_GFX_CTRL`  | R/W | playfield B graphics control                                 |
 | 0x19  | `XR_PB_TILE_CTRL` | R/W | playfield B tile control                                     |
@@ -375,14 +376,14 @@ ___
 | 0x1B  | `XR_PB_LINE_LEN`  | R/W | playfield B display line width in words                      |
 | 0x1C  | `XR_PB_HV_SCROLL` | R/W | playfield B horizontal and vertical fine scroll              |
 | 0x1D  | `XR_PB_LINE_ADDR` | WO  | playfield B scanline start address (loaded at start of line) |
-| 0x1E  | `XR_PB_UNUSED_1E` | -/- |                                                              |
+| 0x16  | `XR_PB_HV_FSCALE` | R/W | playfield B horizontal and vertical fractional scaling       |
 | 0x1F  | `XR_PB_UNUSED_1F` | -/- |                                                              |
 ___
 
 ### Playfield A & B Control XR Registers Details
 
-**0x10 `XR_PA_GFX_CTRL` (R/W) - playfield A (foreground) graphics control**  
-**0x18 `XR_PB_GFX_CTRL` (R/W) - playfield B (background) graphics control**  
+**0x10 `XR_PA_GFX_CTRL` (R/W) - playfield A (base) graphics control**  
+**0x18 `XR_PB_GFX_CTRL` (R/W) - playfield B (overlay) graphics control**  
 <img src="./pics/wd_XR_Px_GFX_CTRL.svg">
 
 **playfield A/B graphics control**  
@@ -394,8 +395,8 @@ bpp selects bits-per-pixel or the number of color index bits per pixel (see "Gra
 H repeat selects the number of native pixels wide an Xosera pixel will be (1-4).  
 V repeat selects the number of native pixels tall an Xosera pixel will be (1-4).  
 
-**0x11 `XR_PA_TILE_CTRL` (R/W) - playfield A (foreground) tile control**  
-**0x19 `XR_PB_TILE_CTRL` (R/W) - playfield B (background) tile control**  
+**0x11 `XR_PA_TILE_CTRL` (R/W) - playfield A (base) tile control**  
+**0x19 `XR_PB_TILE_CTRL` (R/W) - playfield B (overlay) tile control**  
 <img src="./pics/wd_XR_Px_TILE_CTRL.svg">
 
 **playfield A/B tile control**  
@@ -406,15 +407,15 @@ tile selects tile definitions in XR TILEMAP memory or VRAM (5KW of tile XR memor
 tile height selects the tile height-1 from (0-15 for up to 8x16). Tiles are stored as either 8 or 16 lines high. Tile lines past
 height are truncated when displayed (e.g., tile height of 11 would display 8x12 of 8x16 tile).
 
-**0x12 `XR_PA_DISP_ADDR` (R/W) - playfield A (foreground) display VRAM start address**  
-**0x1A `XR_PB_DISP_ADDR` (R/W) - playfield B (background) display VRAM start address**  
+**0x12 `XR_PA_DISP_ADDR` (R/W) - playfield A (base) display VRAM start address**  
+**0x1A `XR_PB_DISP_ADDR` (R/W) - playfield B (overlay) display VRAM start address**  
 <img src="./pics/wd_XR_Px_DISP_ADDR.svg">
 
 **playfield A/B display start address**  
 Address in VRAM for start of playfield display (tiled or bitmap).
 
-**0x13 `XR_PA_LINE_LEN` (R/W) - playfield A (foreground) display line word length**  
-**0x1B `XR_PB_LINE_LEN` (R/W) - playfield B (background) display line word length**  
+**0x13 `XR_PA_LINE_LEN` (R/W) - playfield A (base) display line word length**  
+**0x1B `XR_PB_LINE_LEN` (R/W) - playfield B (overlay) display line word length**  
 <img src="./pics/wd_XR_Px_LINE_LEN.svg">
 
 **playfield A/B display line word length**  
@@ -422,27 +423,34 @@ Length in words for each display line (i.e., the amount added to line start addr
 of the display).  
 Twos complement, so negative values are okay (for reverse scan line order in memory).
 
-**0x14 `XR_PA_HV_SCROLL` (R/W) - playfield A (foreground) horizontal and vertical fine scroll**  
-**0x1C `XR_PB_HV_SCROLL` (R/W) - playfield B (background) horizontal and vertical fine scroll**  
+**0x14 `XR_PA_HV_SCROLL` (R/W) - playfield A (base) horizontal and vertical fine scroll**  
+**0x1C `XR_PB_HV_SCROLL` (R/W) - playfield B (overlay) horizontal and vertical fine scroll**  
 <img src="./pics/wd_XR_Px_HV_SCROLL.svg">
 
 **playfield A/B  horizontal and vertical fine scroll**  
-horizontal fine scroll should be constrained to the scaled width of 8 pixels or 1 tile (e.g., HSCALE 1x = 0-7, 2x = 0-15, 3x =
+Horizontal fine scroll should be constrained to the scaled width of 8 pixels or 1 tile (e.g., `H_REPEAT` 1x = 0-7, 2x = 0-15, 3x =
 0-23 and 4x = 0-31).  
-vertical fine scroll should be constrained to the scaled height of a tile or (one less than the tile-height times VSCALE).
+vertical fine scroll should be constrained to the scaled height of a tile or (one less than the tile-height times `V_REPEAT`).
 (But hey, we will see what happens, it might be fine...)
 
-**0x15 `XR_PA_LINE_ADDR` (WO) - playfield A (foreground) display VRAM line address**  
-**0x1D `XR_PB_LINE_ADDR` (WO) - playfield B (background) display VRAM line address**  
+**0x15 `XR_PA_LINE_ADDR` (WO) - playfield A (base) display VRAM line address**  
+**0x1D `XR_PB_LINE_ADDR` (WO) - playfield B (overlay) display VRAM line address**  
 <img src="./pics/wd_XR_Px_LINE_ADDR.svg">
 
 **playfield A/B display line address**  
 Address in VRAM for start of next scanline (tiled or bitmap). This is generally used to allow the copper to change the display
 address per scanline. Write-only.
 
-**0x16 `XR_PA_UNUSED_16` (-/-) - unused XR PA register 0x16**  
-**0x1E `XR_PB_UNUSED_1E` (-/-) - unused XR PB register 0x1E**  
-Unused XR playfield registers 0x16, 0x1E
+**0x16 `XR_PA_HV_FSCALE` (R/W) - playfield A (base) horizontal and vertical fractional scale 0x16**  
+**0x1E `XR_PB_HV_FSCALE` (R/W) - playfield B (overlay) horizontal and vertical fractional scale 0x1E**  
+<img src="./pics/wd_XR_Px_HV_FSCALE.svg">  
+Fractional scale factor to *repeat* a native pixel column and/or scanline to reduce pixel resolution (the "fractional" part accumulates until an entire row/column is repeated).  
+Will repeat the color of a native column or scan-line every N+1<sup>th</sup> column or line (see native resolution scaling table above, values rounded to integer values).  
+This repeat scaling is applied in addition to the integer pixel repeat (so a repeat value of 3x and fractional scale of 1 [repeat every line], would make 6x effective scale).  
+NOTE: Handy to reduce VRAM consumption a bit and to get the correct aspect ratio on "classic" 320x200 or 640x400 artwork.
+
+vertical fine scroll should be constrained to the scaled height of a tile or (one less than the tile-height times VSCALE).
+(But hey, we will see what happens, it might be fine...)
 
 **0x17 `XR_PA_UNUSED_17` (-/-) - unused XR PA register 0x17**  
 **0x1F `XR_PB_UNUSED_1F` (-/-) - unused XR PB register 0x1F**  
@@ -510,15 +518,10 @@ right and left edges respectively, sicne each line will be drawn right to left).
 `XR_BLIT_MOD_A`, `XR_BLIT_MOD_B` and `XR_BLIT_MOD_D` values will still be added each line (so typically they would be
 negated).
 
-`DECR` mode can be useful for overlapping blitter operations and "scrolling" VRAM, when the destination would overwrite
-the source mid-operation. For example, when copying an overlapping source and destination image rectangle a few pixels
-directly to the right (where the first pixels of each line copied would overwrite uncopied source pixels on each line).
-If lines of an image operation don't overlap, then the `XR_BLIT_MOD_A`, `XR_BLIT_MOD_B` and `XR_BLIT_MOD_D` can be
-negated to copy lines in reverse order, but keeping pixels right to left).
+`DECR` mode can be useful for overlapping blitter operations and "scrolling" VRAM, when the destination would overwrite the source mid-operation. For example, when copying an overlapping source and destination image rectangle a few pixels directly to the right (where the first pixels of each line copied would overwrite uncopied source pixels on each line).  
+If lines of an image operation don't overlap, then the `XR_BLIT_MOD_A`, `XR_BLIT_MOD_B` and `XR_BLIT_MOD_D` can be negated to copy lines in reverse order, but keeping pixels right to left).
 
-**NOTE:** Full `DECR` mode has turned out to be rather "expensive" (in area and speed) in the FPGA implementation. If
-this continues to be an issue, then the ability to "left shift" in `DECR` mode may be removed. This is only strictly
-needed in cases similar to the example outlined above, with overlap on each line (and there are workarounds).
+**NOTE:** Full `DECR` mode, with a left-shift has turned out to be rather "expensive" (in area and speed) in the FPGA implementation. If this continues to be an issue, then the ability to "left shift" in `DECR` mode may be removed. This is only strictly needed in cases similar to the example outlined above, with overlap on each line (and there are workarounds).  The ability to decrement `XR_BLIT_SRC_A`, `XR_BLIT_SRC_B` and `XR_BLIT_DST_D` pointers each word is planned to be retained.
 
 #### Blitter Operation Status
 

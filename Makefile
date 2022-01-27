@@ -141,7 +141,6 @@ golden:
 		cp -v rtl/upduino/logs/xosera_upd_vga_*_yosys.log ./xosera_gateware && \
 		cp -v rtl/upduino/logs/xosera_upd_vga_*_nextpnr.log ./xosera_gateware && \
 		cp -v rtl/upduino/xosera_upd_vga_*.json ./xosera_gateware && \
-		cp -v rtl/upduino/xosera_upd_vga_*.asc ./xosera_gateware && \
 		cp -v rtl/upduino/xosera_upd_vga_*.bin ./xosera_gateware ; \
 		cp -v rtl/xosera_board_vga.bin ./xosera_gateware ; \
 	fi

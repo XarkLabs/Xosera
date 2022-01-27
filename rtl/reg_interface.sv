@@ -63,6 +63,8 @@ word_t          reg_rw_incr;            // VRAM read/write increment
 addr_t          reg_rw_addr;            // VRAM read/write address
 word_t          reg_rw_data;            // word read from VRAM (for RW_ADDR)
 
+logic           reg_rw_rd_inc;          // flag to enable RW_ADDR add of RW_INCR on read
+
 // read flags
 logic           xr_rd;                  // flag for XR_DATA read outstanding
 logic           vram_rd;                // flag for DATA read outstanding
@@ -140,7 +142,7 @@ always_comb begin
         xv::XM_DATA_2:
             bus_data_o  = !bus_bytesel ? reg_rd_data[15:8]      : reg_rd_data[7:0];
         xv::XM_SYS_CTRL:
-            bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { mem_wait, blit_busy_i, blit_full_i, 1'b0, regs_wrmask_o };
+            bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { mem_wait, blit_busy_i, blit_full_i, reg_rw_rd_inc, regs_wrmask_o };
         xv::XM_TIMER:
 `ifdef ENABLE_TIMERLATCH
             bus_data_o  = !bus_bytesel ? reg_timer[15:8]        : timer_latch_val;
@@ -226,6 +228,8 @@ always_ff @(posedge clk) begin
 `ifdef ENABLE_TIMERLATCH
         timer_latch_val <= 8'h00;
 `endif
+        reg_rw_rd_inc <= '0;
+
     end else begin
 
         intr_clear_o    <= 4'b0;
@@ -241,7 +245,9 @@ always_ff @(posedge clk) begin
             // if rw read then save rw data, increment rw_addr
             if (vram_rw_rd) begin
                 reg_rw_data    <= regs_data_i;
-                reg_rw_addr     <= reg_rw_addr + reg_rw_incr;   // TODO: optional rw_addr read incr
+                if (reg_rw_rd_inc) begin
+                    reg_rw_addr     <= reg_rw_addr + reg_rw_incr;
+                end
             end
 
             // if we did a wr write, increment wr addr
@@ -355,6 +361,7 @@ always_ff @(posedge clk) begin
                     regs_wr_o           <= 1'b1;            // write
                 end
                 xv::XM_SYS_CTRL: begin
+                    reg_rw_rd_inc       <= bus_data_byte[4];
                     regs_wrmask_o       <= bus_data_byte[3:0];
                 end
                 xv::XM_TIMER: begin

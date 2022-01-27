@@ -1,0 +1,45 @@
+{
+    "reg": [
+        {
+            "bits": 3,
+            "name": "vert. fractional scale",
+            "type": 4,
+            "attr": [
+                "0=480 lines",
+                "1=240 lines",
+                "2=320 lines",
+                "3=360 lines",
+                "4=384 lines",
+                "5=400 lines",
+                "6=411 lines",
+                "7=420 lines"
+            ]
+        },
+        {
+            "bits": 5,
+            "type": 1
+        },
+        {
+            "bits": 3,
+            "name": "horiz. fractional scale",
+            "type": 4,
+            "attr": [
+                "0=848 / 640 pixels",
+                "1=424 / 320 pixels",
+                "2=565 / 426 pixels",
+                "3=636 / 480 pixels",
+                "4=678 / 512 pixels",
+                "5=706 / 533 pixels",
+                "6=726 / 548 pixels",
+                "7=742 / 560 pixels"
+            ]
+        },
+        {
+            "bits": 5,
+            "type": 1
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

@@ -407,11 +407,12 @@ static inline void xansi_draw_cursor(xansiterm_data * td)
         xv_prep();
 
         bool gfx_change =
-            (((uint16_t)(td->gfx_ctrl ^ xreg_getw(PA_GFX_CTRL)) & 0x007f) != 0) ||        // gfx_ctrl mode bits changed
-            (td->vram_base != xreg_getw(PA_DISP_ADDR)) ||                                 // display address changed
-            (td->h_size != xreg_getw(VID_HSIZE)) ||                                       // screen video mode H changed
-            (td->v_size != xreg_getw(VID_VSIZE)) ||                                       // screen video mode V changed
-            (xreg_getw(PA_LINE_LEN) != (td->line_len ? td->line_len : td->cols));         // line length changed
+            (((uint16_t)(td->gfx_ctrl ^ xreg_getw_wait(PA_GFX_CTRL)) & 0x007f) !=
+             0) ||                                                    // gfx_ctrl mode bits changed
+            (td->vram_base != xreg_getw_wait(PA_DISP_ADDR)) ||        // display address changed
+            (td->h_size != xreg_getw_wait(VID_HSIZE)) ||              // screen video mode H changed
+            (td->v_size != xreg_getw_wait(VID_VSIZE)) ||              // screen video mode V changed
+            (xreg_getw_wait(PA_LINE_LEN) != (td->line_len ? td->line_len : td->cols));        // line length changed
 
         if (gfx_change)
             return;
@@ -512,19 +513,32 @@ static void xansi_reset(bool reset_colormap)
     uint16_t tile_ctrl_val = td->tile_ctrl[td->cur_font];
     uint16_t tile_w        = ((!bitmap || bpp < 2) ? 8 : (bpp == 2) ? 4 : 1) * h_rpt;
     uint16_t tile_h        = ((bitmap) ? 1 : ((tile_ctrl_val & 0xf) + 1)) * v_rpt;
-    uint16_t h_size        = xreg_getw(VID_HSIZE);
-    uint16_t v_size        = xreg_getw(VID_VSIZE);
+    uint16_t h_size        = xreg_getw_wait(VID_HSIZE);
+    uint16_t v_size        = xreg_getw_wait(VID_VSIZE);
+    uint16_t hv_frac       = xreg_getw_wait(PA_HV_FSCALE);
+    uint16_t h_frac        = (hv_frac & 0x0700) >> 8;
+    uint16_t v_frac        = hv_frac & 0x7;
     uint16_t rows          = td->lines_high;
     uint16_t cols          = td->line_len;
 
+    if (h_frac)
+    {
+        h_size -= h_size / (h_frac + 1);
+    }
+
+    if (v_frac)
+    {
+        v_size -= v_size / (v_frac + 1);
+    }
+
     if (rows == 0)
     {
-        rows = (v_size + tile_h - 1) / tile_h;        // calc text rows
+        rows = v_size / tile_h;        // calc full text rows
     }
 
     if (cols == 0)
     {
-        cols = (h_size + tile_w - 1) / tile_w;        // calc text columns
+        cols = h_size / tile_w;        // calc full text columns
     }
 
     uint16_t prev_end = td->vram_end;
@@ -555,9 +569,9 @@ static void xansi_reset(bool reset_colormap)
          cols,
          rows);
 
-    while ((xreg_getw(SCANLINE) & 0x8000))
+    while (!(xreg_getw_wait(SCANLINE) & 0x8000))
         ;
-    while (!(xreg_getw(SCANLINE) & 0x8000))
+    while ((xreg_getw_wait(SCANLINE) & 0x8000))
         ;
 
     xreg_setw(PA_GFX_CTRL, gfx_ctrl_val);
@@ -646,8 +660,8 @@ static void xansi_processctrl(xansiterm_data * td, char cdata)
     {
         xv_prep();
 
-        if (td->h_size != xreg_getw(VID_HSIZE) || td->v_size != xreg_getw(VID_VSIZE) ||
-            td->cols != xreg_getw(PA_LINE_LEN))
+        if (td->h_size != xreg_getw_wait(VID_HSIZE) || td->v_size != xreg_getw_wait(VID_VSIZE) ||
+            td->cols != xreg_getw_wait(PA_LINE_LEN))
         {
             xansi_reset(false);
         }
@@ -989,7 +1003,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                     // VT:  <CSI>?3h    DECCOLM 132 (106) column    EXTENSION: video mode 16:9 (848x480)
                     // VT:  <CSI>?3l    DECCOLM 80 column           EXTENSION: video mode 4:3 (640x480)
                     uint16_t res = (cdata == 'h') ? 848 : 640;
-                    if (xreg_getw(VID_HSIZE) != res)
+                    if (xreg_getw_wait(VID_HSIZE) != res)
                     {
                         uint16_t config = (res == 640) ? 0 : 1;
                         LOGF("<reconfig #%d>\n", config);
@@ -1114,7 +1128,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                 }
                 else if (num_z == 68)
                 {
-                    uint16_t vercode = xreg_getw(VERSION);
+                    uint16_t vercode = xreg_getw_wait(VERSION);
                     char *   strptr  = td->send_buffer;
                     td->send_index   = 0;
 
@@ -1801,7 +1815,7 @@ bool xansiterm_INIT()
 
     xansi_reset(true);
     char     verstr[10];
-    uint16_t ver = xreg_getw(VERSION);
+    uint16_t ver = xreg_getw_wait(VERSION);
     xansiterm_PRINT(xansiterm_banner);
     char * vs = verstr;
     str_dec(&vs, (ver >> 8) & 0xf);

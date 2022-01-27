@@ -62,6 +62,10 @@
 #define XM_RW_DATA   0x38        // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
 #define XM_RW_DATA_2 0x3C        // (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
 
+#define SYS_CTRL_MEMWAIT_B  7
+#define SYS_CTRL_BLITBUSY_B 6
+#define SYS_CTRL_BLITFULL_B 5
+
 #define MK_SYS_CTRL(reboot, bootcfg, intena, wrmask)                                                                   \
     (XB_(reboot, 15, 1) | XB_(bootcfg, 14, 2) | XB_(intena, 11, 4) | XB_(wrmask, 3, 0))
 
@@ -93,8 +97,8 @@
 #define XR_PA_DISP_ADDR 0x12        // (R /W) playfield A display VRAM start address
 #define XR_PA_LINE_LEN  0x13        // (R /W) playfield A display line width in words
 #define XR_PA_HV_SCROLL 0x14        // (R /W) playfield A horizontal and vertical fine scroll
-#define XR_PA_LINE_ADDR 0x15        // (R /W) playfield A scanline start address (loaded at start of line)
-#define XR_PA_UNUSED_16 0x16        //
+#define XR_PA_LINE_ADDR 0x15        // (- /W) playfield A scanline start address (loaded at start of line)
+#define XR_PA_HV_FSCALE 0x16        // (R /W) playfield A horizontal and vertical fractional scale
 #define XR_PA_UNUSED_17 0x17        //
 
 // Playfield B Control XR Registers
@@ -103,8 +107,8 @@
 #define XR_PB_DISP_ADDR 0x1A        // (R /W) playfield B display VRAM start address
 #define XR_PB_LINE_LEN  0x1B        // (R /W) playfield B display line width in words
 #define XR_PB_HV_SCROLL 0x1C        // (R /W) playfield B horizontal and vertical fine scroll
-#define XR_PB_LINE_ADDR 0x1D        // (R /W) playfield B scanline start address (loaded at start of line)
-#define XR_PB_UNUSED_1E 0x1E        //
+#define XR_PB_LINE_ADDR 0x1D        // (- /W) playfield B scanline start address (loaded at start of line)
+#define XR_PB_HV_FSCALE 0x1E        // (R /W) playfield B horizontal and vertical fractional scale
 #define XR_PB_UNUSED_1F 0x1F        //
 
 #define XR_GFX_BPP_1 0        // Px_GFX_CTRL.bpp

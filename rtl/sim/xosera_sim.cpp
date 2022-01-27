@@ -34,8 +34,8 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 8        // video frames to dump to VCD file (and then screen-shot and exit)
-#define MAX_UPLOADS      8        // maximum number of "payload" uploads
+#define MAX_TRACE_FRAMES 10        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_UPLOADS      8         // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
 vluint64_t main_time         = 0;
@@ -148,7 +148,7 @@ class BusInterface
         XR_PA_LINE_LEN  = 0x13,        //  playfield A display line width in words
         XR_PA_HV_SCROLL = 0x14,        //  playfield A horizontal and vertical fine scroll
         XR_PA_LINE_ADDR = 0x15,        //  playfield A scanline start address (loaded at start of line)
-        XR_PA_UNUSED_16 = 0x16,        //
+        XR_PA_HV_FSCALE = 0x16,        //  playfield A horizontal and vertical fractional scale
         XR_PA_UNUSED_17 = 0x17,        //
 
         // Playfield B Control XR Registers
@@ -158,7 +158,7 @@ class BusInterface
         XR_PB_LINE_LEN  = 0x1B,        //  playfield B display line width in words
         XR_PB_HV_SCROLL = 0x1C,        //  playfield B horizontal and vertical fine scroll
         XR_PB_LINE_ADDR = 0x1D,        //  playfield B scanline start address (loaded at start of line)
-        XR_PB_UNUSED_1E = 0x1E,        //
+        XR_PB_HV_FSCALE = 0x1E,        //  playfield B horizontal and vertical fractional scale
         XR_PB_UNUSED_1F = 0x1F,        //
 
         // Blitter Registers
@@ -199,7 +199,7 @@ class BusInterface
     int     data_upload_index;
 
     static int      test_data_len;
-    static uint16_t test_data[16384];
+    static uint16_t test_data[32768];
 
 public:
 public:
@@ -276,6 +276,14 @@ public:
             {
                 last_time = bus_time + 1;
 
+                // logonly_printf("%5d >= %5d [@bt=%lu] INDEX=%9d 0x%04x%s\n",
+                //                bus_time,
+                //                last_time,
+                //                main_time,
+                //                index,
+                //                test_data[index],
+                //                data_upload ? " UPLOAD" : "");
+
                 // REG_END
                 if (!data_upload && test_data[index] == 0xffff)
                 {
@@ -283,6 +291,7 @@ public:
                     done      = true;
                     enable    = false;
                     last_time = bus_time - 1;
+                    logonly_printf("%5d >= new last_time = %5d\n", bus_time, last_time);
                     return;
                 }
                 // REG_WAITVSYNC
@@ -331,6 +340,8 @@ public:
                         index++;
                         last_read_val = 0;
                         wait_blit     = false;
+                        logonly_printf(
+                            "%5d WB >= [@bt=%lu] INDEX=%9d 0x%04x\n", bus_time, main_time, index, test_data[index]);
                         return;
                     }
                     else if (!wait_blit)
@@ -341,7 +352,8 @@ public:
                     index--;
                     return;
                 }
-                else if (!data_upload && (test_data[index] & 0xfffe) == 0xfff0)
+
+                if (!data_upload && (test_data[index] & 0xfffe) == 0xfff0)
                 {
                     data_upload       = upload_size[data_upload_num] > 0;
                     data_upload_mode  = test_data[index] & 0x1;
@@ -446,6 +458,7 @@ public:
                         }
                         else if (++index >= test_data_len)
                         {
+                            logonly_printf("*** END of test_data_len ***\n");
                             enable = false;
                         }
                         break;
@@ -457,6 +470,10 @@ public:
                 {
                     state = BUS_START;
                 }
+            }
+            else
+            {
+                //                logonly_printf("%5d < %5d INDEX=%9d\n", bus_time, last_time, index);
             }
         }
     }
@@ -501,13 +518,29 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR  ",
 #define H_LOGO (16)
 
 BusInterface bus;
-int          BusInterface::test_data_len    = 999;
-uint16_t     BusInterface::test_data[16384] = {
+int          BusInterface::test_data_len    = 32767;
+uint16_t     BusInterface::test_data[32768] = {
     // test data
+
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
+
+    REG_RW(LFSR),
+    REG_RW(LFSR),
+
+
     REG_WAITVSYNC(),        // show boot screen
                             //    REG_WAITVTOP(),         // show boot screen
+
+    REG_W(RW_INCR, 0x1),
+    REG_W(RW_ADDR, 0x1234),
+    REG_RW(RW_DATA),
+    REG_RW(RW_DATA),
+    REG_B(SYS_CTRL, 0x1F),
+    REG_W(RW_INCR, 0x1),
+    REG_W(RW_ADDR, 0x1234),
+    REG_RW(RW_DATA),
+    REG_RW(RW_DATA),
 
     XREG_SETW(PA_GFX_CTRL, 0x005F),         // bitmap, 4-bpp, Hx4, Vx4
     XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
@@ -533,7 +566,6 @@ uint16_t     BusInterface::test_data[16384] = {
     XREG_SETW(BLIT_LINES, H_4BPP - 1),             // screen height -1
     XREG_SETW(BLIT_WORDS, W_4BPP - 1),             // screen width in words -1
     REG_WAIT_BLIT_DONE(),
-    REG_WAITVSYNC(),
 
     // fill screen with dither with 0 = opaque
     REG_WAIT_BLIT_READY(),
@@ -554,8 +586,8 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
     REG_W(WR_ADDR, 0xF000),
     REG_UPLOAD(),
+    // REG_WAITVTOP(),
     REG_WAITVSYNC(),
-    REG_WAITVTOP(),
     //    REG_END(),
 
     // 2D moto blit 0, 0
@@ -806,7 +838,7 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_WAIT_BLIT_DONE(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
-
+#if 1
     // true color hack test
 
     XREG_SETW(PA_GFX_CTRL, 0x0065),         // bitmap, 8-bpp, Hx2, Vx2
@@ -828,8 +860,31 @@ uint16_t     BusInterface::test_data[16384] = {
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),        // RG 8-bpp + 4-bpp B
 
-    REG_WAITVSYNC(),
+// 16-color 320x200 color tut
+#endif
     REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(PA_HV_FSCALE, 0x0005),        // 400 line scale
+
+    XREG_SETW(PA_GFX_CTRL, 0x0055),           // bitmap, 8-bpp, Hx2, Vx2
+    XREG_SETW(PA_TILE_CTRL, 0x000F),          // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    XREG_SETW(PA_DISP_ADDR, 0x0000),          // display start address
+    XREG_SETW(PA_LINE_LEN, (320 / 4)),        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
+
+    XREG_SETW(PB_GFX_CTRL, 0x0080),        // disable
+
+    REG_W(XR_ADDR, XR_COLOR_ADDR),        // upload color palette
+    REG_UPLOAD_AUX(),
+
+    REG_W(WR_INCR, 0x0001),        // tut
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),        // RG 8-bpp + 4-bpp B
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
 
 #if 0
 #if 0

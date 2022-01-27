@@ -120,7 +120,7 @@ typedef enum logic [5:0] {
     XR_PA_LINE_LEN  = 6'h13,            // (R /W) playfield A display line width in words
     XR_PA_HV_SCROLL = 6'h14,            // (R /W) playfield A horizontal and vertical fine scroll
     XR_PA_LINE_ADDR = 6'h15,            // (R /W) playfield A scanline start address (loaded at start of line)
-    XR_PA_UNUSED_16 = 6'h16,            //
+    XR_PA_HV_FSCALE = 6'h16,            // (R /W) playfield A horizontal and vertical pixel scale (reduce pixel res)
     XR_PA_UNUSED_17 = 6'h17,            //
     // Playfield B Control XR Registers
     XR_PB_GFX_CTRL  = 6'h18,            // (R /W) playfield B graphics control
@@ -129,7 +129,7 @@ typedef enum logic [5:0] {
     XR_PB_LINE_LEN  = 6'h1B,            // (R /W) playfield B display line width in words
     XR_PB_HV_SCROLL = 6'h1C,            // (R /W) playfield B horizontal and vertical fine scroll
     XR_PB_LINE_ADDR = 6'h1D,            // (R /W) playfield B scanline start address (loaded at start of line)
-    XR_PB_UNUSED_1E = 6'h1E,            //
+    XR_PB_HV_FSCALE = 6'h1E,            // (R /W) playfield B horizontal and vertical pixel scale (reduce pixel res)
     XR_PB_UNUSED_1F = 6'h1F,            //
     // Blitter Registers
     XR_BLIT_CTRL    = 6'h20,            // (R /W) blit control (transparency control, logic op and op input flags)

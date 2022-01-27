@@ -134,6 +134,7 @@
 			"posedge",
 			"PRINTLN",
 			"PULLUP",
+			"rdinc",
 			"REFERENCECLK",
 			"regs",
 			"regw",
@@ -196,6 +197,7 @@
 			"XRGB",
 			"xrmem",
 			"xvid",
+			"xwait",
 			"Yosys"
 		],
 		"cSpell.allowCompoundWords": true,
@@ -260,6 +262,7 @@
 			"HACK",
 			"FIXME",
 			"TODO"
-		]
+		],
+		"explorer.sortOrder": "type"
 	}
 }

@@ -39,9 +39,6 @@
 bool xosera_sync();                        // true if Xosera present and responding
 bool xosera_init(int reconfig_num);        // wait a bit for Xosera to respond and optional reconfig (if 0 to 3)
 void xv_delay(uint32_t ms);                // delay milliseconds using Xosera TIMER
-void xv_vram_fill(uint32_t vram_addr, uint32_t numwords, uint32_t word_value);           // fill VRAM with word
-void xv_copy_to_vram(uint16_t * source, uint32_t vram_dest, uint32_t numbytes);          // copy to VRAM
-void xv_copy_from_vram(uint32_t vram_source, uint16_t * dest, uint32_t numbytes);        // copy from VRAM
 
 // Low-level C API reference:
 //
@@ -55,17 +52,36 @@ void xv_copy_from_vram(uint32_t vram_source, uint16_t * dest, uint32_t numbytes)
 // uint8_t  xm_getbh(xmreg)         (omit XM_ from xmreg name)
 // uint8_t  xm_getbl(xmreg)         (omit XM_ from xmreg name)
 //
+// XM status checks: (busy wait if condition true)
+// xwait_mem_busy()
+// xwait_blit_busy()
+// xwait_blit_full()
+//
 // set/get XR registers (extended registers):
 // void     xreg_setw(xreg, wval)  (omit XR_ from xreg name)
 // uint16_t xreg_getw(xreg)        (omit XR_ from xreg name)
 // uint8_t  xreg_getbh(xreg)       (omit XR_ from xreg name)
 // uint8_t  xreg_getbl(xreg)       (omit XR_ from xreg name)
+// void     xreg_setw_wait(xreg, wval)  (omit XR_ from xreg name)
+// uint16_t xreg_getw_wait(xreg)        (omit XR_ from xreg name)
+// uint8_t  xreg_getbh_wait(xreg)       (omit XR_ from xreg name)
+// uint8_t  xreg_getbl_wait(xreg)       (omit XR_ from xreg name)
 //
 // set/get XR memory region address:
 // void     xmem_setw(xrmem, wval)
 // uint16_t xmem_getw(xrmem)
 // uint8_t  xmem_getbh(xrmem)
 // uint8_t  xmem_getbl(xrmem)
+// void     xmem_setw_wait(xrmem, wval)
+// uint16_t xmem_getw_wait(xrmem)
+// uint8_t  xmem_getbh_wait(xrmem)
+// uint8_t  xmem_getbl_wait(xrmem)
+
+// NOTE: "wait" functions check for and will wait if there is memory contention.
+// In most cases, other than reading COLOR_MEM, wait will not be needed as
+// there will be enough free XR or VRAM memory cycles.  However, with certain video
+// modes (or with Copper doing lots of writes) the wait may be needed
+// for reliable operation (especially when reading).
 
 #include "xosera_m68k_defs.h"
 
@@ -173,6 +189,44 @@ extern volatile xmreg_t * const xosera_ptr;
             :);                                                                                                        \
     } while (false)
 
+// set XR register XR_<xreg> to 16-bit word word_value (uses MOVEP.L if reg and value are constant)
+#define xreg_setw_wait(xreg, word_value)                                                                               \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        (void)(XR_##xreg);                                                                                             \
+        uint16_t uval16 = (word_value);                                                                                \
+        if (__builtin_constant_p((XR_##xreg)) && __builtin_constant_p((word_value)))                                   \
+        {                                                                                                              \
+            __asm__ __volatile__("movep.l %[rxav]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; "                                   \
+                                 :                                                                                     \
+                                 : [rxav] "d"(((XR_##xreg) << 16) | (uint16_t)((word_value))), [ptr] "a"(xosera_ptr)   \
+                                 :);                                                                                   \
+        }                                                                                                              \
+        else                                                                                                           \
+        {                                                                                                              \
+            __asm__ __volatile__(                                                                                      \
+                "movep.w %[rxa]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; movep.w %[src]," XM_STR(XM_XR_DATA) "(%[ptr])"        \
+                :                                                                                                      \
+                : [rxa] "d"((XR_##xreg)), [src] "d"(uval16), [ptr] "a"(xosera_ptr)                                     \
+                :);                                                                                                    \
+        }                                                                                                              \
+        xwait_mem_busy();                                                                                              \
+    } while (false)
+
+// set XR memory address xrmem to 16-bit word word_value
+#define xmem_setw_wait(xrmem, word_value)                                                                              \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        uint16_t umem16 = (xrmem);                                                                                     \
+        uint16_t uval16 = (word_value);                                                                                \
+        __asm__ __volatile__(                                                                                          \
+            "movep.w %[xra]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; movep.w %[src]," XM_STR(XM_XR_DATA) "(%[ptr])"            \
+            :                                                                                                          \
+            : [xra] "d"(umem16), [src] "d"(uval16), [ptr] "a"(xosera_ptr)                                              \
+            :);                                                                                                        \
+        xwait_mem_busy();                                                                                              \
+    } while (false)
+
 // NOTE: Uses clang and gcc supported extension (statement expression), so we must slightly lower shields...
 #pragma GCC diagnostic ignored "-Wpedantic"        // Yes, I'm slightly cheating (but ugly to have to pass in "return
                                                    // variable" - and this is the "low level" API, remember)
@@ -263,7 +317,7 @@ extern volatile xmreg_t * const xosera_ptr;
 #define xwait_blit_busy()                                                                                              \
     do                                                                                                                 \
     {                                                                                                                  \
-        uint8_t bitval = 1 << SYS_CTRL_BLITBUSY_B;                                                                     \
+        uint8_t bitval = (1 << SYS_CTRL_BLITBUSY_B) | (1 << SYS_CTRL_MEMWAIT_B);                                       \
         __asm__ __volatile__("1: and.b " XM_STR(XM_SYS_CTRL) "+2(%[ptr]),%[bitval] ; bne.s  1b\n"                      \
                                                                                                                        \
                              :                                                                                         \
@@ -274,7 +328,7 @@ extern volatile xmreg_t * const xosera_ptr;
 #define xwait_blit_full()                                                                                              \
     do                                                                                                                 \
     {                                                                                                                  \
-        uint8_t bitval = 1 << SYS_CTRL_BLITFULL_B;                                                                     \
+        uint8_t bitval = (1 << SYS_CTRL_BLITFULL_B) | (1 << SYS_CTRL_MEMWAIT_B);                                       \
         __asm__ __volatile__("1: and.b " XM_STR(XM_SYS_CTRL) "+2(%[ptr]),%[bitval] ; bne.s  1b\n"                      \
                                                                                                                        \
                              :                                                                                         \

@@ -30,14 +30,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#if defined(delay)        // clear out mcBusywait
-#undef delay
-#endif
-#define delay(ms)     xv_delay(ms)
-#define cpu_delay(ms) mcBusywait(ms << 9);        // ~500 == 1ms @ 10MHz 68K
-
 bool xosera_sync();                        // true if Xosera present and responding
 bool xosera_init(int reconfig_num);        // wait a bit for Xosera to respond and optional reconfig (if 0 to 3)
+void cpu_delay(int ms);                    // delay approx milliseconds with CPU busy wait
 void xv_delay(uint32_t ms);                // delay milliseconds using Xosera TIMER
 
 // Low-level C API reference:

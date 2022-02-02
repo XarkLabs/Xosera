@@ -21,13 +21,23 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include <machine.h>
 
 #define XV_PREP_REQUIRED
 #include "xosera_m68k_api.h"
+
+// TODO: This is less than ideal (tuned for ~10MHz)
+__attribute__((noinline)) void cpu_delay(int ms)
+{
+    __asm__ __volatile__(
+        "    lsl.l   #8,%[temp]\n"
+        "    add.l   %[temp],%[temp]\n"
+        "0:  sub.l   #1,%[temp]\n"
+        "    tst.l   %[temp]\n"
+        "    bne.s   0b\n"
+        : [temp] "+d"(ms));
+}
 
 void xv_delay(uint32_t ms)
 {
@@ -105,8 +115,7 @@ bool xosera_sync()
 
 // define xosera_ptr in a way that GCC can't see the immediate const value (causing it to keep it in a register).
 __asm__(
-    "               .data\n"
-    "               .section    .rodata.xosera_ptr,\"a\"\n"
+    "               .text\n"
     "               .align      2\n"
     "               .globl      xosera_ptr\n"
     "xosera_ptr:    .long       " XM_STR(XM_BASEADDR) "\n");

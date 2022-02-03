@@ -54,8 +54,6 @@ module video_gen #(
     input  wire logic           clk                     // clock (video pixel clock)
 );
 
-//localparam [31:0] githash = 32'H`GITHASH;
-
 // video generation signals
 color_t             border_color;
 hres_vis_t          vid_left;

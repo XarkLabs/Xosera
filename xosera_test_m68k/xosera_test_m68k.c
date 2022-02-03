@@ -143,6 +143,8 @@ uint32_t copper_320x200[] = {
 // dummy global variable
 uint32_t global;        // this is used to prevent the compiler from optimizing out tests
 
+char xosera_initdata[32];
+
 uint32_t mem_buffer[128 * 1024];
 
 // timer helpers
@@ -1756,11 +1758,25 @@ void     xosera_test()
     }
 
     dprintf("Xosera_test_m68k\n");
-
+    cpu_delay(1000);
     dprintf("\nxosera_init(0)...");
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw_wait(VID_HSIZE), xreg_getw_wait(VID_VSIZE));
     cpu_delay(1000);
+    char * init_ptr = xosera_initdata;
+    for (int i = XR_COPPER_ADDR + XR_COPPER_SIZE - 16; i < XR_COPPER_ADDR + XR_COPPER_SIZE; i++)
+    {
+        uint16_t v = xmem_getw_wait(i);
+        //        dprintf("0x%04x = 0x%04x\n", i, v);
+        *init_ptr++ = (char)(v >> 8);
+        *init_ptr++ = (char)(v & 0xff);
+    }
+    dprintf("ID: %s Githash:0x%02x%02x%02x%02x\n",
+            xosera_initdata,
+            xosera_initdata[28],
+            xosera_initdata[29],
+            xosera_initdata[30],
+            xosera_initdata[31]);
     wait_vsync();
     xreg_setw(VID_CTRL, 0x0000);               // border color #0
     xmem_setw(XR_COLOR_A_ADDR, 0x0000);        // color # = black
@@ -1824,11 +1840,12 @@ void     xosera_test()
 
         xr_textmode_pb();
 
-        uint16_t version   = xreg_getw_wait(VERSION);
-        uint32_t githash   = ((uint32_t)xreg_getw_wait(GITHASH_H) << 16) | (uint32_t)xreg_getw_wait(GITHASH_L);
+        uint16_t features = xreg_getw_wait(VERSION);
+        //        uint32_t githash   = ((uint32_t)xreg_getw_wait(GITHASH_H) << 16) |
+        //        (uint32_t)xreg_getw_wait(GITHASH_L);
         uint16_t monwidth  = xreg_getw_wait(VID_HSIZE);
         uint16_t monheight = xreg_getw_wait(VID_VSIZE);
-        uint16_t monfreq   = xreg_getw_wait(VID_VFREQ);
+        //        uint16_t monfreq   = xreg_getw_wait(VID_VFREQ);
 
         uint16_t gfxctrl  = xreg_getw_wait(PA_GFX_CTRL);
         uint16_t tilectrl = xreg_getw_wait(PA_TILE_CTRL);
@@ -1840,9 +1857,14 @@ void     xosera_test()
 
         xr_printfxy(0, 0, "Xosera test for rosco_m68k\n");
 
-        dprintf(
-            "Xosera v%1x.%02x #%08x Features:0x%02x\n", (version >> 8) & 0xf, (version & 0xff), githash, version >> 8);
-        dprintf("Monitor Mode: %dx%d@%2x.%02xHz\n", monwidth, monheight, monfreq >> 8, monfreq & 0xff);
+        dprintf("%s #%02x%02x%02x%02x ",
+                xosera_initdata,
+                xosera_initdata[28],
+                xosera_initdata[29],
+                xosera_initdata[30],
+                xosera_initdata[31]);
+        dprintf("Features:0x%04x\n", features);
+        dprintf("Monitor Native Res: %dx%d\n", monwidth, monheight);
         dprintf("\nPlayfield A:\n");
         dprintf("PA_GFX_CTRL : 0x%04x PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
         dprintf("PA_DISP_ADDR: 0x%04x PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);

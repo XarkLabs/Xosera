@@ -14,7 +14,8 @@
 
 module coppermem
     #(
-        parameter   AWIDTH   = 10
+        parameter   AWIDTH   = 10,
+        parameter   EVEN     = 1
     )
     (
            input  wire logic                clk,
@@ -32,14 +33,24 @@ module coppermem
 // interface internally to the copper.
 word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 
-`ifndef SYNTHESIS
+localparam [31:0] githash = 32'H`GITHASH;
+localparam [11:0] version = 12'H`VERSION;
+
 initial begin
     // Fill with numbers
-    for (integer i = 0; i < AWIDTH; i = i + 1) begin
-        bram[i] = 16'(i);
+    for (integer i = 0; i < (2**AWIDTH) - 8; i = i + 1) begin
+        bram[i] = EVEN ? 16'h0000 : 16'h0003;   // COP_END
     end
+
+    bram[(2**AWIDTH) - 8] = EVEN ? "Xo" : "se";
+    bram[(2**AWIDTH) - 7] = EVEN ? "ra" : " v";
+    bram[(2**AWIDTH) - 6] = EVEN ? {"0" + 8'(version[11:8]),  "."} : {"0" + 8'(version[7:4]), "0" + 8'(version[3:0])};
+    bram[(2**AWIDTH) - 5] = EVEN ? '0 : '0;
+    bram[(2**AWIDTH) - 4] = EVEN ? githash[31:16] : githash[15:0];
+    bram[(2**AWIDTH) - 3] = EVEN ? githash[31:16] : githash[15:0];
+    bram[(2**AWIDTH) - 2] = EVEN ? githash[31:16] : githash[15:0];
+    bram[(2**AWIDTH) - 1] = EVEN ? githash[31:16] : githash[15:0];
 end
-`endif
 
 // infer BRAM block
 always_ff @(posedge wr_clk) begin

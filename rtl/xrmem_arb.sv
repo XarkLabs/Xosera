@@ -359,7 +359,8 @@ tilemem #(
 `ifdef ENABLE_COPP
 // copper RAM (even word)
 coppermem #(
-    .AWIDTH(xv::COPP_W)
+    .AWIDTH(xv::COPP_W),
+    .EVEN(1)
     ) coppermem_e(
     .clk(clk),
     .rd_en_i(copp_rd_en),
@@ -373,7 +374,8 @@ coppermem #(
 
 // copper RAM (odd word)
 coppermem #(
-    .AWIDTH(xv::COPP_W)
+    .AWIDTH(xv::COPP_W),
+    .EVEN(0)
     ) coppermem_o(
     .clk(clk),
     .rd_en_i(copp_rd_en),

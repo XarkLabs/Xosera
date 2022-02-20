@@ -9,7 +9,7 @@ Inspired in concept only by it's "namesake" the [Commander X16](https://www.comm
 ![Xosera prototype board in rosco_m68k](pics/Xosera_rosco_m68k_board.jpg)  
 Picture of Xosera prototype being tested with logic-analyzer (most of the `TODO`s are now done)
 
-Currently the design is supported for the [iCE40UP5K FPGA](https://www.latticesemi.com/en/Products/FPGAandCPLD/iCE40UltraPlus) which is fully supported by the open [Yosys/NextPNR tools](https://github.com/YosysHQ).  Development is now mostly on the Xosera board for the rosco_m68k system using [UPduino 3.x](https://github.com/tinyvision-ai-inc/UPduino-v3.0), but still builds for [iCEBreaker FPGA](https://github.com/icebreaker-fpga/icebreaker) board.
+Currently the design is using the [iCE40UP5K FPGA](https://www.latticesemi.com/en/Products/FPGAandCPLD/iCE40UltraPlus) which is fully supported by the open [Yosys/NextPNR tools](https://github.com/YosysHQ).  Development is now mostly on the Xosera board for the rosco_m68k system using [UPduino 3.x](https://github.com/tinyvision-ai-inc/UPduino-v3.0), but still builds for [iCEBreaker FPGA](https://github.com/icebreaker-fpga/icebreaker) board.
 
 This is currently a work in progress, but you can follow along at [Hackaday.io](https://hackaday.io/Xark) or in the [rosco_m68k Discord](https://rosco-m68k.com/docs) (in the #xosera-developers or #xosera-users channel).  The design is largely complete, but still a few more features to hopefully squeeze in (and likely a few bugs and issues to investigate).
 
@@ -45,7 +45,7 @@ Current Xosera features include:
 
 Planned Xosera features TODO:
 
-* DVI/HDMI output at 640x480@60Hz or 848x480@60Hz (16:9 widescreen 480p) using 1BitSquared DV PMOD (currently this _mostly works_, but is not 100% solid at this point).
+* DVI/HDMI output at 640x480@60Hz or 848x480@60Hz (16:9 widescreen 480p) using 1BitSquared DV PMOD (currently this _mostly works_, but is not 100% solid at this point - not exactly sure the issue).
 * 4 dual 8-bit (stereo) audio channels with full channel mixer for audio output similar to Amiga
 * At least one "cursor" sprite above video playfields (and ideally more, probably with 16 or 256 colors)
 

@@ -501,6 +501,7 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR  ",
     ((BusInterface::XM_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XM_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_RW(r)        (((BusInterface::XM_##r) | 0x80) << 8), (((BusInterface::XM_##r) | 0x90) << 8)
 #define XREG_SETW(xr, v) REG_W(XR_ADDR, XR_##xr), REG_W(XR_DATA, (v))
+#define XREG_GETW(xr)    REG_W(XR_ADDR, XR_##xr), REG_RW(XR_DATA)
 
 #define REG_UPLOAD()          0xfff0
 #define REG_UPLOAD_AUX()      0xfff1
@@ -2897,6 +2898,84 @@ uint16_t     BusInterface::test_data[32768] = {
     XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                                             // moto graphic width
 
     REG_WAIT_BLIT_DONE(),
+
+#if 0        // XREG read torture test
+
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+    XREG_GETW(VID_HSIZE),
+
+#endif
+
+
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 #if 1

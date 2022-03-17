@@ -207,9 +207,13 @@ always_comb begin
     // copper write has priority
     if (copp_xr_sel_i & ~copp_xr_ack_o) begin
         xreg_wr_o           = copp_xr_regs_sel;     // copper only writes
-    end else
+    end
 `endif
-    if (xr_sel_i & ~xr_ack_o) begin
+    if (
+`ifdef ENABLE_COPP
+        ~copp_xr_sel_i &                           // avoid read interference from copper write
+`endif
+        xr_sel_i & ~xr_ack_o) begin
         xreg_rd_ack_next    = xr_regs_sel & ~xr_wr_i;
         xreg_wr_o           = xr_regs_sel & xr_wr_i;
     end

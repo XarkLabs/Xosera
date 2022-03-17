@@ -2899,7 +2899,7 @@ uint16_t     BusInterface::test_data[32768] = {
 
     REG_WAIT_BLIT_DONE(),
 
-#if 0        // XREG read torture test
+#if 1        // XREG read torture test
 
     XREG_GETW(VID_HSIZE),
     XREG_GETW(VID_HSIZE),
@@ -2973,6 +2973,7 @@ uint16_t     BusInterface::test_data[32768] = {
     XREG_GETW(VID_HSIZE),
     XREG_GETW(VID_HSIZE),
 
+    XREG_SETW(COPP_CTRL, 0x0000),
 #endif
 
 

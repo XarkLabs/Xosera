@@ -544,11 +544,19 @@ static void install_copper()
     wait_vsync_start();
     xm_setw(XR_ADDR, XR_COPPER_ADDR);
 
+#if 0        // copper torture test
+    for (uint16_t i = 0; i < 1024; i++)
+    {
+        xm_setw(XR_DATA, 0xA000);
+        xm_setw(XR_DATA, i << 2);
+    }
+#else
     for (uint16_t i = 0; i < copper_list_len; i++)
     {
         xm_setw(XR_DATA, copper_list[i] >> 16);
         xm_setw(XR_DATA, copper_list[i] & 0xffff);
     }
+#endif
 
     dprintf("okay\n");
 }

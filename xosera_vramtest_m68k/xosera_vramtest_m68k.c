@@ -758,6 +758,8 @@ int test_xmem(bool LFSR, int mode)
     }
     RETURN_ON_KEYPRESS();
 
+    xm_setw(SYS_CTRL, 0x000F);        // disable vsync
+
     update_elapsed();
     uint32_t start_time;
     uint32_t check_time = elapsed_tenthms;
@@ -800,6 +802,9 @@ int test_xmem(bool LFSR, int mode)
     {
         dprintf("TEST CANCELLED (too many errors)!\n");
     }
+
+    xm_setw(TIMER, 0x000F);           // clear pending vsync
+    xm_setw(SYS_CTRL, 0x080F);        // enable vsync
 
     if (xmem_errs == 0)
     {
@@ -927,7 +932,7 @@ void xosera_test()
             {
                 struct vram_fail_info * fip = &vram_fails[i];
 
-                dprintf("pass %3u #%2u @ 0x%04x=0x%04x vs 0x%04x pat=%s%s\te=%s%s%s\tm=%s%s%s%s%s\tt=%s%s%s%s\n",
+                dprintf("pass %3u #%2u @ 0x%04x=0x%04x vs 0x%04x pat=%s%s\te=%s%s%s\tm=%s%s%s%s%s\tt=%s%s%s%s%s\n",
                         fip->pass,
                         fip->count,
                         fip->addr,
@@ -946,7 +951,8 @@ void xosera_test()
                         fip->flags & MODEFLAG_SLOW ? "S" : "",
                         fip->flags & MODEFLAG_BYTE ? "B" : "",
                         fip->flags & MODEFLAG_WORD ? "W" : "",
-                        fip->flags & MODEFLAG_LONG ? "L" : "");
+                        fip->flags & MODEFLAG_LONG ? "L" : "",
+                        fip->flags & MODEFLAG_SLOW ? "X" : "");
             }
         }
     }

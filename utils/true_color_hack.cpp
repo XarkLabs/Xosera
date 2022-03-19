@@ -5,6 +5,7 @@
 #include <SDL_image.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 bool   noise_mode      = false;
 bool   create_pal      = false;

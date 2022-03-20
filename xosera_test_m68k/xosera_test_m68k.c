@@ -227,7 +227,7 @@ static inline void wait_memory()
 
 _NOINLINE void restore_colors()
 {
-    wait_vsync();
+    wait_vsync_start();
     xm_setw(XR_ADDR, XR_COLOR_ADDR);
     uint16_t * cp = def_colors;
     for (uint16_t i = 0; i < 256; i++)
@@ -245,7 +245,7 @@ _NOINLINE void restore_colors()
 
 _NOINLINE void restore_colors2(uint8_t alpha)
 {
-    wait_vsync();
+    wait_vsync_start();
     xm_setw(XR_ADDR, XR_COLOR_B_ADDR);
     uint16_t * cp = def_colors;
     for (uint16_t i = 0; i < 256; i++)
@@ -266,7 +266,7 @@ _NOINLINE void restore_colors2(uint8_t alpha)
 // sets test blend palette
 _NOINLINE void restore_colors3()
 {
-    wait_vsync();
+    wait_vsync_start();
     xm_setw(XR_ADDR, XR_COLOR_B_ADDR);
     uint16_t * cp = def_colors;
     for (uint16_t i = 0; i < 256; i++)
@@ -286,20 +286,17 @@ _NOINLINE void restore_colors3()
 
 _NOINLINE void dupe_colors(int alpha)
 {
-    wait_vsync();
+    wait_vsync_start();
     uint16_t a = (alpha & 0xf) << 12;
-    xm_setw(XR_ADDR, XR_COLOR_ADDR);
     for (uint16_t i = 0; i < 256; i++)
     {
-        xm_setw(XR_ADDR, XR_COLOR_ADDR + i);
+
         wait_memory();
 
-        uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
+        uint16_t v = (xmem_getw_wait(XR_COLOR_A_ADDR + i) & 0xfff) | a;
 
-        xm_setw(XR_ADDR, XR_COLOR_ADDR + 0x100 + i);
+        xmem_setw(XR_COLOR_B_ADDR + i, v);
         wait_memory();
-
-        xm_setw(XR_DATA, v);
     };
 }
 
@@ -388,7 +385,7 @@ static inline void checkbail()
 {
     if (checkchar())
     {
-        wait_vsync();
+        wait_vsync_start();
         remove_intr();
 
         xreg_setw(VID_LEFT, 0x0000);
@@ -451,7 +448,7 @@ static void xr_textmode_pb()
     xr_text_columns = 28;
     xr_text_rows    = 20;
 
-    wait_vsync();
+    wait_vsync_start();
     xreg_setw(PB_GFX_CTRL, 0x0080);
     for (int i = 1; i < 256; i++)
     {
@@ -1226,28 +1223,8 @@ void test_true_color()
     xm_setw(SYS_CTRL, 0x000F);        // disable Xosera vsync interrupt
 
     uint16_t saddr = 0x0000;
-#if 0
 
-    xreg_setw(PA_GFX_CTRL, 0x0065);         // bitmap, 8-bpp, Hx2, Vx2
-    xreg_setw(PA_TILE_CTRL, 0x000F);        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
-    xreg_setw(PA_DISP_ADDR, saddr);         // display start address
-    xreg_setw(PA_LINE_LEN,
-              (320 / 2) + (320 / 4));        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
-
-    xreg_setw(PB_GFX_CTRL, 0x0055);                    // bitmap, 4-bpp, Hx2, Vx2
-    xreg_setw(PB_TILE_CTRL, 0x000F);                   // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
-    xreg_setw(PB_DISP_ADDR, saddr + (320 / 2));        // display start address
-    xreg_setw(PB_LINE_LEN,
-              (320 / 2) + (320 / 4));        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
-
-    xm_setw(XR_ADDR, XR_COLOR_ADDR + 15);        // set write address
-    xm_setw(XR_DATA, 0x0fff);
-    load_sd_colors("/true_color_pal.raw");        // loads 256 + 16 colors (256 RG and 16 B)
-
-    load_sd_bitmap("/parrot_320x240_RG8B4.raw", saddr);
-#else
     show_test_pic(TRUECOLOR_TEST_PIC, saddr);
-#endif
 
     delay_check(DELAY_TIME * 2);
 
@@ -1643,31 +1620,35 @@ uint16_t rosco_m68k_CPUMHz()
 
 const char blurb[] =
     "\n"
+    "\n"
     "Xosera is an FPGA based video adapter designed with the rosco_m68k retro\n"
     "computer in mind. Inspired in concept by it's \"namesake\" the Commander X16's\n"
     "VERA, Xosera is an original open-source video adapter design, built with open-\n"
     "source tools and is tailored with features generally appropriate for a Motorola\n"
     "68K era retro computer like the rosco_m68k (or even an 8-bit CPU).\n"
     "\n"
-    "  \xf9  Uses low-cost FPGA instead of expensive fab. :)\n"
-    "  \xf9  128KB of embedded video RAM (16-bit words at 33 or 25 MHz)\n"
+    "  \xf9  Uses low-cost FPGA instead of expensive semiconductor fabrication :)\n"
+    "  \xf9  128KB of embedded video VRAM (16-bit words at 33 or 25 MHz)\n"
     "  \xf9  Fast 8-bit bus interface (using MOVEP) for rosco_m68k (by Ross Bamford)\n"
     "  \xf9  Register based interface using 16 main 16-bit registers\n"
     "  \xf9  VGA output at 848x480 or 640x480 (16:9 or 4:3 @ 60Hz)\n"
     "  \xf9  Dual video planes (playfields) with color blending and priority\n"
-    "  \xf9  Dual 256 color palettes showing with 12-bit RGB (4096 colors)\n"
+    "  \xf9  Dual 256 color palettes with 12-bit RGB (4096 colors) and 4-bit alpha\n"
     "  \xf9  Read/write VRAM with programmable read/write address increment\n"
-    "  \xf9  Read/write tile memory for an additional 10KB of tile or tilemap\n"
-    "  \xf9  Text mode with up to 8x16 glyphs and 16 forground/background colors\n"
+    "  \xf9  Read/write tile memory for an additional 10KB of tiles or tilemap\n"
+    "  \xf9  Text mode with up to 8x16 glyphs and 16 forground & background colors\n"
     "  \xf9  Graphic tile modes with 1024 8x8 glyphs, 16/256 colors and H & V tile mirror\n"
     "  \xf9  Bitmap modes with 1 (plus attribute colors), 4 or 8 bits per pixel\n"
-    "  \xf9  Fast 2-D \"blitter\" draw unit with nibble masking flexible logic operations\n"
-    "  \xf9  Horizontal and/or vertical pixel relpeat 1, 2, 3, 4x (e.g. 424x240 or 320x240)\n"
-    "  \xf9  Fractional horizontal and/or vertical repeat (e.g. for 320x200 retro modes)\n"
-    "  \xf9  TODO: Hardware sprites for mouse cursor (similar to Amiga)\n"
+    "  \xf9  Fast 2-D \"blitter\" unit with transparency, masking, shifting and logic ops\n"
+    "  \xf9  Pixel H/V repeat of 1x, 2x, 3x or 4x (e.g. for 424x240 or 320x240)\n"
+    "  \xf9  Fractional H/V repeat scaling (e.g. for 320x200 or 512x384 retro modes)\n"
     "  \xf9  TODO: Wavetable stereo audio (similar to Amiga)\n"
-    "  \xf9  TODO: Additional high-speed USB UART?\n"
-    "  \xf9  TODO: Whatever else fits into the FPGA while it still makes timing. :)\n";
+    "  \xf9  TODO: Hardware sprites for mouse cursor (similar to Amiga)\n"
+    "  \xf9  TODO: Additional high-speed USB UART or SD card SPI?\n"
+    "  \xf9  TODO: Whatever else fits into the FPGA while it still makes timing. :)\n"
+    "\n"
+    "\n"
+    "\n";
 
 static void test_xr_read()
 {
@@ -1844,9 +1825,6 @@ void     xosera_test()
         uint32_t m = t / (60 * 60) % 60;
         uint32_t s = (t / 60) % 60;
         dprintf("*** xosera_test_m68k iteration: %u, running %u:%02u:%02u\n", test_count++, h, m, s);
-        xcls();
-
-        xr_textmode_pb();
 
         uint16_t features = xreg_getw_wait(VERSION);
         //        uint32_t githash   = ((uint32_t)xreg_getw_wait(GITHASH_H) << 16) |
@@ -1862,8 +1840,6 @@ void     xosera_test()
         uint16_t hvscroll = xreg_getw_wait(PA_HV_SCROLL);
         uint16_t sysctrl  = xm_getw(SYS_CTRL);
 
-
-        xr_printfxy(0, 0, "Xosera test for rosco_m68k\n");
 
         dprintf("%s #%02x%02x%02x%02x ",
                 xosera_initdata,
@@ -1883,23 +1859,24 @@ void     xosera_test()
         xm_setw(SYS_CTRL, sysctrl);
         dprintf("SYS_CTRL: 0x%04x\n", sysctrl);
 
-        restore_colors();
 
 #if COPPER_TEST
         if (test_count & 1)
         {
             dprintf("Copper test disabled for this iteration.\n");
             xreg_setw(COPP_CTRL, 0x0000);
-            restore_colors();
         }
         else
         {
             dprintf("Copper test enabled for this interation.\n");
             xreg_setw(COPP_CTRL, 0x8000);
-            restore_colors();
         }
-
 #endif
+
+        wait_vsync_start();
+        restore_colors();
+        dupe_colors(0xf);
+        xmem_setw(XR_COLOR_B_ADDR, 0x0000);        // make sure we can see plane A under B
 
 #if LR_MARGIN_TEST
         // crop left and right 2 pixels
@@ -1907,13 +1884,32 @@ void     xosera_test()
         xreg_setw(VID_RIGHT, monwidth - 4);
 #endif
 
-        for (int y = 0; y < 30; y += 3)
+        xr_textmode_pb();
+        xr_msg_color(0x0f);
+        xr_printfxy(5, 0, "xosera_test_m68k\n");
+
+        xreg_setw(PA_GFX_CTRL, 0x0000);
+        xreg_setw(PA_TILE_CTRL, 0x000F);
+        xreg_setw(PA_LINE_LEN, xreg_getw_wait(VID_HSIZE) >> 3);
+        xreg_setw(PA_DISP_ADDR, 0x0000);
+        xreg_setw(PA_HV_SCROLL, 0x0000);
+        xreg_setw(PA_HV_FSCALE, 0x0000);
+
+        xcls();
+
+        const char * bp    = blurb;
+        int          color = 1;
+
+        for (int y = 0; y < 30; y++)
         {
-            xmsg(20, y, (y & 0xf) ? (y & 0xf) : 0xf0, ">>> Xosera rosco_m68k test utility <<<<");
+            bp = xmsg(0, y, color, bp);
+
+            color = (color + 1) & 0xf;
+            if (color == 0)
+                color = 1;
         }
 
-        delay_check(DELAY_TIME);
-
+        delay_check(DELAY_TIME * 5);
 
         if (SD_check_support())
         {
@@ -1952,9 +1948,9 @@ void     xosera_test()
             delay_check(DELAY_TIME);
         }
 
-        test_dual_8bpp();
+        // ugly: test_dual_8bpp();
 
-        test_xr_read();
+        // ugly: test_xr_read();
 
         wait_vsync();
         xreg_setw(PA_GFX_CTRL, 0x0000);

@@ -14,6 +14,22 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
   - [Xosera Reference Information](#xosera-reference-information)
     - [Xosera Main Registers (XM Registers) Summary](#xosera-main-registers-xm-registers-summary)
     - [Xosera Main Register Details (XM Registers)](#xosera-main-register-details-xm-registers)
+      - [0x0 **`XM_XR_ADDR`** (R/W+) - XR Register / Memory Address](#0x0-xm_xr_addr-rw---xr-register--memory-address)
+      - [0x1 **`XM_XR_DATA`** (R/W+) - eXtended Register / eXtended Region Data](#0x1-xm_xr_data-rw---extended-register--extended-region-data)
+      - [0x2 **`XM_RD_INCR`** (R/W) - increment value for `XM_RD_ADDR` when `XM_DATA`/`XM_DATA_2` is read from](#0x2-xm_rd_incr-rw---increment-value-for-xm_rd_addr-when-xm_dataxm_data_2-is-read-from)
+      - [0x3 **`XM_RD_ADDR`** (R/W+) - VRAM read address for `XM_DATA`/`XM_DATA_2`](#0x3-xm_rd_addr-rw---vram-read-address-for-xm_dataxm_data_2)
+      - [0x4 **`XM_WR_INCR`** (R/W) - increment value for `XM_WR_ADDR` when `XM_DATA`/`XM_DATA_2` is written](#0x4-xm_wr_incr-rw---increment-value-for-xm_wr_addr-when-xm_dataxm_data_2-is-written)
+      - [0x5 **`XM_WR_ADDR`** (R/W) - VRAM write address for `XM_DATA`/`XM_DATA_2`](#0x5-xm_wr_addr-rw---vram-write-address-for-xm_dataxm_data_2)
+      - [0x6 **`XM_DATA`** (R+/W+) - VRAM memory value to read/write at VRAM address `XM_RD_ADDR`/`XM_WR_ADDR`](#0x6-xm_data-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)
+      - [0x7 **`XM_DATA_2`** (R+/W+) - VRAM memory value to read/write at VRAM address `XM_RD_ADDR`/`XM_WR_ADDR`](#0x7-xm_data_2-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)
+      - [0x8 **`XM_SYS_CTRL`** (R/W+) - draw busy status, read wait, reconfigure, interrupt control and write masking control](#0x8-xm_sys_ctrl-rw---draw-busy-status-read-wait-reconfigure-interrupt-control-and-write-masking-control)
+      - [0x9 **`XM_TIMER`** (R/W) - 1/10<sup>th</sup> of millisecond timer (0 - 6553.5 ms) / interrupt clear](#0x9-xm_timer-rw---110supthsup-of-millisecond-timer-0---65535-ms--interrupt-clear)
+      - [0xA **`XM_LFSR`** (RO) - LFSR pseudo-random number](#0xa-xm_lfsr-ro---lfsr-pseudo-random-number)
+      - [0xB **`XM_UNUSED_B`** (R/W) - unused register 0xB](#0xb-xm_unused_b-rw---unused-register-0xb)
+      - [0xC **`XM_RW_INCR`** (R/W) - increment value for `XM_RW_ADDR` when `XM_RW_DATA`/`XM_RW_DATA_2`is accessed](#0xc-xm_rw_incr-rw---increment-value-for-xm_rw_addr-when-xm_rw_dataxm_rw_data_2is-accessed)
+      - [0xD **`XM_RW_ADDR`** (R/W+) - VRAM read/write address for accessed at `XM_RW_DATA`/`XM_RW_DATA_2`](#0xd-xm_rw_addr-rw---vram-readwrite-address-for-accessed-at-xm_rw_dataxm_rw_data_2)
+      - [0xE **`XM_RW_DATA`** (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`](#0xe-xm_rw_data-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr)
+      - [0xF **`XM_RW_DATA_2`** &(nbsp); (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`](#0xf-xm_rw_data_2-nbsp-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr)
   - [Xosera Extended Register / Extended Memory Region Summary](#xosera-extended-register--extended-memory-region-summary)
     - [Xosera Extended Registers Details (XR Registers)](#xosera-extended-registers-details-xr-registers)
     - [Video Config and Copper XR Registers Summary](#video-config-and-copper-xr-registers-summary)
@@ -59,29 +75,30 @@ provide more efficient access to Xosera status flags (like busy and timeout)]
 
 | Reg # | Reg Name       | R /W  | Description                                                                           |
 | ----- | -------------- | ----- | ------------------------------------------------------------------------------------- |
-| 0x0   | `XM_XR_ADDR`   | R /W+ | XR register number/address for `XM_XR_DATA` read/write access                         |
-| 0x1   | `XM_XR_DATA`   | R /W+ | read/write XR register/memory at `XM_XR_ADDR` (`XM_XR_ADDR` incr. on write)           |
-| 0x2   | `XM_RD_INCR`   | R /W  | increment value for `XM_RD_ADDR` read from `XM_DATA`/`XM_DATA_2`                      |
-| 0x3   | `XM_RD_ADDR`   | R /W+ | VRAM address for reading from VRAM when `XM_DATA`/`XM_DATA_2` is read                 |
-| 0x4   | `XM_WR_INCR`   | R /W  | increment value for `XM_WR_ADDR` on write to `XM_DATA`/`XM_DATA_2`                    |
-| 0x5   | `XM_WR_ADDR`   | R /W  | VRAM address for writing to VRAM when `XM_DATA`/`XM_DATA_2` is written                |
-| 0x6   | `XM_DATA`      | R+/W+ | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
-| 0x7   | `XM_DATA_2`    | R+/W+ | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
-| 0x8   | `XM_SYS_CTRL`  | R /W+ | busy status, FPGA reconfig, interrupt status/control, write masking                   |
-| 0x9   | `XM_TIMER`     | R /W+ | read 1/10<sup>th</sup> millisecond timer                                              |
-| 0xA   | `XM_LFSR`      | RO    | read LFSR pseudo random number (internally 19-bit)                                    |
-| 0xB   | `XM_UNUSED_B`  | R /W  | unused direct register 0xB [#TODO]                                                    |
-| 0xC   | `XM_RW_INCR`   | R /W  | `XM_RW_ADDR` increment value on read/write of `XM_RW_DATA`/`XM_RW_DATA_2`             |
-| 0xD   | `XM_RW_ADDR`   | R /W+ | read/write address for VRAM access from `XM_RW_DATA`/`XM_RW_DATA_2`                   |
-| 0xE   | `XM_RW_DATA`   | R+/W+ | read/write VRAM word at `XM_RW_ADDR` (and add `XM_RW_INCR`)                           |
-| 0xF   | `XM_RW_DATA_2` | R+/W+ | 2nd `XM_RW_DATA`(to allow for 32-bit read/write access)                               |
+| 0x0   | [**`XM_XR_ADDR`**](#0x0-xm_xr_addr-rw---xr-register--memory-address)   | R /W+ | XR register number/address for `XM_XR_DATA` read/write access                         |
+| 0x1   | [**`XM_XR_DATA`**](#0x1-xm_xr_data-rw---extended-register--extended-region-data)   | R /W+ | read/write XR register/memory at `XM_XR_ADDR` (`XM_XR_ADDR` incr. on write)           |
+| 0x2   | [**`XM_RD_INCR`**](#0x2-xm_rd_incr-rw---increment-value-for-xm_rd_addr-when-xm_dataxm_data_2-is-read-from)   | R /W  | increment value for `XM_RD_ADDR` read from `XM_DATA`/`XM_DATA_2`                      |
+| 0x3   | [**`XM_RD_ADDR`**](#0x3-xm_rd_addr-rw---vram-read-address-for-xm_dataxm_data_2)   | R /W+ | VRAM address for reading from VRAM when `XM_DATA`/`XM_DATA_2` is read                 |
+| 0x4   | [**`XM_WR_INCR`**](#0x4-xm_wr_incr-rw---increment-value-for-xm_wr_addr-when-xm_dataxm_data_2-is-written)   | R /W  | increment value for `XM_WR_ADDR` on write to `XM_DATA`/`XM_DATA_2`                    |
+| 0x5   | [**`XM_WR_ADDR`**](#0x5-xm_wr_addr-rw---vram-write-address-for-xm_dataxm_data_2)   | R /W  | VRAM address for writing to VRAM when `XM_DATA`/`XM_DATA_2` is written                |
+| 0x6   | [**`XM_DATA`**](#0x6-xm_data-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)      | R+/W+ | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
+| 0x7   | [**`XM_DATA_2`**](#0x7-xm_data_2-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)    | R+/W+ | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
+| 0x8   | [**`XM_SYS_CTRL`**](#0x8-xm_sys_ctrl-rw---draw-busy-status-read-wait-reconfigure-interrupt-control-and-write-masking-control)  | R /W+ | busy status, FPGA reconfig, interrupt status/control, write masking                   |
+| 0x9   | [**`XM_TIMER`**](#0x9-xm_timer-rw---110supthsup-of-millisecond-timer-0---65535-ms--interrupt-clear)     | R /W+ | read 1/10<sup>th</sup> millisecond timer                                              |
+| 0xA   | [**`XM_LFSR`**](#0xa-xm_lfsr-ro---lfsr-pseudo-random-number)      | RO    | read LFSR pseudo random number (internally 19-bit)                                    |
+| 0xB   | [**`XM_UNUSED_B`**](#0xb-xm_unused_b-rw---unused-register-0xb)  | R /W  | unused direct register 0xB [**#TODO**]                                                    |
+| 0xC   | [**`XM_RW_INCR`**](#0xc-xm_rw_incr-rw---increment-value-for-xm_rw_addr-when-xm_rw_dataxm_rw_data_2is-accessed)   | R /W  | `XM_RW_ADDR` increment value on read/write of `XM_RW_DATA`/`XM_RW_DATA_2`             |
+| 0xD   | [**`XM_RW_ADDR`**](#0xd-xm_rw_addr-rw---vram-readwrite-address-for-accessed-at-xm_rw_dataxm_rw_data_2)   | R /W+ | read/write address for VRAM access from `XM_RW_DATA`/`XM_RW_DATA_2`                   |
+| 0xE   | [**`XM_RW_DATA`**](#0xe-xm_rw_data-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr)   | R+/W+ | read/write VRAM word at `XM_RW_ADDR` (and add `XM_RW_INCR`)                           |
+| 0xF   | [**`XM_RW_DATA_2`**](#0xf-xm_rw_data_2-nbsp-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr) | R+/W+ | 2nd `XM_RW_DATA`(to allow for 32-bit read/write access)                               |
 
 (`R+` or `W+` indicates that reading or writing this register has additional "side effects", respectively)
 ___
 
 ### Xosera Main Register Details (XM Registers)
 
-**0x0 `XM_XR_ADDR` (R/W+) - XR Register / Memory Address**  
+#### 0x0 **`XM_XR_ADDR`** (R/W+) - XR Register / Memory Address
+
 <img src="./pics/wd_XM_XR_ADDR.svg">
 
 **Extended register or memory address for data accessed via `XM_XR_DATA`**  
@@ -98,7 +115,8 @@ XR register (or XR memory word) to an immediate word value:
 &emsp;&emsp;`MOVE.L #$rrXXXX,D0`
 &emsp;&emsp;`MOVEP.L D0,XR_ADDR(A1)`
 
-**0x1 `XM_XR_DATA` (R/W+) - eXtended Register / eXtended Region Data**  
+#### 0x1 **`XM_XR_DATA`** (R/W+) - eXtended Register / eXtended Region Data  
+
 <img src="./pics/wd_XM_XR_DATA.svg">
 
 **Read or write extended register or memory addressed by `XM_XR_DATA` register.**  
@@ -108,14 +126,16 @@ When `XM_XR_DATA` is *written*, the XR register or address specified will be rea
 After a word is *written* to `XM_XR_DATA`, the lower 13-bits of `XM_XR_DATA` will be auto-incremented which allows
 writing to  contiguous XR registers or memory by repeatedly writing to `XM_XR_DATA`.
 
-**0x2 `XM_RD_INCR` (R/W) - increment value for `XM_RD_ADDR` when `XM_DATA`/`XM_DATA_2` is read from**  
+#### 0x2 **`XM_RD_INCR`** (R/W) - increment value for `XM_RD_ADDR` when `XM_DATA`/`XM_DATA_2` is read from
+
 <img src="./pics/wd_XM_RD_INCR.svg">
 
 **Read or write a twos-complement value added to `XM_RD_ADDR` when `XM_DATA` or `XM_DATA_2` is read from**  
 Allows quickly reading Xosera VRAM from `XM_DATA`/`XM_DATA_2` when using a fixed increment.  
 Added to `XM_RD_ADDR` when `XM_DATA` or `XM_DATA_2` is read from (twos complement, so value can be negative).
 
-**0x3 `XM_RD_ADDR` (R/W+) - VRAM read address for `XM_DATA`/`XM_DATA_2`**  
+#### 0x3 **`XM_RD_ADDR`** (R/W+) - VRAM read address for `XM_DATA`/`XM_DATA_2`
+
 <img src="./pics/wd_XM_RD_ADDR.svg">
 
 **Read or write VRAM address that will be read when `XM_DATA` or `XM_DATA_2` is read from.**  
@@ -123,21 +143,24 @@ Specifies VRAM address used when reading from VRAM via `XM_DATA`/`XM_DATA_2`.
 When `XM_RD_ADDR` is written (or when auto incremented) the corresponding word in VRAM is read and made
 available for reading at `XM_DATA` or `XM_DATA_2`.
 
-**0x4 `XM_WR_INCR` (R/W) - increment value for `XM_WR_ADDR` when `XM_DATA`/`XM_DATA_2` is written to**  
+#### 0x4 **`XM_WR_INCR`** (R/W) - increment value for `XM_WR_ADDR` when `XM_DATA`/`XM_DATA_2` is written
+
 <img src="./pics/wd_XM_WR_INCR.svg">
 
 **Read or write a twos-complement value added to `XM_WR_ADDR` when `XM_DATA` or `XM_DATA_2` is written to.**  
 Allows quickly writing to Xosera VRAM via `XM_DATA`/`XM_DATA_2` when using a fixed increment.  
 Added to `XM_WR_ADDR` when `XM_DATA` or `XM_DATA_2` is written to (twos complement, so value can be negative).
 
-**0x5 `XM_WR_ADDR` (R/W) - VRAM write address for `XM_DATA`/`XM_DATA_2`**  
+#### 0x5 **`XM_WR_ADDR`** (R/W) - VRAM write address for `XM_DATA`/`XM_DATA_2`
+
 <img src="./pics/wd_XM_WR_ADDR.svg">
 
 **Read or write VRAM address written when `XM_DATA` or `XM_DATA_2` is written to.**  
 Specifies VRAM address used when writing to VRAM via `XM_DATA`/`XM_DATA_2`. Writing a value here does
 not cause any VRAM access (which happens when data *written* to `XM_DATA` or `XM_DATA_2`).
 
-**0x6 `XM_DATA` (R+/W+) - VRAM memory value to read/write at VRAM address `XM_RD_ADDR`/`XM_WR_ADDR`, respectively**  
+#### 0x6 **`XM_DATA`** (R+/W+) - VRAM memory value to read/write at VRAM address `XM_RD_ADDR`/`XM_WR_ADDR`
+
 <img src="./pics/wd_XM_DATA.svg">
 
 **Read or write VRAM value from VRAM at `XM_RD_ADDR`/`XM_WR_ADDR` and add `XM_RD_INCR`/`XM_WR_INCR` to `XM_RD_ADDR`/`XM_WR_ADDR`,
@@ -146,7 +169,8 @@ When `XM_DATA` is read data from VRAM at `XM_RD_ADDR` is returned and `XM_RD_INC
 new VRAM address begins.  
 When `XM_DATA` is written, begins writing value to VRAM at `XM_WR_ADDR` and `XM_WR_INCR` is added to `XM_WR_ADDR`.
 
-**0x7 `XM_DATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address `XM_RD_ADDR`/`XM_WR_ADDR`, respectively**  
+#### 0x7 **`XM_DATA_2`** (R+/W+) - VRAM memory value to read/write at VRAM address `XM_RD_ADDR`/`XM_WR_ADDR`
+
 <img src="./pics/wd_XM_DATA.svg">
 
 **Read or write VRAM value from VRAM at `XM_RD_ADDR`/`XM_WR_ADDR` and add `XM_RD_INCR`/`XM_WR_INCR` to `XM_RD_ADDR`/`XM_WR_ADDR`,
@@ -157,8 +181,10 @@ When `XM_DATA_2` is written, begins writing value to VRAM at `XM_WR_ADDR` and ad
 **NOTE:** This register is identical to `XM_DATA` to allow for 32-bit "long" MOVEP.L transfers to/from `XM_DATA` for
 additional transfer speed.
 
-**0x8 `XM_SYS_CTRL` (R/W+) - draw busy status, read wait, reconfigure, interrupt control and write masking control**  
+#### 0x8 **`XM_SYS_CTRL`** (R/W+) - draw busy status, read wait, reconfigure, interrupt control and write masking control
+
 <img src="./pics/wd_XM_SYS_CTRL.svg">  
+
 **Read draw busy, read wait, write to reboot FPGA or read/write interrupt control/status and `XM_DATA` nibble write mask.**  
 Read:  
 &nbsp;&nbsp;&nbsp;&nbsp;`[11:8]`  interrupt enables  
@@ -175,7 +201,8 @@ Write:
 &nbsp;&nbsp;&nbsp;&nbsp;`[3:0]` interrupt mask (1 allows corresponding interrupt source to generate CPU interrupt).  
 [#TODO optimize layout for 68k status polling]
 
-**0x9 `XM_TIMER` (R/W) - 1/10<sup>th</sup> of millisecond timer (0 - 6553.5 ms) / interrupt clear**  
+#### 0x9 **`XM_TIMER`** (R/W) - 1/10<sup>th</sup> of millisecond timer (0 - 6553.5 ms) / interrupt clear
+
 <img src="./pics/wd_XM_TIMER.svg">
 <img src="./pics/wd_XM_TIMER_W.svg">
 
@@ -185,7 +212,8 @@ Can be used for fairly accurate timing. When value wraps, internal fractional va
 clock).  
 **NOTE:** To assure an atomic incrementing 16-bit value, when the high byte of TIMER is read, the low byte is saved into an internal register and returned when TIMER low byte is read. Because of this reading the full 16-bit TIMER register is recommended (or first even byte, then odd byte, or odd byte value may not update).
 
-**0xA `XM_LFSR` (RO) - LFSR pseudo-random number**  
+#### 0xA **`XM_LFSR`** (RO) - LFSR pseudo-random number
+
 <img src="./pics/wd_XM_LFSR.svg">
 
 **Read 16-bit LFSR pseudo-random value**  
@@ -193,17 +221,20 @@ Read 16-bits from internal 19-bit LFSR (linear feedback shift-register). All val
 every cycle asynchronus at the display pixel clock, it should provide "quite random" numbers (at least for most game
 and graphics purposes).
 
-**0xB `XM_UNUSED_B` (R/W) - unused register 0xB**  
+#### 0xB **`XM_UNUSED_B`** (R/W) - unused register 0xB  
+
 Unused direct register 0xB
 
-**0xC `XM_RW_INCR` (R/W) - increment value for `XM_RW_ADDR` when `XM_RW_DATA`/`XM_RW_DATA_2`is read or written**  
+#### 0xC **`XM_RW_INCR`** (R/W) - increment value for `XM_RW_ADDR` when `XM_RW_DATA`/`XM_RW_DATA_2`is accessed  
+
 <img src="./pics/wd_XM_RW_INCR.svg">
 
 **Read or write twos-complement value added to`XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2`is written to (or read if `RW_RD_INC` flag set).**  
 Allows quickly reading/writing Xosera VRAM from`XM_RW_DATA`/`XM_RW_DATA_2` when using a fixed `XM_RW_ADDR` increment.
 Added to `XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2` is written (twos complement so value can be negative).   If the `RW_RD_INC` flag is set in `XM_SYS_CTRL`, then a read of `XM_RW_DATA` or`XM_RW_DATA_2` will also add `XM_RW_INCR` to `XM_RW_ADDR` (this is useful when using `XM_RW_DATA` *only* for reading).
 
-**0xD `XM_RW_ADDR` (R/W+) - VRAM read/write address for accessed at `XM_RW_DATA`/`XM_RW_DATA_2`**  
+#### 0xD **`XM_RW_ADDR`** (R/W+) - VRAM read/write address for accessed at `XM_RW_DATA`/`XM_RW_DATA_2`
+
 <img src="./pics/wd_XM_RW_ADDR.svg">
 
 **Read or write VRAM address read when`XM_RW_DATA` or `XM_RW_DATA_2`is read from or written to.**  
@@ -213,7 +244,8 @@ reading at `XM_RW_DATA` or `XM_RW_DATA_2`.
 Since this read always happens (even when only a write was intended), prefer using `RW_ADDR` only when
 reading is needed (however, it is a *tiny* VRAM access overhead).  The `RW_RD_INC` flag in `XM_SYS_CTRL` controls if `XM_RW_INCR` is added to `XM_RW_ADDR` when `XM_RW_DATA` or `XM_RW_DATA_2` are *read* (it is always added on a *write*).
 
-**0xE `XM_RW_DATA` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**  
+#### 0xE **`XM_RW_DATA`** (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`
+
 <img src="./pics/wd_XM_RW_DATA.svg">
 
 **Read or write VRAM value in VRAM at`XM_RW_ADDR` and add `XM_RW_INCR` to `XM_RW_ADDR`.**  
@@ -222,7 +254,8 @@ When `XM_RW_DATA` is written, begins writing value to VRAM at `XM_RW_ADDR` and a
 reading new VRAM value.  
 The `RW_RD_INC` flag in `XM_SYS_CTRL` controls if `XM_RW_INCR` is added to `XM_RW_ADDR` when `XM_RW_DATA` is *read* (it is always added on a *write*).
 
-**0xF `XM_RW_DATA_2` (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`**  
+#### 0xF **`XM_RW_DATA_2`** &(nbsp); (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`
+
 <img src="./pics/wd_XM_RW_DATA.svg">
 
 **Read or write VRAM value in VRAM at`XM_RW_ADDR` and add `XM_RW_INCR` to `XM_RW_ADDR`.**  
@@ -582,7 +615,7 @@ The operation has four options that can be independently specified in `XR_BLIT_C
 - `DECR` specifies the blit operation will be carried out with all address decrementing. Source and destination
   addresses would be set to start at the last word (highest address) of image buffers and will decrement during each
   word of the operation (instead of incrementing). This also reverses the left/right edge for first/last word mask and
-  will shift pixels to the left. Note that `DECR` does _not_ subtract `XR_BLIT_MOD_A`, `XR_BLIT_MOD_B` and
+  will shift pixels to the left. Note that `DECR` does *not* subtract `XR_BLIT_MOD_A`, `XR_BLIT_MOD_B` and
   `XR_BLIT_MOD_D` values when set (so they typically need to be negated).
 
 Additionally, a transparency test is applied to all operations: `4-bit mask M = (B != T)` (testing either per nibble or byte)
@@ -630,7 +663,7 @@ Arbitrary value for source constant term `C`. If `C_USE_B` set in `XR_BLIT_CTRL`
 <img src="./pics/wd_XR_BLIT_MOD_D.svg">
 
 **modulo added to `BLIT_DST_D` destination address at end of a line**  
-Arbitrary twos complement value added to `D` destination address at the end of each line. Typically the _destination_width_-_source_width_ (in words) to adjust the destination pointer to the start of the next rectangular image line.
+Arbitrary twos complement value added to `D` destination address at the end of each line. Typically the *destination_width*-*source_width* (in words) to adjust the destination pointer to the start of the next rectangular image line.
 
 **0x28 `XR_BLIT_DST_D` (WO) - destination D VRAM write address**  
 <img src="./pics/wd_XR_BLIT_DST_D.svg">
@@ -692,7 +725,7 @@ In general, programming the copper comprises loading a copper program (or 'coppe
 the `XR_COPPER_ADDR` area, and then setting the starting PC (if necessary) and enable bit in
 the `XR_COPP_CTRL` register.
 
-**NOTE:** The PC contained in the control register is the _initial_ PC, used to initialize
+**NOTE:** The PC contained in the control register is the *initial* PC, used to initialize
 the copper at the next vertical blanking interval. It is **not** read during a frame, and
 cannot be used to perform jumps - see instead the `JMP` instruction.
 

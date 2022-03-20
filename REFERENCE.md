@@ -29,7 +29,7 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
       - [0xC **`XM_RW_INCR`** (R/W) - increment value for `XM_RW_ADDR` when `XM_RW_DATA`/`XM_RW_DATA_2`is accessed](#0xc-xm_rw_incr-rw---increment-value-for-xm_rw_addr-when-xm_rw_dataxm_rw_data_2is-accessed)
       - [0xD **`XM_RW_ADDR`** (R/W+) - VRAM read/write address for accessed at `XM_RW_DATA`/`XM_RW_DATA_2`](#0xd-xm_rw_addr-rw---vram-readwrite-address-for-accessed-at-xm_rw_dataxm_rw_data_2)
       - [0xE **`XM_RW_DATA`** (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`](#0xe-xm_rw_data-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr)
-      - [0xF **`XM_RW_DATA_2`** &(nbsp); (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`](#0xf-xm_rw_data_2-nbsp-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr)
+      - [0xF **`XM_RW_DATA_2`** (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`](#0xf-xm_rw_data_2-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr)
   - [Xosera Extended Register / Extended Memory Region Summary](#xosera-extended-register--extended-memory-region-summary)
     - [Xosera Extended Registers Details (XR Registers)](#xosera-extended-registers-details-xr-registers)
     - [Video Config and Copper XR Registers Summary](#video-config-and-copper-xr-registers-summary)
@@ -93,7 +93,7 @@ This table is ugly, but worth it for clickable links
 | 0xC   | [**`XM_RW_INCR`**](#0xc-xm_rw_incr-rw---increment-value-for-xm_rw_addr-when-xm_rw_dataxm_rw_data_2is-accessed)   | R /W  | `XM_RW_ADDR` increment value on read/write of `XM_RW_DATA`/`XM_RW_DATA_2`             |
 | 0xD   | [**`XM_RW_ADDR`**](#0xd-xm_rw_addr-rw---vram-readwrite-address-for-accessed-at-xm_rw_dataxm_rw_data_2)   | R /W+ | read/write address for VRAM access from `XM_RW_DATA`/`XM_RW_DATA_2`                   |
 | 0xE   | [**`XM_RW_DATA`**](#0xe-xm_rw_data-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr)   | R+/W+ | read/write VRAM word at `XM_RW_ADDR` (and add `XM_RW_INCR`)                           |
-| 0xF   | [**`XM_RW_DATA_2`**](#0xf-xm_rw_data_2-nbsp-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr) | R+/W+ | 2nd `XM_RW_DATA`(to allow for 32-bit read/write access)                               |
+| 0xF   | [**`XM_RW_DATA_2`**](#0xf-xm_rw_data_2-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr) | R+/W+ | 2nd `XM_RW_DATA`(to allow for 32-bit read/write access)                               |
 
 (`R+` or `W+` indicates that reading or writing this register has additional "side effects", respectively)
 ___
@@ -257,7 +257,7 @@ When `XM_RW_DATA` is written, begins writing value to VRAM at `XM_RW_ADDR` and a
 reading new VRAM value.  
 The `RW_RD_INC` flag in `XM_SYS_CTRL` controls if `XM_RW_INCR` is added to `XM_RW_ADDR` when `XM_RW_DATA` is *read* (it is always added on a *write*).
 
-#### 0xF **`XM_RW_DATA_2`** &(nbsp); (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`
+#### 0xF **`XM_RW_DATA_2`** (R+/W+) - VRAM memory value to read/write at VRAM address`XM_RW_ADDR`
 
 <img src="./pics/wd_XM_RW_DATA.svg">
 

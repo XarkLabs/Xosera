@@ -143,7 +143,7 @@ uint32_t copper_320x200[] = {
 // dummy global variable
 uint32_t global;        // this is used to prevent the compiler from optimizing out tests
 
-char xosera_initdata[32];
+uint8_t xosera_initdata[32];
 
 uint32_t mem_buffer[128 * 1024];
 
@@ -381,27 +381,42 @@ static const char * xmsg(int x, int y, int color, const char * msg)
     return msg;
 }
 
+static void reset_vid(void)
+{
+    remove_intr();
+
+    wait_vsync_start();
+
+    xreg_setw(PA_GFX_CTRL, 0x0000);
+    xreg_setw(PA_TILE_CTRL, 0x000F);
+    xreg_setw(PB_GFX_CTRL, 0x0080);
+    xreg_setw(VID_LEFT, 0x0000);
+    xreg_setw(VID_RIGHT, xreg_getw_wait(VID_HSIZE));
+    xreg_setw(PA_HV_SCROLL, 0x0000);
+    xreg_setw(PA_HV_FSCALE, 0x0000);
+    xreg_setw(COPP_CTRL, 0x0000);                                  // disable copper
+    xreg_setw(PA_LINE_LEN, xreg_getw_wait(VID_HSIZE) >> 3);        // line len
+
+    restore_colors();
+
+    printf("\033c");        // reset XANSI
+
+    while (checkchar())
+    {
+        readchar();
+    }
+
+#if 1        // handy for development to force Kermit upload
+    dprintf("Disabling SD on next boot...\n");
+    disable_sd_boot();
+#endif
+}
+
 static inline void checkbail()
 {
     if (checkchar())
     {
-        wait_vsync_start();
-        remove_intr();
-
-        xreg_setw(VID_LEFT, 0x0000);
-        xreg_setw(VID_RIGHT, xreg_getw_wait(VID_HSIZE));
-        xreg_setw(PA_GFX_CTRL, 0x0000);                                // text mode
-        xreg_setw(PA_TILE_CTRL, 0x000F);                               // text mode
-        xreg_setw(COPP_CTRL, 0x0000);                                  // disable copper
-        xreg_setw(PA_LINE_LEN, xreg_getw_wait(VID_HSIZE) >> 3);        // line len
-        xreg_setw(PB_GFX_CTRL, 0x0080);                                // text mode
-        xreg_setw(PB_TILE_CTRL, 0x000F);                               // text mode
-        xreg_setw(PB_LINE_LEN, xreg_getw_wait(VID_HSIZE) >> 3);        // line len
-        xreg_setw(PA_HV_FSCALE, 0x0000);
-        restore_colors();
-        print("\33c");
-
-        disable_sd_boot();
+        reset_vid();
         _WARM_BOOT();
     }
 }
@@ -753,7 +768,6 @@ void show_test_pic(int pic_num, uint16_t addr)
             break;
     }
 
-    xm_setw(SYS_CTRL, 0x000F);        // disable Xosera vsync interrupt
     wait_vsync_start();
     xreg_setw(PA_GFX_CTRL, 0x0080);        // blank screen
     xreg_setw(PB_GFX_CTRL, 0x0080);
@@ -795,11 +809,6 @@ void show_test_pic(int pic_num, uint16_t addr)
         xreg_setw(PB_DISP_ADDR, addr + wpl);
         xreg_setw(PB_LINE_LEN, wpl + wplb);
         xreg_setw(PB_HV_FSCALE, frac);
-    }
-
-    if (ti->mode != BM_12_BIT)
-    {
-        xm_setw(SYS_CTRL, 0x0F0F);        // enable Xosera vsync interrupt
     }
 
     wait_vsync();
@@ -996,7 +1005,7 @@ void test_blit()
         xmem_setw(XR_COLOR_B_ADDR + 250, 0x8000);        // set write address
         xmem_setw(XR_COLOR_A_ADDR + 255, 0xf000);        // set write address
 
-        for (int i = 0x100; i >= 0; i--)
+        for (int i = 0x100; i >= 0; i -= 0x4)
         {
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xf000);        // set write address
             wait_blit_ready();
@@ -1220,7 +1229,6 @@ void test_blit()
 
 void test_true_color()
 {
-    xm_setw(SYS_CTRL, 0x000F);        // disable Xosera vsync interrupt
 
     uint16_t saddr = 0x0000;
 
@@ -1231,8 +1239,6 @@ void test_true_color()
     //    load_sd_bitmap("/fractal_320x240_RG8B4.raw", saddr);
 
     //    delay_check(DELAY_TIME * 2);
-
-    xm_setw(SYS_CTRL, 0x0F0F);        // enable Xosera vsync interrupt
 }
 
 void test_dual_8bpp()
@@ -1629,24 +1635,25 @@ const char blurb[] =
     "\n"
     "  \xf9  Uses low-cost FPGA instead of expensive semiconductor fabrication :)\n"
     "  \xf9  128KB of embedded video VRAM (16-bit words at 33 or 25 MHz)\n"
-    "  \xf9  Fast 8-bit bus interface (using MOVEP) for rosco_m68k (by Ross Bamford)\n"
-    "  \xf9  Register based interface using 16 main 16-bit registers\n"
     "  \xf9  VGA output at 848x480 or 640x480 (16:9 or 4:3 @ 60Hz)\n"
-    "  \xf9  Dual video planes (playfields) with color blending and priority\n"
-    "  \xf9  Dual 256 color palettes with 12-bit RGB (4096 colors) and 4-bit alpha\n"
+    "  \xf9  Register based interface using 16 main 16-bit registers\n"
     "  \xf9  Read/write VRAM with programmable read/write address increment\n"
+    "  \xf9  Fast 8-bit bus interface (using MOVEP) for rosco_m68k (by Ross Bamford)\n"
+    "  \xf9  Dual video planes (playfields) with color blending and priority\n"
+    "  \xf9  Dual 256 color palettes with 12-bit RGB (4096 colors) and 4-bit \"alpha\"\n"
     "  \xf9  Read/write tile memory for an additional 10KB of tiles or tilemap\n"
     "  \xf9  Text mode with up to 8x16 glyphs and 16 forground & background colors\n"
     "  \xf9  Graphic tile modes with 1024 8x8 glyphs, 16/256 colors and H & V tile mirror\n"
     "  \xf9  Bitmap modes with 1 (plus attribute colors), 4 or 8 bits per pixel\n"
     "  \xf9  Fast 2-D \"blitter\" unit with transparency, masking, shifting and logic ops\n"
+    "  \xf9  Screen synchronized \"copper\" to change colors and registers mid-screen\n"
     "  \xf9  Pixel H/V repeat of 1x, 2x, 3x or 4x (e.g. for 424x240 or 320x240)\n"
     "  \xf9  Fractional H/V repeat scaling (e.g. for 320x200 or 512x384 retro modes)\n"
     "  \xf9  TODO: Wavetable stereo audio (similar to Amiga)\n"
-    "  \xf9  TODO: Hardware sprites for mouse cursor (similar to Amiga)\n"
-    "  \xf9  TODO: Additional high-speed USB UART or SD card SPI?\n"
-    "  \xf9  TODO: Whatever else fits into the FPGA while it still makes timing. :)\n"
-    "\n"
+    "  \xf9  TODO: Hardware sprites for mouse cursor etc. (similar to Amiga)\n"
+    "  \xf9  TODO: High-speed USB UART (using FPGA FTDI interface)?\n"
+    "  \xf9  TODO: Perhaps PS/2 keyboard or fast SPI SD card I/O?\n"
+    "  \xf9  TODO: Whatever else fits into the FPGA while it still makes timing! :)\n"
     "\n"
     "\n";
 
@@ -1746,19 +1753,21 @@ void     xosera_test()
         readchar();
     }
 
+    printf("\033c\033[?12l");        // ANSI reset, cursor blink off
+
     dprintf("Xosera_test_m68k\n");
     cpu_delay(1000);
     dprintf("\nxosera_init(0)...");
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw_wait(VID_HSIZE), xreg_getw_wait(VID_VSIZE));
-    cpu_delay(1000);
-    char * init_ptr = xosera_initdata;
+
+    uint8_t * init_ptr = xosera_initdata;
     for (int i = XR_COPPER_ADDR + XR_COPPER_SIZE - 16; i < XR_COPPER_ADDR + XR_COPPER_SIZE; i++)
     {
         uint16_t v = xmem_getw_wait(i);
         //        dprintf("0x%04x = 0x%04x\n", i, v);
-        *init_ptr++ = (char)(v >> 8);
-        *init_ptr++ = (char)(v & 0xff);
+        *init_ptr++ = (uint8_t)(v >> 8);
+        *init_ptr++ = (uint8_t)(v & 0xff);
     }
     dprintf("ID: %s Githash:0x%02x%02x%02x%02x\n",
             xosera_initdata,
@@ -1766,22 +1775,13 @@ void     xosera_test()
             xosera_initdata[29],
             xosera_initdata[30],
             xosera_initdata[31]);
+
     wait_vsync();
+    xreg_setw(PA_GFX_CTRL, 0x0080);            // PA blanked
     xreg_setw(VID_CTRL, 0x0000);               // border color #0
     xmem_setw(XR_COLOR_A_ADDR, 0x0000);        // color # = black
-
-    // D'oh! Uses timer    rosco_m68k_CPUMHz();
-
     xr_textmode_pb();
-    xr_printf("Xosera Test for rosco_m68k\n");
-
-#if 1
-    dprintf("Installing interrupt handler...");
-    install_intr();
-    dprintf("okay.\n");
-#else
-    dprintf("NOT Installing interrupt handler\n");
-#endif
+    xr_printfxy(5, 0, "xosera_test_m68k\n");
 
     if (SD_check_support())
     {
@@ -1801,7 +1801,7 @@ void     xosera_test()
 
     if (use_sd)
     {
-        xr_printf("\nLoading test image:\n");
+        xr_printf("\nLoading test images:\n");
         xr_printf("  pacbox-320x240\n");
         load_test_image(BM_4_BIT, "/pacbox-320x240.raw", "/pacbox-320x240_pal.raw");
         xr_printf("  ST_KingTut_Dpaint_16\n");
@@ -1813,6 +1813,16 @@ void     xosera_test()
         xr_printf("  xosera_r1\n");
         load_test_image(BM_8_BIT, "/xosera_r1.raw", "/xosera_r1_pal.raw");
     }
+
+    // D'oh! Uses timer    rosco_m68k_CPUMHz();
+
+#if 1
+    dprintf("Installing interrupt handler...");
+    install_intr();
+    dprintf("okay.\n");
+#else
+    dprintf("NOT Installing interrupt handler\n");
+#endif
 
 #if COPPER_TEST
     install_copper();
@@ -1898,38 +1908,23 @@ void     xosera_test()
         xcls();
 
         const char * bp    = blurb;
-        int          color = 1;
+        int          color = 6;
 
         for (int y = 0; y < 30; y++)
         {
             bp = xmsg(0, y, color, bp);
 
-            color = (color + 1) & 0xf;
-            if (color == 0)
-                color = 1;
-        }
-
-        delay_check(DELAY_TIME * 5);
-
-        if (SD_check_support())
-        {
-            dprintf("SD card supported: ");
-
-            if (SD_FAT_initialize())
+            if (*bp != '\n')
             {
-                dprintf("SD card ready\n");
-                use_sd = true;
-            }
-            else
-            {
-                dprintf("no SD card\n");
-                use_sd = false;
+                color = (color + 1) & 0xf;
+                if (color == 0)
+                {
+                    color = 1;
+                }
             }
         }
-        else
-        {
-            dprintf("No SD card support.\n");
-        }
+
+        delay_check(DELAY_TIME * 10);
 
         if (use_sd)
         {
@@ -1938,6 +1933,8 @@ void     xosera_test()
 
         if (use_sd)
         {
+            xm_setbh(SYS_CTRL, 0x07);        // disable Xosera vsync interrupt
+
             show_test_pic(TRUECOLOR_TEST_PIC, 0x0000);
             delay_check(DELAY_TIME);
             show_test_pic(SELF_PIC, 0x0000);
@@ -1946,16 +1943,19 @@ void     xosera_test()
             delay_check(DELAY_TIME);
             show_test_pic(SHUTTLE_PIC, 0x0000);
             delay_check(DELAY_TIME);
+
+            xm_setbl(TIMER, 0x08);           // clear any pending interrupt
+            xm_setbh(SYS_CTRL, 0x08);        // enable Xosera vsync interrupt
         }
 
         // ugly: test_dual_8bpp();
+        // delay_check(DELAY_TIME);
 
         // ugly: test_xr_read();
+        // delay_check(DELAY_TIME);
 
-        wait_vsync();
-        xreg_setw(PA_GFX_CTRL, 0x0000);
-        test_hello();
-        delay_check(DELAY_TIME);
+        // ugly: test_hello();
+        // delay_check(DELAY_TIME);
 
 #if 0        // bored with this test. :)
         test_vram_speed();
@@ -1963,25 +1963,7 @@ void     xosera_test()
 
 #endif
     }
-    wait_vsync();
 
-    xreg_setw(PA_GFX_CTRL, 0x0000);                                // text mode
-    xreg_setw(PA_TILE_CTRL, 0x000F);                               // text mode
-    xreg_setw(COPP_CTRL, 0x0000);                                  // disable copper
-    xreg_setw(PA_LINE_LEN, xreg_getw_wait(VID_HSIZE) >> 3);        // line len
-    restore_colors();
-    remove_intr();
-    xcls();
-    xmsg(0, 0, 0x02, "Exited.");
-
-
-    while (checkchar())
-    {
-        readchar();
-    }
-#if 1
-    dprintf("Disabling SD on next boot...\n");
-    disable_sd_boot();
-#endif
-    _WARM_BOOT();
+    // exit test
+    reset_vid();
 }

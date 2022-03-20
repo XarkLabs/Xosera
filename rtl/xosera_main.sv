@@ -24,6 +24,7 @@
 // FPGA4Fun         - https://www.fpga4fun.com/
 // Nandland         - https://www.nandland.com/
 // Project-F        - https://projectf.io/
+// RetroRamblings   - https://retroramblings.net/
 // Alchrity         - https://alchitry.com/
 //
 // 1BitSquared Discord server has also been welcoming and helpful - https://1bitsquared.com/pages/chat
@@ -57,7 +58,8 @@ module xosera_main#(
     output logic      [3:0]   blue_o,               // blue color gun output
     output logic              hsync_o, vsync_o,     // horizontal and vertical sync
     output logic              dv_de_o,              // pixel visible (aka display enable)
-    output logic              audio_l_o, audio_r_o, // left and right audio PWM output
+    output logic              audio_l_o,            // left channel audio PWM output
+    output logic              audio_r_o,            // right channel audio PWM output
     output logic              reconfig_o,           // reconfigure iCE40 from flash
     output logic      [1:0]   boot_select_o,        // reconfigure congigureation number (0-3)
     input  wire logic         reset_i,              // reset signal
@@ -167,8 +169,13 @@ assign audio_l_o    =   dbug_cs_strobe;     // debug to see when CS noticed
 assign audio_r_o    =   regs_xr_sel;        // debug to see when XR bus selected
 `else
 // TODO: audio generation
+`ifndef ENABLE_AUDIO
 assign audio_l_o    =   1'b0;
 assign audio_r_o    =   1'b0;
+`else
+byte_t                  audio_left;     // left audio channel value (8-bit)
+byte_t                  audio_right;    // right audio channel value (8-bit)
+`endif
 `endif
 
 // register interface for CPU access
@@ -194,6 +201,10 @@ reg_interface reg_interface(
     //
     .blit_busy_i(blit_busy),            // blit engine busy
     .blit_full_i(blit_full),            // blit engine queue full
+`ifdef ENABLE_AUDIO
+    .audio_l_o(audio_left),
+    .audio_r_o(audio_right),
+`endif
     // reconfig
     .reconfig_o(reconfig_o),
     .boot_select_o(boot_select_o),
@@ -294,6 +305,25 @@ generate
         assign blit_intr        = '0;
     end
 endgenerate
+
+// audio - test
+`ifdef ENABLE_AUDIO
+audio_dac#(
+    .WIDTH(8)
+) audio_l_dac (
+    .value_i(audio_left),
+    .pulse_o(audio_l_o),
+    .clk(clk)
+);
+
+audio_dac#(
+    .WIDTH(8)
+) audio_r_dac (
+    .value_i(audio_right),
+    .pulse_o(audio_r_o),
+    .clk(clk)
+);
+`endif
 
 `ifdef ENABLE_DRAW
 // TODO: draw?

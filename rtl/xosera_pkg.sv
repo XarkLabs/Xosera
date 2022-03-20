@@ -36,6 +36,7 @@
 `define ENABLE_LFSR                     // enable XM_REG 0xA as 19-bit LFSR
 `define ENABLE_TIMERLATCH               // latch timer low byte when high byte read
 `define ENABLE_COPP                     // enable copper
+`define ENABLE_AUDIO                    // enable test audio
 //`define ENABLE_DRAW                     // enable draw unit
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")

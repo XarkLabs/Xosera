@@ -23,7 +23,7 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
       - [0x6 **`XM_DATA`** (R+/W+) - VRAM memory value to read/write at VRAM address `XM_RD_ADDR`/`XM_WR_ADDR`](#0x6-xm_data-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)
       - [0x7 **`XM_DATA_2`** (R+/W+) - VRAM memory value to read/write at VRAM address `XM_RD_ADDR`/`XM_WR_ADDR`](#0x7-xm_data_2-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)
       - [0x8 **`XM_SYS_CTRL`** (R/W+) - draw busy status, read wait, reconfigure, interrupt control and write masking control](#0x8-xm_sys_ctrl-rw---draw-busy-status-read-wait-reconfigure-interrupt-control-and-write-masking-control)
-      - [0x9 **`XM_TIMER`** (R/W) - 1/10<sup>th</sup> of millisecond timer (0 - 6553.5 ms) / interrupt clear](#0x9-xm_timer-rw---110supthsup-of-millisecond-timer-0---65535-ms--interrupt-clear)
+      - [0x9 **`XM_TIMER`** (R/W) - tenth millisecond timer (0 - 6553.5 ms) / interrupt clear](#0x9-xm_timer-rw---tenth-millisecond-timer-0---65535-ms--interrupt-clear)
       - [0xA **`XM_LFSR`** (RO) - LFSR pseudo-random number](#0xa-xm_lfsr-ro---lfsr-pseudo-random-number)
       - [0xB **`XM_UNUSED_B`** (R/W) - unused register 0xB](#0xb-xm_unused_b-rw---unused-register-0xb)
       - [0xC **`XM_RW_INCR`** (R/W) - increment value for `XM_RW_ADDR` when `XM_RW_DATA`/`XM_RW_DATA_2`is accessed](#0xc-xm_rw_incr-rw---increment-value-for-xm_rw_addr-when-xm_rw_dataxm_rw_data_2is-accessed)
@@ -73,6 +73,9 @@ ___
 [#TODO: **NOTE:** It is planned to swap registers 0 and 1 with registers 8 and 9 along with remapping some `XM_SYS_CTRL` bits to
 provide more efficient access to Xosera status flags (like busy and timeout)]
 
+<!--
+This table is ugly, but worth it for clickable links
+-->
 | Reg # | Reg Name       | R /W  | Description                                                                           |
 | ----- | -------------- | ----- | ------------------------------------------------------------------------------------- |
 | 0x0   | [**`XM_XR_ADDR`**](#0x0-xm_xr_addr-rw---xr-register--memory-address)   | R /W+ | XR register number/address for `XM_XR_DATA` read/write access                         |
@@ -84,7 +87,7 @@ provide more efficient access to Xosera status flags (like busy and timeout)]
 | 0x6   | [**`XM_DATA`**](#0x6-xm_data-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)      | R+/W+ | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
 | 0x7   | [**`XM_DATA_2`**](#0x7-xm_data_2-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)    | R+/W+ | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
 | 0x8   | [**`XM_SYS_CTRL`**](#0x8-xm_sys_ctrl-rw---draw-busy-status-read-wait-reconfigure-interrupt-control-and-write-masking-control)  | R /W+ | busy status, FPGA reconfig, interrupt status/control, write masking                   |
-| 0x9   | [**`XM_TIMER`**](#0x9-xm_timer-rw---110supthsup-of-millisecond-timer-0---65535-ms--interrupt-clear)     | R /W+ | read 1/10<sup>th</sup> millisecond timer                                              |
+| 0x9   | [**`XM_TIMER`**](#0x9-xm_timer-rw---tenth-millisecond-timer-0---65535-ms--interrupt-clear)     | R /W+ | read tenth millisecond timer                                              |
 | 0xA   | [**`XM_LFSR`**](#0xa-xm_lfsr-ro---lfsr-pseudo-random-number)      | RO    | read LFSR pseudo random number (internally 19-bit)                                    |
 | 0xB   | [**`XM_UNUSED_B`**](#0xb-xm_unused_b-rw---unused-register-0xb)  | R /W  | unused direct register 0xB [**#TODO**]                                                    |
 | 0xC   | [**`XM_RW_INCR`**](#0xc-xm_rw_incr-rw---increment-value-for-xm_rw_addr-when-xm_rw_dataxm_rw_data_2is-accessed)   | R /W  | `XM_RW_ADDR` increment value on read/write of `XM_RW_DATA`/`XM_RW_DATA_2`             |
@@ -201,15 +204,15 @@ Write:
 &nbsp;&nbsp;&nbsp;&nbsp;`[3:0]` interrupt mask (1 allows corresponding interrupt source to generate CPU interrupt).  
 [#TODO optimize layout for 68k status polling]
 
-#### 0x9 **`XM_TIMER`** (R/W) - 1/10<sup>th</sup> of millisecond timer (0 - 6553.5 ms) / interrupt clear
+#### 0x9 **`XM_TIMER`** (R/W) - tenth millisecond timer (0 - 6553.5 ms) / interrupt clear
 
 <img src="./pics/wd_XM_TIMER.svg">
 <img src="./pics/wd_XM_TIMER_W.svg">
 
-**Read 16-bit timer, increments every 1/10<sup>th</sup> of a millisecond**  
+**Read 16-bit timer, increments every 1/10<sup>th</sup> of a millisecond (10,000 Hz)**  
 **Write to clear interrupt status**  
 Can be used for fairly accurate timing. When value wraps, internal fractional value is maintined (so as accurate as FPGA PLL
-clock).  
+clock).  Can be used for elapsed time up to ~6.5 seconds (or unlimited, if the cumulative elapsed time is updated at least that often).
 **NOTE:** To assure an atomic incrementing 16-bit value, when the high byte of TIMER is read, the low byte is saved into an internal register and returned when TIMER low byte is read. Because of this reading the full 16-bit TIMER register is recommended (or first even byte, then odd byte, or odd byte value may not update).
 
 #### 0xA **`XM_LFSR`** (RO) - LFSR pseudo-random number

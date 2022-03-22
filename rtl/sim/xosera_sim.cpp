@@ -3520,6 +3520,9 @@ uint16_t     BusInterface::test_data[32768] = {
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+
+    REG_END(),
+
 #if 1
     // true color hack test
 

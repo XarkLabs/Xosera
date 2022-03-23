@@ -2135,6 +2135,8 @@ void     xosera_test()
         }
     }
 
+    (void)sinData;
+
 #if 0          // audio sin test
     {
         // fix signed -> unsigned
@@ -2146,8 +2148,7 @@ void     xosera_test()
 
         test_audio(sd, sizeof(sinData), 7);
     }
-#elif 1        // audio waveform test
-    (void)sinData;
+#elif 0        // audio waveform test
     if (load_test_audio("/Slide_8u.raw", &testsamp, &testsampsize))
     {
         test_audio(testsamp, testsampsize, 26);

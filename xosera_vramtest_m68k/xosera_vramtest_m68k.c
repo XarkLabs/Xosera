@@ -759,6 +759,7 @@ int test_xmem(bool LFSR, int mode)
     RETURN_ON_KEYPRESS();
 
     xm_setw(SYS_CTRL, 0x000F);        // disable vsync
+    xm_setw(TIMER, 0x000F);           // clear any pending vsync
 
     update_elapsed();
     uint32_t start_time;
@@ -952,19 +953,14 @@ void xosera_test()
                         fip->flags & MODEFLAG_BYTE ? "B" : "",
                         fip->flags & MODEFLAG_WORD ? "W" : "",
                         fip->flags & MODEFLAG_LONG ? "L" : "",
-                        fip->flags & MODEFLAG_SLOW ? "X" : "");
+                        fip->flags & MODEFLAG_XRMEM ? "X" : "");
             }
         }
     }
     wait_vsync();
     remove_intr();
 
-    wait_vsync();
-    xmem_setw(XR_COLOR_ADDR, 0x000);
-    xreg_setw(PA_GFX_CTRL, 0x0000);         // text mode
-    xreg_setw(PA_TILE_CTRL, 0x000F);        // text mode
-    xreg_setw(COPP_CTRL, 0x0000);           // disable copper
-    xreg_setw(PA_LINE_LEN, 106);            // line len
+    xosera_init(0);
 
     while (checkchar())
     {

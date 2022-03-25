@@ -33,9 +33,6 @@ module reg_interface(
     // status signals
     input  wire logic            blit_busy_i,       // blit operation in progress
     input  wire logic            blit_full_i,       // blit register queue full
-    // audio test
-    output      byte_t           audio_l_o,         // audio L channel (test)
-    output      byte_t           audio_r_o,         // audio R channel (test)
     // iCE40 reconfigure
     output      logic            reconfig_o,        // reconfigure iCE40 from flash
     output      logic  [1:0]     boot_select_o,     // reconfigure iCE40 flash config number
@@ -315,7 +312,7 @@ always_ff @(posedge clk) begin
                     ;
 `endif
                 xv::XM_UNUSED_B:
-                    audio_l_o           <= bus_data_byte;
+                    ;
                 xv::XM_RW_INCR:
                     reg_rw_incr[15:8]   <= bus_data_byte;
                 xv::XM_RW_ADDR:
@@ -378,7 +375,7 @@ always_ff @(posedge clk) begin
                 end
 `endif
                 xv::XM_UNUSED_B: begin
-                    audio_r_o           <= bus_data_byte;
+                    ;
                 end
                 xv::XM_RW_INCR: begin
                     reg_rw_incr[7:0]    <= bus_data_byte;

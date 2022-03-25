@@ -49,6 +49,9 @@ module video_gen #(
     output      color_t         colorB_index_o,         // color palette index output (16x256)
     output      logic           vsync_o, hsync_o,       // video sync outputs
     output      logic           dv_de_o,                // video active signal (needed for HDMI)
+    // audio signsls
+    output      logic           audio_l_o,              // left PDM output
+    output      logic           audio_r_o,              // right PDM output
     // standard signals
     input  wire logic           reset_i,                // system reset in
     input  wire logic           clk                     // clock (video pixel clock)
@@ -150,13 +153,27 @@ assign h_count_o    = h_count;
 assign v_count_o    = v_count;
 `endif
 
+word_t              pa_aud_addr0;
+word_t              pa_aud_addr1;
+word_t              pa_aud_addr2;
+word_t              pa_aud_addr3;
+
+/* verilator lint_off UNUSED */
+word_t              pa_aud_word0;
+word_t              pa_aud_word1;
+word_t              pa_aud_word2;
+word_t              pa_aud_word3;
+/* verilator lint_on UNUSED */
+
 assign pb_stall = (pa_vram_sel && pb_vram_sel) || (pa_tile_sel && pb_tile_sel);
 assign vram_sel_o       = pa_vram_sel ? pa_vram_sel  : pb_vram_sel;
 assign vram_addr_o      = pa_vram_sel ? pa_vram_addr : pb_vram_addr;
 assign tilemem_sel_o    = pa_tile_sel ? pa_tile_sel  : pb_tile_sel;
 assign tilemem_addr_o   = pa_tile_sel ? pa_tile_addr : pb_tile_addr;
 
-video_playfield video_pf_a(
+video_playfield #(
+    .EN_AUDIO(1)
+) video_pf_a(
     .stall_i(1'b0),                                     // playfield A never stalls
     .v_visible_i(v_state == STATE_VISIBLE),
     .h_count_i(h_count),
@@ -191,6 +208,14 @@ video_playfield video_pf_a(
     .pf_line_start_addr_i(line_set_addr),
     .pf_gfx_ctrl_set_i(pa_gfx_ctrl_set),
     .pf_color_index_o(pa_color_index),
+    .pf_aud_addr0_i(pa_aud_addr0),
+    .pf_aud_addr1_i(pa_aud_addr1),
+    .pf_aud_addr2_i(pa_aud_addr2),
+    .pf_aud_addr3_i(pa_aud_addr3),
+    .pf_aud_word0_o(pa_aud_word0),
+    .pf_aud_word1_o(pa_aud_word1),
+    .pf_aud_word2_o(pa_aud_word2),
+    .pf_aud_word3_o(pa_aud_word3),
     .reset_i(reset_i),
     .clk(clk)
 );
@@ -203,6 +228,14 @@ generate
         logic       pb_tilemem_rd;                      // last cycle was PB tilemem read flag
         logic       pb_tilemem_rd_save;                 // PB tilemem read data saved flag
         word_t      pb_tilemem_rd_data;                 // PB tilemem read data
+
+        word_t      pb_aud_word0;
+        word_t      pb_aud_word1;
+        word_t      pb_aud_word2;
+        word_t      pb_aud_word3;
+
+        logic       unused_audio;                                                       // temp
+        assign      unused_audio = &{ 1'b0, pb_aud_word0, pb_aud_word1, pb_aud_word2, pb_aud_word3 }; // temp
 
         always_ff @(posedge clk) begin
             // latch vram read data for playfield B
@@ -228,7 +261,10 @@ generate
             pb_tilemem_rd  <= pb_tile_sel;              // remember if this cycle was reading tilemem
         end
 
-        video_playfield video_pf_b(
+        video_playfield #(
+            .EN_AUDIO(0)
+        )
+        video_pf_b(
             .stall_i(pb_stall),
             .v_visible_i(v_state == STATE_VISIBLE),
             .h_count_i(h_count),
@@ -263,6 +299,14 @@ generate
             .pf_line_start_addr_i(line_set_addr),
             .pf_gfx_ctrl_set_i(pb_gfx_ctrl_set),
             .pf_color_index_o(pb_color_index),
+            .pf_aud_addr0_i(16'h0000),
+            .pf_aud_addr1_i(16'h0000),
+            .pf_aud_addr2_i(16'h0000),
+            .pf_aud_addr3_i(16'h0000),
+            .pf_aud_word0_o(pb_aud_word0),
+            .pf_aud_word1_o(pb_aud_word1),
+            .pf_aud_word2_o(pb_aud_word2),
+            .pf_aud_word3_o(pb_aud_word3),
             .reset_i(reset_i),
             .clk(clk)
         );
@@ -321,6 +365,11 @@ always_ff @(posedge clk) begin
         pa_v_frac_repeat    <= '0;
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_gfx_ctrl_set     <= 1'b0;
+
+        pa_aud_addr0        <=  '0;
+        pa_aud_addr1        <=  '0;
+        pa_aud_addr2        <=  '0;
+        pa_aud_addr3        <=  '0;
 
         pb_blank            <= 1'b1;            // playfield B starts blanked
         pb_start_addr       <= 16'h0000;
@@ -599,6 +648,32 @@ always_ff @(posedge clk) begin
         dv_de_o     <= dv_display_ena;
     end
 end
+
+byte_t  aud_left;
+assign  aud_left    = pa_aud_word0[15:8];
+byte_t  aud_right;
+assign  aud_right   = pa_aud_word0[7:0];
+
+// audio DAC outout
+`ifdef ENABLE_AUDIO
+audio_dac#(
+    .WIDTH(8)
+) audio_l_dac (
+    .value_i(aud_left),
+    .pulse_o(audio_r_o),
+    .reset_i(reset_i),
+    .clk(clk)
+);
+
+audio_dac#(
+    .WIDTH(8)
+) audio_r_dac (
+    .value_i(aud_right),
+    .pulse_o(audio_l_o),
+    .reset_i(reset_i),
+    .clk(clk)
+);
+`endif
 
 endmodule
 `default_nettype wire               // restore default

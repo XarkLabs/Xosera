@@ -193,29 +193,29 @@ static void disable_sd_boot()
 
 static inline void wait_vsync()
 {
-    while (xreg_getw_wait(SCANLINE) < 0x8000)
+    while (xreg_getw(SCANLINE) < 0x8000)
         ;
 }
 
 void wait_not_vsync()
 {
-    while (xreg_getw_wait(SCANLINE) < 0x8000)
+    while (xreg_getw(SCANLINE) < 0x8000)
         ;
 }
 
 void wait_vsync_start()
 {
-    while (xreg_getw_wait(SCANLINE) >= 0x8000)
+    while (xreg_getw(SCANLINE) >= 0x8000)
         ;
-    while (xreg_getw_wait(SCANLINE) < 0x8000)
+    while (xreg_getw(SCANLINE) < 0x8000)
         ;
 }
 
 static inline void check_vsync()
 {
-    while (xreg_getw_wait(SCANLINE) < 0x8000)
+    while (xreg_getw(SCANLINE) < 0x8000)
         ;
-    while ((xreg_getw_wait(SCANLINE) & 0x3ff) > 520)
+    while ((xreg_getw(SCANLINE) & 0x3ff) > 520)
         ;
 }
 
@@ -343,11 +343,11 @@ static uint8_t  text_color = 0x02;        // dark green on black
 
 static void get_textmode_settings()
 {
-    uint16_t vx          = (xreg_getw_wait(PA_GFX_CTRL) & 3) + 1;
-    uint16_t tile_height = (xreg_getw_wait(PA_TILE_CTRL) & 0xf) + 1;
-    screen_addr          = xreg_getw_wait(PA_DISP_ADDR);
-    text_columns         = (uint8_t)xreg_getw_wait(PA_LINE_LEN);
-    text_rows            = (uint8_t)(((xreg_getw_wait(VID_VSIZE) / vx) + (tile_height - 1)) / tile_height);
+    uint16_t vx          = (xreg_getw(PA_GFX_CTRL) & 3) + 1;
+    uint16_t tile_height = (xreg_getw(PA_TILE_CTRL) & 0xf) + 1;
+    screen_addr          = xreg_getw(PA_DISP_ADDR);
+    text_columns         = (uint8_t)xreg_getw(PA_LINE_LEN);
+    text_rows            = (uint8_t)(((xreg_getw(VID_VSIZE) / vx) + (tile_height - 1)) / tile_height);
 }
 
 static void xcls()
@@ -391,11 +391,11 @@ static void reset_vid(void)
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PB_GFX_CTRL, 0x0080);
     xreg_setw(VID_LEFT, 0x0000);
-    xreg_setw(VID_RIGHT, xreg_getw_wait(VID_HSIZE));
+    xreg_setw(VID_RIGHT, xreg_getw(VID_HSIZE));
     xreg_setw(PA_HV_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
-    xreg_setw(COPP_CTRL, 0x0000);                                  // disable copper
-    xreg_setw(PA_LINE_LEN, xreg_getw_wait(VID_HSIZE) >> 3);        // line len
+    xreg_setw(COPP_CTRL, 0x0000);                             // disable copper
+    xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) >> 3);        // line len
 
     restore_colors();
 
@@ -1939,13 +1939,14 @@ static void test_audio(uint8_t * samp, int sampsize, int speed)
 
     uint8_t * sp = samp;
     int       sc = sampsize;
-    xm_setbl(UNUSED_B, 0);
+    xm_setw(WR_INCR, 0x0000);
+    xm_setw(WR_ADDR, 0x0000);
 
     while (1)
     {
         uint8_t val = *sp++;
-        xm_setbh(UNUSED_B, val);
-        xm_setbl(UNUSED_B, val);
+        xm_setbh(DATA, val);
+        xm_setbl(DATA, val);
 
         for (int d = speed; d != 0; d--)
         {
@@ -1959,6 +1960,50 @@ static void test_audio(uint8_t * samp, int sampsize, int speed)
         }
     }
 }
+
+static void test_audio_sin(uint8_t * samp, int speed)
+{
+    __asm__ __volatile__("or.w    #0x0700,%sr");
+
+    uint8_t spl = 0;
+    uint8_t spr = 128;
+    xm_setw(WR_INCR, 0x0000);
+    xm_setw(WR_ADDR, 0x0000);
+
+    while (1)
+    {
+        uint8_t vall = samp[spl++];
+        xm_setbh(DATA, vall);
+        uint8_t valr = samp[spr++];
+        xm_setbl(DATA, valr);
+
+        for (int d = speed; d != 0; d--)
+        {
+            __asm__ __volatile__("nop");
+        }
+    }
+}
+
+static void test_audio_ramp(int speed)
+{
+    __asm__ __volatile__("or.w    #0x0700,%sr");
+
+    uint8_t sp = 0;
+    xm_setw(WR_INCR, 0x0000);
+    xm_setw(WR_ADDR, 0x0000);
+
+    while (1)
+    {
+        xm_setbh(DATA, sp);
+        xm_setbl(DATA, sp);
+        sp++;
+        for (int d = speed; d != 0; d--)
+        {
+            __asm__ __volatile__("nop");
+        }
+    }
+}
+
 
 const char blurb[] =
     "\n"
@@ -2060,10 +2105,7 @@ void set_alpha_slow(int alpha)
     uint16_t a = (alpha & 0xf) << 12;
     for (int i = XR_COLOR_ADDR; i < XR_COLOR_ADDR + 256; i++)
     {
-        wait_vsync();
-        xm_setw(XR_ADDR, i);
-        __asm__ __volatile__("nop ; nop ; nop ; nop ; nop ; nop ; nop");
-        uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
+        uint16_t v = (xmem_getw_wait(i) & 0xfff) | a;
         xm_setw(XR_DATA, v);
     }
 }
@@ -2073,9 +2115,7 @@ static void set_alpha(int alpha)
     uint16_t a = (alpha & 0xf) << 12;
     for (int i = XR_COLOR_ADDR; i < XR_COLOR_ADDR + 256; i++)
     {
-        xm_setw(XR_ADDR, i);
-        wait_memory();
-        uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
+        uint16_t v = (xmem_getw_wait(i) & 0xfff) | a;
         xm_setw(XR_DATA, v);
     }
 }
@@ -2137,8 +2177,15 @@ void     xosera_test()
 
     (void)sinData;
 
-#if 0          // audio sin test
+#if 1        // audio sin test
     {
+        xreg_setw(PA_GFX_CTRL, 0x0000);
+        xreg_setw(PA_TILE_CTRL, 0x000F);
+        xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) >> 3);
+        xreg_setw(PA_DISP_ADDR, 0x0000);
+        xreg_setw(PA_HV_SCROLL, 0x0000);
+        xreg_setw(PA_HV_FSCALE, 0x0000);
+        xcls();
         // fix signed -> unsigned
         uint8_t * sd = (uint8_t *)sinData;
         for (int i = 0; i < 256; i++)
@@ -2146,7 +2193,8 @@ void     xosera_test()
             sd[i] = sd[i] + 128;
         }
 
-        test_audio(sd, sizeof(sinData), 7);
+        test_audio_sin(sd, 4);
+        test_audio_ramp(10);
     }
 #elif 0        // audio waveform test
     if (load_test_audio("/Slide_8u.raw", &testsamp, &testsampsize))

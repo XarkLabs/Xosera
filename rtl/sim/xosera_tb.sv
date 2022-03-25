@@ -16,7 +16,7 @@
 
 `define MEMDUMP                     // dump VRAM contents to file
 `define BUSTEST
-`define MAX_FRAMES      2
+`define MAX_FRAMES      4
 `define LOAD_MONOBM
 
 module xosera_tb();
@@ -276,6 +276,39 @@ always begin
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_LFSR, readword[7:0]);
     $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
+
+// audio test
+
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_ADDR, 8'h00);
+
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_INCR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_INCR, 8'h00);
+
+    # 50ns;
+
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, 8'h20);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, 8'hE0);
+
+    # 50ns;
+
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, 8'h22);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, 8'hDE);
+
+    # 50ns;
+
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, 8'h24);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, 8'hDC);
+
+    # 50ns;
+
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, 8'h28);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, 8'hDA);
+
+    # 50ns;
+
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, 8'h2A);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, 8'hD8);
 
 `ifdef LOAD_MONOBM
     while (xosera.video_gen.last_frame_pixel != 1'b1) begin

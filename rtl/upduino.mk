@@ -170,11 +170,13 @@ ifdef FMAX_TEST	# run nextPNR FMAX_TEST times to determine "Max frequency" range
 	  ) & \
 	  pids[$${num}]=$$! ; \
 	  ((num = num + 1)) ; \
-	  if (( num % 16 == 15)) ; then \
-	    ((wnum = num - 8)) ; \
-	    wait $${pid[wnum]} ; \
+	  if ((num > 8)) ; then \
+	    if ((num % 16 == 15)) ; then \
+	      ((wnum = num - 8)) ; \
+	      wait $${pid[wnum]} ; \
+	    fi ; \
 	  fi ; \
-    	done ; \
+      done ; \
 	wait
 	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
 	  grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log | tail -1 | cut -d " " -f 7 >"$(LOGS)/fmax/fmax_temp.txt" ; \

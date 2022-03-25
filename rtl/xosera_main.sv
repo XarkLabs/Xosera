@@ -172,9 +172,6 @@ assign audio_r_o    =   regs_xr_sel;        // debug to see when XR bus selected
 `ifndef ENABLE_AUDIO
 assign audio_l_o    =   1'b0;
 assign audio_r_o    =   1'b0;
-`else
-byte_t                  audio_left;     // left audio channel value (8-bit)
-byte_t                  audio_right;    // right audio channel value (8-bit)
 `endif
 `endif
 
@@ -201,10 +198,6 @@ reg_interface reg_interface(
     //
     .blit_busy_i(blit_busy),            // blit engine busy
     .blit_full_i(blit_full),            // blit engine queue full
-`ifdef ENABLE_AUDIO
-    .audio_l_o(audio_left),
-    .audio_r_o(audio_right),
-`endif
     // reconfig
     .reconfig_o(reconfig_o),
     .boot_select_o(boot_select_o),
@@ -245,6 +238,8 @@ video_gen#(
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
 `endif
+    .audio_l_o(audio_l_o),
+    .audio_r_o(audio_r_o),
     .reset_i(reset_i),
     .clk(clk)
 );
@@ -305,25 +300,6 @@ generate
         assign blit_intr        = '0;
     end
 endgenerate
-
-// audio - test
-`ifdef ENABLE_AUDIO
-audio_dac#(
-    .WIDTH(8)
-) audio_l_dac (
-    .value_i(audio_left),
-    .pulse_o(audio_l_o),
-    .clk(clk)
-);
-
-audio_dac#(
-    .WIDTH(8)
-) audio_r_dac (
-    .value_i(audio_right),
-    .pulse_o(audio_r_o),
-    .clk(clk)
-);
-`endif
 
 `ifdef ENABLE_DRAW
 // TODO: draw?

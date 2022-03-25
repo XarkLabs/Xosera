@@ -18,42 +18,25 @@ module audio_dac #(
 (
     input wire  logic [WIDTH-1:0]   value_i,
     output      logic               pulse_o,
+    input wire  logic               reset_i,
     input wire  logic               clk
 );
-`define SIGMADELTA
-`ifdef SIGMADELTA
 
-logic [WIDTH:0] accumulator = '0;
+logic [WIDTH:0] accumulator;
 
 // simple 1st order sigma-delta DAC
+// See https://www.fpga4fun.com/PWM_DAC_2.html
+// and http://retroramblings.net/?p=1686
+assign  pulse_o     = accumulator[WIDTH];
+
+
 always_ff @(posedge clk) begin
-    accumulator <= accumulator[WIDTH-1:0] + value_i;
-    pulse_o     <= accumulator[WIDTH];
-end
-
-`else
-
-logic [WIDTH-1:0] pwm_count;
-logic [WIDTH-1:0] pwm_value;
-
-// simple PWM DAC
-always_ff @(posedge clk) begin
-
-    if (pwm_count == '1) begin
-        pwm_value   <= value_i;
-    end
-
-    if (pwm_count < pwm_value) begin
-        pulse_o     <= 1'b0;
+    if (reset_i) begin
+        accumulator <= 9'b0;
     end else begin
-        pulse_o     <= 1'b1;
+        accumulator <= accumulator[WIDTH-1:0] + value_i;
     end
-
-    pwm_count   <= pwm_count + 1'b1;
 end
-
-`endif
-
 
 endmodule
 `default_nettype wire               // restore default

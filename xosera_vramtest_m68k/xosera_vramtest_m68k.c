@@ -22,6 +22,7 @@
 // from interrupt.asm
 extern void              install_intr(void);
 extern void              remove_intr(void);
+extern volatile uint16_t NukeColor;
 extern volatile uint32_t XFrameCount;
 
 #define DELAY_TIME 100
@@ -731,8 +732,6 @@ int test_xmem(bool LFSR, int mode)
 
     // set funky mode to show XMEM
     wait_vsync();
-
-    wait_vsync();
     xreg_setw(PA_GFX_CTRL, 0x0080);
     xm_setw(XR_ADDR, XR_TILEMAP);
     for (int i = 0; i < (XR_COLS * XR_ROWS); i++)
@@ -745,33 +744,35 @@ int test_xmem(bool LFSR, int mode)
     xreg_setw(PA_LINE_LEN, XR_COLS);
     xreg_setw(PA_DISP_ADDR, XR_TILEMAP);
 
+
+    unsigned int elapsed_time = 0;
+
     dprintf("  > XMEM test=%s speed=%s mode=%s : ", LFSR ? "LFSR" : "ADDR", speed_names[4], vram_mode_names[mode]);
-
-    // generate pattern_buffer data
-    if (LFSR)
-    {
-        fill_LFSR();
-    }
-    else
-    {
-        fill_ADDR();
-    }
-    RETURN_ON_KEYPRESS();
-
-    xm_setw(SYS_CTRL, 0x000F);        // disable vsync
-    xm_setw(TIMER, 0x000F);           // clear any pending vsync
-
-    update_elapsed();
-    uint32_t start_time;
-    uint32_t check_time = elapsed_tenthms;
-    do
-    {
-        update_elapsed();
-        start_time = elapsed_tenthms;
-    } while (start_time == check_time);
-
     // fill XMEM with pattern_buffer
+    for (int r = 0; r < 16; r++)
     {
+        // generate pattern_buffer data
+        if (LFSR)
+        {
+            fill_LFSR();
+        }
+        else
+        {
+            fill_ADDR();
+        }
+        RETURN_ON_KEYPRESS();
+
+        NukeColor = 0xffff;
+
+        update_elapsed();
+        uint32_t start_time;
+        uint32_t check_time = elapsed_tenthms;
+        do
+        {
+            update_elapsed();
+            start_time = elapsed_tenthms;
+        } while (start_time == check_time);
+
         // word tile mem
         xm_setw(XR_ADDR, XR_TILE_ADDR);
         for (int addr = XR_TILE_ADDR; addr < (XR_TILE_ADDR + XR_TILE_SIZE); addr++)
@@ -790,27 +791,28 @@ int test_xmem(bool LFSR, int mode)
         {
             xm_setw(XR_DATA, pattern_buffer[addr]);
         }
+
+        RETURN_ON_KEYPRESS();
+
+        read_xmem_buffer();
+        RETURN_ON_KEYPRESS();
+        // verify write was correct
+        xmem_errs += verify_xmem(LFSR, mode);
+        if (xmem_errs >= 16)
+        {
+            dprintf("TEST CANCELLED (too many errors)!\n");
+        }
+
+        NukeColor = 0;
+        if (xmem_errs == 0)
+        {
+            update_elapsed();
+            elapsed_time += elapsed_tenthms - start_time;
+        }
     }
-
-    RETURN_ON_KEYPRESS();
-
-    read_xmem_buffer();
-    RETURN_ON_KEYPRESS();
-
-    // verify write was correct
-    xmem_errs += verify_xmem(LFSR, mode);
-    if (xmem_errs >= 16)
-    {
-        dprintf("TEST CANCELLED (too many errors)!\n");
-    }
-
-    xm_setw(TIMER, 0x000F);           // clear pending vsync
-    xm_setw(SYS_CTRL, 0x080F);        // enable vsync
 
     if (xmem_errs == 0)
     {
-        update_elapsed();
-        unsigned int elapsed_time = elapsed_tenthms - start_time;
         dprintf("PASSED  (%3u.%1ums)\n", elapsed_time / 10, elapsed_time % 10);
     }
 
@@ -953,14 +955,17 @@ void xosera_test()
                         fip->flags & MODEFLAG_BYTE ? "B" : "",
                         fip->flags & MODEFLAG_WORD ? "W" : "",
                         fip->flags & MODEFLAG_LONG ? "L" : "",
-                        fip->flags & MODEFLAG_XRMEM ? "X" : "");
+                        fip->flags & MODEFLAG_XRMEM ? "XMEM" : "");
             }
         }
     }
     wait_vsync();
     remove_intr();
 
-    xosera_init(0);
+    // reset console
+    xosera_init(cur_xosera_config);        // restore fonts, which were trashed
+    printchar('\033');
+    printchar('c');
 
     while (checkchar())
     {

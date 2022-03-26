@@ -248,7 +248,7 @@
 			"bit": "c"
 		},
 		"workbench.colorCustomizations": {
-			"terminal.foreground": "#20DB20",
+			"terminal.foreground": "#18E818",
 			"terminalCursor.foreground": "#E0E0E0",
 		},
 		"editor.wordWrapColumn": 120,
@@ -263,6 +263,7 @@
 			"FIXME",
 			"TODO"
 		],
-		"explorer.sortOrder": "type"
+		"explorer.sortOrder": "type",
+		"search.quickOpen.history.filterSortOrder": "recency"
 	}
 }

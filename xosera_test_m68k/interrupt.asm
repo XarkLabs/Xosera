@@ -57,18 +57,19 @@ Xosera_intr:
                 movep.w D0,XM_XR_ADDR(A0)
 
                 move.w  NukeColor,D0            ; increment NukeColor
+                bmi.s   NoNukeColor
                 addq.l  #1,D0
                 and.w   #$0FFF,D0
                 move.w  D0,NukeColor
                 movep.w D0,XM_XR_DATA(A0)       ; to NukeColor
 
-                add.l   #1,XFrameCount          ; increment frame counter
+NoNukeColor:    add.l   #1,XFrameCount          ; increment frame counter
 
                 movep.w D1,XM_XR_ADDR(A0)       ; restore aux_addr
                 movem.l (A7)+,D0-D1/A0          ; restore regs
                 rte
 
-NukeColor       dc.w    $0000
+        section .data
+
+NukeColor:      dc.w    $0000
 XFrameCount::   dc.l    $00000000
-
-

@@ -739,8 +739,8 @@ int test_xmem(bool LFSR, int mode)
         xm_setw(XR_DATA, i);
     }
     wait_vsync();
-    xreg_setw(PA_GFX_CTRL, 0x000A | mode);        // colorbase = 0x00 tiled + 8-bpp + Hx3 + Vx2
-    xreg_setw(PA_TILE_CTRL, 0x0207);              // tile=0x0000,tile=tile_mem, map=tile_mem, 8x8 tiles
+    xreg_setw(PA_GFX_CTRL, vram_modes[mode] & ~0x0040);        // text
+    xreg_setw(PA_TILE_CTRL, 0x0207);                           // tile=0x0000,tile=tile_mem, map=tile_mem, 8x8 tiles
     xreg_setw(PA_LINE_LEN, XR_COLS);
     xreg_setw(PA_DISP_ADDR, XR_TILEMAP);
 
@@ -749,6 +749,8 @@ int test_xmem(bool LFSR, int mode)
 
     dprintf("  > XMEM test=%s speed=%s mode=%s : ", LFSR ? "LFSR" : "ADDR", speed_names[4], vram_mode_names[mode]);
     // fill XMEM with pattern_buffer
+    NukeColor = 0xffff;        // disable color cycle while testing COLOR mem
+    wait_vsync();
     for (int r = 0; r < 16; r++)
     {
         // generate pattern_buffer data
@@ -761,8 +763,6 @@ int test_xmem(bool LFSR, int mode)
             fill_ADDR();
         }
         RETURN_ON_KEYPRESS();
-
-        NukeColor = 0xffff;
 
         update_elapsed();
         uint32_t start_time;
@@ -803,13 +803,14 @@ int test_xmem(bool LFSR, int mode)
             dprintf("TEST CANCELLED (too many errors)!\n");
         }
 
-        NukeColor = 0;
         if (xmem_errs == 0)
         {
             update_elapsed();
             elapsed_time += elapsed_tenthms - start_time;
         }
     }
+
+    NukeColor = 0;
 
     if (xmem_errs == 0)
     {

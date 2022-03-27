@@ -36,16 +36,6 @@ module vram_arb#(
     input  wire addr_t          blit_addr_i,
     input  wire word_t          blit_data_i,
 
-`ifdef ENABLE_DRAW
-    // TODO: polygon draw access (read/write)
-    input  wire logic           draw_sel_i,
-    output      logic           draw_ack_o,
-    input  wire logic           draw_wr_i,
-    input  wire logic  [3:0]    draw_wr_mask_i,
-    input  wire addr_t          draw_addr_i,
-    input  wire word_t          draw_data_i,
-`endif
-
     // common VRAM data output
     output      word_t          vram_data_o,
 
@@ -62,16 +52,10 @@ word_t          vram_data_in;
 // ack signals
 logic           regs_ack_next;
 logic           blit_ack_next;
-`ifdef ENABLE_DRAW
-logic           draw_ack_next;
-`endif
 
 always_comb begin
     regs_ack_next   = 1'b0;
     blit_ack_next   = 1'b0;
-`ifdef ENABLE_DRAW
-    draw_ack_next   = 1'b0;
-`endif
     vram_sel        = 1'b0;
     vram_wr         = 1'b0;
     vram_addr       = regs_addr_i;
@@ -99,24 +83,11 @@ always_comb begin
         vram_wr_mask    = blit_wr_mask_i;
         vram_data_in    = blit_data_i;
     end
-`ifdef ENABLE_DRAW
-    else if (draw_sel_i & ~draw_ack_o) begin
-        draw_ack_next   = 1'b1;
-        vram_sel        = 1'b1;
-        vram_wr         = draw_wr_i;
-        vram_addr       = draw_addr_i;
-        vram_wr_mask    = draw_wr_mask_i;
-        vram_data_in    = draw_data_i;
-    end
-`endif
 end
 
 always_ff @(posedge clk) begin
     regs_ack_o  <= regs_ack_next;
     blit_ack_o  <= blit_ack_next;
-`ifdef ENABLE_DRAW
-    draw_ack_o  <= draw_ack_next;
-`endif
 end
 
 vram vram(

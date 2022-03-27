@@ -20,7 +20,8 @@
 `include "xosera_pkg.sv"
 
 module video_gen #(
-    parameter EN_VID_PF_B       = 1
+    parameter EN_VID_PF_B       = 1,
+    parameter EN_AUDIO          = 1
 )
 (
     // video registers and control
@@ -49,9 +50,9 @@ module video_gen #(
     output      color_t         colorB_index_o,         // color palette index output (16x256)
     output      logic           vsync_o, hsync_o,       // video sync outputs
     output      logic           dv_de_o,                // video active signal (needed for HDMI)
-    // audio signsls
-    output      logic           audio_l_o,              // left PDM output
-    output      logic           audio_r_o,              // right PDM output
+    // audio outputs
+    output      logic           audio_pdm_l_o,          // audio left channel PDM output
+    output      logic           audio_pdm_r_o,          // audio left channel PDM output
     // standard signals
     input  wire logic           reset_i,                // system reset in
     input  wire logic           clk                     // clock (video pixel clock)
@@ -153,17 +154,16 @@ assign h_count_o    = h_count;
 assign v_count_o    = v_count;
 `endif
 
-word_t              pa_aud_addr0;
-word_t              pa_aud_addr1;
-word_t              pa_aud_addr2;
-word_t              pa_aud_addr3;
+// audio
+logic           audio_enable;
 
-/* verilator lint_off UNUSED */
-word_t              pa_aud_word0;
-word_t              pa_aud_word1;
-word_t              pa_aud_word2;
-word_t              pa_aud_word3;
-/* verilator lint_on UNUSED */
+word_t          audio_0_vol;                    // audio 0 L+R 8-bit volume/pan
+word_t          audio_0_rate;                   // audio 0 playback rate (TBD)
+addr_t          audio_0_start;                  // audio 0 start address
+logic           audio_0_tile;                   // audio 0 memory (0=VRAM, 1=TILE)
+logic [14:0]    audio_0_len;                    // audio 0 length in words
+addr_t          audio_0_addr;                   // audio 0 current address
+word_t          audio_0_word;                   // audio 0 current output
 
 assign pb_stall = (pa_vram_sel && pb_vram_sel) || (pa_tile_sel && pb_tile_sel);
 assign vram_sel_o       = pa_vram_sel ? pa_vram_sel  : pb_vram_sel;
@@ -172,7 +172,7 @@ assign tilemem_sel_o    = pa_tile_sel ? pa_tile_sel  : pb_tile_sel;
 assign tilemem_addr_o   = pa_tile_sel ? pa_tile_addr : pb_tile_addr;
 
 video_playfield #(
-    .EN_AUDIO(1)
+    .EN_AUDIO(EN_AUDIO)
 ) video_pf_a(
     .stall_i(1'b0),                                     // playfield A never stalls
     .v_visible_i(v_state == STATE_VISIBLE),
@@ -208,14 +208,10 @@ video_playfield #(
     .pf_line_start_addr_i(line_set_addr),
     .pf_gfx_ctrl_set_i(pa_gfx_ctrl_set),
     .pf_color_index_o(pa_color_index),
-    .pf_aud_addr0_i(pa_aud_addr0),
-    .pf_aud_addr1_i(pa_aud_addr1),
-    .pf_aud_addr2_i(pa_aud_addr2),
-    .pf_aud_addr3_i(pa_aud_addr3),
-    .pf_aud_word0_o(pa_aud_word0),
-    .pf_aud_word1_o(pa_aud_word1),
-    .pf_aud_word2_o(pa_aud_word2),
-    .pf_aud_word3_o(pa_aud_word3),
+    .audio_enable_i(audio_enable),
+    .audio_0_tile_i(audio_0_tile),
+    .audio_0_addr_i(audio_0_addr),
+    .audio_0_word_o(audio_0_word),
     .reset_i(reset_i),
     .clk(clk)
 );
@@ -229,13 +225,10 @@ generate
         logic       pb_tilemem_rd_save;                 // PB tilemem read data saved flag
         word_t      pb_tilemem_rd_data;                 // PB tilemem read data
 
-        word_t      pb_aud_word0;
-        word_t      pb_aud_word1;
-        word_t      pb_aud_word2;
-        word_t      pb_aud_word3;
+        word_t      audio_dummy_word;
 
-        logic       unused_audio;                                                       // temp
-        assign      unused_audio = &{ 1'b0, pb_aud_word0, pb_aud_word1, pb_aud_word2, pb_aud_word3 }; // temp
+        logic       unused_pb_audio;
+        assign      unused_pb_audio = &{ 1'b0, audio_dummy_word };
 
         always_ff @(posedge clk) begin
             // latch vram read data for playfield B
@@ -299,14 +292,10 @@ generate
             .pf_line_start_addr_i(line_set_addr),
             .pf_gfx_ctrl_set_i(pb_gfx_ctrl_set),
             .pf_color_index_o(pb_color_index),
-            .pf_aud_addr0_i(16'h0000),
-            .pf_aud_addr1_i(16'h0000),
-            .pf_aud_addr2_i(16'h0000),
-            .pf_aud_addr3_i(16'h0000),
-            .pf_aud_word0_o(pb_aud_word0),
-            .pf_aud_word1_o(pb_aud_word1),
-            .pf_aud_word2_o(pb_aud_word2),
-            .pf_aud_word3_o(pb_aud_word3),
+            .audio_enable_i(1'b0),
+            .audio_0_tile_i(1'b0),
+            .audio_0_addr_i('0),
+            .audio_0_word_o(audio_dummy_word),
             .reset_i(reset_i),
             .clk(clk)
         );
@@ -366,11 +355,6 @@ always_ff @(posedge clk) begin
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_gfx_ctrl_set     <= 1'b0;
 
-        pa_aud_addr0        <=  '0;
-        pa_aud_addr1        <=  '0;
-        pa_aud_addr2        <=  '0;
-        pa_aud_addr3        <=  '0;
-
         pb_blank            <= 1'b1;            // playfield B starts blanked
         pb_start_addr       <= 16'h0000;
         pb_line_len         <= xv::TILES_WIDE[15:0];
@@ -391,10 +375,17 @@ always_ff @(posedge clk) begin
         pb_gfx_ctrl_set     <= 1'b0;
 
         line_set_addr       <= 16'h0000;        // user set display addr
+
 `ifdef ENABLE_COPP
         copp_reg_wr_o       <= 1'b0;
         copp_reg_data_o     <= 16'h0000;
 `endif
+
+        audio_0_vol         <= '0;
+        audio_0_rate        <= '0;
+        audio_0_tile        <= '0;
+        audio_0_start       <= '0;
+        audio_0_len         <= '0;
 
 `ifndef SYNTHESIS
         pa_blank            <= 1'b0;            // don't blank playfield A in simulation
@@ -416,6 +407,7 @@ always_ff @(posedge clk) begin
             case ({1'b0, vgen_reg_num_i})
                 xv::XR_VID_CTRL: begin
                     border_color    <= vgen_reg_data_i[15:8];
+                    audio_enable    <= vgen_reg_data_i[4];
                     intr_signal_o   <= vgen_reg_data_i[3:0];
                 end
                 xv::XR_COPP_CTRL: begin
@@ -425,13 +417,18 @@ always_ff @(posedge clk) begin
                     copp_reg_data_o[xv::COPP_W-1:0]  <= vgen_reg_data_i[xv::COPP_W-1:0];
 `endif
                 end
-                xv::XR_UNUSED_02: begin
+                xv::XR_AUD0_VOL: begin
+                    audio_0_vol <= vgen_reg_data_i;
                 end
-                xv::XR_UNUSED_03: begin
+                xv::XR_AUD0_RATE: begin
+                    audio_0_rate <= vgen_reg_data_i;
                 end
-                xv::XR_UNUSED_04: begin
+                xv::XR_AUD0_START: begin
+                    audio_0_start <= vgen_reg_data_i;
                 end
-                xv::XR_UNUSED_05: begin
+                xv::XR_AUD0_LENGTH: begin
+                    audio_0_tile    <= vgen_reg_data_i[15];
+                    audio_0_len     <= vgen_reg_data_i[14:0];
                 end
                 xv::XR_VID_LEFT: begin
                     vid_left        <= $bits(vid_left)'(vgen_reg_data_i);
@@ -649,31 +646,29 @@ always_ff @(posedge clk) begin
     end
 end
 
-byte_t  aud_left;
-assign  aud_left    = pa_aud_word0[15:8];
-byte_t  aud_right;
-assign  aud_right   = pa_aud_word0[7:0];
 
-// audio DAC outout
-`ifdef ENABLE_AUDIO
-audio_dac#(
-    .WIDTH(8)
-) audio_l_dac (
-    .value_i(aud_left),
-    .pulse_o(audio_r_o),
-    .reset_i(reset_i),
-    .clk(clk)
-);
+// audio generation
+generate
+    if (EN_AUDIO) begin : opt_AUDIO
+        // audio channel mixer
+        audio_mixer audio_mixer
+        (
+            .audio_enable(audio_enable),
+            .audio_mix_strobe(h_line_last_pixel), // TODO: decouple from scanline frequency?
 
-audio_dac#(
-    .WIDTH(8)
-) audio_r_dac (
-    .value_i(aud_right),
-    .pulse_o(audio_l_o),
-    .reset_i(reset_i),
-    .clk(clk)
-);
-`endif
+            .audio_0_vol_i(audio_0_vol),
+            .audio_0_rate_i(audio_0_rate),
+            .audio_0_start_i(audio_0_start),
+            .audio_0_len_i(audio_0_len),
+            .audio_0_addr_o(audio_0_addr),
+            .audio_0_word_i(audio_0_word),
+            .pdm_l_o(audio_pdm_l_o),
+            .pdm_r_o(audio_pdm_r_o),
+            .reset_i(reset_i),
+            .clk(clk)
+        );
+    end
+endgenerate
 
 endmodule
 `default_nettype wire               // restore default

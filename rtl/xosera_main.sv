@@ -80,7 +80,7 @@ argb_t                  colorA_xrgb;        // pf A ARGB output
 color_t                 colorB_index;       // pf B color index
 argb_t                  colorB_xrgb;        // pf B ARGB output
 
-//  VRAM read output data (for vgen, regs, blit, draw)
+//  VRAM read output data (for vgen, regs, blit)
 word_t                  vram_data_out;
 
 // register interface vram/xr access
@@ -101,18 +101,6 @@ addr_t                  blit_vram_addr;
 word_t                  blit_vram_data;
 logic                   blit_busy;
 logic                   blit_full;
-
-`ifdef ENABLE_DRAW
-// draw vram/xr access
-logic                   draw_vram_sel;
-logic                   draw_vram_ack;
-logic                   draw_xr_sel;
-logic                   draw_xr_ack;
-logic                   draw_wr;
-logic  [3:0]            draw_wr_mask;
-addr_t                  draw_vram_addr;
-word_t                  draw_vram_data;
-`endif
 
 `ifdef ENABLE_COPP
 // copper bus signals
@@ -138,10 +126,7 @@ word_t                  xr_regs_data_in;
 
 // XR register unit select signals
 logic                   vgen_reg_wr_en;     // vgen XR register 0x000X & 0x001X
-/* verilator lint_off UNUSED */
 logic                   blit_reg_wr_en;     // blit XR register 0x002X    // TODO
-logic                   draw_reg_wr_en;     // draw XR register 0x003X    // TODO
-/* verilator lint_on UNUSED */
 
 // XM top-level register signals
 addr_t                  xm_regs_addr;       // register interface VRAM/XR addr
@@ -219,7 +204,7 @@ video_gen#(
     .vgen_reg_num_i(xr_regs_addr[4:0]),
     .vgen_reg_data_i(xr_regs_data_in),
     .vgen_reg_data_o(xr_regs_data_out),
-    .intr_status_i(intr_status),        // status read from VID_CTRL
+    .intr_status_i(intr_status),            // status read from VID_CTRL
     .intr_signal_o(vid_intr_signal),        // signaled by write to VID_CTRL
     .vram_sel_o(vgen_vram_sel),
     .vram_addr_o(vgen_vram_addr),
@@ -238,8 +223,8 @@ video_gen#(
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
 `endif
-    .audio_l_o(audio_l_o),
-    .audio_r_o(audio_r_o),
+    .audio_pdm_l_o(audio_l_o),
+    .audio_pdm_r_o(audio_r_o),
     .reset_i(reset_i),
     .clk(clk)
 );
@@ -301,15 +286,6 @@ generate
     end
 endgenerate
 
-`ifdef ENABLE_DRAW
-// TODO: draw?
-assign  draw_vram_sel   = 1'b0;
-assign  draw_wr         = 1'b0;
-assign  draw_wr_mask    = '0;
-assign  draw_vram_addr  = '0;
-assign  draw_vram_data  = '0;
-`endif
-
 // VRAM memory arbitration
 vram_arb #(
     .EN_BLIT(EN_BLIT)
@@ -334,23 +310,12 @@ vram_arb #(
     .blit_addr_i(blit_vram_addr),
     .blit_data_i(blit_vram_data),
 
-`ifdef ENABLE_DRAW
-    // TODO: polygon draw
-    .draw_sel_i(draw_vram_sel),
-    .draw_ack_o(draw_vram_ack),
-    .draw_wr_i(draw_wr & regs_vram_sel),
-    .draw_wr_mask_i(draw_wr_mask),
-    .draw_addr_i(draw_vram_addr),
-    .draw_data_i(draw_vram_data),
-`endif
-
     .clk(clk)
 );
 
 // XR memory arbitration (conbines all other memory regions)
 assign vgen_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:5] == xv::XR_CONFIG_REGS[6:5]);    // vgen reg write
 assign blit_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:4] == xv::XR_BLIT_REGS[6:4]);      // blit reg write
-assign draw_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:4] == xv::XR_DRAW_REGS[6:4]);      // draw reg write
 xrmem_arb#(
     .EN_VID_PF_B(EN_VID_PF_B)
 ) xrmem_arb(

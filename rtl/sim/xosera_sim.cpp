@@ -3000,13 +3000,13 @@ uint16_t     BusInterface::test_data[32768] = {
 
 #if 1                              // lame audio test
     REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
-    REG_W(WR_ADDR, 0xFF80),
+    REG_W(WR_ADDR, 0xFF00),
     REG_UPLOAD(),        // upload sine data
 
-    XREG_SETW(AUD0_VOL, 0x4040),
-    XREG_SETW(AUD0_RATE, 0x4000),
-    XREG_SETW(AUD0_START, 0xFF80),
-    XREG_SETW(AUD0_LENGTH, 0x007F),
+    XREG_SETW(AUD0_VOL, 0x4020),
+    XREG_SETW(AUD0_RATE, 0x0002),
+    XREG_SETW(AUD0_START, 0xFF00),
+    XREG_SETW(AUD0_LENGTH, 0x00FF),
 
     XREG_SETW(VID_CTRL, 0x0010),
 

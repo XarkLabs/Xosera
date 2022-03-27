@@ -54,10 +54,10 @@ module video_playfield#(
     input  wire addr_t          pf_line_start_addr_i,               // address of next line display data start
     output      color_t         pf_color_index_o,                   // output color
     // audio
-    input       logic           audio_enable_i,
+    input       logic           audio_0_fetch_i,
     input  wire logic           audio_0_tile_i,                     // audio 0 memory (0=VRAM, 1=TILE)
     input  wire addr_t          audio_0_addr_i,                     // audio 0 address
-    output      word_t          audio_0_word_o,                     // audio 0 data
+    output      word_t          audio_0_word_o,                     // audio 0 data out
     // standard signals
     input  wire logic           reset_i,                            // system reset in
     input  wire clk                                                 // pixel clock
@@ -210,7 +210,7 @@ always_comb begin
 
     case (pf_fetch)
         FETCH_IDLE: begin
-            if (EN_AUDIO && audio_enable_i && h_line_last_pixel_i) begin
+            if (EN_AUDIO && h_line_last_pixel_i && audio_0_fetch_i) begin
                 vram_sel_next       = ~audio_0_tile_i;        // select vram for audio0
                 tilemem_sel_next    = audio_0_tile_i;
                 fetch_addr_next     = audio_0_addr_i;         // put audio 0 address on bus

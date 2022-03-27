@@ -157,6 +157,7 @@ assign v_count_o    = v_count;
 // audio
 logic           audio_enable;
 
+logic           audio_0_fetch;
 word_t          audio_0_vol;                    // audio 0 L+R 8-bit volume/pan
 word_t          audio_0_rate;                   // audio 0 playback rate (TBD)
 addr_t          audio_0_start;                  // audio 0 start address
@@ -208,7 +209,7 @@ video_playfield #(
     .pf_line_start_addr_i(line_set_addr),
     .pf_gfx_ctrl_set_i(pa_gfx_ctrl_set),
     .pf_color_index_o(pa_color_index),
-    .audio_enable_i(audio_enable),
+    .audio_0_fetch_i(audio_0_fetch),
     .audio_0_tile_i(audio_0_tile),
     .audio_0_addr_i(audio_0_addr),
     .audio_0_word_o(audio_0_word),
@@ -292,7 +293,7 @@ generate
             .pf_line_start_addr_i(line_set_addr),
             .pf_gfx_ctrl_set_i(pb_gfx_ctrl_set),
             .pf_color_index_o(pb_color_index),
-            .audio_enable_i(1'b0),
+            .audio_0_fetch_i(1'b0),
             .audio_0_tile_i(1'b0),
             .audio_0_addr_i('0),
             .audio_0_word_o(audio_dummy_word),
@@ -660,6 +661,7 @@ generate
             .audio_0_rate_i(audio_0_rate),
             .audio_0_start_i(audio_0_start),
             .audio_0_len_i(audio_0_len),
+            .audio_0_fetch_o(audio_0_fetch),
             .audio_0_addr_o(audio_0_addr),
             .audio_0_word_i(audio_0_word),
             .pdm_l_o(audio_pdm_l_o),

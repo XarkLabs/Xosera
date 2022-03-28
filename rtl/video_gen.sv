@@ -159,7 +159,7 @@ logic           audio_enable;
 
 logic           audio_0_fetch;
 word_t          audio_0_vol;                    // audio 0 L+R 8-bit volume/pan
-word_t          audio_0_rate;                   // audio 0 playback rate (TBD)
+word_t          audio_0_period;                   // audio 0 playback rate (TBD)
 addr_t          audio_0_start;                  // audio 0 start address
 logic           audio_0_tile;                   // audio 0 memory (0=VRAM, 1=TILE)
 logic [14:0]    audio_0_len;                    // audio 0 length in words
@@ -383,7 +383,7 @@ always_ff @(posedge clk) begin
 `endif
 
         audio_0_vol         <= '0;
-        audio_0_rate        <= '0;
+        audio_0_period        <= '0;
         audio_0_tile        <= '0;
         audio_0_start       <= '0;
         audio_0_len         <= '0;
@@ -419,13 +419,13 @@ always_ff @(posedge clk) begin
 `endif
                 end
                 xv::XR_AUD0_VOL: begin
-                    audio_0_vol <= vgen_reg_data_i;
+                    audio_0_vol     <= vgen_reg_data_i;
                 end
-                xv::XR_AUD0_RATE: begin
-                    audio_0_rate <= vgen_reg_data_i;
+                xv::XR_AUD0_PERIOD: begin
+                    audio_0_period  <= vgen_reg_data_i;
                 end
                 xv::XR_AUD0_START: begin
-                    audio_0_start <= vgen_reg_data_i;
+                    audio_0_start   <= vgen_reg_data_i;
                 end
                 xv::XR_AUD0_LENGTH: begin
                     audio_0_tile    <= vgen_reg_data_i[15];
@@ -655,10 +655,8 @@ generate
         audio_mixer audio_mixer
         (
             .audio_enable(audio_enable),
-            .audio_mix_strobe(h_line_last_pixel), // TODO: decouple from scanline frequency?
-
             .audio_0_vol_i(audio_0_vol),
-            .audio_0_rate_i(audio_0_rate),
+            .audio_0_period_i(audio_0_period),
             .audio_0_start_i(audio_0_start),
             .audio_0_len_i(audio_0_len),
             .audio_0_fetch_o(audio_0_fetch),

@@ -100,7 +100,7 @@ typedef enum logic [5:0] {
     XR_VID_CTRL     = 6'h00,            // (R /W) display control and border color index
     XR_COPP_CTRL    = 6'h01,            // (R /W) display synchronized coprocessor control
     XR_AUD0_VOL     = 6'h02,            // (R /W) // TODO: replace
-    XR_AUD0_RATE    = 6'h03,            // (R /W) // TODO: replace
+    XR_AUD0_PERIOD  = 6'h03,            // (R /W) // TODO: replace
     XR_AUD0_START   = 6'h04,            // (R /W) // TODO: replace
     XR_AUD0_LENGTH  = 6'h05,            // (R /W) // TODO: replace
     XR_VID_LEFT     = 6'h06,            // (R /W) left edge of active display window (typically 0)
@@ -168,8 +168,7 @@ typedef enum {
     TILE_ATTR_BACK  = 12                // rightmost bit for backcolor (in BPP_1 only)
 } tile_index_attribute_bits_t;
 
-localparam  AUDIO_BASE_HZ   = 12_000;
-
+localparam  AUDIO_MAX_HZ    = 24_000;   // NOTE: frequency assumed to be multiple of 1000 Hz
 
 `ifdef MODE_640x400                     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x400_75                  // 31.500 MHz (requested), 31.500 MHz (achieved)

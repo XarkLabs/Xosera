@@ -14,10 +14,8 @@
 
 module audio_mixer(
     input       logic           audio_enable,
-    input       logic           audio_mix_strobe,
-
     input  wire addr_t          audio_0_vol_i,                      // audio chan 0 L+R volume/pan
-    input  wire word_t          audio_0_rate_i,                     // audio chan 0 playback rate
+    input  wire word_t          audio_0_period_i,                     // audio chan 0 playback rate
     input  wire addr_t          audio_0_start_i,                     // audio chan 0 sample start address (in VRAM or TILE)
     input  wire logic [14:0]    audio_0_len_i,                      // audio chan 0 sample length in words
 
@@ -42,41 +40,49 @@ typedef enum logic [1:0] {
 byte_t              output_l;   // mixed left channel to output to DAC
 byte_t              output_r;   // mixed right channel to output to DAC
 
+
+logic [1:0]     mix_state;  // mixer state
+
+logic signed [7:0]  mix_l_temp;
+logic signed [7:0]  mix_r_temp;
+logic signed [7:0]  vol_r_temp;
+logic signed [7:0]  vol_l_temp;
+logic signed [15:0] mix_l_result;
+logic signed [15:0] mix_r_result;
 /* verilator lint_off UNUSED */
 logic signed [7:0]  result_l;   // mixed left channel to output to DAC
 logic signed [7:0]  result_r;   // mixed right channel to output to DAC
 /* verilator lint_on UNUSED */
 
-logic [1:0]     mix_state;  // mixer state
-
-logic signed [7:0]  mix_l_temp;
-logic signed [7:0]  vol_l_temp;
-logic signed [15:0] mix_l_result;
-logic signed [7:0]  mix_r_temp;
-logic signed [7:0]  vol_r_temp;
-logic signed [15:0] mix_r_result;
-
+logic               audio_0_odd;
+logic               audio_0_nextsamp;
+logic               audio_0_restart;
 logic               audio_0_fetch;      // flag to do audio DMA next scanline
 addr_t              audio_0_addr;       // current sample address
-logic [16:0]        audio_0_length;     // audio sample byte counter (plus underflow flag)
-word_t              audio_0_count;      // audio frequency rate counter
+logic [16:0]        audio_0_length;     // audio sample byte length counter (plus underflow flag)
+word_t              audio_0_period;     // audio frequency period counter
 
 logic signed [7:0]  audio_0_vol_l;
 logic signed [7:0]  audio_0_vol_r;
 
 logic unused_bits;
-assign unused_bits = &{ 1'b0, audio_0_rate_i[15], mix_l_result[15:14], mix_l_result[5:0], mix_r_result[15:14], mix_r_result[5:0] };
+assign unused_bits = &{ 1'b0, audio_0_period_i[15], mix_l_result[15:14], mix_l_result[5:0], mix_r_result[15:14], mix_r_result[5:0] };
 
 assign audio_0_vol_l = audio_0_vol_i[15:8];
 assign audio_0_vol_r = audio_0_vol_i[7:0];
+
+assign audio_0_odd      = audio_0_length[0];
+assign audio_0_restart  = audio_0_length[15];
+assign audio_0_nextsamp = audio_0_period[15];
 
 assign audio_0_fetch_o  = audio_0_fetch;
 assign audio_0_addr_o   = audio_0_addr;
 
 // Thanks to https://www.excamera.com/sphinx/vhdl-clock.html for this timing generation method
-logic [27:0]    audio_timer;
-logic           audio_strobe;
-assign          audio_strobe = ~audio_timer[27];
+localparam                  AUDTIMER_WIDTH  = $clog2((xv::PCLK_HZ/1000)) + 1;   // NOTE: assumes frequencies are multiples of 1000 Hz
+logic [AUDTIMER_WIDTH-1:0]  audio_timer;
+logic                       audio_strobe;
+assign                      audio_strobe    = ~audio_timer[AUDTIMER_WIDTH-1];
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -92,16 +98,13 @@ always_ff @(posedge clk) begin
         mix_r_temp      <= '0;
         vol_l_temp      <= '0;
         vol_r_temp      <= '0;
-        audio_0_addr    <= '0;
-        audio_0_length  <= '0;
-        audio_0_count   <= '0;
+        audio_0_addr    <= '0;      // current address for sample data
+        audio_0_length  <= '0;      // remaining length for sample data (bytes)
+        audio_0_period  <= '0;      // countdown for next sample load
     end else begin
 
-        audio_timer <= audio_timer + (audio_timer[27] ? (xv::AUDIO_BASE_HZ) : (xv::AUDIO_BASE_HZ - xv::PCLK_HZ));
-
-        if (audio_strobe) begin
-            audio_0_count   <= audio_0_count - 1'b1;            // decrement rate counter
-        end
+        audio_timer <= audio_timer + (audio_timer[AUDTIMER_WIDTH-1] ? (AUDTIMER_WIDTH)'(xv::AUDIO_MAX_HZ/1000) : (AUDTIMER_WIDTH)'((xv::AUDIO_MAX_HZ/1000) - (xv::PCLK_HZ/1000)));
+        audio_0_period   <= audio_0_period - 1'b1;            // decrement audio period counter
 
         if (!audio_enable) begin
             output_l    <= '0;
@@ -109,11 +112,13 @@ always_ff @(posedge clk) begin
          end else begin
              case (mix_state)
                 AUD_IDLE: begin
-                    if (audio_mix_strobe) begin
-                        mix_l_temp  <= audio_0_length[0] ? audio_0_word_i[15:8] : audio_0_word_i[7:0];
+                    if (audio_strobe) begin
+                        audio_0_fetch   <= 1'b0;                        // clear audio fetch flag
+
+                        mix_l_temp  <= audio_0_odd ? audio_0_word_i[15:8] : audio_0_word_i[7:0];
                         vol_l_temp  <= audio_0_vol_l;
 
-                        mix_r_temp  <= audio_0_length[0] ? audio_0_word_i[15:8] : audio_0_word_i[7:0];;
+                        mix_r_temp  <= audio_0_odd ? audio_0_word_i[15:8] : audio_0_word_i[7:0];;
                         vol_r_temp  <= audio_0_vol_r;
 
                         mix_state   <= AUD_MIX_0;
@@ -121,31 +126,32 @@ always_ff @(posedge clk) begin
                 end
                 AUD_MIX_0: begin
                     // convert to unsigned for DAC
-                    result_l        <= mix_l_result[13:6];              // signed result
-                    output_l        <= mix_l_result[13:6] + 8'h80;      // unsigned result for DAC
+                    result_l        <= mix_l_result[13:6];              // signed result (for simulation)
                     result_r        <= mix_r_result[13:6];
+                    output_l        <= mix_l_result[13:6] + 8'h80;      // unsigned result for DAC
                     output_r        <= mix_r_result[13:6] + 8'h80;
 
                     mix_state       <= AUD_RATE_0;
                 end
                 AUD_RATE_0: begin
-                    audio_0_fetch       <= 1'b0;                        // clear audio fetch flag
-                    audio_0_count       <= { 1'b0, audio_0_rate_i[14:0]};// reset rate counter
-                    if (audio_0_count[15]) begin                        // if time for a new sample
-                        audio_0_addr        <= audio_0_addr + 1'b1;     // update address
-                        audio_0_length      <= audio_0_length - 1'b1;
+                    if (audio_0_nextsamp) begin                           // if time for a new sample
+                        audio_0_period  <= { 1'b0, audio_0_period_i[14:0] };  // reset period counter
+                        audio_0_length  <= audio_0_length - 1'b1;
 
-                        mix_state           <= AUD_INCR_0;
+                        mix_state       <= AUD_INCR_0;
                     end else begin
-                        mix_state           <= AUD_IDLE;
+                        mix_state       <= AUD_IDLE;
                     end
                 end
                 AUD_INCR_0: begin
-                    if (audio_0_length[15]) begin
-                        audio_0_length  <= { 1'b0, audio_0_len_i, 1'b0 };
+                    if (audio_0_odd) begin                                  // if odd sample in word, increment address
+                        audio_0_addr    <= audio_0_addr + 1'b1;
+                        audio_0_fetch   <= 1'b1;                                // fetch new audio data word
+                    end
+                    if (audio_0_restart) begin                           // if length underflow, reset address and length
+                        audio_0_length  <= { 1'b0, audio_0_len_i, 1'b1 };
                         audio_0_addr    <= audio_0_start_i;
                     end
-                    audio_0_fetch   <= 1'b1;                            // fetch new audio data
                     mix_state       <= AUD_IDLE;
                 end
                 default:

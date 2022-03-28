@@ -128,7 +128,7 @@ class BusInterface
         XR_VID_CTRL    = 0x00,        // (R /W) display control and border color index
         XR_COPP_CTRL   = 0x01,        // (R /W) display synchronized coprocessor control
         XR_AUD0_VOL    = 0x02,        // (R /W) // TODO:
-        XR_AUD0_RATE   = 0x03,        // (R /W) // TODO:
+        XR_AUD0_PERIOD = 0x03,        // (R /W) // TODO:
         XR_AUD0_START  = 0x04,        // (R /W) // TODO:
         XR_AUD0_LENGTH = 0x05,        // (R /W) // TODO:
         XR_VID_LEFT    = 0x06,        // (R /W) left edge of active display window (typically 0)
@@ -3004,12 +3004,19 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_UPLOAD(),        // upload sine data
 
     XREG_SETW(AUD0_VOL, 0x4020),
-    XREG_SETW(AUD0_RATE, 0x0800),
+    XREG_SETW(AUD0_PERIOD, 1200),
+    XREG_SETW(AUD0_PERIOD, 0),
     XREG_SETW(AUD0_START, 0xFF00),
-    XREG_SETW(AUD0_LENGTH, 0x00FF),
+    XREG_SETW(AUD0_LENGTH, 0x007F),
 
     XREG_SETW(VID_CTRL, 0x0010),
 
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
     REG_WAITVTOP(),

@@ -623,16 +623,18 @@ static long filesize(void * f)
     return fsize;
 }
 
-static bool load_test_audio(const char * filename, uint8_t ** out, int * size)
+static bool load_test_audio(const char * filename, int8_t ** out, int * size)
 {
     void * file  = fl_fopen(filename, "r");
-    int    fsize = (int)filesize(file);
+    int    fsize = 128 * 1024;
+    //    int    fsize = (int)filesize(file);
 
-    if (fsize <= 0 || fsize > (128 * 1024))
+    if (fsize <= 0 || fsize > (800 * 1024))
     {
         dprintf("Bad size %ld for \"%s\"\n", fsize, filename);
         return false;
     }
+
 
     uint8_t * data = malloc(fsize);
     if (data == NULL)
@@ -640,7 +642,7 @@ static bool load_test_audio(const char * filename, uint8_t ** out, int * size)
         dprintf("Allocating %ld for \"%s\" failed\n", fsize, filename);
         return false;
     }
-    *out = data;
+    *out = (int8_t *)data;
 
     int cnt   = 0;
     int rsize = 0;
@@ -654,6 +656,10 @@ static bool load_test_audio(const char * filename, uint8_t ** out, int * size)
         data += cnt;
         rsize += cnt;
         checkbail();
+        if (rsize >= fsize)
+        {
+            break;
+        }
     }
     dprintf("\rLoaded \"%s\": %dKB (%d bytes).  \n", filename, rsize >> 10, rsize);
 
@@ -1930,8 +1936,8 @@ static int8_t sinData[256] = {
 };
 #endif
 
-uint8_t * testsamp;
-int       testsampsize;
+int8_t * testsamp;
+int      testsampsize;
 
 static void test_audio(uint8_t * samp, int sampsize, int speed)
 {
@@ -1961,49 +1967,23 @@ static void test_audio(uint8_t * samp, int sampsize, int speed)
     }
 }
 
-static void test_audio_sin(uint8_t * samp, int speed)
+static void test_audio_sample(int8_t * samp, int size, int speed)
 {
-    __asm__ __volatile__("or.w    #0x0700,%sr");
-
-    uint8_t spl = 0;
-    uint8_t spr = 128;
-    xm_setw(WR_INCR, 0x0000);
+    xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, 0x0000);
 
-    while (1)
+    for (int i = 0; i < size; i += 2)
     {
-        uint8_t vall = samp[spl++];
-        xm_setbh(DATA, vall);
-        uint8_t valr = samp[spr++];
-        xm_setbl(DATA, valr);
-
-        for (int d = speed; d != 0; d--)
-        {
-            __asm__ __volatile__("nop");
-        }
+        xm_setbh(DATA, *samp++);
+        xm_setbl(DATA, *samp++);
     }
+
+    xreg_setw(AUD0_VOL, 0x4020);             // set left 100% volume, right 50% volume
+    xreg_setw(AUD0_PERIOD, speed);           // 1000 clocks per each sample byte
+    xreg_setw(AUD0_START, 0x0000);           // address in VRAM
+    xreg_setw(AUD0_LENGTH, size - 1);        // length in words (256 8-bit samples)
+    xreg_setw(VID_CTRL, 0x0010);             // enable audio DMA to start playing
 }
-
-static void test_audio_ramp(int speed)
-{
-    __asm__ __volatile__("or.w    #0x0700,%sr");
-
-    uint8_t sp = 0;
-    xm_setw(WR_INCR, 0x0000);
-    xm_setw(WR_ADDR, 0x0000);
-
-    while (1)
-    {
-        xm_setbh(DATA, sp);
-        xm_setbl(DATA, sp);
-        sp++;
-        for (int d = speed; d != 0; d--)
-        {
-            __asm__ __volatile__("nop");
-        }
-    }
-}
-
 
 const char blurb[] =
     "\n"
@@ -2177,7 +2157,7 @@ void     xosera_test()
 
     (void)sinData;
 
-#if 1        // audio sin test
+#if 0          // audio sin test
     {
         xreg_setw(PA_GFX_CTRL, 0x0000);
         xreg_setw(PA_TILE_CTRL, 0x000F);
@@ -2186,20 +2166,24 @@ void     xosera_test()
         xreg_setw(PA_HV_SCROLL, 0x0000);
         xreg_setw(PA_HV_FSCALE, 0x0000);
         xcls();
-        // fix signed -> unsigned
-        uint8_t * sd = (uint8_t *)sinData;
-        for (int i = 0; i < 256; i++)
-        {
-            sd[i] = sd[i] + 128;
-        }
 
-        test_audio_sin(sd, 4);
-        test_audio_ramp(10);
+        test_audio_sin(sinData, 4000);
+
+        for (int i = 4000; i > 100; i--)
+        {
+            xreg_setw(AUD0_PERIOD, i);        // 1000 clocks per each sample byte
+            cpu_delay(10);
+        }
+        xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
     }
-#elif 0        // audio waveform test
-    if (load_test_audio("/Slide_8u.raw", &testsamp, &testsampsize))
+#elif 1        // audio waveform test
+    if (load_test_audio("/Slide_12000.raw", &testsamp, &testsampsize))
     {
-        test_audio(testsamp, testsampsize, 26);
+        test_audio_sample(testsamp, 65535, 20);
+
+        cpu_delay(20 * 1000);
+
+        xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
     }
 #endif
 

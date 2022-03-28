@@ -168,6 +168,9 @@ typedef enum {
     TILE_ATTR_BACK  = 12                // rightmost bit for backcolor (in BPP_1 only)
 } tile_index_attribute_bits_t;
 
+localparam  AUDIO_BASE_HZ   = 12_000;
+
+
 `ifdef MODE_640x400                     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x400_75                  // 31.500 MHz (requested), 31.500 MHz (achieved)
 `elsif MODE_640x480                     // 25.175 MHz (requested), 25.125 MHz (achieved)

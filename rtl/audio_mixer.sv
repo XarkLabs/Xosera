@@ -58,20 +58,25 @@ logic signed [15:0] mix_r_result;
 
 logic               audio_0_fetch;      // flag to do audio DMA next scanline
 addr_t              audio_0_addr;       // current sample address
-logic [16:0]        audio_0_length;     // 32768 bytes, plus underflow flag
+logic [16:0]        audio_0_length;     // audio sample byte counter (plus underflow flag)
 word_t              audio_0_count;      // audio frequency rate counter
 
 logic signed [7:0]  audio_0_vol_l;
 logic signed [7:0]  audio_0_vol_r;
 
 logic unused_bits;
-assign unused_bits = &{ 1'b0, mix_l_result[15:14], mix_l_result[5:0], mix_r_result[15:14], mix_r_result[5:0] };
+assign unused_bits = &{ 1'b0, audio_0_rate_i[15], mix_l_result[15:14], mix_l_result[5:0], mix_r_result[15:14], mix_r_result[5:0] };
 
 assign audio_0_vol_l = audio_0_vol_i[15:8];
 assign audio_0_vol_r = audio_0_vol_i[7:0];
 
 assign audio_0_fetch_o  = audio_0_fetch;
 assign audio_0_addr_o   = audio_0_addr;
+
+// Thanks to https://www.excamera.com/sphinx/vhdl-clock.html for this timing generation method
+logic [27:0]    audio_timer;
+logic           audio_strobe;
+assign          audio_strobe = ~audio_timer[27];
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -91,6 +96,13 @@ always_ff @(posedge clk) begin
         audio_0_length  <= '0;
         audio_0_count   <= '0;
     end else begin
+
+        audio_timer <= audio_timer + (audio_timer[27] ? (xv::AUDIO_BASE_HZ) : (xv::AUDIO_BASE_HZ - xv::PCLK_HZ));
+
+        if (audio_strobe) begin
+            audio_0_count   <= audio_0_count - 1'b1;            // decrement rate counter
+        end
+
         if (!audio_enable) begin
             output_l    <= '0;
             output_r    <= '0;
@@ -114,20 +126,18 @@ always_ff @(posedge clk) begin
                     result_r        <= mix_r_result[13:6];
                     output_r        <= mix_r_result[13:6] + 8'h80;
 
-                    audio_0_count   <= audio_0_count - 1'b1;            // decrement rate counter
-
                     mix_state       <= AUD_RATE_0;
                 end
                 AUD_RATE_0: begin
-                    audio_0_fetch   <= 1'b0;                            // clear audio fetch
+                    audio_0_fetch       <= 1'b0;                        // clear audio fetch flag
+                    audio_0_count       <= { 1'b0, audio_0_rate_i[14:0]};// reset rate counter
                     if (audio_0_count[15]) begin                        // if time for a new sample
-                        audio_0_addr    <= audio_0_addr + 1'b1;         // update address
-                        audio_0_length  <= audio_0_length - 1'b1;
+                        audio_0_addr        <= audio_0_addr + 1'b1;     // update address
+                        audio_0_length      <= audio_0_length - 1'b1;
 
-                        audio_0_count   <= audio_0_rate_i;              // reset rate counter
-                        mix_state       <= AUD_INCR_0;
+                        mix_state           <= AUD_INCR_0;
                     end else begin
-                        mix_state       <= AUD_IDLE;
+                        mix_state           <= AUD_IDLE;
                     end
                 end
                 AUD_INCR_0: begin

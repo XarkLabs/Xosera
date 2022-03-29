@@ -30,18 +30,19 @@ module audio_mixer(
     input wire  logic           clk
 );
 
-typedef enum logic [1:0] {
-    AUD_IDLE        = 2'b00,
-    AUD_MIX_0       = 2'b01,
-    AUD_RATE_0      = 2'b10,
-    AUD_INCR_0      = 2'b11
+typedef enum logic [2:0] {
+    AUD_RAMP        = 3'b000,
+    AUD_IDLE        = 3'b100,
+    AUD_MIX_0       = 3'b101,
+    AUD_RATE_0      = 3'b110,
+    AUD_INCR_0      = 3'b111
 } audio_mix_st;
 
 byte_t              output_l;   // mixed left channel to output to DAC
 byte_t              output_r;   // mixed right channel to output to DAC
 
 
-logic [1:0]     mix_state;  // mixer state
+logic [2:0]     mix_state;  // mixer state
 
 logic signed [7:0]  mix_l_temp;
 logic signed [7:0]  mix_r_temp;
@@ -72,7 +73,7 @@ assign audio_0_vol_l = audio_0_vol_i[15:8];
 assign audio_0_vol_r = audio_0_vol_i[7:0];
 
 assign audio_0_odd      = audio_0_length[0];
-assign audio_0_restart  = audio_0_length[15];
+assign audio_0_restart  = audio_0_length[16];
 assign audio_0_nextsamp = audio_0_period[15];
 
 assign audio_0_fetch_o  = audio_0_fetch;
@@ -86,7 +87,7 @@ assign                      audio_strobe    = ~audio_timer[AUDTIMER_WIDTH-1];
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        mix_state       <= AUD_IDLE;
+        mix_state       <= AUD_RAMP;
 `ifndef SYNTHESIS
         output_l        <= '1;      // hack to force full scale display for analog signal view in GTKWave
         output_r        <= '1;
@@ -99,18 +100,38 @@ always_ff @(posedge clk) begin
         vol_l_temp      <= '0;
         vol_r_temp      <= '0;
         audio_0_addr    <= '0;      // current address for sample data
-        audio_0_length  <= '0;      // remaining length for sample data (bytes)
+`ifndef SYNTHESIS
+        audio_0_length  <= 17'h00ff;      // remaining length for sample data (bytes)
+`else
+        audio_0_length  <= 17'hffff;      // remaining length for sample data (bytes)
+`endif
         audio_0_period  <= '0;      // countdown for next sample load
     end else begin
 
         audio_timer <= audio_timer + (audio_timer[AUDTIMER_WIDTH-1] ? (AUDTIMER_WIDTH)'(xv::AUDIO_MAX_HZ/1000) : (AUDTIMER_WIDTH)'((xv::AUDIO_MAX_HZ/1000) - (xv::PCLK_HZ/1000)));
         audio_0_period   <= audio_0_period - 1'b1;            // decrement audio period counter
 
-        if (!audio_enable) begin
+        if (1'b0 && !audio_enable) begin
             output_l    <= '0;
             output_r    <= '0;
          end else begin
              case (mix_state)
+                AUD_RAMP: begin
+                    if (!audio_0_restart) begin
+`ifndef SYNTHESIS
+                        output_l        <= { 1'b0, ~audio_0_length[7:1] };
+                        output_r        <= { 1'b0, ~audio_0_length[7:1] };
+`else
+                        output_l        <= { 1'b0, ~audio_0_length[15:9] };
+                        output_r        <= { 1'b0, ~audio_0_length[15:9] };
+`endif
+                        if (audio_strobe) begin
+                            audio_0_length  <= audio_0_length - 1'b1;
+                        end
+                    end else begin
+                        mix_state   <= AUD_IDLE;
+                    end
+                end
                 AUD_IDLE: begin
                     if (audio_strobe) begin
                         audio_0_fetch   <= 1'b0;                        // clear audio fetch flag

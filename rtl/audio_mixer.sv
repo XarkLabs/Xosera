@@ -117,7 +117,7 @@ always_ff @(posedge clk) begin
                 audio_0_period  <= { 1'b0, audio_0_period_i[14:0] };  // reset period counter
                 audio_0_length  <= audio_0_length - 1'b1;
                 audio_0_fetch   <= audio_0_lenodd;           // if odd, next sample will be even from new word
-                audio_0_addr    <= audio_0_addr + addr_t'(audio_0_lenodd);
+                audio_0_addr    <= audio_0_addr + 16'(audio_0_lenodd);
             end
 
             if (audio_0_restart) begin                              // if length underflowed, reset address and length

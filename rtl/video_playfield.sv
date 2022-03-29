@@ -18,7 +18,8 @@ module video_playfield#(
 (
     // video control signals
     input  wire logic           stall_i,
-    input  wire logic           v_visible_i,
+    input  wire logic           mem_fetch_i,
+    input  wire logic           mem_fetch_start_i,
     input  wire hres_t          h_count_i,
     input  wire logic           h_line_last_pixel_i,
     input  wire logic           last_frame_pixel_i,
@@ -63,8 +64,6 @@ module video_playfield#(
     input  wire clk                                                 // pixel clock
 );
 
-localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;               // memory prefetch starts early
-localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fetch can end a bit early
 localparam H_SCANOUT_BEGIN  = xv::OFFSCREEN_WIDTH-2;                // h count for start line scanout
 
 // display line fetch generation FSM
@@ -99,10 +98,6 @@ logic           scanout_start;                      // scanout start strobe
 logic           scanout_end;                        // scanout stop strobe
 hres_t          scanout_start_hcount;               // horizontal pixel count to start scanout
 hres_t          scanout_end_hcount;                 // horizontal pixel count to stop scanout
-logic           mem_fetch_active;                   // true when fetching display data
-hres_t          mem_fetch_hcount;                   // horizontal count when mem_fetch_active toggles
-logic           mem_fetch_next;
-logic           h_start_line_fetch;
 
 logic  [1:0]    pf_h_count;                         // current horizontal repeat countdown
 logic  [1:0]    pf_v_count;                         // current vertical repeat countdown
@@ -139,20 +134,8 @@ logic           pf_pixels_buf_hrev;                 // horizontal reverse flag
 logic [63:0]    pf_pixels_buf;                      // 8 pixel buffer waiting for scan out
 logic [63:0]    pf_pixels;                          // 8 pixels currently shifting to scan out
 
-always_comb     scanout_start = (h_count_i == scanout_start_hcount) ? mem_fetch_active : 1'b0;
+always_comb     scanout_start = (h_count_i == scanout_start_hcount) ? mem_fetch_i : 1'b0;
 always_comb     scanout_end = (h_count_i == scanout_end_hcount) ? 1'b1 : 1'b0;
-always_comb     h_start_line_fetch = (~mem_fetch_active && mem_fetch_next);
-
-// combinational block for video fetch start and stop
-always_comb     mem_fetch_next = (v_visible_i && h_count_i == mem_fetch_hcount) ? ~mem_fetch_active : mem_fetch_active;
-always_comb begin
-    // set mem_fetch_active next toggle for video memory access
-    if (mem_fetch_active) begin
-        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_END);
-    end else begin
-        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_BEGIN);
-    end
-end
 
 // generate tile address from index, tile y, bpp and tile size (8x8 or 8x16)
 function automatic addr_t calc_tile_addr(
@@ -216,7 +199,7 @@ always_comb begin
                 fetch_addr_next     = audio_0_addr_i;         // put audio 0 address on bus
                 pf_fetch_next       = FETCH_WAIT_AUDIO_0;
             end else begin
-                if (mem_fetch_active) begin                 // delay scanline until mem_fetch_active
+                if (mem_fetch_i) begin                 // delay scanline until mem_fetch_active
                     if (pf_bitmap_i) begin
                         pf_fetch_next   = FETCH_ADDR_DISP;
                     end else begin
@@ -237,7 +220,7 @@ always_comb begin
             end
         end
         FETCH_ADDR_DISP: begin
-            if (!mem_fetch_active) begin                    // stop if no longer fetching
+            if (!mem_fetch_i) begin                    // stop if no longer fetching
                 pf_fetch_next   = FETCH_IDLE;
             end else begin
                 if (!pf_pixels_buf_full) begin              // if room in buffer
@@ -300,7 +283,7 @@ always_comb begin
             if (pf_bpp_i[1:1] == xv::BPP_8[1:1]) begin
                 pf_data_word3_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI3: read tile data
             end
-            if (!mem_fetch_active) begin                    // stop if no longer fetching
+            if (!mem_fetch_i) begin                    // stop if no longer fetching
                 pf_fetch_next   = FETCH_IDLE;
             end else begin
                 if (!pf_pixels_buf_full) begin              // if room in buffer
@@ -386,7 +369,6 @@ always_ff @(posedge clk) begin
         tilemem_sel_o       <= 1'b0;
         tilemem_addr_o      <= '0;
 
-        mem_fetch_active    <= 1'b0;            // true enables display memory fetch
         scanout             <= 1'b0;
         scanout_start_hcount<= '0;
         scanout_end_hcount  <= '0;
@@ -535,7 +517,7 @@ always_ff @(posedge clk) begin
         end
 
         // start of line display fetch
-        if (h_start_line_fetch) begin       // on line fetch start signal
+        if (mem_fetch_start_i) begin       // on line fetch start signal
             pf_initial_buf          <= 1'b1;
             pf_pixels_buf_full      <= 1'b0;
             scanout_start_hcount    <= scanout_start_hcount - $bits(scanout_start_hcount)'(pf_fine_hscroll_i);
@@ -601,8 +583,6 @@ always_ff @(posedge clk) begin
             pf_tile_y       <= pf_fine_vscroll_i[5:2];      // fine scroll tile line
             pf_v_frac_count <= '0;
         end
-
-        mem_fetch_active <= mem_fetch_next & ~pf_blank_i;
     end
 end
 

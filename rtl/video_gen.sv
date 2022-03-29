@@ -126,6 +126,9 @@ typedef enum logic [1:0] {
     STATE_POST_SYNC = 2'b11
 } video_signal_st;
 
+localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;               // memory prefetch starts early
+localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fetch can end a bit early
+
 // sync generation signals (and combinatorial logic "next" versions)
 logic  [1:0]    h_state;
 hres_t          h_count;
@@ -143,6 +146,7 @@ addr_t          line_set_addr;                          // address for on-the-fl
 logic           hsync;
 logic           vsync;
 logic           dv_display_ena;
+logic           v_visible;
 logic           h_line_last_pixel;
 logic           last_visible_pixel;
 logic           last_frame_pixel;
@@ -176,7 +180,8 @@ video_playfield #(
     .EN_AUDIO(EN_AUDIO)
 ) video_pf_a(
     .stall_i(1'b0),                                     // playfield A never stalls
-    .v_visible_i(v_state == STATE_VISIBLE),
+    .mem_fetch_i(mem_fetch & ~pa_blank),
+    .mem_fetch_start_i(mem_fetch_h_start),
     .h_count_i(h_count),
     .h_line_last_pixel_i(h_line_last_pixel),
     .last_frame_pixel_i(last_frame_pixel),
@@ -260,7 +265,8 @@ generate
         )
         video_pf_b(
             .stall_i(pb_stall),
-            .v_visible_i(v_state == STATE_VISIBLE),
+            .mem_fetch_i(mem_fetch & ~pb_blank),
+            .mem_fetch_start_i(mem_fetch_h_start),
             .h_count_i(h_count),
             .h_line_last_pixel_i(h_line_last_pixel),
             .last_frame_pixel_i(last_frame_pixel),
@@ -568,6 +574,8 @@ always_comb     h_line_last_pixel   = (h_state_next == STATE_PRE_SYNC) && (h_sta
 always_comb     last_visible_pixel  = (v_state_next == STATE_PRE_SYNC) && (v_state == STATE_VISIBLE) && h_line_last_pixel;
 always_comb     last_frame_pixel    = (v_state_next == STATE_VISIBLE) && (v_state == STATE_POST_SYNC) && h_line_last_pixel;
 
+always_comb     v_visible           = (v_state == STATE_VISIBLE);
+
 // combinational block for video counters
 always_comb begin
     h_count_next = h_count + 1'b1;
@@ -615,6 +623,28 @@ always_comb begin
     endcase
 end
 
+// combinational block for video fetch start and stop
+`ifdef OLD_WAY
+hres_t          mem_fetch_hcount;                   // horizontal count when mem_fetch_active toggles
+always_comb     mem_fetch_next = (v_visible_i && h_count_i == mem_fetch_hcount) ? ~mem_fetch_active : mem_fetch_active;
+always_comb begin
+    // set mem_fetch_active next toggle for video memory access
+    if (mem_fetch_active) begin
+        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_END);
+    end else begin
+        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_BEGIN);
+    end
+end
+`else
+logic           mem_fetch;                   // true when fetching display data
+logic           mem_fetch_next;
+logic           mem_fetch_h_start;
+logic           mem_fetch_h_end;
+always_comb     mem_fetch_h_start = ($bits(h_count)'(H_MEM_BEGIN) == h_count);
+always_comb     mem_fetch_h_end = ($bits(h_count)'(H_MEM_END) == h_count);
+always_comb     mem_fetch_next = (!mem_fetch ? mem_fetch_h_start : !mem_fetch_h_end) && v_visible;
+`endif
+
 // video pixel generation
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -644,6 +674,8 @@ always_ff @(posedge clk) begin
         hsync_o     <= hsync ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
         vsync_o     <= vsync ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
         dv_de_o     <= dv_display_ena;
+
+        mem_fetch   <= mem_fetch_next;
     end
 end
 
@@ -654,7 +686,8 @@ generate
         // audio channel mixer
         audio_mixer audio_mixer
         (
-            .audio_enable(audio_enable),
+            .audio_enable_i(audio_enable),
+            .audio_strobe_i(mem_fetch_h_start),
             .audio_0_vol_i(audio_0_vol),
             .audio_0_period_i(audio_0_period),
             .audio_0_start_i(audio_0_start),

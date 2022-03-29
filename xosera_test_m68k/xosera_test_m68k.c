@@ -2176,7 +2176,7 @@ void     xosera_test()
         }
         xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
     }
-#elif 1        // audio waveform test
+#elif 0        // audio waveform test
     if (load_test_audio("/Slide_12000.raw", &testsamp, &testsampsize))
     {
         test_audio_sample(testsamp, 65535, 20);
@@ -2187,6 +2187,7 @@ void     xosera_test()
     }
 #endif
 
+    //    xreg_setw(VID_CTRL, 0x0010);        // enable audio DMA to start playing
 
     if (use_sd)
     {

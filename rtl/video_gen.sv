@@ -700,6 +700,14 @@ generate
             .reset_i(reset_i),
             .clk(clk)
         );
+    end else begin
+        assign  audio_pdm_l_o   = 1'b0;
+        assign  audio_pdm_r_o   = 1'b0;
+        assign  audio_0_fetch   = 1'b0;
+        assign  audio_0_addr    = '0;
+
+        logic   audio_unused;
+        assign  audio_unused = &{1'b0, audio_enable, audio_0_vol, audio_0_period, audio_0_start, audio_0_len, audio_0_word };
     end
 endgenerate
 

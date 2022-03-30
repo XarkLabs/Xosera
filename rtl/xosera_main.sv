@@ -43,7 +43,8 @@ module xosera_main#(
     parameter   EN_BLEND_ADDCLAMP       = 1,        // enable pf B clamped RGB blending
     parameter   EN_BLIT                 = 1,        // enable blit unit
     parameter   EN_BLIT_DECR_MODE       = 1,        // enable blit pointer decrementing
-    parameter   EN_BLIT_DECR_LSHIFT     = 1         // enable blit left shift when decrementing
+    parameter   EN_BLIT_DECR_LSHIFT     = 1,        // enable blit left shift when decrementing
+    parameter   EN_AUDIO                = 1         // enable audio output
 )
 (
     input  wire logic         bus_cs_n_i,           // register select strobe (active low)
@@ -152,12 +153,6 @@ logic                   dbug_cs_strobe;     // debug "ack" bus strobe
 `ifdef BUS_DEBUG_SIGNALS
 assign audio_l_o    =   dbug_cs_strobe;     // debug to see when CS noticed
 assign audio_r_o    =   regs_xr_sel;        // debug to see when XR bus selected
-`else
-// TODO: audio generation
-`ifndef ENABLE_AUDIO
-assign audio_l_o    =   1'b0;
-assign audio_r_o    =   1'b0;
-`endif
 `endif
 
 // register interface for CPU access
@@ -198,7 +193,8 @@ reg_interface reg_interface(
 
 //  video generation
 video_gen#(
-    .EN_VID_PF_B(EN_VID_PF_B)
+    .EN_VID_PF_B(EN_VID_PF_B),
+    .EN_AUDIO(EN_AUDIO)
 ) video_gen(
     .vgen_reg_wr_en_i(vgen_reg_wr_en),
     .vgen_reg_num_i(xr_regs_addr[4:0]),

@@ -626,15 +626,19 @@ static long filesize(void * f)
 static bool load_test_audio(const char * filename, int8_t ** out, int * size)
 {
     void * file  = fl_fopen(filename, "r");
-    int    fsize = 128 * 1024;
-    //    int    fsize = (int)filesize(file);
+    int    fsize = (int)filesize(file);
 
-    if (fsize <= 0 || fsize > (800 * 1024))
+    if (fsize <= 0)
     {
-        dprintf("Bad size %ld for \"%s\"\n", fsize, filename);
+        dprintf("Can't get size for \"%s\" (not found?)\n", filename);
         return false;
     }
 
+    if (fsize > (64 * 1024))
+    {
+        dprintf("Sample size reduced from %d to %d for \"%s\"\n", fsize, 65536, filename);
+        fsize = 65536;
+    }
 
     uint8_t * data = malloc(fsize);
     if (data == NULL)
@@ -1967,22 +1971,22 @@ static void test_audio(uint8_t * samp, int sampsize, int speed)
     }
 }
 
-static void test_audio_sample(int8_t * samp, int size, int speed)
+static void test_audio_sample(int8_t * samp, int bytesize, int speed)
 {
     xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, 0x0000);
 
-    for (int i = 0; i < size; i += 2)
+    for (int i = 0; i < bytesize * 2; i += 2)
     {
         xm_setbh(DATA, *samp++);
         xm_setbl(DATA, *samp++);
     }
 
-    xreg_setw(AUD0_VOL, 0x4020);             // set left 100% volume, right 50% volume
-    xreg_setw(AUD0_PERIOD, speed);           // 1000 clocks per each sample byte
-    xreg_setw(AUD0_START, 0x0000);           // address in VRAM
-    xreg_setw(AUD0_LENGTH, size - 1);        // length in words (256 8-bit samples)
-    xreg_setw(VID_CTRL, 0x0010);             // enable audio DMA to start playing
+    xreg_setw(AUD0_VOL, 0x4020);                       // set left 100% volume, right 50% volume
+    xreg_setw(AUD0_PERIOD, speed);                     // 1000 clocks per each sample byte
+    xreg_setw(AUD0_START, 0x0000);                     // address in VRAM
+    xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+    xreg_setw(VID_CTRL, 0x0010);                       // enable audio DMA to start playing
 }
 
 const char blurb[] =
@@ -2172,14 +2176,14 @@ void     xosera_test()
         for (int i = 4000; i > 100; i--)
         {
             xreg_setw(AUD0_PERIOD, i);        // 1000 clocks per each sample byte
-            cpu_delay(10);
+            cpu_delay(100);
         }
         xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
     }
-#elif 0        // audio waveform test
-    if (load_test_audio("/Slide_12000.raw", &testsamp, &testsampsize))
+#elif 1        // audio waveform test
+    if (load_test_audio("/Slide_8000.raw", &testsamp, &testsampsize))
     {
-        test_audio_sample(testsamp, 65535, 20);
+        test_audio_sample(testsamp, testsampsize, 1300);
 
         cpu_delay(20 * 1000);
 

@@ -3014,12 +3014,6 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
 
 #endif
 

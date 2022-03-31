@@ -16,7 +16,7 @@ module audio_mixer(
     input       logic           audio_enable_i,
     input       logic           audio_strobe_i,
     input  wire addr_t          audio_0_vol_i,                      // audio chan 0 L+R volume/pan
-    input  wire word_t          audio_0_period_i,                     // audio chan 0 playback rate
+    input  wire logic [14:0]    audio_0_period_i,                     // audio chan 0 playback rate
     input  wire addr_t          audio_0_start_i,                     // audio chan 0 sample start address (in VRAM or TILE)
     input  wire logic [14:0]    audio_0_len_i,                      // audio chan 0 sample length in words
 
@@ -53,27 +53,29 @@ logic signed [7:0]  result_r;   // mixed right channel to output to DAC
 logic signed [7:0]  audio_0_vol_l;
 logic signed [7:0]  audio_0_vol_r;
 
-/* verilator lint_on UNUSED */
 
-logic               audio_0_lenodd;
-logic               audio_0_nextsamp;
+logic               audio_0_2nd;
+logic               audio_0_next;
 logic               audio_0_restart;
 logic               audio_0_fetch;      // flag to do audio DMA next scanline
 addr_t              audio_0_addr;       // current sample address
-logic [16:0]        audio_0_length;     // audio sample byte length counter (plus underflow flag)
-word_t              audio_0_period;     // audio frequency period counter
+word_t              audio_0_length;     // audio sample byte length counter (15=underflow flag)
+word_t              audio_0_period;     // audio frequency period counter (15=underflow flag)
 logic signed [7:0]  audio_0_val;
+logic               audio_0_full;
 word_t              audio_0_word;
+logic               audio_0_full1;
+word_t              audio_0_word1;
+/* verilator lint_on UNUSED */
 
 logic unused_bits;
-assign unused_bits = &{ 1'b0, audio_0_period_i[15], mix_l_result[15:14], mix_l_result[5:0], mix_r_result[15:14], mix_r_result[5:0], audio_strobe_i };
+assign unused_bits = &{ 1'b0, mix_l_result[15:14], mix_l_result[5:0], mix_r_result[15:14], mix_r_result[5:0], audio_strobe_i };
 
 assign audio_0_vol_l = audio_0_vol_i[15:8];
 assign audio_0_vol_r = audio_0_vol_i[7:0];
 
-assign audio_0_lenodd   = audio_0_length[0];
-assign audio_0_restart  = audio_0_length[16];
-assign audio_0_nextsamp = audio_0_period[15];
+assign audio_0_restart  = audio_0_length[15];
+assign audio_0_next     = audio_0_period[15];
 
 assign audio_0_fetch_o  = audio_0_fetch;
 assign audio_0_addr_o   = audio_0_addr;
@@ -88,7 +90,11 @@ always_ff @(posedge clk) begin
         output_l        <= '0;
         output_r        <= '0;
 `endif
+        audio_0_val     <= '0;
+        audio_0_full    <= '0;
         audio_0_word    <= '0;
+        audio_0_full1   <= '0;
+        audio_0_word1   <= '0;
         mix_l_temp      <= '0;
         mix_r_temp      <= '0;
         vol_l_temp      <= '0;
@@ -96,34 +102,48 @@ always_ff @(posedge clk) begin
         audio_0_addr    <= '0;      // current address for sample data
         audio_0_length  <= '0;      // remaining length for sample data (bytes)
         audio_0_period  <= '1;      // countdown for next sample load
+        audio_0_2nd     <= 1'b1;
     end else begin
 
         if (!audio_enable_i) begin
-            output_l    <= '0;
-            output_r    <= '0;
+            output_l    <= audio_0_vol_l;
+            output_r    <= audio_0_vol_r;
          end else begin
-            audio_0_period   <= audio_0_period - 1'b1;            // decrement audio period counter
+
 
             if (audio_strobe_i) begin
                 if (audio_0_fetch) begin
-                    audio_0_word    <= audio_0_word_i;
+                    audio_0_fetch   <= 1'b0;
+                    audio_0_addr    <= audio_0_addr + 1'b1;
+                    audio_0_length  <= audio_0_length - 1'b1;
+
+                    audio_0_word1   <= audio_0_word_i;
+                    audio_0_full1   <= 1'b1;
+
+                    audio_0_word    <= audio_0_word1;
                 end
-                audio_0_fetch   <= 1'b0;                        // clear audio fetch flag
+            end else begin
+                audio_0_fetch   <= !audio_0_full1;
             end
 
-            if (audio_0_nextsamp) begin                           // if time for a new sample
-                audio_0_val     <= audio_0_word[15:8];
-                audio_0_word[15:8] <= audio_0_word[7:0];
-                audio_0_period  <= { 1'b0, audio_0_period_i[14:0] };  // reset period counter
-                audio_0_length  <= audio_0_length - 1'b1;
-                audio_0_fetch   <= audio_0_lenodd;           // if odd, next sample will be even from new word
-                audio_0_addr    <= audio_0_addr + 16'(audio_0_lenodd);
-            end
-
-            if (audio_0_restart) begin                              // if length underflowed, reset address and length
-                audio_0_fetch   <= 1'b1;                                // fetch new audio data word
+            if (audio_0_restart && audio_0_2nd) begin               // if length underflowed, reset address and length
                 audio_0_addr    <= audio_0_start_i;
-                audio_0_length  <= { 1'b0, audio_0_len_i, 1'b0 };
+                audio_0_length  <= { 1'b0, audio_0_len_i };
+            end
+
+            audio_0_period   <= audio_0_period - 1'b1;              // decrement audio period counter
+
+            if (audio_0_next) begin                                 // if time to output a new sample
+                if (audio_0_2nd) begin
+                    audio_0_val     <= audio_0_word[7:0];
+                    audio_0_word    <= audio_0_word1;
+                    audio_0_full1   <= 1'b0;
+                end else begin
+                    audio_0_val     <= audio_0_word[15:8];
+                end
+
+                audio_0_2nd     <= !audio_0_2nd;
+                audio_0_period  <= { 1'b0, audio_0_period_i[14:0] };  // reset period counter
             end
 
             case (mix_state)
@@ -147,7 +167,7 @@ always_ff @(posedge clk) begin
                     mix_state       <= AUD_MIX_0;
                 end
                 default:
-                    mix_state   <= AUD_MIX_0;
+                    mix_state       <= AUD_MIX_0;
              endcase
          end
     end

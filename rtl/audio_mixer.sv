@@ -149,8 +149,8 @@ always_ff @(posedge clk) begin
             if (chan0_sendout) begin                                 // if time to output a new sample
                 chan0_val       <= chan0_word2[15:8];
                 chan0_word2[15:8] <= chan0_word2[7:0];
-`ifndef SYNTHESIS
-                chan0_word2[7:0] <= '0;
+`ifndef NO_GLITCH // TODO: remove "glitch enhancer"
+                chan0_word2[7] <= ~chan0_word2[7];
 `endif
                 chan0_2nd       <= !chan0_2nd;
                 chan0_word2_ok  <= chan0_word2_ok && !chan0_2nd;

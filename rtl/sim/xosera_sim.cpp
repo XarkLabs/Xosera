@@ -3003,8 +3003,8 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(WR_ADDR, 0xFF00),
     REG_UPLOAD(),        // upload sine data
 
-    XREG_SETW(AUD0_VOL, 0x4020),
-    XREG_SETW(AUD0_PERIOD, 2000),
+    XREG_SETW(AUD0_VOL, 0x40C0),
+    XREG_SETW(AUD0_PERIOD, 1600),
     XREG_SETW(AUD0_START, 0xFF00),
     XREG_SETW(AUD0_LENGTH, 0x007F),
 

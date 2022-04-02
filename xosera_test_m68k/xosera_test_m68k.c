@@ -2181,14 +2181,31 @@ void     xosera_test()
         xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
     }
 #elif 1        // audio waveform test
-    if (load_test_audio("/Slide_8000.raw", &testsamp, &testsampsize))
+    if (load_test_audio("/xosera_8000.raw", &testsamp, &testsampsize))
     {
-        test_audio_sample(testsamp, testsampsize, 1300);
+        test_audio_sample(testsamp, testsampsize, 1573 * 2);
 
-        cpu_delay(20 * 1000);
+        cpu_delay(4500);
 
         xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
+
+        memset(testsamp, 0, testsampsize);
+
+        free(testsamp);
     }
+    if (load_test_audio("/Slide_8000.raw", &testsamp, &testsampsize))
+    {
+        test_audio_sample(testsamp, testsampsize, 1573);
+
+        cpu_delay(10 * 1000);
+
+        xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
+
+        memset(testsamp, 0, testsampsize);
+
+        free(testsamp);
+    }
+
 #endif
 
     //    xreg_setw(VID_CTRL, 0x0010);        // enable audio DMA to start playing

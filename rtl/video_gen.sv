@@ -687,7 +687,8 @@ generate
         audio_mixer audio_mixer
         (
             .audio_enable_i(audio_enable),
-            .audio_strobe_i(mem_fetch_h_start),
+            .audio_dma_start_i(mem_fetch_h_start),
+            .audio_dma_end_i(h_line_last_pixel),
             .audio_0_vol_i(audio_0_vol),
             .audio_0_period_i(audio_0_period),
             .audio_0_start_i(audio_0_start),

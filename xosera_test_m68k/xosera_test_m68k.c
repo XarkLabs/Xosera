@@ -1952,6 +1952,10 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
 {
     xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, 0x8000);
+    xm_setw(SYS_CTRL, 0x000F);
+    xreg_setw(AUD0_VOL, 0x0000);           // set volume to 0%
+    xreg_setw(AUD0_PERIOD, 0x0000);        // 1000 clocks per each sample byte
+    xreg_setw(AUD0_LENGTH, 0x0000);        // 1000 clocks per each sample byte
 
     for (int i = 0; i < bytesize; i += 2)
     {
@@ -1959,37 +1963,75 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
         xm_setbl(DATA, *samp++);
     }
 
-    uint16_t p = speed;
-    uint8_t  v = 0x80;
+    uint16_t p  = speed;
+    uint8_t  lv = 0x80;
+    uint8_t  rv = 0x80;
 
-    xreg_setw(AUD0_VOL, v << 8 | (v >> 1));            // set left 100% volume, right 50% volume
+    xr_printfxy(0, 0, "Xosera audio test\n%s: %d B\n", name, bytesize);
+
+    dprintf("\nTesting audio sample: \"%s\" (%d bytes)...\n\n", name, bytesize);
+    dprintf("Press: 'Z' and 'X' to change sample volume (hold shift for faster)\n");
+    dprintf("       'Q' and 'W' to change left volume (hold shift for faster)\n");
+    dprintf("       'E' and 'R' to change right volume (hold shift for faster)\n");
+    dprintf("       ',' and '.' to change sample period (hold shift for faster)\n");
+    dprintf("       ESC to reboot rosco\n");
+    dprintf("       SPACE to continue to next test\n\n");
+
+    dprintf("Volume (128=1.0): L:%3d/R:%3d    Period (1/pclk): %5d", lv, rv, p);
+
     xreg_setw(AUD0_PERIOD, p);                         // 1000 clocks per each sample byte
     xreg_setw(AUD0_START, 0x8000);                     // address in VRAM
     xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
-
-    dprintf("Starting sample %s...\n", name);
-    dprintf("Press z & x for volume , & . for period (Shift = faster).\n");
-    dprintf("ESC to boot, space to skip\n");
-    xreg_setw(VID_CTRL, 0x0010);        // enable audio DMA to start playing
+    xreg_setw(AUD0_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
+    xreg_setw(VID_CTRL, 0x0010);                       // enable audio DMA to start playing
 
     bool done = false;
-    while (!done)
+
+    while (1)
     {
         char c = readchar();
 
         switch (c)
         {
             case 'z':
-                v = v - 1;
+                lv = lv - 1;
+                rv = lv;
                 break;
             case 'x':
-                v = v + 1;
+                lv = lv + 1;
+                rv = lv;
                 break;
             case 'Z':
-                v = v - 16;
+                lv = lv - 16;
+                rv = lv;
                 break;
             case 'X':
-                v = v + 16;
+                lv = lv + 16;
+                rv = lv;
+                break;
+            case 'q':
+                lv = lv - 1;
+                break;
+            case 'w':
+                lv = lv + 1;
+                break;
+            case 'Q':
+                lv = lv - 16;
+                break;
+            case 'W':
+                lv = lv + 16;
+                break;
+            case 'e':
+                rv = rv - 1;
+                break;
+            case 'r':
+                rv = rv + 1;
+                break;
+            case 'E':
+                rv = rv - 16;
+                break;
+            case 'R':
+                rv = rv + 16;
                 break;
             case ',':
                 p = p - 1;
@@ -2007,14 +2049,27 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
                 done = true;
                 break;
             case '\x1b':
+                dprintf("\nExit!\n");
                 reset_vid();
                 _WARM_BOOT();
                 break;
         }
-        dprintf("p =%5d    v =%3d\n", p, v);
-        xreg_setw(AUD0_VOL, v << 8 | (v >> 1));        // set left 100% volume, right 50% volume
-        xreg_setw(AUD0_PERIOD, p);                     // 1000 clocks per each sample byte
+        if (done)
+        {
+            break;
+        }
+        dprintf("\rVolume (128 = 1.0): L:%3d R:%3d  Period (1/pclk): %5d", lv, rv, p);
+        xreg_setw(AUD0_VOL, lv << 8 | rv);        // set left 100% volume, right 50% volume
+        xreg_setw(AUD0_PERIOD, p);                // 1000 clocks per each sample byte
     }
+
+    xreg_setw(AUD0_VOL, 0x0000);           // set volume to 0%
+    xreg_setw(VID_CTRL, 0x0000);           // disable audio DMA
+    xreg_setw(AUD0_PERIOD, 0x0000);        // 1000 clocks per each sample byte
+    xreg_setw(AUD0_LENGTH, 0x0000);        // 1000 clocks per each sample byte
+
+    dprintf("\rSample playback done.                                       \n");
+    xr_printfxy(0, 0, "Xosera audio test\n\n");
 }
 
 const char blurb[] =
@@ -2169,6 +2224,7 @@ void     xosera_test()
     xreg_setw(VID_CTRL, 0x0000);               // border color #0
     xmem_setw(XR_COLOR_A_ADDR, 0x0000);        // color # = black
     xr_textmode_pb();
+    xr_msg_color(0x0f);
     xr_printfxy(5, 0, "xosera_test_m68k\n");
 
     if (SD_check_support())
@@ -2221,6 +2277,9 @@ void     xosera_test()
     }
 
 #endif
+    xr_textmode_pb();
+    xr_msg_color(0x0f);
+    xr_printfxy(5, 0, "xosera_test_m68k\n");
 
     //    xreg_setw(VID_CTRL, 0x0010);        // enable audio DMA to start playing
 

@@ -35,7 +35,7 @@ $(info === Xosera UPduino [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
 # Maximum number of CPU cores to use before waiting with FMAX_TEST
-MAX_CPUS := 6
+MAX_CPUS := 8
 
 # Xosera video mode selection:
 # Supported modes:                           (exact) (actual)
@@ -179,14 +179,14 @@ ifdef FMAX_TEST	# run nextPNR FMAX_TEST times to determine "Max frequency" range
 	      wait $${pid[wnum]} ; \
 	    fi ; \
 	  fi ; \
-      done ; \
+	done ; \
 	wait
 	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
 	  grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log | tail -1 | cut -d " " -f 7 >"$(LOGS)/fmax/fmax_temp.txt" ; \
 	  FMAX=$$(cat "$(LOGS)/fmax/fmax_temp.txt") ; \
 	  echo $${num} $${FMAX} "$(LOGS)/fmax/$(OUTNAME)_$${num}.asc" >> $(LOGS)/fmax/$(OUTNAME)_list.log ; \
 	  ((num = num + 1)) ; \
-    	done
+	done
 	@echo === fMAX after $(FMAX_TEST) runs: ===
 	@awk '{ total += $$2 ; minv = (minv == 0 || minv > $$2 ? $$2 : minv) ; maxv = (maxv < $$2 ? $$2 : maxv) ; count++ } END \
 	  { print "fMAX: Minimum frequency:", minv ; print "fMAX: Average frequency:", total/count ; print "fMAX: Maximum frequency:", maxv, "   <== selected as best" ; }' $(LOGS)/fmax/$(OUTNAME)_list.log
@@ -205,8 +205,8 @@ ifdef NO_PNR_RETRY
 else
 	@echo $(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 	@until $$($(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@) ; do \
-        	echo 'Retrying nextpnr-ice40 with new seed...' ; \
-    	done
+	  echo 'Retrying nextpnr-ice40 with new seed...' ; \
+	done
 endif
 endif
 	@echo === UPduino Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(OUTNAME)_stats.txt

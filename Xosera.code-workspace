@@ -251,7 +251,7 @@
 			"terminal.foreground": "#20DB20",
 			"terminalCursor.foreground": "#E0E0E0",
 		},
-		"editor.wordWrapColumn": 120,
+		"editor.wordWrapColumn": 200,
 		"files.trimTrailingWhitespace": true,
 		"rewrap.autoWrap.enabled": true,
 		"rewrap.wrappingColumn": 120,

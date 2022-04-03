@@ -34,6 +34,22 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
     - [Xosera Extended Registers Details (XR Registers)](#xosera-extended-registers-details-xr-registers)
     - [Video Config and Copper XR Registers Summary](#video-config-and-copper-xr-registers-summary)
     - [Video Config and Copper XR Registers Details](#video-config-and-copper-xr-registers-details)
+      - [0x00 **`XR_VID_CTRL` (R/W) - interrupt status/signal and border color**](#0x00-xr_vid_ctrl-rw---interrupt-statussignal-and-border-color)
+      - [0x01 **`XR_COPP_CTRL` (R/W) - copper start address and enable**](#0x01-xr_copp_ctrl-rw---copper-start-address-and-enable)
+      - [0x02 **`XR_UNUSED_02` (--) - unused XR register 0x02**](#0x02-xr_unused_02------unused-xr-register-0x02)
+      - [0x03 **`XR_UNUSED_03` (--) - unused XR register 0x03**](#0x03-xr_unused_03------unused-xr-register-0x03)
+      - [0x04 **`XR_UNUSED_04` (--) - unused XR register 0x04**](#0x04-xr_unused_04------unused-xr-register-0x04)
+      - [0x05 **`XR_UNUSED_05` (--) - unused XR register 0x05**](#0x05-xr_unused_05------unused-xr-register-0x05)
+      - [0x06 **`XR_VID_LEFT` (R/W) - video display window left edge**](#0x06-xr_vid_left-rw---video-display-window-left-edge)
+      - [0x07 **`XR_VID_RIGHT` (R/W) - video display window right edge**](#0x07-xr_vid_right-rw---video-display-window-right-edge)
+      - [0x08 **`XR_SCANLINE` (RO) - current video display scan line and blanking status**](#0x08-xr_scanline-ro---current-video-display-scan-line-and-blanking-status)
+      - [0x09 **`XR_UNUSED_09` (--) - unused XR register 0x09**](#0x09-xr_unused_09------unused-xr-register-0x09)
+      - [0x0A **`XR_UNUSED_0A` (--) - unused XR register 0x0A**](#0x0a-xr_unused_0a------unused-xr-register-0x0a)
+      - [0x0B **`XR_UNUSED_0B` (--) - unused XR register 0x0B**](#0x0b-xr_unused_0b------unused-xr-register-0x0b)
+      - [0x0C **`XR_UNUSED_0C` (--) - unused XR register 0x0C**](#0x0c-xr_unused_0c------unused-xr-register-0x0c)
+      - [0x0D **`XR_VID_HSIZE` (RO) - monitor display mode native horizontal resolution**](#0x0d-xr_vid_hsize-ro---monitor-display-mode-native-horizontal-resolution)
+      - [0x0E **`XR_VID_VSIZE` (RO) - monitor display mode native vertical resolution**](#0x0e-xr_vid_vsize-ro---monitor-display-mode-native-vertical-resolution)
+      - [0x0F **`XR_UNUSED_0F` (--) - unused XR register 0x0F**](#0x0f-xr_unused_0f------unused-xr-register-0x0f)
     - [Playfield A & B Control XR Registers Summary](#playfield-a--b-control-xr-registers-summary)
     - [Playfield A & B Control XR Registers Details](#playfield-a--b-control-xr-registers-details)
     - [2D Blitter Engine Operation](#2d-blitter-engine-operation)
@@ -304,24 +320,24 @@ To access these XR registers, first write the register address to `XM_XR_ADDR`, 
 
 ### Video Config and Copper XR Registers Summary
 
-| Reg # | Reg Name       | R /W | Description                                                                             |
-| ----- | -------------- | ---- | --------------------------------------------------------------------------------------- |
-| 0x00  | `XR_VID_CTRL`  | R /W | display control and border color index                                                  |
-| 0x01  | `XR_COPP_CTRL` | R /W | display synchronized coprocessor control                                                |
-| 0x02  | `XR_UNUSED_02` | R /W | [#TODO]                                                                                 |
-| 0x03  | `XR_UNUSED_03` | R /W | [#TODO]                                                                                 |
-| 0x04  | `XR_UNUSED_04` | R /W | [#TODO]                                                                                 |
-| 0x05  | `XR_UNUSED_05` | R /W | [#TODO]                                                                                 |
-| 0x06  | `XR_VID_LEFT`  | R /W | left edge start of active display window (normally 0)                                   |
-| 0x07  | `XR_VID_RIGHT` | R /W | right edge + 1 end of active display window (normally 640 or 848)                       |
-| 0x08  | `XR_SCANLINE`  | RO   | [15] in V blank, [14] in H blank [10:0] V scanline                                      |
-| 0x09  | `XR_UNUSED_09` | RO   | [#TODO]                                                                                 |
-| 0x0A  | `XR_VERSION`   | RO   | optional feature bits [15:12] and 3 digit BCD version [11:0]                            |
-| 0x0B  | `XR_GITHASH_H` | RO   | [15:0] high 16-bits of 32-bit Git hash build identifier                                 |
-| 0x0C  | `XR_GITHASH_L` | RO   | [15:0] low 16-bits of 32-bit Git hash build identifier                                  |
-| 0x0D  | `XR_VID_HSIZE` | RO   | native pixel width of monitor mode (e.g. 640/848)                                       |
-| 0x0E  | `XR_VID_VSIZE` | RO   | native pixel height of monitor mode (e.g. 480)                                          |
-| 0x0F  | `XR_VID_VFREQ` | RO   | update frequency of monitor mode in BCD 1/100<sup>th</sup> Hz (e.g., 0x5997 = 59.97 Hz) |
+| Reg # | Reg Name       | R /W | Description                                                                                                   |
+| ----- | -------------- | ---- | ------------------------------------------------------------------------------------------------------------- |
+| 0x00  | [**`XR_VID_CTRL`**](#0x00-xr_vid_ctrl-rw---interrupt-statussignal-and-border-color) | R /W | display control and border color index       |
+| 0x01  | [**`XR_COPP_CTRL`**](#0x01-xr_copp_ctrl-rw---copper-start-address-and-enable) | R /W | display synchronized coprocessor control           |
+| 0x02  | [**`XR_UNUSED_02`**](#0x02-xr_unused_02------unused-xr-register-0x02) | R /W | [#TODO]                                                    |
+| 0x03  | [**`XR_UNUSED_03`**](#0x03-xr_unused_03------unused-xr-register-0x03) | R /W | [#TODO]                                                    |
+| 0x04  | [**`XR_UNUSED_04`**](#0x04-xr_unused_04------unused-xr-register-0x04) | R /W | [#TODO]                                                    |
+| 0x05  | [**`XR_UNUSED_05`**](#0x05-xr_unused_05------unused-xr-register-0x05) | R /W | [#TODO]                                                    |
+| 0x06  | [**`XR_VID_LEFT`**](#0x06-xr_vid_left-rw---video-display-window-left-edge) | R /W | left edge start of active display window (normally 0) |
+| 0x07  | [**`XR_VID_RIGHT`**](#0x07-xr_vid_right-rw---video-display-window-right-edge) | R /W | right edge + 1 end of active display window (normally 640 or 848)   |
+| 0x08  | [**`XR_SCANLINE`**](#0x08-xr_scanline-ro---current-video-display-scan-line-and-blanking-status) | RO   | [15] in V blank, [14] in H blank [10:0] V scanline |
+| 0x09  | [**`XR_UNUSED_09`**](#0x09-xr_unused_09------unused-xr-register-0x09) | RO   | [#TODO]                                                                      |
+| 0x0A  | [**`XR_UNUSED_0A`**](#0x0A-xr_unused_0A------unused-xr-register-0x0A) | RO   | [#TODO]                                                                      |
+| 0x0B  | [**`XR_UNUSED_0B`**](#0x0B-xr_unused_0B------unused-xr-register-0x0B) | RO  | [#TODO]                                                                      |
+| 0x0C  | [**`XR_UNUSED_0C`**](#0x0C-xr_unused_0C------unused-xr-register-0x0C) | RO   | [#TODO]                                                                      |
+| 0x0D  | [**`XR_VID_HSIZE`**](#0x0d-xr_vid_hsize-ro---monitor-display-mode-native-horizontal-resolution) | RO   | native pixel width of monitor mode (e.g. 640/848)  |
+| 0x0E  | [**`XR_VID_VSIZE`**](#0x0e-xr_vid_vsize-ro---monitor-display-mode-native-vertical-resolution)   | RO   | native pixel height of monitor mode (e.g. 480)       |
+| 0x0F  | [**`XR_UNUSED_0F`**](#0x0F-xr_unused_0F------unused-xr-register-0x0F)  | RO |  [#TODO]                                                                      |
 
 (`R+` or `W+` indicates that reading or writing this register has additional "side effects", respectively)
 
@@ -329,69 +345,86 @@ ___
 
 ### Video Config and Copper XR Registers Details
 
-**0x00 `XR_VID_CTRL` (R/W) - interrupt status/signal and border color**  
-<img src="./pics/wd_XR_VID_CTRL.svg">
+#### 0x00 **`XR_VID_CTRL` (R/W) - interrupt status/signal and border color**  
+
+<img src="./pics/wd_XR_VID_CTRL.svg">  
+
 Pixels outside video window (`VID_TOP`, `VID_BOTTOM`, `VID_LEFT`, `VID_RIGHT`) will use border color index. Sprite cursor will
 also use upper 4-bits of border color (with lower 4-bits from sprite data).  
 Writing 1 to interrupt bit will generate CPU interrupt (if not already pending). Read will give pending interrupts (which CPU can
 clear writing to `XM_TIMER`).
 
-**0x01 `XR_COPP_CTRL` (R/W) - copper start address and enable**  
+#### 0x01 **`XR_COPP_CTRL` (R/W) - copper start address and enable**  
+
 <img src="./pics/wd_XR_COPP_CTRL.svg">
+
 Display synchronized co-processor enable and starting PC address for each video frame within copper XR memory region.
 
-**0x02 `XR_UNUSED_02` (--) - unused XR register 0x02**  
+#### 0x02 **`XR_UNUSED_02` (--) - unused XR register 0x02**  
+
 Unused XR register 0x02
 
-**0x03 `XR_UNUSED_03` (--) - unused XR register 0x03**  
+#### 0x03 **`XR_UNUSED_03` (--) - unused XR register 0x03**  
+
 Unused XR register 0x03
 
-**0x04 `XR_UNUSED_04` (--) - unused XR register 0x04**  
+#### 0x04 **`XR_UNUSED_04` (--) - unused XR register 0x04**  
+
 Unused XR register 0x04
 
-**0x05 `XR_UNUSED_05` (--) - unused XR register 0x05**  
+#### 0x05 **`XR_UNUSED_05` (--) - unused XR register 0x05**  
+
 Unused XR register 0x05
 
-**0x06 `XR_VID_LEFT` (R/W) - video display window left edge**  
+#### 0x06 **`XR_VID_LEFT` (R/W) - video display window left edge**  
+
 <img src="./pics/wd_XR_VID_LEFT.svg">
+
 Defines left-most native pixel of video display window (normally 0 for full-screen).
 
-**0x07 `XR_VID_RIGHT` (R/W) - video display window right edge**  
+#### 0x07 **`XR_VID_RIGHT` (R/W) - video display window right edge**  
+
 <img src="./pics/wd_XR_VID_RIGHT.svg">
+
 Defines right-most native pixel of video display window (normally 639 or 847 for 4:3 or 16:9 full-screen, respectively).
 
-**0x08 `XR_SCANLINE` (RO) - current video display scan line and blanking status**  
+#### 0x08 **`XR_SCANLINE` (RO) - current video display scan line and blanking status**  
+
 <img src="./pics/wd_XR_SCANLINE.svg">
+
 Continuously updated with the scanline and blanking status during display scanning. Read-only.
 
-**0x09 `XR_UNUSED_09` (--) - unused XR register 0x09**  
+#### 0x09 **`XR_UNUSED_09` (--) - unused XR register 0x09**  
+
 Unused XR register 0x09
 
-**0x0A `XR_VERSION` (RO) - Xosera version and optional feature bits**  
-<img src="./pics/wd_XR_VERSION.svg">
-BCD coded version (x.xx) and optional feature bits (0 for undefined/not present). Read-only.  
-Bit 15 will be set if the bitstream design was "clean" Git hash (locally unmodified).
+#### 0x0A **`XR_UNUSED_0A` (--) - unused XR register 0x0A**  
 
-**0x0B `XR_GITHASH_H` (RO) - Xosera Git hash identifier (high 16-bits)**  
-<img src="./pics/wd_XR_GITHASH_H.svg">
-High 16-bits of Git short hash identifier. Can be used to help identify exact repository version.  
-Upper nibble will be 0xD when local modifications have been made. Read-only.
+Unused XR register 0x0A
 
-**0x0C `XR_GITHASH_L` (RO) - Xosera Git hash identifier (low 16-bits)**  
-<img src="./pics/wd_XR_GITHASH_L.svg">
-Low 16-bits of Git short hash identifier. Can be used to help identify exact repository version. Read-only.
+#### 0x0B **`XR_UNUSED_0B` (--) - unused XR register 0x0B**  
 
-**0x0D `XR_VID_HSIZE` (RO) - monitor display mode native horizontal resolution**  
+Unused XR register 0x0B
+
+#### 0x0C **`XR_UNUSED_0C` (--) - unused XR register 0x0C**  
+
+Unused XR register 0x0C
+
+#### 0x0D **`XR_VID_HSIZE` (RO) - monitor display mode native horizontal resolution**  
+
 <img src="./pics/wd_XR_VID_HSIZE.svg">
+
 Monitor display mode native horizontal resolution (e.g., 640 for 4:3 or 848 for 16:9). Read-only.
 
-**0x0E `XR_VID_VSIZE` (RO) - monitor display mode native vertical resolution**  
+#### 0x0E **`XR_VID_VSIZE` (RO) - monitor display mode native vertical resolution**  
+
 <img src="./pics/wd_XR_VID_VSIZE.svg">
+
 Monitor display mode native vertical resolution (e.g., 480). Read-only.
 
-**0x0F `XR_VID_VFREQ` (RO) - monitor display mode update frequency in BCD 1/100<sup>th</sup> Hz**  
-<img src="./pics/wd_XR_VID_VFREQ.svg">
-Monitor display mode update frequency in BCD 1/100<sup>th</sup> Hz (e.g., 0x5997 = 59.97 Hz). Read-only.
+#### 0x0F **`XR_UNUSED_0F` (--) - unused XR register 0x0F**  
+
+Unused XR register 0x0F
 ___
 
 ### Playfield A & B Control XR Registers Summary

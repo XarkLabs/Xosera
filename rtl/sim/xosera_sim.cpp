@@ -48,6 +48,7 @@ bool          sim_bus    = BUS_INTERFACE;
 bool          wait_close = false;
 
 bool vsync_detect = false;
+bool hsync_detect = false;
 bool vtop_detect  = false;
 
 int          num_uploads;
@@ -124,22 +125,22 @@ class BusInterface
     enum
     {
         // Video Config / Copper XR Registers
-        XR_VID_CTRL  = 0x00,        // (R /W) display control and border color index
-        XR_COPP_CTRL = 0x01,        // (R /W) display synchronized coprocessor control
-        XR_UNUSED_02 = 0x02,        // (R /W) // TODO:
-        XR_UNUSED_03 = 0x03,        // (R /W) // TODO:
-        XR_UNUSED_04 = 0x04,        // (R /W) // TODO:
-        XR_UNUSED_05 = 0x05,        // (R /W) // TODO:
-        XR_VID_LEFT  = 0x06,        // (R /W) left edge of active display window (typically 0)
-        XR_VID_RIGHT = 0x07,        // (R /W) right edge of active display window (typically 639 or 847)
-        XR_SCANLINE  = 0x08,        // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
-        XR_UNUSED_09 = 0x09,        // (RO  )
-        XR_VERSION   = 0x0A,        // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
-        XR_GITHASH_H = 0x0B,        // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
-        XR_GITHASH_L = 0x0C,        // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
-        XR_VID_HSIZE = 0x0D,        // (RO  ) native pixel width of monitor mode (e.g. 640/848)
-        XR_VID_VSIZE = 0x0E,        // (RO  ) native pixel height of monitor mode (e.g. 480)
-        XR_VID_VFREQ = 0x0F,        // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+        XR_VID_CTRL    = 0x00,        // (R /W) display control and border color index
+        XR_COPP_CTRL   = 0x01,        // (R /W) display synchronized coprocessor control
+        XR_AUD0_VOL    = 0x02,        // (R /W) // TODO:
+        XR_AUD0_PERIOD = 0x03,        // (R /W) // TODO:
+        XR_AUD0_START  = 0x04,        // (R /W) // TODO:
+        XR_AUD0_LENGTH = 0x05,        // (R /W) // TODO:
+        XR_VID_LEFT    = 0x06,        // (R /W) left edge of active display window (typically 0)
+        XR_VID_RIGHT   = 0x07,        // (R /W) right edge of active display window (typically 639 or 847)
+        XR_SCANLINE    = 0x08,        // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
+        XR_UNUSED_09   = 0x09,        // (RO  )
+        XR_VERSION     = 0x0A,        // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
+        XR_GITHASH_H   = 0x0B,        // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
+        XR_GITHASH_L   = 0x0C,        // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
+        XR_VID_HSIZE   = 0x0D,        // (RO  ) native pixel width of monitor mode (e.g. 640/848)
+        XR_VID_VSIZE   = 0x0E,        // (RO  ) native pixel height of monitor mode (e.g. 480)
+        XR_VID_VFREQ   = 0x0F,        // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
 
         // Playfield A Control XR Registers
         XR_PA_GFX_CTRL  = 0x10,        //  playfield A graphics control
@@ -190,6 +191,7 @@ class BusInterface
     int     state;
     int     index;
     bool    wait_vsync;
+    bool    wait_hsync;
     bool    wait_vtop;
     bool    wait_blit;
     bool    data_upload;
@@ -233,6 +235,7 @@ public:
         index             = 0;
         state             = BUS_START;
         wait_vsync        = false;
+        wait_hsync        = false;
         wait_vtop         = false;
         wait_blit         = false;
         data_upload       = false;
@@ -269,6 +272,15 @@ public:
                 return;
             }
 
+            if (wait_hsync)
+            {
+                if (hsync_detect)
+                {
+                    logonly_printf("[@t=%lu  ... HSYNC arrives]\n", main_time);
+                    wait_hsync = false;
+                }
+                return;
+            }
 
             int64_t bus_time = (main_time - BUS_START_TIME) / BUS_CLOCK_DIV;
 
@@ -350,6 +362,14 @@ public:
                     }
                     wait_blit = true;
                     index--;
+                    return;
+                }
+                // REG_WAITHSYNC
+                if (!data_upload && test_data[index] == 0xfffa)
+                {
+                    logonly_printf("[@t=%lu] Wait HSYNC...\n", main_time);
+                    wait_hsync = true;
+                    index++;
                     return;
                 }
 
@@ -505,6 +525,7 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR  ",
 
 #define REG_UPLOAD()          0xfff0
 #define REG_UPLOAD_AUX()      0xfff1
+#define REG_WAITHSYNC()       0xfffa
 #define REG_WAIT_BLIT_READY() (((BusInterface::XM_SYS_CTRL) | 0x90) << 8), 0xfffc
 #define REG_WAIT_BLIT_DONE()  (((BusInterface::XM_SYS_CTRL) | 0x90) << 8), 0xfffb
 #define REG_WAITVTOP()        0xfffd
@@ -2650,6 +2671,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_UPLOAD(),
     // REG_WAITVTOP(),
     REG_WAITVSYNC(),
+
     //    REG_END(),
 
     // 2D moto blit 0, 0
@@ -2976,9 +2998,51 @@ uint16_t     BusInterface::test_data[32768] = {
     XREG_SETW(COPP_CTRL, 0x0000),
 #endif
 
+#if 1                              // lame audio test
+    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
+    REG_W(WR_ADDR, 0xFF00),
+    REG_UPLOAD(),        // upload sine data
+
+    XREG_SETW(PA_GFX_CTRL, 0x0080),        // pf a blank
+    XREG_SETW(PB_GFX_CTRL, 0x0080),        // pf b blank
+
+
+    XREG_SETW(AUD0_PERIOD, 800),
+    XREG_SETW(AUD0_START, 0xFF00),
+    XREG_SETW(AUD0_LENGTH, 0x007F),
+
+    XREG_SETW(AUD0_VOL, 0x0000),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x1010),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x2020),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x3030),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x4040),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x5050),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x6060),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x7070),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x8080),
+    REG_WAITHSYNC(),
+    XREG_SETW(VID_CTRL, 0x0010),
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+#endif
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+    REG_END(),
+
 #if 1
     // true color hack test
 
@@ -3395,9 +3459,12 @@ int main(int argc, char ** argv)
 
         vtop_detect = top->xosera_main->dv_de_o;
 
+        hsync_detect = false;
+
         // end of hsync
         if (!hsync && vga_hsync_previous)
         {
+            hsync_detect = true;
             if (hsync_count > hsync_max)
                 hsync_max = hsync_count;
             if (hsync_count < hsync_min || !hsync_min)

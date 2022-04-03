@@ -20,7 +20,8 @@
 `include "xosera_pkg.sv"
 
 module video_gen #(
-    parameter EN_VID_PF_B       = 1
+    parameter EN_VID_PF_B       = 1,
+    parameter EN_AUDIO          = 1
 )
 (
     // video registers and control
@@ -49,6 +50,9 @@ module video_gen #(
     output      color_t         colorB_index_o,         // color palette index output (16x256)
     output      logic           vsync_o, hsync_o,       // video sync outputs
     output      logic           dv_de_o,                // video active signal (needed for HDMI)
+    // audio outputs
+    output      logic           audio_pdm_l_o,          // audio left channel PDM output
+    output      logic           audio_pdm_r_o,          // audio left channel PDM output
     // standard signals
     input  wire logic           reset_i,                // system reset in
     input  wire logic           clk                     // clock (video pixel clock)
@@ -122,6 +126,9 @@ typedef enum logic [1:0] {
     STATE_POST_SYNC = 2'b11
 } video_signal_st;
 
+localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;               // memory prefetch starts early
+localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fetch can end a bit early
+
 // sync generation signals (and combinatorial logic "next" versions)
 logic  [1:0]    h_state;
 hres_t          h_count;
@@ -139,6 +146,7 @@ addr_t          line_set_addr;                          // address for on-the-fl
 logic           hsync;
 logic           vsync;
 logic           dv_display_ena;
+logic           v_visible;
 logic           h_line_last_pixel;
 logic           last_visible_pixel;
 logic           last_frame_pixel;
@@ -150,15 +158,30 @@ assign h_count_o    = h_count;
 assign v_count_o    = v_count;
 `endif
 
+// audio
+logic           audio_enable;
+
+logic           audio_0_fetch;
+word_t          audio_0_vol;                    // audio 0 L+R 8-bit volume/pan
+logic [14:0]    audio_0_period;                   // audio 0 playback rate (TBD)
+addr_t          audio_0_start;                  // audio 0 start address
+logic           audio_0_tile;                   // audio 0 memory (0=VRAM, 1=TILE)
+logic [14:0]    audio_0_len;                    // audio 0 length in words
+addr_t          audio_0_addr;                   // audio 0 current address
+word_t          audio_0_word;                   // audio 0 current output
+
 assign pb_stall = (pa_vram_sel && pb_vram_sel) || (pa_tile_sel && pb_tile_sel);
 assign vram_sel_o       = pa_vram_sel ? pa_vram_sel  : pb_vram_sel;
 assign vram_addr_o      = pa_vram_sel ? pa_vram_addr : pb_vram_addr;
 assign tilemem_sel_o    = pa_tile_sel ? pa_tile_sel  : pb_tile_sel;
 assign tilemem_addr_o   = pa_tile_sel ? pa_tile_addr : pb_tile_addr;
 
-video_playfield video_pf_a(
+video_playfield #(
+    .EN_AUDIO(EN_AUDIO)
+) video_pf_a(
     .stall_i(1'b0),                                     // playfield A never stalls
-    .v_visible_i(v_state == STATE_VISIBLE),
+    .mem_fetch_i(mem_fetch & ~pa_blank),
+    .mem_fetch_start_i(mem_fetch_h_start),
     .h_count_i(h_count),
     .h_line_last_pixel_i(h_line_last_pixel),
     .last_frame_pixel_i(last_frame_pixel),
@@ -191,6 +214,10 @@ video_playfield video_pf_a(
     .pf_line_start_addr_i(line_set_addr),
     .pf_gfx_ctrl_set_i(pa_gfx_ctrl_set),
     .pf_color_index_o(pa_color_index),
+    .audio_0_fetch_i(audio_0_fetch),
+    .audio_0_tile_i(audio_0_tile),
+    .audio_0_addr_i(audio_0_addr),
+    .audio_0_word_o(audio_0_word),
     .reset_i(reset_i),
     .clk(clk)
 );
@@ -203,6 +230,11 @@ generate
         logic       pb_tilemem_rd;                      // last cycle was PB tilemem read flag
         logic       pb_tilemem_rd_save;                 // PB tilemem read data saved flag
         word_t      pb_tilemem_rd_data;                 // PB tilemem read data
+
+        word_t      audio_dummy_word;
+
+        logic       unused_pb_audio;
+        assign      unused_pb_audio = &{ 1'b0, audio_dummy_word };
 
         always_ff @(posedge clk) begin
             // latch vram read data for playfield B
@@ -228,9 +260,13 @@ generate
             pb_tilemem_rd  <= pb_tile_sel;              // remember if this cycle was reading tilemem
         end
 
-        video_playfield video_pf_b(
+        video_playfield #(
+            .EN_AUDIO(0)
+        )
+        video_pf_b(
             .stall_i(pb_stall),
-            .v_visible_i(v_state == STATE_VISIBLE),
+            .mem_fetch_i(mem_fetch & ~pb_blank),
+            .mem_fetch_start_i(mem_fetch_h_start),
             .h_count_i(h_count),
             .h_line_last_pixel_i(h_line_last_pixel),
             .last_frame_pixel_i(last_frame_pixel),
@@ -263,6 +299,10 @@ generate
             .pf_line_start_addr_i(line_set_addr),
             .pf_gfx_ctrl_set_i(pb_gfx_ctrl_set),
             .pf_color_index_o(pb_color_index),
+            .audio_0_fetch_i(1'b0),
+            .audio_0_tile_i(1'b0),
+            .audio_0_addr_i('0),
+            .audio_0_word_o(audio_dummy_word),
             .reset_i(reset_i),
             .clk(clk)
         );
@@ -342,10 +382,17 @@ always_ff @(posedge clk) begin
         pb_gfx_ctrl_set     <= 1'b0;
 
         line_set_addr       <= 16'h0000;        // user set display addr
+
 `ifdef ENABLE_COPP
         copp_reg_wr_o       <= 1'b0;
         copp_reg_data_o     <= 16'h0000;
 `endif
+
+        audio_0_vol         <= '0;
+        audio_0_period      <= '0;
+        audio_0_tile        <= '0;
+        audio_0_start       <= '0;
+        audio_0_len         <= '0;
 
 `ifndef SYNTHESIS
         pa_blank            <= 1'b0;            // don't blank playfield A in simulation
@@ -367,6 +414,7 @@ always_ff @(posedge clk) begin
             case ({1'b0, vgen_reg_num_i})
                 xv::XR_VID_CTRL: begin
                     border_color    <= vgen_reg_data_i[15:8];
+                    audio_enable    <= vgen_reg_data_i[4];
                     intr_signal_o   <= vgen_reg_data_i[3:0];
                 end
                 xv::XR_COPP_CTRL: begin
@@ -376,13 +424,18 @@ always_ff @(posedge clk) begin
                     copp_reg_data_o[xv::COPP_W-1:0]  <= vgen_reg_data_i[xv::COPP_W-1:0];
 `endif
                 end
-                xv::XR_UNUSED_02: begin
+                xv::XR_AUD0_VOL: begin
+                    audio_0_vol     <= vgen_reg_data_i;
                 end
-                xv::XR_UNUSED_03: begin
+                xv::XR_AUD0_PERIOD: begin
+                    audio_0_period  <= vgen_reg_data_i[14:0];
                 end
-                xv::XR_UNUSED_04: begin
+                xv::XR_AUD0_START: begin
+                    audio_0_start   <= vgen_reg_data_i;
                 end
-                xv::XR_UNUSED_05: begin
+                xv::XR_AUD0_LENGTH: begin
+                    audio_0_tile    <= vgen_reg_data_i[15];
+                    audio_0_len     <= vgen_reg_data_i[14:0];
                 end
                 xv::XR_VID_LEFT: begin
                     vid_left        <= $bits(vid_left)'(vgen_reg_data_i);
@@ -521,6 +574,8 @@ always_comb     h_line_last_pixel   = (h_state_next == STATE_PRE_SYNC) && (h_sta
 always_comb     last_visible_pixel  = (v_state_next == STATE_PRE_SYNC) && (v_state == STATE_VISIBLE) && h_line_last_pixel;
 always_comb     last_frame_pixel    = (v_state_next == STATE_VISIBLE) && (v_state == STATE_POST_SYNC) && h_line_last_pixel;
 
+always_comb     v_visible           = (v_state == STATE_VISIBLE);
+
 // combinational block for video counters
 always_comb begin
     h_count_next = h_count + 1'b1;
@@ -568,6 +623,28 @@ always_comb begin
     endcase
 end
 
+// combinational block for video fetch start and stop
+`ifdef OLD_WAY
+hres_t          mem_fetch_hcount;                   // horizontal count when mem_fetch_active toggles
+always_comb     mem_fetch_next = (v_visible_i && h_count_i == mem_fetch_hcount) ? ~mem_fetch_active : mem_fetch_active;
+always_comb begin
+    // set mem_fetch_active next toggle for video memory access
+    if (mem_fetch_active) begin
+        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_END);
+    end else begin
+        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_BEGIN);
+    end
+end
+`else
+logic           mem_fetch;                   // true when fetching display data
+logic           mem_fetch_next;
+logic           mem_fetch_h_start;
+logic           mem_fetch_h_end;
+always_comb     mem_fetch_h_start = ($bits(h_count)'(H_MEM_BEGIN) == h_count);
+always_comb     mem_fetch_h_end = ($bits(h_count)'(H_MEM_END) == h_count);
+always_comb     mem_fetch_next = (!mem_fetch ? mem_fetch_h_start : !mem_fetch_h_end) && v_visible;
+`endif
+
 // video pixel generation
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -597,8 +674,42 @@ always_ff @(posedge clk) begin
         hsync_o     <= hsync ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
         vsync_o     <= vsync ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
         dv_de_o     <= dv_display_ena;
+
+        mem_fetch   <= mem_fetch_next;
     end
 end
+
+
+// audio generation
+generate
+    if (EN_AUDIO) begin : opt_AUDIO
+        // audio channel mixer
+        audio_mixer audio_mixer
+        (
+            .audio_enable_i(audio_enable),
+            .audio_dma_start_i(h_line_last_pixel),
+            .audio_0_vol_i(audio_0_vol),
+            .audio_0_period_i(audio_0_period),
+            .audio_0_start_i(audio_0_start),
+            .audio_0_len_i(audio_0_len),
+            .audio_0_fetch_o(audio_0_fetch),
+            .audio_0_addr_o(audio_0_addr),
+            .audio_0_word_i(audio_0_word),
+            .pdm_l_o(audio_pdm_l_o),
+            .pdm_r_o(audio_pdm_r_o),
+            .reset_i(reset_i),
+            .clk(clk)
+        );
+    end else begin
+        assign  audio_pdm_l_o   = 1'b0;
+        assign  audio_pdm_r_o   = 1'b0;
+        assign  audio_0_fetch   = 1'b0;
+        assign  audio_0_addr    = '0;
+
+        logic   audio_unused;
+        assign  audio_unused = &{1'b0, audio_enable, audio_0_vol, audio_0_period, audio_0_start, audio_0_len, audio_0_word };
+    end
+endgenerate
 
 endmodule
 `default_nettype wire               // restore default

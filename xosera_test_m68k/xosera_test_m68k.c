@@ -193,29 +193,29 @@ static void disable_sd_boot()
 
 static inline void wait_vsync()
 {
-    while (xreg_getw_wait(SCANLINE) < 0x8000)
+    while (xreg_getw(SCANLINE) < 0x8000)
         ;
 }
 
 void wait_not_vsync()
 {
-    while (xreg_getw_wait(SCANLINE) < 0x8000)
+    while (xreg_getw(SCANLINE) < 0x8000)
         ;
 }
 
 void wait_vsync_start()
 {
-    while (xreg_getw_wait(SCANLINE) >= 0x8000)
+    while (xreg_getw(SCANLINE) >= 0x8000)
         ;
-    while (xreg_getw_wait(SCANLINE) < 0x8000)
+    while (xreg_getw(SCANLINE) < 0x8000)
         ;
 }
 
 static inline void check_vsync()
 {
-    while (xreg_getw_wait(SCANLINE) < 0x8000)
+    while (xreg_getw(SCANLINE) < 0x8000)
         ;
-    while ((xreg_getw_wait(SCANLINE) & 0x3ff) > 520)
+    while ((xreg_getw(SCANLINE) & 0x3ff) > 520)
         ;
 }
 
@@ -343,11 +343,11 @@ static uint8_t  text_color = 0x02;        // dark green on black
 
 static void get_textmode_settings()
 {
-    uint16_t vx          = (xreg_getw_wait(PA_GFX_CTRL) & 3) + 1;
-    uint16_t tile_height = (xreg_getw_wait(PA_TILE_CTRL) & 0xf) + 1;
-    screen_addr          = xreg_getw_wait(PA_DISP_ADDR);
-    text_columns         = (uint8_t)xreg_getw_wait(PA_LINE_LEN);
-    text_rows            = (uint8_t)(((xreg_getw_wait(VID_VSIZE) / vx) + (tile_height - 1)) / tile_height);
+    uint16_t vx          = (xreg_getw(PA_GFX_CTRL) & 3) + 1;
+    uint16_t tile_height = (xreg_getw(PA_TILE_CTRL) & 0xf) + 1;
+    screen_addr          = xreg_getw(PA_DISP_ADDR);
+    text_columns         = (uint8_t)xreg_getw(PA_LINE_LEN);
+    text_rows            = (uint8_t)(((xreg_getw(VID_VSIZE) / vx) + (tile_height - 1)) / tile_height);
 }
 
 static void xcls()
@@ -391,11 +391,11 @@ static void reset_vid(void)
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PB_GFX_CTRL, 0x0080);
     xreg_setw(VID_LEFT, 0x0000);
-    xreg_setw(VID_RIGHT, xreg_getw_wait(VID_HSIZE));
+    xreg_setw(VID_RIGHT, xreg_getw(VID_HSIZE));
     xreg_setw(PA_HV_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
-    xreg_setw(COPP_CTRL, 0x0000);                                  // disable copper
-    xreg_setw(PA_LINE_LEN, xreg_getw_wait(VID_HSIZE) >> 3);        // line len
+    xreg_setw(COPP_CTRL, 0x0000);                             // disable copper
+    xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) >> 3);        // line len
 
     restore_colors();
 
@@ -405,18 +405,23 @@ static void reset_vid(void)
     {
         readchar();
     }
+}
 
+static void reset_vid_nosd(void)
+{
+    reset_vid();
 #if 1        // handy for development to force Kermit upload
     dprintf("Disabling SD on next boot...\n");
     disable_sd_boot();
 #endif
 }
 
+
 static inline void checkbail()
 {
     if (checkchar())
     {
-        reset_vid();
+        reset_vid_nosd();
         _WARM_BOOT();
     }
 }
@@ -621,6 +626,61 @@ static long filesize(void * f)
     }
 
     return fsize;
+}
+
+static bool load_test_audio(const char * filename, int8_t ** out, int * size)
+{
+    void * file  = fl_fopen(filename, "r");
+    int    fsize = (int)filesize(file);
+
+    if (fsize <= 0)
+    {
+        dprintf("Can't get size for \"%s\" (not found?)\n", filename);
+        return false;
+    }
+
+    if (fsize > (64 * 1024))
+    {
+        dprintf("Sample size reduced from %d to %d for \"%s\"\n", fsize, 65536, filename);
+        fsize = 65536;
+    }
+
+    uint8_t * data = malloc(fsize);
+    if (data == NULL)
+    {
+        dprintf("Allocating %ld for \"%s\" failed\n", fsize, filename);
+        return false;
+    }
+    *out = (int8_t *)data;
+
+    int cnt   = 0;
+    int rsize = 0;
+    while ((cnt = fl_fread(data, 1, 512, file)) > 0)
+    {
+        if ((rsize & 0xFFF) == 0)
+        {
+            dprintf("\rReading \"%s\": %d KB ", filename, rsize >> 10);
+        }
+
+        data += cnt;
+        rsize += cnt;
+        checkbail();
+        if (rsize >= fsize)
+        {
+            break;
+        }
+    }
+    dprintf("\rLoaded \"%s\": %dKB (%d bytes).  \n", filename, rsize >> 10, rsize);
+
+    if (rsize != fsize)
+    {
+        dprintf("\nSize mismatch: ftell %ld vs read %ld\n", fsize, rsize);
+    }
+    *size = fsize;
+
+    fl_fclose(file);
+
+    return true;
 }
 
 static bool load_test_image(int mode, const char * filename, const char * colorname)
@@ -1624,6 +1684,339 @@ uint16_t rosco_m68k_CPUMHz()
 }
 #endif
 
+#if 1
+static int8_t sinData[256] = {
+    0,           // 0
+    3,           // 1
+    6,           // 2
+    9,           // 3
+    12,          // 4
+    15,          // 5
+    18,          // 6
+    21,          // 7
+    24,          // 8
+    27,          // 9
+    30,          // 10
+    33,          // 11
+    36,          // 12
+    39,          // 13
+    42,          // 14
+    45,          // 15
+    48,          // 16
+    51,          // 17
+    54,          // 18
+    57,          // 19
+    59,          // 20
+    62,          // 21
+    65,          // 22
+    67,          // 23
+    70,          // 24
+    73,          // 25
+    75,          // 26
+    78,          // 27
+    80,          // 28
+    82,          // 29
+    85,          // 30
+    87,          // 31
+    89,          // 32
+    91,          // 33
+    94,          // 34
+    96,          // 35
+    98,          // 36
+    100,         // 37
+    102,         // 38
+    103,         // 39
+    105,         // 40
+    107,         // 41
+    108,         // 42
+    110,         // 43
+    112,         // 44
+    113,         // 45
+    114,         // 46
+    116,         // 47
+    117,         // 48
+    118,         // 49
+    119,         // 50
+    120,         // 51
+    121,         // 52
+    122,         // 53
+    123,         // 54
+    123,         // 55
+    124,         // 56
+    125,         // 57
+    125,         // 58
+    126,         // 59
+    126,         // 60
+    126,         // 61
+    126,         // 62
+    126,         // 63
+    127,         // 64
+    126,         // 65
+    126,         // 66
+    126,         // 67
+    126,         // 68
+    126,         // 69
+    125,         // 70
+    125,         // 71
+    124,         // 72
+    123,         // 73
+    123,         // 74
+    122,         // 75
+    121,         // 76
+    120,         // 77
+    119,         // 78
+    118,         // 79
+    117,         // 80
+    116,         // 81
+    114,         // 82
+    113,         // 83
+    112,         // 84
+    110,         // 85
+    108,         // 86
+    107,         // 87
+    105,         // 88
+    103,         // 89
+    102,         // 90
+    100,         // 91
+    98,          // 92
+    96,          // 93
+    94,          // 94
+    91,          // 95
+    89,          // 96
+    87,          // 97
+    85,          // 98
+    82,          // 99
+    80,          // 100
+    78,          // 101
+    75,          // 102
+    73,          // 103
+    70,          // 104
+    67,          // 105
+    65,          // 106
+    62,          // 107
+    59,          // 108
+    57,          // 109
+    54,          // 110
+    51,          // 111
+    48,          // 112
+    45,          // 113
+    42,          // 114
+    39,          // 115
+    36,          // 116
+    33,          // 117
+    30,          // 118
+    27,          // 119
+    24,          // 120
+    21,          // 121
+    18,          // 122
+    15,          // 123
+    12,          // 124
+    9,           // 125
+    6,           // 126
+    3,           // 127
+    0,           // 128
+    -3,          // 129
+    -6,          // 130
+    -9,          // 131
+    -12,         // 132
+    -15,         // 133
+    -18,         // 134
+    -21,         // 135
+    -24,         // 136
+    -27,         // 137
+    -30,         // 138
+    -33,         // 139
+    -36,         // 140
+    -39,         // 141
+    -42,         // 142
+    -45,         // 143
+    -48,         // 144
+    -51,         // 145
+    -54,         // 146
+    -57,         // 147
+    -59,         // 148
+    -62,         // 149
+    -65,         // 150
+    -67,         // 151
+    -70,         // 152
+    -73,         // 153
+    -75,         // 154
+    -78,         // 155
+    -80,         // 156
+    -82,         // 157
+    -85,         // 158
+    -87,         // 159
+    -89,         // 160
+    -91,         // 161
+    -94,         // 162
+    -96,         // 163
+    -98,         // 164
+    -100,        // 165
+    -102,        // 166
+    -103,        // 167
+    -105,        // 168
+    -107,        // 169
+    -108,        // 170
+    -110,        // 171
+    -112,        // 172
+    -113,        // 173
+    -114,        // 174
+    -116,        // 175
+    -117,        // 176
+    -118,        // 177
+    -119,        // 178
+    -120,        // 179
+    -121,        // 180
+    -122,        // 181
+    -123,        // 182
+    -123,        // 183
+    -124,        // 184
+    -125,        // 185
+    -125,        // 186
+    -126,        // 187
+    -126,        // 188
+    -126,        // 189
+    -126,        // 190
+    -126,        // 191
+    -127,        // 192
+    -126,        // 193
+    -126,        // 194
+    -126,        // 195
+    -126,        // 196
+    -126,        // 197
+    -125,        // 198
+    -125,        // 199
+    -124,        // 200
+    -123,        // 201
+    -123,        // 202
+    -122,        // 203
+    -121,        // 204
+    -120,        // 205
+    -119,        // 206
+    -118,        // 207
+    -117,        // 208
+    -116,        // 209
+    -114,        // 210
+    -113,        // 211
+    -112,        // 212
+    -110,        // 213
+    -108,        // 214
+    -107,        // 215
+    -105,        // 216
+    -103,        // 217
+    -102,        // 218
+    -100,        // 219
+    -98,         // 220
+    -96,         // 221
+    -94,         // 222
+    -91,         // 223
+    -89,         // 224
+    -87,         // 225
+    -85,         // 226
+    -82,         // 227
+    -80,         // 228
+    -78,         // 229
+    -75,         // 230
+    -73,         // 231
+    -70,         // 232
+    -67,         // 233
+    -65,         // 234
+    -62,         // 235
+    -59,         // 236
+    -57,         // 237
+    -54,         // 238
+    -51,         // 239
+    -48,         // 240
+    -45,         // 241
+    -42,         // 242
+    -39,         // 243
+    -36,         // 244
+    -33,         // 245
+    -30,         // 246
+    -27,         // 247
+    -24,         // 248
+    -21,         // 249
+    -18,         // 250
+    -15,         // 251
+    -12,         // 252
+    -9,          // 253
+    -6,          // 254
+    -4,          // 255
+};
+#endif
+
+int8_t * testsamp;
+int      testsampsize;
+
+static void test_audio_sample(const char * name, int8_t * samp, int bytesize, int speed)
+{
+    xm_setw(WR_INCR, 0x0001);
+    xm_setw(WR_ADDR, 0x8000);
+
+    for (int i = 0; i < bytesize; i += 2)
+    {
+        xm_setbh(DATA, *samp++);
+        xm_setbl(DATA, *samp++);
+    }
+
+    uint16_t p = speed;
+    uint8_t  v = 0x80;
+
+    xreg_setw(AUD0_VOL, v << 8 | (v >> 1));            // set left 100% volume, right 50% volume
+    xreg_setw(AUD0_PERIOD, p);                         // 1000 clocks per each sample byte
+    xreg_setw(AUD0_START, 0x8000);                     // address in VRAM
+    xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+
+    dprintf("Starting sample %s...\n", name);
+    dprintf("Press z & x for volume , & . for period (Shift = faster).\n");
+    dprintf("ESC to boot, space to skip\n");
+    xreg_setw(VID_CTRL, 0x0010);        // enable audio DMA to start playing
+
+    bool done = false;
+    while (!done)
+    {
+        char c = readchar();
+
+        switch (c)
+        {
+            case 'z':
+                v = v - 1;
+                break;
+            case 'x':
+                v = v + 1;
+                break;
+            case 'Z':
+                v = v - 16;
+                break;
+            case 'X':
+                v = v + 16;
+                break;
+            case ',':
+                p = p - 1;
+                break;
+            case '.':
+                p = p + 1;
+                break;
+            case '<':
+                p = p - 16;
+                break;
+            case '>':
+                p = p + 16;
+                break;
+            case ' ':
+                done = true;
+                break;
+            case '\x1b':
+                reset_vid();
+                _WARM_BOOT();
+                break;
+        }
+        dprintf("p =%5d    v =%3d\n", p, v);
+        xreg_setw(AUD0_VOL, v << 8 | (v >> 1));        // set left 100% volume, right 50% volume
+        xreg_setw(AUD0_PERIOD, p);                     // 1000 clocks per each sample byte
+    }
+}
+
 const char blurb[] =
     "\n"
     "\n"
@@ -1643,7 +2036,7 @@ const char blurb[] =
     "  \xf9  Dual 256 color palettes with 12-bit RGB (4096 colors) and 4-bit \"alpha\"\n"
     "  \xf9  Read/write tile memory for an additional 10KB of tiles or tilemap\n"
     "  \xf9  Text mode with up to 8x16 glyphs and 16 forground & background colors\n"
-    "  \xf9  Graphic tile modes with 1024 8x8 glyphs, 16/256 colors and H & V tile mirror\n"
+    "  \xf9  Graphic tile modes with 1024 8x8 glyphs, 16/256 colors and H/V tile mirror\n"
     "  \xf9  Bitmap modes with 1 (plus attribute colors), 4 or 8 bits per pixel\n"
     "  \xf9  Fast 2-D \"blitter\" unit with transparency, masking, shifting and logic ops\n"
     "  \xf9  Screen synchronized \"copper\" to change colors and registers mid-screen\n"
@@ -1724,10 +2117,7 @@ void set_alpha_slow(int alpha)
     uint16_t a = (alpha & 0xf) << 12;
     for (int i = XR_COLOR_ADDR; i < XR_COLOR_ADDR + 256; i++)
     {
-        wait_vsync();
-        xm_setw(XR_ADDR, i);
-        __asm__ __volatile__("nop ; nop ; nop ; nop ; nop ; nop ; nop");
-        uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
+        uint16_t v = (xmem_getw_wait(i) & 0xfff) | a;
         xm_setw(XR_DATA, v);
     }
 }
@@ -1737,9 +2127,7 @@ static void set_alpha(int alpha)
     uint16_t a = (alpha & 0xf) << 12;
     for (int i = XR_COLOR_ADDR; i < XR_COLOR_ADDR + 256; i++)
     {
-        xm_setw(XR_ADDR, i);
-        wait_memory();
-        uint16_t v = (xm_getw(XR_DATA) & 0xfff) | a;
+        uint16_t v = (xmem_getw_wait(i) & 0xfff) | a;
         xm_setw(XR_DATA, v);
     }
 }
@@ -1798,6 +2186,43 @@ void     xosera_test()
             use_sd = false;
         }
     }
+
+    (void)sinData;
+
+#if 1        // audio waveform test
+    {
+        test_audio_sample("sine wave", sinData, sizeof(sinData), 1000);
+
+        xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
+
+        memset(testsamp, 0, testsampsize);
+
+        free(testsamp);
+    }
+    if (load_test_audio("/xosera_8000.raw", &testsamp, &testsampsize))
+    {
+        test_audio_sample("xosera_8000.raw", testsamp, testsampsize, 3150);
+
+        xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
+
+        memset(testsamp, 0, testsampsize);
+
+        free(testsamp);
+    }
+    if (load_test_audio("/Slide_8000.raw", &testsamp, &testsampsize))
+    {
+        test_audio_sample("Slide_8000.raw", testsamp, testsampsize, 3150 / 2);
+
+        xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
+
+        memset(testsamp, 0, testsampsize);
+
+        free(testsamp);
+    }
+
+#endif
+
+    //    xreg_setw(VID_CTRL, 0x0010);        // enable audio DMA to start playing
 
     if (use_sd)
     {

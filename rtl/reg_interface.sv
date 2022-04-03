@@ -375,6 +375,7 @@ always_ff @(posedge clk) begin
                 end
 `endif
                 xv::XM_UNUSED_B: begin
+                    ;
                 end
                 xv::XM_RW_INCR: begin
                     reg_rw_incr[7:0]    <= bus_data_byte;

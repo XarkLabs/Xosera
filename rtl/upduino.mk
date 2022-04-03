@@ -34,6 +34,9 @@ XOSERA_CLEAN := 0
 $(info === Xosera UPduino [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
+# Maximum number of CPU cores to use before waiting with FMAX_TEST
+MAX_CPUS := 6
+
 # Xosera video mode selection:
 # Supported modes:                           (exact) (actual)
 #       MODE_640x400    640x400@70Hz    clock 25.175 (25.125) MHz
@@ -170,11 +173,13 @@ ifdef FMAX_TEST	# run nextPNR FMAX_TEST times to determine "Max frequency" range
 	  ) & \
 	  pids[$${num}]=$$! ; \
 	  ((num = num + 1)) ; \
-	  if (( num % 16 == 15)) ; then \
-	    ((wnum = num - 8)) ; \
-	    wait $${pid[wnum]} ; \
+	  if ((num > ($(MAX_CPUS) - 1))) ; then \
+	    if ((num % $(MAX_CPUS) == ($(MAX_CPUS) - 1))); then \
+	      ((wnum = num - $(MAX_CPUS))) ; \
+	      wait $${pid[wnum]} ; \
+	    fi ; \
 	  fi ; \
-    	done ; \
+      done ; \
 	wait
 	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
 	  grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log | tail -1 | cut -d " " -f 7 >"$(LOGS)/fmax/fmax_temp.txt" ; \

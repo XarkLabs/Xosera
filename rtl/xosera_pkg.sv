@@ -36,7 +36,6 @@
 `define ENABLE_LFSR                     // enable XM_REG 0xA as 19-bit LFSR
 `define ENABLE_TIMERLATCH               // latch timer low byte when high byte read
 `define ENABLE_COPP                     // enable copper
-//`define ENABLE_DRAW                     // enable draw unit
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
@@ -66,7 +65,7 @@ typedef enum logic [3:0] {
 `else
     XM_UNUSED_A     = 4'hA,             // (R /W ) unused direct register 0xA [TODO]
 `endif
-    XM_UNUSED_B     = 4'hB,             // (R /W ) unused direct register 0xB [TODO]
+    XM_UNUSED_B     = 4'hB,             // (R /W ) unused direct register 0xB // TODO: SCANLINE
     XM_RW_INCR      = 4'hC,             // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
     XM_RW_ADDR      = 4'hD,             // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
     XM_RW_DATA      = 4'hE,             // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
@@ -85,8 +84,8 @@ typedef enum logic [15:0] {
     XR_CONFIG_REGS      = 16'h0000,     // 0x0000-0x000F 16 config/video/copper registers
     XR_PA_REGS          = 16'h0010,     // 0x0010-0x0017 8 playfield A video registers
     XR_PB_REGS          = 16'h0018,     // 0x0000-0x001F 8 playfield B video registers
-    XR_BLIT_REGS        = 16'h0020,     // 0x0020-0x002F 16 polygon blit registers      // TODO: blit
-    XR_DRAW_REGS        = 16'h0030,     // 0x0030-0x003F 16 polygon draw registers      // TODO: draw
+    XR_BLIT_REGS        = 16'h0020,     // 0x0020-0x002F 16 polygon blit registers
+    XR_AUDIO_REGS       = 16'h0030,     // 0x0030-0x003F 16 audio playback registers      // TODO: audio
     // XR Memory Regions
     XR_COLOR_ADDR       = 16'h8000,     // 0x8000-0x81FF 256 16-bit 0xXRGB color lookup playfield A & B
     XR_TILE_ADDR        = 16'hA000,     // 0xA000-0xB3FF 5K 16-bit words of tile memory
@@ -99,20 +98,20 @@ typedef enum logic [5:0] {
     // Video Config / Copper XR Registers
     XR_VID_CTRL     = 6'h00,            // (R /W) display control and border color index
     XR_COPP_CTRL    = 6'h01,            // (R /W) display synchronized coprocessor control
-    XR_UNUSED_02    = 6'h02,            // (R /W) // TODO: replace
-    XR_UNUSED_03    = 6'h03,            // (R /W) // TODO: replace
-    XR_UNUSED_04    = 6'h04,            // (R /W) // TODO: replace
-    XR_UNUSED_05    = 6'h05,            // (R /W) // TODO: replace
+    XR_AUD0_VOL     = 6'h02,            // (R /W) // TODO: replace
+    XR_AUD0_PERIOD  = 6'h03,            // (R /W) // TODO: replace
+    XR_AUD0_START   = 6'h04,            // (R /W) // TODO: replace
+    XR_AUD0_LENGTH  = 6'h05,            // (R /W) // TODO: replace
     XR_VID_LEFT     = 6'h06,            // (R /W) left edge of active display window (typically 0)
-    XR_VID_RIGHT    = 6'h07,            // (R /W) right edge of active display window (typically 639 or 847)
-    XR_SCANLINE     = 6'h08,            // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
-    XR_UNUSED_09    = 6'h09,            // (RO  )
-    XR_VERSION      = 6'h0A,            // (RO  ) optional feature bits [15:12] and BCD version code [11:0]  // TODO: define
-    XR_GITHASH_H    = 6'h0B,            // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
-    XR_GITHASH_L    = 6'h0C,            // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
-    XR_VID_HSIZE    = 6'h0D,            // (RO  ) native pixel width of monitor mode (e.g. 640/848)
-    XR_VID_VSIZE    = 6'h0E,            // (RO  ) native pixel height of monitor mode (e.g. 480)
-    XR_VID_VFREQ    = 6'h0F,            // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+    XR_VID_RIGHT    = 6'h07,            // (R /W) right edge of active display window +1 (typically 640 or 848)
+    XR_SCANLINE     = 6'h08,            // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline // TODO: replace
+    XR_UNUSED_09    = 6'h09,            // (WO  ) // TODO: replace
+    XR_UNUSED_0A    = 6'h0A,            // (WO  ) // TODO: replace
+    XR_UNUSED_0B    = 6'h0B,            // (WO  ) // TODO: replace
+    XR_UNUSED_0C    = 6'h0C,            // (WO  ) // TODO: replace
+    XR_VID_HSIZE    = 6'h0D,            // (RO  ) native pixel width of monitor mode (e.g. 640/848)// TODO: reorg
+    XR_VID_VSIZE    = 6'h0E,            // (RO  ) native pixel height of monitor mode (e.g. 480)   // TODO: reorg
+    XR_UNUSED_0F    = 6'h0F,            // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
     // Playfield A Control XR Registers
     XR_PA_GFX_CTRL  = 6'h10,            // (R /W) playfield A graphics control
     XR_PA_TILE_CTRL = 6'h11,            // (R /W) playfield A tile control
@@ -167,6 +166,8 @@ typedef enum {
     TILE_ATTR_FORE  = 8,                // rightmost bit for forecolor (in BPP_1 only)
     TILE_ATTR_BACK  = 12                // rightmost bit for backcolor (in BPP_1 only)
 } tile_index_attribute_bits_t;
+
+localparam  AUDIO_MAX_HZ    = 24_000;   // NOTE: frequency assumed to be multiple of 1000 Hz
 
 `ifdef MODE_640x400                     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x400_75                  // 31.500 MHz (requested), 31.500 MHz (achieved)

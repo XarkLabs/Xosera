@@ -12,10 +12,14 @@
 
 `include "xosera_pkg.sv"
 
-module video_playfield(
+module video_playfield#(
+    parameter EN_AUDIO = 1
+)
+(
     // video control signals
     input  wire logic           stall_i,
-    input  wire logic           v_visible_i,
+    input  wire logic           mem_fetch_i,
+    input  wire logic           mem_fetch_start_i,
     input  wire hres_t          h_count_i,
     input  wire logic           h_line_last_pixel_i,
     input  wire logic           last_frame_pixel_i,
@@ -50,34 +54,43 @@ module video_playfield(
     input  wire logic           pf_line_start_set_i,                // true if pf_line_start_i changed (register write)
     input  wire addr_t          pf_line_start_addr_i,               // address of next line display data start
     output      color_t         pf_color_index_o,                   // output color
-
+    // audio
+    input       logic           audio_0_fetch_i,
+    input  wire logic           audio_0_tile_i,                     // audio 0 memory (0=VRAM, 1=TILE)
+    input  wire addr_t          audio_0_addr_i,                     // audio 0 address
+    output      word_t          audio_0_word_o,                     // audio 0 data out
+    // standard signals
     input  wire logic           reset_i,                            // system reset in
     input  wire clk                                                 // pixel clock
 );
 
-localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;               // memory prefetch starts early
-localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fetch can end a bit early
 localparam H_SCANOUT_BEGIN  = xv::OFFSCREEN_WIDTH-2;                // h count for start line scanout
 
 // display line fetch generation FSM
-typedef enum logic [3:0] {
-    FETCH_IDLE          =   4'h0,       // idle, waiting for line start
+typedef enum logic [4:0] {
+    FETCH_IDLE          =   5'h0,
+    FETCH_WAIT_AUDIO_0  =   5'h1,
+    FETCH_READ_AUDIO_0  =   5'h2,
+    FETCH_READ_AUDIO_1  =   5'h3,
+    FETCH_READ_AUDIO_2  =   5'h4,
+    FETCH_READ_AUDIO_3  =   5'h5,
+    FETCH_DISP          =   5'h6,       // output bitmap VRAM address (and read tile word3 data)
     // bitmap
-    FETCH_ADDR_DISP     =   4'h1,       // output bitmap VRAM address (and read tile word3 data)
-    FETCH_WAIT_DISP     =   4'h2,       // wait for bitmap data
-    FETCH_READ_DISP_0   =   4'h3,       // read bitmap word0/tilemap from VRAM
-    FETCH_READ_DISP_1   =   4'h4,       // read bitmap word1 data from VRAM
-    FETCH_READ_DISP_2   =   4'h5,       // read bitmap word2 data from VRAM
-    FETCH_READ_DISP_3   =   4'h6,       // read bitmap word3 data from VRAM
+    FETCH_ADDR_DISP     =   5'h10,       // output bitmap VRAM address (and read tile word3 data)
+    FETCH_WAIT_DISP     =   5'h11,       // wait for bitmap data
+    FETCH_READ_DISP_0   =   5'h12,       // read bitmap word0/tilemap from VRAM
+    FETCH_READ_DISP_1   =   5'h13,       // read bitmap word1 data from VRAM
+    FETCH_READ_DISP_2   =   5'h14,       // read bitmap word2 data from VRAM
+    FETCH_READ_DISP_3   =   5'h15,       // read bitmap word3 data from VRAM
     // tiled
-    FETCH_ADDR_TILEMAP  =   4'h7,       // output tilemap VRAM address (and read tile word3 data)
-    FETCH_WAIT_TILEMAP  =   4'h8,       // wait for tilemap data
-    FETCH_READ_TILEMAP  =   4'h9,       // read tilemap from VRAM
-    FETCH_ADDR_TILE     =   4'hA,       // output tile word0 VRAM/TILE address
-    FETCH_WAIT_TILE     =   4'hB,       // wait for tilemap data, output word1 tile addr
-    FETCH_READ_TILE_0   =   4'hC,       // read tile word0 data from bus, output word2 tile addr
-    FETCH_READ_TILE_1   =   4'hD,       // read tile word1 data from bus, output word3 tile addr
-    FETCH_READ_TILE_2   =   4'hE        // read tile word2 data from bus
+    FETCH_ADDR_TILEMAP  =   5'h18,       // output tilemap VRAM address (and read tile word3 data)
+    FETCH_WAIT_TILEMAP  =   5'h19,       // wait for tilemap data
+    FETCH_READ_TILEMAP  =   5'h1A,       // read tilemap from VRAM
+    FETCH_ADDR_TILE     =   5'h1B,       // output tile word0 VRAM/TILE address
+    FETCH_WAIT_TILE     =   5'h1C,       // wait for tilemap data, output word1 tile addr
+    FETCH_READ_TILE_0   =   5'h1D,       // read tile word0 data from bus, output word2 tile addr
+    FETCH_READ_TILE_1   =   5'h1E,       // read tile word1 data from bus, output word3 tile addr
+    FETCH_READ_TILE_2   =   5'h1F        // read tile word2 data from bus
 } vgen_fetch_st;
 
 
@@ -86,10 +99,6 @@ logic           scanout_start;                      // scanout start strobe
 logic           scanout_end;                        // scanout stop strobe
 hres_t          scanout_start_hcount;               // horizontal pixel count to start scanout
 hres_t          scanout_end_hcount;                 // horizontal pixel count to stop scanout
-logic           mem_fetch_active;                   // true when fetching display data
-hres_t          mem_fetch_hcount;                   // horizontal count when mem_fetch_active toggles
-logic           mem_fetch_next;
-logic           h_start_line_fetch;
 
 logic  [1:0]    pf_h_count;                         // current horizontal repeat countdown
 logic  [1:0]    pf_v_count;                         // current vertical repeat countdown
@@ -102,10 +111,12 @@ addr_t          pf_line_start;
 
 // fetch fsm outputs
 // scanline generation (registered signals and "_next" combinatorally set signals)
-logic [3:0]     pf_fetch, pf_fetch_next;            // playfield A generation FSM state
+logic [4:0]     pf_fetch, pf_fetch_next;            // playfield A generation FSM state
 
 addr_t          pf_addr, pf_addr_next;              // address to fetch display bitmap/tilemap
 addr_t          pf_tile_addr;                       // tile start address (VRAM or TILERAM)
+
+word_t          audio_0_word, audio_0_word_next;    // audio 0 data being fetched
 
 logic           vram_sel, vram_sel_next;            // vram select output
 logic           tilemem_sel, tilemem_sel_next;      // tilemem select output
@@ -124,20 +135,8 @@ logic           pf_pixels_buf_hrev;                 // horizontal reverse flag
 logic [63:0]    pf_pixels_buf;                      // 8 pixel buffer waiting for scan out
 logic [63:0]    pf_pixels;                          // 8 pixels currently shifting to scan out
 
-always_comb     scanout_start = (h_count_i == scanout_start_hcount) ? mem_fetch_active : 1'b0;
+always_comb     scanout_start = (h_count_i == scanout_start_hcount) ? mem_fetch_i : 1'b0;
 always_comb     scanout_end = (h_count_i == scanout_end_hcount) ? 1'b1 : 1'b0;
-always_comb     h_start_line_fetch = (~mem_fetch_active && mem_fetch_next);
-
-// combinational block for video fetch start and stop
-always_comb     mem_fetch_next = (v_visible_i && h_count_i == mem_fetch_hcount) ? ~mem_fetch_active : mem_fetch_active;
-always_comb begin
-    // set mem_fetch_active next toggle for video memory access
-    if (mem_fetch_active) begin
-        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_END);
-    end else begin
-        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_BEGIN);
-    end
-end
 
 // generate tile address from index, tile y, bpp and tile size (8x8 or 8x16)
 function automatic addr_t calc_tile_addr(
@@ -170,21 +169,24 @@ endfunction
 // fetch FSM combinational logic
 always_comb begin
     // set default outputs
-
     pf_words_ready_next = pf_words_ready;
     pf_initial_buf_next = pf_initial_buf;
     pf_fetch_next       = pf_fetch;
     pf_addr_next        = pf_addr;
+
     pf_data_word0_next  = pf_data_word0;
     pf_data_word1_next  = pf_data_word1;
     pf_data_word2_next  = pf_data_word2;
     pf_data_word3_next  = pf_data_word3;
     pf_tile_attr_next   = pf_tile_attr;
+
     vram_sel_next       = vram_sel;
     tilemem_sel_next    = tilemem_sel;
     fetch_addr_next     = fetch_addr;
 
     pf_tile_addr        = calc_tile_addr(pf_tile_attr_next[xv::TILE_INDEX+:10], pf_tile_y, pf_tile_bank_i, pf_bpp_i, pf_tile_height_i[3], pf_tile_attr_next[xv::TILE_ATTR_VREV]);
+
+    audio_0_word_next   = audio_0_word;
 
     pf_words_ready_next = 1'b0;
     vram_sel_next       = 1'b0;
@@ -192,16 +194,47 @@ always_comb begin
 
     case (pf_fetch)
         FETCH_IDLE: begin
-            if (mem_fetch_active) begin                     // delay scanline until mem_fetch_active
+            if (mem_fetch_i) begin                 // delay scanline until mem_fetch_active
                 if (pf_bitmap_i) begin
                     pf_fetch_next   = FETCH_ADDR_DISP;
                 end else begin
                     pf_fetch_next   = FETCH_ADDR_TILEMAP;
                 end
+            end else begin
+                if (EN_AUDIO && audio_0_fetch_i) begin
+                    vram_sel_next       = ~audio_0_tile_i;        // select vram for audio0
+                    tilemem_sel_next    = audio_0_tile_i;
+                    fetch_addr_next     = audio_0_addr_i;         // put audio 0 address on bus
+                    pf_fetch_next       = FETCH_WAIT_AUDIO_0;
+                end
+            end
+        end
+        FETCH_WAIT_AUDIO_0: begin
+            if (EN_AUDIO) begin
+                pf_fetch_next   = FETCH_READ_AUDIO_0;
+            end
+        end
+        FETCH_READ_AUDIO_0: begin
+            if (EN_AUDIO) begin
+                audio_0_word_next = audio_0_tile_i ? tilemem_data_i : vram_data_i;            // read audio0 word
+                pf_fetch_next   = FETCH_DISP;
+            end
+        end
+        FETCH_DISP: begin
+            if (mem_fetch_i) begin                 // delay scanline until mem_fetch_active
+                if (pf_bitmap_i) begin
+                    pf_fetch_next   = FETCH_ADDR_DISP;
+                end else begin
+                    pf_fetch_next   = FETCH_ADDR_TILEMAP;
+                end
+            end else begin
+                if (EN_AUDIO && h_line_last_pixel_i) begin
+                    pf_fetch_next   = FETCH_IDLE;
+                end
             end
         end
         FETCH_ADDR_DISP: begin
-            if (!mem_fetch_active) begin                    // stop if no longer fetching
+            if (!mem_fetch_i) begin                    // stop if no longer fetching
                 pf_fetch_next   = FETCH_IDLE;
             end else begin
                 if (!pf_pixels_buf_full) begin              // if room in buffer
@@ -264,7 +297,7 @@ always_comb begin
             if (pf_bpp_i[1:1] == xv::BPP_8[1:1]) begin
                 pf_data_word3_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI3: read tile data
             end
-            if (!mem_fetch_active) begin                    // stop if no longer fetching
+            if (!mem_fetch_i) begin                    // stop if no longer fetching
                 pf_fetch_next   = FETCH_IDLE;
             end else begin
                 if (!pf_pixels_buf_full) begin              // if room in buffer
@@ -341,6 +374,7 @@ always_comb begin
 end
 
 assign  pf_color_index_o    = pf_pixels[63:56] ^ pf_colorbase_i;   // XOR colorbase bits here
+assign  audio_0_word_o      = audio_0_word;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -349,7 +383,6 @@ always_ff @(posedge clk) begin
         tilemem_sel_o       <= 1'b0;
         tilemem_addr_o      <= '0;
 
-        mem_fetch_active    <= 1'b0;            // true enables display memory fetch
         scanout             <= 1'b0;
         scanout_start_hcount<= '0;
         scanout_end_hcount  <= '0;
@@ -396,6 +429,10 @@ always_ff @(posedge clk) begin
             vram_addr_o     <= fetch_addr_next;
             tilemem_sel_o   <= tilemem_sel_next;
             tilemem_addr_o  <= $bits(tilemem_addr_o)'(fetch_addr_next);
+        end
+
+        if (EN_AUDIO) begin
+            audio_0_word    <= audio_0_word_next;
         end
 
         // have display words been fetched?
@@ -494,7 +531,7 @@ always_ff @(posedge clk) begin
         end
 
         // start of line display fetch
-        if (h_start_line_fetch) begin       // on line fetch start signal
+        if (mem_fetch_start_i) begin       // on line fetch start signal
             pf_initial_buf          <= 1'b1;
             pf_pixels_buf_full      <= 1'b0;
             scanout_start_hcount    <= scanout_start_hcount - $bits(scanout_start_hcount)'(pf_fine_hscroll_i);
@@ -560,11 +597,8 @@ always_ff @(posedge clk) begin
             pf_tile_y       <= pf_fine_vscroll_i[5:2];      // fine scroll tile line
             pf_v_frac_count <= '0;
         end
-
-        mem_fetch_active <= mem_fetch_next & ~pf_blank_i;
     end
 end
-
 
 endmodule
 `default_nettype wire               // restore default

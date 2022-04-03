@@ -6,8 +6,8 @@
 
 Inspired in concept only by it's "namesake" the [Commander X16](https://www.commanderx16.com/)'s VERA, Xosera is an original open-source video adapter design, built with open-source tools, that is being tailored with features appropriate for a Motorola 68K era retro computer.
 
-![Xosera prototype board in rosco_m68k](pics/Xosera_rosco_m68k_board.jpg)  
-Picture of Xosera prototype being tested with logic-analyzer (most of the `TODO`s are now done)
+![Xosera board in rosco_m68k](pics/Xosera_audio_test.jpg)  
+Picture of Xosera board in rosco_m68k undgoing audio development with logic-analyzer
 
 Currently the design is using the [iCE40UP5K FPGA](https://www.latticesemi.com/en/Products/FPGAandCPLD/iCE40UltraPlus) which is fully supported by the open [Yosys/NextPNR tools](https://github.com/YosysHQ).  Development is now mostly on the Xosera board for the rosco_m68k system using [UPduino 3.x](https://github.com/tinyvision-ai-inc/UPduino-v3.0), but still builds for [iCEBreaker FPGA](https://github.com/icebreaker-fpga/icebreaker) board.
 

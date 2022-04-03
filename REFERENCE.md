@@ -36,6 +36,7 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
     - [Video Config and Copper XR Registers Details](#video-config-and-copper-xr-registers-details)
     - [Playfield A & B Control XR Registers Summary](#playfield-a--b-control-xr-registers-summary)
     - [Playfield A & B Control XR Registers Details](#playfield-a--b-control-xr-registers-details)
+    - [Playfield Color Blending](#playfield-color-blending)
     - [2D Blitter Engine Operation](#2d-blitter-engine-operation)
       - [Logic Operation Applied to Blitter Operations](#logic-operation-applied-to-blitter-operations)
       - [Transparency Testing nd Masking Applied to Blitter Operations](#transparency-testing-nd-masking-applied-to-blitter-operations)
@@ -76,24 +77,24 @@ provide more efficient access to Xosera status flags (like busy and timeout)]
 <!--
 This table is ugly, but worth it for clickable links
 -->
-| Reg # | Reg Name       | R /W  | Description                                                                           |
-| ----- | -------------- | ----- | ------------------------------------------------------------------------------------- |
-| 0x0   | [**`XM_XR_ADDR`**](#0x0-xm_xr_addr-rw---xr-register--memory-address)   | R /W+ | XR register number/address for `XM_XR_DATA` read/write access                         |
-| 0x1   | [**`XM_XR_DATA`**](#0x1-xm_xr_data-rw---extended-register--extended-region-data)   | R /W+ | read/write XR register/memory at `XM_XR_ADDR` (`XM_XR_ADDR` incr. on write)           |
-| 0x2   | [**`XM_RD_INCR`**](#0x2-xm_rd_incr-rw---increment-value-for-xm_rd_addr-when-xm_dataxm_data_2-is-read-from)   | R /W  | increment value for `XM_RD_ADDR` read from `XM_DATA`/`XM_DATA_2`                      |
-| 0x3   | [**`XM_RD_ADDR`**](#0x3-xm_rd_addr-rw---vram-read-address-for-xm_dataxm_data_2)   | R /W+ | VRAM address for reading from VRAM when `XM_DATA`/`XM_DATA_2` is read                 |
-| 0x4   | [**`XM_WR_INCR`**](#0x4-xm_wr_incr-rw---increment-value-for-xm_wr_addr-when-xm_dataxm_data_2-is-written)   | R /W  | increment value for `XM_WR_ADDR` on write to `XM_DATA`/`XM_DATA_2`                    |
-| 0x5   | [**`XM_WR_ADDR`**](#0x5-xm_wr_addr-rw---vram-write-address-for-xm_dataxm_data_2)   | R /W  | VRAM address for writing to VRAM when `XM_DATA`/`XM_DATA_2` is written                |
-| 0x6   | [**`XM_DATA`**](#0x6-xm_data-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)      | R+/W+ | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
-| 0x7   | [**`XM_DATA_2`**](#0x7-xm_data_2-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)    | R+/W+ | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
-| 0x8   | [**`XM_SYS_CTRL`**](#0x8-xm_sys_ctrl-rw---draw-busy-status-read-wait-reconfigure-interrupt-control-and-write-masking-control)  | R /W+ | busy status, FPGA reconfig, interrupt status/control, write masking                   |
-| 0x9   | [**`XM_TIMER`**](#0x9-xm_timer-rw---tenth-millisecond-timer-0---65535-ms--interrupt-clear)     | R /W+ | read tenth millisecond timer                                              |
-| 0xA   | [**`XM_LFSR`**](#0xa-xm_lfsr-ro---lfsr-pseudo-random-number)      | RO    | read LFSR pseudo random number (internally 19-bit)                                    |
-| 0xB   | [**`XM_UNUSED_B`**](#0xb-xm_unused_b-rw---unused-register-0xb)  | R /W  | unused direct register 0xB [**#TODO**]                                                    |
-| 0xC   | [**`XM_RW_INCR`**](#0xc-xm_rw_incr-rw---increment-value-for-xm_rw_addr-when-xm_rw_dataxm_rw_data_2is-accessed)   | R /W  | `XM_RW_ADDR` increment value on read/write of `XM_RW_DATA`/`XM_RW_DATA_2`             |
-| 0xD   | [**`XM_RW_ADDR`**](#0xd-xm_rw_addr-rw---vram-readwrite-address-for-accessed-at-xm_rw_dataxm_rw_data_2)   | R /W+ | read/write address for VRAM access from `XM_RW_DATA`/`XM_RW_DATA_2`                   |
-| 0xE   | [**`XM_RW_DATA`**](#0xe-xm_rw_data-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr)   | R+/W+ | read/write VRAM word at `XM_RW_ADDR` (and add `XM_RW_INCR`)                           |
-| 0xF   | [**`XM_RW_DATA_2`**](#0xf-xm_rw_data_2-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr) | R+/W+ | 2nd `XM_RW_DATA`(to allow for 32-bit read/write access)                               |
+| Reg # | Reg Name                                                                                                                      | R /W  | Description                                                                           |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------------------------------- |
+| 0x0   | [**`XM_XR_ADDR`**](#0x0-xm_xr_addr-rw---xr-register--memory-address)                                                          | R /W+ | XR register number/address for `XM_XR_DATA` read/write access                         |
+| 0x1   | [**`XM_XR_DATA`**](#0x1-xm_xr_data-rw---extended-register--extended-region-data)                                              | R /W+ | read/write XR register/memory at `XM_XR_ADDR` (`XM_XR_ADDR` incr. on write)           |
+| 0x2   | [**`XM_RD_INCR`**](#0x2-xm_rd_incr-rw---increment-value-for-xm_rd_addr-when-xm_dataxm_data_2-is-read-from)                    | R /W  | increment value for `XM_RD_ADDR` read from `XM_DATA`/`XM_DATA_2`                      |
+| 0x3   | [**`XM_RD_ADDR`**](#0x3-xm_rd_addr-rw---vram-read-address-for-xm_dataxm_data_2)                                               | R /W+ | VRAM address for reading from VRAM when `XM_DATA`/`XM_DATA_2` is read                 |
+| 0x4   | [**`XM_WR_INCR`**](#0x4-xm_wr_incr-rw---increment-value-for-xm_wr_addr-when-xm_dataxm_data_2-is-written)                      | R /W  | increment value for `XM_WR_ADDR` on write to `XM_DATA`/`XM_DATA_2`                    |
+| 0x5   | [**`XM_WR_ADDR`**](#0x5-xm_wr_addr-rw---vram-write-address-for-xm_dataxm_data_2)                                              | R /W  | VRAM address for writing to VRAM when `XM_DATA`/`XM_DATA_2` is written                |
+| 0x6   | [**`XM_DATA`**](#0x6-xm_data-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)                        | R+/W+ | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
+| 0x7   | [**`XM_DATA_2`**](#0x7-xm_data_2-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)                    | R+/W+ | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
+| 0x8   | [**`XM_SYS_CTRL`**](#0x8-xm_sys_ctrl-rw---draw-busy-status-read-wait-reconfigure-interrupt-control-and-write-masking-control) | R /W+ | busy status, FPGA reconfig, interrupt status/control, write masking                   |
+| 0x9   | [**`XM_TIMER`**](#0x9-xm_timer-rw---tenth-millisecond-timer-0---65535-ms--interrupt-clear)                                    | R /W+ | read tenth millisecond timer                                                          |
+| 0xA   | [**`XM_LFSR`**](#0xa-xm_lfsr-ro---lfsr-pseudo-random-number)                                                                  | RO    | read LFSR pseudo random number (internally 19-bit)                                    |
+| 0xB   | [**`XM_UNUSED_B`**](#0xb-xm_unused_b-rw---unused-register-0xb)                                                                | R /W  | unused direct register 0xB [**#TODO**]                                                |
+| 0xC   | [**`XM_RW_INCR`**](#0xc-xm_rw_incr-rw---increment-value-for-xm_rw_addr-when-xm_rw_dataxm_rw_data_2is-accessed)                | R /W  | `XM_RW_ADDR` increment value on read/write of `XM_RW_DATA`/`XM_RW_DATA_2`             |
+| 0xD   | [**`XM_RW_ADDR`**](#0xd-xm_rw_addr-rw---vram-readwrite-address-for-accessed-at-xm_rw_dataxm_rw_data_2)                        | R /W+ | read/write address for VRAM access from `XM_RW_DATA`/`XM_RW_DATA_2`                   |
+| 0xE   | [**`XM_RW_DATA`**](#0xe-xm_rw_data-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr)                             | R+/W+ | read/write VRAM word at `XM_RW_ADDR` (and add `XM_RW_INCR`)                           |
+| 0xF   | [**`XM_RW_DATA_2`**](#0xf-xm_rw_data_2-rw---vram-memory-value-to-readwrite-at-vram-addressxm_rw_addr)                         | R+/W+ | 2nd `XM_RW_DATA`(to allow for 32-bit read/write access)                               |
 
 (`R+` or `W+` indicates that reading or writing this register has additional "side effects", respectively)
 ___
@@ -492,6 +493,24 @@ vertical fine scroll should be constrained to the scaled height of a tile or (on
 **0x1F `XR_PB_UNUSED_1F` (-/-) - unused XR PB register 0x1F**  
 Unused XR playfield registers 0x17, 0x1F
 ___
+
+### Playfield Color Blending
+
+The dual playfields are generated independently and blended together to form the final output image.  The "alpha" values
+in the upper four bits of colormap entries from playfield A and B control how the playfields are blended.  Conceptually,
+for alpha purposes, playfield A is the bottom "destination" playfield, and playfield B is the "source" playfield blended
+on top, over it.  When A alpha nibble is 0000, then B alpha value will be used for transparency (4 levels currently).
+Other A alpha nibbles select signed additive blend, saturating additive blend or playfield A on top.
+
+| A-alpha | B-alpha | Blend Formula          | Description                                                |
+| ------- | ------- | ---------------------- | ---------------------------------------------------------- |
+| 00xx    | 00xx    | 100% A RGB +  0% B RGB | transparency using B alpha value (and inverse value for A) |
+| 00xx    | 01xx    | 75% A RGB +  25% B RGB | transparency using B alpha value (and inverse value for A) |
+| 00xx    | 10xx    | 50% A RGB +  50% B RGB | transparency using B alpha value (and inverse value for A) |
+| 00xx    | 11xx    | 0% A  RGB + 100% B RGB | transparency using B alpha value (and inverse value for A) |
+| 01xx    | xxxx    | A RGB + B RGB wrapping | signed RGB component addition / delta blend                |
+| 10xx    | xxxx    | A RGB + B RGB clamping | saturating RGB blend (components clamped at 1111)          |
+| 11xx    | xxxx    | 100% A RGB +  0% B RGB | playfield A RGB on top (and B alpha value ignored)         |
 
 ### 2D Blitter Engine Operation
 

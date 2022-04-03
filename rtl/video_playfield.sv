@@ -74,6 +74,7 @@ typedef enum logic [4:0] {
     FETCH_READ_AUDIO_1  =   5'h3,
     FETCH_READ_AUDIO_2  =   5'h4,
     FETCH_READ_AUDIO_3  =   5'h5,
+    FETCH_DISP          =   5'h6,       // output bitmap VRAM address (and read tile word3 data)
     // bitmap
     FETCH_ADDR_DISP     =   5'h10,       // output bitmap VRAM address (and read tile word3 data)
     FETCH_WAIT_DISP     =   5'h11,       // wait for bitmap data
@@ -193,18 +194,18 @@ always_comb begin
 
     case (pf_fetch)
         FETCH_IDLE: begin
-            if (EN_AUDIO && h_line_last_pixel_i && audio_0_fetch_i) begin
-                vram_sel_next       = ~audio_0_tile_i;        // select vram for audio0
-                tilemem_sel_next    = audio_0_tile_i;
-                fetch_addr_next     = audio_0_addr_i;         // put audio 0 address on bus
-                pf_fetch_next       = FETCH_WAIT_AUDIO_0;
+            if (mem_fetch_i) begin                 // delay scanline until mem_fetch_active
+                if (pf_bitmap_i) begin
+                    pf_fetch_next   = FETCH_ADDR_DISP;
+                end else begin
+                    pf_fetch_next   = FETCH_ADDR_TILEMAP;
+                end
             end else begin
-                if (mem_fetch_i) begin                 // delay scanline until mem_fetch_active
-                    if (pf_bitmap_i) begin
-                        pf_fetch_next   = FETCH_ADDR_DISP;
-                    end else begin
-                        pf_fetch_next   = FETCH_ADDR_TILEMAP;
-                    end
+                if (EN_AUDIO && audio_0_fetch_i) begin
+                    vram_sel_next       = ~audio_0_tile_i;        // select vram for audio0
+                    tilemem_sel_next    = audio_0_tile_i;
+                    fetch_addr_next     = audio_0_addr_i;         // put audio 0 address on bus
+                    pf_fetch_next       = FETCH_WAIT_AUDIO_0;
                 end
             end
         end
@@ -216,7 +217,20 @@ always_comb begin
         FETCH_READ_AUDIO_0: begin
             if (EN_AUDIO) begin
                 audio_0_word_next = audio_0_tile_i ? tilemem_data_i : vram_data_i;            // read audio0 word
-                pf_fetch_next   = FETCH_IDLE;
+                pf_fetch_next   = FETCH_DISP;
+            end
+        end
+        FETCH_DISP: begin
+            if (mem_fetch_i) begin                 // delay scanline until mem_fetch_active
+                if (pf_bitmap_i) begin
+                    pf_fetch_next   = FETCH_ADDR_DISP;
+                end else begin
+                    pf_fetch_next   = FETCH_ADDR_TILEMAP;
+                end
+            end else begin
+                if (EN_AUDIO && h_line_last_pixel_i) begin
+                    pf_fetch_next   = FETCH_IDLE;
+                end
             end
         end
         FETCH_ADDR_DISP: begin

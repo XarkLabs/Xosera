@@ -405,18 +405,23 @@ static void reset_vid(void)
     {
         readchar();
     }
+}
 
+static void reset_vid_nosd(void)
+{
+    reset_vid();
 #if 1        // handy for development to force Kermit upload
     dprintf("Disabling SD on next boot...\n");
     disable_sd_boot();
 #endif
 }
 
+
 static inline void checkbail()
 {
     if (checkchar())
     {
-        reset_vid();
+        reset_vid_nosd();
         _WARM_BOOT();
     }
 }
@@ -1943,50 +1948,73 @@ static int8_t sinData[256] = {
 int8_t * testsamp;
 int      testsampsize;
 
-static void test_audio(uint8_t * samp, int sampsize, int speed)
-{
-    __asm__ __volatile__("or.w    #0x0700,%sr");
-
-    uint8_t * sp = samp;
-    int       sc = sampsize;
-    xm_setw(WR_INCR, 0x0000);
-    xm_setw(WR_ADDR, 0x0000);
-
-    while (1)
-    {
-        uint8_t val = *sp++;
-        xm_setbh(DATA, val);
-        xm_setbl(DATA, val);
-
-        for (int d = speed; d != 0; d--)
-        {
-            __asm__ __volatile__("nop");
-        }
-        sc--;
-        if (sc <= 0)
-        {
-            sp = samp;
-            sc = sampsize;
-        }
-    }
-}
-
-static void test_audio_sample(int8_t * samp, int bytesize, int speed)
+static void test_audio_sample(const char * name, int8_t * samp, int bytesize, int speed)
 {
     xm_setw(WR_INCR, 0x0001);
-    xm_setw(WR_ADDR, 0x0000);
+    xm_setw(WR_ADDR, 0x8000);
 
-    for (int i = 0; i < bytesize * 2; i += 2)
+    for (int i = 0; i < bytesize; i += 2)
     {
         xm_setbh(DATA, *samp++);
         xm_setbl(DATA, *samp++);
     }
 
-    xreg_setw(AUD0_VOL, 0x4020);                       // set left 100% volume, right 50% volume
-    xreg_setw(AUD0_PERIOD, speed);                     // 1000 clocks per each sample byte
-    xreg_setw(AUD0_START, 0x0000);                     // address in VRAM
+    uint16_t p = speed;
+    uint8_t  v = 0x80;
+
+    xreg_setw(AUD0_VOL, v << 8 | (v >> 1));            // set left 100% volume, right 50% volume
+    xreg_setw(AUD0_PERIOD, p);                         // 1000 clocks per each sample byte
+    xreg_setw(AUD0_START, 0x8000);                     // address in VRAM
     xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
-    xreg_setw(VID_CTRL, 0x0010);                       // enable audio DMA to start playing
+
+    dprintf("Starting sample %s...\n", name);
+    dprintf("Press z & x for volume , & . for period (Shift = faster).\n");
+    dprintf("ESC to boot, space to skip\n");
+    xreg_setw(VID_CTRL, 0x0010);        // enable audio DMA to start playing
+
+    bool done = false;
+    while (!done)
+    {
+        char c = readchar();
+
+        switch (c)
+        {
+            case 'z':
+                v = v - 1;
+                break;
+            case 'x':
+                v = v + 1;
+                break;
+            case 'Z':
+                v = v - 16;
+                break;
+            case 'X':
+                v = v + 16;
+                break;
+            case ',':
+                p = p - 1;
+                break;
+            case '.':
+                p = p + 1;
+                break;
+            case '<':
+                p = p - 16;
+                break;
+            case '>':
+                p = p + 16;
+                break;
+            case ' ':
+                done = true;
+                break;
+            case '\x1b':
+                reset_vid();
+                _WARM_BOOT();
+                break;
+        }
+        dprintf("p =%5d    v =%3d\n", p, v);
+        xreg_setw(AUD0_VOL, v << 8 | (v >> 1));        // set left 100% volume, right 50% volume
+        xreg_setw(AUD0_PERIOD, p);                     // 1000 clocks per each sample byte
+    }
 }
 
 const char blurb[] =
@@ -2161,31 +2189,19 @@ void     xosera_test()
 
     (void)sinData;
 
-#if 0          // audio sin test
+#if 1        // audio waveform test
     {
-        xreg_setw(PA_GFX_CTRL, 0x0000);
-        xreg_setw(PA_TILE_CTRL, 0x000F);
-        xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) >> 3);
-        xreg_setw(PA_DISP_ADDR, 0x0000);
-        xreg_setw(PA_HV_SCROLL, 0x0000);
-        xreg_setw(PA_HV_FSCALE, 0x0000);
-        xcls();
+        test_audio_sample("sine wave", sinData, sizeof(sinData), 1000);
 
-        test_audio_sin(sinData, 4000);
-
-        for (int i = 4000; i > 100; i--)
-        {
-            xreg_setw(AUD0_PERIOD, i);        // 1000 clocks per each sample byte
-            cpu_delay(100);
-        }
         xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
+
+        memset(testsamp, 0, testsampsize);
+
+        free(testsamp);
     }
-#elif 1        // audio waveform test
     if (load_test_audio("/xosera_8000.raw", &testsamp, &testsampsize))
     {
-        test_audio_sample(testsamp, testsampsize, 1573 * 2);
-
-        cpu_delay(4500);
+        test_audio_sample("xosera_8000.raw", testsamp, testsampsize, 3150);
 
         xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
 
@@ -2195,9 +2211,7 @@ void     xosera_test()
     }
     if (load_test_audio("/Slide_8000.raw", &testsamp, &testsampsize))
     {
-        test_audio_sample(testsamp, testsampsize, 1573);
-
-        cpu_delay(10 * 1000);
+        test_audio_sample("Slide_8000.raw", testsamp, testsampsize, 3150 / 2);
 
         xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
 

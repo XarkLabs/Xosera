@@ -424,7 +424,7 @@ ___
 
 **playfield A/B graphics control**  
 colorbase is used for any color index bits not in source pixel (e.g., the upper 4-bits of 4-bit pixel).  
-blank bit set will disable display memory fetch and cause the display to "blanked" be a solid (`XR_VID_CTRL` border color, XOR'd with colorbase color).  
+blank bit set will disable display memory fetch and "blank" the display to a solid color (`XR_VID_CTRL` bordercolor, XOR'd with colorbase).  
 bitmap 0 for tiled character graphics (see `XR_Px_TILE_CTRL`) using display word with attribute and tile index.  
 bitmap 1 for bitmapped mode (1-bpp mode uses a 4-bit fore/back color attributes in upper 8-bits of each word).  
 bpp selects bits-per-pixel or the number of color index bits per pixel (see "Graphics Modes" [#TODO]).  

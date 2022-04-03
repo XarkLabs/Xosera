@@ -569,7 +569,7 @@ move from left to the right (from MSB to LSB). If the `DECR` bit is set in `XR_B
 `XR_BLIT_SRC_A` and `XR_BLIT_DST_D` pointers will decrement on each use and shifting will be to the right (LSB to MSB).
 So this means when setting up a blitter operation they need to be pointing to the last word of the image (inclusive,
 since not pre-decremented). Also `DECR` will also reverse the edge used by the first and last word masks (to be the
-right and left edges respectively, sicne each line will be drawn right to left). However, even in `DECR` mode, the
+right and left edges respectively, since each line will be drawn right to left). However, even in `DECR` mode, the
 `XR_BLIT_MOD_A`, `XR_BLIT_MOD_B` and `XR_BLIT_MOD_D` values will still be added each line (so typically they would be
 negated).
 

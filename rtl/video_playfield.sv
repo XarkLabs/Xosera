@@ -21,8 +21,8 @@ module video_playfield#(
     input  wire logic           mem_fetch_i,
     input  wire logic           mem_fetch_start_i,
     input  wire hres_t          h_count_i,
-    input  wire logic           h_line_last_pixel_i,
-    input  wire logic           last_frame_pixel_i,
+    input  wire logic           end_of_line_i,
+    input  wire logic           end_of_frame_i,
     input  wire color_t         border_color_i,
     input  wire hres_vis_t      vid_left_i,
     input  wire hres_vis_t      vid_right_i,
@@ -228,7 +228,7 @@ always_comb begin
                     pf_fetch_next   = FETCH_ADDR_TILEMAP;
                 end
             end else begin
-                if (EN_AUDIO && h_line_last_pixel_i) begin
+                if (EN_AUDIO && end_of_line_i) begin
                     pf_fetch_next   = FETCH_IDLE;
                 end
             end
@@ -566,7 +566,7 @@ always_ff @(posedge clk) begin
         end
 
         // end of line
-        if (h_line_last_pixel_i) begin
+        if (end_of_line_i) begin
             scanout         <= 1'b0;                                        // force scanout off
             pf_addr         <= pf_line_start;                               // addr back to line start (for tile lines, or v repeat)
             pf_h_frac_count <= '0;                                          // reset horizontal fractional pixel repeat counter
@@ -589,7 +589,7 @@ always_ff @(posedge clk) begin
         end
 
         // end of frame or blanked, prepare for next frame
-        if (pf_blank_i || last_frame_pixel_i) begin         // is last pixel of frame?
+        if (pf_blank_i || end_of_frame_i) begin         // is last pixel of frame?
             pf_addr         <= pf_start_addr_i;             // set start of display data
             pf_line_start   <= pf_start_addr_i;             // set line to start of display data
 

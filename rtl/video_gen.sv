@@ -62,6 +62,7 @@ module video_gen #(
 color_t             border_color;
 hres_vis_t          vid_left;
 hres_vis_t          vid_right;
+addr_t              line_set_addr;                      // address for on-the-fly addr set
 
 // playfield A generation control signals
 logic               pa_blank;                           // disable plane A
@@ -118,45 +119,43 @@ addr_t              pb_vram_addr;                       // vram word address out
 logic               pb_tile_sel;                        // tile mem read select
 tile_addr_t         pb_tile_addr;                       // tile mem word address out (16x5K)
 
-// video sync generation via state machine (Thanks tnt & drr - a much more efficient method!)
-typedef enum logic [1:0] {
-    STATE_VISIBLE   = 2'b00,
-    STATE_PRE_SYNC  = 2'b01,
-    STATE_SYNC      = 2'b10,
-    STATE_POST_SYNC = 2'b11
-} video_signal_st;
-
 localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;               // memory prefetch starts early
 localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fetch can end a bit early
 
 // sync generation signals (and combinatorial logic "next" versions)
-logic  [1:0]    h_state;
+
+logic           end_of_line;
+logic           end_of_frame;
+logic           end_of_visible;
+logic           v_visible;
 hres_t          h_count;
-hres_t          h_count_next;
-hres_t          h_count_next_state;
-
-logic  [1:0]    v_state;
 vres_t          v_count;
-vres_t          v_count_next;
-vres_t          v_count_next_state;
-
-addr_t          line_set_addr;                          // address for on-the-fly addr set
-
-// sync condition indicators (combinatorial)
 logic           hsync;
 logic           vsync;
-logic           dv_display_ena;
-logic           v_visible;
-logic           h_line_last_pixel;
-logic           last_visible_pixel;
-logic           last_frame_pixel;
-logic [1:0]     h_state_next;
-logic [1:0]     v_state_next;
+logic           dv_de;
 
-`ifdef ENABLE_COPP
+assign hsync_o      = hsync;
+assign vsync_o      = vsync;
+assign dv_de_o      = dv_de;
 assign h_count_o    = h_count;
 assign v_count_o    = v_count;
-`endif
+
+
+video_timing video_timing
+(
+    // video registers and control
+    .h_count_o(h_count),
+    .v_count_o(v_count),
+    .v_visible_o(v_visible),
+    .end_of_line_o(end_of_line),
+    .end_of_frame_o(end_of_frame),
+    .end_of_visible_o(end_of_visible),
+    .vsync_o(vsync),
+    .hsync_o(hsync),
+    .dv_de_o(dv_de),
+    .reset_i(reset_i),
+    .clk(clk)
+);
 
 // audio
 logic           audio_enable;
@@ -183,8 +182,8 @@ video_playfield #(
     .mem_fetch_i(mem_fetch & ~pa_blank),
     .mem_fetch_start_i(mem_fetch_h_start),
     .h_count_i(h_count),
-    .h_line_last_pixel_i(h_line_last_pixel),
-    .last_frame_pixel_i(last_frame_pixel),
+    .end_of_line_i(end_of_line),
+    .end_of_frame_i(end_of_frame),
     .border_color_i(border_color ^ pa_colorbase),   // pre-XOR so colorbase doesn't affect border
     .vid_left_i(vid_left),
     .vid_right_i(vid_right),
@@ -268,8 +267,8 @@ generate
             .mem_fetch_i(mem_fetch & ~pb_blank),
             .mem_fetch_start_i(mem_fetch_h_start),
             .h_count_i(h_count),
-            .h_line_last_pixel_i(h_line_last_pixel),
-            .last_frame_pixel_i(last_frame_pixel),
+            .end_of_line_i(end_of_line),
+            .end_of_frame_i(end_of_frame),
             .border_color_i(pb_colorbase),
             .vid_left_i(vid_left),
             .vid_right_i(vid_right),
@@ -515,7 +514,7 @@ always_ff @(posedge clk) begin
             endcase
         end
         // vsync interrupt generation
-        if (last_visible_pixel) begin
+        if (end_of_visible) begin
             intr_signal_o[3]  <= 1'b1;
         end
     end
@@ -538,7 +537,7 @@ always_comb begin
 `endif
 //        xv::XR_VID_LEFT[3:0]:       rd_vid_regs = 16'(vid_left);
 //        xv::XR_VID_RIGHT[3:0]:      rd_vid_regs = 16'(vid_right);
-        xv::XR_SCANLINE[3:0]:       rd_vid_regs = { (v_state != STATE_VISIBLE), 15'(v_count) };
+        xv::XR_SCANLINE[3:0]:       rd_vid_regs = { ~v_visible, 15'(v_count) };
 //        xv::XR_VERSION[3:0]:        rd_vid_regs = { 1'b`GITCLEAN, 3'b000, 12'h`VERSION };
 //        xv::XR_GITHASH_H[3:0]:      rd_vid_regs = githash[31:16];
 //        xv::XR_GITHASH_L[3:0]:      rd_vid_regs = githash[15:0];
@@ -566,67 +565,10 @@ always_comb begin
     endcase
 end
 
-// video signal generation
-always_comb     hsync               = (h_state_next == STATE_SYNC);
-always_comb     vsync               = (v_state_next == STATE_SYNC);
-always_comb     dv_display_ena      = (h_state_next == STATE_VISIBLE) && (v_state_next == STATE_VISIBLE);
-always_comb     h_line_last_pixel   = (h_state_next == STATE_PRE_SYNC) && (h_state == STATE_VISIBLE);
-always_comb     last_visible_pixel  = (v_state_next == STATE_PRE_SYNC) && (v_state == STATE_VISIBLE) && h_line_last_pixel;
-always_comb     last_frame_pixel    = (v_state_next == STATE_VISIBLE) && (v_state == STATE_POST_SYNC) && h_line_last_pixel;
-
-always_comb     v_visible           = (v_state == STATE_VISIBLE);
-
-// combinational block for video counters
-always_comb begin
-    h_count_next = h_count + 1'b1;
-    v_count_next = v_count;
-
-    if (h_line_last_pixel) begin
-        h_count_next = 0;
-        v_count_next = v_count + 1'b1;
-
-        if (last_frame_pixel) begin
-            v_count_next = 0;
-        end
-    end
-end
-
-// combinational block for horizontal video state
-always_comb h_state_next = (h_count == h_count_next_state) ? h_state + 1'b1 : h_state;
-always_comb begin
-    // scanning horizontally left to right, offscreen pixels are on left before visible pixels
-    case (h_state)
-        STATE_VISIBLE:
-            h_count_next_state = xv::TOTAL_WIDTH - 1;
-        STATE_PRE_SYNC:
-            h_count_next_state = xv::H_FRONT_PORCH - 1;
-        STATE_SYNC:
-            h_count_next_state = xv::H_FRONT_PORCH + xv::H_SYNC_PULSE - 1;
-        STATE_POST_SYNC:
-            h_count_next_state = xv::OFFSCREEN_WIDTH - 1;
-    endcase
-end
-
-// combinational block for vertical video state
-always_comb v_state_next = (h_line_last_pixel && v_count == v_count_next_state) ? v_state + 1'b1 : v_state;
-always_comb begin
-    // scanning vertically top to bottom, offscreen lines are on bottom after visible lines
-    case (v_state)
-        STATE_VISIBLE:
-            v_count_next_state = xv::VISIBLE_HEIGHT - 1;
-        STATE_PRE_SYNC:
-            v_count_next_state = xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH - 1;
-        STATE_SYNC:
-            v_count_next_state = xv::VISIBLE_HEIGHT + xv::V_FRONT_PORCH + xv::V_SYNC_PULSE - 1;
-        STATE_POST_SYNC:
-            v_count_next_state = xv::TOTAL_HEIGHT - 1;
-    endcase
-end
-
 // combinational block for video fetch start and stop
 `ifdef OLD_WAY
 hres_t          mem_fetch_hcount;                   // horizontal count when mem_fetch_active toggles
-always_comb     mem_fetch_next = (v_visible_i && h_count_i == mem_fetch_hcount) ? ~mem_fetch_active : mem_fetch_active;
+always_comb     mem_fetch_next = (v_visible && h_count_i == mem_fetch_hcount) ? ~mem_fetch_active : mem_fetch_active;
 always_comb begin
     // set mem_fetch_active next toggle for video memory access
     if (mem_fetch_active) begin
@@ -650,35 +592,17 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         colorA_index_o      <= 8'b0;
         colorB_index_o      <= 8'b0;
-        hsync_o             <= 1'b0;
-        vsync_o             <= 1'b0;
-        dv_de_o             <= 1'b0;
-        h_state             <= STATE_VISIBLE;
-        v_state             <= STATE_VISIBLE;  // check STATE_VISIBLE
-        h_count             <= '0;         // horizontal counter
-        v_count             <= '0;         // vertical counter
+
+        mem_fetch           <= 1'b0;
 
     end else begin
-
         // set output pixel index from pixel shift-out
-        colorA_index_o <= pa_color_index;
-        colorB_index_o <= pb_color_index;
+        colorA_index_o      <= pa_color_index;
+        colorB_index_o      <= pb_color_index;
 
-        // update registered signals from combinatorial "next" versions
-        h_state <= h_state_next;
-        v_state <= v_state_next;
-        h_count <= h_count_next;
-        v_count <= v_count_next;
-
-        // set other video output signals
-        hsync_o     <= hsync ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
-        vsync_o     <= vsync ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
-        dv_de_o     <= dv_display_ena;
-
-        mem_fetch   <= mem_fetch_next;
+        mem_fetch           <= mem_fetch_next;
     end
 end
-
 
 // audio generation
 generate
@@ -687,7 +611,7 @@ generate
         audio_mixer audio_mixer
         (
             .audio_enable_i(audio_enable),
-            .audio_dma_start_i(h_line_last_pixel),
+            .audio_dma_start_i(end_of_line),
             .audio_0_vol_i(audio_0_vol),
             .audio_0_period_i(audio_0_period),
             .audio_0_start_i(audio_0_start),

@@ -165,9 +165,9 @@ enum
     SPI_CMD_REGMASK = 0x0F
 };
 
-#define DEBUG_HEXDUMP 0
+#define DEBUG_HEXDUMP 1
 
-#if 1
+#if 0
 #define MAX_SEND    1024
 #define FLUSH_QUEUE 1020
 #else

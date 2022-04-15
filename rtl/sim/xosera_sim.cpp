@@ -85,7 +85,7 @@ static void logonly_printf(const char * fmt, ...)
 class BusInterface
 {
     const int   BUS_START_TIME = 1000000;        // after init
-    const float BUS_CLOCK_DIV  = 5;              // min 4
+    const float BUS_CLOCK_DIV  = 5;              // min 5
 
     enum
     {
@@ -544,15 +544,9 @@ int          BusInterface::test_data_len    = 32767;
 uint16_t     BusInterface::test_data[32768] = {
     // test data
 
-    REG_WAITVSYNC(),
-    REG_WAITVTOP(),
-
-    REG_RW(LFSR),
-    REG_RW(LFSR),
-
-
-    REG_WAITVSYNC(),        // show boot screen
-                            //    REG_WAITVTOP(),         // show boot screen
+    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
+    REG_W(WR_ADDR, 0xF000),
+    REG_UPLOAD(),
 
     REG_W(RW_INCR, 0x1),
     REG_W(RW_ADDR, 0x1234),
@@ -563,6 +557,9 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(RW_ADDR, 0x1234),
     REG_RW(RW_DATA),
     REG_RW(RW_DATA),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
 
     XREG_SETW(PA_GFX_CTRL, 0x005F),         // bitmap, 4-bpp, Hx4, Vx4
     XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
@@ -587,7 +584,9 @@ uint16_t     BusInterface::test_data[32768] = {
     XREG_SETW(BLIT_SHIFT, 0xFF00),                 // no edge masking or shifting
     XREG_SETW(BLIT_LINES, H_4BPP - 1),             // screen height -1
     XREG_SETW(BLIT_WORDS, W_4BPP - 1),             // screen width in words -1
+
     REG_WAIT_BLIT_DONE(),
+    REG_WAITVSYNC(),
 
     // fill screen with dither with 0 = opaque
     REG_WAIT_BLIT_READY(),
@@ -605,9 +604,6 @@ uint16_t     BusInterface::test_data[32768] = {
     XREG_SETW(BLIT_WORDS, W_4BPP - 1),             // screen width in words -1
     REG_WAIT_BLIT_DONE(),
 
-    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
-    REG_W(WR_ADDR, 0xF000),
-    REG_UPLOAD(),
     // REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
@@ -859,6 +855,7 @@ uint16_t     BusInterface::test_data[32768] = {
     XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                                             // moto graphic width
 
     REG_WAIT_BLIT_DONE(),
+    REG_WAITVSYNC(),
 
 #if 0        // lame audio test
     REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
@@ -909,17 +906,19 @@ uint16_t     BusInterface::test_data[32768] = {
 #if 1
     // true color hack test
 
-    XREG_SETW(PA_GFX_CTRL, 0x0065),         // bitmap, 8-bpp, Hx2, Vx2
+    XREG_SETW(PA_GFX_CTRL, 0x0065),         // PA bitmap, 8-bpp, Hx2, Vx2
     XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
-    XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address
+    XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address (start of 8-bpp line data)
     XREG_SETW(PA_LINE_LEN,
-              (320 / 2) + (320 / 4)),        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
+              (320 / 2) +
+                  (320 / 4)),        // display line word length (combined 8-bit and 4-bit for interleaved lines)
 
-    XREG_SETW(PB_GFX_CTRL, 0x0055),                     // bitmap, 4-bpp, Hx2, Vx2
+    XREG_SETW(PB_GFX_CTRL, 0x0055),                     // PB bitmap, 4-bpp, Hx2, Vx2
     XREG_SETW(PB_TILE_CTRL, 0x000F),                    // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
-    XREG_SETW(PB_DISP_ADDR, 0x0000 + (320 / 2)),        // display start address
+    XREG_SETW(PB_DISP_ADDR, 0x0000 + (320 / 2)),        // display start address (start of 4-bpp line data)
     XREG_SETW(PB_LINE_LEN,
-              (320 / 2) + (320 / 4)),        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
+              (320 / 2) +
+                  (320 / 4)),        // display line word length (combined 8-bit and 4-bit for interleaved lines)
 
     REG_W(XR_ADDR, XR_COLOR_ADDR),        // upload color palette
     REG_UPLOAD_AUX(),
@@ -928,8 +927,8 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(WR_ADDR, 0x0000),
     REG_UPLOAD(),        // RG 8-bpp + 4-bpp B
 
-// 16-color 320x200 color tut
 #endif
+    // 16-color 320x200 color tut
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
     XREG_SETW(PA_HV_FSCALE, 0x0005),        // 400 line scale
@@ -950,10 +949,6 @@ uint16_t     BusInterface::test_data[32768] = {
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
-
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-
 
     REG_END(),
     // end test data

@@ -19,7 +19,7 @@
 
 `include "xosera_pkg.sv"
 
-//`define XOSERA_VERSION
+`define XOSERA_VERSION
 
 `ifdef XOSERA_VERSION
 

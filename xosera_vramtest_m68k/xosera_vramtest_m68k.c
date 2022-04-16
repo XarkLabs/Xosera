@@ -840,7 +840,12 @@ void xosera_test()
 {
     xv_prep();
 
-    dprintf("Xosera_vramtest_m68k\n");
+    // flush output buffer
+    for (int i = 0; i < 1000; i++)
+    {
+        dputc(0);
+    }
+    dprintf("\033cXosera_vramtest_m68k\n");
     // flush any input charaters to avoid instant exit
     while (checkchar())
     {
@@ -978,4 +983,5 @@ void xosera_test()
     {
         readchar();
     }
+    dprintf("\n\nExiting...\n");
 }

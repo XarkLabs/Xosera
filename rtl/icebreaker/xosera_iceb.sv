@@ -69,6 +69,7 @@ logic [7:0] bus_data;                   // bus 8-bit bidirectional data I/O
 logic       audio_l;                    // left audio PWM
 logic       audio_r;                    // right audio PWM
 logic       bus_intr;                   // bus interrupt signal output (not used)
+logic       bus_intr_r;                 // registered signal, to improve timing
 /* verilator lint_on UNUSED */
 logic [3:0] vga_r;                      // vga red (4-bit)
 logic [3:0] vga_g;                      // vga green (4-bits)
@@ -76,6 +77,10 @@ logic [3:0] vga_b;                      // vga blue (4-bits)
 logic       vga_hs;                     // vga hsync
 logic       vga_vs;                     // vga vsync
 logic       dv_de;                      // DV display enable
+logic       reconfig;                   // set to 1 to force reconfigure of FPGA
+logic       reconfig_r;                 // registered signal, to improve timing
+logic [1:0] boot_select;                // two bit number for flash configuration to load on reconfigure
+logic [1:0] boot_select_r;              // registered signal, to improve timing
 `ifdef SPI_INTERFACE    // SPI target interface (FPGA is the peripheral)
 logic       spi_sck;                    // SPI clock from controller
 logic       spi_copi;                   // SPI controller out/peripheral in
@@ -88,6 +93,7 @@ logic       spi_reset   = 1'b0;         // SPI "soft" reset (if SPI_INTERFACE)
 assign      nreset      = BTN_N;        // active LOW reset button
 
 // split tri-state data lines into in/out signals for inside FPGA
+logic [7:0] bus_data_out_r;             // registered bus_data_out signal, this helps timing
 logic [7:0] bus_data_out;
 logic [7:0] bus_data_in;
 
@@ -106,7 +112,7 @@ logic [7:0] bus_data_in;
 
     // tri-state data bus unless Xosera is both selected and bus is reading
     // NOTE: No longer need to use iCE40 SB_IO primitive to control tri-state properly here
-    assign bus_data     = bus_out_ena ? bus_data_out : 8'bZ;
+    assign bus_data     = bus_out_ena ? bus_data_out_r : 8'bZ;
     assign bus_data_in  = bus_data;
     assign bus_cs_n     = LED_RED_N;        // RGB LED red as Xosera select=cs_ENABLED (UP_nCS)
     assign bus_rd_nwr   = LED_GRN_N;        // RGB LED green as RnW_WRITE=0, RnW_READ=1, read= (UP_RnW)
@@ -170,6 +176,15 @@ assign {P1B1, P1B2, P1B3, P1B4, P1B7, P1B8, P1B9, P1B10} =
        {vga_vs, vga_g[3], vga_r[2], vga_b[2], vga_hs, vga_r[3], vga_b[3], vga_g[2]};
 `endif
 
+
+// update registered signals each clock
+always_ff @(posedge pclk) begin
+    bus_data_out_r  <= bus_data_out;
+    bus_intr_r      <= bus_intr;
+    reconfig_r      <= reconfig;
+    boot_select_r   <= boot_select;
+end
+
 // PLL to derive proper video frequency from 12MHz oscillator
 logic pclk;                  // video pixel clock output from PLL block
 logic pll_lock;              // indicates when PLL frequency has locked-on
@@ -199,19 +214,16 @@ assign pll_lock = 1'b1;
 assign pclk     = CLK;
 `endif
 
-logic           reconfig;                   // set to 1 to force reconfigure of FPGA
-logic   [1:0]   boot_select;                // two bit number for flash configuration to load on reconfigure
-
 `ifdef SYNTHESIS
 SB_WARMBOOT boot(
-                .BOOT(reconfig),
-                .S0(boot_select[0]),
-                .S1(boot_select[1])
-            );
+    .BOOT(reconfig_r),
+    .S0(boot_select_r[0]),
+    .S1(boot_select_r[1])
+);
 `else
 always @* begin
-    if (reconfig) begin
-        $display("XOSERA REBOOT: To flash config #0x%x", boot_select);
+    if (reconfig_r) begin
+        $display("XOSERA REBOOT: To flash config #0x%x", boot_select_r);
         $finish;
     end
 end
@@ -291,7 +303,7 @@ assign bus_bytesel          = spi_cmd_byte[4];                          // BS bi
 assign spi_reset            = spi_cmd_byte[5];                          // RS bit
 assign bus_reg_num          = spi_cmd_byte[3:0];                        // register bits
 assign bus_data_in          = spi_data_byte;                            // bus data to write
-assign spi_transmit_data    = spi_payload_byte ? bus_data_out : 8'hCB;  // bus data to read
+assign spi_transmit_data    = spi_payload_byte ? bus_data_out_r : 8'hCB;  // bus data to read
 
 // DBUG assign { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 } = spi_cmd_byte;  // debug
 

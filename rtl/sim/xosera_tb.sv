@@ -100,6 +100,11 @@ initial begin
     $dumpvars(0, xosera);
 
     $display("Xosera - Verilog testbench started");
+    // $monitor ("time=%09t clk=%x v =%4d == v_m =%4d v_st :%d EOL :%x EOF :%x\ntime=%09t clk=%x vn=%4d == v_mn=%4d v_stn:%d EOLn:%x EOFn:%x\n",
+    //     $realtime, clk,
+    //     xosera.video_gen.v_count, xosera.video_gen.v_count_next_value, xosera.video_gen.v_state, xosera.video_gen.end_of_line, xosera.video_gen.end_of_frame,
+    //     $realtime, clk,
+    //     xosera.video_gen.v_count_next, xosera.video_gen.v_count_next_value, xosera.video_gen.v_state_next, xosera.video_gen.end_of_line_next, xosera.video_gen.end_of_frame_next);
 
     frame = 1;
     test_addr = 'hABCD;
@@ -311,7 +316,7 @@ always begin
     #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, 8'hD8);
 
 `ifdef LOAD_MONOBM
-    while (xosera.video_gen.last_frame_pixel != 1'b1) begin
+    while (xosera.video_gen.end_of_frame != 1'b1) begin
         # 1ns;
     end
 
@@ -456,12 +461,12 @@ always begin
 end
 
 always @(posedge clk) begin
-    if (xosera.video_gen.last_frame_pixel == 1'b1) begin
+    if (xosera.video_gen.end_of_frame == 1'b1) begin
         frame <= frame + 1;
         $fdisplay(logfile, "%0t Finished rendering frame #%1d", $realtime, frame);
         $display("%0t Finished rendering frame #%1d", $realtime, frame);
 
-        if (frame > `MAX_FRAMES) begin
+        if (frame > `MAX_FRAMES || $realtime > (`MAX_FRAMES * 18_000_000)) begin
 `ifdef MEMDUMP
             f = $fopen("logs/xosera_tb_isim_vram.txt", "w");
             for (i = 0; i < 65536; i += 16) begin

@@ -390,8 +390,8 @@ static void reset_vid(void)
     xreg_setw(PA_GFX_CTRL, 0x0000);
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PB_GFX_CTRL, 0x0080);
-    xreg_setw(VID_LEFT, 0x0000);
-    xreg_setw(VID_RIGHT, xreg_getw(VID_HSIZE));
+    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
     xreg_setw(PA_HV_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
     xreg_setw(COPP_CTRL, 0x0000);                             // disable copper
@@ -833,7 +833,8 @@ void show_test_pic(int pic_num, uint16_t addr)
     xreg_setw(PB_GFX_CTRL, 0x0080);
     xreg_setw(VID_CTRL, 0x0000);        // set write address
     xmem_setw(XR_COLOR_A_ADDR, 0x0000);
-    xreg_setw(VID_RIGHT, xreg_getw_wait(VID_HSIZE));        // set write address
+    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
 
     xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, addr);
@@ -1050,7 +1051,7 @@ void test_blit()
 
     // crop left and right 2 pixels
     xr_textmode_pb();
-    xreg_setw(VID_RIGHT, xreg_getw_wait(VID_HSIZE) - 4);
+    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640 - 4);
     xreg_setw(VID_CTRL, 0xFF00);
 
     do
@@ -1096,7 +1097,7 @@ void test_blit()
 
         uint16_t paddr = 0x9b00;
         show_test_pic(0, paddr);
-        xreg_setw(VID_RIGHT, xreg_getw_wait(VID_HSIZE) - 4);
+        xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640 - 4);
         xreg_setw(VID_CTRL, 0xFF00);
         xmem_setw(XR_COLOR_A_ADDR + 255, 0x0000);        // set write address
 
@@ -1284,7 +1285,8 @@ void test_blit()
     xreg_setw(PA_LINE_LEN, 320 / 4);
     xreg_setw(PA_DISP_ADDR, 0x0000);
 
-    xreg_setw(VID_RIGHT, xreg_getw_wait(VID_HSIZE));
+    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
 }
 
 void test_true_color()
@@ -2196,7 +2198,7 @@ void     xosera_test()
         readchar();
     }
 
-    printf("\033c\033[?12l");        // ANSI reset, cursor blink off
+    printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
     dprintf("Xosera_test_m68k\n");
     cpu_delay(1000);
@@ -2219,6 +2221,7 @@ void     xosera_test()
             xosera_initdata[30],
             xosera_initdata[31]);
 
+    cpu_delay(1000);        // give monitor time to adjust with grey screen (vs black)
     wait_vsync();
     xreg_setw(PA_GFX_CTRL, 0x0080);            // PA blanked
     xreg_setw(VID_CTRL, 0x0000);               // border color #0
@@ -2245,7 +2248,7 @@ void     xosera_test()
 
     (void)sinData;
 
-#if 1        // audio waveform test
+#if 0        // audio waveform test
     {
         test_audio_sample("sine wave", sinData, sizeof(sinData), 1000);
 
@@ -2312,13 +2315,32 @@ void     xosera_test()
     install_copper();
 #endif
 
+    uint8_t config_num = 0;
+
     while (true)
     {
         uint32_t t = XFrameCount;
         uint32_t h = t / (60 * 60 * 60);
         uint32_t m = t / (60 * 60) % 60;
         uint32_t s = (t / 60) % 60;
+
+        if (test_count && (test_count & 3) == 0)
+        {
+            config_num++;
+            dprintf("\nxosera_init(%u)...", config_num % 3);
+            bool success = xosera_init(config_num);
+            dprintf(
+                "%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw_wait(VID_HSIZE), xreg_getw_wait(VID_VSIZE));
+#if COPPER_TEST
+            install_copper();
+#endif
+            cpu_delay(1000);        // give monitor time to adjust with grey screen (vs black)
+        }
+
         dprintf("*** xosera_test_m68k iteration: %u, running %u:%02u:%02u\n", test_count++, h, m, s);
+
+        xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
+        xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
 
         uint16_t features = xreg_getw_wait(VERSION);
         //        uint32_t githash   = ((uint32_t)xreg_getw_wait(GITHASH_H) << 16) |
@@ -2333,7 +2355,6 @@ void     xosera_test()
         uint16_t linelen  = xreg_getw_wait(PA_LINE_LEN);
         uint16_t hvscroll = xreg_getw_wait(PA_HV_SCROLL);
         uint16_t sysctrl  = xm_getw(SYS_CTRL);
-
 
         dprintf("%s #%02x%02x%02x%02x ",
                 xosera_initdata,
@@ -2371,12 +2392,6 @@ void     xosera_test()
         restore_colors();
         dupe_colors(0xf);
         xmem_setw(XR_COLOR_B_ADDR, 0x0000);        // make sure we can see plane A under B
-
-#if LR_MARGIN_TEST
-        // crop left and right 2 pixels
-        xreg_setw(VID_LEFT, 4);
-        xreg_setw(VID_RIGHT, monwidth - 4);
-#endif
 
         xr_textmode_pb();
         xr_msg_color(0x0f);

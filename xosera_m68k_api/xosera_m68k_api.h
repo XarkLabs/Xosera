@@ -334,7 +334,6 @@ extern volatile xmreg_t * const xosera_ptr;
 // return high byte (even address) from XR memory address xrmem
 #define xmem_getbh_wait(xrmem)                                                                                         \
     ({                                                                                                                 \
-        (void)(XR_##xreg);                                                                                             \
         uint8_t byte_value;                                                                                            \
         xm_setw(XR_ADDR, (xrmem));                                                                                     \
         xwait_mem_busy();                                                                                              \
@@ -344,9 +343,8 @@ extern volatile xmreg_t * const xosera_ptr;
 // return low byte (odd address) from XR memory address xrmem
 #define xmem_getbl_wait(xrmem)                                                                                         \
     ({                                                                                                                 \
-        (void)(XR_##xreg);                                                                                             \
         uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (XR_##xreg));                                                                                 \
+        xm_setw(XR_ADDR, (xrmem));                                                                                     \
         xwait_mem_busy();                                                                                              \
         byte_value = xosera_ptr[XM_XR_DATA >> 2].b.l;                                                                  \
         byte_value;                                                                                                    \

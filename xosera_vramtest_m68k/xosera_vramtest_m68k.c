@@ -195,12 +195,19 @@ static void add_fail(int addr, int data, int expected, int flags)
 
 static _NOINLINE void fill_LFSR()
 {
-    uint16_t start_state;
+    static uint16_t salt = 42;
+    uint32_t        start_state;
+    uint16_t        lfsr;
     do
     {
         start_state = xm_getw(TIMER);
-    } while (start_state == 0);
-    uint16_t lfsr = start_state;
+        start_state += salt++;
+        if (start_state > 0xffff)
+        {
+            start_state++;
+        }
+        lfsr = start_state;
+    } while (lfsr == 0);
 
     for (uint32_t i = 0; i < 0xffff; i++)
     {
@@ -773,6 +780,14 @@ int test_xmem(bool LFSR, int mode)
             start_time = elapsed_tenthms;
         } while (start_time == check_time);
 
+        // word color mem
+        xm_setw(XR_ADDR, XR_COLOR_ADDR);
+        xwait_mem_busy();        // must wait for initial (slow) color mem read to finish, before writing
+        for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + XR_COLOR_SIZE); addr++)
+        {
+            xm_setw(XR_DATA, pattern_buffer[addr]);
+        }
+
         // word tile mem
         xm_setw(XR_ADDR, XR_TILE_ADDR);
         for (int addr = XR_TILE_ADDR; addr < (XR_TILE_ADDR + XR_TILE_SIZE); addr++)
@@ -782,12 +797,6 @@ int test_xmem(bool LFSR, int mode)
         // word copper mem
         xm_setw(XR_ADDR, XR_COPPER_ADDR);
         for (int addr = XR_COPPER_ADDR; addr < (XR_COPPER_ADDR + XR_COPPER_SIZE); addr++)
-        {
-            xm_setw(XR_DATA, pattern_buffer[addr]);
-        }
-        // word color mem
-        xm_setw(XR_ADDR, XR_COLOR_A_ADDR);
-        for (int addr = XR_COLOR_A_ADDR; addr < (XR_COLOR_A_ADDR + XR_COLOR_A_SIZE + XR_COLOR_B_SIZE); addr++)
         {
             xm_setw(XR_DATA, pattern_buffer[addr]);
         }
@@ -819,6 +828,13 @@ int test_xmem(bool LFSR, int mode)
 
     return xmem_errs;
 }
+struct xosera_initdata
+{
+    char     name_version[28];
+    uint32_t githash;
+};
+
+struct xosera_initdata initdata;
 
 void xosera_test()
 {
@@ -831,19 +847,7 @@ void xosera_test()
         readchar();
     }
 
-    uint8_t cur_xosera_config = 0;
-    dprintf("\nxosera_init(%d)...", cur_xosera_config);
-    bool success   = xosera_init(cur_xosera_config);
-    last_timer_val = xm_getw(TIMER);
-    dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
-
-    if (delay_check(4000))
-    {
-        return;
-    }
-
-    // D'oh! Uses timer    rosco_m68k_CPUMHz();
-
+    uint8_t cur_xosera_config = ~0;
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");
@@ -857,9 +861,15 @@ void xosera_test()
             update_elapsed();
             cur_xosera_config = new_config;
             dprintf("\n [Switching to Xosera config #%d...", cur_xosera_config);
-            success        = xosera_init(cur_xosera_config);
+            bool success   = xosera_init(cur_xosera_config);
             last_timer_val = xm_getw(TIMER);
             dprintf("%s (%dx%d). ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+            char * init_ptr = (char *)&initdata;
+            for (int i = XR_COPPER_ADDR + XR_COPPER_SIZE - 16; i < XR_COPPER_ADDR + XR_COPPER_SIZE; i++)
+            {
+                *init_ptr++ = (char)xmem_getbh_wait(i);
+                *init_ptr++ = (char)xm_getbl(XR_DATA);
+            }
         }
 
 #if 0
@@ -882,21 +892,17 @@ void xosera_test()
                 s,
                 vram_test_fail_count);
 
-        uint16_t version   = xreg_getw(VERSION);
-        uint32_t githash   = ((uint32_t)xreg_getw(GITHASH_H) << 16) | (uint32_t)xreg_getw(GITHASH_L);
+        uint16_t features  = xreg_getw(VERSION);        // TODO: this is feature codes
         uint16_t monwidth  = xreg_getw(VID_HSIZE);
         uint16_t monheight = xreg_getw(VID_VSIZE);
-        uint16_t monfreq   = xreg_getw(VID_VFREQ);
 
-        dprintf("    Xosera v%1x.%02x #%08x Features:0x%02x %ux%u @%2x.%02xHz\n",
-                (unsigned int)(version >> 8) & 0xf,
-                (unsigned int)(version & 0xff),
-                (unsigned int)githash,
-                (unsigned int)(version >> 12) & 0xf,
+        dprintf("    Config #%d [%04x]   Res:%ux%u   Git:0x%08x   ID:\"%s\"\n",
+                cur_xosera_config,
+                (unsigned int)features,
                 (unsigned int)monwidth,
                 (unsigned int)monheight,
-                (unsigned int)monfreq >> 8,
-                (unsigned int)monfreq & 0xff);
+                (unsigned int)initdata.githash,
+                initdata.name_version);
 
         for (int i = 0; i < TEST_MODES; i++)
         {

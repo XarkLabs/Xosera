@@ -2197,7 +2197,7 @@ void     xosera_test()
         readchar();
     }
 
-    printf("\033c\033[?12l");        // ANSI reset, cursor blink off
+    printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
     dprintf("Xosera_test_m68k\n");
     cpu_delay(1000);

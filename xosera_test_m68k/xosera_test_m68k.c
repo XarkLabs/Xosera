@@ -28,8 +28,8 @@
 
 //#define DELAY_TIME 15000        // slow human speed
 //#define DELAY_TIME 5000        // human speed
-#define DELAY_TIME 1000        // impatient human speed
-//#define DELAY_TIME 500        // machine speed
+//#define DELAY_TIME 1000        // impatient human speed
+#define DELAY_TIME 500        // machine speed
 
 #define COPPER_TEST    1
 #define LR_MARGIN_TEST 0
@@ -387,15 +387,17 @@ static void reset_vid(void)
 
     wait_vsync_start();
 
-    xreg_setw(PA_GFX_CTRL, 0x0000);
-    xreg_setw(PA_TILE_CTRL, 0x000F);
-    xreg_setw(PB_GFX_CTRL, 0x0080);
+    xreg_setw(VID_CTRL, 0x0800);
+    xreg_setw(COPP_CTRL, 0x0000);        // disable copper
     xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
     xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
+    xreg_setw(PA_GFX_CTRL, 0x0000);
+    xreg_setw(PA_TILE_CTRL, 0x000F);
+    xreg_setw(PA_DISP_ADDR, 0x0000);
+    xreg_setw(PA_LINE_LEN, 80);        // line len
     xreg_setw(PA_HV_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
-    xreg_setw(COPP_CTRL, 0x0000);                             // disable copper
-    xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) >> 3);        // line len
+    xreg_setw(PB_GFX_CTRL, 0x0080);
 
     restore_colors();
 
@@ -514,9 +516,13 @@ static void xr_putc(const char c)
         xr_x = 0;
         xr_y += 1;
     }
+    else if (c == '\r')
+    {
+        xr_x = 0;
+    }
     else
     {
-        xm_setw(XR_DATA, (xr_text_color << 8) | c);
+        xm_setw(XR_DATA, (xr_text_color << 8) | (uint8_t)c);
         xr_x++;
         if (xr_x >= xr_text_columns)
         {
@@ -714,6 +720,12 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
         if ((rsize & 0xFFF) == 0)
         {
             dprintf("\rReading \"%s\": %d KB ", filename, rsize >> 10);
+            if (rsize)
+            {
+                uint8_t ox = xr_x;
+                xr_printf("%3dK", rsize >> 10);
+                xr_x = ox;
+            }
         }
 
         data += cnt;
@@ -721,6 +733,7 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
         checkbail();
     }
     dprintf("\rLoaded \"%s\": %dKB (%d bytes).  \n", filename, rsize >> 10, rsize);
+    xr_printf("%3dK\n", rsize >> 10);
 
     if (rsize != fsize)
     {
@@ -2221,10 +2234,9 @@ void     xosera_test()
             xosera_initdata[30],
             xosera_initdata[31]);
 
-    cpu_delay(1000);        // give monitor time to adjust with grey screen (vs black)
-    wait_vsync();
+    wait_vsync_start();
     xreg_setw(PA_GFX_CTRL, 0x0080);            // PA blanked
-    xreg_setw(VID_CTRL, 0x0000);               // border color #0
+    xreg_setw(VID_CTRL, 0x0100);               // border color #1 (blue)
     xmem_setw(XR_COLOR_A_ADDR, 0x0000);        // color # = black
     xr_textmode_pb();
     xr_msg_color(0x0f);
@@ -2281,6 +2293,8 @@ void     xosera_test()
 
 #endif
     xr_textmode_pb();
+    xreg_setw(VID_CTRL, 0x0100);                      // border color #0
+    xmem_setw(XR_COLOR_B_ADDR + 0xFF, 0xFfff);        // color # = black
     xr_msg_color(0x0f);
     xr_printfxy(5, 0, "xosera_test_m68k\n");
 
@@ -2289,15 +2303,15 @@ void     xosera_test()
     if (use_sd)
     {
         xr_printf("\nLoading test images:\n");
-        xr_printf("  pacbox-320x240\n");
+        xr_printf(" \xAF 320x240 pac-mock ");
         load_test_image(BM_4_BIT, "/pacbox-320x240.raw", "/pacbox-320x240_pal.raw");
-        xr_printf("  ST_KingTut_Dpaint_16\n");
+        xr_printf(" \xAF 320x200 King Tut ");
         load_test_image(BM_4_BIT_RETRO, "/ST_KingTut_Dpaint_16.raw", "/ST_KingTut_Dpaint_16_pal.raw");
-        xr_printf("  space_shuttle_color_small\n");
+        xr_printf(" \xAF 640x480 Shuttle  ");
         load_test_image(BM_MONO_ATTR, "/space_shuttle_color_small.raw", NULL);
-        xr_printf("  parrot_320x240_RG8B4\n");
+        xr_printf(" \xAF RGB-12 Parrot    ");
         load_test_image(BM_12_BIT, "/parrot_320x240_RG8B4.raw", "/true_color_pal.raw");
-        xr_printf("  xosera_r1\n");
+        xr_printf(" \xAF Xosera 8-bpp     ");
         load_test_image(BM_8_BIT, "/xosera_r1.raw", "/xosera_r1_pal.raw");
     }
 
@@ -2328,7 +2342,7 @@ void     xosera_test()
         {
             config_num++;
             dprintf("\nxosera_init(%u)...", config_num % 3);
-            bool success = xosera_init(config_num);
+            bool success = xosera_init(config_num % 3);
             dprintf(
                 "%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw_wait(VID_HSIZE), xreg_getw_wait(VID_VSIZE));
 #if COPPER_TEST
@@ -2354,7 +2368,11 @@ void     xosera_test()
         uint16_t dispaddr = xreg_getw_wait(PA_DISP_ADDR);
         uint16_t linelen  = xreg_getw_wait(PA_LINE_LEN);
         uint16_t hvscroll = xreg_getw_wait(PA_HV_SCROLL);
+        uint16_t hvfscale = xreg_getw_wait(PA_HV_FSCALE);
         uint16_t sysctrl  = xm_getw(SYS_CTRL);
+        uint16_t vidctrl  = xreg_getw_wait(VID_CTRL);
+        uint16_t vidleft  = xreg_getw_wait(VID_LEFT);
+        uint16_t vidright = xreg_getw_wait(VID_RIGHT);
 
         dprintf("%s #%02x%02x%02x%02x ",
                 xosera_initdata,
@@ -2364,15 +2382,13 @@ void     xosera_test()
                 xosera_initdata[31]);
         dprintf("Features:0x%04x\n", features);
         dprintf("Monitor Native Res: %dx%d\n", monwidth, monheight);
+        dprintf("SYS_CTRL    : 0x%04x  VID_CTRL    : 0x%04x\n", sysctrl, vidctrl);
+        dprintf("VID_LEFT    : 0x%04x  VID_RIGHT   : 0x%04x\n", vidleft, vidright);
         dprintf("\nPlayfield A:\n");
-        dprintf("PA_GFX_CTRL : 0x%04x PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
-        dprintf("PA_DISP_ADDR: 0x%04x PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
-        dprintf("PA_HV_SCROLL: 0x%04x\n", hvscroll);
+        dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
+        dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
+        dprintf("PA_HV_SCROLL: 0x%04x  PA_HV_FSCALE: 0x%04x\n", hvscroll, hvfscale);
         dprintf("\n");
-
-        dprintf("SYS_CTRL: 0x%04x\n", sysctrl);
-        xm_setw(SYS_CTRL, sysctrl);
-        dprintf("SYS_CTRL: 0x%04x\n", sysctrl);
 
 
 #if COPPER_TEST

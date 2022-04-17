@@ -39,6 +39,9 @@ xvid_spi/xvid_spi
 # object files
 **/*.o
 
+# library files
+**/*.a
+
 # rosco files
 **/**_m68k*/**/*.elf
 **/**_m68k*/**/*.s

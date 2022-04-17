@@ -17,6 +17,7 @@ endif
 -include $(ROSCO_M68K_DIR)/user.mk
 
 # NOTE: Uses "private" xosera_m68k_api.h (to be self-contained in firmware)
+XOSERA_M68K_API_ORGIN?=../xosera_m68k_api
 XOSERA_M68K_API?=videoXoseraANSI
 XOSERA_M68K_XANSI?=videoXoseraANSI
 
@@ -85,7 +86,14 @@ CFLAGS+=-I$(XOSERA_M68K_XANSI)
 # Assume each source files makes an object file
 OBJECTS=$(addsuffix .o,$(basename $(SOURCES)))
 
-all: $(BINARY) $(DISASM)
+all: update $(BINARY) $(DISASM)
+
+update:
+	@echo Updating XANSI private xosera_m68k_api to be self-contained for firmware
+	@cp -av $(XOSERA_M68K_API_ORGIN)/xosera_m68k_api.c videoXoseraANSI/xosera_m68k_api.c
+	@cp -av $(XOSERA_M68K_API_ORGIN)/xosera_m68k_api.h videoXoseraANSI/xosera_m68k_api.h
+	@cp -av $(XOSERA_M68K_API_ORGIN)/xosera_m68k_defs.h videoXoseraANSI/xosera_m68k_defs.h
+	@cp -av $(XOSERA_M68K_API_ORGIN)/xosera_m68k_defs.inc videoXoseraANSI/xosera_m68k_defs.inc
 
 $(ELF) : $(OBJECTS)
 	$(LD) $(LDFLAGS) $(GCC_LIBS) $^ -o $@ $(LIBS)
@@ -152,4 +160,4 @@ macterm:
 	open -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
 
 # Makefile magic (for "phony" targets that are not real files)
-.PHONY: all clean disasm dump load linuxtest linuxterm mactest macterm
+.PHONY: all update clean disasm dump load linuxtest linuxterm mactest macterm

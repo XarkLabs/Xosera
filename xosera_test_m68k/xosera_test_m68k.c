@@ -2254,7 +2254,7 @@ void     xosera_test()
 
     (void)sinData;
 
-#if 0        // audio waveform test
+#if 1        // audio waveform test
     {
         test_audio_sample("sine wave", sinData, sizeof(sinData), 1000);
 
@@ -2274,9 +2274,9 @@ void     xosera_test()
 
         free(testsamp);
     }
-    if (load_test_audio("/Slide_8000.raw", &testsamp, &testsampsize))
+    if (load_test_audio("/Boing.raw", &testsamp, &testsampsize))
     {
-        test_audio_sample("Slide_8000.raw", testsamp, testsampsize, 3150 / 2);
+        test_audio_sample("Boing.raw", testsamp, testsampsize, 3150);
 
         xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
 

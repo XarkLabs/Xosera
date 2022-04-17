@@ -2205,16 +2205,10 @@ static void set_alpha(int alpha)
 uint32_t test_count;
 void     xosera_test()
 {
-    // flush any input charaters to avoid instant exit
-    while (checkchar())
-    {
-        readchar();
-    }
-
     printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
     dprintf("Xosera_test_m68k\n");
-    cpu_delay(1000);
+
     dprintf("\nxosera_init(0)...");
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw_wait(VID_HSIZE), xreg_getw_wait(VID_VSIZE));

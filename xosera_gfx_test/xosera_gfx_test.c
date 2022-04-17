@@ -204,13 +204,9 @@ uint16_t rosco_m68k_CPUMHz()
 
 
 uint32_t test_count;
-void     xosera_mode_test()
+void     xosera_gfx_test()
 {
-    // flush any input charaters to avoid instant exit
-    while (checkchar())
-    {
-        readchar();
-    }
+    printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
     dprintf("Xosera_gfx_test\n");
 

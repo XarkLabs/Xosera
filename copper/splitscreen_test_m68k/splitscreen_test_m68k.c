@@ -200,14 +200,11 @@ static bool load_sd_colors(const char * filename)
 }
 
 uint32_t test_count;
-void     xosera_test()
+void     xosera_splitscreen_test()
 {
-    dprintf("Xosera_test_m68k\n");
+    printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
-    if (checkchar())
-    {
-        readchar();
-    }
+    dprintf("Xosera_test_m68k\n");
 
     // wait for monitor to unblank
     dprintf("\nxosera_init(0)...");

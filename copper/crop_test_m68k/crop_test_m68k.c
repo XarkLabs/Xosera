@@ -51,13 +51,10 @@ static void msg(char * msg)
     sendchar('\n');
 }
 
-void xosera_test()
+void xosera_crop_test()
 {
-    if (checkchar())
-    {
-        readchar();
-    }
-    delay(1000);        // wait a bit for terminal window/serial
+    printf("\033c\033[?25l");        // ANSI reset, disable input cursor
+
     msg("copper crop_test - set Xosera to 640x480");
     msg("");
     xosera_init(0);        // 640x480

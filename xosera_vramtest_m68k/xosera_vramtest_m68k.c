@@ -836,21 +836,11 @@ struct xosera_initdata
 
 struct xosera_initdata initdata;
 
-void xosera_test()
+void xosera_vramtest()
 {
     xv_prep();
 
-    // flush output buffer
-    for (int i = 0; i < 1000; i++)
-    {
-        dputc(0);
-    }
     dprintf("\033cXosera_vramtest_m68k\n");
-    // flush any input charaters to avoid instant exit
-    while (checkchar())
-    {
-        readchar();
-    }
 
     uint8_t cur_xosera_config = ~0;
     dprintf("Installing interrupt handler...");

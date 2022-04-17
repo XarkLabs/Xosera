@@ -21,15 +21,13 @@
 #include <string.h>
 
 #include <basicio.h>
-#include <debug_stub.h>
 #include <machine.h>
 
 extern void xosera_ansiterm_test();
 
 void kmain()
 {
-    debug_stub();
-    delay(5000);               // wait a bit for terminal window/serial
+    delay(15000);              // wait a bit for terminal window/serial
     while (checkchar())        // clear any queued input
     {
         readchar();

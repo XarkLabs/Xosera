@@ -23,14 +23,14 @@
 #include <basicio.h>
 #include <machine.h>
 
-extern void xosera_mode_test();
+extern void xosera_gfx_test();
 
 void kmain()
 {
-    delay(5000);               // wait a bit for terminal window/serial
+    delay(15000);              // wait a bit for terminal window/serial
     while (checkchar())        // clear any queued input
     {
         readchar();
     }
-    xosera_mode_test();
+    xosera_gfx_test();
 }

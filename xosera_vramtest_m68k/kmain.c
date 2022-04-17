@@ -23,14 +23,16 @@
 #include <basicio.h>
 #include <machine.h>
 
-extern void xosera_test();
+#include <debug_stub.h>
+
+extern void xosera_vramtest();
 
 void kmain()
 {
-    delay(5000);               // wait a bit for terminal window/serial
+    delay(15000);              // wait a bit for terminal window/serial
     while (checkchar())        // clear any queued input
     {
         readchar();
     }
-    xosera_test();
+    xosera_vramtest();
 }

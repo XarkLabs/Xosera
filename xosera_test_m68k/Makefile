@@ -5,7 +5,7 @@
 # MIT LICENSE
 
 ifeq (, $(shell m68k-elf-gcc --version))
-$(info info No m68k-elf-* build tools found in path)
+$(info No m68k-elf-* build tools found in path)
 else
 ifndef ROSCO_M68K_DIR
 $(info Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
@@ -74,7 +74,7 @@ $(ELF) : $(OBJECTS)
 	$(LD) $(LDFLAGS) $(GCC_LIBS) $^ -o $@ $(LIBS)
 	$(NM) --numeric-sort $@ >$(SYM)
 	$(SIZE) $@
-	chmod a-x $@
+	-chmod a-x $@
 
 $(BINARY) : $(ELF)
 	$(OBJCOPY) -O binary $(ELF) $(BINARY)

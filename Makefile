@@ -114,6 +114,7 @@ utils:
 
 # Build image/font mem utility
 m68k:
+	cd xosera_m68k_api/ && $(MAKE)
 	cd xosera_ansiterm_m68k/ && $(MAKE)
 	cd xosera_vramtest_m68k && $(MAKE)
 	cd xosera_test_m68k && $(MAKE)
@@ -151,6 +152,7 @@ clean:
 	cd utils && $(MAKE) clean
 	cd host_spi && $(MAKE) clean
 	cd xvid_spi && $(MAKE) clean
+	cd xosera_m68k_api/ && $(MAKE) clean
 	cd xosera_ansiterm_m68k/ && $(MAKE) clean
 	cd xosera_vramtest_m68k && $(MAKE) clean
 	cd xosera_test_m68k && $(MAKE) clean

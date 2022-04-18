@@ -99,7 +99,7 @@ class BusInterface
         XM_DATA_2 = 0x7,        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
         XM_SYS_CTRL  = 0x8,        // (R /W+) busy status, FPGA reconfig, interrupt status/control, write masking
         XM_TIMER     = 0x9,        // (RO   ) read 1/10th millisecond timer
-        XM_LFSR      = 0xA,        // (R /W ) LFSR pseudo-random register // TODO: keep this?
+        XM_UNUSED_A  = 0xA,        // (R /W ) unused direct register 0xA // TODO: keep this?
         XM_UNUSED_B  = 0xB,        // (R /W ) unused direct register 0xB // TODO: Use for XM_XR_DATA_2
         XM_RW_INCR   = 0xC,        // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
         XM_RW_ADDR   = 0xD,        // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
@@ -509,7 +509,7 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR  ",
                                          "XM_DATA_2   ",
                                          "XM_SYS_CTRL ",
                                          "XM_TIMER    ",
-                                         "XM_LFSR     ",
+                                         "XM_UNUSED_A     ",
                                          "XM_UNUSED_B ",
                                          "XM_RW_INCR  ",
                                          "XM_RW_ADDR  ",
@@ -542,7 +542,7 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR  ",
 BusInterface bus;
 int          BusInterface::test_data_len    = 32767;
 uint16_t     BusInterface::test_data[32768] = {
-    // test data
+        // test data
 
     REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
     REG_W(WR_ADDR, 0xF000),
@@ -1409,7 +1409,15 @@ int main(int argc, char ** argv)
             {
                 break;
             }
-            frame_num += 1;
+
+            if (TOTAL_HEIGHT == y_max + 1)
+            {
+                frame_num += 1;
+            }
+            else if (TOTAL_HEIGHT <= y_max)
+            {
+                log_printf("line %d >= TOTAL_HEIGHT\n", y_max);
+            }
         }
 
         vga_vsync_previous = vsync;

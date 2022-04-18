@@ -24,7 +24,7 @@
 `define GITHASH 00000000                // unknown Git hash (not using Git)
 `endif
 
-`define VERSION 0_27                    // BCD version code (x.xx)
+`define VERSION 0_30                    // BCD version code (x.xx)
 
 //`define USE_HEXFONT                     // use hex font instead of default fonts
 //`define NO_TESTPATTERN                  // don't initialize VRAM with test pattern and fonts in simulation
@@ -33,7 +33,7 @@
 
 
 // features that can be optionally disabled
-`define ENABLE_LFSR                     // enable XM_REG 0xA as 19-bit LFSR
+//`define ENABLE_LFSR                     // enable XM_REG 0xA as 19-bit LFSR
 `define ENABLE_TIMERLATCH               // latch timer low byte when high byte read
 `define ENABLE_COPP                     // enable copper
 

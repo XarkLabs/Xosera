@@ -47,7 +47,7 @@
 #pragma GCC push_options
 #pragma GCC optimize("-Os")
 
-#define INSTALL_XANSI 0        // 0 to disable XANSI RAM installation (to test firmware XANSI)
+#define INSTALL_XANSI 1        // 0 to disable XANSI RAM installation (to test firmware XANSI)
 #define TINYECHO      0        // set to 1 for tiny echo only test
 
 #if !TINYECHO
@@ -342,8 +342,9 @@ static void ansiterm_testmenu()
 
 void xosera_ansiterm_test()
 {
-    printf("\nxosera_ansiterm_test started.\n\n");
+    printf("\033cxosera_ansiterm_test started.\n\n");
 #if INSTALL_XANSI
+    printf("\033[?25l");
     if (XANSI_CON_INIT())
     {
         printf("Xosera XANSI RAM console initialized.\n");

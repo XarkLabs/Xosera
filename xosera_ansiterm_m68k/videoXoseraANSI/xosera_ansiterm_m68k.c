@@ -74,6 +74,7 @@ extern void dprintf(const char * fmt, ...) __attribute__((format(__printf__, 1, 
 #define DEFAULT_COLOR         0x02        // rosco_m68k "retro" dark green on black
 #define MAX_CSI_PARMS         16          // max CSI parameters per sequence
 #define MAX_QUERY_LEN         16          // max query response length (including NUL terminator)
+#define USE_BLITTER           1           // 1 = use blitter for scrolling and clearing
 
 // terminal attribute and option flags
 enum e_term_flags
@@ -108,6 +109,7 @@ typedef struct xansiterm_data
     uint16_t vram_base;               // base VRAM address for text screen
     uint16_t vram_size;               // size of text screen in current mode (init clears to allow 8x8 font)
     uint16_t vram_end;                // ending address for text screen in current mode
+    uint16_t vram_memend;             // highest ending address used (for clear)
     uint16_t line_len;                // user specified line len (normally 0)
     uint16_t lines_high;              // user specified screen lines_high (normally 0)
     uint16_t cursor_glyph;            // custom cursor color and/or glyph (ignored if zero)
@@ -130,6 +132,7 @@ typedef struct xansiterm_data
     uint8_t  state;                             // current ANSI parsing state (e_term_state)
     uint8_t  flags;                             // various terminal flags (e_term_flags)
     uint8_t  color;                             // effective current background and forground color (high/low nibble)
+    char     ver_code[3];                       // Xosera initdata (from COPPER memory after reconfig)
     char     send_buffer[MAX_QUERY_LEN];        // xmit data for query replies
     bool     lcf;                               // flag for delayed last column wrap flag (PITA)
     bool     save_lcf;                          // storeage to save/restore lcf with cursor position
@@ -312,6 +315,7 @@ static inline void xansi_check_lcf(xansiterm_data * td)
 static inline void xansi_drawchar(xansiterm_data * td, char cdata)
 {
     xv_prep();
+
     xansi_check_lcf(td);
     xm_setw(WR_ADDR, td->cur_addr++);
     xm_setbh(DATA, td->color);
@@ -339,6 +343,37 @@ static inline void xansi_drawchar(xansiterm_data * td, char cdata)
 }
 
 // functions where speed is nice (but inline is too much)
+#if USE_BLITTER
+static __attribute__((noinline)) void xansi_clear(uint16_t start, uint16_t end)
+{
+    xansiterm_data * td = get_xansi_data();
+
+    if (start > end)
+    {
+        uint16_t t = start;
+        start      = end;
+        end        = t;
+    }
+    uint16_t count = end - start;
+
+    xv_prep();
+
+    xwait_blit_ready();
+    xreg_setw(BLIT_CTRL, 0x0003);                         // constA+constB
+    xreg_setw(BLIT_MOD_A, 0x0000);                        // no modulo A
+    xreg_setw(BLIT_SRC_A, (td->color << 8) | ' ');        // A = const data
+    xreg_setw(BLIT_MOD_B, 0x0000);                        // no modulo B
+    xreg_setw(BLIT_SRC_B, 0xFFFF);                        // AND with B (and disable transparency)
+    xreg_setw(BLIT_MOD_C, 0x0000);                        // no modulo C
+    xreg_setw(BLIT_VAL_C, 0x0000);                        // XOR with C
+    xreg_setw(BLIT_MOD_D, 0x0000);                        // no modulo D
+    xreg_setw(BLIT_DST_D, start);                         // VRAM display dest address
+    xreg_setw(BLIT_SHIFT, 0xFF00);                        // no edge masking or shifting
+    xreg_setw(BLIT_LINES, 0x0000);                        // lines (0 for 1-D blit)
+    xreg_setw(BLIT_WORDS, count);                         // words to write -1
+    xwait_blit_done();
+}
+#else
 static __attribute__((noinline)) void xansi_clear(uint16_t start, uint16_t end)
 {
     xansiterm_data * td = get_xansi_data();
@@ -358,7 +393,9 @@ static __attribute__((noinline)) void xansi_clear(uint16_t start, uint16_t end)
         xm_setbl(DATA, ' ');
     } while (++start <= end);
 }
+#endif
 
+#if 1 || !USE_BLITTER        // TODO: This will not be needed when xansi_scroll_down blitter debugged
 // scroll unrolled for 32-bytes per loop, so no inline please
 static __attribute__((noinline)) void xansi_do_scroll()
 {
@@ -398,6 +435,7 @@ static __attribute__((noinline)) void xansi_do_scroll()
         xm_setbl(DATA, ' ');
     }
 }
+#endif
 
 // draw input cursor (trying to make it visible)
 static inline void xansi_draw_cursor(xansiterm_data * td)
@@ -520,6 +558,8 @@ static void xansi_reset(bool reset_colormap)
     uint16_t v_frac        = hv_frac & 0x7;
     uint16_t rows          = td->lines_high;
     uint16_t cols          = td->line_len;
+    uint16_t rows_ru       = td->lines_high;
+    uint16_t cols_ru       = td->line_len;
 
     if (h_frac)
     {
@@ -533,15 +573,15 @@ static void xansi_reset(bool reset_colormap)
 
     if (rows == 0)
     {
-        rows = v_size / tile_h;        // calc full text rows
+        rows    = v_size / tile_h;                       // calc full text rows
+        rows_ru = (v_size + tile_h - 1) / tile_h;        // calc full text rows rounded up
     }
 
     if (cols == 0)
     {
-        cols = h_size / tile_w;        // calc full text columns
+        cols    = h_size / tile_w;                       // calc full text columns
+        cols_ru = (h_size + tile_w - 1) / tile_w;        // calc full text columns rounded up
     }
-
-    uint16_t prev_end = td->vram_end;
 
     td->h_size    = h_size;
     td->v_size    = v_size;
@@ -586,9 +626,11 @@ static void xansi_reset(bool reset_colormap)
     }
 
     // only clear any additional VRAM used from previous mode
-    if (prev_end < td->vram_end)
+    uint16_t clear_end = td->vram_base + (cols_ru * rows_ru);
+    if (td->vram_memend < clear_end)
     {
-        xansi_clear(prev_end, td->vram_end);
+        xansi_clear(td->vram_memend, clear_end);
+        td->vram_memend = clear_end;
     }
 
     xansi_calc_cur_addr(td);
@@ -629,6 +671,42 @@ static void xansi_cls()
 }
 
 // setup Xosera registers for scrolling up and call scroll function
+#if USE_BLITTER
+static void xansi_scroll_up()
+{
+    xansiterm_data * td = get_xansi_data();
+
+    xv_prep();
+
+    uint16_t saddr = td->vram_base + td->cols;
+    uint16_t daddr = td->vram_base;
+    uint16_t count = td->vram_size - td->cols;
+
+    xwait_blit_ready();
+    xreg_setw(BLIT_CTRL, 0x0002);            // constB
+    xreg_setw(BLIT_MOD_A, 0x0000);           // no modulo A
+    xreg_setw(BLIT_SRC_A, saddr);            // A = source
+    xreg_setw(BLIT_MOD_B, 0x0000);           // no modulo B
+    xreg_setw(BLIT_SRC_B, 0xFFFF);           // AND with B (and disable transparency)
+    xreg_setw(BLIT_MOD_C, 0x0000);           // no modulo C
+    xreg_setw(BLIT_VAL_C, 0x0000);           // XOR with C
+    xreg_setw(BLIT_MOD_D, 0x0000);           // no modulo D
+    xreg_setw(BLIT_DST_D, daddr);            // VRAM display dest address
+    xreg_setw(BLIT_SHIFT, 0xFF00);           // no edge masking or shifting
+    xreg_setw(BLIT_LINES, 0x0000);           // lines (0 for 1-D blit)
+    xreg_setw(BLIT_WORDS, count - 1);        // words to write -1
+
+    daddr = td->vram_base + td->vram_size - td->cols;
+    count = td->cols;
+
+    xwait_blit_ready();
+    xreg_setw(BLIT_CTRL, 0x0003);                         // constB+constA
+    xreg_setw(BLIT_SRC_A, (td->color << 8) | ' ');        // A = const data
+    xreg_setw(BLIT_DST_D, daddr);                         // VRAM display dest address
+    xreg_setw(BLIT_WORDS, count - 1);                     // words to write -1
+    xwait_blit_done();
+}
+#else
 static void xansi_scroll_up()
 {
     xansiterm_data * td = get_xansi_data();
@@ -640,7 +718,43 @@ static void xansi_scroll_up()
     xm_setw(RD_ADDR, td->vram_base + td->cols);
     xansi_do_scroll();
 }
+#endif
 
+#if 0 && USE_BLITTER        // TODO: This seldom used function is buggy...too tired to debug now. :)
+// setup Xosera registers for scrolling down and call scroll function
+static void xansi_scroll_down(xansiterm_data * td)
+{
+    xv_prep();
+
+    uint16_t saddr = td->vram_end - td->cols - 1;
+    uint16_t daddr = td->vram_end - 1;
+    uint16_t count = td->vram_size - td->cols;
+
+    xwait_blit_ready();
+    xreg_setw(BLIT_CTRL, 0x0012);            // decr+constB
+    xreg_setw(BLIT_MOD_A, 0x0000);           // no modulo A
+    xreg_setw(BLIT_SRC_A, saddr);            // A = source
+    xreg_setw(BLIT_MOD_B, 0x0000);           // no modulo B
+    xreg_setw(BLIT_SRC_B, 0xFFFF);           // AND with B (and disable transparency)
+    xreg_setw(BLIT_MOD_C, 0x0000);           // no modulo C
+    xreg_setw(BLIT_VAL_C, 0x0000);           // XOR with C
+    xreg_setw(BLIT_MOD_D, 0x0000);           // no modulo D
+    xreg_setw(BLIT_DST_D, daddr);            // VRAM display dest address
+    xreg_setw(BLIT_SHIFT, 0xFF00);           // no edge masking or shifting
+    xreg_setw(BLIT_LINES, 0x0000);           // lines (0 for 1-D blit)
+    xreg_setw(BLIT_WORDS, count - 1);        // words to write -1
+
+    daddr = td->vram_base + td->cols - 1;
+    count = td->cols;
+
+    xwait_blit_ready();
+    xreg_setw(BLIT_CTRL, 0x0013);                         // decr+constB+constA
+    xreg_setw(BLIT_SRC_A, (td->color << 8) | ' ');        // A = const data
+    xreg_setw(BLIT_DST_D, daddr);                         // VRAM display dest address
+    xreg_setw(BLIT_WORDS, count - 1);                     // words to write -1
+    xwait_blit_done();
+}
+#else
 // setup Xosera registers for scrolling down and call scroll function
 static void xansi_scroll_down(xansiterm_data * td)
 {
@@ -651,6 +765,7 @@ static void xansi_scroll_down(xansiterm_data * td)
     xm_setw(RD_ADDR, (uint16_t)(td->vram_end - 1 - td->cols));
     xansi_do_scroll();
 }
+#endif
 
 // process control character
 static void xansi_processctrl(xansiterm_data * td, char cdata)
@@ -785,6 +900,18 @@ static void str_dec(char ** strptr, unsigned int num)
     }
     *p++    = '0' + n;
     *strptr = p;
+}
+
+// note 0-ffffffff (outputs 1 to 8 digits)
+static void str_hex(char ** strptr, unsigned int num)
+{
+    if (num > 0xf)
+    {
+        str_hex(strptr, num >> 4);
+    }
+    char * p = *strptr;
+    *p++     = "0123456789ABCDEF"[num & 0xf];
+    *strptr  = p;
 }
 
 // also copies NUL
@@ -1128,19 +1255,18 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                 }
                 else if (num_z == 68)
                 {
-                    uint16_t vercode = xreg_getw_wait(VERSION);
-                    char *   strptr  = td->send_buffer;
-                    td->send_index   = 0;
+                    char * strptr  = td->send_buffer;
+                    td->send_index = 0;
 
                     *strptr++ = '\x1b';
                     *strptr++ = '[';
                     *strptr++ = '?';
                     str_dec(&strptr, 68);
                     *strptr++ = ';';
-                    str_dec(&strptr, (vercode >> 8) & 0xf);
+                    *strptr++ = td->ver_code[0];
                     *strptr++ = ';';
-                    str_dec(&strptr, (vercode >> 4) & 0xf);
-                    str_dec(&strptr, (vercode >> 0) & 0xf);
+                    *strptr++ = td->ver_code[1];
+                    *strptr++ = td->ver_code[2];
                     *strptr++ = ';';
                     str_dec(&strptr, XANSI_TERMINAL_REVISION);
                     *strptr++ = 'c';
@@ -1782,14 +1908,14 @@ static const char xansiterm_banner[] =
     " ___ ___ ___ __ ___       _____|  _| . | |_\r\n"
     "|  _| . |_ -| _| . |     |     | . | . | '_|\r\n"
     "|_| |___|___|__|___|_____|_|_|_|___|___|_,_|\r\n"
-    "\x1b[35mX\x1b[93mo\x1b[33ms\x1b[96me\x1b[92mr\x1b[91ma \x1b[0mv";                     // 0.20
-static const char xansiterm_banner2[] = " XANSI \x1b[93m|_____|\x1b[0m  Firmware ";        // 2.0.DEV\r\n;
+    "\x1b[35mX\x1b[93mo\x1b[33ms\x1b[96me\x1b[92mr\x1b[91ma \x1b[0mv";                              // 0.20
+static const char xansiterm_banner2[] = " XANSI \x1b[93m|_____|\x1b[1;37m  Classic \x1b[0m";        // 2.30.DEV\r\n;
 
-// initialize terminal functions
-// TODO: ICP default values
+
+// initialize XANSI // TODO: ICP default values in flash config
 bool xansiterm_INIT()
 {
-    xv_prep();
+    xosera_info_t init_data;
 
     LOGF("\n[xansiterm_INIT: xosera_init(%d) ", DEFAULT_XOSERA_CONFIG);
     bool reconfig_ok = xosera_init(DEFAULT_XOSERA_CONFIG);
@@ -1813,37 +1939,42 @@ bool xansiterm_INIT()
     td->def_color    = DEFAULT_COLOR;                           // default dark-green on black
     td->send_index   = -1;
 
+    // TODO: Improve numeric version code method
+    xosera_get_info(&init_data);
+    td->ver_code[0] = init_data.version_str[8];         // Xosera vX.xx
+    td->ver_code[1] = init_data.version_str[10];        // Xosera vx.Xx
+    td->ver_code[2] = init_data.version_str[11];        // Xosera vx.xX
+
     xansi_reset(true);
-    char     verstr[10];
-    uint16_t ver = xreg_getw_wait(VERSION);
+    char verstr[10];
     xansiterm_PRINT(xansiterm_banner);
     char * vs = verstr;
-    str_dec(&vs, (ver >> 8) & 0xf);
-    *vs++ = '.';
-    str_dec(&vs, (ver >> 4) & 0xf);
-    str_dec(&vs, (ver >> 0) & 0xf);
-    *vs++ = '\0';
+    *vs++     = td->ver_code[0];
+    *vs++     = '.';
+    *vs++     = td->ver_code[1];
+    *vs++     = td->ver_code[2];
+    *vs++     = '\0';
     xansiterm_PRINT(verstr);
     xansiterm_PRINT(xansiterm_banner2);
-    vs = verstr;
+    char * ft = verstr;
     if (!(_FIRMWARE_REV & (1U << 31)))
     {
-        *vs++ = ' ';
-        *vs++ = ' ';
-        *vs++ = ' ';
-        *vs++ = ' ';
+        *ft++ = ' ';
+        *ft++ = ' ';
+        *ft++ = ' ';
+        *ft++ = ' ';
     }
-    str_dec(&vs, (_FIRMWARE_REV >> 8) & 0xf);
-    *vs++ = '.';
-    str_dec(&vs, (_FIRMWARE_REV >> 0) & 0xf);
+    str_hex(&ft, (_FIRMWARE_REV >> 8) & 0xf);
+    *ft++ = '.';
+    str_hex(&ft, (_FIRMWARE_REV >> 0) & 0xff);
     if (_FIRMWARE_REV & (1U << 31))
     {
-        *vs++ = '.';
-        *vs++ = 'D';
-        *vs++ = 'E';
-        *vs++ = 'V';
+        *ft++ = '.';
+        *ft++ = 'D';
+        *ft++ = 'E';
+        *ft++ = 'V';
     }
-    *vs++ = '\0';
+    *ft++ = '\0';
     xansiterm_PRINTLN(verstr);
     xansiterm_PRINTLN(0);
     return true;

@@ -27,13 +27,9 @@
 #if !defined(XOSERA_M68K_API_H)
 #define XOSERA_M68K_API_H
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
-
-bool xosera_sync();                        // true if Xosera present and responding
-bool xosera_init(int reconfig_num);        // wait a bit for Xosera to respond and optional reconfig (if 0 to 3)
-void cpu_delay(int ms);                    // delay approx milliseconds with CPU busy wait
-void xv_delay(uint32_t ms);                // delay milliseconds using Xosera TIMER
 
 // Low-level C API reference:
 //
@@ -104,6 +100,24 @@ typedef struct _xreg
         const volatile uint32_t l;        // NOTE: For use as offset only with xv_setl (and MOVEP.L opcode)
     };
 } xmreg_t;
+
+// TODO: Make this 64 bytes...
+typedef struct _xosera_info
+{
+    char version_str[28];
+    int  githash;
+} xosera_info_t;
+
+// external function declarations
+
+bool xosera_sync();                                // true if Xosera present and responding
+bool xosera_init(int reconfig_num);                // wait a bit for Xosera to respond and optional reconfig (if 0 to 3)
+bool xosera_get_info(xosera_info_t * info);        // TODO: retrieve initdata (only valid after xosera reconfig)
+void cpu_delay(int ms);                            // delay approx milliseconds with CPU busy wait
+void xv_delay(uint32_t ms);                        // delay milliseconds using Xosera TIMER
+
+static_assert(sizeof(uint32_t) == 4, "bad sizeof uint32_t");
+static_assert(sizeof(xosera_info_t) == 32, "bad  sizeof xosera_info");
 
 // Xosera XM register base ptr
 #if !defined(XV_PREP_REQUIRED)
@@ -319,6 +333,9 @@ extern volatile xmreg_t * const xosera_ptr;
                              : [ptr] "a"(xosera_ptr), [bitval] "d"(bitval)                                             \
                              :);                                                                                       \
     } while (false)
+// wait until blit unit to be completely done with all operations (synonym for xwait_blit_busy)
+#define xwait_blit_done() xwait_blit_busy()
+
 // wait for blit unit to have room in xreg queue
 #define xwait_blit_full()                                                                                              \
     do                                                                                                                 \
@@ -330,6 +347,8 @@ extern volatile xmreg_t * const xosera_ptr;
                              : [ptr] "a"(xosera_ptr), [bitval] "d"(bitval)                                             \
                              :);                                                                                       \
     } while (false)
+// wait until blit unit is available for a new operation (synonym for xwait_blit_full)
+#define xwait_blit_ready() xwait_blit_full()
 
 // return high byte (even address) from XR memory address xrmem
 #define xmem_getbh_wait(xrmem)                                                                                         \

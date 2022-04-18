@@ -144,7 +144,7 @@ uint32_t copper_320x200[] = {
 // dummy global variable
 uint32_t global;        // this is used to prevent the compiler from optimizing out tests
 
-uint8_t xosera_initdata[32];
+xosera_info_t initinfo;
 
 uint32_t mem_buffer[128 * 1024];
 
@@ -1060,6 +1060,23 @@ struct bob      bobs[NUM_BOBS];
 static uint16_t blit_shift[4]  = {0xF000, 0x7801, 0x3C02, 0x1E03};
 static uint16_t blit_rshift[4] = {0x8700, 0xC301, 0xE102, 0xF003};
 
+static uint16_t get_lfsr()
+{
+    static uint16_t lfsr = 42;
+    uint32_t        msb  = (int16_t)lfsr < 0; /* Get MSB (i.e., the output bit). */
+    lfsr <<= 1;                               /* Shift register */
+    if (msb)                                  /* If the output bit is 1, */
+        lfsr ^= 0x002Du;                      /*  apply toggle mask. */
+
+    uint32_t r = lfsr + xreg_getw(SCANLINE) + xm_getw(TIMER) + _TIMER_100HZ;
+    if (r >= 0x10000)
+    {
+        r++;
+    }
+
+    return r;
+}
+
 void test_blit()
 {
     static const int W_4BPP = 320 / 4;
@@ -1090,7 +1107,7 @@ void test_blit()
         for (int i = 0x100; i >= 0; i -= 0x4)
         {
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xf000);        // set write address
-            wait_blit_ready();
+            xwait_blit_ready();
             wait_vsync();
             wait_not_vsync();
             while (xreg_getw_wait(SCANLINE) != 20)
@@ -1109,7 +1126,7 @@ void test_blit()
             xreg_setw(BLIT_SHIFT, 0xFF00);             // no edge masking or shifting
             xreg_setw(BLIT_LINES, 0x0000);             // 1D
             xreg_setw(BLIT_WORDS, 0x10000 - 1);        // 64KW VRAM
-            wait_blit_done();
+            xwait_blit_done();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xff00);        // set write address
             wait_vsync();
         }
@@ -1125,7 +1142,7 @@ void test_blit()
         xr_printfxy(0, 0, "Blit 320x240 16 color\n");        // set write address
 
         // 2D screen screen copy 0x0000 -> 0x4B00 320x240 4-bpp
-        wait_blit_ready();
+        xwait_blit_ready();
         xreg_setw(BLIT_CTRL, 0x0002);             // constB
         xreg_setw(BLIT_MOD_A, 0x0000);            // no modulo A
         xreg_setw(BLIT_SRC_A, paddr);             // A = source
@@ -1138,14 +1155,14 @@ void test_blit()
         xreg_setw(BLIT_SHIFT, 0xFF00);            // no edge masking or shifting
         xreg_setw(BLIT_LINES, H_4BPP - 1);        // lines (0 for 1-D blit)
         xreg_setw(BLIT_WORDS, W_4BPP - 1);        // words to write -1
-        wait_blit_done();
+        xwait_blit_done();
         xreg_setw(PA_DISP_ADDR, daddr);
 
         xr_printfxy(0, 0, "Blit 320x240 16 color\nShift right\n");        // set write address
         wait_vsync_start();
         for (int i = 0; i < 128; i++)
         {
-            wait_blit_ready();                              // make sure blit ready (previous blit started)
+            xwait_blit_ready();                             // make sure blit ready (previous blit started)
             xreg_setw(BLIT_CTRL, 0x0002);                   // constB
             xreg_setw(BLIT_MOD_A, -1);                      // A modulo
             xreg_setw(BLIT_SRC_A, paddr);                   // A source VRAM addr (pacman)
@@ -1161,7 +1178,7 @@ void test_blit()
             xreg_setw(BLIT_WORDS, W_4BPP);            // words to write -1
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xfff0);        // set write address
 
-            wait_blit_done();
+            xwait_blit_done();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xf0f0);        // set write address
             wait_vsync_start();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xff00);        // set write address
@@ -1173,7 +1190,7 @@ void test_blit()
         wait_vsync_start();
         for (int i = 127; i >= 3; i--)
         {
-            wait_blit_ready();                                       // make sure blit ready (previous blit started)
+            xwait_blit_ready();                                      // make sure blit ready (previous blit started)
             xreg_setw(BLIT_CTRL, 0x0012);                            // constB
             xreg_setw(BLIT_MOD_A, 1);                                // A modulo
             xreg_setw(BLIT_SRC_A, paddr + (H_4BPP * W_4BPP));        // A source VRAM addr (pacman)
@@ -1189,7 +1206,7 @@ void test_blit()
             xreg_setw(BLIT_LINES, H_4BPP - 1);        // lines (0 for 1-D blit)
             xreg_setw(BLIT_WORDS, W_4BPP);            // words to write -1
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xfff0);        // set write address
-            wait_blit_done();
+            xwait_blit_done();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xf0f0);        // set write address
             wait_vsync_start();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xff00);        // set write address
@@ -1213,13 +1230,13 @@ void test_blit()
             bobs[b].x_pos = b * 22;
             bobs[b].y_pos = b * 18;
             uint16_t r;
-            r               = xm_getw(LFSR);
+            r               = get_lfsr();
             bobs[b].x_delta = r & 0x8 ? -((r & 3) - 1) : ((r & 3) + 1);
-            r               = xm_getw(LFSR);
+            r               = get_lfsr();
             bobs[b].y_delta = r & 0x8 ? -((r & 3) - 1) : ((r & 3) + 1);
         }
 
-        wait_blit_ready();
+        xwait_blit_ready();
         xreg_setw(BLIT_CTRL, 0xEE02);             // constB, 4bpp transp=E
         xreg_setw(BLIT_MOD_A, 0x0000);            // A mod (XOR)
         xreg_setw(BLIT_SRC_A, paddr);             // A source const word
@@ -1241,7 +1258,7 @@ void test_blit()
             for (int b = 0; b < nb; b++)
             {
                 struct bob * bp = &bobs[b];
-                wait_blit_ready();                             // make sure blit ready (previous blit started)
+                xwait_blit_ready();                            // make sure blit ready (previous blit started)
                 xreg_setw(BLIT_CTRL, 0xEE02);                  // constB, 4bpp transp=E
                 xm_setw(XR_DATA, W_4BPP - W_LOGO - 1);         // A modulo
                 xm_setw(XR_DATA, paddr + bp->w_offset);        // A initial term (not used)
@@ -1274,7 +1291,7 @@ void test_blit()
                 bp->w_offset     = off;
                 uint8_t shift    = bp->x_pos & 3;
 
-                wait_blit_ready();                            // make sure blit ready (previous blit started)
+                xwait_blit_ready();                           // make sure blit ready (previous blit started)
                 xreg_setw(BLIT_CTRL, 0x0001);                 // constA
                 xm_setw(XR_DATA, 0x0000);                     // A modulo
                 xm_setw(XR_DATA, 0xFFFF);                     // A initial term (not used)
@@ -1291,7 +1308,7 @@ void test_blit()
             }
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xfff0);        // set write address
             checkbail();
-            wait_blit_done();
+            xwait_blit_done();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xf0f0);        // set write address
             wait_vsync();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xff00);        // set write address
@@ -2274,21 +2291,8 @@ void     xosera_test()
     dprintf("\nxosera_init(0)...");
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw_wait(VID_HSIZE), xreg_getw_wait(VID_VSIZE));
-
-    uint8_t * init_ptr = xosera_initdata;
-    for (int i = XR_COPPER_ADDR + XR_COPPER_SIZE - 16; i < XR_COPPER_ADDR + XR_COPPER_SIZE; i++)
-    {
-        uint16_t v = xmem_getw_wait(i);
-        //        dprintf("0x%04x = 0x%04x\n", i, v);
-        *init_ptr++ = (uint8_t)(v >> 8);
-        *init_ptr++ = (uint8_t)(v & 0xff);
-    }
-    dprintf("ID: %s Githash:0x%02x%02x%02x%02x\n",
-            xosera_initdata,
-            xosera_initdata[28],
-            xosera_initdata[29],
-            xosera_initdata[30],
-            xosera_initdata[31]);
+    xosera_get_info(&initinfo);
+    dprintf("ID: %s Githash:0x%08x\n", initinfo.version_str, initinfo.githash);
 
     wait_vsync_start();
     xreg_setw(PA_GFX_CTRL, 0x0080);            // PA blanked
@@ -2414,7 +2418,7 @@ void     xosera_test()
         xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
         xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
 
-        uint16_t features = xreg_getw_wait(VERSION);
+        uint16_t features = xreg_getw_wait(FEATURES);
         //        uint32_t githash   = ((uint32_t)xreg_getw_wait(GITHASH_H) << 16) |
         //        (uint32_t)xreg_getw_wait(GITHASH_L);
         uint16_t monwidth  = xreg_getw_wait(VID_HSIZE);
@@ -2432,12 +2436,7 @@ void     xosera_test()
         uint16_t vidleft  = xreg_getw_wait(VID_LEFT);
         uint16_t vidright = xreg_getw_wait(VID_RIGHT);
 
-        dprintf("%s #%02x%02x%02x%02x ",
-                xosera_initdata,
-                xosera_initdata[28],
-                xosera_initdata[29],
-                xosera_initdata[30],
-                xosera_initdata[31]);
+        dprintf("%s #%02x%02x%02x%02x ", initinfo.version_str, initinfo.githash);
         dprintf("Features:0x%04x\n", features);
         dprintf("Monitor Native Res: %dx%d\n", monwidth, monheight);
         dprintf("SYS_CTRL    : 0x%04x  VID_CTRL    : 0x%04x\n", sysctrl, vidctrl);

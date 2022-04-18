@@ -131,22 +131,21 @@ void xosera_copper_test()
 
     xreg_setw(COPP_CTRL, 0x8000);
 
-    uint16_t version   = xreg_getw(VERSION);
-    uint32_t githash   = ((uint32_t)xreg_getw(GITHASH_H) << 16) | (uint32_t)xreg_getw(GITHASH_L);
+    uint16_t features  = xreg_getw(FEATURES);
     uint16_t monwidth  = xreg_getw(VID_HSIZE);
     uint16_t monheight = xreg_getw(VID_VSIZE);
-    uint16_t monfreq   = xreg_getw(VID_VFREQ);
 
     uint16_t gfxctrl  = xreg_getw(PA_GFX_CTRL);
     uint16_t tilectrl = xreg_getw(PA_TILE_CTRL);
     uint16_t dispaddr = xreg_getw(PA_DISP_ADDR);
     uint16_t linelen  = xreg_getw(PA_LINE_LEN);
     uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
+    uint16_t hvfscale = xreg_getw(PA_HV_FSCALE);
 
-    dprintf("Xosera v%1x.%02x #%08x Features:0x%02x\n", (version >> 8) & 0xf, (version & 0xff), githash, version >> 8);
-    dprintf("Monitor Mode: %dx%d@%2x.%02xHz\n", monwidth, monheight, monfreq >> 8, monfreq & 0xff);
+    dprintf("Xosera - Features: 0x%04x\n", features);
+    dprintf("Monitor Mode: %dx%d\n", monwidth, monheight);
     dprintf("\nPlayfield A:\n");
-    dprintf("PA_GFX_CTRL : 0x%04x PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
-    dprintf("PA_DISP_ADDR: 0x%04x PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
-    dprintf("PA_HV_SCROLL: 0x%04x\n", hvscroll);
+    dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
+    dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
+    dprintf("PA_HV_SCROLL: 0x%04x  PA_HV_FSCALE: 0x%04x\n", hvscroll, hvfscale);
 }

@@ -21,6 +21,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <machine.h>
 
@@ -113,6 +115,35 @@ bool xosera_init(int reconfig_num)
     }
 
     return detected;
+}
+
+// TODO: retrieve xosera_info (placed in COPPER memory after xosera reconfig)
+bool xosera_get_info(xosera_info_t * info)
+{
+    if (info == NULL)
+    {
+        return false;
+    }
+
+    memset(info, 0, sizeof(xosera_info_t));
+
+    if (!xosera_sync())
+    {
+        return false;
+    }
+
+    xv_prep();
+
+    uint16_t * wp = (uint16_t *)info;
+
+    // xosera_info stored at end COPPER program memory
+    for (int i = XV_INFO_ADDR; i < (XV_INFO_ADDR + XV_INFO_WORDSIZE); i++)
+    {
+        uint16_t v = xmem_getw_wait(i);
+        *wp++      = v;
+    }
+
+    return true;        // TODO: Add CRC or similar?
 }
 
 // define xosera_ptr in a way that GCC can't see the immediate const value (causing it to keep it in a register).

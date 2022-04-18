@@ -39,6 +39,12 @@
 #define XR_COPPER_SIZE  0x0800        //                      2048 x 16-bit copper program memory addresses
 #define XR_UNUSED_ADDR  0xE000        // (-/-) 0xE000-0xFFFF unused
 
+// Xosera info data in COPPER memory after FPGA reconfigure
+#define XV_INFO_WORDSIZE    16        // TODO: make this 32?
+#define XV_INFO_ADDR        (XR_COPPER_ADDR + XR_COPPER_SIZE - XV_INFO_WORDSIZE)
+#define XV_INFO_VERSION_STR 0         // byte offset in xosera_info for version string
+#define XV_INFO_GITHASH     14        // byte offset in xosera_info for githash uint32_t
+
 // Macros to make bit-fields easier (works similar to Verilog "+:" operator, e.g., word[RIGHTMOST_BIT +: BIT_WIDTH])
 #define XB_(v, right_bit, bit_width) (((v) & ((1 << (bit_width)) - 1)) << (right_bit))
 
@@ -55,7 +61,7 @@
 #define XM_DATA_2    0x1C        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
 #define XM_SYS_CTRL  0x20        // (R /W+) busy status, FPGA reconfig, interrupt status/control, write masking
 #define XM_TIMER     0x24        // (R /W+) read 1/10th millisecond timer, write clear interrupt signal
-#define XM_LFSR      0x28        // (RO)    LFSR pseudo-random number // TODO: keep this?
+#define XM_UNUSED_A  0x28        // (RO)    // TODO: unused?
 #define XM_UNUSED_B  0x2C        // (R /W ) unused direct register 0xB // TODO: slated for XR_DATA_2 after reorg
 #define XM_RW_INCR   0x30        // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
 #define XM_RW_ADDR   0x34        // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
@@ -81,13 +87,13 @@
 #define XR_VID_LEFT    0x06        // (R /W) left edge of active display window (typically 0)
 #define XR_VID_RIGHT   0x07        // (R /W) right edge +1 of active display window (typically 640 or 848)
 #define XR_SCANLINE    0x08        // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline
-#define XR_UNUSED_09   0x09        // (RO  )
-#define XR_VERSION     0x0A        // (RO  ) Xosera optional feature bits [15:8] and version code [7:0] [TODO]
-#define XR_GITHASH_H   0x0B        // (RO  ) [15:0] high 16-bits of 32-bit Git hash build identifier
-#define XR_GITHASH_L   0x0C        // (RO  ) [15:0] low 16-bits of 32-bit Git hash build identifier
+#define XR_UNUSED_09   0x09        // (RO  ) // TODO: to be refactored
+#define XR_UNUSED_0A   0x0A        // (RO  ) // TODO: to be refactored
+#define XR_UNUSED_0B   0x0B        // (RO  ) // TODO: to be refactored
+#define XR_UNUSED_0C   0x0C        // (RO  ) // TODO: to be refactored
 #define XR_VID_HSIZE   0x0D        // (RO  ) native pixel width of monitor mode (e.g. 640/848)
 #define XR_VID_VSIZE   0x0E        // (RO  ) native pixel height of monitor mode (e.g. 480)
-#define XR_VID_VFREQ   0x0F        // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+#define XR_FEATURES    0x0F        // (RO  ) // TODO: to be refactored
 
 #define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 8, 8) | XB_(intmask, 0, 4))
 
@@ -99,7 +105,7 @@
 #define XR_PA_HV_SCROLL 0x14        // (R /W) playfield A horizontal and vertical fine scroll
 #define XR_PA_LINE_ADDR 0x15        // (- /W) playfield A scanline start address (loaded at start of line)
 #define XR_PA_HV_FSCALE 0x16        // (R /W) playfield A horizontal and vertical fractional scale
-#define XR_PA_UNUSED_17 0x17        //
+#define XR_PA_UNUSED_17 0x17        // // TODO: colorbase?
 
 // Playfield B Control XR Registers
 #define XR_PB_GFX_CTRL  0x18        // (R /W) playfield B graphics control
@@ -109,7 +115,7 @@
 #define XR_PB_HV_SCROLL 0x1C        // (R /W) playfield B horizontal and vertical fine scroll
 #define XR_PB_LINE_ADDR 0x1D        // (- /W) playfield B scanline start address (loaded at start of line)
 #define XR_PB_HV_FSCALE 0x1E        // (R /W) playfield B horizontal and vertical fractional scale
-#define XR_PB_UNUSED_1F 0x1F        //
+#define XR_PB_UNUSED_1F 0x1F        // // TODO: colorbase?
 
 #define XR_GFX_BPP_1 0        // Px_GFX_CTRL.bpp
 #define XR_GFX_BPP_4 1        // Px_GFX_CTRL.bpp

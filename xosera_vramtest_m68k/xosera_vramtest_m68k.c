@@ -834,7 +834,7 @@ struct xosera_initdata
     uint32_t githash;
 };
 
-struct xosera_initdata initdata;
+xosera_info_t initinfo;
 
 void xosera_vramtest()
 {
@@ -859,12 +859,7 @@ void xosera_vramtest()
             bool success   = xosera_init(cur_xosera_config);
             last_timer_val = xm_getw(TIMER);
             dprintf("%s (%dx%d). ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
-            char * init_ptr = (char *)&initdata;
-            for (int i = XR_COPPER_ADDR + XR_COPPER_SIZE - 16; i < XR_COPPER_ADDR + XR_COPPER_SIZE; i++)
-            {
-                *init_ptr++ = (char)xmem_getbh_wait(i);
-                *init_ptr++ = (char)xm_getbl(XR_DATA);
-            }
+            xosera_get_info(&initinfo);
         }
 
 #if 0
@@ -887,7 +882,7 @@ void xosera_vramtest()
                 s,
                 vram_test_fail_count);
 
-        uint16_t features  = xreg_getw(VERSION);        // TODO: this is feature codes
+        uint16_t features  = xreg_getw(FEATURES);        // TODO: this is feature codes
         uint16_t monwidth  = xreg_getw(VID_HSIZE);
         uint16_t monheight = xreg_getw(VID_VSIZE);
 
@@ -896,8 +891,8 @@ void xosera_vramtest()
                 (unsigned int)features,
                 (unsigned int)monwidth,
                 (unsigned int)monheight,
-                (unsigned int)initdata.githash,
-                initdata.name_version);
+                (unsigned int)initinfo.githash,
+                initinfo.version_str);
 
         for (int i = 0; i < TEST_MODES; i++)
         {

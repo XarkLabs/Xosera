@@ -31,8 +31,9 @@
 //#define DELAY_TIME 1000        // impatient human speed
 #define DELAY_TIME 500        // machine speed
 
-#define COPPER_TEST    1
-#define LR_MARGIN_TEST 0
+#define COPPER_TEST            1
+#define INTERACTIVE_AUDIO_TEST 0
+#define BLURB_AUDIO            1
 
 #define BLIT_TEST_PIC      0
 #define TUT_PIC            1
@@ -634,7 +635,7 @@ static long filesize(void * f)
     return fsize;
 }
 
-static bool load_test_audio(const char * filename, int8_t ** out, int * size)
+static bool load_test_audio(const char * filename, void ** out, int * size)
 {
     void * file  = fl_fopen(filename, "r");
     int    fsize = (int)filesize(file);
@@ -666,6 +667,12 @@ static bool load_test_audio(const char * filename, int8_t ** out, int * size)
         if ((rsize & 0xFFF) == 0)
         {
             dprintf("\rReading \"%s\": %d KB ", filename, rsize >> 10);
+            if (rsize)
+            {
+                uint8_t ox = xr_x;
+                xr_printf("%3dK", rsize >> 10);
+                xr_x = ox;
+            }
         }
 
         data += cnt;
@@ -677,6 +684,7 @@ static bool load_test_audio(const char * filename, int8_t ** out, int * size)
         }
     }
     dprintf("\rLoaded \"%s\": %dKB (%d bytes).  \n", filename, rsize >> 10, rsize);
+    xr_printf("%3dK\n", rsize >> 10);
 
     if (rsize != fsize)
     {
@@ -1960,8 +1968,8 @@ static int8_t sinData[256] = {
 };
 #endif
 
-int8_t * testsamp;
-int      testsampsize;
+void * testsamp;
+int    testsampsize;
 
 static void test_audio_sample(const char * name, int8_t * samp, int bytesize, int speed)
 {
@@ -1998,7 +2006,7 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
     xreg_setw(AUD0_START, 0x8000);                     // address in VRAM
     xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
     xreg_setw(AUD0_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
-    xreg_setw(VID_CTRL, 0x0010);                       // enable audio DMA to start playing
+    xreg_setw(VID_CTRL, 0x0110);                       // enable audio DMA to start playing
 
     bool done = false;
 
@@ -2079,12 +2087,62 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
     }
 
     xreg_setw(AUD0_VOL, 0x0000);           // set volume to 0%
-    xreg_setw(VID_CTRL, 0x0000);           // disable audio DMA
+    xreg_setw(VID_CTRL, 0x0100);           // disable audio DMA
     xreg_setw(AUD0_PERIOD, 0x0000);        // 1000 clocks per each sample byte
     xreg_setw(AUD0_LENGTH, 0x0000);        // 1000 clocks per each sample byte
 
     dprintf("\rSample playback done.                                       \n");
     xr_printfxy(0, 0, "Xosera audio test\n\n");
+}
+
+void wait_scanline()
+{
+    uint16_t l = xreg_getw(SCANLINE) & 0x7fff;
+    while (l == (xreg_getw(SCANLINE) & 0x7fff))
+        ;
+    l = xreg_getw(SCANLINE) & 0x7fff;
+    while (l == (xreg_getw(SCANLINE) & 0x7fff))
+        ;
+    l = xreg_getw(SCANLINE) & 0x7fff;
+    while (l == (xreg_getw(SCANLINE) & 0x7fff))
+        ;
+    l = xreg_getw(SCANLINE) & 0x7fff;
+    while (l == (xreg_getw(SCANLINE) & 0x7fff))
+        ;
+}
+
+#define SILENCE_VADDR 0xffff
+
+static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
+{
+    xreg_setw(AUD0_START, vaddr);
+    xreg_setw(AUD0_LENGTH, (len / 2) - 1);
+
+    uint32_t clk_hz = xreg_getw(VID_HSIZE) > 640 ? 33750000 : 25125000;
+    uint16_t period = (clk_hz + rate - 1) / rate;
+    xreg_setw(AUD0_PERIOD, period);
+
+    wait_scanline();
+
+    xreg_setw(AUD0_START, SILENCE_VADDR);
+    xreg_setw(AUD0_LENGTH, 0);
+}
+
+static void upload_audio(void * memdata, uint16_t vaddr, int len)
+{
+    xm_setw(WR_INCR, 0x0001);
+    xm_setw(WR_ADDR, SILENCE_VADDR);
+    xm_setw(DATA, 0x0000);        // zero = silence sample
+    xreg_setw(AUD0_START, SILENCE_VADDR);
+    xreg_setw(AUD0_LENGTH, 0);
+    xm_setw(WR_ADDR, vaddr);
+    uint16_t * wp = memdata;
+    for (int i = len; i > 0; i -= 2)
+    {
+        xm_setw(DATA, *wp++);
+    }
+    xreg_setw(AUD0_VOL, 0x8080);
+    xreg_setw(VID_CTRL, 0x0010);
 }
 
 const char blurb[] =
@@ -2201,6 +2259,10 @@ static void set_alpha(int alpha)
         xm_setw(XR_DATA, v);
     }
 }
+#if BLURB_AUDIO
+void * xosera_audio;
+int    xosera_audio_len;
+#endif
 
 uint32_t test_count;
 void     xosera_test()
@@ -2233,6 +2295,8 @@ void     xosera_test()
     xreg_setw(VID_CTRL, 0x0100);               // border color #1 (blue)
     xmem_setw(XR_COLOR_A_ADDR, 0x0000);        // color # = black
     xr_textmode_pb();
+    xreg_setw(VID_CTRL, 0x0100);                      // border color #0
+    xmem_setw(XR_COLOR_B_ADDR + 0xFF, 0xFfff);        // color # = black
     xr_msg_color(0x0f);
     xr_printfxy(5, 0, "xosera_test_m68k\n");
 
@@ -2254,21 +2318,12 @@ void     xosera_test()
 
     (void)sinData;
 
-#if 1        // audio waveform test
-    {
-        test_audio_sample("sine wave", sinData, sizeof(sinData), 1000);
-
-        xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
-
-        memset(testsamp, 0, testsampsize);
-
-        free(testsamp);
-    }
+#if INTERACTIVE_AUDIO_TEST        // audio waveform test
     if (load_test_audio("/xosera_8000.raw", &testsamp, &testsampsize))
     {
         test_audio_sample("xosera_8000.raw", testsamp, testsampsize, 3150);
 
-        xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
+        xreg_setw(VID_CTRL, 0x0100);        // enable audio DMA to start playing
 
         memset(testsamp, 0, testsampsize);
 
@@ -2278,14 +2333,19 @@ void     xosera_test()
     {
         test_audio_sample("Boing.raw", testsamp, testsampsize, 3150);
 
-        xreg_setw(VID_CTRL, 0x0000);        // enable audio DMA to start playing
+        xreg_setw(VID_CTRL, 0x0100);        // enable audio DMA to start playing
 
         memset(testsamp, 0, testsampsize);
 
         free(testsamp);
     }
+    {
+        test_audio_sample("sine wave", sinData, sizeof(sinData), 1000);
 
+        xreg_setw(VID_CTRL, 0x0100);        // enable audio DMA to start playing
+    }
 #endif
+
     xr_textmode_pb();
     xreg_setw(VID_CTRL, 0x0100);                      // border color #0
     xmem_setw(XR_COLOR_B_ADDR + 0xFF, 0xFfff);        // color # = black
@@ -2296,7 +2356,7 @@ void     xosera_test()
 
     if (use_sd)
     {
-        xr_printf("\nLoading test images:\n");
+        xr_printf("\nLoading test assets:\n");
         xr_printf(" \xAF 320x240 pac-mock ");
         load_test_image(BM_4_BIT, "/pacbox-320x240.raw", "/pacbox-320x240_pal.raw");
         xr_printf(" \xAF 320x200 King Tut ");
@@ -2307,6 +2367,10 @@ void     xosera_test()
         load_test_image(BM_12_BIT, "/parrot_320x240_RG8B4.raw", "/true_color_pal.raw");
         xr_printf(" \xAF Xosera 8-bpp     ");
         load_test_image(BM_8_BIT, "/xosera_r1.raw", "/xosera_r1_pal.raw");
+#if BLURB_AUDIO
+        xr_printf(" \xAF Xark audio clip  ");
+        load_test_audio("/xosera_8000.raw", &xosera_audio, &xosera_audio_len);
+#endif
     }
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
@@ -2432,6 +2496,11 @@ void     xosera_test()
                 }
             }
         }
+
+#if BLURB_AUDIO
+        upload_audio(xosera_audio, 0x2000, xosera_audio_len);
+        play_sample(0x2000, xosera_audio_len, 8000);
+#endif
 
         delay_check(DELAY_TIME * 10);
 

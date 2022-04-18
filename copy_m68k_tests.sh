@@ -13,6 +13,7 @@ fi
 echo "=== Copying rosco_m68k Xosera tests -> $1"
 echo
 cp -v xosera_ansiterm_m68k/xosera_ansiterm_m68k.bin "$1"
+cp -v xosera_boing_m68k/xosera_boing_m68k.bin "$1"
 cp -v xosera_vramtest_m68k/xosera_vramtest_m68k.bin "$1"
 cp -v xosera_test_m68k/xosera_test_m68k.bin "$1"
 cp -v copper/splitscreen_test_m68k/splitscreen_test_m68k.bin "$1"

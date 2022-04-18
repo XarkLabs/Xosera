@@ -116,6 +116,7 @@ utils:
 m68k:
 	cd xosera_m68k_api/ && $(MAKE)
 	cd xosera_ansiterm_m68k/ && $(MAKE)
+	cd xosera_boing_m68k/ && $(MAKE)
 	cd xosera_vramtest_m68k && $(MAKE)
 	cd xosera_test_m68k && $(MAKE)
 	cd copper/copper_test_m68k && $(MAKE)
@@ -147,17 +148,20 @@ golden:
 	fi
 	@echo === Done
 # Clean all project targets
-clean:
+clean: m68kclean
 	cd rtl && $(MAKE) clean
 	cd utils && $(MAKE) clean
 	cd host_spi && $(MAKE) clean
 	cd xvid_spi && $(MAKE) clean
+
+m68kclean:
 	cd xosera_m68k_api/ && $(MAKE) clean
 	cd xosera_ansiterm_m68k/ && $(MAKE) clean
+	cd xosera_boing_m68k/ && $(MAKE) clean
 	cd xosera_vramtest_m68k && $(MAKE) clean
 	cd xosera_test_m68k && $(MAKE) clean
 	cd copper/copper_test_m68k && $(MAKE) clean
 	cd copper/crop_test_m68k && $(MAKE) clean
 	cd copper/splitscreen_test_m68k && $(MAKE) clean
 
-.PHONY: all upduino upd upd_prog icebreaker iceb iceb_prog rtl sim isim irun vsim vrun utils m68k host_spi xvid_spi clean
+.PHONY: all upduino upd upd_prog icebreaker iceb iceb_prog rtl sim isim irun vsim vrun utils m68k host_spi xvid_spi clean m68kclean

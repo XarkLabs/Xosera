@@ -309,7 +309,7 @@ vram_arb #(
     .clk(clk)
 );
 
-// XR memory arbitration (conbines all other memory regions)
+// XR memory arbitration (combines all other memory regions)
 assign vgen_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:5] == xv::XR_CONFIG_REGS[6:5]);    // vgen reg write
 assign blit_reg_wr_en = xr_regs_wr_en && (xr_regs_addr[6:4] == xv::XR_BLIT_REGS[6:4]);      // blit reg write
 xrmem_arb#(

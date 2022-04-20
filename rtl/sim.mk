@@ -62,6 +62,8 @@ VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
 
+DEFTOP := xosera_make_defs
+
 # Xosera main target top (for Verilator)
 VTOP := xosera_main
 
@@ -117,7 +119,12 @@ VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -Mdir sim/obj_dir -Wall 
 CSRC := sim/xosera_sim.cpp
 
 # default build native simulation executable
-all: vsim isim
+all: make_defs vsim isim
+
+make_defs: sim/$(DEFTOP) sim.mk
+	@echo === Icarus Verilog creating C and asm definition files ===
+	@mkdir -p $(LOGS)
+	sim/$(DEFTOP)
 
 # build native simulation executable
 vsim: sim/obj_dir/V$(VTOP) sim.mk
@@ -137,6 +144,11 @@ vrun: sim/obj_dir/V$(VTOP) sim.mk
 irun: sim/$(TBTOP) sim.mk
 	@mkdir -p $(LOGS)
 	sim/$(TBTOP) -fst
+
+# use Icarus Verilog to build vvp simulation executable
+sim/$(DEFTOP): $(INC) sim/$(DEFTOP).sv sim.mk
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TBTOP) sim/$(TBTOP).sv
+	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -o sim/$(DEFTOP) $(current_dir)/sim/$(DEFTOP).sv
 
 # use Verilator to build native simulation executable
 sim/obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) sim.mk

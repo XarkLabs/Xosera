@@ -27,17 +27,18 @@
 #define XM_BASEADDR 0xf80060        // Xosera rosco_m68k register base address
 
 // Xosera XR Memory Regions (size in 16-bit words)
+#define XR_TILE_ADDR    0x4000        // (R/W) 0x4000-0x53FF tile glyph/tile map memory
+#define XR_TILE_SIZE    0x1400        //                     5120 x 16-bit tile glyph/tile map memory
 #define XR_COLOR_ADDR   0x8000        // (R/W) 0x8000-0x81FF 2 x A & B color lookup memory
-#define XR_COLOR_SIZE   0x0200        //                      2 x 256 x 16-bit words  (0xARGB)
+#define XR_COLOR_SIZE   0x0200        //                     2 x 256 x 16-bit words  (0xARGB)
 #define XR_COLOR_A_ADDR 0x8000        // (R/W) 0x8000-0x80FF A 256 entry color lookup memory
-#define XR_COLOR_A_SIZE 0x0100        //                      256 x 16-bit words (0xARGB)
+#define XR_COLOR_A_SIZE 0x0100        //                     256 x 16-bit words (0xARGB)
 #define XR_COLOR_B_ADDR 0x8100        // (R/W) 0x8100-0x81FF B 256 entry color lookup memory
-#define XR_COLOR_B_SIZE 0x0100        //                      256 x 16-bit words (0xARGB)
-#define XR_TILE_ADDR    0xA000        // (R/W) 0xA000-0xB3FF tile glyph/tile map memory
-#define XR_TILE_SIZE    0x1400        //                      5120 x 16-bit tile glyph/tile map memory
+#define XR_COLOR_B_SIZE 0x0100        //                     256 x 16-bit words (0xARGB)
 #define XR_COPPER_ADDR  0xC000        // (R/W) 0xC000-0xC7FF copper program memory (32-bit instructions)
-#define XR_COPPER_SIZE  0x0800        //                      2048 x 16-bit copper program memory addresses
-#define XR_UNUSED_ADDR  0xE000        // (-/-) 0xE000-0xFFFF unused
+#define XR_COPPER_SIZE  0x0800        //                     2048 x 16-bit copper program memory addresses
+
+#define XRMEM_READ 0x0000        // when OR'd with above XR memory address, contents will be read NOWORKIE
 
 // Xosera info data in COPPER memory after FPGA reconfigure
 #define XV_INFO_WORDSIZE    16        // TODO: make this 32?

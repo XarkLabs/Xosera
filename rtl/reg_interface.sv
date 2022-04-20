@@ -329,8 +329,13 @@ always_ff @(posedge clk) begin
                 xv::XM_XR_ADDR: begin
                     reg_xr_addr[7:0]    <= bus_data_byte;
                     regs_addr_o         <= { reg_xr_addr[15:8], bus_data_byte };    // output read addr (pre-read)
+`ifdef NOWORKIE
+                    regs_xr_sel_o       <= reg_xr_addr[xv::XRMEM_READ_B];            // select XR
+                    xr_rd               <= reg_xr_addr[xv::XRMEM_READ_B];            // remember pending aux read request
+`else
                     regs_xr_sel_o       <= 1'b1;            // select XR
                     xr_rd               <= 1'b1;            // remember pending aux read request
+`endif
                 end
                 xv::XM_XR_DATA: begin
                     regs_addr_o         <= reg_xr_addr;

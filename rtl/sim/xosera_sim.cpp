@@ -109,17 +109,18 @@ class BusInterface
 
     enum
     {
+        XR_TILE_ADDR    = 0x4000,        // (R/W) 0x4000-0x53FF tile glyph/tile map memory
+        XR_TILE_SIZE    = 0x1400,        //                     5120 x 16-bit tile glyph/tile map memory
         XR_COLOR_ADDR   = 0x8000,        // (R/W) 0x8000-0x81FF 2 x A & B color lookup memory
-        XR_COLOR_SIZE   = 0x0200,        //                      2 x 256 x 16-bit words  (0xARGB)
+        XR_COLOR_SIZE   = 0x0200,        //                     2 x 256 x 16-bit words  (0xARGB)
         XR_COLOR_A_ADDR = 0x8000,        // (R/W) 0x8000-0x80FF A 256 entry color lookup memory
-        XR_COLOR_A_SIZE = 0x0100,        //                      256 x 16-bit words (0xARGB)
+        XR_COLOR_A_SIZE = 0x0100,        //                     256 x 16-bit words (0xARGB)
         XR_COLOR_B_ADDR = 0x8100,        // (R/W) 0x8100-0x81FF B 256 entry color lookup memory
-        XR_COLOR_B_SIZE = 0x0100,        //                      256 x 16-bit words (0xARGB)
-        XR_TILE_ADDR    = 0xA000,        // (R/W) 0xA000-0xB3FF tile glyph/tile map memory
-        XR_TILE_SIZE    = 0x1400,        //                      5120 x 16-bit tile glyph/tile map memory
+        XR_COLOR_B_SIZE = 0x0100,        //                     256 x 16-bit words (0xARGB)
         XR_COPPER_ADDR  = 0xC000,        // (R/W) 0xC000-0xC7FF copper program memory (32-bit instructions)
-        XR_COPPER_SIZE  = 0x0800,        //                      2048 x 16-bit copper program memory addresses
-        XR_UNUSED_ADDR  = 0xE000         // (-/-) 0xE000-0xFFFF unused
+        XR_COPPER_SIZE  = 0x0800,        //                     2048 x 16-bit copper program memory addresses
+
+        XRMEM_READ = 0x0000        //  XR memory read bit NOWORKIE
     };
 
     enum
@@ -521,7 +522,7 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR  ",
     ((BusInterface::XM_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XM_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_RW(r)        (((BusInterface::XM_##r) | 0x80) << 8), (((BusInterface::XM_##r) | 0x90) << 8)
 #define XREG_SETW(xr, v) REG_W(XR_ADDR, XR_##xr), REG_W(XR_DATA, (v))
-#define XREG_GETW(xr)    REG_W(XR_ADDR, XR_##xr), REG_RW(XR_DATA)
+#define XREG_GETW(xr)    REG_W(XR_ADDR, (XR_##xr) | XRMEM_READ), REG_RW(XR_DATA)
 
 #define REG_UPLOAD()          0xfff0
 #define REG_UPLOAD_AUX()      0xfff1
@@ -542,7 +543,10 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR  ",
 BusInterface bus;
 int          BusInterface::test_data_len    = 32767;
 uint16_t     BusInterface::test_data[32768] = {
-        // test data
+    // test data
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
 
     REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
     REG_W(WR_ADDR, 0xF000),
@@ -557,6 +561,9 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(RW_ADDR, 0x1234),
     REG_RW(RW_DATA),
     REG_RW(RW_DATA),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),

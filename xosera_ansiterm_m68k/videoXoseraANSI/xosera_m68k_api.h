@@ -268,14 +268,14 @@ extern volatile xmreg_t * const xosera_ptr;
     })
 
 // return high byte (even address) from XR memory address xrmem
-#define xmem_getbh(xrmem) (xm_setw(XR_ADDR, xrmem), xosera_ptr[XM_XR_DATA >> 2].b.h)
+#define xmem_getbh(xrmem) (xm_setw(XR_ADDR, (xrmem) | XRMEM_READ), xosera_ptr[XM_XR_DATA >> 2].b.h)
 // return low byte (odd address) from XR memory address xrmem
-#define xmem_getbl(xrmem) (xm_setw(XR_ADDR, xrmem), xosera_ptr[XM_XR_DATA >> 2].b.l)
+#define xmem_getbl(xrmem) (xm_setw(XR_ADDR, (xrmem) | XRMEM_READ), xosera_ptr[XM_XR_DATA >> 2].b.l)
 // return 16-bit word from XR memory address xrmem
 #define xmem_getw(xrmem)                                                                                               \
     ({                                                                                                                 \
         uint16_t word_value;                                                                                           \
-        xm_setw(XR_ADDR, xrmem);                                                                                       \
+        xm_setw(XR_ADDR, (xrmem) | XRMEM_READ);                                                                        \
         __asm__ __volatile__("movep.w " XM_STR(XM_XR_DATA) "(%[ptr]),%[dst]"                                           \
                              : [dst] "=d"(word_value)                                                                  \
                              : [ptr] "a"(xosera_ptr)                                                                   \
@@ -287,7 +287,7 @@ extern volatile xmreg_t * const xosera_ptr;
     ({                                                                                                                 \
         (void)(XR_##xreg);                                                                                             \
         uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (XR_##xreg));                                                                                 \
+        xm_setw(XR_ADDR, (XR_##xreg) | XRMEM_READ);                                                                    \
         byte_value = xosera_ptr[XM_XR_DATA >> 2].b.h;                                                                  \
         byte_value;                                                                                                    \
     })
@@ -297,7 +297,7 @@ extern volatile xmreg_t * const xosera_ptr;
     ({                                                                                                                 \
         (void)(XR_##xreg);                                                                                             \
         uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (XR_##xreg));                                                                                 \
+        xm_setw(XR_ADDR, (XR_##xreg) | XRMEM_READ);                                                                    \
         byte_value = xosera_ptr[XM_XR_DATA >> 2].b.l;                                                                  \
         byte_value;                                                                                                    \
     })
@@ -306,7 +306,7 @@ extern volatile xmreg_t * const xosera_ptr;
     ({                                                                                                                 \
         (void)(XR_##xreg);                                                                                             \
         uint16_t word_value;                                                                                           \
-        xm_setw(XR_ADDR, (XR_##xreg));                                                                                 \
+        xm_setw(XR_ADDR, (XR_##xreg) | XRMEM_READ);                                                                    \
         __asm__ __volatile__("movep.w " XM_STR(XM_XR_DATA) "(%[ptr]),%[dst]"                                           \
                              : [dst] "=d"(word_value)                                                                  \
                              : [ptr] "a"(xosera_ptr)                                                                   \
@@ -354,7 +354,7 @@ extern volatile xmreg_t * const xosera_ptr;
 #define xmem_getbh_wait(xrmem)                                                                                         \
     ({                                                                                                                 \
         uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (xrmem));                                                                                     \
+        xm_setw(XR_ADDR, (xrmem) | XRMEM_READ);                                                                        \
         xwait_mem_busy();                                                                                              \
         byte_value = xosera_ptr[XM_XR_DATA >> 2].b.h;                                                                  \
         byte_value;                                                                                                    \
@@ -363,7 +363,7 @@ extern volatile xmreg_t * const xosera_ptr;
 #define xmem_getbl_wait(xrmem)                                                                                         \
     ({                                                                                                                 \
         uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (xrmem));                                                                                     \
+        xm_setw(XR_ADDR, (xrmem) | XRMEM_READ);                                                                        \
         xwait_mem_busy();                                                                                              \
         byte_value = xosera_ptr[XM_XR_DATA >> 2].b.l;                                                                  \
         byte_value;                                                                                                    \
@@ -372,7 +372,7 @@ extern volatile xmreg_t * const xosera_ptr;
 #define xmem_getw_wait(xrmem)                                                                                          \
     ({                                                                                                                 \
         uint16_t word_value;                                                                                           \
-        xm_setw(XR_ADDR, xrmem);                                                                                       \
+        xm_setw(XR_ADDR, (xrmem) | XRMEM_READ);                                                                        \
         xwait_mem_busy();                                                                                              \
         __asm__ __volatile__("movep.w " XM_STR(XM_XR_DATA) "(%[ptr]),%[dst]"                                           \
                              : [dst] "=d"(word_value)                                                                  \
@@ -385,7 +385,7 @@ extern volatile xmreg_t * const xosera_ptr;
     ({                                                                                                                 \
         (void)(XR_##xreg);                                                                                             \
         uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (XR_##xreg));                                                                                 \
+        xm_setw(XR_ADDR, (XR_##xreg) | XRMEM_READ);                                                                    \
         xwait_mem_busy();                                                                                              \
         byte_value = xosera_ptr[XM_XR_DATA >> 2].b.h;                                                                  \
         byte_value;                                                                                                    \
@@ -395,7 +395,7 @@ extern volatile xmreg_t * const xosera_ptr;
     ({                                                                                                                 \
         (void)(XR_##xreg);                                                                                             \
         uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (XR_##xreg));                                                                                 \
+        xm_setw(XR_ADDR, (XR_##xreg) | XRMEM_READ);                                                                    \
         xwait_mem_busy();                                                                                              \
         byte_value = xosera_ptr[XM_XR_DATA >> 2].b.l;                                                                  \
         byte_value;                                                                                                    \
@@ -405,7 +405,7 @@ extern volatile xmreg_t * const xosera_ptr;
     ({                                                                                                                 \
         (void)(XR_##xreg);                                                                                             \
         uint16_t word_value;                                                                                           \
-        xm_setw(XR_ADDR, (XR_##xreg));                                                                                 \
+        xm_setw(XR_ADDR, (XR_##xreg) | XRMEM_READ);                                                                    \
         xwait_mem_busy();                                                                                              \
         __asm__ __volatile__("movep.w " XM_STR(XM_XR_DATA) "(%[ptr]),%[dst]"                                           \
                              : [dst] "=d"(word_value)                                                                  \

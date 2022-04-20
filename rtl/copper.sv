@@ -437,7 +437,7 @@ always_ff @(posedge clk) begin
                         INSN_MOVER: begin
                             // mover
                             xr_wr_en                <= 1'b1;
-                            ram_wr_addr_out[15:8]   <= 8'h0;
+                            ram_wr_addr_out[15:13]  <= xv::XR_CONFIG_REGS[15:13];
                             ram_wr_addr_out[7:0]    <= move_r_addr;
                             ram_wr_data_out         <= move_data;
 
@@ -459,7 +459,7 @@ always_ff @(posedge clk) begin
                         INSN_MOVEP: begin
                             // movep
                             xr_wr_en                <= 1'b1;
-                            ram_wr_addr_out[15:9]   <= xv::XR_COLOR_ADDR[15:9];
+                            ram_wr_addr_out[15:13]  <= xv::XR_COLOR_ADDR[15:13];
                             ram_wr_addr_out[8:0]    <= move_p_addr;
                             ram_wr_data_out         <= move_data;
 
@@ -470,9 +470,9 @@ always_ff @(posedge clk) begin
                         INSN_MOVEC: begin
                             // movec
                             xr_wr_en                <= 1'b1;
-                            ram_wr_addr_out[15:xv::COPP_W]  <= xv::XR_COPPER_ADDR[15:xv::COPP_W];
+                            ram_wr_addr_out[15:13]  <= xv::XR_COPPER_ADDR[15:13];
                             ram_wr_addr_out[xv::COPP_W-1:0] <= move_c_addr_v_pos[xv::COPP_W-1:0];
-                            ram_wr_data_out                 <= move_data;
+                            ram_wr_data_out         <= move_data;
 
                             // Setup fetch next instruction
                             copper_ex_state         <= STATE_WAIT;

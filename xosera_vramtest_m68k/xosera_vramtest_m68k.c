@@ -364,7 +364,6 @@ static void read_vram_buffer(int speed)
             uint8_t * bp = (uint8_t *)&vram_buffer[0];
             for (int addr = 0; addr < 0x10000; addr++)
             {
-
                 uint8_t bh = xm_getbh(DATA);
                 *bp++      = bh;
                 uint8_t bl = xm_getbl(DATA);
@@ -669,7 +668,7 @@ static int verify_xmem(bool LFSR, int mode)
     int xmem_errs = 0;
 
     // read XMEM back into vram_buffer
-    for (int addr = XR_COLOR_A_ADDR; addr < (XR_COLOR_A_ADDR + XR_COLOR_A_SIZE + XR_COLOR_A_SIZE); addr++)
+    for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + XR_COLOR_SIZE); addr++)
     {
         uint16_t data = vram_buffer[addr];
         if (data != pattern_buffer[addr])
@@ -714,7 +713,7 @@ static void read_xmem_buffer()
     xv_prep();
 
     // read XMEM back into vram_buffer
-    for (int addr = XR_COLOR_A_ADDR; addr < (XR_COLOR_A_ADDR + XR_COLOR_A_SIZE + XR_COLOR_A_SIZE); addr++)
+    for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + XR_COLOR_SIZE); addr++)
     {
         uint16_t data     = xmem_getw_wait(addr);
         vram_buffer[addr] = data;
@@ -840,12 +839,15 @@ void xosera_vramtest()
 {
     xv_prep();
 
-    dprintf("\033cXosera_vramtest_m68k\n");
+    dprintf("\033c\nXosera_vramtest_m68k\n");
 
     uint8_t cur_xosera_config = ~0;
+
+#if 1
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");
+#endif
 
     while (true)
     {
@@ -898,25 +900,21 @@ void xosera_vramtest()
         {
             for (int j = 0; j < TEST_SPEEDS - 1; j++)
             {
-                test_vram(false, i, j);
-                if (delay_check(DELAY_TIME))
+                if (test_vram(false, i, j) || delay_check(DELAY_TIME))
                 {
                     break;
                 }
-                test_vram(true, i, j);
-                if (delay_check(DELAY_TIME))
+                if (test_vram(true, i, j) || delay_check(DELAY_TIME))
                 {
                     break;
                 }
             }
             {
-                test_xmem(false, i);
-                if (delay_check(DELAY_TIME))
+                if (test_xmem(false, i) || delay_check(DELAY_TIME))
                 {
                     break;
-                }
-                test_xmem(true, i);
-                if (delay_check(DELAY_TIME))
+                };
+                if (test_xmem(true, i) || delay_check(DELAY_TIME))
                 {
                     break;
                 }

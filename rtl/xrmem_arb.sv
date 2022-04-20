@@ -127,18 +127,18 @@ assign  copp_prog_data_o    = copp_data_out;
 `endif
 
 // decode flags for XR interface
-assign  xr_regs_sel     = (xr_addr_i[15] == 1'b0);
-assign  xr_color_sel    = (xr_addr_i[15:13] == xv::XR_COLOR_ADDR[15:13]);
-assign  xr_tile_sel     = (xr_addr_i[15:13] == xv::XR_TILE_ADDR[15:13]);
+assign  xr_regs_sel     = (xr_addr_i[15:14] == xv::XR_CONFIG_REGS[15:14]);
+assign  xr_tile_sel     = (xr_addr_i[15:14] == xv::XR_TILE_ADDR[15:14]);
+assign  xr_color_sel    = (xr_addr_i[15:14] == xv::XR_COLOR_ADDR[15:14]);
 
 `ifdef ENABLE_COPP
-assign  xr_copp_sel     = (xr_addr_i[15:13] == xv::XR_COPPER_ADDR[15:13]);
+assign  xr_copp_sel     = (xr_addr_i[15:14] == xv::XR_COPPER_ADDR[15:14]);
 
 // decode flags for copper XR interface
-assign  copp_xr_regs_sel    = (copp_xr_addr_i[15] == 1'b0);
-assign  copp_xr_color_sel   = (copp_xr_addr_i[15:13] == xv::XR_COLOR_ADDR[15:13]);
-assign  copp_xr_tile_sel    = (copp_xr_addr_i[15:13] == xv::XR_TILE_ADDR[15:13]);
-assign  copp_xr_copp_sel    = (copp_xr_addr_i[15:13] == xv::XR_COPPER_ADDR[15:13]);
+assign  copp_xr_regs_sel    = (copp_xr_addr_i[15:14] == xv::XR_CONFIG_REGS[15:14]);
+assign  copp_xr_tile_sel    = (copp_xr_addr_i[15:14] == xv::XR_TILE_ADDR[15:14]);
+assign  copp_xr_color_sel   = (copp_xr_addr_i[15:14] == xv::XR_COLOR_ADDR[15:14]);
+assign  copp_xr_copp_sel    = (copp_xr_addr_i[15:14] == xv::XR_COPPER_ADDR[15:14]);
 `endif
 
 `ifdef ENABLE_COPP

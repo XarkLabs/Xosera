@@ -16,7 +16,7 @@ XOSERA_M68K_API?=../xosera_m68k_api
 
 -include $(ROSCO_M68K_DIR)/user.mk
 
-EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer -I$(XOSERA_M68K_API)
+EXTRA_CFLAGS?=-g -O2 -fomit-frame-pointer -I$(XOSERA_M68K_API)
 EXTRA_LIBS?=
 #EXTRA_VASMFLAGS?=-showopt
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include

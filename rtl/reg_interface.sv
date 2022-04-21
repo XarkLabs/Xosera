@@ -238,13 +238,13 @@ always_ff @(posedge clk) begin
         if (vram_ack_i) begin
             // if rd read then save rd data, increment rd_addr
             if (vram_rd) begin
-                reg_rd_data    <= regs_data_i;
+                reg_rd_data     <= regs_data_i;
                 reg_rd_addr     <= reg_rd_addr + reg_rd_incr;
             end
 
             // if rw read then save rw data, increment rw_addr
             if (vram_rw_rd) begin
-                reg_rw_data    <= regs_data_i;
+                reg_rw_data     <= regs_data_i;
                 if (reg_rw_rd_inc) begin
                     reg_rw_addr     <= reg_rw_addr + reg_rw_incr;
                 end

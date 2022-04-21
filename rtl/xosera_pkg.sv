@@ -29,7 +29,7 @@
 //`define USE_HEXFONT                     // use hex font instead of default fonts
 //`define NO_TESTPATTERN                  // don't initialize VRAM with test pattern and fonts in simulation
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
-//`define NO_CS_BUS_DELAY                 // set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
+`define NO_CS_BUS_DELAY                 // HACK: set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
 
 
 // features that can be optionally disabled

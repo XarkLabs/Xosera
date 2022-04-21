@@ -364,10 +364,8 @@ static void read_vram_buffer(int speed)
             uint8_t * bp = (uint8_t *)&vram_buffer[0];
             for (int addr = 0; addr < 0x10000; addr++)
             {
-                uint8_t bh = xm_getbh(DATA);
-                *bp++      = bh;
-                uint8_t bl = xm_getbl(DATA);
-                *bp++      = bl;
+                *bp++ = xm_getbh(DATA);
+                *bp++ = xm_getbl(DATA);
             }
             break;
 
@@ -755,7 +753,6 @@ int test_xmem(bool LFSR, int mode)
 
     dprintf("  > XMEM test=%s speed=%s mode=%s : ", LFSR ? "LFSR" : "ADDR", speed_names[4], vram_mode_names[mode]);
     // fill XMEM with pattern_buffer
-    NukeColor = 0xffff;        // disable color cycle while testing COLOR mem
     wait_vsync();
     for (int r = 0; r < 16; r++)
     {
@@ -780,12 +777,14 @@ int test_xmem(bool LFSR, int mode)
         } while (start_time == check_time);
 
         // word color mem
+        NukeColor = 0xffff;        // disable color cycle while testing COLOR mem
         xm_setw(XR_ADDR, XR_COLOR_ADDR);
         xwait_mem_busy();        // must wait for initial (slow) color mem read to finish, before writing
         for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + XR_COLOR_SIZE); addr++)
         {
             xm_setw(XR_DATA, pattern_buffer[addr]);
         }
+        NukeColor = 0;
 
         // word tile mem
         xm_setw(XR_ADDR, XR_TILE_ADDR);
@@ -818,7 +817,6 @@ int test_xmem(bool LFSR, int mode)
         }
     }
 
-    NukeColor = 0;
 
     if (xmem_errs == 0)
     {
@@ -843,7 +841,7 @@ void xosera_vramtest()
 
     uint8_t cur_xosera_config = ~0;
 
-#if 1
+#if 0
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");
@@ -864,7 +862,7 @@ void xosera_vramtest()
             xosera_get_info(&initinfo);
         }
 
-#if 0
+#if 0        // FIXME: fixme tag test
         uint32_t t = XFrameCount;
         int      h = t / (60 * 60 * 60);
         int      m = t / (60 * 60) % 60;

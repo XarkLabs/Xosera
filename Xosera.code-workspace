@@ -211,19 +211,37 @@
 		"todo-tree.highlights.defaultHighlight": {
 			"icon": "alert",
 			"type": "text",
-			"foreground": "red",
-			/*			"background": "white", */
+			"foreground": "#F00",
 			"opacity": 50,
-			"iconColour": "yellow"
+			"iconColour": "#FF0"
 		},
 		"todo-tree.highlights.customHighlight": {
-			"TODO": {
-				"icon": "check",
-				"type": "word"
+			"HACK": {
+				"icon": "$(gear)",
+				"foreground": "#80F",
+				"iconColour": "problemsInfoIcon.foreground",
+				"type": "tag",
+				"gutterIcon": true
+			},
+			"BUG": {
+				"icon": "$(bug)",
+				"foreground": "#0c0",
+				"iconColour": "editorError.foreground",
+				"type": "tag",
+				"gutterIcon": true
 			},
 			"FIXME": {
-				"foreground": "black",
-				"iconColour": "yellow",
+				"icon": "$(flame)",
+				"foreground": "#F00",
+				"iconColour": "editorError.foreground",
+				"type": "tag",
+				"gutterIcon": true
+			},
+			"TODO": {
+				"icon": "$(check)",
+				"foreground": "#FF0",
+				"iconColour": "editorWarning.foreground",
+				"type": "tag",
 				"gutterIcon": true
 			}
 		},

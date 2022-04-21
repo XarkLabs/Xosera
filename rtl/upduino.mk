@@ -91,11 +91,12 @@ ICEPROG := iceprog
 ICEMULTI := icemulti
 
 # Yosys synthesis arguments
-#FLOW3 :=
+FLOW3 :=
+#YOSYS_SYNTH_ARGS := -device u -dsp -retime -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -dsp -abc2 -relut -retime -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -relut -top $(TOP)
 YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -top $(TOP)
-FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
+#FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO

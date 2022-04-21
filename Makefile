@@ -24,7 +24,7 @@ info:
 	@echo "   make icebreaker      - build Xosera for iCEBreaker (see rtl/icebreaker.mk for options)"
 	@echo "   make iceb_prog       - build Xosera and program iCEBreaker (see rtl/icebreaker.mk for options)"
 	@echo "   make rtl             - build UPduino, iCEBreaker bitstreams and simulation targets"
-	@echo "   make make_defs       - build C & asm definition files using Icarus Verilog"
+	@echo "   make def_files       - build C & asm definition files using Icarus Verilog"
 	@echo "   make sim             - build Icarus Verilog and Verilalator simulation files"
 	@echo "   make isim            - build Icarus Verilog simulation files"
 	@echo "   make irun            - build and run Icarus Verilog simulation"
@@ -86,8 +86,8 @@ rtl:
 	cd rtl && $(MAKE) all
 
 # Build Icarus and run Verilog simulation
-make_defs:
-	cd rtl && $(MAKE) make_defs
+def_files:
+	cd rtl && $(MAKE) def_files
 
 # Build all simulation targets
 sim:

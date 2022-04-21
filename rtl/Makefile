@@ -9,8 +9,8 @@ all: sim upd iceb
 prog: upd_prog ice_prog
 
 # build Icarus Verilog simulation files
-make_defs:
-	$(MAKE) -f sim.mk make_defs
+def_files:
+	$(MAKE) -f sim.mk def_files
 
 # build simulation files (Icarus Verilog and Verilator)
 sim:
@@ -70,4 +70,4 @@ clean:
 	$(MAKE) -f upduino.mk clean
 	$(MAKE) -f icebreaker.mk clean
 
-.PHONY: all prog make_defs sim isim irun vsim vrun upd iceb xosera_board iceb_prog upd_prog xosera_prog clean
+.PHONY: all prog def_files sim isim irun vsim vrun upd iceb xosera_board iceb_prog upd_prog xosera_prog clean

@@ -61,4 +61,4 @@ utils/image_pal
 **/*.swp
 
 utils/true_color_hack
-rtl/sim/xosera_make_defs
+rtl/sim/xosera_def_files

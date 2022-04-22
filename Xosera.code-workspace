@@ -10,6 +10,8 @@
 			"editor.wordWrapColumn": 131,
 			"files.trimTrailingWhitespace": false
 		},
+		"editor.acceptSuggestionOnCommitCharacter": false,
+		"editor.quickSuggestions": false,
 		"editor.formatOnSave": true,
 		"editor.dragAndDrop": false,
 		"editor.codeActionsOnSave": {

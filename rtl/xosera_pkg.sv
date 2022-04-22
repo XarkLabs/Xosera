@@ -50,22 +50,21 @@ localparam COLOR_W  = 8;                // 256 words color table mem (per playfi
 // Xosera directly addressable registers (16 x 16-bit words [high/low byte])
 typedef enum logic [3:0] {
     // register 16-bit read/write (no side effects)
-    XM_XR_ADDR      = 4'h0,             // (R /W+) XR register number/address for XM_XR_DATA read/write access
-    XM_XR_DATA      = 4'h1,             // (R /W+) read/write XR register/memory at XM_XR_ADDR (XM_XR_ADDR incr. on write)
-    XM_RD_INCR      = 4'h2,             // (R /W ) increment value for XM_RD_ADDR read from XM_DATA/XM_DATA_2
-    XM_RD_ADDR      = 4'h3,             // (R /W+) VRAM address for reading from VRAM when XM_DATA/XM_DATA_2 is read
-    XM_WR_INCR      = 4'h4,             // (R /W ) increment value for XM_WR_ADDR on write to XM_DATA/XM_DATA_2
-    XM_WR_ADDR      = 4'h5,             // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
-    XM_DATA         = 4'h6,             // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
-    XM_DATA_2       = 4'h7,             // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
-    XM_SYS_CTRL     = 4'h8,             // (R /W+) busy status, FPGA reconfig, interrupt status/control, write masking
-    XM_TIMER        = 4'h9,             // (RO   ) read 1/10th millisecond timer, write interrupt ack [TODO]
-`ifdef ENABLE_LFSR
-    XM_LFSR         = 4'hA,             // (R /W ) LFSR (random numbers)
-`else
-    XM_UNUSED_A     = 4'hA,             // (R /W ) unused direct register 0xA [TODO]
-`endif
-    XM_UNUSED_B     = 4'hB,             // (R /W ) unused direct register 0xB // TODO: SCANLINE
+    XM_SYS_CTRL     = 4'h0,             // (R /W+) busy status, FPGA reconfig, write masking
+    XM_INT_CTRL     = 4'h1,             // (R /W ) interrupt status/control
+    XM_TIMER        = 4'h2,             // (RO   ) read 1/10th millisecond timer, write interrupt ack [TODO]
+
+    XM_X_RD_ADDR    = 4'h3,             // (R /W+) XR register number/address for XM_XDATA read access
+    XM_X_WR_ADDR    = 4'h4,             // (R /W ) unused direct register 0xB // TODO: SCANLINE
+    XM_X_DATA       = 4'h5,             // (R /W+) read/write XR register/memory at XM_XR_ADDR (XM_XR_ADDR incr. on write)
+
+    XM_RD_INCR      = 4'h6,             // (R /W ) increment value for XM_RD_ADDR read from XM_DATA/XM_DATA_2
+    XM_RD_ADDR      = 4'h7,             // (R /W+) VRAM address for reading from VRAM when XM_DATA/XM_DATA_2 is read
+    XM_WR_INCR      = 4'h8,             // (R /W ) increment value for XM_WR_ADDR on write to XM_DATA/XM_DATA_2
+    XM_WR_ADDR      = 4'h9,             // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
+    XM_DATA         = 4'hA,             // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
+    XM_DATA_2       = 4'hB,             // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
+
     XM_RW_INCR      = 4'hC,             // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
     XM_RW_ADDR      = 4'hD,             // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
     XM_RW_DATA      = 4'hE,             // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
@@ -73,9 +72,12 @@ typedef enum logic [3:0] {
 } xm_register_t;
 
 typedef enum {
-    SYS_CTRL_MEM_WAIT_B = 7,
-    SYS_CTRL_BLIT_BUSY_B = 6,
-    SYS_CTRL_BLIT_FULL_B = 5
+    SYS_CTRL_RW_BUSY_B = 15,            // memory read/write operation active (with contended memory)
+    SYS_CTRL_BLIT_FULL_B = 14,          // blitter queue is full, do not write new operation to blitter registers
+    SYS_CTRL_BLIT_BUSY_B = 13,          // blitter is still busy performing an operation
+
+    SYS_CTRL_HBLANK_B = 11,             // video signal is in horizontal blank period
+    SYS_CTRL_VBLANK_B = 10              // video signal is in vertical blank period
 } xm_sys_ctrl_t;
 
 // XR register / memory regions
@@ -99,28 +101,20 @@ typedef enum logic [5:0] {
     // Video Config / Copper XR Registers
     XR_VID_CTRL     = 6'h00,            // (R /W) display control and border color index
     XR_COPP_CTRL    = 6'h01,            // (R /W) display synchronized coprocessor control
-    XR_AUD0_VOL     = 6'h02,            // (R /W) // TODO: replace
-    XR_AUD0_PERIOD  = 6'h03,            // (R /W) // TODO: replace
-    XR_AUD0_START   = 6'h04,            // (R /W) // TODO: replace
-    XR_AUD0_LENGTH  = 6'h05,            // (R /W) // TODO: replace
-    XR_VID_LEFT     = 6'h06,            // (R /W) left edge of active display window (typically 0)
-    XR_VID_RIGHT    = 6'h07,            // (R /W) right edge of active display window +1 (typically 640 or 848)
-    XR_SCANLINE     = 6'h08,            // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline // TODO: replace
-    XR_UNUSED_09    = 6'h09,            // (WO  ) // TODO: replace
-    XR_UNUSED_0A    = 6'h0A,            // (WO  ) // TODO: replace
-    XR_UNUSED_0B    = 6'h0B,            // (WO  ) // TODO: replace
-    XR_UNUSED_0C    = 6'h0C,            // (WO  ) // TODO: replace
-    XR_VID_HSIZE    = 6'h0D,            // (RO  ) native pixel width of monitor mode (e.g. 640/848)// TODO: reorg
-    XR_VID_VSIZE    = 6'h0E,            // (RO  ) native pixel height of monitor mode (e.g. 480)   // TODO: reorg
-    XR_UNUSED_0F    = 6'h0F,            // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+    XR_VID_LEFT     = 6'h02,            // (R /W) left edge of active display window (typically 0)
+    XR_VID_RIGHT    = 6'h03,            // (R /W) right edge of active display window +1 (typically 640 or 848)
+    XR_SCANLINE     = 6'h04,            // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline // TODO: replace
+    XR_FEATURES     = 6'h05,            // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+    XR_VID_HSIZE    = 6'h06,            // (RO  ) native pixel width of monitor mode (e.g. 640/848)// TODO: reorg
+    XR_VID_VSIZE    = 6'h07,            // (RO  ) native pixel height of monitor mode (e.g. 480)   // TODO: reorg
     // Playfield A Control XR Registers
     XR_PA_GFX_CTRL  = 6'h10,            // (R /W) playfield A graphics control
     XR_PA_TILE_CTRL = 6'h11,            // (R /W) playfield A tile control
     XR_PA_DISP_ADDR = 6'h12,            // (R /W) playfield A display VRAM start address
     XR_PA_LINE_LEN  = 6'h13,            // (R /W) playfield A display line width in words
     XR_PA_HV_SCROLL = 6'h14,            // (R /W) playfield A horizontal and vertical fine scroll
+    XR_PA_HV_FSCALE = 6'h16,            // (R /W) playfield A horizontal and vertical fractional scale
     XR_PA_LINE_ADDR = 6'h15,            // (R /W) playfield A scanline start address (loaded at start of line)
-    XR_PA_HV_FSCALE = 6'h16,            // (R /W) playfield A horizontal and vertical pixel scale (reduce pixel res)
     XR_PA_UNUSED_17 = 6'h17,            //
     // Playfield B Control XR Registers
     XR_PB_GFX_CTRL  = 6'h18,            // (R /W) playfield B graphics control
@@ -128,8 +122,8 @@ typedef enum logic [5:0] {
     XR_PB_DISP_ADDR = 6'h1A,            // (R /W) playfield B display VRAM start address
     XR_PB_LINE_LEN  = 6'h1B,            // (R /W) playfield B display line width in words
     XR_PB_HV_SCROLL = 6'h1C,            // (R /W) playfield B horizontal and vertical fine scroll
+    XR_PB_HV_FSCALE = 6'h1E,            // (R /W) playfield B horizontal and vertical fractional scale
     XR_PB_LINE_ADDR = 6'h1D,            // (R /W) playfield B scanline start address (loaded at start of line)
-    XR_PB_HV_FSCALE = 6'h1E,            // (R /W) playfield B horizontal and vertical pixel scale (reduce pixel res)
     XR_PB_UNUSED_1F = 6'h1F,            //
     // Blitter Registers
     XR_BLIT_CTRL    = 6'h20,            // (R /W) blit control (transparency control, logic op and op input flags)
@@ -144,6 +138,11 @@ typedef enum logic [5:0] {
     XR_BLIT_SHIFT   = 6'h29,            // (R /W) blit first and last word nibble masks and nibble right shift (0-3)
     XR_BLIT_LINES   = 6'h2A,            // (R /W) blit number of lines minus 1, (repeats blit word count after modulo calc)
     XR_BLIT_WORDS   = 6'h2B             // (R /W) blit word count minus 1 per line (write starts blit operation)
+    // Audio
+    XR_AUD0_VOL     = 6'h02,            // (R /W) // TODO: replace
+    XR_AUD0_PERIOD  = 6'h03,            // (R /W) // TODO: replace
+    XR_AUD0_START   = 6'h04,            // (R /W) // TODO: replace
+    XR_AUD0_LENGTH  = 6'h05,            // (R /W) // TODO: replace
 } xr_register_t;
 
 typedef enum integer {

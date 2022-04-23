@@ -75,9 +75,11 @@ typedef enum {
     SYS_CTRL_RW_BUSY_B = 15,            // memory read/write operation active (with contended memory)
     SYS_CTRL_BLIT_FULL_B = 14,          // blitter queue is full, do not write new operation to blitter registers
     SYS_CTRL_BLIT_BUSY_B = 13,          // blitter is still busy performing an operation
-
+    SYS_CTRL_UNUSED_B12 = 12,           // unused (reads 0)
     SYS_CTRL_HBLANK_B = 11,             // video signal is in horizontal blank period
-    SYS_CTRL_VBLANK_B = 10              // video signal is in vertical blank period
+    SYS_CTRL_VBLANK_B = 10,             // video signal is in vertical blank period
+    SYS_CTRL_UNUSED_B9 = 9,             // unused (reads 0)
+    SYS_CTRL_UNUSED_B8 = 8              // unused (reads 0)
 } xm_sys_ctrl_t;
 
 // XR register / memory regions

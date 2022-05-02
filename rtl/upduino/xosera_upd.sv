@@ -191,6 +191,10 @@ SB_IO #(
         //             CK*
           .PACKAGE_PIN(gpio_2),
 `endif
+`ifdef PMOD_MUSE_VGA
+        //             CK*
+          .PACKAGE_PIN(gpio_19),
+`endif
 `ifdef PMOD_1B2_DVI12
         //             CK
           .PACKAGE_PIN(gpio_4),
@@ -205,12 +209,16 @@ SB_IO #(
           .PIN_TYPE(6'b010100)   // PIN_OUTPUT_REGISTERED
       ) dv_signals_sbio [14: 0] (
 `ifdef PMOD_DIGILENT_VGA
-        //              DE*      VS      HS       R3       R2       R1       R0      G3       G2      G1       G0       B3       B2       B1       B0
-          .PACKAGE_PIN({gpio_46, gpio_21, gpio_12, gpio_13, gpio_11, gpio_44, gpio_48, gpio_19, gpio_9, gpio_4, gpio_45, gpio_18, gpio_6, gpio_3, gpio_47}),
+        //              DE*      VS       HS       R3       R2       R1       R0       G3       G2      G1        G0       B3       B2       B1       B0
+          .PACKAGE_PIN({gpio_46, gpio_21, gpio_12, gpio_13, gpio_11, gpio_44, gpio_48, gpio_19, gpio_9, gpio_4,   gpio_45, gpio_18, gpio_6,  gpio_3,  gpio_47}),
+`endif
+`ifdef PMOD_MUSE_VGA
+        //              DE*      VS       HS       R3       R2       R1       R0       G3       G2       G1       G0       B3       B2       B1       B0
+          .PACKAGE_PIN({gpio_9,  gpio_4,  gpio_45, gpio_18, gpio_6,  gpio_3,  gpio_47, gpio_2,  gpio_46, gpio_21, gpio_12, gpio_13, gpio_11, gpio_44, gpio_48}),
 `endif
 `ifdef PMOD_1B2_DVI12
-        //              DE       VS      HS       R3       R2       R1       R0      G3       G2      G1       G0       B3       B2       B1       B0
-          .PACKAGE_PIN({gpio_46, gpio_2, gpio_19, gpio_48, gpio_47, gpio_44, gpio_3, gpio_11, gpio_6, gpio_13, gpio_18, gpio_45, gpio_12, gpio_21, gpio_9}),
+        //              DE       VS       HS       R3       R2       R1       R0       G3       G2       G1       G0       B3       B2       B1       B0
+          .PACKAGE_PIN({gpio_46, gpio_2,  gpio_19, gpio_48, gpio_47, gpio_44, gpio_3,  gpio_11, gpio_6,  gpio_13, gpio_18, gpio_45, gpio_12, gpio_21, gpio_9}),
 `endif
           //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
           .OUTPUT_CLK(pclk),

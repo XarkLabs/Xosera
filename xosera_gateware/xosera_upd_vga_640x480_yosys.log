@@ -19,10 +19,10 @@
  |                                                                            |
  \----------------------------------------------------------------------------/
 
- Yosys 0.16+31 (git sha1 c1646a00a, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
+ Yosys 0.16+61 (git sha1 c785cb7fe, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
 
 
--- Running command `verilog_defines -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=9d73009 -DMODE_640x480 -DPMOD_DIGILENT_VGA -DICE40UP5K -DUPDUINO ; read_verilog -I. -sv upduino/xosera_upd.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv ; scratchpad -copy abc9.script.flow3 abc9.script ; synth_ice40 -device u -dsp -abc9 -top xosera_upd -json upduino/xosera_upd_vga_640x480.json' --
+-- Running command `verilog_defines -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=0 -DGITHASH=b86523b -DMODE_640x480 -DPMOD_DIGILENT_VGA -DICE40UP5K -DUPDUINO ; read_verilog -I. -sv upduino/xosera_upd.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv ; scratchpad -copy abc9.script.flow3 abc9.script ; synth_ice40 -device u -dsp -abc9 -top xosera_upd -json upduino/xosera_upd_vga_640x480.json' --
 
 1. Executing Verilog-2005 frontend: upduino/xosera_upd.sv
 Parsing SystemVerilog input from `upduino/xosera_upd.sv' to AST representation.
@@ -505,7 +505,7 @@ Marked 2 switch rules as full_case in process $proc$./xrmem_arb.sv:0$4180 in mod
 Marked 2 switch rules as full_case in process $proc$./xrmem_arb.sv:0$4170 in module $paramod\xrmem_arb\EN_VID_PF_B=s32'00000000000000000000000000000001.
 Marked 3 switch rules as full_case in process $proc$./xrmem_arb.sv:0$4163 in module $paramod\xrmem_arb\EN_VID_PF_B=s32'00000000000000000000000000000001.
 Marked 2 switch rules as full_case in process $proc$./xrmem_arb.sv:0$4155 in module $paramod\xrmem_arb\EN_VID_PF_B=s32'00000000000000000000000000000001.
-Marked 1 switch rules as full_case in process $proc$upduino/xosera_upd.sv:250$6 in module xosera_upd.
+Marked 1 switch rules as full_case in process $proc$upduino/xosera_upd.sv:258$6 in module xosera_upd.
 Removed a total of 10 dead cases.
 
 22.3.3. Executing PROC_PRUNE pass (remove redundant assignments in processes).
@@ -1297,7 +1297,7 @@ Creating decoders for process `$paramod\xrmem_arb\EN_VID_PF_B=s32'00000000000000
      6/8: $1\tile_wr_en[0:0]
      7/8: $1\color_wr_en[0:0]
      8/8: $1\copp_wr_ack_next[0:0]
-Creating decoders for process `\xosera_upd.$proc$upduino/xosera_upd.sv:250$6'.
+Creating decoders for process `\xosera_upd.$proc$upduino/xosera_upd.sv:258$6'.
      1/1: $0\reset[0:0]
 Creating decoders for process `\xosera_upd.$proc$upduino/xosera_upd.sv:145$5'.
 
@@ -4119,7 +4119,7 @@ Creating register for signal `$paramod\xrmem_arb\EN_VID_PF_B=s32'000000000000000
   created $dff cell `$procdff$17415' with positive edge clock.
 Creating register for signal `$paramod\xrmem_arb\EN_VID_PF_B=s32'00000000000000000000000000000001.\tile_addr' using process `$paramod\xrmem_arb\EN_VID_PF_B=s32'00000000000000000000000000000001.$proc$./xrmem_arb.sv:279$4201'.
   created $dff cell `$procdff$17416' with positive edge clock.
-Creating register for signal `\xosera_upd.\reset' using process `\xosera_upd.$proc$upduino/xosera_upd.sv:250$6'.
+Creating register for signal `\xosera_upd.\reset' using process `\xosera_upd.$proc$upduino/xosera_upd.sv:258$6'.
   created $dff cell `$procdff$17417' with positive edge clock.
 Creating register for signal `\xosera_upd.\bus_intr_r' using process `\xosera_upd.$proc$upduino/xosera_upd.sv:145$5'.
   created $dff cell `$procdff$17418' with positive edge clock.
@@ -4307,8 +4307,8 @@ Found and cleaned up 3 empty switches in `$paramod\xrmem_arb\EN_VID_PF_B=s32'000
 Removing empty process `$paramod\xrmem_arb\EN_VID_PF_B=s32'00000000000000000000000000000001.$proc$./xrmem_arb.sv:0$4163'.
 Found and cleaned up 2 empty switches in `$paramod\xrmem_arb\EN_VID_PF_B=s32'00000000000000000000000000000001.$proc$./xrmem_arb.sv:0$4155'.
 Removing empty process `$paramod\xrmem_arb\EN_VID_PF_B=s32'00000000000000000000000000000001.$proc$./xrmem_arb.sv:0$4155'.
-Found and cleaned up 1 empty switch in `\xosera_upd.$proc$upduino/xosera_upd.sv:250$6'.
-Removing empty process `xosera_upd.$proc$upduino/xosera_upd.sv:250$6'.
+Found and cleaned up 1 empty switch in `\xosera_upd.$proc$upduino/xosera_upd.sv:258$6'.
+Removing empty process `xosera_upd.$proc$upduino/xosera_upd.sv:258$6'.
 Removing empty process `xosera_upd.$proc$upduino/xosera_upd.sv:145$5'.
 Cleaned up 238 empty switches.
 
@@ -9438,14 +9438,14 @@ Generating RTLIL representation for module `\$__ICE40_RAM4K_M123'.
 Successfully finished Verilog frontend.
 
 22.31.2. Continuing TECHMAP pass.
-Using template $paramod$91693778016d07df12cb9f43c134910deb8f44da\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
-Using template $paramod$acc1bfbfd141dfca236a33d940002e6249bd4651\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
-Using template $paramod$dc4bcd755fea67855d37f5ed5e7794ba6050aed5\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
+Using template $paramod$48fdf89305bebac1f0269899f6c6bbe51e46e96c\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
+Using template $paramod$38c4281f75fe0064892d8cbe7e4e1e323adf2dfe\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
+Using template $paramod$1bfdc1127715946c3923fb23d63cfc55b0f3c51c\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
 Using template $paramod$f19e58cb5fec24ac13bf7bcd028b9445b8198196\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
-Using template $paramod$e81f27b89a9055a21c2551453fce1249a2ee54f9\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
-Using template $paramod$8cc9b885a8a03c9fecba9e00081b9bc84c7a5ac9\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
-Using template $paramod$415e180b6add93f2744b0f8d546b63277d0d8127\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
-Using template $paramod$bfbec77ad888c2429bbe34f5165ec35b91d40821\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
+Using template $paramod$3db4e0eb8d53c24de24a4ad79a60a4439aa7c451\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
+Using template $paramod$773411d828f7f14e59330d058acea8a930c20b43\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
+Using template $paramod$2ff24960acca0f9f2bce122a33865cf8fc54db58\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
+Using template $paramod$790feb69a258b307b0b54068ffdfaac5ae876a83\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
 Using template $paramod$c5bad42865e229a93361b43e324ac6b285e0f703\$__ICE40_RAM4K_M0 for cells of type $__ICE40_RAM4K_M0.
 Using template $paramod$f607fec2f8abe2ba21c1b26e4dbd91f7183d0e33\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
 Using template $paramod$8c9b43de5032ec5de8163da0b7e822787daa7ef2\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
@@ -9468,14 +9468,14 @@ Using template $paramod$3d5496d5cec0e68be53b3b419c100cd5b0f93241\$__ICE40_RAM4K_
 Using template $paramod$cdb16d4457328f0cbdcf463255c359a49f48b5b6\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
 Using template $paramod$113fb57ce67f2b31af58aec06af484865898efce\$__ICE40_RAM4K_M123 for cells of type $__ICE40_RAM4K_M123.
 Using template $paramod$9e23e67c1c5ba1f2358d1336db93cf998aced905\$__ICE40_RAM4K_M0 for cells of type $__ICE40_RAM4K_M0.
-Using template $paramod$1532b6ad287603889f569b5a370e7e97699ba191\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
-Using template $paramod$8ff41fd47b479218228448b02d1ebbe04012a3bf\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
-Using template $paramod$5cc6d0934c22cc854896160decb6c17f7c263f64\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
+Using template $paramod$41330b413c8eb3675e89983472eab5cd83492d6b\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
+Using template $paramod$cebfb5e1e5d409f10f8880bfe793c6354a42a438\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
+Using template $paramod$0e3e7abe83891f09891a8cdf21f7a278bfce5811\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
 Using template $paramod$0b4e4e91bf5697d5f949fe124c6ad93bceb78315\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
-Using template $paramod$8d6dc4b2a847594b68ac44d9fdc242be675609c6\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
-Using template $paramod$3f6616c2c87c7ffe00a801639c168c43ac8e0a0b\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
-Using template $paramod$fa851883e7fca4c1333fa8d3fcbc89f15963cba7\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
-Using template $paramod$8d7838d2a07e5177de9e789a51ede6496b3e8aa7\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
+Using template $paramod$6154c10d7c3dd606d33253389a8e51e9a4cdfb75\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
+Using template $paramod$5546d848e92a3cef6b9986e6ca5a1fa4d2fc4901\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
+Using template $paramod$a139ff8e348c7b631c5dbeb30419099b6b21605d\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
+Using template $paramod$3aa06d3cb36d6cc7448b8235019f688d91495974\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
 Using template $paramod$7515aa7ff1a318c71ea1b0274102dbd3604b2723\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
 Using template $paramod$baba26a67cfd2db31dc736e6255ce6ae30d5f12c\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
 Using template $paramod$82cfe578cd631f1514a321725108924b68e68250\$__ICE40_RAM4K for cells of type $__ICE40_RAM4K.
@@ -10283,14 +10283,14 @@ Module xosera_upd: replaced 4757 cells with 28324 new cells, skipped 8404 cells.
        1 $paramod$a512a5ccdd6f83d07710cc2016cdc2ec741f9655\SB_RAM40_4K
        1 $paramod$b04603f9dc4bc61e00a7bfa582b3188b042b91d8\SB_RAM40_4K
        1 $paramod$b55b86c9ea65ef2e72e4ec1496f4a900e9254877\SB_RAM40_4K
-       1 $paramod$46dab4fd13f39572ae50ef133a22adbab3aa4fbe\SB_RAM40_4K
-       1 $paramod$3fbd8e792ae5f17a7204b2bcb24ab0470a297246\SB_RAM40_4K
-       1 $paramod$f2e7dc82d291909bcd9f00ff32b0627fa6ca3af1\SB_RAM40_4K
-       1 $paramod$9252d6743c7722fa6e6332f9896303e810337494\SB_RAM40_4K
-       1 $paramod$b3d81934d027bfb84d27f3b1bfb9647d17d930a4\SB_RAM40_4K
-       1 $paramod$f87221a21bbf9103b0c30a3991f669bd6cfe33e6\SB_RAM40_4K
+       1 $paramod$126e7712a26ddda2e3878b035cc4a9f946f4e7a8\SB_RAM40_4K
+       1 $paramod$bc4a82517de8c0fb90996920c6803c4e8d76d9a6\SB_RAM40_4K
+       1 $paramod$72e94581197a335a7052d365f46731b57f7d082e\SB_RAM40_4K
+       1 $paramod$7631aacc9b7f12f6abd99ad417c0bc9e1a9fde87\SB_RAM40_4K
+       1 $paramod$a6121d6be81719f9ca5c271680fba27fecf1c42f\SB_RAM40_4K
+       1 $paramod$b0e430508211ae4518ca09d049a14680d10a82b7\SB_RAM40_4K
      461 $paramod$__ICE40_CARRY_WRAPPER\LUT=16'0110100110010110\I3_IS_CI=1'1
-       1 $paramod$d79fbc019100062184542d0d4cb4c0a4564c8b74\SB_RAM40_4K
+       1 $paramod$a867d4419a80daf16219fe193796cc53c835d5f3\SB_RAM40_4K
        1 $paramod$a4586d2dcd2d3a87c01c8d4bc737156d0344ba31\SB_RAM40_4K
        1 $paramod$b837a24ad2cf22036161f387f20bc015150fd583\SB_RAM40_4K
        1 $paramod$1d2b433153acc6b3c1be07e017d0159fc4ba1f75\SB_RAM40_4K
@@ -10414,14 +10414,14 @@ Using template $paramod$f379b5ce5b2c3ccdb8b45823b64f55375300abcd\SB_RAM40_4K for
 Using template $paramod$28ca3bc5ed3f95f990fa10be3cb49f8795bca96f\SB_RAM40_4K for cells of type $paramod$28ca3bc5ed3f95f990fa10be3cb49f8795bca96f\SB_RAM40_4K.
 Using template $paramod$f3ec2089be6e333bfb9d7e50e6ec6896680170ad\SB_RAM40_4K for cells of type $paramod$f3ec2089be6e333bfb9d7e50e6ec6896680170ad\SB_RAM40_4K.
 Using template $paramod$b55b86c9ea65ef2e72e4ec1496f4a900e9254877\SB_RAM40_4K for cells of type $paramod$b55b86c9ea65ef2e72e4ec1496f4a900e9254877\SB_RAM40_4K.
-Using template $paramod$f87221a21bbf9103b0c30a3991f669bd6cfe33e6\SB_RAM40_4K for cells of type $paramod$f87221a21bbf9103b0c30a3991f669bd6cfe33e6\SB_RAM40_4K.
-Using template $paramod$b3d81934d027bfb84d27f3b1bfb9647d17d930a4\SB_RAM40_4K for cells of type $paramod$b3d81934d027bfb84d27f3b1bfb9647d17d930a4\SB_RAM40_4K.
-Using template $paramod$9252d6743c7722fa6e6332f9896303e810337494\SB_RAM40_4K for cells of type $paramod$9252d6743c7722fa6e6332f9896303e810337494\SB_RAM40_4K.
+Using template $paramod$b0e430508211ae4518ca09d049a14680d10a82b7\SB_RAM40_4K for cells of type $paramod$b0e430508211ae4518ca09d049a14680d10a82b7\SB_RAM40_4K.
+Using template $paramod$a6121d6be81719f9ca5c271680fba27fecf1c42f\SB_RAM40_4K for cells of type $paramod$a6121d6be81719f9ca5c271680fba27fecf1c42f\SB_RAM40_4K.
+Using template $paramod$7631aacc9b7f12f6abd99ad417c0bc9e1a9fde87\SB_RAM40_4K for cells of type $paramod$7631aacc9b7f12f6abd99ad417c0bc9e1a9fde87\SB_RAM40_4K.
 Using template $paramod$a4586d2dcd2d3a87c01c8d4bc737156d0344ba31\SB_RAM40_4K for cells of type $paramod$a4586d2dcd2d3a87c01c8d4bc737156d0344ba31\SB_RAM40_4K.
-Using template $paramod$f2e7dc82d291909bcd9f00ff32b0627fa6ca3af1\SB_RAM40_4K for cells of type $paramod$f2e7dc82d291909bcd9f00ff32b0627fa6ca3af1\SB_RAM40_4K.
-Using template $paramod$3fbd8e792ae5f17a7204b2bcb24ab0470a297246\SB_RAM40_4K for cells of type $paramod$3fbd8e792ae5f17a7204b2bcb24ab0470a297246\SB_RAM40_4K.
-Using template $paramod$46dab4fd13f39572ae50ef133a22adbab3aa4fbe\SB_RAM40_4K for cells of type $paramod$46dab4fd13f39572ae50ef133a22adbab3aa4fbe\SB_RAM40_4K.
-Using template $paramod$d79fbc019100062184542d0d4cb4c0a4564c8b74\SB_RAM40_4K for cells of type $paramod$d79fbc019100062184542d0d4cb4c0a4564c8b74\SB_RAM40_4K.
+Using template $paramod$72e94581197a335a7052d365f46731b57f7d082e\SB_RAM40_4K for cells of type $paramod$72e94581197a335a7052d365f46731b57f7d082e\SB_RAM40_4K.
+Using template $paramod$bc4a82517de8c0fb90996920c6803c4e8d76d9a6\SB_RAM40_4K for cells of type $paramod$bc4a82517de8c0fb90996920c6803c4e8d76d9a6\SB_RAM40_4K.
+Using template $paramod$126e7712a26ddda2e3878b035cc4a9f946f4e7a8\SB_RAM40_4K for cells of type $paramod$126e7712a26ddda2e3878b035cc4a9f946f4e7a8\SB_RAM40_4K.
+Using template $paramod$a867d4419a80daf16219fe193796cc53c835d5f3\SB_RAM40_4K for cells of type $paramod$a867d4419a80daf16219fe193796cc53c835d5f3\SB_RAM40_4K.
 Using template $paramod$b04603f9dc4bc61e00a7bfa582b3188b042b91d8\SB_RAM40_4K for cells of type $paramod$b04603f9dc4bc61e00a7bfa582b3188b042b91d8\SB_RAM40_4K.
 Using template $paramod$a512a5ccdd6f83d07710cc2016cdc2ec741f9655\SB_RAM40_4K for cells of type $paramod$a512a5ccdd6f83d07710cc2016cdc2ec741f9655\SB_RAM40_4K.
 Using template $paramod$1d2b433153acc6b3c1be07e017d0159fc4ba1f75\SB_RAM40_4K for cells of type $paramod$1d2b433153acc6b3c1be07e017d0159fc4ba1f75\SB_RAM40_4K.
@@ -10967,6 +10967,6 @@ Found and reported 0 problems.
 
 22.56. Executing JSON backend.
 
-End of script. Logfile hash: d97bce6633, CPU: user 15.79s system 0.17s
-Yosys 0.16+31 (git sha1 c1646a00a, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
+End of script. Logfile hash: d0cfa0e481, CPU: user 15.77s system 0.33s
+Yosys 0.16+61 (git sha1 c785cb7fe, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
 Time spent: 15% 12x techmap (2 sec), 14% 31x opt_merge (2 sec), ...

@@ -75,6 +75,7 @@
 			"endcase",
 			"endmodule",
 			"FMAX",
+			"FSCALE",
 			"FTDI",
 			"getbh",
 			"getbl",

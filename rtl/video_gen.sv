@@ -26,7 +26,7 @@ module video_gen #(
 (
     // video registers and control
     input  wire logic           vgen_reg_wr_en_i,       // strobe to write internal config register number
-    input  wire logic  [4:0]    vgen_reg_num_i,         // internal config register number (for reads)
+    input  wire logic  [5:0]    vgen_reg_num_i,         // internal config register number (for reads)
     input  wire word_t          vgen_reg_data_i,        // data for internal config register
     output      word_t          vgen_reg_data_o,        // register/status data reads
     input wire  logic  [3:0]    intr_status_i,          // interrupt pending status
@@ -46,6 +46,8 @@ module video_gen #(
     output      tile_addr_t     tilemem_addr_o,         // tile mem word address out (16x5K)
     input  wire word_t          tilemem_data_i,         // tile mem word data in
     // video signal outputs
+    output      logic           v_blank_o,              // line blanked (off bottom of visible)
+    output      logic           h_blank_o,              // pixel blanked (off left of visible)
     output      color_t         colorA_index_o,         // color palette index output (16x256)
     output      color_t         colorB_index_o,         // color palette index output (16x256)
     output      logic           vsync_o, hsync_o,       // video sync outputs
@@ -127,6 +129,7 @@ localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fe
 logic           end_of_line;
 logic           end_of_frame;
 logic           end_of_visible;
+logic           h_visible;
 logic           v_visible;
 hres_t          h_count;
 vres_t          v_count;
@@ -139,13 +142,15 @@ assign vsync_o      = vsync;
 assign dv_de_o      = dv_de;
 assign h_count_o    = h_count;
 assign v_count_o    = v_count;
-
+assign h_blank_o    = ~h_visible;
+assign v_blank_o    = ~v_visible;
 
 video_timing video_timing
 (
     // video registers and control
     .h_count_o(h_count),
     .v_count_o(v_count),
+    .h_visible_o(h_visible),
     .v_visible_o(v_visible),
     .end_of_line_o(end_of_line),
     .end_of_frame_o(end_of_frame),
@@ -387,12 +392,6 @@ always_ff @(posedge clk) begin
         copp_reg_data_o     <= 16'h0000;
 `endif
 
-        audio_0_vol         <= '0;
-        audio_0_period      <= '0;
-        audio_0_tile        <= '0;
-        audio_0_start       <= '0;
-        audio_0_len         <= '0;
-
 `ifndef SYNTHESIS
         pa_blank            <= 1'b0;            // don't blank playfield A in simulation
 `endif
@@ -410,7 +409,7 @@ always_ff @(posedge clk) begin
 `endif
         // video register write
         if (vgen_reg_wr_en_i) begin
-            case ({1'b0, vgen_reg_num_i})
+            case (vgen_reg_num_i)
                 xv::XR_VID_CTRL: begin
                     border_color    <= vgen_reg_data_i[15:8];
                     audio_enable    <= vgen_reg_data_i[4];
@@ -423,24 +422,36 @@ always_ff @(posedge clk) begin
                     copp_reg_data_o[xv::COPP_W-1:0]  <= vgen_reg_data_i[xv::COPP_W-1:0];
 `endif
                 end
-                xv::XR_AUD0_VOL: begin
-                    audio_0_vol     <= vgen_reg_data_i;
+                xv::XR_AUD_CTRL: begin
+                    audio_enable    <= vgen_reg_data_i[0];
                 end
-                xv::XR_AUD0_PERIOD: begin
-                    audio_0_period  <= vgen_reg_data_i[14:0];
-                end
-                xv::XR_AUD0_START: begin
-                    audio_0_start   <= vgen_reg_data_i;
-                end
-                xv::XR_AUD0_LENGTH: begin
-                    audio_0_tile    <= vgen_reg_data_i[15];
-                    audio_0_len     <= vgen_reg_data_i[14:0];
+                xv::XR_UNUSED_03: begin
                 end
                 xv::XR_VID_LEFT: begin
                     vid_left        <= $bits(vid_left)'(vgen_reg_data_i);
                 end
                 xv::XR_VID_RIGHT: begin
                     vid_right       <= $bits(vid_right)'(vgen_reg_data_i);
+                end
+                xv::XR_UNUSED_06: begin
+                end
+                xv::XR_UNUSED_07: begin
+                end
+                xv::XR_SCANLINE: begin
+                end
+                xv::XR_FEATURES: begin
+                end
+                xv::XR_VID_HSIZE: begin
+                end
+                xv::XR_VID_VSIZE: begin
+                end
+                xv::XR_UNUSED_0C: begin
+                end
+                xv::XR_UNUSED_0D: begin
+                end
+                xv::XR_UNUSED_0E: begin
+                end
+                xv::XR_UNUSED_0F: begin
                 end
                 // playfield A
                 xv::XR_PA_GFX_CTRL: begin
@@ -468,13 +479,15 @@ always_ff @(posedge clk) begin
                     pa_fine_hscroll <= vgen_reg_data_i[12:8];
                     pa_fine_vscroll <= vgen_reg_data_i[5:0];
                 end
+                xv::XR_PA_HV_FSCALE: begin
+                    pa_h_frac_repeat <= vgen_reg_data_i[6:4];
+                    pa_v_frac_repeat <= vgen_reg_data_i[2:0];
+                end
                 xv::XR_PA_LINE_ADDR: begin
                     pa_line_start_set <= 1'b1;               // changed flag
                     line_set_addr   <= vgen_reg_data_i;
                 end
-                xv::XR_PA_HV_FSCALE: begin
-                    pa_h_frac_repeat <= vgen_reg_data_i[6:4];
-                    pa_v_frac_repeat <= vgen_reg_data_i[2:0];
+                xv::XR_PA_UNUSED_17: begin
                 end
                 // playfield B
                 xv::XR_PB_GFX_CTRL: begin
@@ -501,13 +514,15 @@ always_ff @(posedge clk) begin
                     pb_fine_hscroll <= vgen_reg_data_i[12:8];
                     pb_fine_vscroll <= vgen_reg_data_i[5:0];
                 end
+                xv::XR_PB_HV_FSCALE: begin
+                    pb_h_frac_repeat <= vgen_reg_data_i[6:4];
+                    pb_v_frac_repeat <= vgen_reg_data_i[2:0];
+                end
                 xv::XR_PB_LINE_ADDR: begin
                     pb_line_start_set <= 1'b1;
                     line_set_addr   <= vgen_reg_data_i;
                 end
-                xv::XR_PB_HV_FSCALE: begin
-                    pb_h_frac_repeat <= vgen_reg_data_i[6:4];
-                    pb_v_frac_repeat <= vgen_reg_data_i[2:0];
+                xv::XR_PB_UNUSED_1F: begin
                 end
                 default: begin
                 end
@@ -520,6 +535,21 @@ always_ff @(posedge clk) begin
     end
 end
 
+                // xv::XR_AUD0_VOL: begin
+                //     audio_0_vol     <= vgen_reg_data_i;
+                // end
+                // xv::XR_AUD0_PERIOD: begin
+                //     audio_0_period  <= vgen_reg_data_i[14:0];
+                // end
+                // xv::XR_AUD0_START: begin
+                //     audio_0_start   <= vgen_reg_data_i;
+                // end
+                // xv::XR_AUD0_LENGTH: begin
+                //     audio_0_tile    <= vgen_reg_data_i[15];
+                //     audio_0_len     <= vgen_reg_data_i[14:0];
+                // end
+
+
 word_t  rd_vid_regs;
 word_t  rd_pf_regs;
 
@@ -531,18 +561,19 @@ end
 // video registers read
 always_comb begin
     case (vgen_reg_num_i[3:0])
-        xv::XR_VID_CTRL[3:0]:       rd_vid_regs = { border_color, 4'b0, intr_status_i };
+        xv::XR_VID_CTRL[3:0]:       rd_vid_regs = { border_color, 8'(intr_status_i) };
 `ifdef ENABLE_COPP
-        xv::XR_COPP_CTRL[3:0]:      rd_vid_regs = { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPP_W-1:0]};
+        xv::XR_COPP_CTRL[3:0]:      rd_vid_regs = { copp_reg_data_o[15], 15'(copp_reg_data_o[xv::COPP_W-1:0]) };
 `endif
-//        xv::XR_VID_LEFT[3:0]:       rd_vid_regs = 16'(vid_left);
-//        xv::XR_VID_RIGHT[3:0]:      rd_vid_regs = 16'(vid_right);
-        xv::XR_SCANLINE[3:0]:       rd_vid_regs = { ~v_visible, 15'(v_count) };
-//        xv::XR_VERSION[3:0]:        rd_vid_regs = { 1'b`GITCLEAN, 3'b000, 12'h`VERSION };
+        xv::XR_AUD_CTRL[3:0]:       rd_vid_regs = { 15'b0, audio_enable };
+        xv::XR_VID_LEFT[3:0]:       rd_vid_regs = 16'(vid_left);
+        xv::XR_VID_RIGHT[3:0]:      rd_vid_regs = 16'(vid_right);
+        xv::XR_SCANLINE[3:0]:       rd_vid_regs = 16'(v_count);
+        xv::XR_FEATURES[3:0]:       rd_vid_regs = 16'h0000; // TODO: feature codes
 //        xv::XR_GITHASH_H[3:0]:      rd_vid_regs = githash[31:16];
 //        xv::XR_GITHASH_L[3:0]:      rd_vid_regs = githash[15:0];
-        xv::XR_VID_HSIZE[3:0]:      rd_vid_regs = 16'(xv::VISIBLE_WIDTH);
-        xv::XR_VID_VSIZE[3:0]:      rd_vid_regs = 16'(xv::VISIBLE_HEIGHT);
+//        xv::XR_VID_HSIZE[3:0]:      rd_vid_regs = 16'(xv::VISIBLE_WIDTH);
+//        xv::XR_VID_VSIZE[3:0]:      rd_vid_regs = 16'(xv::VISIBLE_HEIGHT);
 //        xv::XR_VID_VFREQ[3:0]:      rd_vid_regs = xv::REFRESH_FREQ;
         default:                    rd_vid_regs = 16'h0000;
     endcase
@@ -555,12 +586,14 @@ always_comb begin
         xv::XR_PA_TILE_CTRL[3:0]:   rd_pf_regs = { pa_tile_bank, pa_disp_in_tile, pa_tile_in_vram, 4'b0, pa_tile_height };
         xv::XR_PA_DISP_ADDR[3:0]:   rd_pf_regs = pa_start_addr;
         xv::XR_PA_LINE_LEN[3:0]:    rd_pf_regs = pa_line_len;
-//        xv::XR_PA_HV_SCROLL[3:0]:   rd_pf_regs = { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
+        xv::XR_PA_HV_SCROLL[3:0]:   rd_pf_regs = { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
+        xv::XR_PA_HV_FSCALE[3:0]:   rd_pf_regs = { 8'h00, 4'(pa_h_frac_repeat), 4'(pa_v_frac_repeat) };
         xv::XR_PB_GFX_CTRL[3:0]:    rd_pf_regs = { pb_colorbase, pb_blank, pb_bitmap, pb_bpp, pb_h_repeat, pb_v_repeat };
         xv::XR_PB_TILE_CTRL[3:0]:   rd_pf_regs = { pb_tile_bank, pb_disp_in_tile, pb_tile_in_vram, 4'b0, pb_tile_height };
         xv::XR_PB_DISP_ADDR[3:0]:   rd_pf_regs = pb_start_addr;
         xv::XR_PB_LINE_LEN[3:0]:    rd_pf_regs = pb_line_len;
-//        xv::XR_PB_HV_SCROLL[3:0]:   rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
+        xv::XR_PB_HV_SCROLL[3:0]:   rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
+        xv::XR_PB_HV_FSCALE[3:0]:   rd_pf_regs = { 8'h00, 4'(pb_h_frac_repeat), 4'(pb_v_frac_repeat) };
         default:                    rd_pf_regs = 16'h0000;
     endcase
 end
@@ -624,6 +657,37 @@ generate
             .reset_i(reset_i),
             .clk(clk)
         );
+
+    always_ff @(posedge clk) begin
+        if (reset_i) begin
+            audio_0_vol         <= '0;
+            audio_0_period      <= '0;
+            audio_0_tile        <= '0;
+            audio_0_start       <= '0;
+            audio_0_len         <= '0;
+        end else begin
+            if (vgen_reg_wr_en_i) begin
+                case (vgen_reg_num_i)
+                    xv::XR_AUD0_VOL: begin
+                        audio_0_vol     <= vgen_reg_data_i;
+                    end
+                    xv::XR_AUD0_PERIOD: begin
+                        audio_0_period  <= vgen_reg_data_i[14:0];
+                    end
+                    xv::XR_AUD0_START: begin
+                        audio_0_start   <= vgen_reg_data_i;
+                    end
+                    xv::XR_AUD0_LENGTH: begin
+                        audio_0_tile    <= vgen_reg_data_i[15];
+                        audio_0_len     <= vgen_reg_data_i[14:0];
+                    end
+                    default: begin
+                    end
+                endcase
+            end
+        end
+    end
+
     end else begin
         assign  audio_pdm_l_o   = 1'b0;
         assign  audio_pdm_r_o   = 1'b0;

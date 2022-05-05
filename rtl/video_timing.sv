@@ -28,7 +28,8 @@ module video_timing
     // video registers and control
     output      hres_t          h_count_o,              // horizontal video counter
     output      vres_t          v_count_o,              // vertical video counter
-    output      logic           v_visible_o,            // vertical line visible (e.g., 0-479)
+    output      logic           h_visible_o,            // horizontal pixel visible (not off left edge)
+    output      logic           v_visible_o,            // vertical line visible (not off bottom edge)
     output      logic           end_of_line_o,          // strobe for end of line (h_count resets)
     output      logic           end_of_frame_o,         // strobe for end of frame (v_count resets)
     output      logic           end_of_visible_o,       // strobe for end of visible frame (e.g EOL 479)
@@ -95,6 +96,7 @@ assign end_of_line_o    = end_of_line;
 assign end_of_frame_o   = end_of_frame;
 assign end_of_visible_o = end_of_visible;
 assign v_visible_o      = (v_state == V_STATE_VISIBLE);
+assign h_visible_o      = (h_state == H_STATE_VISIBLE);
 assign hsync_o          = hsync;
 assign vsync_o          = vsync;
 assign dv_de_o          = dv_de;

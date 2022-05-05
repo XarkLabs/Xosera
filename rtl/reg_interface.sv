@@ -31,11 +31,12 @@ module reg_interface(
     input  wire word_t           regs_data_i,       // VRAM read data in
     input  wire word_t           xr_data_i,         // XR read data in
     // status signals
-    input  wire logic            blit_busy_i,       // blit operation in progress
     input  wire logic            blit_full_i,       // blit register queue full
+    input  wire logic            blit_busy_i,       // blit operation in progress
+    input  wire logic            h_blank_i,         // pixel outside of visible range (before left edge)
+    input  wire logic            v_blank_i,         // line outside of visible range (after bottom line)
     // iCE40 reconfigure
     output      logic            reconfig_o,        // reconfigure iCE40 from flash
-    output      logic  [1:0]     boot_select_o,     // reconfigure iCE40 flash config number
     // interrupt management
     output      logic  [3:0]     intr_mask_o,       // enabled interrupts
     output      logic  [3:0]     intr_clear_o,      // interrupt CPU acknowledge
@@ -44,13 +45,14 @@ module reg_interface(
     output      logic            bus_ack_o,         // ACK strobe for bus debug
 `endif
 
-    input  wire logic            reset_i,
-    input  wire logic            clk
+    input  wire logic            reset_i,           // reset signal
+    input  wire logic            clk                // pixel clock
 );
 
 // read/write storage for main interface registers
-addr_t          reg_xr_addr;            // XR read/write address (XR_ADDR)
-word_t          reg_xr_data;            // word read from XR bus
+addr_t          reg_rd_xaddr;           // XR read address (RD_XADDR)
+addr_t          reg_wr_xaddr;           // XR write address (WR_XADDR)
+word_t          reg_rd_xdata;           // word read from XR bus (for RD_XDATA)
 
 word_t          reg_rd_incr;            // VRAM read increment
 addr_t          reg_rd_addr;            // VRAM read address
@@ -63,7 +65,12 @@ word_t          reg_rw_incr;            // VRAM read/write increment
 addr_t          reg_rw_addr;            // VRAM read/write address
 word_t          reg_rw_data;            // word read from VRAM (for RW_ADDR)
 
+word_t          reg_timer;              // 1/10 ms timer (visible 16 bits)
+logic [11:0]    reg_timer_frac;         // internal clock counter for 1/10 ms
+
+logic  [3:0]    intr_mask;              // interrupt mask
 logic           reg_rw_rd_inc;          // flag to enable RW_ADDR add of RW_INCR on read
+
 
 // read flags
 logic           xr_rd;                  // flag for XR_DATA read outstanding
@@ -71,34 +78,20 @@ logic           vram_rd;                // flag for DATA read outstanding
 logic           vram_rw_rd;             // flag for RW_DATA read outstanding
 logic           vram_rw_wr;             // flag for RW_DATA write outstanding
 
-
-// internal storage
-logic  [3:0]    intr_mask;              // interrupt mask
 logic  [3:0]    bus_reg_num;            // bus register on bus
-
-logic  [7:0]    reg_xr_data_even;       // byte written to even byte of XR_DATA
-logic  [7:0]    reg_data_even;          // byte written to even byte of XM_DATA/XM_DATA_2
-
 logic           bus_write_strobe;       // strobe when a word of data written
 logic           bus_read_strobe;        // strobe when a word of data read
 logic           bus_bytesel;            // msb/lsb on bus
-logic  [7:0]    bus_data_byte;          // data byte from bus
+byte_t          bus_data_byte;          // data byte from bus
 
-word_t          reg_timer;              // 1/10 ms timer (visible 16 bits)
-logic [11:0]    reg_timer_frac;         // internal clock counter for 1/10 ms
+byte_t          timer_latch_val;        // low byte of timer (latched on high byte read)
+byte_t          reg_xdata_even;         // byte written to even byte of XR_XDATA
+byte_t          reg_data_even;          // byte written to even byte of XM_DATA/XM_DATA_2
+byte_t          reg_rwdata_even;        // byte written to even byte of XM_RW_DATA/XM_RW_DATA_2
 
-`ifdef ENABLE_TIMERLATCH
-logic [7:0]     timer_latch_val;
-`endif
-
-`ifdef ENABLE_LFSR
-parameter               LFSR_SIZE = 19; // NOTE: if changed, must change taps
-logic [LFSR_SIZE-1:0]   LFSR;
-word_t          reg_LFSR;
-`endif
 
 logic mem_wait;
-assign mem_wait    = xr_rd | vram_rd | vram_rw_rd | regs_wr_o | vram_rw_wr;
+assign mem_wait    = xr_rd | vram_rd | vram_rw_rd | regs_wr_o;  // believed unneeded: | vram_rw_wr
 
 // output interrupt mask
 assign intr_mask_o = intr_mask;
@@ -124,47 +117,42 @@ bus_interface bus(
 );
 
 // continuously output byte selected for read from Xosera (to be put on bus when selected for read)
+
+word_t      rd_temp_word;
+always_comb bus_data_o = !bus_bytesel ? rd_temp_word[15:8] : rd_temp_word[7:0];
+
 always_comb begin
     case (bus_reg_num)
-        xv::XM_XR_ADDR:
-            bus_data_o  = !bus_bytesel ? reg_xr_addr[15:8]      : reg_xr_addr[7:0];
-        xv::XM_XR_DATA:
-            bus_data_o  = !bus_bytesel ? reg_xr_data[15:8]      : reg_xr_data[7:0];
+        xv::XM_SYS_CTRL:
+            rd_temp_word  = { mem_wait, blit_full_i, blit_busy_i, 1'b0, h_blank_i, v_blank_i, 1'b0, reg_rw_rd_inc, 4'b0, regs_wrmask_o };
+        xv::XM_INT_CTRL:
+            rd_temp_word  = { 4'b0, intr_mask, 8'b0 };
+        xv::XM_TIMER:
+            rd_temp_word  = { reg_timer[15:8], timer_latch_val };
+        xv::XM_RD_XADDR:
+            rd_temp_word  = reg_rd_xaddr;
+        xv::XM_WR_XADDR:
+            rd_temp_word  = reg_wr_xaddr;
+        xv::XM_XDATA:
+            rd_temp_word  = reg_rd_xdata;
         xv::XM_RD_INCR:
-            bus_data_o  = !bus_bytesel ? reg_rd_incr[15:8]      : reg_rd_incr[7:0];
+            rd_temp_word  = reg_rd_incr;
         xv::XM_RD_ADDR:
-            bus_data_o  = !bus_bytesel ? reg_rd_addr[15:8]      : reg_rd_addr[7:0];
+            rd_temp_word  = reg_rd_addr;
         xv::XM_WR_INCR:
-            bus_data_o  = !bus_bytesel ? reg_wr_incr[15:8]      : reg_wr_incr[7:0];
+            rd_temp_word  = reg_wr_incr;
         xv::XM_WR_ADDR:
-            bus_data_o  = !bus_bytesel ? reg_wr_addr[15:8]      : reg_wr_addr[7:0];
+            rd_temp_word  = reg_wr_addr;
         xv::XM_DATA,
         xv::XM_DATA_2:
-            bus_data_o  = !bus_bytesel ? reg_rd_data[15:8]      : reg_rd_data[7:0];
-        xv::XM_SYS_CTRL:
-            bus_data_o  = !bus_bytesel ? { 4'b0, intr_mask }    : { mem_wait, blit_busy_i, blit_full_i, reg_rw_rd_inc, regs_wrmask_o };
-        xv::XM_TIMER:
-`ifdef ENABLE_TIMERLATCH
-            bus_data_o  = !bus_bytesel ? reg_timer[15:8]        : timer_latch_val;
-`else
-            bus_data_o  = !bus_bytesel ? reg_timer[15:8]        : reg_timer[7:0];
-`endif
-`ifdef ENABLE_LFSR
-        xv::XM_LFSR:
-            bus_data_o  = !bus_bytesel ? reg_LFSR[15:8]         : reg_LFSR[7:0];
-`else
-        xv::XM_UNUSED_A:
-            bus_data_o  = 8'b0;
-`endif
-        xv::XM_UNUSED_B:
-            bus_data_o  = 8'b0;
+            rd_temp_word  = reg_rd_data;
         xv::XM_RW_INCR:
-            bus_data_o  = !bus_bytesel ? reg_rw_incr[15:8]      : reg_rw_incr[7:0];
+            rd_temp_word  = reg_rw_incr;
         xv::XM_RW_ADDR:
-            bus_data_o  = !bus_bytesel ? reg_rw_addr[15:8]      : reg_rw_addr[7:0];
+            rd_temp_word  = reg_rw_addr;
         xv::XM_RW_DATA,
         xv::XM_RW_DATA_2:
-            bus_data_o  = !bus_bytesel ? reg_rw_data[15:8]     : reg_rw_data[7:0];
+            rd_temp_word  = reg_rw_data;
     endcase
 end
 
@@ -182,57 +170,46 @@ always_ff @(posedge clk) begin
     end
 end
 
-// LFSR for random numbers
-`ifdef ENABLE_LFSR
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        LFSR <= LFSR_SIZE'(1);
-    end else begin
-        LFSR <= {LFSR[LFSR_SIZE-2:0], LFSR[18] ^~ LFSR[5] ^~ LFSR[1] ^~ LFSR[0]};
-
-        // latch a new LFSR into reg_LFSR on bus activity
-        if (bus_read_strobe || bus_write_strobe) begin
-            reg_LFSR    <= LFSR[16:1];
-        end
-    end
-end
-`endif
-
-always_ff @(posedge clk) begin
-    if (reset_i) begin
-        // control signals
+        // control signal strobes
         reconfig_o      <= 1'b0;
-        boot_select_o   <= 2'b00;
-        intr_clear_o    <= 4'b0;
-        intr_mask       <= 4'b0000;
-        // register signals
+        intr_clear_o    <= 4'b0000;
+
+        // control signals
         regs_vram_sel_o <= 1'b0;
         regs_xr_sel_o   <= 1'b0;
         regs_wr_o       <= 1'b0;
-        regs_wrmask_o   <= 4'b1111;
         vram_rd         <= 1'b0;
         xr_rd           <= 1'b0;
+
         // addr/data out
         regs_addr_o     <= 16'h0000;
         regs_data_o     <= 16'h0000;
 
         // xosera registers
-        reg_xr_addr     <= 16'h0000;
+        reg_rd_xaddr    <= 16'h0000;
+        reg_wr_xaddr    <= 16'h0000;
         reg_rd_addr     <= 16'h0000;
         reg_rd_incr     <= 16'h0000;
         reg_wr_addr     <= 16'h0000;
         reg_wr_incr     <= 16'h0000;
         reg_rw_addr     <= 16'h0000;
         reg_rw_incr     <= 16'h0000;
-        reg_data_even   <= 8'h00;
-`ifdef ENABLE_TIMERLATCH
+        regs_wrmask_o   <= 4'b1111;
+        intr_mask       <= 4'b0000;
+        reg_rw_rd_inc   <= 1'b0;
+
+        // temp registers
         timer_latch_val <= 8'h00;
-`endif
-        reg_rw_rd_inc <= '0;
+        reg_data_even   <= 8'h00;
+        reg_rwdata_even <= 8'h00;
+        reg_xdata_even  <= 8'h00;
 
     end else begin
-
-        intr_clear_o    <= 4'b0;
+        // clear strobe signals
+        reconfig_o      <= 1'b0;
+        intr_clear_o    <= 4'b0000;
 
         // VRAM access acknowledge
         if (vram_ack_i) begin
@@ -270,11 +247,11 @@ always_ff @(posedge clk) begin
         // XR access acknowledge
         if (xr_ack_i) begin
             if (xr_rd) begin
-                reg_xr_data      <= xr_data_i;
+                reg_rd_xdata    <= xr_data_i;
             end
 
             if (regs_wr_o) begin
-                reg_xr_addr     <= reg_xr_addr + 1'b1;  // TODO: optional xr rd increment?
+                reg_wr_xaddr    <= reg_wr_xaddr + 1'b1;
             end
 
             regs_xr_sel_o   <= 1'b0;            // clear xr select
@@ -282,128 +259,130 @@ always_ff @(posedge clk) begin
             xr_rd           <= 1'b0;            // clear pending xr read
         end
 
-        // even register byte write
-        if (bus_write_strobe && !bus_bytesel) begin
+        // register write
+        if (bus_write_strobe) begin
             case (bus_reg_num)
-                xv::XM_XR_ADDR:
-                    reg_xr_addr[15:8]   <= bus_data_byte;
-                xv::XM_XR_DATA:
-                    reg_xr_data_even    <= bus_data_byte;   // data xr reg even byte storage
-                xv::XM_RD_INCR:
-                    reg_rd_incr[15:8]   <= bus_data_byte;
-                xv::XM_RD_ADDR:
-                    reg_rd_addr[15:8]   <= bus_data_byte;
-                xv::XM_WR_INCR:
-                    reg_wr_incr[15:8]   <= bus_data_byte;
-                xv::XM_WR_ADDR:
-                    reg_wr_addr[15:8]   <= bus_data_byte;
-                xv::XM_DATA,
-                xv::XM_DATA_2:
-                    reg_data_even       <= bus_data_byte;   // data reg even byte storage
-                xv::XM_SYS_CTRL:
-                    { reconfig_o, boot_select_o, intr_mask} <= { bus_data_byte[7], bus_data_byte[6:5], bus_data_byte[3:0] };
-                xv::XM_TIMER:
-                    ;
-`ifdef ENABLE_LFSR
-                xv::XM_LFSR:
-                    ;
-`else
-                xv::XM_UNUSED_A:
-                    ;
-`endif
-                xv::XM_UNUSED_B:
-                    ;
-                xv::XM_RW_INCR:
-                    reg_rw_incr[15:8]   <= bus_data_byte;
-                xv::XM_RW_ADDR:
-                    reg_rw_addr[15:8]   <= bus_data_byte;
-                xv::XM_RW_DATA,
-                xv::XM_RW_DATA_2:
-                    reg_data_even       <= bus_data_byte;   // data reg even byte storage
-            endcase
-        end
-
-        // odd register byte write (actives action)
-        if (bus_write_strobe && bus_bytesel) begin
-            case (bus_reg_num)
-                xv::XM_XR_ADDR: begin
-                    reg_xr_addr[7:0]    <= bus_data_byte;
-                    regs_addr_o         <= { reg_xr_addr[15:8], bus_data_byte };    // output read addr (pre-read)
-`ifdef NOWORKIE
-                    regs_xr_sel_o       <= reg_xr_addr[xv::XRMEM_READ_B];            // select XR
-                    xr_rd               <= reg_xr_addr[xv::XRMEM_READ_B];            // remember pending aux read request
-`else
-                    regs_xr_sel_o       <= 1'b1;            // select XR
-                    xr_rd               <= 1'b1;            // remember pending aux read request
-`endif
+                xv::XM_SYS_CTRL: begin
+                    if (!bus_bytesel) begin
+                        reg_rw_rd_inc       <= bus_data_byte[0];
+                    end else begin
+                        regs_wrmask_o       <= bus_data_byte[3:0];
+                    end
                 end
-                xv::XM_XR_DATA: begin
-                    regs_addr_o         <= reg_xr_addr;
-                    regs_data_o         <= { reg_xr_data_even, bus_data_byte };     // output write addr
-                    regs_xr_sel_o       <= 1'b1;            // select XR
-                    regs_wr_o           <= 1'b1;
+                xv::XM_INT_CTRL: begin
+                    if (!bus_bytesel) begin
+                        intr_mask           <= bus_data_byte[3:0];
+                    end else begin
+                        intr_clear_o        <= bus_data_byte[3:0];
+                    end
+                end
+                xv::XM_TIMER: begin
+                    reconfig_o          <= (bus_data_byte[7:4] == 4'hB);
+                end
+                xv::XM_RD_XADDR: begin
+                    if (!bus_bytesel) begin
+                        reg_rd_xaddr[15:8]  <= bus_data_byte;
+                    end else begin
+                        reg_rd_xaddr[7:0]   <= bus_data_byte;
+                        regs_xr_sel_o       <= 1'b1;            // select XR
+                        xr_rd               <= 1'b1;            // remember pending XR read request
+                    end
+                    regs_addr_o         <= { reg_rd_xaddr[15:8], bus_data_byte };    // output read addr (pre-read)
+                end
+                xv::XM_WR_XADDR: begin
+                    if (!bus_bytesel) begin
+                        reg_wr_xaddr[15:8]  <= bus_data_byte;
+                    end else begin
+                        reg_wr_xaddr[7:0]   <= bus_data_byte;
+                    end
+                end
+                xv::XM_XDATA: begin
+                    if (!bus_bytesel) begin
+                        reg_xdata_even      <= bus_data_byte;   // data xr reg even byte storage
+                    end else begin
+                        regs_xr_sel_o       <= 1'b1;            // select XR
+                        regs_wr_o           <= 1'b1;
+                    end
+                    regs_addr_o         <= reg_wr_xaddr;
+                    regs_data_o         <= { reg_xdata_even, bus_data_byte };     // output write addr
                 end
                 xv::XM_RD_INCR: begin
-                    reg_rd_incr[7:0]    <= bus_data_byte;
+                    if (!bus_bytesel) begin
+                        reg_rd_addr[15:8]   <= bus_data_byte;
+                    end else begin
+                        reg_rd_incr[7:0]    <= bus_data_byte;
+                    end
                 end
                 xv::XM_RD_ADDR: begin
-                    reg_rd_addr[7:0]    <= bus_data_byte;
+                    if (!bus_bytesel) begin
+                        reg_rd_addr[15:8]   <= bus_data_byte;
+                    end else begin
+                        reg_rd_addr[7:0]    <= bus_data_byte;
+                        regs_vram_sel_o     <= 1'b1;            // select VRAM
+                        vram_rd             <= 1'b1;            // remember pending VRAM read request
+                    end
                     regs_addr_o         <= { reg_rd_addr[15:8], bus_data_byte };      // output read address
-                    regs_vram_sel_o     <= 1'b1;            // select VRAM
-                    vram_rd             <= 1'b1;            // remember pending vramread request
                 end
                 xv::XM_WR_INCR: begin
-                    reg_wr_incr[7:0]    <= bus_data_byte;
+                    if (!bus_bytesel) begin
+                        reg_wr_incr[15:8]   <= bus_data_byte;
+                    end else begin
+                        reg_wr_incr[7:0]    <= bus_data_byte;
+                    end
                 end
                 xv::XM_WR_ADDR: begin
-                    reg_wr_addr[7:0]    <= bus_data_byte;
+                    if (!bus_bytesel) begin
+                        reg_wr_addr[15:8]   <= bus_data_byte;
+                    end else begin
+                        reg_wr_addr[7:0]    <= bus_data_byte;
+                    end
                 end
                 xv::XM_DATA,
                 xv::XM_DATA_2: begin
+                    if (!bus_bytesel) begin
+                        reg_data_even       <= bus_data_byte;   // data reg even byte storage
+                    end else begin
+                        regs_vram_sel_o     <= 1'b1;            // select VRAM
+                        regs_wr_o           <= 1'b1;            // write
+                    end
                     regs_addr_o         <= reg_wr_addr;    // output write address
                     regs_data_o         <= { reg_data_even, bus_data_byte };      // output write data
-                    regs_vram_sel_o     <= 1'b1;            // select VRAM
-                    regs_wr_o           <= 1'b1;            // write
-                end
-                xv::XM_SYS_CTRL: begin
-                    reg_rw_rd_inc       <= bus_data_byte[4];
-                    regs_wrmask_o       <= bus_data_byte[3:0];
-                end
-                xv::XM_TIMER: begin
-                    intr_clear_o        <= bus_data_byte[3:0];
-                end
-`ifdef ENABLE_LFSR
-                xv::XM_LFSR: begin
-                end
-`else
-                xv::XM_UNUSED_A: begin
-                end
-`endif
-                xv::XM_UNUSED_B: begin
-                    ;
                 end
                 xv::XM_RW_INCR: begin
-                    reg_rw_incr[7:0]    <= bus_data_byte;
+                    if (!bus_bytesel) begin
+                        reg_rw_incr[15:8]   <= bus_data_byte;
+                    end else begin
+                        reg_rw_incr[7:0]    <= bus_data_byte;
+                    end
                 end
                 xv::XM_RW_ADDR: begin
-                    reg_rw_addr[7:0]    <= bus_data_byte;
+                    if (!bus_bytesel) begin
+                        reg_rw_addr[15:8]   <= bus_data_byte;
+                    end else begin
+                        reg_rw_addr[7:0]    <= bus_data_byte;
+                        regs_vram_sel_o     <= 1'b1;            // select VRAM
+                        vram_rd             <= 1'b1;            // remember pending vramread request
+                        vram_rw_rd          <= 1'b1;            // remember rw read
+                    end
                     regs_addr_o         <= { reg_rw_addr[15:8], bus_data_byte };      // output read address
-                    regs_vram_sel_o     <= 1'b1;            // select VRAM
-                    vram_rd             <= 1'b1;            // remember pending vramread request
-                    vram_rw_rd          <= 1'b1;            // remember rw read
                 end
                 xv::XM_RW_DATA,
                 xv::XM_RW_DATA_2: begin
+                    if (!bus_bytesel) begin
+                        reg_rwdata_even     <= bus_data_byte;   // data reg even byte storage
+                    end else begin
+                        regs_vram_sel_o     <= 1'b1;            // select VRAM
+                        regs_wr_o           <= 1'b1;            // write
+                        vram_rw_wr          <= 1'b1;            // remember rw write
+                    end
                     regs_addr_o         <= reg_rw_addr;    // output write address
-                    regs_data_o         <= { reg_data_even, bus_data_byte };      // output write data
-                    regs_vram_sel_o     <= 1'b1;            // select VRAM
-                    regs_wr_o           <= 1'b1;            // write
-                    vram_rw_wr          <= 1'b1;            // remember rw write
+                    regs_data_o         <= { reg_rwdata_even, bus_data_byte };      // output write data
                 end
             endcase
         end
 
-        if (bus_read_strobe & bus_bytesel) begin
+        // if data read, start next pre-read
+        if (bus_read_strobe && bus_bytesel) begin
             // if read from data then pre-read next vram rd address
             if (bus_reg_num == xv::XM_DATA || bus_reg_num == xv::XM_DATA_2) begin
                 regs_addr_o         <= reg_rd_addr;     // output read address
@@ -417,11 +396,11 @@ always_ff @(posedge clk) begin
                 vram_rw_rd          <= 1'b1;            // remember pending vram read request
             end
         end
-`ifdef ENABLE_TIMERLATCH
+
+        // latch low byte of timer when upper byte read
         if (bus_read_strobe && !bus_bytesel) begin
             timer_latch_val <= reg_timer[7:0];
         end
-`endif
     end
 end
 endmodule

@@ -62,7 +62,7 @@ module xosera_main#(
     output logic              audio_l_o,            // left channel audio PWM output
     output logic              audio_r_o,            // right channel audio PWM output
     output logic              reconfig_o,           // reconfigure iCE40 from flash
-    output logic      [1:0]   boot_select_o,        // reconfigure congigureation number (0-3)
+    output logic      [1:0]   boot_select_o,        // reconfigure configuration number (0-3)
     input  wire logic         reset_i,              // reset signal
     input  wire logic         clk                   // pixel clock
 );
@@ -74,6 +74,9 @@ addr_t                  vgen_vram_addr;     // video gen vram addr
 logic                   dv_de;              // display enable
 logic                   hsync;              // hsync
 logic                   vsync;              // vsync
+
+logic                   h_blank;             // off left edge
+logic                   v_blank;             // off bottom edge
 
 color_t                 colorA_index;       // pf A color index
 argb_t                  colorA_xrgb;        // pf A ARGB output
@@ -91,7 +94,6 @@ logic                   regs_xr_sel;
 logic                   regs_xr_ack;
 logic                   regs_wr;
 logic  [3:0]            regs_wr_mask;
-//addr_t                  regs_vram_addr;
 
 // blit vram/xr access
 logic                   blit_vram_sel;
@@ -127,7 +129,7 @@ word_t                  xr_regs_data_in;
 
 // XR register unit select signals
 logic                   vgen_reg_wr_en;     // vgen XR register 0x000X & 0x001X
-logic                   blit_reg_wr_en;     // blit XR register 0x002X    // TODO
+logic                   blit_reg_wr_en;     // blit XR register 0x002X
 
 // XM top-level register signals
 addr_t                  xm_regs_addr;       // register interface VRAM/XR addr
@@ -155,6 +157,8 @@ assign audio_l_o    =   dbug_cs_strobe;     // debug to see when CS noticed
 assign audio_r_o    =   regs_xr_sel;        // debug to see when XR bus selected
 `endif
 
+assign boot_select_o    = regs_wr_mask[1:0];    // low two bits of write mask used as boot config
+
 // register interface for CPU access
 reg_interface reg_interface(
     // bus
@@ -175,12 +179,13 @@ reg_interface reg_interface(
     .regs_data_o(xm_regs_data_out),     // 16-bit word write to XR/vram
     .regs_data_i(vram_data_out),        // 16-bit word read from vram
     .xr_data_i(xm_regs_data_in),        // 16-bit word read from XR
-    //
+    // status flags
+    .h_blank_i(h_blank),                // horizontal blank (non-visible)
+    .v_blank_i(v_blank),                // vertical blank (non-visible)
     .blit_busy_i(blit_busy),            // blit engine busy
     .blit_full_i(blit_full),            // blit engine queue full
     // reconfig
     .reconfig_o(reconfig_o),
-    .boot_select_o(boot_select_o),
     // interrupts
     .intr_mask_o(intr_mask),            // set with write to SYS_CTRL
     .intr_clear_o(intr_clear),          // strobe with write to TIMER
@@ -197,7 +202,7 @@ video_gen#(
     .EN_AUDIO(EN_AUDIO)
 ) video_gen(
     .vgen_reg_wr_en_i(vgen_reg_wr_en),
-    .vgen_reg_num_i(xr_regs_addr[4:0]),
+    .vgen_reg_num_i(xr_regs_addr[5:0]),
     .vgen_reg_data_i(xr_regs_data_in),
     .vgen_reg_data_o(xr_regs_data_out),
     .intr_status_i(intr_status),            // status read from VID_CTRL
@@ -208,6 +213,8 @@ video_gen#(
     .tilemem_sel_o(vgen_tile_sel),
     .tilemem_addr_o(vgen_tile_addr),
     .tilemem_data_i(vgen_tile_data),
+    .h_blank_o(h_blank),
+    .v_blank_o(v_blank),
     .colorA_index_o(colorA_index),
     .colorB_index_o(colorB_index),
     .hsync_o(hsync),

@@ -34,7 +34,6 @@
 
 // features that can be optionally disabled
 //`define ENABLE_LFSR                     // enable XM_REG 0xA as 19-bit LFSR
-`define ENABLE_TIMERLATCH               // latch timer low byte when high byte read
 `define ENABLE_COPP                     // enable copper
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
@@ -74,12 +73,12 @@ typedef enum logic [3:0] {
 typedef enum {
     SYS_CTRL_RW_BUSY_B = 15,            // memory read/write operation active (with contended memory)
     SYS_CTRL_BLIT_FULL_B = 14,          // blitter queue is full, do not write new operation to blitter registers
-    SYS_CTRL_BLIT_BUSY_B = 13,          // blitter is still busy performing an operation
-    SYS_CTRL_UNUSED_B12 = 12,           // unused (reads 0)
+    SYS_CTRL_BLIT_BUSY_B = 13,          // blitter is still busy (not done) performing an operation
+    SYS_CTRL_UNUSED_12_B = 12,          // unused (reads 0)
     SYS_CTRL_HBLANK_B = 11,             // video signal is in horizontal blank period
     SYS_CTRL_VBLANK_B = 10,             // video signal is in vertical blank period
-    SYS_CTRL_UNUSED_B9 = 9,             // unused (reads 0)
-    SYS_CTRL_UNUSED_B8 = 8              // unused (reads 0)
+    SYS_CTRL_UNUSED_9_B = 9,            // unused (reads 0)
+    SYS_CTRL_RW_RD_INC_B = 8            // increment XM_RD_ADDR after read
 } xm_sys_ctrl_t;
 
 // XR register / memory regions
@@ -95,8 +94,6 @@ typedef enum logic [15:0] {
     XR_COLOR_ADDR       = 16'h8000,     // 0x8000-0x81FF 256 16-bit 0xXRGB color lookup playfield A & B
     XR_COPPER_ADDR      = 16'hC000      // 0xC000-0xC7FF 2K 16-bit words copper program memory
 } xr_region_t;
-
-// NOWORKIE localparam XRMEM_READ_B = 13;           // XR memory XR_ADDR read bit
 
 // XR read/write registers/memory regions
 typedef enum logic [5:0] {

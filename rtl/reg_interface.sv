@@ -248,6 +248,7 @@ always_ff @(posedge clk) begin
         if (xr_ack_i) begin
             if (xr_rd) begin
                 reg_rd_xdata    <= xr_data_i;
+                reg_rd_xaddr    <= reg_rd_xaddr + 1'b1;
             end
 
             if (regs_wr_o) begin

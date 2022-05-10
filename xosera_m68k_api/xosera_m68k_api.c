@@ -107,10 +107,17 @@ bool xosera_init(int reconfig_num)
         // reconfig if configuration valid (0 to 3)
         if ((reconfig_num & 3) == reconfig_num)
         {
-            uint16_t sys_ctrl_save = xm_getw(SYS_CTRL) & 0x0F0F;               // save SYS_CTRL
-            xm_setw(SYS_CTRL, 0x800F | (uint16_t)(reconfig_num << 13));        // reboot FPGA to config_num
-            detected = xosera_wait_sync();                                     // wait for detect
-            xm_setw(SYS_CTRL, sys_ctrl_save);                                  // restore SYS_CTRL
+            uint16_t int_ctrl_save = xm_getw(INT_CTRL);        // save INT_CTRL
+            xm_setw(INT_CTRL, 0x0000);                         // clear INT_CTRL
+            uint16_t sys_ctrl_save = xm_getw(SYS_CTRL);        // save SYS_CTRL
+            xm_setbl(SYS_CTRL, reconfig_num & 3);              // set WRMASK to config_num
+            xm_setbl(TIMER, 0xB0);                             // reconfig FPGA to config_num
+            detected = xosera_wait_sync();                     // wait for detect
+            if (detected)
+            {
+                xm_setw(SYS_CTRL, sys_ctrl_save);        // restore SYS_CTRL
+                xm_setw(INT_CTRL, int_ctrl_save);        // restore INT_CTRL
+            }
         }
     }
 
@@ -137,10 +144,10 @@ bool xosera_get_info(xosera_info_t * info)
     uint16_t * wp = (uint16_t *)info;
 
     // xosera_info stored at end COPPER program memory
-    for (int i = XV_INFO_ADDR; i < (XV_INFO_ADDR + XV_INFO_WORDSIZE); i++)
+    xmem_get_addr(XV_INFO_ADDR);
+    for (uint16_t i = 0; i < sizeof(xosera_info_t); i += 2)
     {
-        uint16_t v = xmem_getw_wait(i);
-        *wp++      = v;
+        *wp++ = xmem_getw_next_wait();
     }
 
     return true;        // TODO: Add CRC or similar?
@@ -148,7 +155,10 @@ bool xosera_get_info(xosera_info_t * info)
 
 // define xosera_ptr in a way that GCC can't see the immediate const value (causing it to keep it in a register).
 __asm__(
-    "               .text\n"
+    "               .section    .postinit.sdata\n"        // assure < 32K for abs.w addressing
     "               .align      2\n"
+    "               .globl      xosera_ptr_\n"
     "               .globl      xosera_ptr\n"
+    "               .type	    xosera_ptr, @object\n"
+    "xosera_ptr_:\n"
     "xosera_ptr:    .long       " XM_STR(XM_BASEADDR) "\n");

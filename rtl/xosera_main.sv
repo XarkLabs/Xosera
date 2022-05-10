@@ -297,6 +297,7 @@ vram_arb #(
     .vram_data_o(vram_data_out),
     .vgen_sel_i(vgen_vram_sel),
     .vgen_addr_i(vgen_vram_addr),
+
     // register interface
     .regs_sel_i(regs_vram_sel),
     .regs_ack_o(regs_vram_ack),
@@ -305,7 +306,7 @@ vram_arb #(
     .regs_addr_i(xm_regs_addr),
     .regs_data_i(xm_regs_data_out),
 
-    // TODO: 2D blit
+    // blitter access
     .blit_sel_i(blit_vram_sel),
     .blit_ack_o(blit_vram_ack),
     .blit_wr_i(blit_wr & blit_vram_sel),

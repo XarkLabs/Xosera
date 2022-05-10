@@ -30,49 +30,73 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
+// Low-level C API macro reference (act like functions as shown):
 
-// Low-level C API reference:
-//
-// set/get XM registers (main registers):
-// void     xm_setw(xmreg, wval)    (omit XM_ from xmreg name)
-// void     xm_setl(xmreg, lval)    (omit XM_ from xmreg name)
-// void     xm_setbh(xmreg, bhval)  (omit XM_ from xmreg name)
-// void     xm_setbl(xmreg, blval)  (omit XM_ from xmreg name)
-// uint16_t xm_getw(xmreg)          (omit XM_ from xmreg name)
-// uint32_t xm_getl(xmreg)          (omit XM_ from xmreg name)
-// uint8_t  xm_getbh(xmreg)         (omit XM_ from xmreg name)
-// uint8_t  xm_getbl(xmreg)         (omit XM_ from xmreg name)
-//
-// XM status checks: (busy wait if condition true)
-// xwait_mem_busy()
-// xwait_blit_busy()
-// xwait_blit_full()
-//
-// set/get XR registers (extended registers):
-// void     xreg_setw(xreg, wval)  (omit XR_ from xreg name)
-// uint16_t xreg_getw(xreg)        (omit XR_ from xreg name)
-// uint8_t  xreg_getbh(xreg)       (omit XR_ from xreg name)
-// uint8_t  xreg_getbl(xreg)       (omit XR_ from xreg name)
-// void     xreg_setw_wait(xreg, wval)  (omit XR_ from xreg name)
-// uint16_t xreg_getw_wait(xreg)        (omit XR_ from xreg name)
-// uint8_t  xreg_getbh_wait(xreg)       (omit XR_ from xreg name)
-// uint8_t  xreg_getbl_wait(xreg)       (omit XR_ from xreg name)
-//
-// set/get XR memory region address:
-// void     xmem_setw(xrmem, wval)
+// set XM registers (main registers, omit XM_ from xmreg name):
+// void     xm_setbh(xmreg, high_byte)
+// void     xm_setbl(xmreg, low_byte)
+// void     xm_setw(xmreg, word_value)
+// void     xm_setl(xmreg, long_value)
+// void     xm_set_rw_rd_incr()
+// void     xm_set_no_rw_rd_incr()
+
+// set XR register (extended registers, omit XR_ from xreg name):
+// void     xreg_setw(xreg, word_value)
+// void     xreg_set_addr(xreg)
+// void     xreg_setw_next(word_value)
+
+// set XR memory address (or XR register):
+// void     xmem_setw(xrmem, word_value)
+// void     xmem_set_addr(xrmem)
+// void     xmem_setw_next(word_value)
+// void     xmem_setw_wait(xrmem, wordval)
+// void     xmem_setw_next_wait(word_value)
+
+// get XM registers (main registers):
+// uint8_t  xm_get_ctrl_bit(bit_name)   (SYS_CTRL_<bit_name>_B)
+// uint8_t  xm_getbh(xmreg)             (omit XM_ from xmreg name)
+// uint8_t  xm_getbl(xmreg)             (omit XM_ from xmreg name)
+// uint16_t xm_getw(xmreg)              (omit XM_ from xmreg name)
+// uint32_t xm_getl(xmreg)              (omit XM_ from xmreg name)
+
+// get XR registers (extended registers):
+// uint16_t xreg_getw(xreg)             (omit XR_ from xreg name)
+// uint16_t xreg_get_addr(xreg)         (omit XR_ from xreg name)
+// uint16_t xreg_getw_next(xreg)        (omit XR_ from xreg name)
+
+// NOTE: "*_wait" functions wait if there is memory contention (with xwait_mem_ready() before a read or after a write).
+// In most video modes, other than reading COLOR_MEM, wait will not be needed as there will be enough free XR or VRAM
+// memory cycles available. However, with certain video modes or combinations with both playfields the wait may be
+// needed for reliable operation (especially when reading memories used during video display).
+// TODO: test and verify exactly when "*_wait" functions are required
+
+// get XR memory address (or XR register):
 // uint16_t xmem_getw(xrmem)
-// uint8_t  xmem_getbh(xrmem)
-// uint8_t  xmem_getbl(xrmem)
-// void     xmem_setw_wait(xrmem, wval)
+// void xmem_get_addr(xrmem)
+// uint16_t xmem_getw_next()
 // uint16_t xmem_getw_wait(xrmem)
-// uint8_t  xmem_getbh_wait(xrmem)
-// uint8_t  xmem_getbl_wait(xrmem)
+// uint16_t xmem_getw_next_wait()
 
-// NOTE: "wait" functions check for and will wait if there is memory contention.
-// In most cases, other than reading COLOR_MEM, wait will not be needed as
-// there will be enough free XR or VRAM memory cycles.  However, with certain video
-// modes (or with Copper doing lots of writes) the wait may be needed
-// for reliable operation (especially when reading).
+// wait for status (busy wait until condition true)
+// NOTE: May hang if Xosera not present/operating
+// void     xwait_ctrl_bit(bit_name)
+// void     xwait_not_ctrl_bit(bit_name)
+// void     xwait_mem_ready()
+// void     xwait_blit_ready()
+// void     xwait_blit_done()
+// void     xwait_hblank()
+// void     xwait_not_hblank()
+// void     xwait_vblank()
+// void     xwait_not_vblank()
+
+typedef struct _xosera_info xosera_info_t;        // forward declare
+
+// external function declarations
+bool xosera_init(int reconfig_num);                // wait a bit for Xosera to respond and optional reconfig (if 0 to 3)
+bool xosera_get_info(xosera_info_t * info);        // retrieve init xosera_info_t (valid after xosera reconfig)
+bool xosera_sync();                                // true if Xosera present and responding
+void cpu_delay(int ms);                            // delay approx milliseconds with CPU busy wait
+void xv_delay(uint32_t ms);                        // delay milliseconds using Xosera TIMER
 
 #include "xosera_m68k_defs.h"
 
@@ -101,23 +125,19 @@ typedef struct _xreg
     };
 } xmreg_t;
 
-// TODO: Make this 64 bytes...
+// stored at XV_INFO_ADDR after FPGA reconfigure
 typedef struct _xosera_info
 {
-    char version_str[28];
-    int  githash;
+    char          description_str[48];        // ASCII description
+    uint16_t      reserved_48[4];             // 8 reserved bytes (and force alignment)
+    unsigned char ver_bcd_major;              // major BCD version
+    unsigned char ver_bcd_minor;              // minor BCD version
+    unsigned char reserved_58;                // reserved byte
+    unsigned char git_modified;               // non-zero if modified from git
+    unsigned char githash[4];
 } xosera_info_t;
 
-// external function declarations
-
-bool xosera_sync();                                // true if Xosera present and responding
-bool xosera_init(int reconfig_num);                // wait a bit for Xosera to respond and optional reconfig (if 0 to 3)
-bool xosera_get_info(xosera_info_t * info);        // TODO: retrieve initdata (only valid after xosera reconfig)
-void cpu_delay(int ms);                            // delay approx milliseconds with CPU busy wait
-void xv_delay(uint32_t ms);                        // delay milliseconds using Xosera TIMER
-
-static_assert(sizeof(uint32_t) == 4, "bad sizeof uint32_t");
-static_assert(sizeof(xosera_info_t) == 32, "bad  sizeof xosera_info");
+static_assert(sizeof(xosera_info_t) == 64, "sizeof xosera_info mismatch");
 
 // Xosera XM register base ptr
 #if !defined(XV_PREP_REQUIRED)
@@ -137,8 +157,10 @@ extern volatile xmreg_t * const xosera_ptr;
 
 // set high byte (even address) of XM register XM_<xmreg> to 8-bit high_byte
 #define xm_setbh(xmreg, high_byte) (xosera_ptr[(XM_##xmreg) >> 2].b.h = (high_byte))
+
 // set low byte (odd address) of XM register XM_<xmreg> xr to 8-bit low_byte
 #define xm_setbl(xmreg, low_byte) (xosera_ptr[(XM_##xmreg) >> 2].b.l = (low_byte))
+
 // set XM register XM_<xmreg> to 16-bit word word_value
 #define xm_setw(xmreg, word_value)                                                                                     \
     do                                                                                                                 \
@@ -162,88 +184,132 @@ extern volatile xmreg_t * const xosera_ptr;
                              : [src] "d"(uval32), [ptr] "a"(xosera_ptr)                                                \
                              :);                                                                                       \
     } while (false)
+
+// set high byte of SYS_CTRL register to enable RW_DATA read increment (NOTE: assumes only write bit)
+#define xm_set_rw_rd_incr()                                                                                            \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __asm__ __volatile__("move.b #1<<" XM_STR(SYS_CTRL_RW_RD_INCR_B) ",(%[ptr])" : : [ptr] "a"(xosera_ptr) :);     \
+    } while (false)
+
+// clear high byte of SYS_CTRL register to disable RW_DATA read increment (NOTE: assumes only write bit)
+#define xm_set_no_rw_rd_incr()                                                                                         \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __asm__ __volatile__("clr.b (%[ptr])" : : [ptr] "a"(xosera_ptr) :);                                            \
+    } while (false)
+
 // set XR register XR_<xreg> to 16-bit word word_value (uses MOVEP.L if reg and value are constant)
 #define xreg_setw(xreg, word_value)                                                                                    \
     do                                                                                                                 \
     {                                                                                                                  \
         (void)(XR_##xreg);                                                                                             \
-        uint16_t uval16 = (word_value);                                                                                \
         if (__builtin_constant_p((XR_##xreg)) && __builtin_constant_p((word_value)))                                   \
         {                                                                                                              \
-            __asm__ __volatile__("movep.l %[rxav]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; "                                   \
-                                 :                                                                                     \
-                                 : [rxav] "d"(((XR_##xreg) << 16) | (uint16_t)((word_value))), [ptr] "a"(xosera_ptr)   \
-                                 :);                                                                                   \
+            __asm__ __volatile__(                                                                                      \
+                "movep.l %[rxav]," XM_STR(XM_WR_XADDR) "(%[ptr])"                                                      \
+                :                                                                                                      \
+                : [rxav] "d"((((uint32_t)XR_##xreg) << 16) | (uint16_t)((word_value))), [ptr] "a"(xosera_ptr)          \
+                :);                                                                                                    \
         }                                                                                                              \
         else                                                                                                           \
         {                                                                                                              \
-            __asm__ __volatile__(                                                                                      \
-                "movep.w %[rxa]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; movep.w %[src]," XM_STR(XM_XR_DATA) "(%[ptr])"        \
-                :                                                                                                      \
-                : [rxa] "d"((XR_##xreg)), [src] "d"(uval16), [ptr] "a"(xosera_ptr)                                     \
-                :);                                                                                                    \
+            xm_setw(WR_XADDR, (XR_##xreg));                                                                            \
+            xm_setw(XDATA, word_value);                                                                                \
         }                                                                                                              \
     } while (false)
+
+// set XR memory write address xrmem (use xmem_setw_next()/xmem_setw_next_wait() to write data)
+#define xreg_set_addr(xreg)                                                                                            \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        uint16_t umem16 = (XR_##xreg);                                                                                 \
+        __asm__ __volatile__("movep.w %[xra]," XM_STR(XM_WR_XADDR) "(%[ptr])"                                          \
+                             :                                                                                         \
+                             : [xra] "d"(umem16), [ptr] "a"(xosera_ptr)                                                \
+                             :);                                                                                       \
+    } while (false)
+
+// set next xreg (i.e., next WR_XADDR after increment) 16-bit word value
+#define xreg_setw_next(word_value)                                                                                     \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        uint16_t uval16 = (word_value);                                                                                \
+        __asm__ __volatile__("movep.w %[src]," XM_STR(XM_XDATA) "(%[ptr])"                                             \
+                             :                                                                                         \
+                             : [src] "d"(uval16), [ptr] "a"(xosera_ptr)                                                \
+                             :);                                                                                       \
+    } while (false)
+
 
 // set XR memory address xrmem to 16-bit word word_value
 #define xmem_setw(xrmem, word_value)                                                                                   \
     do                                                                                                                 \
     {                                                                                                                  \
         uint16_t umem16 = (xrmem);                                                                                     \
+        __asm__ __volatile__("movep.w %[xra]," XM_STR(XM_WR_XADDR) "(%[ptr])"                                          \
+                             :                                                                                         \
+                             : [xra] "d"(umem16), [ptr] "a"(xosera_ptr)                                                \
+                             :);                                                                                       \
         uint16_t uval16 = (word_value);                                                                                \
-        __asm__ __volatile__(                                                                                          \
-            "movep.w %[xra]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; movep.w %[src]," XM_STR(XM_XR_DATA) "(%[ptr])"            \
-            :                                                                                                          \
-            : [xra] "d"(umem16), [src] "d"(uval16), [ptr] "a"(xosera_ptr)                                              \
-            :);                                                                                                        \
+        __asm__ __volatile__("movep.w %[src]," XM_STR(XM_XDATA) "(%[ptr])"                                             \
+                             :                                                                                         \
+                             : [src] "d"(uval16), [ptr] "a"(xosera_ptr)                                                \
+                             :);                                                                                       \
     } while (false)
 
-// set XR register XR_<xreg> to 16-bit word word_value (uses MOVEP.L if reg and value are constant)
-#define xreg_setw_wait(xreg, word_value)                                                                               \
+// set XR memory write address xrmem (use xmem_setw_next()/xmem_setw_next_wait() to write data)
+#define xmem_set_addr(xrmem)                                                                                           \
     do                                                                                                                 \
     {                                                                                                                  \
-        (void)(XR_##xreg);                                                                                             \
-        uint16_t uval16 = (word_value);                                                                                \
-        if (__builtin_constant_p((XR_##xreg)) && __builtin_constant_p((word_value)))                                   \
-        {                                                                                                              \
-            __asm__ __volatile__("movep.l %[rxav]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; "                                   \
-                                 :                                                                                     \
-                                 : [rxav] "d"(((XR_##xreg) << 16) | (uint16_t)((word_value))), [ptr] "a"(xosera_ptr)   \
-                                 :);                                                                                   \
-        }                                                                                                              \
-        else                                                                                                           \
-        {                                                                                                              \
-            __asm__ __volatile__(                                                                                      \
-                "movep.w %[rxa]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; movep.w %[src]," XM_STR(XM_XR_DATA) "(%[ptr])"        \
-                :                                                                                                      \
-                : [rxa] "d"((XR_##xreg)), [src] "d"(uval16), [ptr] "a"(xosera_ptr)                                     \
-                :);                                                                                                    \
-        }                                                                                                              \
-        xwait_mem_busy();                                                                                              \
+        uint16_t umem16 = (xrmem);                                                                                     \
+        __asm__ __volatile__("movep.w %[xra]," XM_STR(XM_WR_XADDR) "(%[ptr])"                                          \
+                             :                                                                                         \
+                             : [xra] "d"(umem16), [ptr] "a"(xosera_ptr)                                                \
+                             :);                                                                                       \
     } while (false)
 
-// set XR memory address xrmem to 16-bit word word_value
+// set next xmem (i.e., next WR_XADDR after increment) 16-bit word value
+#define xmem_setw_next(word_value) xreg_setw_next(word_value)
+
+// set XR memory address xrmem to 16-bit word word_value and wait for slow memory
 #define xmem_setw_wait(xrmem, word_value)                                                                              \
     do                                                                                                                 \
     {                                                                                                                  \
         uint16_t umem16 = (xrmem);                                                                                     \
+        __asm__ __volatile__("movep.w %[xra]," XM_STR(XM_WR_XADDR) "(%[ptr])"                                          \
+                             :                                                                                         \
+                             : [xra] "d"(umem16), [ptr] "a"(xosera_ptr)                                                \
+                             :);                                                                                       \
         uint16_t uval16 = (word_value);                                                                                \
-        __asm__ __volatile__(                                                                                          \
-            "movep.w %[xra]," XM_STR(XM_XR_ADDR) "(%[ptr]) ; movep.w %[src]," XM_STR(XM_XR_DATA) "(%[ptr])"            \
-            :                                                                                                          \
-            : [xra] "d"(umem16), [src] "d"(uval16), [ptr] "a"(xosera_ptr)                                              \
-            :);                                                                                                        \
-        xwait_mem_busy();                                                                                              \
+        __asm__ __volatile__("movep.w %[src]," XM_STR(XM_XDATA) "(%[ptr])"                                             \
+                             :                                                                                         \
+                             : [src] "d"(uval16), [ptr] "a"(xosera_ptr)                                                \
+                             :);                                                                                       \
+        xwait_mem_ready();                                                                                             \
+    } while (false)
+
+// set next xmem (i.e., next WR_XADDR after increment) 16-bit word value and wait for slow memory
+#define xmem_setw_next_wait(word_value)                                                                                \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        xmem_setw_next(word_value);                                                                                    \
+        xwait_mem_ready();                                                                                             \
     } while (false)
 
 // NOTE: Uses clang and gcc supported extension (statement expression), so we must slightly lower shields...
 #pragma GCC diagnostic ignored "-Wpedantic"        // Yes, I'm slightly cheating (but ugly to have to pass in "return
                                                    // variable" - and this is the "low level" API, remember)
 
+// get bit in SYS_CTRL
+#define xm_get_ctrl_bit(bit_name) ((xosera_ptr[XM_SYS_CTRL >> 2].b.h) & (1 << (SYS_CTRL_##bit_name##_B)))
+
 // return high byte (even address) from XM register XM_<xmreg>
 #define xm_getbh(xmreg) (xosera_ptr[XM_##xmreg >> 2].b.h)
+
 // return low byte (odd address) from XM register XM_<xmreg>
 #define xm_getbl(xmreg) (xosera_ptr[XM_##xmreg >> 2].b.l)
+
 // return 16-bit word from XM register XM_<xmreg>
 #define xm_getw(xmreg)                                                                                                 \
     ({                                                                                                                 \
@@ -255,6 +321,7 @@ extern volatile xmreg_t * const xosera_ptr;
                              :);                                                                                       \
         word_value;                                                                                                    \
     })
+
 // return 32-bit word from two consecutive 16-bit word XM registers XM_<xmreg> & XM_<xmreg>+1
 #define xm_getl(xmreg)                                                                                                 \
     ({                                                                                                                 \
@@ -267,151 +334,120 @@ extern volatile xmreg_t * const xosera_ptr;
         long_value;                                                                                                    \
     })
 
-// return high byte (even address) from XR memory address xrmem
-#define xmem_getbh(xrmem) (xm_setw(XR_ADDR, (xrmem) | XRMEM_READ), xosera_ptr[XM_XR_DATA >> 2].b.h)
-// return low byte (odd address) from XR memory address xrmem
-#define xmem_getbl(xrmem) (xm_setw(XR_ADDR, (xrmem) | XRMEM_READ), xosera_ptr[XM_XR_DATA >> 2].b.l)
-// return 16-bit word from XR memory address xrmem
-#define xmem_getw(xrmem)                                                                                               \
-    ({                                                                                                                 \
-        uint16_t word_value;                                                                                           \
-        xm_setw(XR_ADDR, (xrmem) | XRMEM_READ);                                                                        \
-        __asm__ __volatile__("movep.w " XM_STR(XM_XR_DATA) "(%[ptr]),%[dst]"                                           \
-                             : [dst] "=d"(word_value)                                                                  \
-                             : [ptr] "a"(xosera_ptr)                                                                   \
-                             :);                                                                                       \
-        word_value;                                                                                                    \
-    })
-// return high byte (even address) from XR register XR_<xreg>
-#define xreg_getbh(xreg)                                                                                               \
-    ({                                                                                                                 \
-        (void)(XR_##xreg);                                                                                             \
-        uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (XR_##xreg) | XRMEM_READ);                                                                    \
-        byte_value = xosera_ptr[XM_XR_DATA >> 2].b.h;                                                                  \
-        byte_value;                                                                                                    \
-    })
-
-// return low byte (odd address) from XR register XR_<xreg>
-#define xreg_getbl(xreg)                                                                                               \
-    ({                                                                                                                 \
-        (void)(XR_##xreg);                                                                                             \
-        uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (XR_##xreg) | XRMEM_READ);                                                                    \
-        byte_value = xosera_ptr[XM_XR_DATA >> 2].b.l;                                                                  \
-        byte_value;                                                                                                    \
-    })
 // return 16-bit word from XR register XR_<xreg>
 #define xreg_getw(xreg)                                                                                                \
     ({                                                                                                                 \
         (void)(XR_##xreg);                                                                                             \
         uint16_t word_value;                                                                                           \
-        xm_setw(XR_ADDR, (XR_##xreg) | XRMEM_READ);                                                                    \
-        __asm__ __volatile__("movep.w " XM_STR(XM_XR_DATA) "(%[ptr]),%[dst]"                                           \
+        xm_setw(RD_XADDR, (XR_##xreg));                                                                                \
+        __asm__ __volatile__("movep.w " XM_STR(XM_XDATA) "(%[ptr]),%[dst]"                                             \
                              : [dst] "=d"(word_value)                                                                  \
                              : [ptr] "a"(xosera_ptr)                                                                   \
                              :);                                                                                       \
         word_value;                                                                                                    \
     })
 
-// wait for bit in SYS_CTRL // TODO: check proper byte
-#define xm_wait_SYS_CTRL(bit_num)                                                                                      \
+// set XR memory read address xrmem (use xmem_getw_next()/xmem_getw_next_wait() to read data)
+#define xreg_get_addr(xreg)                                                                                            \
     do                                                                                                                 \
     {                                                                                                                  \
-    } while (xm_getbl(SYS_CTRL) & (1 << (bit_num)))
-
-// wait for slow memory or xreg to complete read/write (under bus contention)
-#define xwait_mem_busy() xm_wait_SYS_CTRL(SYS_CTRL_MEMWAIT_B)
-// wait for blit unit to become idle
-#define xwait_blit_busy()                                                                                              \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        uint8_t bitval = (1 << SYS_CTRL_BLITBUSY_B) | (1 << SYS_CTRL_MEMWAIT_B);                                       \
-        __asm__ __volatile__("1: and.b " XM_STR(XM_SYS_CTRL) "+2(%[ptr]),%[bitval] ; bne.s  1b\n"                      \
-                                                                                                                       \
-                             :                                                                                         \
-                             : [ptr] "a"(xosera_ptr), [bitval] "d"(bitval)                                             \
-                             :);                                                                                       \
+        (void)(XR_##xreg);                                                                                             \
+        xm_setw(RD_XADDR, (XR_##xreg));                                                                                \
     } while (false)
-// wait until blit unit to be completely done with all operations (synonym for xwait_blit_busy)
-#define xwait_blit_done() xwait_blit_busy()
 
-// wait for blit unit to have room in xreg queue
-#define xwait_blit_full()                                                                                              \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        uint8_t bitval = (1 << SYS_CTRL_BLITFULL_B) | (1 << SYS_CTRL_MEMWAIT_B);                                       \
-        __asm__ __volatile__("1: and.b " XM_STR(XM_SYS_CTRL) "+2(%[ptr]),%[bitval] ; bne.s  1b\n"                      \
-                                                                                                                       \
-                             :                                                                                         \
-                             : [ptr] "a"(xosera_ptr), [bitval] "d"(bitval)                                             \
+// return next xreg (i.e., next RD_XADDR after increment) 16-bit word value
+#define xreg_getw_next()                                                                                               \
+    ({                                                                                                                 \
+        uint16_t word_value;                                                                                           \
+        __asm__ __volatile__("movep.w " XM_STR(XM_XDATA) "(%[ptr]),%[dst]"                                             \
+                             : [dst] "=d"(word_value)                                                                  \
+                             : [ptr] "a"(xosera_ptr)                                                                   \
                              :);                                                                                       \
-    } while (false)
-// wait until blit unit is available for a new operation (synonym for xwait_blit_full)
-#define xwait_blit_ready() xwait_blit_full()
+        word_value;                                                                                                    \
+    })
 
-// return high byte (even address) from XR memory address xrmem
-#define xmem_getbh_wait(xrmem)                                                                                         \
-    ({                                                                                                                 \
-        uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (xrmem) | XRMEM_READ);                                                                        \
-        xwait_mem_busy();                                                                                              \
-        byte_value = xosera_ptr[XM_XR_DATA >> 2].b.h;                                                                  \
-        byte_value;                                                                                                    \
-    })
-// return low byte (odd address) from XR memory address xrmem
-#define xmem_getbl_wait(xrmem)                                                                                         \
-    ({                                                                                                                 \
-        uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (xrmem) | XRMEM_READ);                                                                        \
-        xwait_mem_busy();                                                                                              \
-        byte_value = xosera_ptr[XM_XR_DATA >> 2].b.l;                                                                  \
-        byte_value;                                                                                                    \
-    })
 // return 16-bit word from XR memory address xrmem
+#define xmem_getw(xrmem)                                                                                               \
+    ({                                                                                                                 \
+        uint16_t word_value;                                                                                           \
+        xm_setw(RD_XADDR, (xrmem));                                                                                    \
+        __asm__ __volatile__("movep.w " XM_STR(XM_XDATA) "(%[ptr]),%[dst]"                                             \
+                             : [dst] "=d"(word_value)                                                                  \
+                             : [ptr] "a"(xosera_ptr)                                                                   \
+                             :);                                                                                       \
+        word_value;                                                                                                    \
+    })
+
+// set XR memory read address xrmem (use xmem_getw_next()/xmem_getw_next_wait() to read data)
+#define xmem_get_addr(xrmem)                                                                                           \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        uint16_t umem16 = (xrmem);                                                                                     \
+        __asm__ __volatile__("movep.w %[xra]," XM_STR(XM_RD_XADDR) "(%[ptr])"                                          \
+                             :                                                                                         \
+                             : [xra] "d"(umem16), [ptr] "a"(xosera_ptr)                                                \
+                             :);                                                                                       \
+    } while (false)
+
+// return next xmem (i.e., next RD_XADDR after increment) 16-bit word value
+#define xmem_getw_next() xreg_getw_next()
+
+// return 16-bit word from XR memory address xrmem and wait for slow memory
 #define xmem_getw_wait(xrmem)                                                                                          \
     ({                                                                                                                 \
         uint16_t word_value;                                                                                           \
-        xm_setw(XR_ADDR, (xrmem) | XRMEM_READ);                                                                        \
-        xwait_mem_busy();                                                                                              \
+        xm_setw(RD_XADDR, (xrmem));                                                                                    \
+        xwait_mem_ready();                                                                                             \
         __asm__ __volatile__("movep.w " XM_STR(XM_XR_DATA) "(%[ptr]),%[dst]"                                           \
                              : [dst] "=d"(word_value)                                                                  \
                              : [ptr] "a"(xosera_ptr)                                                                   \
                              :);                                                                                       \
         word_value;                                                                                                    \
     })
-// return high byte (even address) from XR register XR_<xreg>
-#define xreg_getbh_wait(xreg)                                                                                          \
+
+// return next xmem (i.e., next RD_XADDR after increment) 16-bit word value and wait for slow memory
+#define xmem_getw_next_wait()                                                                                          \
     ({                                                                                                                 \
-        (void)(XR_##xreg);                                                                                             \
-        uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (XR_##xreg) | XRMEM_READ);                                                                    \
-        xwait_mem_busy();                                                                                              \
-        byte_value = xosera_ptr[XM_XR_DATA >> 2].b.h;                                                                  \
-        byte_value;                                                                                                    \
-    })
-// return low byte (odd address) from XR register XR_<xreg>
-#define xreg_getbl_wait(xreg)                                                                                          \
-    ({                                                                                                                 \
-        (void)(XR_##xreg);                                                                                             \
-        uint8_t byte_value;                                                                                            \
-        xm_setw(XR_ADDR, (XR_##xreg) | XRMEM_READ);                                                                    \
-        xwait_mem_busy();                                                                                              \
-        byte_value = xosera_ptr[XM_XR_DATA >> 2].b.l;                                                                  \
-        byte_value;                                                                                                    \
-    })
-// return 16-bit word from XR register XR_<xreg>
-#define xreg_getw_wait(xreg)                                                                                           \
-    ({                                                                                                                 \
-        (void)(XR_##xreg);                                                                                             \
         uint16_t word_value;                                                                                           \
-        xm_setw(XR_ADDR, (XR_##xreg) | XRMEM_READ);                                                                    \
-        xwait_mem_busy();                                                                                              \
+        xwait_mem_ready();                                                                                             \
         __asm__ __volatile__("movep.w " XM_STR(XM_XR_DATA) "(%[ptr]),%[dst]"                                           \
                              : [dst] "=d"(word_value)                                                                  \
                              : [ptr] "a"(xosera_ptr)                                                                   \
                              :);                                                                                       \
         word_value;                                                                                                    \
     })
+
+// wait while bit in SYS_CTRL is set
+#define xwait_ctrl_bit(bit_name)                                                                                       \
+    do                                                                                                                 \
+    {                                                                                                                  \
+    } while (xm_get_ctrl_bit(bit_name))
+
+// wait while bit in SYS_CTRL is clear
+#define xwait_not_ctrl_bit(bit_name)                                                                                   \
+    do                                                                                                                 \
+    {                                                                                                                  \
+    } while (!xm_get_ctrl_bit(bit_name))
+
+// wait for memory read/write to be completed
+#define xwait_mem_ready() xwait_ctrl_bit(MEM_BUSY)
+
+// wait for blit unit is available for a new operation (queue not full)
+#define xwait_blit_ready() xwait_ctrl_bit(BLIT_FULL)
+
+// wait until blit unit has completed all queued operations (not busy)
+#define xwait_blit_done() xwait_ctrl_bit(BLIT_BUSY)
+
+// wait until scanout is in horizontal blank (off left/right edge of display line)
+#define xwait_hblank() xwait_ctrl_bit(HBLANK)
+
+// wait until scanout is not in horizontal blank (center visible  of display line)
+#define xwait_not_hblank() xwait_not_ctrl_bit(HBLANK)
+
+// wait until scanout is in vertical blank (line off top/bottom edge of display)
+#define xwait_vblank() xwait_ctrl_bit(VBLANK)
+
+// wait until scanout is not in horizontal blank (visible line on display)
+#define xwait_not_vblank() xwait_not_ctrl_bit(VBLANK)
 
 #endif        // XOSERA_M68K_API_H

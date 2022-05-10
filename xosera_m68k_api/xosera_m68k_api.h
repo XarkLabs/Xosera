@@ -351,15 +351,15 @@ extern volatile xmreg_t * const xosera_ptr;
     })
 
 // wait while bit in SYS_CTRL is set
-#define xwait_ctrl_bit(bit_name)                                                                                       \
-    __asm__ __volatile__("0: btst.b #" XM_STR(SYS_CTRL_##bit_name##_B) ",(%[ptr]); bne.s 0b"                           \
+#define xwait_ctrl_bit_set(bit_name)                                                                                   \
+    __asm__ __volatile__("0: btst.b #" XM_STR(SYS_CTRL_##bit_name##_B) ",(%[ptr]); beq.s 0b"                           \
                          :                                                                                             \
                          : [ptr] "a"(xosera_ptr)                                                                       \
                          : "cc")
 
 // wait while bit in SYS_CTRL is clear
-#define xwait_not_ctrl_bit(bit_name)                                                                                   \
-    __asm__ __volatile__("0: btst.b #" XM_STR(SYS_CTRL_##bit_name##_B) ",(%[ptr]); beq.s 0b"                           \
+#define xwait_ctrl_bit_clear(bit_name)                                                                                 \
+    __asm__ __volatile__("0: btst.b #" XM_STR(SYS_CTRL_##bit_name##_B) ",(%[ptr]); bne.s 0b"                           \
                          :                                                                                             \
                          : [ptr] "a"(xosera_ptr)                                                                       \
                          : "cc")
@@ -368,21 +368,21 @@ extern volatile xmreg_t * const xosera_ptr;
 #define xwait_mem_ready() __asm__ __volatile__("0: tst.b (%[ptr]); bmi.s 0b" : : [ptr] "a"(xosera_ptr) : "cc")
 
 // wait for blit unit is available for a new operation (queue not full)
-#define xwait_blit_ready() xwait_ctrl_bit(BLIT_FULL)
+#define xwait_blit_ready() xwait_ctrl_bit_clear(BLIT_FULL)
 
 // wait until blit unit has completed all queued operations (not busy)
-#define xwait_blit_done() xwait_ctrl_bit(BLIT_BUSY)
+#define xwait_blit_done() xwait_ctrl_bit_clear(BLIT_BUSY)
 
 // wait until scanout is in horizontal blank (off left/right edge of display line)
-#define xwait_hblank() xwait_ctrl_bit(HBLANK)
+#define xwait_hblank() xwait_ctrl_bit_set(HBLANK)
 
 // wait until scanout is not in horizontal blank (center visible  of display line)
-#define xwait_not_hblank() xwait_not_ctrl_bit(HBLANK)
+#define xwait_not_hblank() xwait_ctrl_bit_clear(HBLANK)
 
 // wait until scanout is in vertical blank (line off top/bottom edge of display)
-#define xwait_vblank() xwait_ctrl_bit(VBLANK)
+#define xwait_vblank() xwait_ctrl_bit_set(VBLANK)
 
 // wait until scanout is not in horizontal blank (visible line on display)
-#define xwait_not_vblank() xwait_not_ctrl_bit(VBLANK)
+#define xwait_not_vblank() xwait_ctrl_bit_clear(VBLANK)
 
 #endif        // XOSERA_M68K_API_H

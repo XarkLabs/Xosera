@@ -111,7 +111,7 @@ bool xosera_init(int reconfig_num)
             xm_setw(INT_CTRL, 0x0000);                         // clear INT_CTRL
             uint16_t sys_ctrl_save = xm_getw(SYS_CTRL);        // save SYS_CTRL
             xm_setbl(SYS_CTRL, reconfig_num & 3);              // set WRMASK to config_num
-            xm_setbl(TIMER, 0xB0);                             // reconfig FPGA to config_num
+            xm_setw(TIMER, 0xB0B0);                            // reconfig FPGA to config_num
             detected = xosera_wait_sync();                     // wait for detect
             if (detected)
             {
@@ -155,10 +155,8 @@ bool xosera_get_info(xosera_info_t * info)
 
 // define xosera_ptr in a way that GCC can't see the immediate const value (causing it to keep it in a register).
 __asm__(
-    "               .section    .postinit.sdata\n"        // assure < 32K for abs.w addressing
+    "               .section    .data\n"
     "               .align      2\n"
-    "               .globl      xosera_ptr_\n"
     "               .globl      xosera_ptr\n"
     "               .type	    xosera_ptr, @object\n"
-    "xosera_ptr_:\n"
     "xosera_ptr:    .long       " XM_STR(XM_BASEADDR) "\n");

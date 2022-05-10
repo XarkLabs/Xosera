@@ -278,7 +278,7 @@ always_ff @(posedge clk) begin
                     end
                 end
                 xv::XM_TIMER: begin
-                    reconfig_o          <= (bus_data_byte[7:4] == 4'hB);
+                    reconfig_o          <= (bus_data_byte[7:4] == 4'hB) ? 1'b1 : 1'b0;
                 end
                 xv::XM_RD_XADDR: begin
                     if (!bus_bytesel) begin

@@ -103,9 +103,9 @@ void kmain(void)
     nop();
     xmem_getw_next_wait();
     nop();
-    xwait_ctrl_bit(HBLANK);
+    xwait_ctrl_bit_set(HBLANK);
     nop();
-    xwait_not_ctrl_bit(VBLANK);
+    xwait_ctrl_bit_clear(VBLANK);
     nop();
     xwait_mem_ready();
     nop();

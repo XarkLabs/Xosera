@@ -111,8 +111,10 @@ bool xosera_init(int reconfig_num)
             xm_setw(INT_CTRL, 0x0000);                         // clear INT_CTRL
             uint16_t sys_ctrl_save = xm_getw(SYS_CTRL);        // save SYS_CTRL
             xm_setbl(SYS_CTRL, reconfig_num & 3);              // set WRMASK to config_num
-            xm_setw(TIMER, 0xB0B0);                            // reconfig FPGA to config_num
-            detected = xosera_wait_sync();                     // wait for detect
+            xwait_not_vblank();
+            xwait_vblank();
+            xm_setw(TIMER, 0xB0B0);               // reconfig FPGA to config_num
+            detected = xosera_wait_sync();        // wait for detect
             if (detected)
             {
                 xm_setw(SYS_CTRL, sys_ctrl_save);        // restore SYS_CTRL

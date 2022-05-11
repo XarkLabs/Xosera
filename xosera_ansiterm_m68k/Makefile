@@ -21,7 +21,7 @@ XOSERA_M68K_API_ORGIN?=../xosera_m68k_api
 XOSERA_M68K_API?=videoXoseraANSI
 XOSERA_M68K_XANSI?=videoXoseraANSI
 
-EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer -Wno-variadic-macros -DTEST_FIRMWARE
+EXTRA_CFLAGS?=-g -O2 -fomit-frame-pointer -Wno-variadic-macros -DTEST_FIRMWARE
 EXTRA_VASMFLAGS?=-showopt -I$(XOSERA_M68K_XANSI) -I$(ROSCO_M68K_DIR)/code/shared -DTEST_FIRMWARE
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
 SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib

@@ -535,21 +535,6 @@ always_ff @(posedge clk) begin
     end
 end
 
-                // xv::XR_AUD0_VOL: begin
-                //     audio_0_vol     <= vgen_reg_data_i;
-                // end
-                // xv::XR_AUD0_PERIOD: begin
-                //     audio_0_period  <= vgen_reg_data_i[14:0];
-                // end
-                // xv::XR_AUD0_START: begin
-                //     audio_0_start   <= vgen_reg_data_i;
-                // end
-                // xv::XR_AUD0_LENGTH: begin
-                //     audio_0_tile    <= vgen_reg_data_i[15];
-                //     audio_0_len     <= vgen_reg_data_i[14:0];
-                // end
-
-
 word_t  rd_vid_regs;
 word_t  rd_pf_regs;
 
@@ -570,11 +555,8 @@ always_comb begin
         xv::XR_VID_RIGHT[3:0]:      rd_vid_regs = 16'(vid_right);
         xv::XR_SCANLINE[3:0]:       rd_vid_regs = 16'(v_count);
         xv::XR_FEATURES[3:0]:       rd_vid_regs = 16'h0000; // TODO: feature codes
-//        xv::XR_GITHASH_H[3:0]:      rd_vid_regs = githash[31:16];
-//        xv::XR_GITHASH_L[3:0]:      rd_vid_regs = githash[15:0];
-//        xv::XR_VID_HSIZE[3:0]:      rd_vid_regs = 16'(xv::VISIBLE_WIDTH);
-//        xv::XR_VID_VSIZE[3:0]:      rd_vid_regs = 16'(xv::VISIBLE_HEIGHT);
-//        xv::XR_VID_VFREQ[3:0]:      rd_vid_regs = xv::REFRESH_FREQ;
+        xv::XR_VID_HSIZE[3:0]:      rd_vid_regs = 16'(xv::VISIBLE_WIDTH);
+        xv::XR_VID_VSIZE[3:0]:      rd_vid_regs = 16'(xv::VISIBLE_HEIGHT);
         default:                    rd_vid_regs = 16'h0000;
     endcase
 end
@@ -599,18 +581,6 @@ always_comb begin
 end
 
 // combinational block for video fetch start and stop
-`ifdef OLD_WAY
-hres_t          mem_fetch_hcount;                   // horizontal count when mem_fetch_active toggles
-always_comb     mem_fetch_next = (v_visible && h_count_i == mem_fetch_hcount) ? ~mem_fetch_active : mem_fetch_active;
-always_comb begin
-    // set mem_fetch_active next toggle for video memory access
-    if (mem_fetch_active) begin
-        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_END);
-    end else begin
-        mem_fetch_hcount = $bits(mem_fetch_hcount)'(H_MEM_BEGIN);
-    end
-end
-`else
 logic           mem_fetch;                   // true when fetching display data
 logic           mem_fetch_next;
 logic           mem_fetch_h_start;
@@ -618,7 +588,6 @@ logic           mem_fetch_h_end;
 always_comb     mem_fetch_h_start = ($bits(h_count)'(H_MEM_BEGIN) == h_count);
 always_comb     mem_fetch_h_end = ($bits(h_count)'(H_MEM_END) == h_count);
 always_comb     mem_fetch_next = (!mem_fetch ? mem_fetch_h_start : !mem_fetch_h_end) && v_visible;
-`endif
 
 // video pixel generation
 always_ff @(posedge clk) begin

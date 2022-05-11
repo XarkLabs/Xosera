@@ -4,7 +4,7 @@
 # MIT LICENSE
 # vim: set noet ts=8 sw=8
 
-ifeq (, $(shell command -v m68k-elf-gcc))
+ifeq (, $(shell m68k-elf-gcc --version))
 $(info No m68k-elf-* build tools found in path)
 else
 ifndef ROSCO_M68K_DIR
@@ -31,7 +31,7 @@ GCC_LIBS=$(shell $(CC) --print-search-dirs \
  | grep libraries:\ = \
  | sed 's/libraries: =/-L/g' \
  | sed 's/:/m68000\/ -L/g')m68000/
-LIBS=$(EXTRA_LIBS) -lprintf -lcstdlib -lmachine -lstart_serial -lgcc
+LIBS=$(EXTRA_LIBS) -lxosera_m68k_api -lrosco_m68k -lgcc
 ASFLAGS=-mcpu=68010 -march=68010
 
 ifeq ($(ROSCO_M68K_HUGEROM),true)
@@ -40,7 +40,7 @@ else
 LDSCRIPT?=$(SYSLIBDIR)/ld/serial/rosco_m68k_program.ld
 endif
 
-LDFLAGS=-T $(LDSCRIPT) -L $(SYSLIBDIR) -Map=$(MAP) --gc-sections --oformat=elf32-m68k
+LDFLAGS=-T $(LDSCRIPT) -L $(XOSERA_M68K_API) -L $(SYSLIBDIR) -Map=$(MAP) --gc-sections --oformat=elf32-m68k
 VASMFLAGS=-Felf -m68010 -quiet -Lnf $(DEFINES)
 CC=m68k-elf-gcc
 AS=m68k-elf-as
@@ -68,7 +68,6 @@ SYM=$(PROGRAM_BASENAME).sym
 
 # Assume source files in Makefile directory are source files for project
 CSOURCES=$(wildcard *.c)
-CSOURCES+=$(wildcard $(XOSERA_M68K_API)/*.c) # add Xosera API
 CINCLUDES=$(wildcard *.h)
 SSOURCES=$(wildcard *.S)
 ASMSOURCES=$(wildcard *.asm)

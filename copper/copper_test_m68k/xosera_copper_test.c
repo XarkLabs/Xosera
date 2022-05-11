@@ -122,6 +122,8 @@ void xosera_copper_test()
 {
     dprintf("Xosera_copper_test\n");
 
+    cpu_delay(5000);
+
     xosera_init(0);
 
     xmem_set_addr(XR_COPPER_ADDR);

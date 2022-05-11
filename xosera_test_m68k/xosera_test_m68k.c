@@ -209,18 +209,15 @@ static inline void check_vblank()
 _NOINLINE void restore_colors()
 {
     wait_vblank_start();
-    xmem_set_addr(XR_COLOR_ADDR);
-    uint16_t * cp = def_colors;
     for (uint16_t i = 0; i < 256; i++)
     {
-        xmem_setw_next(*cp++);
+        xmem_setw(XR_COLOR_A_ADDR + i, def_colors[i]);
     }
     // set B colors to same, alpha 0x8 (with color 0 fully transparent)
-    xmem_setw_next(0x0000);
-    cp = def_colors + 1;
+    xmem_setw(XR_COLOR_B_ADDR, 0x0000);
     for (uint16_t i = 1; i < 256; i++)
     {
-        xmem_setw_next(0x8000 | *cp++);
+        xmem_setw(XR_COLOR_B_ADDR + i, 0x8000 | def_colors[i]);
     }
 }
 
@@ -228,12 +225,11 @@ _NOINLINE void restore_colors2(uint8_t alpha)
 {
     wait_vblank_start();
     xmem_set_addr(XR_COLOR_B_ADDR);
-    uint16_t * cp = def_colors;
-    uint16_t   sa = (alpha & 0xf) << 12;
+    uint16_t sa = (alpha & 0xf) << 12;
     for (uint16_t i = 0; i < 256; i++)
     {
-        uint16_t w = sa | (*cp++ & 0xfff);
-        xmem_setw_next(i ? w : 0);
+        uint16_t w = i ? (sa | (def_colors[i] & 0xfff)) : 0;
+        xmem_setw(XR_COLOR_B_ADDR + i, w);
     };
 }
 
@@ -241,12 +237,10 @@ _NOINLINE void restore_colors2(uint8_t alpha)
 _NOINLINE void restore_colors3()
 {
     wait_vblank_start();
-    xmem_set_addr(XR_COLOR_B_ADDR);
-    uint16_t * cp = def_colors;
     for (uint16_t i = 0; i < 256; i++)
     {
-        uint16_t w = ((i & 0x3) << 14) | (*cp++ & 0xfff);
-        xmem_setw_next(i ? w : 0);
+        uint16_t w = i ? ((i & 0x3) << 14) | (def_colors[i] & 0xfff) : 0x0000;
+        xmem_setw(XR_COLOR_B_ADDR + i, w);
     };
 }
 
@@ -436,13 +430,13 @@ static void xr_textmode_pb()
     for (int i = 1; i < 256; i++)
     {
         uint16_t v = xmem_getw_wait(XR_COLOR_A_ADDR + i) & 0x0fff;
-        xmem_setw_wait(XR_COLOR_A_ADDR + i, 0x0000 | v);
+        xmem_setw(XR_COLOR_A_ADDR + i, v);
     }
     xr_cls();
     xmem_setw(XR_COLOR_B_ADDR + 0xf0, 0x0000);        // set write address
     for (int i = 1; i < 16; i++)
     {
-        xmem_setw(XR_COLOR_B_ADDR + 0xf0 + i, 0xf202 | i << 4);
+        xmem_setw(XR_COLOR_B_ADDR + 0xf0 + i, 0xf202 | (i << 4));
     }
     xmem_setw(XR_COLOR_B_ADDR, 0x0000);        // set write address
 
@@ -728,7 +722,7 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
             break;
         }
 
-        uint8_t * cdata = malloc(csize);
+        uint16_t * cdata = malloc(csize);
         if (cdata == NULL)
         {
             dprintf("Allocating %ld for \"%s\" failed\n", csize, colorname);
@@ -736,12 +730,12 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
         }
 
 
-        int       cnt   = 0;
-        int       rsize = 0;
-        uint8_t * rdata = cdata;
+        int        cnt   = 0;
+        int        rsize = 0;
+        uint16_t * rdata = cdata;
         while ((cnt = fl_fread(rdata, 1, 512, file)) > 0)
         {
-            rdata += cnt;
+            rdata += (cnt >> 1);
             rsize += cnt;
         }
         if (rsize != csize)
@@ -751,7 +745,7 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
             break;
         }
         dprintf("Loaded colors %d colors from \"%s\".  \n", rsize >> 1, colorname);
-        ti->color      = (uint16_t *)cdata;
+        ti->color      = cdata;
         ti->num_colors = rsize >> 1;
 
     } while (false);
@@ -828,11 +822,10 @@ void show_test_pic(int pic_num, uint16_t addr)
 
     if (ti->color)
     {
-        xmem_set_addr(XR_COLOR_A_ADDR);
-        wp = (uint16_t *)ti->color;
+        wp = ti->color;
         for (int w = 0; w < ti->num_colors; w++)
         {
-            xmem_setw_next(*wp++);
+            xmem_setw(XR_COLOR_A_ADDR + w, *wp++);
         }
     }
     else
@@ -1323,8 +1316,8 @@ void test_dual_8bpp()
 
         xwait_vblank();
         xreg_setw(VID_CTRL, 0x0000);           // border color = black
-        xreg_setw(PA_GFX_CTRL, 0x00FF);        // blank screen
-        xreg_setw(PB_GFX_CTRL, 0x00FF);
+        xreg_setw(PA_GFX_CTRL, 0x0080);        // blank screen
+        xreg_setw(PB_GFX_CTRL, 0x0080);
         // install 320x200 "crop" copper list
         xmem_set_addr(XR_COPPER_ADDR);
         for (uint16_t i = 0; i < NUM_ELEMENTS(copper_320x200); i++)
@@ -2234,15 +2227,31 @@ int    xosera_audio_len;
 uint32_t test_count;
 void     xosera_test()
 {
+
     printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
     dprintf("Xosera_test_m68k\n");
 
-    dprintf("\nxosera_init(0)...");
+    cpu_delay(3000);
+
+    dprintf("\nCalling xosera_sync()...");
+    bool syncok = xosera_sync();
+    dprintf("%s\n\n", syncok ? "succeeded" : "FAILED");
+
+    dprintf("\nCalling xosera_init(0)...");
     bool success = xosera_init(0);
-    dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+    dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+
+    cpu_delay(1000);
+    xv_prep();
+    xm_setw(TIMER, 0xB007);
+    cpu_delay(3000);
+
     xosera_get_info(&initinfo);
     dprintf("ID: %s Githash:0x%08x\n", initinfo.description_str, initinfo.githash);
+
+
+    dprintf("\nBegin...\n");
 
     wait_vblank_start();
     xreg_setw(PA_GFX_CTRL, 0x0080);            // PA blanked

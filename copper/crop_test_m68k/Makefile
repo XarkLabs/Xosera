@@ -4,7 +4,7 @@
 # Copyright (c) 2021 Xark
 # MIT LICENSE
 
-ifeq (, $(shell command -v m68k-elf-gcc))
+ifeq (, $(shell m68k-elf-gcc --version))
 $(info No m68k-elf-* build tools found in path)
 else
 ifndef ROSCO_M68K_DIR
@@ -14,7 +14,7 @@ endif
 
 XOSERA_M68K_API?=../../xosera_m68k_api
 
-EXTRA_CFLAGS?=-g -O3 -fomit-frame-pointer
+EXTRA_CFLAGS?=-g -O2 -fomit-frame-pointer
 #EXTRA_VASMFLAGS?=-showopt
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
 SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib
@@ -27,9 +27,9 @@ GCC_LIBS=$(shell $(CC) --print-search-dirs \
     | grep libraries:\ = \
     | sed 's/libraries: =/-L/g' \
     | sed 's/:/m68000\/ -L/g')m68000/
-LIBS=-lsdfat -lprintf -lcstdlib -lmachine -lstart_serial -lgcc
+LIBS=-lxosera_m68k_api -lheap -lsdfat -lprintf -lcstdlib -lmachine -lstart_serial -lgcc
 ASFLAGS=-mcpu=68010 -march=68010
-LDFLAGS=-T $(SYSLIBDIR)/ld/serial/rosco_m68k_program.ld -L $(SYSLIBDIR) \
+LDFLAGS=-T $(SYSLIBDIR)/ld/serial/rosco_m68k_program.ld -L $(XOSERA_M68K_API) -L $(SYSLIBDIR) \
     -Map=$(MAP) --gc-sections --oformat=elf32-m68k
 VASMFLAGS=-Felf -m68010 -quiet -Lnf $(DEFINES)
 CC=m68k-elf-gcc
@@ -58,7 +58,6 @@ SYM=$(PROGRAM_BASENAME).sym
 
 # Assume source files in Makefile directory are source files for project
 CSOURCES=$(wildcard *.c)
-CSOURCES+=$(wildcard $(XOSERA_M68K_API)/*.c)
 SSOURCES=$(wildcard *.S)
 ASMSOURCES=$(wildcard *.asm)
 SOURCES=$(CSOURCES) $(SSOURCES) $(ASMSOURCES)
@@ -72,7 +71,7 @@ $(ELF) : $(OBJECTS)
 	$(LD) $(LDFLAGS) $(GCC_LIBS) $^ -o $@ $(LIBS)
 	$(NM) --numeric-sort $@ >$(SYM)
 	$(SIZE) $@
-	chmod a-x $@
+	-chmod a-x $@
 
 $(BINARY) : $(ELF)
 	$(OBJCOPY) -O binary $(ELF) $(BINARY)

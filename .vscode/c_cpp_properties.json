@@ -69,7 +69,8 @@
                 "-pedantic",
                 "-Wno-unused-function",
                 "-I${env:ROSCO_M68K_DIR}/code/software/libs/build/include"
-            ]
+            ],
+            "configurationProvider": "ms-vscode.makefile-tools"
         }
     ],
     "version": 4

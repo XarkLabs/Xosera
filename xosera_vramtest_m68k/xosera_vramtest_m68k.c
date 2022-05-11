@@ -75,12 +75,10 @@ _NOINLINE static bool delay_check(int ms)
     return false;
 }
 
-void wait_vsync()
+void wait_start_vblank()
 {
-    while (xreg_getw(SCANLINE) >= 0x8000)
-        ;
-    while (xreg_getw(SCANLINE) < 0x8000)
-        ;
+    xwait_not_vblank();
+    xwait_vblank();
 }
 
 // VRAM test globals
@@ -406,7 +404,7 @@ int test_vram(bool LFSR, int mode, int speed)
     xv_prep();
 
     // set funky mode to show VRAM
-    wait_vsync();
+    wait_start_vblank();
     xreg_setw(VID_CTRL, 0x0000);
     xreg_setw(PA_LINE_LEN, 136);        // ~65536/480 words per line
     xreg_setw(PA_DISP_ADDR, 0x0000);
@@ -735,14 +733,14 @@ int test_xmem(bool LFSR, int mode)
     xv_prep();
 
     // set funky mode to show XMEM
-    wait_vsync();
+    wait_start_vblank();
     xreg_setw(PA_GFX_CTRL, 0x0080);
-    xm_setw(XR_ADDR, XR_TILEMAP);
+    xmem_set_addr(XR_TILEMAP);
     for (int i = 0; i < (XR_COLS * XR_ROWS); i++)
     {
-        xm_setw(XR_DATA, i);
+        xmem_setw_next(i);
     }
-    wait_vsync();
+    wait_start_vblank();
     xreg_setw(PA_GFX_CTRL, vram_modes[mode] & ~0x0040);        // text
     xreg_setw(PA_TILE_CTRL, 0x0207);                           // tile=0x0000,tile=tile_mem, map=tile_mem, 8x8 tiles
     xreg_setw(PA_LINE_LEN, XR_COLS);
@@ -753,7 +751,7 @@ int test_xmem(bool LFSR, int mode)
 
     dprintf("  > XMEM test=%s speed=%s mode=%s : ", LFSR ? "LFSR" : "ADDR", speed_names[4], vram_mode_names[mode]);
     // fill XMEM with pattern_buffer
-    wait_vsync();
+    wait_start_vblank();
     for (int r = 0; r < 16; r++)
     {
         // generate pattern_buffer data
@@ -778,25 +776,25 @@ int test_xmem(bool LFSR, int mode)
 
         // word color mem
         NukeColor = 0xffff;        // disable color cycle while testing COLOR mem
-        xm_setw(XR_ADDR, XR_COLOR_ADDR);
-        xwait_mem_busy();        // must wait for initial (slow) color mem read to finish, before writing
+        xmem_set_addr(XR_COLOR_ADDR);
+        xwait_mem_ready();        // must wait for initial (slow) color mem read to finish, before writing
         for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + XR_COLOR_SIZE); addr++)
         {
-            xm_setw(XR_DATA, pattern_buffer[addr]);
+            xmem_setw_next(pattern_buffer[addr]);
         }
         NukeColor = 0;
 
         // word tile mem
-        xm_setw(XR_ADDR, XR_TILE_ADDR);
+        xmem_set_addr(XR_TILE_ADDR);
         for (int addr = XR_TILE_ADDR; addr < (XR_TILE_ADDR + XR_TILE_SIZE); addr++)
         {
-            xm_setw(XR_DATA, pattern_buffer[addr]);
+            xmem_setw_next(pattern_buffer[addr]);
         }
         // word copper mem
-        xm_setw(XR_ADDR, XR_COPPER_ADDR);
+        xmem_set_addr(XR_COPPER_ADDR);
         for (int addr = XR_COPPER_ADDR; addr < (XR_COPPER_ADDR + XR_COPPER_SIZE); addr++)
         {
-            xm_setw(XR_DATA, pattern_buffer[addr]);
+            xmem_setw_next(pattern_buffer[addr]);
         }
 
         RETURN_ON_KEYPRESS();
@@ -836,6 +834,8 @@ xosera_info_t initinfo;
 void xosera_vramtest()
 {
     xv_prep();
+
+    cpu_delay(3000);
 
     dprintf("\033c\nXosera_vramtest_m68k\n");
 
@@ -886,13 +886,13 @@ void xosera_vramtest()
         uint16_t monwidth  = xreg_getw(VID_HSIZE);
         uint16_t monheight = xreg_getw(VID_VSIZE);
 
-        dprintf("    Config #%d [%04x]   Res:%ux%u   Git:0x%08x   ID:\"%s\"\n",
+        dprintf("    Config #%d [%04x]   Res:%ux%u   Git:0x%08x   ID:\"%.48s\"\n",
                 cur_xosera_config,
                 (unsigned int)features,
                 (unsigned int)monwidth,
                 (unsigned int)monheight,
                 (unsigned int)initinfo.githash,
-                initinfo.version_str);
+                initinfo.description_str);
 
         for (int i = 0; i < TEST_MODES; i++)
         {
@@ -952,7 +952,7 @@ void xosera_vramtest()
             }
         }
     }
-    wait_vsync();
+    wait_start_vblank();
     remove_intr();
 
     // reset console

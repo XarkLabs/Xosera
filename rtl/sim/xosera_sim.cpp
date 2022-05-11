@@ -975,6 +975,12 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+    REG_W(SYS_CTRL, 0x0001),
+    REG_W(TIMER, 0xb007),
+
     REG_END(),
     // end test data
 };

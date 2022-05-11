@@ -32,7 +32,6 @@
 #define XR_PB_REGS      0x0018        // 0x0000-0x001F 8 playfield B video registers
 #define XR_BLIT_REGS    0x0020        // 0x0020-0x002F 12 blitter registers
 #define XR_AUDIO_REGS   0x0030        // 0x0030-0x003F 16 audio playback registers      // TODO: audio
-#define XR_TILE_SIZE    0x1400        //                     5120 x 16-bit tile glyph/tile map memory
 #define XR_TILE_ADDR    0x4000        // (R/W) 0x4000-0x53FF tile glyph/tile map memory
 #define XR_TILE_SIZE    0x1400        //                     5120 x 16-bit tile glyph/tile map memory
 #define XR_COLOR_ADDR   0x8000        // (R/W) 0x8000-0x81FF 2 x A & B color lookup memory

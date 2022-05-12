@@ -324,7 +324,7 @@ extern volatile xmreg_t * const xosera_ptr;
         uint16_t xmem_getw_wait_u16;                                                                                   \
         xm_setw(RD_XADDR, (xrmem));                                                                                    \
         xwait_mem_ready();                                                                                             \
-        __asm__ __volatile__("movep.w " XM_STR(XM_XR_DATA) "(%[ptr]),%[dst]"                                           \
+        __asm__ __volatile__("movep.w " XM_STR(XM_XDATA) "(%[ptr]),%[dst]"                                             \
                              : [dst] "=d"(xmem_getw_wait_u16)                                                          \
                              : [ptr] "a"(xosera_ptr)                                                                   \
                              :);                                                                                       \
@@ -336,11 +336,12 @@ extern volatile xmreg_t * const xosera_ptr;
 #define xmem_getw_next_wait()                                                                                          \
     ({                                                                                                                 \
         uint16_t xmem_getw_next_wait_u16;                                                                              \
-        xwait_mem_ready();                                                                                             \
-        __asm__ __volatile__("movep.w " XM_STR(XM_XR_DATA) "(%[ptr]),%[dst]"                                           \
-                             : [dst] "=d"(xmem_getw_next_wait_u16)                                                     \
-                             : [ptr] "a"(xosera_ptr)                                                                   \
-                             :);                                                                                       \
+        __asm__ __volatile__(                                                                                          \
+            "0: tst.b (%[ptr]); bmi.s 0b\n"                                                                            \
+            "movep.w " XM_STR(XM_XDATA) "(%[ptr]),%[dst]"                                                              \
+            : [dst] "=d"(xmem_getw_next_wait_u16)                                                                      \
+            : [ptr] "a"(xosera_ptr)                                                                                    \
+            :);                                                                                                        \
         xmem_getw_next_wait_u16;                                                                                       \
     })
 

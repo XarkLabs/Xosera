@@ -88,7 +88,7 @@
 #define SYS_CTRL_UNUSED_9_B   1        // (RO   )  unused (reads 0)
 #define SYS_CTRL_RW_RD_INCR_B 0        // (R / W)  increment XM_RW_ADDR after XM_RW_DATA/XM_RW_DATA_2 read
 
-// XR Extended Register / Region (accessed via XM_XR_ADDR and XM_XR_DATA)
+// XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 
 //  Video Config and Copper XR Registers
 #define XR_VID_CTRL  0x00        // (R /W) display control and border color index

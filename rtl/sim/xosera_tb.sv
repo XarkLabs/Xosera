@@ -210,18 +210,18 @@ function automatic logic [63:0] regname(
     );
     begin
         case (num)
-            4'h0: regname = "XR_ADDR ";
-            4'h1: regname = "XR_DATA ";
-            4'h2: regname = "RD_INCR ";
-            4'h3: regname = "RD_ADDR ";
-            4'h4: regname = "WR_INCR ";
-            4'h5: regname = "WR_ADDR ";
-            4'h6: regname = "DATA    ";
-            4'h7: regname = "DATA2   ";
-            4'h8: regname = "SYS_CTRL";
-            4'h9: regname = "TIMER   ";
-            4'hA: regname = "UNUSED_A";
-            4'hB: regname = "UNUSED_B";
+            4'h0: regname = "SYS_CTRL";
+            4'h1: regname = "INT_CTRL";
+            4'h2: regname = "TIMER   ";
+            4'h3: regname = "RD_XADDR";
+            4'h4: regname = "WR_XADDR";
+            4'h5: regname = "XDATA   ";
+            4'h6: regname = "RD_INCR ";
+            4'h7: regname = "RD_ADDR ";
+            4'h8: regname = "WR_INCR ";
+            4'h9: regname = "WR_ADDR ";
+            4'hA: regname = "DATA    ";
+            4'hB: regname = "DATA_2  ";
             4'hC: regname = "RW_INCR ";
             4'hD: regname = "RW_ADDR ";
             4'hE: regname = "RW_DATA ";
@@ -256,13 +256,13 @@ always begin
     # 8ms;
 
     // TODO hacked in copper enable
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, 16'(XR_COPP_CTRL));
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h8000);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_COPP_CTRL));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h8000);
     // TODO end
 
     // TODO hacked in blit test
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, 16'(XR_BLIT_WORDS));
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h0007);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_BLIT_WORDS));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0007);
     // TODO end
 
 // audio test
@@ -307,8 +307,8 @@ always begin
 
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_INCR, test_inc);
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0000);
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_ADDR, 16'(XR_PA_GFX_CTRL));
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XR_DATA, 16'h0040);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_PA_GFX_CTRL));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0040);
 
     inject_file("../testdata/raw/space_shuttle_color_small.raw", XM_DATA);  // pump binary file into DATA
 
@@ -369,48 +369,48 @@ always begin
 
 `ifdef ZZZUNDEF // some other test...
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_RD_XADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_RD_XADDR, 8'h00);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XDATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XDATA, readword[7:0]);
     $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h01);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_RD_XADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_RD_XADDR, 8'h01);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XDATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XDATA, readword[7:0]);
     $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h02);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_RD_XADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_RD_XADDR, 8'h02);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XDATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XDATA, readword[7:0]);
     $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(1ms) ;
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h03);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_RD_XADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_RD_XADDR, 8'h03);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XDATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XDATA, readword[7:0]);
     $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h03);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_RD_XADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_RD_XADDR, 8'h03);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XDATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XDATA, readword[7:0]);
     $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
     #(1500us) ;
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_XR_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_XR_ADDR, 8'h03);
+    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_RD_XADDR, 8'h00);
+    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_RD_XADDR, 8'h03);
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XR_DATA, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XR_DATA, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_XDATA, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_XDATA, readword[7:0]);
     $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
 
 `endif

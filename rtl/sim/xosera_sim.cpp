@@ -561,7 +561,7 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR  ",
 BusInterface bus;
 int          BusInterface::test_data_len    = 32767;
 uint16_t     BusInterface::test_data[32768] = {
-    // test data
+        // test data
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
@@ -580,11 +580,25 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_RW(RW_DATA),
     REG_RW(RW_DATA),
 
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
+    REG_W(WR_XADDR, XR_COLOR_A_ADDR),
+    REG_W(XDATA, 0x1234),
+    REG_W(XDATA, 0x5678),
+
+    REG_W(RD_XADDR, XR_COLOR_A_ADDR),
+    REG_RW(XDATA),
+    REG_RW(XDATA),
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+
+    REG_W(INT_CTRL, 0x000F),
+    REG_W(INT_CTRL, 0x0F00),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+    REG_W(INT_CTRL, 0x000F),
+
 
     XREG_SETW(PA_GFX_CTRL, 0x005F),         // bitmap, 4-bpp, Hx4, Vx4
     XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font

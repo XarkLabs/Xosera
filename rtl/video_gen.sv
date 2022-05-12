@@ -29,7 +29,6 @@ module video_gen #(
     input  wire logic  [5:0]    vgen_reg_num_i,         // internal config register number (for reads)
     input  wire word_t          vgen_reg_data_i,        // data for internal config register
     output      word_t          vgen_reg_data_o,        // register/status data reads
-    input wire  logic  [3:0]    intr_status_i,          // interrupt pending status
     output      logic  [3:0]    intr_signal_o,          // generate interrupt signal
 `ifdef ENABLE_COPP
     // outputs for copper
@@ -546,7 +545,7 @@ end
 // video registers read
 always_comb begin
     case (vgen_reg_num_i[3:0])
-        xv::XR_VID_CTRL[3:0]:       rd_vid_regs = { border_color, 8'(intr_status_i) };
+        xv::XR_VID_CTRL[3:0]:       rd_vid_regs = { border_color, 8'h00 };
 `ifdef ENABLE_COPP
         xv::XR_COPP_CTRL[3:0]:      rd_vid_regs = { copp_reg_data_o[15], 15'(copp_reg_data_o[xv::COPP_W-1:0]) };
 `endif

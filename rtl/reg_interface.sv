@@ -38,8 +38,9 @@ module reg_interface(
     // iCE40 reconfigure
     output      logic            reconfig_o,        // reconfigure iCE40 from flash
     // interrupt management
-    output      logic  [3:0]     intr_mask_o,       // enabled interrupts
-    output      logic  [3:0]     intr_clear_o,      // interrupt CPU acknowledge
+    output      logic  [3:0]     intr_mask_o,       // enabled interrupts (which signal CPU interrupt)
+    output      logic  [3:0]     intr_clear_o,      // pending interrupts CPU acknowledge (clear)
+    input  wire logic  [3:0]     intr_status_i,     // pending interrupts CPU status read
 
 `ifdef BUS_DEBUG_SIGNALS
     output      logic            bus_ack_o,         // ACK strobe for bus debug
@@ -125,7 +126,7 @@ always_comb begin
         xv::XM_SYS_CTRL:
             rd_temp_word  = { mem_wait, blit_full_i, blit_busy_i, 1'b0, h_blank_i, v_blank_i, 1'b0, reg_rw_rd_inc, 4'b0, regs_wrmask_o };
         xv::XM_INT_CTRL:
-            rd_temp_word  = { 4'b0, intr_mask, 8'b0 };
+            rd_temp_word  = { 4'b0, intr_mask, 4'b0, intr_status_i };
         xv::XM_TIMER:
             rd_temp_word  = { reg_timer[15:8], timer_latch_val };
         xv::XM_RD_XADDR:
@@ -291,8 +292,8 @@ always_ff @(posedge clk) begin
                         reg_rd_xaddr[7:0]   <= bus_data_byte;
                         regs_xr_sel_o       <= 1'b1;            // select XR
                         xr_rd               <= 1'b1;            // remember pending XR read request
+                        regs_addr_o         <= { reg_rd_xaddr[15:8], bus_data_byte };    // output read addr (pre-read)
                     end
-                    regs_addr_o         <= { reg_rd_xaddr[15:8], bus_data_byte };    // output read addr (pre-read)
                 end
                 xv::XM_WR_XADDR: begin
                     if (!bus_bytesel) begin
@@ -307,9 +308,9 @@ always_ff @(posedge clk) begin
                     end else begin
                         regs_xr_sel_o       <= 1'b1;            // select XR
                         regs_wr_o           <= 1'b1;
+                        regs_addr_o         <= reg_wr_xaddr;
+                        regs_data_o         <= { reg_xdata_even, bus_data_byte };     // output write addr
                     end
-                    regs_addr_o         <= reg_wr_xaddr;
-                    regs_data_o         <= { reg_xdata_even, bus_data_byte };     // output write addr
                 end
                 xv::XM_RD_INCR: begin
                     if (!bus_bytesel) begin
@@ -325,8 +326,8 @@ always_ff @(posedge clk) begin
                         reg_rd_addr[7:0]    <= bus_data_byte;
                         regs_vram_sel_o     <= 1'b1;            // select VRAM
                         vram_rd             <= 1'b1;            // remember pending VRAM read request
+                        regs_addr_o         <= { reg_rd_addr[15:8], bus_data_byte };      // output read address
                     end
-                    regs_addr_o         <= { reg_rd_addr[15:8], bus_data_byte };      // output read address
                 end
                 xv::XM_WR_INCR: begin
                     if (!bus_bytesel) begin
@@ -349,9 +350,9 @@ always_ff @(posedge clk) begin
                     end else begin
                         regs_vram_sel_o     <= 1'b1;            // select VRAM
                         regs_wr_o           <= 1'b1;            // write
+                        regs_addr_o         <= reg_wr_addr;    // output write address
+                        regs_data_o         <= { reg_data_even, bus_data_byte };      // output write data
                     end
-                    regs_addr_o         <= reg_wr_addr;    // output write address
-                    regs_data_o         <= { reg_data_even, bus_data_byte };      // output write data
                 end
                 xv::XM_RW_INCR: begin
                     if (!bus_bytesel) begin
@@ -368,8 +369,8 @@ always_ff @(posedge clk) begin
                         regs_vram_sel_o     <= 1'b1;            // select VRAM
                         vram_rd             <= 1'b1;            // remember pending vramread request
                         vram_rw_rd          <= 1'b1;            // remember rw read
+                        regs_addr_o         <= { reg_rw_addr[15:8], bus_data_byte };      // output read address
                     end
-                    regs_addr_o         <= { reg_rw_addr[15:8], bus_data_byte };      // output read address
                 end
                 xv::XM_RW_DATA,
                 xv::XM_RW_DATA_2: begin
@@ -379,9 +380,9 @@ always_ff @(posedge clk) begin
                         regs_vram_sel_o     <= 1'b1;            // select VRAM
                         regs_wr_o           <= 1'b1;            // write
                         vram_rw_wr          <= 1'b1;            // remember rw write
+                        regs_addr_o         <= reg_rw_addr;    // output write address
+                        regs_data_o         <= { reg_rw_data_even, bus_data_byte };      // output write data
                     end
-                    regs_addr_o         <= reg_rw_addr;    // output write address
-                    regs_data_o         <= { reg_rw_data_even, bus_data_byte };      // output write data
                 end
             endcase
         end

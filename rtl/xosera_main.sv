@@ -187,8 +187,9 @@ reg_interface reg_interface(
     // reconfig
     .reconfig_o(reconfig_o),
     // interrupts
-    .intr_mask_o(intr_mask),            // set with write to SYS_CTRL
-    .intr_clear_o(intr_clear),          // strobe with write to TIMER
+    .intr_mask_o(intr_mask),            // enabled interrupts from INT_CTRL high byte
+    .intr_clear_o(intr_clear),          // strobe clears pending INT_CTRL interrupt
+    .intr_status_i(intr_status),        // status read from pending INT_CTRL interrupt
 `ifdef BUS_DEBUG_SIGNALS
     .bus_ack_o(dbug_cs_strobe),         // debug "ack" bus strobe
 `endif
@@ -205,7 +206,6 @@ video_gen#(
     .vgen_reg_num_i(xr_regs_addr[5:0]),
     .vgen_reg_data_i(xr_regs_data_in),
     .vgen_reg_data_o(xr_regs_data_out),
-    .intr_status_i(intr_status),            // status read from VID_CTRL
     .intr_signal_o(vid_intr_signal),        // signaled by write to VID_CTRL
     .vram_sel_o(vgen_vram_sel),
     .vram_addr_o(vgen_vram_addr),

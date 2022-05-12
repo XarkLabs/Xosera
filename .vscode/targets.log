@@ -1,0 +1,1611 @@
+make all --print-data-base --no-builtin-variables --no-builtin-rules --question
+# GNU Make 3.81
+# Copyright (C) 2006  Free Software Foundation, Inc.
+# This is free software; see the source for copying conditions.
+# There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
+
+# This program built for i386-apple-darwin11.3.0
+cd rtl && /Library/Developer/CommandLineTools/usr/bin/make all
+ 
+# GNU Make 3.81
+# Copyright (C) 2006  Free Software Foundation, Inc.
+# This is free software; see the source for copying conditions.
+# There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
+
+# This program built for i386-apple-darwin11.3.0
+/Library/Developer/CommandLineTools/usr/bin/make -f sim.mk all
+ 
+# GNU Make 3.81
+# Copyright (C) 2006  Free Software Foundation, Inc.
+# This is free software; see the source for copying conditions.
+# There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
+
+# This program built for i386-apple-darwin11.3.0
+ 
+=== Xosera simulation [c7ade0a] is CLEAN from git
+ 
+make[2]: *** No rule to make target `make_defs', needed by `all'.  Stop.
+
+
+# Make data base, printed on Thu May 12 14:58:36 2022
+
+# Variables
+
+# automatic
+<D = $(patsubst %/,%,$(dir $<))
+# automatic
+?F = $(notdir $?)
+# makefile (from `sim.mk', line 77)
+SRC := ./xosera_main.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_pkg.sv ./xrmem_arb.sv
+# environment
+VSCODE_LOG_NATIVE = false
+# automatic
+?D = $(patsubst %/,%,$(dir $?))
+# automatic
+@D = $(patsubst %/,%,$(dir $@))
+# automatic
+@F = $(notdir $@)
+# makefile
+CURDIR := /Users/kenj/Dev/Xosera_Dev/Xosera/rtl
+# makefile (from `sim.mk', line 16)
+SHELL := /bin/bash -o pipefail
+# environment
+SERIAL = /dev/tty.usbserial-20180508_02
+# environment
+VSCODE_NLS_CONFIG = {"locale":"en-us","availableLanguages":{},"_languagePackSupport":true}
+# environment
+_ = /Library/Developer/CommandLineTools/usr/bin/make
+# makefile (from `sim.mk', line 112)
+CFLAGS := -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-int-in-bool-context -DMODE_640x480 -DSDL_RENDER=1 -DBUS_INTERFACE=1 -I/opt/homebrew/include/SDL2 -D_THREAD_SAFE"
+# makefile (from `sim.mk', line 19)
+GITSHORTHASH := c7ade0a
+# makefile (from `sim.mk', line 20)
+DIRTYFILES := 
+# makefile (from `sim.mk', line 60)
+VRUN_TESTDATA = -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw
+# makefile (from `sim.mk', line 1)
+MAKEFILE_LIST :=  sim.mk
+# makefile (from `sim.mk', line 108)
+SDL_CFLAGS := -I/opt/homebrew/include/SDL2 -D_THREAD_SAFE
+# environment
+VSCODE_VERBOSE_LOGGING = true
+# environment
+PERL_MM_OPT = INSTALL_BASE=/Users/kenj/perl5
+# environment
+__CFBundleIdentifier = com.microsoft.VSCode
+# environment
+INFOPATH = /opt/homebrew/share/info:
+# environment
+VSCODE_IPC_HOOK_EXTHOST = /var/folders/h2/0d_p7srj0bn55f55zz6pbxt40000gn/T/vscode-ipc-e9944a14-20a2-402a-b7c0-60545b90e9e1.sock
+# environment
+VSCODE_CWD = /
+# environment
+P4CLIENT = kenj-Air
+# environment
+PATH = /Users/kenj/Dev/oss-cad-suite/bin:/opt/riscv/bin:/Users/kenj/perl5/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/Apple/usr/bin
+# makefile (from `sim.mk', line 98)
+TECH_LIB := /Users/kenj/Dev/oss-cad-suite/share/yosys/ice40/cells_sim.v
+# makefile (from `sim.mk', line 83)
+BUS_INTERFACE := 1
+# makefile (from `sim.mk', line 92)
+current_dir = $(shell pwd)
+# makefile (from `sim.mk', line 74)
+VPATH := .
+# environment
+VSCODE_LOG_STACK = false
+# environment
+ELECTRON_RUN_AS_NODE = 1
+# makefile (from `sim.mk', line 107)
+LDFLAGS := -LDFLAGS "-L/opt/homebrew/lib -lSDL2 -lSDL2_image"
+# default
+.FEATURES := target-specific order-only second-expansion else-if archives jobserver check-symlink
+# environment
+SSH_AUTH_SOCK = /private/tmp/com.apple.launchd.py0q26OVdo/Listeners
+# makefile (from `sim.mk', line 71)
+SRCDIR := .
+# automatic
+%F = $(notdir $%)
+# environment
+VSCODE_PIPE_LOGGING = true
+# environment
+PWD = /Users/kenj/Dev/Xosera_Dev/Xosera/rtl
+# environment
+ROSCO_M68K_DIR = /Users/kenj/Dev/Rosco_Dev/rosco_m68k
+# environment
+HOMEBREW_CELLAR = /opt/homebrew/Cellar
+# environment
+ORIGINAL_XDG_CURRENT_DESKTOP = undefined
+# makefile (from `sim.mk', line 101)
+IVERILOG := iverilog
+# environment
+MANPATH = /opt/homebrew/share/man::
+# environment
+VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
+# environment
+HOME = /Users/kenj
+# environment
+PERL_MB_OPT = --install_base "/Users/kenj/perl5"
+# environment
+P4USER = kenj
+# environment
+PERL_LOCAL_LIB_ROOT = /Users/kenj/perl5
+# default
+MAKEFILEPATH = $(shell /usr/bin/xcode-select -print-path 2>/dev/null || echo /Developer)/Makefiles
+# environment
+PERL5LIB = /Users/kenj/perl5/lib/perl5
+# makefile (from `sim.mk', line 89)
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=c7ade0a -DMODE_640x480 -DICE40UP5K -DBUS_INTERFACE
+# environment
+VSCODE_CODE_CACHE_PATH = /Users/kenj/Library/Application Support/Code/CachedData/da15b6fd3ef856477bf6f4fb29ba1b7af717770d
+# makefile (from `sim.mk', line 68)
+VTOP := xosera_main
+# environment
+LOGNAME = kenj
+# environment
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
+# makefile (from `sim.mk', line 115)
+VERILATOR := verilator
+# makefile (from `sim.mk', line 94)
+LOGS := sim/logs
+# makefile (from `sim.mk', line 63)
+TBTOP := xosera_tb
+# environment
+VSCODE_HANDLES_UNCAUGHT_ERRORS = true
+# automatic
+^D = $(patsubst %/,%,$(dir $^))
+# makefile (from `sim.mk', line 119)
+CSRC := sim/xosera_sim.cpp
+# environment
+BAUD = 115200
+# environment
+XPC_FLAGS = 0x0
+# default
+MAKE = $(MAKE_COMMAND)
+# default
+MAKECMDGOALS := all
+# environment
+SHLVL = 2
+# default
+MAKE_VERSION := 3.81
+# environment
+USER = kenj
+# makefile
+.DEFAULT_GOAL := all
+# makefile (from `sim.mk', line 97)
+YOSYS_CONFIG := yosys-config
+# automatic
+%D = $(patsubst %/,%,$(dir $%))
+# default
+MAKE_COMMAND := /Library/Developer/CommandLineTools/usr/bin/make
+# makefile (from `sim.mk', line 80)
+INC := 
+# environment
+OLDPWD = /Users/kenj/Dev/Xosera_Dev/Xosera
+# makefile (from `sim.mk', line 65)
+DEFTOP := xosera_def_files
+# default
+.VARIABLES := 
+# environment
+TMPDIR = /var/folders/h2/0d_p7srj0bn55f55zz6pbxt40000gn/T/
+# makefile (from `sim.mk', line 44)
+VIDEO_MODE = MODE_640x480
+# automatic
+*F = $(notdir $*)
+# environment
+VSCODE_IPC_HOOK = /Users/kenj/Library/Application Support/Code/1.67.1-main.sock
+# makefile
+MAKEFLAGS = Rrqp
+# makefile (from `sim.mk', line 102)
+IVERILOG_ARGS := -g2012 -I. -Wall -l /Users/kenj/Dev/oss-cad-suite/share/yosys/ice40/cells_sim.v
+# environment
+MFLAGS = -Rrqp
+# automatic
+*D = $(patsubst %/,%,$(dir $*))
+# environment
+XPC_SERVICE_NAME = 0
+# environment
+HOMEBREW_PREFIX = /opt/homebrew
+# automatic
++D = $(patsubst %/,%,$(dir $+))
+# makefile (from `sim.mk', line 116)
+VERILATOR_ARGS := --sv --language 1800-2012 -I. -Mdir sim/obj_dir -Wall --trace-fst -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
+# automatic
++F = $(notdir $+)
+# environment
+ROSCO_M68K_HUGEROM = true
+# environment
+HOMEBREW_REPOSITORY = /opt/homebrew
+# environment
+__CF_USER_TEXT_ENCODING = 0x1F5:0x0:0x0
+# environment
+COMMAND_MODE = unix2003
+# default
+MAKEFILES := 
+# automatic
+<F = $(notdir $<)
+# environment
+LC_ALL = C
+# makefile (from `sim.mk', line 23)
+XOSERA_HASH := c7ade0a
+# automatic
+^F = $(notdir $^)
+# default
+SUFFIXES := 
+# environment
+ROSCO_M68K_CC = /usr/local/bin/
+# makefile (from `sim.mk', line 105)
+SDL_RENDER := 1
+# default
+.INCLUDE_DIRS = /usr/local/include
+# environment
+MAKELEVEL := 2
+# environment
+LANG = C
+# makefile (from `sim.mk', line 24)
+XOSERA_CLEAN := 1
+# environment
+P4PORT = cute-sys76-pc.home:1666
+# environment
+VSCODE_PID = 89581
+# variable set hash-table stats:
+# Load=108/1024=11%, Rehash=0, Collisions=3/190=2%
+
+# Pattern-specific Variable Values
+
+# No pattern-specific variable values.
+
+# Directories
+
+# . (device 16777233, inode 34086367): 40 files, no impossibilities.
+
+# 40 files, no impossibilities in 1 directories.
+
+# Implicit Rules
+
+# No implicit rules.
+
+# Files
+
+# Not a target:
+sim/xosera_def_files.sv:
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+bus_interface.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-03-29 09:40:53
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+irun: sim/xosera_tb sim.mk
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `sim.mk', line 145):
+	@mkdir -p $(LOGS)
+	sim/$(TBTOP) -fst
+	
+
+all: make_defs vsim isim
+#  Phony target (prerequisite of .PHONY).
+#  Command-line target.
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  File does not exist.
+#  File has not been updated.
+ 
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/3=0%
+
+vrun: sim/obj_dir/Vxosera_main sim.mk
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `sim.mk', line 140):
+	@mkdir -p $(LOGS)
+	sim/obj_dir/V$(VTOP) $(VRUN_TESTDATA)
+	
+
+.PHONY: all vsim isim vrun irun clean
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+blitter.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-03-29 09:40:53
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+video_timing.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-05-05 00:17:35
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+sim/obj_dir/Vxosera_main: sim/xosera_sim.cpp xosera_main.sv audio_dac.sv audio_mixer.sv blitter.sv blitter2.sv bus_interface.sv colormem.sv copper.sv coppermem.sv reg_interface.sv spi_target.sv tilemem.sv video_blend.sv video_gen.sv video_playfield.sv video_timing.sv vram.sv vram_arb.sv xosera_pkg.sv xrmem_arb.sv sim.mk
+#  Implicit rule search has not been done.
+#  Last modified 2022-05-11 21:00:31
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+#  commands to execute (from `sim.mk', line 155):
+	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(TECH_LIB) $(SRC) $(current_dir)/$(CSRC)
+	cd sim/obj_dir && make -f V$(VTOP).mk
+	
+
+# Not a target:
+coppermem.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-03-29 09:40:53
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+.SECONDARY:
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+xosera_pkg.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-05-09 20:52:25
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+sim/xosera_sim.cpp:
+#  Implicit rule search has been done.
+#  Last modified 2022-05-11 21:00:28
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+.SUFFIXES:
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+reg_interface.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-05-11 12:38:16
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+vram.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-03-29 09:40:53
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+vram_arb.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-04-03 18:58:55
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+sim/xosera_tb: sim/xosera_tb.sv xosera_main.sv audio_dac.sv audio_mixer.sv blitter.sv blitter2.sv bus_interface.sv colormem.sv copper.sv coppermem.sv reg_interface.sv spi_target.sv tilemem.sv video_blend.sv video_gen.sv video_playfield.sv video_timing.sv vram.sv vram_arb.sv xosera_pkg.sv xrmem_arb.sv sim.mk
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `sim.mk', line 160):
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES)  -v $(TECH_LIB) --top-module $(TBTOP) sim/$(TBTOP).sv $(SRC)
+	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -D$(VIDEO_MODE) -o sim/$(TBTOP) $(current_dir)/sim/$(TBTOP).sv $(SRC)
+	
+
+# Not a target:
+make_defs:
+#  Implicit rule search has been done.
+#  File is an intermediate prerequisite.
+#  File does not exist.
+#  File has not been updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+audio_mixer.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-04-15 09:09:43
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+isim: sim/xosera_tb sim.mk
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `sim.mk', line 135):
+	@echo === Icarus Verilog simulation configured for: $(VIDEO_MODE) ===
+	@echo Completed building Icarus Verilog simulation, use \"make irun\" to run.
+	
+
+# Not a target:
+tilemem.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-03-29 09:40:53
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+xosera_main.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-05-11 20:45:25
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+sim/xosera_def_files: sim/xosera_def_files.sv sim.mk
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `sim.mk', line 150):
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TBTOP) sim/$(TBTOP).sv
+	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -o sim/$(DEFTOP) $(current_dir)/sim/$(DEFTOP).sv
+	
+
+# Not a target:
+colormem.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-03-29 09:40:53
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+video_gen.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-05-11 12:27:19
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+vsim: sim/obj_dir/Vxosera_main sim.mk
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  Implicit/static pattern stem: `'
+#  File is an intermediate prerequisite.
+#  File does not exist.
+#  File has been updated.
+#  Needs to be updated (-q is set).
+# automatic
+# @ := vsim
+# automatic
+# % := 
+# automatic
+# * := 
+# automatic
+# + := sim/obj_dir/Vxosera_main sim.mk
+# automatic
+# | := 
+# automatic
+# < := sim/obj_dir/Vxosera_main
+# automatic
+# ^ := sim/obj_dir/Vxosera_main sim.mk
+# automatic
+# ? := sim/obj_dir/Vxosera_main sim.mk
+# variable set hash-table stats:
+# Load=8/32=25%, Rehash=0, Collisions=2/11=18%
+#  commands to execute (from `sim.mk', line 131):
+	@echo === Verilator simulation configured for: $(VIDEO_MODE) ===
+	@echo Completed building Verilator simulation, use \"make vrun\" to run.
+	
+
+# Not a target:
+xrmem_arb.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-05-04 15:08:05
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+blitter2.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-03-29 09:40:53
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+.DEFAULT:
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+sim.mk:
+#  Implicit rule search has been done.
+#  Last modified 2022-05-04 15:08:05
+ 
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+def_files: sim/xosera_def_files sim.mk
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `sim.mk', line 125):
+	@echo === Icarus Verilog creating C and asm definition files ===
+	@mkdir -p $(LOGS)
+	sim/$(DEFTOP)
+	
+
+clean:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `sim.mk', line 165):
+	rm -rf sim/obj_dir sim/$(TBTOP)
+	
+
+# Not a target:
+video_playfield.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-04-15 15:53:30
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+copper.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-05-04 15:08:05
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+video_blend.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-03-29 09:40:53
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+spi_target.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-03-29 09:40:53
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# Not a target:
+sim/xosera_tb.sv:
+#  Implicit rule search has not been done.
+#  File is an intermediate prerequisite.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+audio_dac.sv:
+#  Implicit rule search has been done.
+#  Last modified 2022-04-15 09:09:43
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+# files hash-table stats:
+# Load=39/1024=4%, Rehash=0, Collisions=0/118=0%
+# VPATH Search Paths
+
+# No `vpath' search paths.
+
+# No general (`VPATH' variable) search path.
+
+# # of strings in strcache: 1
+# # of strcache buffers: 1
+# strcache size: total = 4096 / max = 4096 / min = 4096 / avg = 4096
+# strcache free: total = 4089 / max = 4089 / min = 4089 / avg = 4089
+
+# Finished Make data base on Thu May 12 14:58:37 2022
+
+
+# Make data base, printed on Thu May 12 14:58:37 2022
+
+# Variables
+
+# automatic
+<D = $(patsubst %/,%,$(dir $<))
+# automatic
+?F = $(notdir $?)
+# environment
+VSCODE_LOG_NATIVE = false
+# automatic
+?D = $(patsubst %/,%,$(dir $?))
+# automatic
+@D = $(patsubst %/,%,$(dir $@))
+# automatic
+@F = $(notdir $@)
+# makefile
+CURDIR := /Users/kenj/Dev/Xosera_Dev/Xosera/rtl
+# makefile
+SHELL = /bin/sh
+# environment
+SERIAL = /dev/tty.usbserial-20180508_02
+# environment
+ 
+VSCODE_NLS_CONFIG = {"locale":"en-us","availableLanguages":{},"_languagePackSupport":true}
+# environment
+_ = /Library/Developer/CommandLineTools/usr/bin/make
+# makefile (from `Makefile', line 1)
+MAKEFILE_LIST :=  Makefile
+# environment
+VSCODE_VERBOSE_LOGGING = true
+# environment
+PERL_MM_OPT = INSTALL_BASE=/Users/kenj/perl5
+# environment
+__CFBundleIdentifier = com.microsoft.VSCode
+# environment
+INFOPATH = /opt/homebrew/share/info:
+# environment
+VSCODE_IPC_HOOK_EXTHOST = /var/folders/h2/0d_p7srj0bn55f55zz6pbxt40000gn/T/vscode-ipc-e9944a14-20a2-402a-b7c0-60545b90e9e1.sock
+# environment
+VSCODE_CWD = /
+# environment
+P4CLIENT = kenj-Air
+# environment
+PATH = /Users/kenj/Dev/oss-cad-suite/bin:/opt/riscv/bin:/Users/kenj/perl5/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/Apple/usr/bin
+# environment
+VSCODE_LOG_STACK = false
+# environment
+ELECTRON_RUN_AS_NODE = 1
+# default
+.FEATURES := target-specific order-only second-expansion else-if archives jobserver check-symlink
+# environment
+SSH_AUTH_SOCK = /private/tmp/com.apple.launchd.py0q26OVdo/Listeners
+# automatic
+%F = $(notdir $%)
+# environment
+VSCODE_PIPE_LOGGING = true
+# environment
+PWD = /Users/kenj/Dev/Xosera_Dev/Xosera/rtl
+# environment
+ROSCO_M68K_DIR = /Users/kenj/Dev/Rosco_Dev/rosco_m68k
+# environment
+HOMEBREW_CELLAR = /opt/homebrew/Cellar
+# environment
+ORIGINAL_XDG_CURRENT_DESKTOP = undefined
+# environment
+MANPATH = /opt/homebrew/share/man::
+# environment
+VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
+# environment
+HOME = /Users/kenj
+# environment
+PERL_MB_OPT = --install_base "/Users/kenj/perl5"
+# environment
+P4USER = kenj
+# environment
+PERL_LOCAL_LIB_ROOT = /Users/kenj/perl5
+# default
+MAKEFILEPATH = $(shell /usr/bin/xcode-select -print-path 2>/dev/null || echo /Developer)/Makefiles
+# environment
+PERL5LIB = /Users/kenj/perl5/lib/perl5
+# environment
+VSCODE_CODE_CACHE_PATH = /Users/kenj/Library/Application Support/Code/CachedData/da15b6fd3ef856477bf6f4fb29ba1b7af717770d
+# environment
+LOGNAME = kenj
+# environment
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
+# environment
+VSCODE_HANDLES_UNCAUGHT_ERRORS = true
+# automatic
+^D = $(patsubst %/,%,$(dir $^))
+# environment
+BAUD = 115200
+# environment
+XPC_FLAGS = 0x0
+# default
+MAKE = $(MAKE_COMMAND)
+# default
+MAKECMDGOALS := all
+# environment
+SHLVL = 2
+# default
+MAKE_VERSION := 3.81
+# environment
+USER = kenj
+# makefile
+.DEFAULT_GOAL := all
+# automatic
+%D = $(patsubst %/,%,$(dir $%))
+# default
+MAKE_COMMAND := /Library/Developer/CommandLineTools/usr/bin/make
+# environment
+OLDPWD = /Users/kenj/Dev/Xosera_Dev/Xosera
+# default
+.VARIABLES := 
+# environment
+TMPDIR = /var/folders/h2/0d_p7srj0bn55f55zz6pbxt40000gn/T/
+# automatic
+*F = $(notdir $*)
+# environment
+VSCODE_IPC_HOOK = /Users/kenj/Library/Application Support/Code/1.67.1-main.sock
+# makefile
+MAKEFLAGS = Rrqp
+# environment
+MFLAGS = -Rrqp
+# automatic
+*D = $(patsubst %/,%,$(dir $*))
+# environment
+XPC_SERVICE_NAME = 0
+# environment
+HOMEBREW_PREFIX = /opt/homebrew
+# automatic
++D = $(patsubst %/,%,$(dir $+))
+# automatic
++F = $(notdir $+)
+# environment
+ROSCO_M68K_HUGEROM = true
+# environment
+HOMEBREW_REPOSITORY = /opt/homebrew
+# environment
+__CF_USER_TEXT_ENCODING = 0x1F5:0x0:0x0
+# environment
+COMMAND_MODE = unix2003
+# default
+MAKEFILES := 
+# automatic
+<F = $(notdir $<)
+# environment
+LC_ALL = C
+# automatic
+^F = $(notdir $^)
+# default
+SUFFIXES := 
+# environment
+ROSCO_M68K_CC = /usr/local/bin/
+# default
+.INCLUDE_DIRS = /usr/local/include
+# environment
+MAKELEVEL := 1
+# environment
+LANG = C
+# environment
+P4PORT = cute-sys76-pc.home:1666
+# environment
+VSCODE_PID = 89581
+# variable set hash-table stats:
+# Load=80/1024=8%, Rehash=0, Collisions=1/111=1%
+
+# Pattern-specific Variable Values
+
+# No pattern-specific variable values.
+
+# Directories
+
+# . (device 16777233, inode 34086367): 40 files, no impossibilities.
+
+# 40 files, no impossibilities in 1 directories.
+
+# Implicit Rules
+
+# No implicit rules.
+
+# Files
+
+xosera_vga:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 42):
+	$(MAKE) -f upduino.mk clean
+	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_640x480 $(MAKE) -f upduino.mk
+	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_848x480 $(MAKE) -f upduino.mk
+	mv xosera_upd.bin xosera_board_vga.bin
+	
+
+irun:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 25):
+	$(MAKE) -f sim.mk irun
+	
+
+all: sim upd iceb
+#  Phony target (prerequisite of .PHONY).
+#  Command-line target.
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/4=0%
+
+vrun:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 33):
+	$(MAKE) -f sim.mk vrun
+	
+
+.PHONY: all prog def_files sim isim irun vsim vrun upd iceb xosera_board iceb_prog upd_prog xosera_prog clean
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+.SUFFIXES:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+Makefile:
+#  Implicit rule search has been done.
+#  Last modified 2022-05-04 15:08:05
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+upd_prog:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 61):
+	$(MAKE) -f upduino.mk prog
+	
+
+iceb:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 56):
+	$(MAKE) -f icebreaker.mk
+	@echo Type \"make iceb_prog\" to program the iCEBreaker via USB
+	
+
+prog: upd_prog ice_prog
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+
+# Not a target:
+ice_prog:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+isim:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 21):
+	$(MAKE) -f sim.mk isim
+	
+
+vsim:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 29):
+	$(MAKE) -f sim.mk vsim
+	
+
+xosera_prog:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+
+# Not a target:
+.DEFAULT:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+sim:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  Implicit/static pattern stem: `'
+#  File does not exist.
+#  File has been updated.
+#  Failed to be updated.
+# automatic
+# @ := sim
+# automatic
+# % := 
+# automatic
+# * := 
+# automatic
+# + := 
+# automatic
+# | := 
+# automatic
+# < := 
+# automatic
+# ^ := 
+# automatic
+# ? := 
+# variable set hash-table stats:
+# Load=8/32=25%, Rehash=0, Collisions=2/12=17%
+#  commands to execute (from `Makefile', line 17):
+	$(MAKE) -f sim.mk all
+	
+
+def_files:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 13):
+	$(MAKE) -f sim.mk def_files
+	
+
+clean:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 69):
+ 
+make[1]: *** [sim] Error 2
+
+	$(MAKE) -f sim.mk clean
+	$(MAKE) -f upduino.mk clean
+	$(MAKE) -f icebreaker.mk clean
+	
+
+iceb_prog:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 65):
+	$(MAKE) -f icebreaker.mk prog
+	
+
+xosera_dvi:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 49):
+	$(MAKE) -f upduino.mk clean
+	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_640x480 $(MAKE) -f upduino.mk
+	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_848x480 $(MAKE) -f upduino.mk
+	mv xosera_upd.bin xosera_board_dvi.bin
+	
+
+xosera_board:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+
+upd:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 37):
+	$(MAKE) -f upduino.mk
+	@echo Type \"make upd_prog\" to program the UPduino via USB
+	
+
+# files hash-table stats:
+# Load=22/1024=2%, Rehash=0, Collisions=0/57=0%
+# VPATH Search Paths
+
+# No `vpath' search paths.
+
+# No general (`VPATH' variable) search path.
+
+# # of strings in strcache: 1
+# # of strcache buffers: 1
+# strcache size: total = 4096 / max = 4096 / min = 4096 / avg = 4096
+# strcache free: total = 4087 / max = 4087 / min = 4087 / avg = 4087
+
+# Finished Make data base on Thu May 12 14:58:37 2022
+
+ 
+make: *** [rtl] Error 2
+
+
+# Make data base, printed on Thu May 12 14:58:37 2022
+
+# Variables
+
+# automatic
+<D = $(patsubst %/,%,$(dir $<))
+# automatic
+?F = $(notdir $?)
+ 
+# environment
+VSCODE_LOG_NATIVE = false
+# automatic
+?D = $(patsubst %/,%,$(dir $?))
+# automatic
+@D = $(patsubst %/,%,$(dir $@))
+# automatic
+@F = $(notdir $@)
+# makefile
+CURDIR := /Users/kenj/Dev/Xosera_Dev/Xosera
+# makefile
+SHELL = /bin/sh
+# environment
+SERIAL = /dev/tty.usbserial-20180508_02
+# environment
+VSCODE_NLS_CONFIG = {"locale":"en-us","availableLanguages":{},"_languagePackSupport":true}
+# environment
+_ = /usr/bin/make
+# makefile (from `Makefile', line 1)
+MAKEFILE_LIST :=  Makefile
+# environment
+VSCODE_VERBOSE_LOGGING = true
+# environment
+PERL_MM_OPT = INSTALL_BASE=/Users/kenj/perl5
+# environment
+__CFBundleIdentifier = com.microsoft.VSCode
+# environment
+INFOPATH = /opt/homebrew/share/info:
+# environment
+VSCODE_IPC_HOOK_EXTHOST = /var/folders/h2/0d_p7srj0bn55f55zz6pbxt40000gn/T/vscode-ipc-e9944a14-20a2-402a-b7c0-60545b90e9e1.sock
+# environment
+VSCODE_CWD = /
+# environment
+P4CLIENT = kenj-Air
+# environment
+PATH = /Users/kenj/Dev/oss-cad-suite/bin:/opt/riscv/bin:/Users/kenj/perl5/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/Apple/usr/bin
+# environment
+VSCODE_LOG_STACK = false
+# environment
+ELECTRON_RUN_AS_NODE = 1
+# default
+.FEATURES := target-specific order-only second-expansion else-if archives jobserver check-symlink
+# environment
+SSH_AUTH_SOCK = /private/tmp/com.apple.launchd.py0q26OVdo/Listeners
+# automatic
+%F = $(notdir $%)
+# environment
+VSCODE_PIPE_LOGGING = true
+# environment
+PWD = /Users/kenj/Dev/Xosera_Dev/Xosera
+# environment
+ROSCO_M68K_DIR = /Users/kenj/Dev/Rosco_Dev/rosco_m68k
+# environment
+HOMEBREW_CELLAR = /opt/homebrew/Cellar
+# environment
+ORIGINAL_XDG_CURRENT_DESKTOP = undefined
+# environment
+MANPATH = /opt/homebrew/share/man::
+# environment
+VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
+# environment
+HOME = /Users/kenj
+# environment
+PERL_MB_OPT = --install_base "/Users/kenj/perl5"
+# environment
+P4USER = kenj
+# environment
+PERL_LOCAL_LIB_ROOT = /Users/kenj/perl5
+# default
+MAKEFILEPATH = $(shell /usr/bin/xcode-select -print-path 2>/dev/null || echo /Developer)/Makefiles
+# environment
+PERL5LIB = /Users/kenj/perl5/lib/perl5
+# environment
+VSCODE_CODE_CACHE_PATH = /Users/kenj/Library/Application Support/Code/CachedData/da15b6fd3ef856477bf6f4fb29ba1b7af717770d
+# environment
+LOGNAME = kenj
+# environment
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
+# environment
+VSCODE_HANDLES_UNCAUGHT_ERRORS = true
+# automatic
+^D = $(patsubst %/,%,$(dir $^))
+# environment
+BAUD = 115200
+# environment
+XPC_FLAGS = 0x0
+# default
+MAKE = $(MAKE_COMMAND)
+# default
+MAKECMDGOALS := all
+# environment
+SHLVL = 1
+# default
+MAKE_VERSION := 3.81
+ 
+# environment
+USER = kenj
+# makefile
+.DEFAULT_GOAL := info
+# automatic
+%D = $(patsubst %/,%,$(dir $%))
+# default
+MAKE_COMMAND := /Library/Developer/CommandLineTools/usr/bin/make
+# default
+.VARIABLES := 
+# environment
+TMPDIR = /var/folders/h2/0d_p7srj0bn55f55zz6pbxt40000gn/T/
+# automatic
+*F = $(notdir $*)
+# environment
+VSCODE_IPC_HOOK = /Users/kenj/Library/Application Support/Code/1.67.1-main.sock
+# makefile
+MAKEFLAGS = Rrqp
+# environment
+MFLAGS = -Rrqp
+# automatic
+*D = $(patsubst %/,%,$(dir $*))
+# environment
+XPC_SERVICE_NAME = application.com.microsoft.VSCode.35625608.35625614
+# environment
+HOMEBREW_PREFIX = /opt/homebrew
+# automatic
++D = $(patsubst %/,%,$(dir $+))
+# automatic
++F = $(notdir $+)
+# environment
+ROSCO_M68K_HUGEROM = true
+# environment
+HOMEBREW_REPOSITORY = /opt/homebrew
+# environment
+__CF_USER_TEXT_ENCODING = 0x1F5:0x0:0x0
+# environment
+COMMAND_MODE = unix2003
+# default
+MAKEFILES := 
+# automatic
+<F = $(notdir $<)
+# environment
+LC_ALL = C
+# automatic
+^F = $(notdir $^)
+# default
+SUFFIXES := 
+# environment
+ROSCO_M68K_CC = /usr/local/bin/
+# default
+.INCLUDE_DIRS = /usr/local/include
+# environment
+MAKELEVEL := 0
+# environment
+LANG = C
+# environment
+P4PORT = cute-sys76-pc.home:1666
+# environment
+VSCODE_PID = 89581
+# makefile (from `Makefile', line 4)
+ICEPROG := iceprog
+# variable set hash-table stats:
+# Load=80/1024=8%, Rehash=0, Collisions=1/108=1%
+
+# Pattern-specific Variable Values
+
+# No pattern-specific variable values.
+
+# Directories
+
+# . (device 16777233, inode 34086152): 32 files, no impossibilities.
+
+# 32 files, no impossibilities in 1 directories.
+
+# Implicit Rules
+
+# No implicit rules.
+
+# Files
+
+xosera_vga:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 43):
+	cd rtl && $(MAKE) xosera_vga
+	@echo Type \"make xosera_vga_prog\" to program the UPduino via USB
+	
+
+irun:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 102):
+	cd rtl && $(MAKE) irun
+	
+
+xvid_spi:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 137):
+	cd xvid_spi && $(MAKE)
+	
+
+all: rtl utils host_spi xvid_spi
+#  Phony target (prerequisite of .PHONY).
+#  Command-line target.
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/4=0%
+
+vrun:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 110):
+	cd rtl && $(MAKE) vrun
+	
+
+.PHONY: all upduino upd upd_prog icebreaker iceb iceb_prog rtl sim isim irun vsim vrun utils m68k host_spi xvid_spi clean m68kclean
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+.SUFFIXES:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+Makefile:
+#  Implicit rule search has been done.
+#  Last modified 2022-05-04 15:08:05
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+count:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 114):
+	cd rtl && $(MAKE) -f upduino.mk count
+	
+
+icebreaker:
+ 
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 75):
+	cd rtl && $(MAKE) iceb
+	
+
+xosera_dvi_prog: xosera_dvi
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 58):
+	@echo === Programming Xosera board UPduino DVI firmware ===
+	$(ICEPROG) -d i:0x0403:0x6014 rtl/xosera_board_dvi.bin
+	
+
+upd_prog:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 71):
+	cd rtl && $(MAKE) upd_prog
+	
+
+iceb: icebreaker
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+
+m68k:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 122):
+	cd xosera_m68k_api/ && $(MAKE)
+	cd xosera_ansiterm_m68k/ && $(MAKE)
+	cd xosera_boing_m68k/ && $(MAKE)
+	cd xosera_vramtest_m68k && $(MAKE)
+	cd xosera_test_m68k && $(MAKE)
+	cd copper/copper_test_m68k && $(MAKE)
+	cd copper/crop_test_m68k && $(MAKE)
+	cd copper/splitscreen_test_m68k && $(MAKE)
+	
+
+isim:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 98):
+	cd rtl && $(MAKE) isim
+	
+
+xosera_vga_prog: xosera_vga
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 53):
+	@echo === Programming Xosera board UPduino VGA firmware ===
+	$(ICEPROG) -d i:0x0403:0x6014 rtl/xosera_board_vga.bin
+	
+
+vsim:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 106):
+	cd rtl && $(MAKE) vsim
+	
+
+# Not a target:
+.DEFAULT:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+upduino:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 64):
+	cd rtl && $(MAKE) upd
+	
+
+sim:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 94):
+	cd rtl && $(MAKE) sim
+	
+
+host_spi:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 133):
+	cd host_spi && $(MAKE)
+	
+
+ 
+def_files:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 90):
+	cd rtl && $(MAKE) def_files
+	
+
+clean: m68kclean
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 157):
+	cd rtl && $(MAKE) clean
+	cd utils && $(MAKE) clean
+	cd host_spi && $(MAKE) clean
+	cd xvid_spi && $(MAKE) clean
+	
+
+utils:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 118):
+	cd utils && $(MAKE)
+	
+
+iceb_prog:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 82):
+	cd rtl && $(MAKE) iceb_prog
+	
+
+m68kclean:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 163):
+	cd xosera_m68k_api/ && $(MAKE) clean
+	cd xosera_ansiterm_m68k/ && $(MAKE) clean
+	cd xosera_boing_m68k/ && $(MAKE) clean
+	cd xosera_vramtest_m68k && $(MAKE) clean
+	cd xosera_test_m68k && $(MAKE) clean
+	cd copper/copper_test_m68k && $(MAKE) clean
+	cd copper/crop_test_m68k && $(MAKE) clean
+	cd copper/splitscreen_test_m68k && $(MAKE) clean
+	
+
+rtl:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  Implicit/static pattern stem: `'
+#  File does not exist.
+#  File has been updated.
+#  Failed to be updated.
+# automatic
+# @ := rtl
+# automatic
+# % := 
+# automatic
+# * := 
+# automatic
+# + := 
+# automatic
+# | := 
+# automatic
+# < := 
+# automatic
+# ^ := 
+# automatic
+# ? := 
+# variable set hash-table stats:
+# Load=8/32=25%, Rehash=0, Collisions=2/12=17%
+#  commands to execute (from `Makefile', line 86):
+	cd rtl && $(MAKE) all
+	
+
+xosera_dvi:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 48):
+	cd rtl && $(MAKE) xosera_dvi
+	@echo Type \"make xosera_dvi_prog\" to program the UPduino via USB
+	
+
+golden:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 140):
+	@echo === Last 640x480 bitstream stats:
+	@cat rtl/xosera_upd_vga_640x480_stats.txt
+	@echo === Last 848x480 bitstream stats:
+	@cat rtl/xosera_upd_vga_848x480_stats.txt
+	@echo Enshrine these bitstreams [y/N]?
+	@read ans && if [ $${ans:-'N'} = 'y' ] ; then \
+	echo === Copying xosera bitstreams to xosera_gateware... ; \
+	cp -v rtl/xosera_upd_vga_*_stats.txt ./xosera_gateware && \
+	cp -v rtl/upduino/logs/xosera_upd_vga_*_yosys.log ./xosera_gateware && \
+	cp -v rtl/upduino/logs/xosera_upd_vga_*_nextpnr.log ./xosera_gateware && \
+	cp -v rtl/upduino/xosera_upd_vga_*.json ./xosera_gateware && \
+	cp -v rtl/upduino/xosera_upd_vga_*.bin ./xosera_gateware ; \
+	cp -v rtl/xosera_board_vga.bin ./xosera_gateware ; \
+	fi
+	@echo === Done
+	
+
+upd: upduino
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+
+info:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 9):
+	@echo "NOTE: Requires YosysHQ tools."
+	@echo "      (e.g. https://github.com/YosysHQ/oss-cad-suite-build/releases/latest)"
+	@echo "      (Sadly, brew and distribution versions seem sadly outdated)"
+	@echo "      Simulation requires Icarus Verilog and/or Verilator"
+	@echo "      Utilities and Verilator simulation require C++ compiler"
+	@echo "      SDL2 and SDL2_Image required for Verilator visual simulation and utils"
+	@echo " "
+	@echo "Xosera make targets:"
+	@echo "   make all             - build everything (RTL, simulation, uitls and host_spi)"
+	@echo "   make upduino         - build Xosera for UPduino v3 (see rtl/upduino.mk for options)"
+	@echo "   make upd_prog        - build Xosera and program UPduino v3 (see rtl/upduino.mk for options)"
+	@echo "   make xosera_vga      - build Xosera VGA Rosco_m68k board firmware"
+	@echo "   make xosera_vga_prog - build & program Xosera VGA Rosco_m68k board firmware"
+	@echo "   make icebreaker      - build Xosera for iCEBreaker (see rtl/icebreaker.mk for options)"
+	@echo "   make iceb_prog       - build Xosera and program iCEBreaker (see rtl/icebreaker.mk for options)"
+	@echo "   make rtl             - build UPduino, iCEBreaker bitstreams and simulation targets"
+	@echo "   make def_files       - build C & asm definition files using Icarus Verilog"
+	@echo "   make sim             - build Icarus Verilog and Verilalator simulation files"
+	@echo "   make isim            - build Icarus Verilog simulation files"
+	@echo "   make irun            - build and run Icarus Verilog simulation"
+	@echo "   make vsim            - build Verilator C++ & SDL2 native visual simulation files"
+	@echo "   make vrun            - build and run Verilator C++ & SDL2 native visual simulation"
+	@echo "   make count           - build Xosera VGA with Yosys count for module resource usage"
+	@echo "   make utils           - build misc C++ image utilities"
+	@echo "   make m68k            - build rosco_m68k Xosera test programs"
+	@echo "   make clean           - clean most files that can be rebuilt"
+	
+
+# files hash-table stats:
+# Load=31/1024=3%, Rehash=0, Collisions=1/74=1%
+# VPATH Search Paths
+
+# No `vpath' search paths.
+
+# No general (`VPATH' variable) search path.
+
+# # of strings in strcache: 1
+# # of strcache buffers: 1
+# strcache size: total = 4096 / max = 4096 / min = 4096 / avg = 4096
+# strcache free: total = 4087 / max = 4087 / min = 4087 / avg = 4087
+
+# Finished Make data base on Thu May 12 14:58:37 2022
+
+ 

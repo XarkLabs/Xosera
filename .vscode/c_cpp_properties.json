@@ -7,7 +7,7 @@
                 "/Users/kenj/Dev/oss-cad-suite/share/verilator/include",
                 "/Users/kenj/Dev/oss-cad-suite/share/verilator/include/vltstd/",
                 "/opt/homebrew/include/SDL2",
-                "/opt/homebrew/Cellar/libftdi/1.5_2/include/libftdi1/",
+                "/opt/homebrew/include/libftdi1",
                 "${workspaceFolder}/rtl/sim/obj_dir"
             ],
             "defines": [],

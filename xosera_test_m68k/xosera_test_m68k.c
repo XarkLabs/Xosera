@@ -420,25 +420,29 @@ static void xr_cls()
 
 static void xr_textmode_pb()
 {
-    xv_prep();
 
     xr_text_columns = 28;
     xr_text_rows    = 20;
 
     wait_vblank_start();
+    xv_prep();
     xreg_setw(PB_GFX_CTRL, 0x0080);
+#if 1
     for (int i = 1; i < 256; i++)
     {
         uint16_t v = xmem_getw_wait(XR_COLOR_A_ADDR + i) & 0x0fff;
         xmem_setw(XR_COLOR_A_ADDR + i, v);
     }
+#endif
     xr_cls();
+#if 1
     xmem_setw(XR_COLOR_B_ADDR + 0xf0, 0x0000);        // set write address
     for (int i = 1; i < 16; i++)
     {
         xmem_setw(XR_COLOR_B_ADDR + 0xf0 + i, 0xf202 | (i << 4));
     }
     xmem_setw(XR_COLOR_B_ADDR, 0x0000);        // set write address
+#endif
 
     xwait_vblank();
     xreg_setw(PB_GFX_CTRL, 0xF00A);         // colorbase = 0xF0 tiled + 1-bpp + Hx3 + Vx2
@@ -2057,17 +2061,17 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
 
 void wait_scanline()
 {
-    uint16_t l = xreg_getw(SCANLINE) & 0x7fff;
-    while (l == (xreg_getw(SCANLINE) & 0x7fff))
+    uint16_t l = xreg_getw(SCANLINE);
+    while (l == xreg_getw(SCANLINE))
         ;
-    l = xreg_getw(SCANLINE) & 0x7fff;
-    while (l == (xreg_getw(SCANLINE) & 0x7fff))
+    l = xreg_getw(SCANLINE);
+    while (l == xreg_getw(SCANLINE))
         ;
-    l = xreg_getw(SCANLINE) & 0x7fff;
-    while (l == (xreg_getw(SCANLINE) & 0x7fff))
+    l = xreg_getw(SCANLINE);
+    while (l == xreg_getw(SCANLINE))
         ;
-    l = xreg_getw(SCANLINE) & 0x7fff;
-    while (l == (xreg_getw(SCANLINE) & 0x7fff))
+    l = xreg_getw(SCANLINE);
+    while (l == xreg_getw(SCANLINE))
         ;
 }
 
@@ -2243,6 +2247,10 @@ void     xosera_test()
     dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
 
     cpu_delay(1000);
+    while (checkchar())        // clear any queued input
+    {
+        readchar();
+    }
     xv_prep();
     xm_setw(TIMER, 0xB007);
     cpu_delay(3000);

@@ -122,10 +122,6 @@ void xosera_copper_test()
 {
     dprintf("Xosera_copper_test\n");
 
-    cpu_delay(5000);
-
-    xosera_init(0);
-
     xmem_set_addr(XR_COPPER_ADDR);
 
     for (uint8_t i = 0; i < copper_list_len; i++)
@@ -133,6 +129,7 @@ void xosera_copper_test()
         xmem_setw_next(copper_list[i]);
     }
 
+    xreg_setw(VID_CTRL, 0x0000);        // border uses color 0
     xreg_setw(COPP_CTRL, 0x8000);
 
     uint16_t features  = xreg_getw(FEATURES);

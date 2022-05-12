@@ -203,17 +203,15 @@ static inline long scale_coord(long v, long scale, long v_center, long scale_cen
     return (v - v_center) * scale / scale_center + v_center;
 }
 
-static inline void wait_vsync()
+static inline void wait_vblank()
 {
-    while (xreg_getw(SCANLINE) < 0x8000)
-        ;
+    xwait_vblank();
 }
 
-static inline void wait_vsync_start()
+static inline void wait_vblank_start()
 {
-    while (xreg_getw(SCANLINE) >= 0x8000)
-        ;
-    wait_vsync();
+    xwait_not_vblank();
+    xwait_vblank();
 }
 
 void draw_line_scale(int     width,
@@ -562,17 +560,17 @@ uint32_t copper_list[] = {
 #if USE_AUDIO
 static inline void wait_scanline()
 {
-    uint16_t l = xreg_getw(SCANLINE) & 0x7fff;
-    while (l == (xreg_getw(SCANLINE) & 0x7fff))
+    uint16_t l = xreg_getw(SCANLINE);
+    while (l == xreg_getw(SCANLINE))
         ;
-    l = xreg_getw(SCANLINE) & 0x7fff;
-    while (l == (xreg_getw(SCANLINE) & 0x7fff))
+    l = xreg_getw(SCANLINE);
+    while (l == xreg_getw(SCANLINE))
         ;
-    l = xreg_getw(SCANLINE) & 0x7fff;
-    while (l == (xreg_getw(SCANLINE) & 0x7fff))
+    l = xreg_getw(SCANLINE);
+    while (l == xreg_getw(SCANLINE))
         ;
-    l = xreg_getw(SCANLINE) & 0x7fff;
-    while (l == (xreg_getw(SCANLINE) & 0x7fff))
+    l = xreg_getw(SCANLINE);
+    while (l == xreg_getw(SCANLINE))
         ;
 }
 
@@ -867,7 +865,7 @@ void xosera_boing()
     xreg_setw(PB_DISP_ADDR, vram_base_b);
 
     // PA Colours:
-    wait_vsync_start();
+    wait_vblank_start();
     xmem_setw(XR_COLOR_A_ADDR + 0x0, 0x0BBB);        // Grey
     xmem_setw(XR_COLOR_A_ADDR + 0x1, 0x0B0B);        // Purple
 
@@ -878,51 +876,51 @@ void xosera_boing()
         {
             uint8_t  colour_base  = palette_index * 16;
             uint16_t palette_base = XR_COLOR_B_ADDR + colour_base;
-            wait_vsync();
+            wait_vblank();
             xmem_setw(palette_base + 0, 0x0000);        // Transparent Black
-            wait_vsync();
+            wait_vblank();
             xmem_setw(palette_base + 1, 0x6000);        // Translucent Black
             for (uint16_t colour = 0; colour < 7; ++colour)
             {
-                wait_vsync();
+                wait_vblank();
                 xmem_setw(palette_base + 2 + (palette_index + colour) % 14, 0xFFFF);        // White
             }
             for (uint16_t colour = 7; colour < 14; ++colour)
             {
-                wait_vsync();
+                wait_vblank();
                 xmem_setw(palette_base + 2 + (palette_index + colour) % 14, 0xFF00);        // Red
             }
         }
     }
     else
     {
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0x2, 0xF000);        // Black
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0x3, 0xFFFF);        // White
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0x4, 0xFF00);        // Red
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0x5, 0xFF70);        // Orange
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0x6, 0xFFF0);        // Yellow
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0x7, 0xF7F0);        // Spring Green
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0x8, 0xF0F0);        // Green
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0x9, 0xF0F7);        // Turquoise
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0xA, 0xF0FF);        // Cyan
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0xB, 0xF07F);        // Ocean
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0xC, 0xF00F);        // Blue
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0xD, 0xF70F);        // Violet
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0xE, 0xFF0F);        // Magenta
-        wait_vsync();
+        wait_vblank();
         xmem_setw(XR_COLOR_B_ADDR + 0xF, 0xFF07);        // Raspberry
     }
 
@@ -1035,7 +1033,7 @@ void xosera_boing()
         }
 
 #if USE_AUDIO
-        if (bounced && (xreg_getw(SCANLINE) >= 0x8000))
+        if (bounced && xm_get_ctrl_bit(VBLANK))
         {
             play_audio();
             bounced = false;
@@ -1043,14 +1041,14 @@ void xosera_boing()
 #endif
 
 #if !USE_COPPER
-        while (xreg_getw(SCANLINE) & XB_(1, 15, 1))
+        while (xm_get_ctrl_bit(VBLANK))
         {
             // Wait while VBlank
         }
 #endif
     }
     readchar();
-    wait_vsync_start();
+    wait_vblank_start();
 
     xreg_setw(VID_CTRL, 0x0800);
     xreg_setw(COPP_CTRL, 0x0000);        // disable copper

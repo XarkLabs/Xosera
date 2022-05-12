@@ -86,12 +86,10 @@ static void dprintf(const char * fmt, ...)
     va_end(args);
 }
 
-void wait_vsync()
+void wait_vblank_start()
 {
-    while (xreg_getw(SCANLINE) >= 0x8000)
-        ;
-    while (xreg_getw(SCANLINE) < 0x8000)
-        ;
+    xwait_not_vblank();
+    xwait_vblank();
 }
 
 uint16_t screen_addr;
@@ -180,10 +178,10 @@ static bool load_sd_colors(const char * filename)
             }
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
-            xm_setw(XR_ADDR, XR_COLOR_ADDR);
+            xmem_set_addr(XR_COLOR_ADDR);
             for (int i = 0; i < (cnt >> 1); i++)
             {
-                xm_setw(XR_DATA, *maddr++);
+                xmem_setw_next(*maddr++);
             }
             vaddr += (cnt >> 1);
         }
@@ -213,12 +211,12 @@ void     xosera_splitscreen_test()
 
     dprintf("Loading copper list...\n");
 
-    xm_setw(XR_ADDR, XR_COPPER_ADDR);
+    xmem_set_addr(XR_COPPER_ADDR);
     uint16_t * wp = (uint16_t *)copper_list;
     for (uint8_t i = 0; i < sizeof(copper_list) / sizeof(uint32); i++)
     {
-        xm_setw(XR_DATA, *wp++);
-        xm_setw(XR_DATA, *wp++);
+        xmem_setw_next(*wp++);
+        xmem_setw_next(*wp++);
     }
 
     uint16_t features  = xreg_getw(FEATURES);
@@ -315,12 +313,12 @@ void     xosera_splitscreen_test()
 
     while (!checkchar())
     {
-        wait_vsync();
+        wait_vblank_start();
 
-        xm_setw(XR_ADDR, XR_COPPER_ADDR + 4);
+        xmem_set_addr(XR_COPPER_ADDR + 4);
         if (up)
         {
-            xm_setw(XR_DATA, ++current);
+            xmem_setw_next(++current);
             if (current == 300)
             {
                 up = false;
@@ -328,7 +326,7 @@ void     xosera_splitscreen_test()
         }
         else
         {
-            xm_setw(XR_DATA, --current);
+            xmem_setw_next(--current);
             if (current == 200)
             {
                 up = true;

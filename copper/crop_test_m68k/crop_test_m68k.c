@@ -61,12 +61,11 @@ void xosera_crop_test()
 
     xreg_setw(VID_CTRL, 0x0000);        // set border black
 
-    xm_setw(XR_ADDR, XR_COPPER_ADDR);
-
+    xmem_set_addr(XR_COPPER_ADDR);
     for (uint8_t i = 0; i < (sizeof(copper_list) / sizeof(uint32_t)); i++)
     {
-        xm_setw(XR_DATA, copper_list[i] >> 16);
-        xm_setw(XR_DATA, copper_list[i] & 0xffff);
+        xmem_setw_next(copper_list[i] >> 16);
+        xmem_setw_next(copper_list[i] & 0xffff);
     }
 
     xreg_setw(PA_LINE_LEN, 160);
@@ -92,12 +91,11 @@ void xosera_crop_test()
 
     xreg_setw(VID_CTRL, 0x0000);        // set border black
 
-    xm_setw(XR_ADDR, XR_COPPER_ADDR);
-
+    xmem_set_addr(XR_COPPER_ADDR);
     for (uint8_t i = 0; i < (sizeof(copper_list) / sizeof(uint32_t)); i++)
     {
-        xm_setw(XR_DATA, copper_list[i] >> 16);
-        xm_setw(XR_DATA, copper_list[i] & 0xffff);
+        xmem_setw_next(copper_list[i] >> 16);
+        xmem_setw_next(copper_list[i] & 0xffff);
     }
 
     xreg_setw(PA_LINE_LEN, 160);

@@ -345,15 +345,14 @@ static void read_vram_buffer(int speed)
         case 0:
             // slow
             xm_setw(RD_INCR, 0x0000);
-
             for (uint32_t addr = 0; addr < 0x10000; addr++)
             {
                 xm_setw(RD_ADDR, (uint16_t)addr);
-                VRAM_RD_DELAY();
+                //                VRAM_RD_DELAY();
+                xwait_mem_ready();
                 vram_buffer[addr] = xm_getw(DATA);
             }
             break;
-
         case 1:
             // byte
             xm_setw(RD_INCR, 0x0001);
@@ -850,7 +849,7 @@ void xosera_vramtest()
     while (true)
     {
         // switch between configurations every few test iterations
-        uint8_t new_config = (vram_test_count & MODE_TOGGLE_BIT) ? 1 : 0;
+        uint8_t new_config = (vram_test_count & MODE_TOGGLE_BIT) ? 0 : 1;
         if (new_config != cur_xosera_config)
         {
             update_elapsed();
@@ -907,6 +906,7 @@ void xosera_vramtest()
                     break;
                 }
             }
+            if (false)
             {
                 if (test_xmem(false, i) || delay_check(DELAY_TIME))
                 {

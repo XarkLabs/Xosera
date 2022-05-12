@@ -26,7 +26,7 @@
  */
 
 #if defined(TEST_FIRMWARE)
-#define DEBUG 1        // set to 1 for test debugging (LOG/LOGF)
+#define DEBUG 0        // set to 1 for test debugging (LOG/LOGF)
 
 #include <assert.h>
 #include <basicio.h>
@@ -608,10 +608,8 @@ static void xansi_reset(bool reset_colormap)
          cols,
          rows);
 
-    while (!(xreg_getw(SCANLINE) & 0x8000))
-        ;
-    while ((xreg_getw(SCANLINE) & 0x8000))
-        ;
+    xwait_not_vblank();
+    xwait_vblank();
 
     xreg_setw(PA_GFX_CTRL, gfx_ctrl_val);
     xreg_setw(PA_TILE_CTRL, tile_ctrl_val);
@@ -1920,13 +1918,10 @@ bool xansiterm_INIT()
     bool reconfig_ok = xosera_init(DEFAULT_XOSERA_CONFIG);
     LOGF(" %s]\n", reconfig_ok ? "succeeded" : "FAILED");
 
-    // if (!reconfig_ok)
-    // {
-    //     return false;
-    // }
-    xv_prep();
-    xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) >> 3);
-
+    if (!reconfig_ok)
+    {
+        return false;
+    }
     xansiterm_data * td = get_xansi_data();
     xansi_memset(td, sizeof(*td));
     // default values (others will be zero or computed)
@@ -1939,6 +1934,9 @@ bool xansiterm_INIT()
     td->tile_ctrl[3] = MAKE_TILE_CTRL(0x0000, 0, 0, 16);        // same as 0 (for user defined)
     td->def_color    = DEFAULT_COLOR;                           // default dark-green on black
     td->send_index   = -1;
+
+    xv_prep();
+    xreg_setw(PA_GFX_CTRL, td->gfx_ctrl);
 
     // TODO: Improve numeric version code method
     xosera_get_info(&init_data);

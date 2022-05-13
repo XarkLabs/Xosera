@@ -60,5 +60,7 @@ utils/image_pal
 # Vim swaps
 **/*.swp
 
+.vscode/*.log
+
 utils/true_color_hack
 rtl/sim/xosera_def_files

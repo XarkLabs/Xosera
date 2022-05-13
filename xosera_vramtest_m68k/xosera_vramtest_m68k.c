@@ -348,8 +348,7 @@ static void read_vram_buffer(int speed)
             for (uint32_t addr = 0; addr < 0x10000; addr++)
             {
                 xm_setw(RD_ADDR, (uint16_t)addr);
-                //                VRAM_RD_DELAY();
-                xwait_mem_ready();
+                VRAM_RD_DELAY();
                 vram_buffer[addr] = xm_getw(DATA);
             }
             break;
@@ -764,6 +763,8 @@ int test_xmem(bool LFSR, int mode)
         }
         RETURN_ON_KEYPRESS();
 
+        NukeColor = 0xffff;        // disable color cycle while testing COLOR mem
+
         update_elapsed();
         uint32_t start_time;
         uint32_t check_time = elapsed_tenthms;
@@ -774,14 +775,11 @@ int test_xmem(bool LFSR, int mode)
         } while (start_time == check_time);
 
         // word color mem
-        NukeColor = 0xffff;        // disable color cycle while testing COLOR mem
         xmem_set_addr(XR_COLOR_ADDR);
-        xwait_mem_ready();        // must wait for initial (slow) color mem read to finish, before writing
         for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + XR_COLOR_SIZE); addr++)
         {
             xmem_setw_next(pattern_buffer[addr]);
         }
-        NukeColor = 0;
 
         // word tile mem
         xmem_set_addr(XR_TILE_ADDR);
@@ -799,6 +797,9 @@ int test_xmem(bool LFSR, int mode)
         RETURN_ON_KEYPRESS();
 
         read_xmem_buffer();
+
+        NukeColor = 0;
+
         RETURN_ON_KEYPRESS();
         // verify write was correct
         xmem_errs += verify_xmem(LFSR, mode);
@@ -834,13 +835,13 @@ void xosera_vramtest()
 {
     xv_prep();
 
-    cpu_delay(3000);
+    cpu_delay(1000);
 
     dprintf("\033c\nXosera_vramtest_m68k\n");
 
     uint8_t cur_xosera_config = ~0;
 
-#if 0
+#if 1
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");
@@ -849,7 +850,7 @@ void xosera_vramtest()
     while (true)
     {
         // switch between configurations every few test iterations
-        uint8_t new_config = (vram_test_count & MODE_TOGGLE_BIT) ? 0 : 1;
+        uint8_t new_config = (vram_test_count & MODE_TOGGLE_BIT) ? 1 : 0;
         if (new_config != cur_xosera_config)
         {
             update_elapsed();
@@ -906,7 +907,6 @@ void xosera_vramtest()
                     break;
                 }
             }
-            if (false)
             {
                 if (test_xmem(false, i) || delay_check(DELAY_TIME))
                 {

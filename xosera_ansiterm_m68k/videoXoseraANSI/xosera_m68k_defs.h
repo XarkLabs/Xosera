@@ -78,7 +78,7 @@
 #define XM_RW_DATA   0x38        // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
 #define XM_RW_DATA_2 0x3C        // (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
 
-// NOTE: These are bits in high byte of SYS_CTRL word (fastest to access)
+// NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register indirect with no offset)
 #define SYS_CTRL_MEM_BUSY_B   7        // (RO   )  memory read/write operation pending (with contended memory)
 #define SYS_CTRL_BLIT_FULL_B  6        // (RO   )  blitter queue is full, do not write new operation to blitter registers
 #define SYS_CTRL_BLIT_BUSY_B  5        // (RO   )  blitter is still busy performing an operation (not done)

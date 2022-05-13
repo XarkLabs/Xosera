@@ -13,7 +13,7 @@ endif
 
 XOSERA_M68K_API?=./
 
-EXTRA_CFLAGS?=-g -O2 -fomit-frame-pointer -save-temps
+EXTRA_CFLAGS?=-g -O2 -fomit-frame-pointer
 #EXTRA_VASMFLAGS?=-showopt
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
 SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib

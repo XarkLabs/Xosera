@@ -1,23 +1,26 @@
-make xosera_vga_prog --dry-run --always-make --keep-going --print-directory
+make xosera_vga_prog --dry-run --keep-going --print-directory
 make: Entering directory `/Users/kenj/Dev/Xosera_Dev/Xosera'
 cd rtl && /Library/Developer/CommandLineTools/usr/bin/make xosera_vga
+ 
 make[1]: Entering directory `/Users/kenj/Dev/Xosera_Dev/Xosera/rtl'
 /Library/Developer/CommandLineTools/usr/bin/make -f upduino.mk clean
-=== Xosera UPduino [c7ade0a] is CLEAN from git
+ 
+=== Xosera UPduino [fd7a213] is CLEAN from git
  
 make[2]: Entering directory `/Users/kenj/Dev/Xosera_Dev/Xosera/rtl'
-rm -f xosera_upd.bin upduino/xosera_upd_vga_640x480.json upduino/xosera_upd_vga_848x480.json upduino/xosera_upd_vga_640x480.asc upduino/xosera_upd_vga_848x480.asc  upduino/xosera_upd_vga_640x480.bin upduino/xosera_upd_vga_848x480.bin
+rm -f xosera_upd.bin    
 make[2]: Leaving directory `/Users/kenj/Dev/Xosera_Dev/Xosera/rtl'
+ 
 VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_640x480 /Library/Developer/CommandLineTools/usr/bin/make -f upduino.mk
  
-=== Xosera UPduino [c7ade0a] is CLEAN from git
+=== Xosera UPduino [fd7a213] is CLEAN from git
  
 make[2]: Entering directory `/Users/kenj/Dev/Xosera_Dev/Xosera/rtl'
 echo === Building UPduino Xosera ===
 rm -f upduino/xosera_upd_vga_640x480.json
 mkdir -p upduino/logs
-verilator --sv --language 1800-2012 -I. -Werror-UNUSED -Wall -Wno-DECLFILENAME --lint-only -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=c7ade0a -DMODE_640x480 -DPMOD_DIGILENT_VGA -DICE40UP5K -DUPDUINO --top-module xosera_upd /Users/kenj/Dev/oss-cad-suite/share/yosys/ice40/cells_sim.v upduino/xosera_upd.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv 2>&1 | tee upduino/logs/xosera_upd_vga_640x480_verilator.log
-yosys -l upduino/logs/xosera_upd_vga_640x480_yosys.log -w ".*" -q -p 'verilog_defines -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=c7ade0a -DMODE_640x480 -DPMOD_DIGILENT_VGA -DICE40UP5K -DUPDUINO ; read_verilog -I. -sv upduino/xosera_upd.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv  ; synth_ice40 -device u -dsp -abc9 -top xosera_upd -json upduino/xosera_upd_vga_640x480.json'
+verilator --sv --language 1800-2012 -I. -Werror-UNUSED -Wall -Wno-DECLFILENAME --lint-only -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=fd7a213 -DMODE_640x480 -DPMOD_DIGILENT_VGA -DICE40UP5K -DUPDUINO --top-module xosera_upd /Users/kenj/Dev/oss-cad-suite/share/yosys/ice40/cells_sim.v upduino/xosera_upd.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv 2>&1 | tee upduino/logs/xosera_upd_vga_640x480_verilator.log
+yosys -l upduino/logs/xosera_upd_vga_640x480_yosys.log -w ".*" -q -p 'verilog_defines -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=fd7a213 -DMODE_640x480 -DPMOD_DIGILENT_VGA -DICE40UP5K -DUPDUINO ; read_verilog -I. -sv upduino/xosera_upd.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv  ; synth_ice40 -device u -dsp -abc9 -top xosera_upd -json upduino/xosera_upd_vga_640x480.json'
 rm -f upduino/xosera_upd_vga_640x480.asc
 mkdir -p upduino/logs
 cp xosera_upd_vga_640x480_stats.txt upduino/logs/xosera_upd_vga_640x480_stats_last.txt
@@ -42,14 +45,15 @@ echo === Finished Building UPduino Xosera: PMOD_DIGILENT_VGA ===
 make[2]: Leaving directory `/Users/kenj/Dev/Xosera_Dev/Xosera/rtl'
 VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_848x480 /Library/Developer/CommandLineTools/usr/bin/make -f upduino.mk
  
-=== Xosera UPduino [c7ade0a] is CLEAN from git
+=== Xosera UPduino [fd7a213] is CLEAN from git
  
 make[2]: Entering directory `/Users/kenj/Dev/Xosera_Dev/Xosera/rtl'
 echo === Building UPduino Xosera ===
 rm -f upduino/xosera_upd_vga_848x480.json
 mkdir -p upduino/logs
-verilator --sv --language 1800-2012 -I. -Werror-UNUSED -Wall -Wno-DECLFILENAME --lint-only -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=c7ade0a -DMODE_848x480 -DPMOD_DIGILENT_VGA -DICE40UP5K -DUPDUINO --top-module xosera_upd /Users/kenj/Dev/oss-cad-suite/share/yosys/ice40/cells_sim.v upduino/xosera_upd.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv 2>&1 | tee upduino/logs/xosera_upd_vga_848x480_verilator.log
-yosys -l upduino/logs/xosera_upd_vga_848x480_yosys.log -w ".*" -q -p 'verilog_defines -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=c7ade0a -DMODE_848x480 -DPMOD_DIGILENT_VGA -DICE40UP5K -DUPDUINO ; read_verilog -I. -sv upduino/xosera_upd.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv  ; synth_ice40 -device u -dsp -abc9 -top xosera_upd -json upduino/xosera_upd_vga_848x480.json'
+verilator --sv --language 1800-2012 -I. -Werror-UNUSED -Wall -Wno-DECLFILENAME --lint-only -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=fd7a213 -DMODE_848x480 -DPMOD_DIGILENT_VGA -DICE40UP5K -DUPDUINO --top-module xosera_upd /Users/kenj/Dev/oss-cad-suite/share/yosys/ice40/cells_sim.v upduino/xosera_upd.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv 2>&1 | tee upduino/logs/xosera_upd_vga_848x480_verilator.log
+yosys -l upduino/logs/xosera_upd_vga_848x480_yosys.log -w ".*" -q -p 'verilog_defines -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=fd7a213 -DMODE_848x480 -DPMOD_DIGILENT_VGA -DICE40UP5K -DUPDUINO ; read_verilog -I. -sv upduino/xosera_upd.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv  ; synth_ice40 -device u -dsp -abc9 -top xosera_upd -json upduino/xosera_upd_vga_848x480.json'
+ 
 rm -f upduino/xosera_upd_vga_848x480.asc
 mkdir -p upduino/logs
 cp xosera_upd_vga_848x480_stats.txt upduino/logs/xosera_upd_vga_848x480_stats_last.txt
@@ -72,8 +76,11 @@ icepack upduino/xosera_upd_vga_848x480.asc upduino/xosera_upd_vga_848x480.bin
 icemulti -v -v -p0 upduino/*.bin -o xosera_upd.bin
 echo === Finished Building UPduino Xosera: PMOD_DIGILENT_VGA ===
 make[2]: Leaving directory `/Users/kenj/Dev/Xosera_Dev/Xosera/rtl'
+ 
 mv xosera_upd.bin xosera_board_vga.bin
+ 
 make[1]: Leaving directory `/Users/kenj/Dev/Xosera_Dev/Xosera/rtl'
+ 
 echo Type \"make xosera_vga_prog\" to program the UPduino via USB
 echo === Programming Xosera board UPduino VGA firmware ===
 iceprog -d i:0x0403:0x6014 rtl/xosera_board_vga.bin

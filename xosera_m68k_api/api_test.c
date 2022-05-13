@@ -75,7 +75,7 @@ void kmain(void)
     nop();
     xmem_setw_next_wait(0xF00F);
     nop();
-    if (!xm_get_ctrl_bit(RW_RD_INCR))
+    if (!xm_get_sys_ctrlb(RW_RD_INCR))
     {
         nop();
         xm_set_rw_rd_incr();

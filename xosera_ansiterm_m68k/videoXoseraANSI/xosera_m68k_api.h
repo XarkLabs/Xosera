@@ -53,7 +53,7 @@
 // void     xmem_setw_next_wait(word_value)
 
 // get XM registers (main registers):
-// uint8_t  xm_get_ctrl_bit(bit_name)   (SYS_CTRL_<bit_name>_B)
+// uint8_t  xm_get_sys_ctrlb(bit_name)   (SYS_CTRL_<bit_name>_B)
 // uint8_t  xm_getbh(xmreg)             (omit XM_ from xmreg name)
 // uint8_t  xm_getbl(xmreg)             (omit XM_ from xmreg name)
 // uint16_t xm_getw(xmreg)              (omit XM_ from xmreg name)
@@ -254,7 +254,7 @@ extern volatile xmreg_t * const xosera_ptr;
                                                    // variable" - and this is the "low level" API, remember)
 
 // get bit in SYS_CTRL
-#define xm_get_ctrl_bit(bit_name) ((xosera_ptr[XM_SYS_CTRL >> 2].b.h) & (1 << (SYS_CTRL_##bit_name##_B)))
+#define xm_get_sys_ctrlb(bit_name) ((xosera_ptr[XM_SYS_CTRL >> 2].b.h) & (1 << (SYS_CTRL_##bit_name##_B)))
 
 // return high byte (even address) from XM register XM_<xmreg>
 #define xm_getbh(xmreg) (xosera_ptr[XM_##xmreg >> 2].b.h)

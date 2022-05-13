@@ -1033,7 +1033,7 @@ void xosera_boing()
         }
 
 #if USE_AUDIO
-        if (bounced && xm_get_ctrl_bit(VBLANK))
+        if (bounced && xm_get_sys_ctrlb(VBLANK))
         {
             play_audio();
             bounced = false;
@@ -1041,7 +1041,7 @@ void xosera_boing()
 #endif
 
 #if !USE_COPPER
-        while (xm_get_ctrl_bit(VBLANK))
+        while (xm_get_sys_ctrlb(VBLANK))
         {
             // Wait while VBlank
         }

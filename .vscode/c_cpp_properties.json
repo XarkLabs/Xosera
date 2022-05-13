@@ -45,7 +45,8 @@
                 "-Wextra",
                 "-pedantic",
                 "-Wno-unused-function"
-            ]
+            ],
+            "configurationProvider": "ms-vscode.makefile-tools"
         },
         {
             "name": "rosco_m68k",

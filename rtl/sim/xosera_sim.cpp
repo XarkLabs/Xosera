@@ -87,115 +87,6 @@ class BusInterface
     const int   BUS_START_TIME = 1000000;        // after init
     const float BUS_CLOCK_DIV  = 5;              // min 5
 
-    enum
-    {
-        XM_SYS_CTRL  = 0x0,
-        XM_INT_CTRL  = 0x1,
-        XM_TIMER     = 0x2,
-        XM_RD_XADDR  = 0x3,
-        XM_WR_XADDR  = 0x4,
-        XM_XDATA     = 0x5,
-        XM_RD_INCR   = 0x6,
-        XM_RD_ADDR   = 0x7,
-        XM_WR_INCR   = 0x8,
-        XM_WR_ADDR   = 0x9,
-        XM_DATA      = 0xA,
-        XM_DATA_2    = 0xB,
-        XM_RW_INCR   = 0xC,
-        XM_RW_ADDR   = 0xD,
-        XM_RW_DATA   = 0xE,
-        XM_RW_DATA_2 = 0xF
-    };
-
-    enum
-    {
-        SYS_CTRL_RW_BUSY_B   = 15,        // memory read/write operation active (with contended memory)
-        SYS_CTRL_BLIT_FULL_B = 14,        // blitter queue is full, do not write new operation to blitter registers
-        SYS_CTRL_BLIT_BUSY_B = 13,        // blitter is still busy performing an operation
-        SYS_CTRL_UNUSED_12_B = 12,        // unused (reads 0)
-        SYS_CTRL_HBLANK_B    = 11,        // video signal is in horizontal blank period
-        SYS_CTRL_VBLANK_B    = 10,        // video signal is in vertical blank period
-        SYS_CTRL_UNUSED_9_B  = 9,         // unused (reads 0)
-        SYS_CTRL_RW_RD_INC_B = 8          // increment XM_RD_ADDR after read
-    };
-
-    enum
-    {
-        XR_TILE_ADDR    = 0x4000,        // (R/W) 0x4000-0x53FF tile glyph/tile map memory
-        XR_TILE_SIZE    = 0x1400,        //                     5120 x 16-bit tile glyph/tile map memory
-        XR_COLOR_ADDR   = 0x8000,        // (R/W) 0x8000-0x81FF 2 x A & B color lookup memory
-        XR_COLOR_SIZE   = 0x0200,        //                     2 x 256 x 16-bit words  (0xARGB)
-        XR_COLOR_A_ADDR = 0x8000,        // (R/W) 0x8000-0x80FF A 256 entry color lookup memory
-        XR_COLOR_A_SIZE = 0x0100,        //                     256 x 16-bit words (0xARGB)
-        XR_COLOR_B_ADDR = 0x8100,        // (R/W) 0x8100-0x81FF B 256 entry color lookup memory
-        XR_COLOR_B_SIZE = 0x0100,        //                     256 x 16-bit words (0xARGB)
-        XR_COPPER_ADDR  = 0xC000,        // (R/W) 0xC000-0xC7FF copper program memory (32-bit instructions)
-        XR_COPPER_SIZE  = 0x0800,        //                     2048 x 16-bit copper program memory addresses
-    };
-
-    enum
-    {
-        // Video Config / Copper XR Registers
-        XR_VID_CTRL  = 0x00,        // (R /W) display control and border color index
-        XR_COPP_CTRL = 0x01,        // (R /W) display synchronized coprocessor control
-        XR_AUD_CTRL  = 0x02,        // (- /-) TODO: audio channel control
-        XR_UNUSED_03 = 0x03,        // (- /-) TODO: unused XR 03
-
-        XR_VID_LEFT  = 0x04,        // (R /W) left edge of active display window (typically 0)
-        XR_VID_RIGHT = 0x05,        // (R /W) right edge of active display window +1 (typically 640 or 848)
-        XR_UNUSED_06 = 0x06,        // (- /-) TODO: unused XR 06
-        XR_UNUSED_07 = 0x07,        // (- /-) TODO: unused XR 07
-
-        XR_SCANLINE  = 0x08,           // (RO  ) [15] in V blank, [14] in H blank [10:0] V scanline // TODO: replace
-        XR_FEATURES  = 0x09,           // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
-        XR_VID_HSIZE = 0x0A,           // (RO  ) native pixel width of monitor mode (e.g. 640/848)// TODO: reorg
-        XR_VID_VSIZE = 0x0B,           // (RO  ) native pixel height of monitor mode (e.g. 480)   // TODO: reorg
-        XR_UNUSED_0C = 0x0C,           // (- /-) TODO: unused XR 0C
-        XR_UNUSED_0D = 0x0D,           // (- /-) TODO: unused XR 0D
-        XR_UNUSED_0E = 0x0E,           // (- /-) TODO: unused XR 0E
-        XR_UNUSED_0F = 0x0F,           // (- /-) TODO: unused XR 0F
-                                       // Playfield A Control XR Registers
-        XR_PA_GFX_CTRL  = 0x10,        // (R /W) playfield A graphics control
-        XR_PA_TILE_CTRL = 0x11,        // (R /W) playfield A tile control
-        XR_PA_DISP_ADDR = 0x12,        // (R /W) playfield A display VRAM start address
-        XR_PA_LINE_LEN  = 0x13,        // (R /W) playfield A display line width in words
-        XR_PA_HV_SCROLL = 0x14,        // (R /W) playfield A horizontal and vertical fine scroll
-        XR_PA_HV_FSCALE = 0x16,        // (R /W) playfield A horizontal and vertical fractional scale
-        XR_PA_LINE_ADDR = 0x15,        // (R /W) playfield A scanline start address (loaded at start of line)
-        XR_PA_UNUSED_17 = 0x17,        //
-                                       // Playfield B Control XR Registers
-        XR_PB_GFX_CTRL  = 0x18,        // (R /W) playfield B graphics control
-        XR_PB_TILE_CTRL = 0x19,        // (R /W) playfield B tile control
-        XR_PB_DISP_ADDR = 0x1A,        // (R /W) playfield B display VRAM start address
-        XR_PB_LINE_LEN  = 0x1B,        // (R /W) playfield B display line width in words
-        XR_PB_HV_SCROLL = 0x1C,        // (R /W) playfield B horizontal and vertical fine scroll
-        XR_PB_HV_FSCALE = 0x1D,        // (R /W) playfield B horizontal and vertical fractional scale
-        XR_PB_LINE_ADDR = 0x1E,        // (R /W) playfield B scanline start address (loaded at start of line)
-        XR_PB_UNUSED_1F = 0x1F,        //
-                                       // Blitter Registers
-        XR_BLIT_CTRL  = 0x20,          // (R /W) blit control (transparency control, logic op and op input flags)
-        XR_BLIT_MOD_A = 0x21,          // (R /W) blit line modulo added to SRC_A (XOR if A const)
-        XR_BLIT_SRC_A = 0x22,          // (R /W) blit A source VRAM read address / constant value
-        XR_BLIT_MOD_B = 0x23,          // (R /W) blit line modulo added to SRC_B (XOR if B const)
-        XR_BLIT_SRC_B = 0x24,          // (R /W) blit B AND source VRAM read address / constant value
-        XR_BLIT_MOD_C = 0x25,          // (R /W) blit line XOR modifier for C_VAL const
-        XR_BLIT_VAL_C = 0x26,          // (R /W) blit C XOR constant value
-        XR_BLIT_MOD_D = 0x27,          // (R /W) blit modulo added to D destination after each line
-        XR_BLIT_DST_D = 0x28,          // (R /W) blit D VRAM destination write address
-        XR_BLIT_SHIFT = 0x29,          // (R /W) blit first and last word nibble masks and nibble right shift (0-3)
-        XR_BLIT_LINES = 0x2A,        // (R /W) blit number of lines minus 1, (repeats blit word count after modulo calc)
-        XR_BLIT_WORDS = 0x2B,        // (R /W) blit word count minus 1 per line (write starts blit operation)
-        XR_UNUSED_2C  = 0x2C,        // (- /-) TODO: unused XR 2C
-        XR_UNUSED_2D  = 0x2D,        // (- /-) TODO: unused XR 2D
-        XR_UNUSED_2E  = 0x2E,        // (- /-) TODO: unused XR 2E
-        XR_UNUSED_2F  = 0x2F,        // (- /-) TODO: unused XR 2F
-                                     // Audio
-        XR_AUD0_VOL    = 0x30,        // (R /W) // TODO: WIP
-        XR_AUD0_PERIOD = 0x31,        // (R /W) // TODO: WIP
-        XR_AUD0_START  = 0x32,        // (R /W) // TODO: WIP
-        XR_AUD0_LENGTH = 0x33         // (R /W) // TODO: WIP
-    };
-
     static const char * reg_name[];
     enum
     {
@@ -345,7 +236,7 @@ public:
                 if (!data_upload && test_data[index] == 0xfffc)
                 {
                     last_time = bus_time - 1;
-                    if (!(last_read_val & (1 << SYS_CTRL_BLIT_FULL_B)))        // blit_full bit
+                    if (!(last_read_val & (0x0100 << SYS_CTRL_BLIT_FULL_B)))        // blit_full bit
                     {
                         logonly_printf("[@t=%lu] blit_full clear (SYS_CTRL.L=0x%02x)\n", main_time, last_read_val);
                         index++;
@@ -365,7 +256,7 @@ public:
                 if (!data_upload && test_data[index] == 0xfffb)
                 {
                     last_time = bus_time - 1;
-                    if (!(last_read_val & (1 << SYS_CTRL_BLIT_BUSY_B)))        // blit_busy bit
+                    if (!(last_read_val & (0x0100 << SYS_CTRL_BLIT_BUSY_B)))        // blit_busy bit
                     {
                         logonly_printf("[@t=%lu] blit_busy clear (SYS_CTRL.L=0x%02x)\n", main_time, last_read_val);
                         index++;
@@ -535,18 +426,17 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR  ",
                                          "XM_RW_DATA  ",
                                          "XM_RW_DATA_2"};
 
-#define REG_B(r, v) (((BusInterface::XM_##r) | 0x10) << 8) | ((v)&0xff)
-#define REG_W(r, v)                                                                                                    \
-    ((BusInterface::XM_##r) << 8) | (((v) >> 8) & 0xff), (((BusInterface::XM_##r) | 0x10) << 8) | ((v)&0xff)
-#define REG_RW(r)        (((BusInterface::XM_##r) | 0x80) << 8), (((BusInterface::XM_##r) | 0x90) << 8)
+#define REG_B(r, v)      (((XM_##r) | 0x10) << 8) | ((v)&0xff)
+#define REG_W(r, v)      ((XM_##r) << 8) | (((v) >> 8) & 0xff), (((XM_##r) | 0x10) << 8) | ((v)&0xff)
+#define REG_RW(r)        (((XM_##r) | 0x80) << 8), (((XM_##r) | 0x90) << 8)
 #define XREG_SETW(xr, v) REG_W(WR_XADDR, XR_##xr), REG_W(XDATA, (v))
 #define XREG_GETW(xr)    REG_W(RD_XADDR, (XR_##xr) | XRMEM_READ), REG_RW(XDATA)
 
 #define REG_UPLOAD()          0xfff0
 #define REG_UPLOAD_AUX()      0xfff1
 #define REG_WAITHSYNC()       0xfffa
-#define REG_WAIT_BLIT_READY() (((BusInterface::XM_SYS_CTRL) | 0x80) << 8), 0xfffc
-#define REG_WAIT_BLIT_DONE()  (((BusInterface::XM_SYS_CTRL) | 0x80) << 8), 0xfffb
+#define REG_WAIT_BLIT_READY() (((XM_SYS_CTRL) | 0x80) << 8), 0xfffc
+#define REG_WAIT_BLIT_DONE()  (((XM_SYS_CTRL) | 0x80) << 8), 0xfffb
 #define REG_WAITVTOP()        0xfffd
 #define REG_WAITVSYNC()       0xfffe
 #define REG_END()             0xffff
@@ -561,7 +451,7 @@ const char * BusInterface::reg_name[] = {"XM_XR_ADDR  ",
 BusInterface bus;
 int          BusInterface::test_data_len    = 32767;
 uint16_t     BusInterface::test_data[32768] = {
-        // test data
+    // test data
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
@@ -570,6 +460,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(WR_ADDR, 0xF000),
     REG_UPLOAD(),
 
+#if 0
     REG_W(RW_INCR, 0x1),
     REG_W(RW_ADDR, 0x1234),
     REG_RW(RW_DATA),
@@ -587,6 +478,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(RD_XADDR, XR_COLOR_A_ADDR),
     REG_RW(XDATA),
     REG_RW(XDATA),
+#endif
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
@@ -970,6 +862,7 @@ uint16_t     BusInterface::test_data[32768] = {
     // 16-color 320x200 color tut
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+    XREG_SETW(PA_HV_FSCALE, 0x0005),        // 400 line scale
     XREG_SETW(PA_HV_FSCALE, 0x0005),        // 400 line scale
 
     XREG_SETW(PA_GFX_CTRL, 0x0055),           // bitmap, 8-bpp, Hx2, Vx2

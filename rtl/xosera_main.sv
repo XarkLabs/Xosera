@@ -147,6 +147,7 @@ logic  [3:0]            intr_status;        // pending interrupt status
 logic  [3:0]            vid_intr_signal;    // any interrupt signalled VID_CTRL
 logic  [3:0]            intr_clear;         // interrupt cleared by CPU
 logic                   blit_intr;          // blit done interrupt
+logic                   timer_intr;          // blit done interrupt
 
 `ifdef BUS_DEBUG_SIGNALS
 logic                   dbug_cs_strobe;     // debug "ack" bus strobe
@@ -157,7 +158,11 @@ assign audio_l_o    =   dbug_cs_strobe;     // debug to see when CS noticed
 assign audio_r_o    =   regs_xr_sel;        // debug to see when XR bus selected
 `endif
 
-assign boot_select_o    = regs_wr_mask[1:0];    // low two bits of write mask used as boot config
+assign boot_select_o    = intr_mask[1:0];   // low two bits of interrupt mask used as boot config
+
+`ifndef ENABLE_TIMER_INTR
+assign timer_intr       = 1'b0;             // timer compare interrupt
+`endif
 
 // register interface for CPU access
 reg_interface reg_interface(
@@ -187,6 +192,9 @@ reg_interface reg_interface(
     // reconfig
     .reconfig_o(reconfig_o),
     // interrupts
+`ifdef ENABLE_TIMER_INTR
+    .timer_intr_o(timer_intr),          // timer compare interrupt
+`endif
     .intr_mask_o(intr_mask),            // enabled interrupts from INT_CTRL high byte
     .intr_clear_o(intr_clear),          // strobe clears pending INT_CTRL interrupt
     .intr_status_i(intr_status),        // status read from pending INT_CTRL interrupt
@@ -395,13 +403,13 @@ always_ff @(posedge clk) begin
         intr_status <= 4'b0;
     end else begin
         // generate bus interrupt if signal bit set, not masked and not already set
-        if (((vid_intr_signal | { 2'b0, blit_intr, 1'b0 } ) & intr_mask & (~intr_status)) != 4'b0) begin
+        if (((vid_intr_signal | { 1'b0, timer_intr, blit_intr, 1'b0 } ) & intr_mask & (~intr_status)) != 4'b0) begin
             bus_intr_o  <= 1'b1;
         end else begin
             bus_intr_o  <= 1'b0;
         end
         // remember interrupt signal and clear cleared interrupts
-        intr_status <= (intr_status | vid_intr_signal | { 2'b0, blit_intr, 1'b0 } ) & (~intr_clear);
+        intr_status <= (intr_status | vid_intr_signal | { 1'b0, timer_intr, blit_intr, 1'b0 } ) & (~intr_clear);
     end
 end
 

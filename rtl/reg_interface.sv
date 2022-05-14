@@ -38,6 +38,9 @@ module reg_interface(
     // iCE40 reconfigure
     output      logic            reconfig_o,        // reconfigure iCE40 from flash
     // interrupt management
+`ifdef ENABLE_TIMER_INTR
+    output      logic            timer_intr_o,      // timer compare interrrupt
+`endif
     output      logic  [3:0]     intr_mask_o,       // enabled interrupts (which signal CPU interrupt)
     output      logic  [3:0]     intr_clear_o,      // pending interrupts CPU acknowledge (clear)
     input  wire logic  [3:0]     intr_status_i,     // pending interrupts CPU status read
@@ -63,6 +66,9 @@ word_t          reg_wr_incr;            // VRAM write increment
 addr_t          reg_wr_addr;            // VRAM write address
 
 word_t          reg_timer;              // 1/10 ms timer (visible 16 bits)
+`ifdef ENABLE_TIMER_INTR
+word_t          reg_timer_cmp;          // timer compare interrupt
+`endif
 logic [11:0]    reg_timer_frac;         // internal clock counter for 1/10 ms
 
 logic  [3:0]    intr_mask;              // interrupt mask
@@ -174,13 +180,25 @@ end
 // 1/10th ms timer counter
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        reg_timer <= 16'h0000;
-        reg_timer_frac <= 12'h000;
+        reg_timer       <= 16'h0000;
+        reg_timer_frac  <= 12'h000;
+`ifdef ENABLE_TIMER_INTR
+        timer_intr_o    <= 1'b0;
+`endif
     end else begin
-        reg_timer_frac <= reg_timer_frac + 1'b1;
+`ifdef ENABLE_TIMER_INTR
+        timer_intr_o    <= 1'b0;
+`endif
+        reg_timer_frac  <= reg_timer_frac + 1'b1;
         if (reg_timer_frac == 12'(xv::PCLK_HZ / 10000)) begin
-            reg_timer_frac   <= 12'h000;
-            reg_timer        <= reg_timer + 1;
+            reg_timer_frac  <= 12'h000;
+            reg_timer       <= reg_timer + 1'b1;
+`ifdef ENABLE_TIMER_INTR
+            if (reg_timer == reg_timer_cmp) begin
+                reg_timer       <= 16'h0000;
+                timer_intr_o    <= 1'b1;
+            end
+`endif
         end
     end
 end
@@ -226,6 +244,10 @@ always_ff @(posedge clk) begin
 
         reg_data        <= '0;
         reg_xdata       <= '0;
+
+`ifdef ENABLE_TIMER_INTR
+        reg_timer_cmp   <= 16'hFFFF;
+`endif
 
     end else begin
         // clear strobe signals
@@ -304,15 +326,20 @@ always_ff @(posedge clk) begin
                 end
                 xv::XM_INT_CTRL: begin
                     if (!bus_bytesel) begin
+                        reconfig_o          <= bus_data_byte[7];
                         intr_mask           <= bus_data_byte[3:0];
                     end else begin
                         intr_clear_o        <= bus_data_byte[3:0];
                     end
                 end
                 xv::XM_TIMER: begin
+`ifdef ENABLE_TIMER_INTR
                     if (!bus_bytesel) begin
-                        reconfig_o          <= (bus_data_byte[7:4] == 4'hB) ? 1'b1 : 1'b0;
+                        reg_timer_cmp[15:8] <= bus_data_byte;
+                    end else begin
+                        reg_timer_cmp[7:0]  <= bus_data_byte;
                     end
+`endif
                 end
                 xv::XM_RD_XADDR: begin
                     if (!bus_bytesel) begin

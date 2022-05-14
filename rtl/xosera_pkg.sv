@@ -33,7 +33,8 @@
 
 // features that can be optionally disabled
 //`define ENABLE_LFSR                     // enable XM_REG 0xA as 19-bit LFSR
-//`define ENABLE_RW_DATA                  // enable 2nd VRAM RW port
+//`define ENABLE_TIMER_INTR
+`define ENABLE_RW_DATA                  // enable 2nd VRAM RW port
 `define ENABLE_COPP                     // enable copper
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")

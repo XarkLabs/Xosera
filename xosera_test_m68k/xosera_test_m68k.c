@@ -209,15 +209,16 @@ static inline void check_vblank()
 _NOINLINE void restore_colors()
 {
     wait_vblank_start();
+    xmem_set_addr(XR_COLOR_A_ADDR);
     for (uint16_t i = 0; i < 256; i++)
     {
-        xmem_setw(XR_COLOR_A_ADDR + i, def_colors[i]);
+        xmem_setw_next(def_colors[i]);
     }
     // set B colors to same, alpha 0x8 (with color 0 fully transparent)
     xmem_setw(XR_COLOR_B_ADDR, 0x0000);
     for (uint16_t i = 1; i < 256; i++)
     {
-        xmem_setw(XR_COLOR_B_ADDR + i, 0x8000 | def_colors[i]);
+        xmem_setw_next(0x8000 | def_colors[i]);
     }
 }
 
@@ -229,7 +230,7 @@ _NOINLINE void restore_colors2(uint8_t alpha)
     for (uint16_t i = 0; i < 256; i++)
     {
         uint16_t w = i ? (sa | (def_colors[i] & 0xfff)) : 0;
-        xmem_setw(XR_COLOR_B_ADDR + i, w);
+        xmem_setw_next(w);
     };
 }
 
@@ -237,10 +238,11 @@ _NOINLINE void restore_colors2(uint8_t alpha)
 _NOINLINE void restore_colors3()
 {
     wait_vblank_start();
+    xmem_set_addr(XR_COLOR_B_ADDR);
     for (uint16_t i = 0; i < 256; i++)
     {
         uint16_t w = i ? ((i & 0x3) << 14) | (def_colors[i] & 0xfff) : 0x0000;
-        xmem_setw(XR_COLOR_B_ADDR + i, w);
+        xmem_setw_next(w);
     };
 }
 
@@ -827,9 +829,10 @@ void show_test_pic(int pic_num, uint16_t addr)
     if (ti->color)
     {
         wp = ti->color;
+        xmem_set_addr(XR_COLOR_A_ADDR);
         for (int w = 0; w < ti->num_colors; w++)
         {
-            xmem_setw(XR_COLOR_A_ADDR + w, *wp++);
+            xmem_setw_next(*wp++);
         }
     }
     else
@@ -2346,7 +2349,7 @@ void     xosera_test()
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
 
-#if 1
+#if 0
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");

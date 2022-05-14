@@ -11,10 +11,8 @@ install_intr::
 
                 or.w    #$0200,SR               ; disable interrupts
 
-                move.l  #XM_BASEADDR,A0         ; get Xosera base addr
-                move.b  #$0F,D0                 ; all interrupt source bits
-                move.b  D0,XM_TIMER+2(A0)       ; clear out any prior pending interrupts
-                move.w  #$0800,D0               ; vsync interrupt
+                lea.l   XM_BASEADDR,A0          ; get Xosera base addr
+                move.w  #$080F,D0               ; enable vsync interrupt, clear any pending
                 movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
 
                 move.l  #Xosera_intr,$68        ; set interrupt vector
@@ -26,7 +24,7 @@ install_intr::
 remove_intr::
                 movem.l D0-D7/A0-A6,-(A7)
 
-                move.l  #XM_BASEADDR,A0         ; get Xosera base addr
+                lea.l   XM_BASEADDR,A0          ; get Xosera base addr
                 moveq.l #$000F,D0               ; disable interrupts, and clear pending
                 movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
                 move.l  $60,D0                  ; copy spurious int handler
@@ -40,6 +38,8 @@ Xosera_intr:
                 movem.l D0-D1/A0,-(A7)          ; save minimal regs
 
                 move.l  #XM_BASEADDR,A0         ; get Xosera base addr
+WaitXMem:       tst.b   (a0)                    ; make sure
+                bmi.s   WaitXMem
                 movep.w XM_WR_XADDR(A0),D1      ; save aux_addr value
 
                 move.b  XM_INT_CTRL+2(A0),D0       ; read pending interrupts

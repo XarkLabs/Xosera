@@ -33,6 +33,7 @@
 
 // features that can be optionally disabled
 //`define ENABLE_LFSR                     // enable XM_REG 0xA as 19-bit LFSR
+//`define ENABLE_RW_DATA                  // enable 2nd VRAM RW port
 `define ENABLE_COPP                     // enable copper
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
@@ -60,10 +61,17 @@ typedef enum logic [3:0] {
     XM_WR_ADDR      = 4'h9,             // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
     XM_DATA         = 4'hA,             // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
     XM_DATA_2       = 4'hB,             // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
+`ifdef ENABLE_RW_DATA
     XM_RW_INCR      = 4'hC,             // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
     XM_RW_ADDR      = 4'hD,             // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
     XM_RW_DATA      = 4'hE,             // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
     XM_RW_DATA_2    = 4'hF              // (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
+`else
+    XM_UNUSED_0C    = 4'hC,             // (- /- ) // TODO: useful?
+    XM_UNUSED_0D    = 4'hD,             // (- /- ) // TODO: useful?
+    XM_UNUSED_0E    = 4'hE,             // (- /- ) // TODO: useful?
+    XM_UNUSED_0F    = 4'hF              // (- /- ) // TODO: useful?
+`endif
 } xm_register_t;
 
 typedef enum {

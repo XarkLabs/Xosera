@@ -707,19 +707,22 @@ static void read_xmem_buffer()
     xv_prep();
 
     // read XMEM back into vram_buffer
+    xmem_get_addr(XR_COLOR_ADDR);
     for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + XR_COLOR_SIZE); addr++)
     {
-        uint16_t data     = xmem_getw_wait(addr);
+        uint16_t data     = xmem_getw_next_wait();
         vram_buffer[addr] = data;
     }
+    xmem_get_addr(XR_TILE_ADDR);
     for (int addr = XR_TILE_ADDR; addr < (XR_TILE_ADDR + XR_TILE_SIZE); addr++)
     {
-        uint16_t data     = xmem_getw_wait(addr);
+        uint16_t data     = xmem_getw_next_wait();
         vram_buffer[addr] = data;
     }
+    xmem_get_addr(XR_COPPER_ADDR);
     for (int addr = XR_COPPER_ADDR; addr < (XR_COPPER_ADDR + XR_COPPER_SIZE); addr++)
     {
-        uint16_t data     = xmem_getw_wait(addr);
+        uint16_t data     = xmem_getw_next_wait();
         vram_buffer[addr] = data;
     }
 }

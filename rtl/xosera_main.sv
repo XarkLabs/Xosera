@@ -142,12 +142,12 @@ tile_addr_t             vgen_tile_addr;
 word_t                  vgen_tile_data;
 
 // interrupt management signals
-logic  [3:0]            intr_mask;          // true for each enabled interrupt
-logic  [3:0]            intr_status;        // pending interrupt status
-logic  [3:0]            vid_intr_signal;    // any interrupt signalled VID_CTRL
-logic  [3:0]            intr_clear;         // interrupt cleared by CPU
+intr_t                  intr_mask;          // true for each enabled interrupt
+intr_t                  intr_status;        // pending interrupt status
+intr_t                  vid_intr_signal;    // any interrupt signalled VID_CTRL
+intr_t                  intr_clear;         // interrupt cleared by CPU
 logic                   blit_intr;          // blit done interrupt
-logic                   timer_intr;          // blit done interrupt
+logic                   timer_intr;         // blit done interrupt
 
 `ifdef BUS_DEBUG_SIGNALS
 logic                   dbug_cs_strobe;     // debug "ack" bus strobe

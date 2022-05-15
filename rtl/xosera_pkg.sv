@@ -161,7 +161,7 @@ typedef enum logic [5:0] {
 
 typedef enum integer {
     VSYNC_INTR      = 3,
-    COPP_INTR       = 2,
+    TIMER_INTR      = 2,
     DONE_INTR       = 1,
     AUDIO_INTR      = 0
 } intr_bit_t;
@@ -439,6 +439,7 @@ typedef logic [15:0]                            word_t;         // word size (16
 typedef logic [31:0]                            long_t;         // long size (32-bit)
 typedef logic [15:0]                            argb_t;         // ARGB color (16-bit)
 typedef logic [11:0]                            rgb_t;          // RGB color (12-bit)
+typedef logic [3:0]                             intr_t;         // interrupt bits
 
 typedef logic [xv::VRAM_W-1:0]                  addr_t;         // vram or xmem address (16-bit)
 typedef logic [xv::TILE_W-1:0]                  tile_addr_t;    // tile address

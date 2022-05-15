@@ -29,7 +29,7 @@ module video_gen #(
     input  wire logic  [5:0]    vgen_reg_num_i,         // internal config register number (for reads)
     input  wire word_t          vgen_reg_data_i,        // data for internal config register
     output      word_t          vgen_reg_data_o,        // register/status data reads
-    output      logic  [3:0]    intr_signal_o,          // generate interrupt signal
+    output      intr_t          intr_signal_o,          // generate interrupt signal
 `ifdef ENABLE_COPP
     // outputs for copper
     output      logic           copp_reg_wr_o,          // COPP_CTRL write strobe
@@ -529,7 +529,7 @@ always_ff @(posedge clk) begin
         end
         // vsync interrupt generation
         if (end_of_visible) begin
-            intr_signal_o[3]  <= 1'b1;
+            intr_signal_o[xv::VSYNC_INTR]  <= 1'b1;
         end
     end
 end

@@ -41,9 +41,9 @@ module reg_interface(
 `ifdef ENABLE_TIMER_INTR
     output      logic            timer_intr_o,      // timer compare interrrupt
 `endif
-    output      logic  [3:0]     intr_mask_o,       // enabled interrupts (which signal CPU interrupt)
-    output      logic  [3:0]     intr_clear_o,      // pending interrupts CPU acknowledge (clear)
-    input  wire logic  [3:0]     intr_status_i,     // pending interrupts CPU status read
+    output      intr_t           intr_mask_o,       // enabled interrupts (which signal CPU interrupt)
+    output      intr_t           intr_clear_o,      // pending interrupts CPU acknowledge (clear)
+    input  wire intr_t           intr_status_i,     // pending interrupts CPU status read
 
 `ifdef BUS_DEBUG_SIGNALS
     output      logic            bus_ack_o,         // ACK strobe for bus debug
@@ -71,7 +71,7 @@ word_t          reg_timer_cmp;          // timer compare interrupt
 `endif
 logic [11:0]    reg_timer_frac;         // internal clock counter for 1/10 ms
 
-logic  [3:0]    intr_mask;              // interrupt mask
+intr_t         intr_mask;              // interrupt mask
 
 // read flags
 logic           xr_rd;                  // flag for XR_DATA read outstanding

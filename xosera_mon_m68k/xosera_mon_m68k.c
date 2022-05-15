@@ -15,6 +15,7 @@
  */
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -27,6 +28,8 @@
 #include <sdfat.h>
 
 #include "xosera_m68k_api.h"
+
+#define DEBUG 1
 
 #include "rosco_m68k_support.h"
 #include "xosera_mon_m68k.h"
@@ -100,24 +103,7 @@ uint32_t timer_stop()
     return ((stop_tick - start_tick) * 1667) / 100;
 }
 
-#if !defined(checkchar)        // newer rosco_m68k library addition, this is in case not present
-bool checkchar()
-{
-    int rc;
-    __asm__ __volatile__(
-        "move.l #6,%%d1\n"        // CHECKCHAR
-        "trap   #14\n"
-        "move.b %%d0,%[rc]\n"
-        "ext.w  %[rc]\n"
-        "ext.l  %[rc]\n"
-        : [rc] "=d"(rc)
-        :
-        : "d0", "d1");
-    return rc != 0;
-}
-#endif
-
-static void wait_vblank_start()
+static inline void wait_vblank_start()
 {
     xwait_not_vblank();
     xwait_vblank();
@@ -131,7 +117,7 @@ static inline void check_vblank()
     }
 }
 
-_NOINLINE void restore_colors()
+void restore_colors()
 {
     wait_vblank_start();
     xmem_set_addr(XR_COLOR_ADDR);
@@ -149,7 +135,7 @@ _NOINLINE void restore_colors()
     }
 }
 
-static void reset_vid(void)
+void reset_vid(void)
 {
     remove_intr();
 
@@ -163,8 +149,8 @@ static void reset_vid(void)
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_LINE_LEN, 80);        // line len
-    xreg_setw(PA_HV_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
+    xreg_setw(PA_HV_SCROLL, 0x0000);
     xreg_setw(PB_GFX_CTRL, 0x0080);
 
     restore_colors();
@@ -183,7 +169,6 @@ void bail()
     disable_sd_boot();
     _WARM_BOOT();
 }
-
 
 const char * val_name(const addr_range_t * ar, uint16_t v)
 {
@@ -208,15 +193,51 @@ const char * val_name(const addr_range_t * ar, uint16_t v)
     return "";
 }
 
+int name_val(const addr_range_t * ar, const char * name)
+{
+    for (int i = 0; ar[i].name != NULL; i++)
+    {
+        if (strcmp(name, ar[i].name) == 0)
+        {
+            return (int)ar[i].addr;
+        }
+    }
+
+    return -1;
+}
+
+void str_upper(char * str)
+{
+    char c;
+    while (str && (c = *str) != '\0')
+    {
+        *str = toupper(*str);
+        str++;
+    }
+}
+
+void print_xr_reg(int xreg_num)
+{
+    xv_prep();
+    xwait_mem_ready();
+    uint16_t v = xmem_getw_wait(xreg_num);
+
+    dprintf("%-13.13s= 0x%04x", val_name(xr_mem, xreg_num), v);
+}
+
 void print_xm_reg(int reg_num)
 {
     xv_prep();
 
-    dprintf("%-12.12s= ", val_name(xm_regs, reg_num));
+    dprintf("%-10.10s= ", val_name(xm_regs, reg_num));
 
     uint16_t v;
     uint32_t l;
-    uint16_t save;
+    uint16_t prev;
+    uint16_t read;
+    uint16_t incr;
+
+    (void)read;
 
     switch (reg_num << 2)
     {
@@ -236,7 +257,7 @@ void print_xm_reg(int reg_num)
             v = xm_getw(INT_CTRL);
             dprintf("0x%04x", v);
             dprintf(" IM:%x%x%x%x", (v >> 11) & 1, (v >> 10) & 1, (v >> 9) & 1, (v >> 8) & 1);
-            dprintf(" IP:%s%s%s%s",
+            dprintf(" IS:%s%s%s%s",
                     (v >> 3) & 1 ? "V" : "-",
                     (v >> 2) & 1 ? "C" : "-",
                     (v >> 1) & 1 ? "B" : "-",
@@ -256,10 +277,12 @@ void print_xm_reg(int reg_num)
             break;
         case XM_XDATA:
             xwait_mem_ready();
-            save = xm_getw(RD_XADDR);
+            prev = xm_getw(RD_XADDR);
             v    = xm_getw(XDATA);
             dprintf("[0x%04x]", v);
-            xm_setw(RD_XADDR, save);
+            read = xm_getw(RD_XADDR);
+            ASSERT(read == (prev + 1), "0x%04x vs 0x%04x + 1", read, prev);
+            xm_setw(RD_XADDR, prev - 1);
             xwait_mem_ready();
             break;
         case XM_RD_INCR:
@@ -280,19 +303,25 @@ void print_xm_reg(int reg_num)
             break;
         case XM_DATA:
             xwait_mem_ready();
-            save = xm_getw(RD_ADDR);
+            prev = xm_getw(RD_ADDR);
+            incr = xm_getw(RD_INCR);
             v    = xm_getw(DATA);
             dprintf("[0x%04x]", v);
-            xm_setw(RD_ADDR, save);
+            read = xm_getw(RD_ADDR);
+            ASSERT(read == (prev + incr), "0x%04x vs 0x%04x + 0x%04x", read, prev, incr);
+            xm_setw(RD_ADDR, prev - incr);
             xwait_mem_ready();
             break;
         case XM_DATA_2:
             xwait_mem_ready();
-            save = xm_getw(RD_ADDR);
+            prev = xm_getw(RD_ADDR);
+            incr = xm_getw(RD_INCR) << 1;
             l    = xm_getl(DATA);
             v    = (uint16_t)l;
             dprintf("[0x%04x]", v);
-            xm_setw(RD_ADDR, save);
+            read = xm_getw(RD_ADDR);
+            ASSERT(read == (prev + incr), "0x%04x vs 0x%04x + 0x%04x", read, prev, incr);
+            xm_setw(RD_ADDR, prev - incr);
             xwait_mem_ready();
             break;
         case XM_RW_INCR:
@@ -305,19 +334,25 @@ void print_xm_reg(int reg_num)
             break;
         case XM_RW_DATA:
             xwait_mem_ready();
-            save = xm_getw(RW_ADDR);
+            prev = xm_getw(RW_ADDR);
+            incr = xm_get_sys_ctrlb(RW_RD_INCR) ? xm_getw(RW_INCR) : 0;
             v    = xm_getw(RW_DATA);
             dprintf("[0x%04x]", v);
-            xm_setw(RW_ADDR, save);
+            read = xm_getw(RW_ADDR);
+            ASSERT(read == (prev + incr), "0x%04x vs 0x%04x + 0x%04x", read, prev, incr);
+            xm_setw(RW_ADDR, prev - incr);
             xwait_mem_ready();
             break;
         case XM_RW_DATA_2:
             xwait_mem_ready();
-            save = xm_getw(RW_ADDR);
+            prev = xm_getw(RW_ADDR);
+            incr = xm_get_sys_ctrlb(RW_RD_INCR) ? xm_getw(RW_INCR) << 1 : 0;
             l    = xm_getl(RW_DATA);
             v    = (uint16_t)l;
             dprintf("[0x%04x]", v);
-            xm_setw(RW_ADDR, save);
+            read = xm_getw(RW_ADDR);
+            ASSERT(read == (prev + incr), "0x%04x vs 0x%04x + 0x%04x", read, prev, incr);
+            xm_setw(RW_ADDR, prev - incr);
             xwait_mem_ready();
             break;
     }
@@ -332,7 +367,16 @@ void print_xm_regs()
     }
 }
 
-char line[256];
+void print_xr_regs()
+{
+    for (int r = 0; r < 0x40; r++)
+    {
+        print_xr_reg(r);
+        dprintf("\n");
+    }
+}
+
+char line[4096];
 
 void xosera_mon()
 {
@@ -358,13 +402,15 @@ void xosera_mon()
         }
     }
 
-#if 1
+#if 0
     dprintf("Installing Xosera test interrupt handler...");
     install_intr();
     dprintf("done.\n");
 #else
     dprintf("NOT Installing test interrupt handler\n");
 #endif
+
+    dprintf("\n");
 
     if (xosera_sync())
     {
@@ -379,15 +425,59 @@ void xosera_mon()
     bool exit = false;
     do
     {
-
         dprintf("\n*");
         dreadline(line, sizeof(line));
 
-        if (strncmp(line, "r", 1) == 0)
+        char * line_ptr = line;
+
+        char * cmd = next_token(&line_ptr);
+
+        if (strcmp(cmd, "xm") == 0)
         {
-            print_xm_regs();
+            char * reg = next_token(&line_ptr);
+
+            if (*reg == '\0')
+            {
+                print_xm_regs();
+            }
+            else
+            {
+                str_upper(reg);
+                int r = name_val(xm_regs, reg);
+                if (r < 0)
+                {
+                    if (isdigit(*reg))
+                    {
+                        r = strtol(reg, NULL, 0);
+                        print_xm_reg(r);
+                    }
+                    else
+                    {
+                        dprintf("Bad XM reg: \"%s\"\n", reg);
+                    }
+                }
+                else
+                {
+                    print_xm_reg(r);
+                }
+            }
         }
-        else if (strncmp(line, "x", 1) == 0)
+        else if (strcmp(cmd, "xr") == 0)
+        {
+            print_xr_regs();
+        }
+        else if (strcmp(cmd, "Z") == 0)
+        {
+            char * num = next_token(&line_ptr);
+            int    n   = strtol(num, NULL, 0);
+            if (!isdigit(*num))
+            {
+                n = -1;
+            }
+            bool result = xosera_init(n);
+            dprintf("xosera_init(%d) %s\n", n, result ? "succeeded" : "failed");
+        }
+        else if (strcmp(cmd, "exit") == 0)
         {
             exit = true;
         }

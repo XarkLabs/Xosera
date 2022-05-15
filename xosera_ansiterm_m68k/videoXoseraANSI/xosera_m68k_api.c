@@ -107,18 +107,14 @@ bool xosera_init(int reconfig_num)
         // reconfig if configuration valid (0 to 3)
         if ((reconfig_num & 3) == reconfig_num)
         {
-            uint16_t int_ctrl_save = xm_getw(INT_CTRL);        // save INT_CTRL
-            xm_setw(INT_CTRL, 0x0000);                         // clear INT_CTRL
-            uint16_t sys_ctrl_save = xm_getw(SYS_CTRL);        // save SYS_CTRL
-            xm_setbl(SYS_CTRL, reconfig_num & 3);              // set WRMASK to config_num
             xwait_not_vblank();
             xwait_vblank();
-            xm_setw(TIMER, 0xB0B0);               // reconfig FPGA to config_num
-            detected = xosera_wait_sync();        // wait for detect
+            uint16_t int_ctrl_save = xm_getw(INT_CTRL);        // save INT_CTRL
+            xm_setbh(INT_CTRL, 0x80 | reconfig_num);           // reconfig FPGA to config_num
+            detected = xosera_wait_sync();                     // wait for detect
             if (detected)
             {
-                xm_setw(SYS_CTRL, sys_ctrl_save);        // restore SYS_CTRL
-                xm_setw(INT_CTRL, int_ctrl_save);        // restore INT_CTRL
+                xm_setw(INT_CTRL, int_ctrl_save | 0x000F);        // restore INT_CTRL
             }
         }
     }

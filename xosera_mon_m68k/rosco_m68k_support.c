@@ -179,9 +179,43 @@ int dreadline(char * buf, int buf_size)
                 }
         }
     }
-    dputc('\n');
+    dputs("\n");
     // make sure string is terminated
     buf[len] = 0;
 
     return len;
+}
+
+// return next argument from string
+char * next_token(char ** next_token)
+{
+    if (next_token == NULL || *next_token == NULL || **next_token == '\0')
+    {
+        return "";
+    }
+
+    char * token = *next_token;
+    // skip leading spaces
+    while (*token == ' ')
+    {
+        token++;
+    }
+    bool quoted = false;
+    if (*token == '"')
+    {
+        quoted = true;
+        token++;
+    }
+    // arg string
+    char * end_token = token;
+    // either empty or starts after space (unless quoted)
+    while (*end_token && *end_token != '"' && !(*end_token == ' ' && quoted == false))
+    {
+        end_token++;
+    }
+    // end cmd_ptr string
+    *end_token++ = '\0';
+    *next_token  = end_token;
+
+    return token;
 }

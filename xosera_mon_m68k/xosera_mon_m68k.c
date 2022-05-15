@@ -369,7 +369,7 @@ void print_xm_regs()
 
 void print_xr_regs()
 {
-    for (int r = 0; r < 0x40; r++)
+    for (int r = 0; r < 0x20; r++)
     {
         print_xr_reg(r);
         dprintf("\n");
@@ -444,21 +444,35 @@ void xosera_mon()
             {
                 str_upper(reg);
                 int r = name_val(xm_regs, reg);
-                if (r < 0)
+                if (r < 0 && isdigit(*reg))
                 {
-                    if (isdigit(*reg))
-                    {
-                        r = strtol(reg, NULL, 0);
-                        print_xm_reg(r);
-                    }
-                    else
-                    {
-                        dprintf("Bad XM reg: \"%s\"\n", reg);
-                    }
+                    r = strtol(reg, NULL, 0);
                 }
                 else
                 {
-                    print_xm_reg(r);
+                    dprintf("Bad register: \"%s\"\n", reg);
+                    continue;
+                }
+
+                print_xm_reg(r);
+
+                char * assign = next_token(&line_ptr);
+                if (assign[0] == '=')
+                {
+                    assign++;
+                    if (*assign == '\0')
+                    {
+                        assign = next_token(&line_ptr);
+                    }
+
+                    if (isdigit(*assign))
+                    {
+                        int v = strtol(assign, NULL, 0);
+
+                        dprintf(" = 0x%04x, ", v);
+
+                        print_xm_reg(r);
+                    }
                 }
             }
         }

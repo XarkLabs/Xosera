@@ -29,11 +29,9 @@
 //`define USE_HEXFONT                     // use hex font instead of default fonts
 //`define NO_TESTPATTERN                  // don't initialize VRAM with test pattern and fonts in simulation
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
-`define NO_CS_BUS_DELAY                 // HACK: set this if your 68020+ is "cranky" with Xosera (no CS & data bus cycle delay)
 
 // features that can be optionally disabled
-//`define ENABLE_LFSR                     // enable XM_REG 0xA as 19-bit LFSR
-//`define ENABLE_TIMER_INTR
+`define ENABLE_TIMER_INTR
 `define ENABLE_RW_DATA                  // enable 2nd VRAM RW port
 `define ENABLE_COPP                     // enable copper
 
@@ -365,8 +363,8 @@ localparam TILES_HIGH        = (VISIBLE_HEIGHT/TILE_HEIGHT);    // default tiled
 // symbolic Xosera bus signals (to be a bit more clear)
 localparam RnW_WRITE         = 1'b0;
 localparam RnW_READ          = 1'b1;
-localparam cs_ENABLED        = 1'b0;
-localparam cs_DISABLED       = 1'b1;
+localparam CS_ENABLED        = 1'b0;
+localparam CS_DISABLED       = 1'b1;
 
 `ifdef ICE40UP5K    // iCE40UltraPlus5K specific
 // Lattice/SiliconBlue PLL "magic numbers" to derive pixel clock from 12Mhz oscillator (from "icepll" utility)

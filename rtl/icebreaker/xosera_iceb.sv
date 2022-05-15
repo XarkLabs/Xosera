@@ -108,13 +108,13 @@ logic [7:0] bus_data_in;
 `else   // direct bus interface (untested on iCEBreaker)
     logic bus_out_ena;
     // only set bus to output if Xosera is selected and read is selected
-    assign bus_out_ena  = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ);
+    assign bus_out_ena  = (bus_cs_n == xv::CS_ENABLED && bus_rd_nwr == xv::RnW_READ);
 
     // tri-state data bus unless Xosera is both selected and bus is reading
     // NOTE: No longer need to use iCE40 SB_IO primitive to control tri-state properly here
     assign bus_data     = bus_out_ena ? bus_data_out_r : 8'bZ;
     assign bus_data_in  = bus_data;
-    assign bus_cs_n     = LED_RED_N;        // RGB LED red as Xosera select=cs_ENABLED (UP_nCS)
+    assign bus_cs_n     = LED_RED_N;        // RGB LED red as Xosera select=CS_ENABLED (UP_nCS)
     assign bus_rd_nwr   = LED_GRN_N;        // RGB LED green as RnW_WRITE=0, RnW_READ=1, read= (UP_RnW)
     assign bus_bytesel  = LED_BLU_N;        // RGB LED blue for word byte select (UP_bytesel)
     assign bus_reg_num  = { FLASH_IO3, FLASH_IO2, FLASH_IO1, FLASH_IO0 };       // gpio for register number (UP_R0-UP_R3)

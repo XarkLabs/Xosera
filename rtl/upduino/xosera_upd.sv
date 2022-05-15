@@ -132,7 +132,7 @@ logic [7:0] bus_data_out;               // bus out from Xosera
 logic [7:0] bus_data_in;                // bus input to Xosera
 
 // only set bus to output if Xosera is selected and read is selected
-assign bus_out_ena  = (bus_cs_n == xv::cs_ENABLED && bus_rd_nwr == xv::RnW_READ);
+assign bus_out_ena  = (bus_cs_n == xv::CS_ENABLED && bus_rd_nwr == xv::RnW_READ);
 
 // tri-state data bus unless Xosera is both selected and bus is reading
 // NOTE: No longer need to use iCE40 SB_IO primitive to control tri-state properly here

@@ -54,6 +54,7 @@ VIDEO_MODE ?= MODE_848x480
 # Supported video outputs:
 #   PMOD_1B2_DVI12      12-bit DVI, PMOD 1A&1B  https://1bitsquared.com/products/pmod-digital-video-interface
 #   PMOD_DIGILENT_VGA   12-bit VGA, PMOD 1A&1B  https://store.digilentinc.com/pmod-vga-video-graphics-array/
+#   PMOD_MUSE_VGA       12-bit VGA, PMOD 1A&1B  https://www.tindie.com/products/johnnywu/pmod-vga-expansion-board/
 VIDEO_OUTPUT ?= PMOD_DIGILENT_VGA
 
 FONTFILES := $(wildcard tilesets/*.mem)

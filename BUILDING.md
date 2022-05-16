@@ -92,6 +92,8 @@ In the "icebreaker" directory is the Makefile to build Xosera for the iCEBreaker
 
 * **PMOD_1B2_DVI12** - 12-bit [DVI via HDMI PMOD from 1BitSquared​](https://1bitsquared.com/products/pmod-digital-video-interface) (as shown [here​](https://hackaday.io/project/173731/gallery#0a6102557e8b8c3aa18dedca5f91d63a))
 * **​​PMOD_DIGILENT_VGA** - 12-bit [​VGA PMOD from Digilent](https://store.digilentinc.com/pmod-vga-video-graphics-array/)​
+* **PMOD_MUSE_VGA** - 12-bit [PMOD-VGA Expansion Board](https://www.tindie.com/products/johnnywu/pmod-vga-expansion-board/)
+
 * **PMOD_XESS_VGA** - 12-bit [StickIt!-​VGA PMOD from Xess](http://www.xess.com/shop/product/stickit-vga/)​ (out of production - but [design is open](https://github.com/xesscorp/StickIt/tree/master/modules/Vga))​
 * **PMOD_XESS_VGA_SINGLE** - ​6-bit using a single PMOD from [StickIt!-​VGA PMOD from Xess](http://www.xess.com/shop/product/stickit-vga/)​ (out of production - but [design is open](https://github.com/xesscorp/StickIt/tree/master/modules/Vga))
 

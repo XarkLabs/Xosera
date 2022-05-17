@@ -335,7 +335,7 @@ void print_xm_reg(int reg_num)
         case XM_RW_DATA:
             xwait_mem_ready();
             prev = xm_getw(RW_ADDR);
-            incr = xm_get_sys_ctrlb(RW_RD_INCR) ? xm_getw(RW_INCR) : 0;
+            incr = xm_get_sys_ctrlb(RD_RW_INCR) ? xm_getw(RW_INCR) : 0;
             v    = xm_getw(RW_DATA);
             dprintf("[0x%04x]", v);
             read = xm_getw(RW_ADDR);
@@ -346,7 +346,7 @@ void print_xm_reg(int reg_num)
         case XM_RW_DATA_2:
             xwait_mem_ready();
             prev = xm_getw(RW_ADDR);
-            incr = xm_get_sys_ctrlb(RW_RD_INCR) ? xm_getw(RW_INCR) << 1 : 0;
+            incr = xm_get_sys_ctrlb(RD_RW_INCR) ? xm_getw(RW_INCR) << 1 : 0;
             l    = xm_getl(RW_DATA);
             v    = (uint16_t)l;
             dprintf("[0x%04x]", v);

@@ -131,7 +131,7 @@ const addr_range_t sys_ctrl_status[] = {
     {"HBLANK", 3, 1},            // (RO   )  video signal is in horizontal blank period
     {"VBLANK", 2, 1},            // (RO   )  video signal is in vertical blank period
     {"UNUSED_9", 1, 1},          // (RO   )  unused (reads 0)
-    {"RW_RD_INCR", 0, 1},        // (R / W)  increment XM_RW_ADDR after XM_RW_DATA/XM_RW_DATA_2 read
+    {"RD_RW_INCR", 0, 1},        // (R / W)  increment XM_RW_ADDR after XM_RW_DATA/XM_RW_DATA_2 read
     {NULL, 0, 0}};
 
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)

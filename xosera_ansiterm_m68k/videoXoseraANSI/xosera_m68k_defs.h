@@ -86,7 +86,7 @@
 #define SYS_CTRL_HBLANK_B     3        // (RO   )  video signal is in horizontal blank period
 #define SYS_CTRL_VBLANK_B     2        // (RO   )  video signal is in vertical blank period
 #define SYS_CTRL_UNUSED_9_B   1        // (RO   )  unused (reads 0)
-#define SYS_CTRL_RW_RD_INCR_B 0        // (R / W)  increment XM_RW_ADDR after XM_RW_DATA/XM_RW_DATA_2 read
+#define SYS_CTRL_RD_RW_INCR_B 0        // (R / W)  increment XM_RW_ADDR after XM_RW_DATA/XM_RW_DATA_2 read
 
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 

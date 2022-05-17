@@ -186,7 +186,7 @@ extern volatile xmreg_t * const xosera_ptr;
     } while (false)
 
 // set high byte of SYS_CTRL register to enable RW_DATA read increment (NOTE: assumes only writeable bit)
-#define xm_set_rw_rd_incr() xm_setbh(SYS_CTRL, 1 << SYS_CTRL_RW_RD_INCR_B)
+#define xm_set_rw_rd_incr() xm_setbh(SYS_CTRL, 1 << SYS_CTRL_RD_RW_INCR_B)
 
 // clear high byte of SYS_CTRL register to disable RW_DATA read increment (NOTE: assumes only writeable bit)
 #define xm_set_no_rw_rd_incr() xm_setbh(SYS_CTRL, 0)

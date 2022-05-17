@@ -48,7 +48,7 @@ localparam COLOR_W  = 8;                // 256 words color table mem (per playfi
 // Xosera directly addressable registers (16 x 16-bit words [high/low byte])
 typedef enum logic [3:0] {
     // register 16-bit read/write
-    XM_SYS_CTRL     = 4'h0,             // (R /W+) status bits, FPGA config, write masking
+    XM_SYS_CTRL     = 4'h0,             // (R /W ) status/option flags, VRAM write masking
     XM_INT_CTRL     = 4'h1,             // (R /W ) interrupt status/control
     XM_TIMER        = 4'h2,             // (RO   ) read 1/10th millisecond timer
     XM_RD_XADDR     = 4'h3,             // (R /W+) XR register/address for XM_XDATA read access
@@ -81,7 +81,7 @@ typedef enum {
     SYS_CTRL_HBLANK_B = 11,             // video signal is in horizontal blank period
     SYS_CTRL_VBLANK_B = 10,             // video signal is in vertical blank period
     SYS_CTRL_UNUSED_9_B = 9,            // unused (reads 0)
-    SYS_CTRL_RW_RD_INC_B = 8            // increment XM_RD_ADDR after read
+    SYS_CTRL_RD_RW_INCR_B = 8           // increment XM_RW_ADDR with XM_RW_INCR after read
 } xm_sys_ctrl_t;
 
 // XR register / memory regions

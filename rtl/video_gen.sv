@@ -411,7 +411,6 @@ always_ff @(posedge clk) begin
             case (vgen_reg_num_i)
                 xv::XR_VID_CTRL: begin
                     border_color    <= vgen_reg_data_i[15:8];
-                    audio_enable    <= vgen_reg_data_i[4];
                     intr_signal_o   <= vgen_reg_data_i[3:0];
                 end
                 xv::XR_COPP_CTRL: begin

@@ -813,7 +813,7 @@ void show_test_pic(int pic_num, uint16_t addr)
     wait_vblank_start();
     xreg_setw(PA_GFX_CTRL, 0x0080);        // blank screen
     xreg_setw(PB_GFX_CTRL, 0x0080);
-    xreg_setw(VID_CTRL, 0x0000);        // set write address
+    xreg_setw(VID_CTRL, 0x0000);        // set border
     xmem_setw(XR_COLOR_A_ADDR, 0x0000);
     xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
     xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
@@ -1973,7 +1973,7 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
     xreg_setw(AUD0_START, 0x8000);                     // address in VRAM
     xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
     xreg_setw(AUD0_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
-    xreg_setw(VID_CTRL, 0x0110);                       // enable audio DMA to start playing
+    xreg_setw(AUD_CTRL, 0x0001);                       // enable audio DMA to start playing
 
     bool done = false;
 
@@ -2054,7 +2054,7 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
     }
 
     xreg_setw(AUD0_VOL, 0x0000);           // set volume to 0%
-    xreg_setw(VID_CTRL, 0x0100);           // disable audio DMA
+    xreg_setw(AUD_CTRL, 0x0000);           // disable audio DMA
     xreg_setw(AUD0_PERIOD, 0x0000);        // 1000 clocks per each sample byte
     xreg_setw(AUD0_LENGTH, 0x0000);        // 1000 clocks per each sample byte
 
@@ -2109,7 +2109,7 @@ static void upload_audio(void * memdata, uint16_t vaddr, int len)
         xm_setw(DATA, *wp++);
     }
     xreg_setw(AUD0_VOL, 0x8080);
-    xreg_setw(VID_CTRL, 0x0010);
+    xreg_setw(AUD_CTRL, 0x0001);
 }
 
 const char blurb[] =
@@ -2297,7 +2297,7 @@ void     xosera_test()
     {
         test_audio_sample("xosera_8000.raw", testsamp, testsampsize, 3150);
 
-        xreg_setw(VID_CTRL, 0x0100);        // enable audio DMA to start playing
+        xreg_setw(AUD_CTRL, 0x0000);        // stop audio
 
         memset(testsamp, 0, testsampsize);
 
@@ -2307,7 +2307,7 @@ void     xosera_test()
     {
         test_audio_sample("Boing.raw", testsamp, testsampsize, 3150);
 
-        xreg_setw(VID_CTRL, 0x0100);        // enable audio DMA to start playing
+        xreg_setw(AUD_CTRL, 0x0000);        // stop audio
 
         memset(testsamp, 0, testsampsize);
 
@@ -2316,7 +2316,7 @@ void     xosera_test()
     {
         test_audio_sample("sine wave", sinData, sizeof(sinData), 1000);
 
-        xreg_setw(VID_CTRL, 0x0100);        // enable audio DMA to start playing
+        xreg_setw(AUD_CTRL, 0x0000);        // stop audio
     }
 #endif
 
@@ -2325,8 +2325,6 @@ void     xosera_test()
     xmem_setw(XR_COLOR_B_ADDR + 0xFF, 0xFfff);        // color # = black
     xr_msg_color(0x0f);
     xr_printfxy(5, 0, "xosera_test_m68k\n");
-
-    //    xreg_setw(VID_CTRL, 0x0010);        // enable audio DMA to start playing
 
     if (use_sd)
     {

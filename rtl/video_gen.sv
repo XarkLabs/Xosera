@@ -408,7 +408,7 @@ always_ff @(posedge clk) begin
 `endif
         // video register write
         if (vgen_reg_wr_en_i) begin
-            case (vgen_reg_num_i)
+            case (7'(vgen_reg_num_i))
                 xv::XR_VID_CTRL: begin
                     border_color    <= vgen_reg_data_i[15:8];
                     intr_signal_o   <= vgen_reg_data_i[3:0];
@@ -634,7 +634,7 @@ generate
             audio_0_len         <= '0;
         end else begin
             if (vgen_reg_wr_en_i) begin
-                case (vgen_reg_num_i)
+                case (7'(vgen_reg_num_i))
                     xv::XR_AUD0_VOL: begin
                         audio_0_vol     <= vgen_reg_data_i;
                     end

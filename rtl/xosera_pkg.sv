@@ -89,9 +89,9 @@ typedef enum logic [15:0] {
     // XR Register Regions
     XR_CONFIG_REGS      = 16'h0000,     // 0x0000-0x000F 16 config/video/copper registers
     XR_PA_REGS          = 16'h0010,     // 0x0010-0x0017 8 playfield A video registers
-    XR_PB_REGS          = 16'h0018,     // 0x0000-0x001F 8 playfield B video registers
-    XR_BLIT_REGS        = 16'h0020,     // 0x0020-0x002F 16 polygon blit registers
-    XR_AUDIO_REGS       = 16'h0030,     // 0x0030-0x003F 16 audio playback registers      // TODO: audio
+    XR_PB_REGS          = 16'h0018,     // 0x0018-0x001F 8 playfield B video registers
+    XR_AUDIO_REGS       = 16'h0020,     // 0x0020-0x002F 16 audio playback registers      // TODO: audio
+    XR_BLIT_REGS        = 16'h0040,     // 0x0040-0x004B 12 polygon blit registers
     // XR Memory Regions
     XR_TILE_ADDR        = 16'h4000,     // 0x4000-0x53FF 5K 16-bit words of tile memory
     XR_COLOR_ADDR       = 16'h8000,     // 0x8000-0x81FF 256 16-bit 0xXRGB color lookup playfield A & B
@@ -99,64 +99,76 @@ typedef enum logic [15:0] {
 } xr_region_t;
 
 // XR read/write registers/memory regions
-typedef enum logic [5:0] {
+typedef enum logic [6:0] {
     // Video Config / Copper XR Registers
-    XR_VID_CTRL     = 6'h00,            // (R /W) display control and border color index
-    XR_COPP_CTRL    = 6'h01,            // (R /W) display synchronized coprocessor control
-    XR_AUD_CTRL     = 6'h02,            // (- /-) TODO: audio channel control
-    XR_UNUSED_03    = 6'h03,            // (- /-) TODO: unused XR 03
-    XR_VID_LEFT     = 6'h04,            // (R /W) left edge of active display window (typically 0)
-    XR_VID_RIGHT    = 6'h05,            // (R /W) right edge of active display window +1 (typically 640 or 848)
-    XR_UNUSED_06    = 6'h06,            // (- /-) TODO: unused XR 06
-    XR_UNUSED_07    = 6'h07,            // (- /-) TODO: unused XR 07
-    XR_SCANLINE     = 6'h08,            // (RO  ) scanline (including offscreen >= 480)
-    XR_FEATURES     = 6'h09,            // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
-    XR_VID_HSIZE    = 6'h0A,            // (RO  ) native pixel width of monitor mode (e.g. 640/848)
-    XR_VID_VSIZE    = 6'h0B,            // (RO  ) native pixel height of monitor mode (e.g. 480)
-    XR_UNUSED_0C    = 6'h0C,            // TODO: unused XR 0C
-    XR_UNUSED_0D    = 6'h0D,            // TODO: unused XR 0D
-    XR_UNUSED_0E    = 6'h0E,            // TODO: unused XR 0E
-    XR_UNUSED_0F    = 6'h0F,            // TODO: unused XR 0F
+    XR_VID_CTRL     = 7'h00,            // (R /W) display control and border color index
+    XR_COPP_CTRL    = 7'h01,            // (R /W) display synchronized coprocessor control
+    XR_AUD_CTRL     = 7'h02,            // (- /-) TODO: audio channel control
+    XR_UNUSED_03    = 7'h03,            // (- /-) TODO: unused XR 03
+    XR_VID_LEFT     = 7'h04,            // (R /W) left edge of active display window (typically 0)
+    XR_VID_RIGHT    = 7'h05,            // (R /W) right edge of active display window +1 (typically 640 or 848)
+    XR_UNUSED_06    = 7'h06,            // (- /-) TODO: unused XR 06
+    XR_UNUSED_07    = 7'h07,            // (- /-) TODO: unused XR 07
+    XR_SCANLINE     = 7'h08,            // (RO  ) scanline (including offscreen >= 480)
+    XR_FEATURES     = 7'h09,            // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+    XR_VID_HSIZE    = 7'h0A,            // (RO  ) native pixel width of monitor mode (e.g. 640/848)
+    XR_VID_VSIZE    = 7'h0B,            // (RO  ) native pixel height of monitor mode (e.g. 480)
+    XR_UNUSED_0C    = 7'h0C,            // TODO: unused XR 0C
+    XR_UNUSED_0D    = 7'h0D,            // TODO: unused XR 0D
+    XR_UNUSED_0E    = 7'h0E,            // TODO: unused XR 0E
+    XR_UNUSED_0F    = 7'h0F,            // TODO: unused XR 0F
     // Playfield A Control XR Registers
-    XR_PA_GFX_CTRL  = 6'h10,            // (R /W) playfield A graphics control
-    XR_PA_TILE_CTRL = 6'h11,            // (R /W) playfield A tile control
-    XR_PA_DISP_ADDR = 6'h12,            // (R /W) playfield A display VRAM start address
-    XR_PA_LINE_LEN  = 6'h13,            // (R /W) playfield A display line width in words
-    XR_PA_HV_FSCALE = 6'h14,            // (R /W) playfield A horizontal and vertical fractional scale
-    XR_PA_HV_SCROLL = 6'h15,            // (R /W) playfield A horizontal and vertical fine scroll
-    XR_PA_LINE_ADDR = 6'h16,            // (R /W) playfield A scanline start address (loaded at start of line)
-    XR_PA_UNUSED_17 = 6'h17,            // TODO: unused XR PA 17
+    XR_PA_GFX_CTRL  = 7'h10,            // (R /W) playfield A graphics control
+    XR_PA_TILE_CTRL = 7'h11,            // (R /W) playfield A tile control
+    XR_PA_DISP_ADDR = 7'h12,            // (R /W) playfield A display VRAM start address
+    XR_PA_LINE_LEN  = 7'h13,            // (R /W) playfield A display line width in words
+    XR_PA_HV_FSCALE = 7'h14,            // (R /W) playfield A horizontal and vertical fractional scale
+    XR_PA_HV_SCROLL = 7'h15,            // (R /W) playfield A horizontal and vertical fine scroll
+    XR_PA_LINE_ADDR = 7'h16,            // (R /W) playfield A scanline start address (loaded at start of line)
+    XR_PA_UNUSED_17 = 7'h17,            // TODO: unused XR PA 17
     // Playfield B Control XR Registers
-    XR_PB_GFX_CTRL  = 6'h18,            // (R /W) playfield B graphics control
-    XR_PB_TILE_CTRL = 6'h19,            // (R /W) playfield B tile control
-    XR_PB_DISP_ADDR = 6'h1A,            // (R /W) playfield B display VRAM start address
-    XR_PB_LINE_LEN  = 6'h1B,            // (R /W) playfield B display line width in words
-    XR_PB_HV_FSCALE = 6'h1C,            // (R /W) playfield B horizontal and vertical fractional scale
-    XR_PB_HV_SCROLL = 6'h1D,            // (R /W) playfield B horizontal and vertical fine scroll
-    XR_PB_LINE_ADDR = 6'h1E,            // (R /W) playfield B scanline start address (loaded at start of line)
-    XR_PB_UNUSED_1F = 6'h1F,            // TODO: unused XR PB 1F
-    // Blitter Registers
-    XR_BLIT_CTRL    = 6'h20,            // (WO) blit control (transparency control, logic op and op input flags)
-    XR_BLIT_MOD_A   = 6'h21,            // (WO) blit line modulo added to SRC_A (XOR if A const)
-    XR_BLIT_SRC_A   = 6'h22,            // (WO) blit A source VRAM read address / constant value
-    XR_BLIT_MOD_B   = 6'h23,            // (WO) blit line modulo added to SRC_B (XOR if B const)
-    XR_BLIT_SRC_B   = 6'h24,            // (WO) blit B AND source VRAM read address / constant value
-    XR_BLIT_MOD_C   = 6'h25,            // (WO) blit line XOR modifier for C_VAL const
-    XR_BLIT_VAL_C   = 6'h26,            // (WO) blit C XOR constant value
-    XR_BLIT_MOD_D   = 6'h27,            // (WO) blit modulo added to D destination after each line
-    XR_BLIT_DST_D   = 6'h28,            // (WO) blit D VRAM destination write address
-    XR_BLIT_SHIFT   = 6'h29,            // (WO) blit first and last word nibble masks and nibble right shift (0-3)
-    XR_BLIT_LINES   = 6'h2A,            // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
-    XR_BLIT_WORDS   = 6'h2B,            // (WO+) blit word count minus 1 per line (write starts blit operation)
-    XR_UNUSED_2C    = 6'h2C,            // TODO: unused XR 2C
-    XR_UNUSED_2D    = 6'h2D,            // TODO: unused XR 2D
-    XR_UNUSED_2E    = 6'h2E,            // TODO: unused XR 2E
-    XR_UNUSED_2F    = 6'h2F,            // TODO: unused XR 2F
+    XR_PB_GFX_CTRL  = 7'h18,            // (R /W) playfield B graphics control
+    XR_PB_TILE_CTRL = 7'h19,            // (R /W) playfield B tile control
+    XR_PB_DISP_ADDR = 7'h1A,            // (R /W) playfield B display VRAM start address
+    XR_PB_LINE_LEN  = 7'h1B,            // (R /W) playfield B display line width in words
+    XR_PB_HV_FSCALE = 7'h1C,            // (R /W) playfield B horizontal and vertical fractional scale
+    XR_PB_HV_SCROLL = 7'h1D,            // (R /W) playfield B horizontal and vertical fine scroll
+    XR_PB_LINE_ADDR = 7'h1E,            // (R /W) playfield B scanline start address (loaded at start of line)
+    XR_PB_UNUSED_1F = 7'h1F,            // TODO: unused XR PB 1F
     // Audio
-    XR_AUD0_VOL     = 6'h30,            // (WO) // TODO: WIP
-    XR_AUD0_PERIOD  = 6'h31,            // (WO) // TODO: WIP
-    XR_AUD0_START   = 6'h32,            // (WO) // TODO: WIP
-    XR_AUD0_LENGTH  = 6'h33             // (WO) // TODO: WIP
+    XR_AUD0_VOL     = 7'h20,            // (WO) // TODO: WIP
+    XR_AUD0_PERIOD  = 7'h21,            // (WO) // TODO: WIP
+    XR_AUD0_START   = 7'h22,            // (WO) // TODO: WIP
+    XR_AUD0_LENGTH  = 7'h23,            // (WO) // TODO: WIP
+    XR_AUD1_VOL     = 7'h24,            // (WO) // TODO: WIP
+    XR_AUD1_PERIOD  = 7'h25,            // (WO) // TODO: WIP
+    XR_AUD1_START   = 7'h26,            // (WO) // TODO: WIP
+    XR_AUD1_LENGTH  = 7'h27,            // (WO) // TODO: WIP
+    XR_AUD2_VOL     = 7'h28,            // (WO) // TODO: WIP
+    XR_AUD2_PERIOD  = 7'h29,            // (WO) // TODO: WIP
+    XR_AUD2_START   = 7'h2A,            // (WO) // TODO: WIP
+    XR_AUD2_LENGTH  = 7'h2B,            // (WO) // TODO: WIP
+    XR_AUD3_VOL     = 7'h2C,            // (WO) // TODO: WIP
+    XR_AUD3_PERIOD  = 7'h2D,            // (WO) // TODO: WIP
+    XR_AUD3_START   = 7'h2E,            // (WO) // TODO: WIP
+    XR_AUD3_LENGTH  = 7'h2F,            // (WO) // TODO: WIP
+    // Blitter Registers
+    XR_BLIT_CTRL    = 7'h40,            // (WO) blit control (transparency control, logic op and op input flags)
+    XR_BLIT_MOD_A   = 7'h41,            // (WO) blit line modulo added to SRC_A (XOR if A const)
+    XR_BLIT_SRC_A   = 7'h42,            // (WO) blit A source VRAM read address / constant value
+    XR_BLIT_MOD_B   = 7'h43,            // (WO) blit line modulo added to SRC_B (XOR if B const)
+    XR_BLIT_SRC_B   = 7'h44,            // (WO) blit B AND source VRAM read address / constant value
+    XR_BLIT_MOD_C   = 7'h45,            // (WO) blit line XOR modifier for C_VAL const
+    XR_BLIT_VAL_C   = 7'h46,            // (WO) blit C XOR constant value
+    XR_BLIT_MOD_D   = 7'h47,            // (WO) blit modulo added to D destination after each line
+    XR_BLIT_DST_D   = 7'h48,            // (WO) blit D VRAM destination write address
+    XR_BLIT_SHIFT   = 7'h49,            // (WO) blit first and last word nibble masks and nibble right shift (0-3)
+    XR_BLIT_LINES   = 7'h4A,            // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
+    XR_BLIT_WORDS   = 7'h4B,            // (WO+) blit word count minus 1 per line (write starts blit operation)
+    XR_UNUSED_2C    = 7'h4C,            // TODO: unused XR 2C
+    XR_UNUSED_2D    = 7'h4D,            // TODO: unused XR 2D
+    XR_UNUSED_2E    = 7'h4E,            // TODO: unused XR 2E
+    XR_UNUSED_2F    = 7'h4F             // TODO: unused XR 2F
 } xr_register_t;
 
 typedef enum integer {

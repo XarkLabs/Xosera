@@ -34,7 +34,7 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 10        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 15        // video frames to dump to VCD file (and then screen-shot and exit)
 #define MAX_UPLOADS      8         // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
@@ -786,51 +786,6 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAIT_BLIT_DONE(),
     REG_WAITVSYNC(),
 
-#if 0        // lame audio test
-    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
-    REG_W(WR_ADDR, 0xFF00),
-    REG_UPLOAD(),        // upload sine data
-
-    XREG_SETW(PA_GFX_CTRL, 0x0080),        // pf a blank
-    XREG_SETW(PB_GFX_CTRL, 0x0080),        // pf b blank
-
-
-    XREG_SETW(AUD0_PERIOD, 800),
-    XREG_SETW(AUD0_START, 0xFF00),
-    XREG_SETW(AUD0_LENGTH, 0x007F),
-
-    XREG_SETW(AUD0_VOL, 0x0000),
-    REG_WAITHSYNC(),
-    XREG_SETW(AUD0_VOL, 0x1010),
-    REG_WAITHSYNC(),
-    XREG_SETW(AUD0_VOL, 0x2020),
-    REG_WAITHSYNC(),
-    XREG_SETW(AUD0_VOL, 0x3030),
-    REG_WAITHSYNC(),
-    XREG_SETW(AUD0_VOL, 0x4040),
-    REG_WAITHSYNC(),
-    XREG_SETW(AUD0_VOL, 0x5050),
-    REG_WAITHSYNC(),
-    XREG_SETW(AUD0_VOL, 0x6060),
-    REG_WAITHSYNC(),
-    XREG_SETW(AUD0_VOL, 0x7070),
-    REG_WAITHSYNC(),
-    XREG_SETW(AUD0_VOL, 0x8080),
-    REG_WAITHSYNC(),
-    XREG_SETW(VID_CTRL, 0x0010),
-
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-
-    REG_END(),
-
-#endif
-
 
 #if 1
     // true color hack test
@@ -882,6 +837,50 @@ uint16_t     BusInterface::test_data[32768] = {
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+
+#if 1                              // lame audio test
+    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
+    REG_W(WR_ADDR, 0xFF00),
+    REG_UPLOAD(),        // upload sine data
+
+    XREG_SETW(PA_GFX_CTRL, 0x0080),        // pf a blank
+    XREG_SETW(PB_GFX_CTRL, 0x0080),        // pf b blank
+
+
+    XREG_SETW(AUD0_PERIOD, 800),
+    XREG_SETW(AUD0_START, 0xFF00),
+    XREG_SETW(AUD0_LENGTH, 0x007F),
+
+    XREG_SETW(AUD0_VOL, 0x0000),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x1010),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x2020),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x3030),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x4040),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x5050),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x6060),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x7070),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_VOL, 0x8080),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD_CTRL, 0x0001),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+#endif
+
 
     REG_W(INT_CTRL, 0x8100),
 

@@ -100,7 +100,7 @@ always_ff @(posedge clk) begin
 
         // blit register write
         if (xreg_wr_en_i) begin
-            case ({ 2'b10, xreg_num_i })
+            case ({ xv::XR_BLIT_REGS[6:4], xreg_num_i })
                 xv::XR_BLIT_CTRL: begin
                     xreg_ctrl_transp_T  <= xreg_data_i[15:8];
                     xreg_ctrl_transp_8b <= xreg_data_i[5];

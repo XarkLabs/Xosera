@@ -27,9 +27,9 @@
 // Xosera XR Memory Regions (size in 16-bit words)
 #define XR_CONFIG_REGS  0x0000        // 0x0000-0x000F 16 config/ctrl registers
 #define XR_PA_REGS      0x0010        // 0x0010-0x0017 8 playfield A video registers
-#define XR_PB_REGS      0x0018        // 0x0000-0x001F 8 playfield B video registers
-#define XR_BLIT_REGS    0x0020        // 0x0020-0x002F 12 blitter registers
-#define XR_AUDIO_REGS   0x0030        // 0x0030-0x003F 16 audio playback registers      // TODO: audio
+#define XR_PB_REGS      0x0018        // 0x0018-0x001F 8 playfield B video registers
+#define XR_AUDIO_REGS   0x0020        // 0x0020-0x002F 16 audio playback registers      // TODO: audio
+#define XR_BLIT_REGS    0x0040        // 0x0040-0x004B 12 blitter registers
 #define XR_TILE_ADDR    0x4000        // (R/W) 0x4000-0x53FF tile glyph/tile map memory
 #define XR_TILE_SIZE    0x1400        //                     5120 x 16-bit tile glyph/tile map memory
 #define XR_COLOR_ADDR   0x8000        // (R/W) 0x8000-0x81FF 2 x A & B color lookup memory
@@ -124,29 +124,41 @@
 #define XR_PB_LINE_ADDR 0x1E        // (- /W) playfield B scanline start address (loaded at start of line)
 #define XR_PB_UNUSED_1F 0x1F        // // TODO: colorbase?
 
-// Blitter Registers
-#define XR_BLIT_CTRL  0x20        // (R /W) blit control (transparency control, logic op and op input flags)
-#define XR_BLIT_MOD_A 0x21        // (R /W) blit line modulo added to SRC_A (XOR if A const)
-#define XR_BLIT_SRC_A 0x22        // (R /W) blit A source VRAM read address / constant value
-#define XR_BLIT_MOD_B 0x23        // (R /W) blit line modulo added to SRC_B (XOR if B const)
-#define XR_BLIT_SRC_B 0x24        // (R /W) blit B AND source VRAM read address / constant value
-#define XR_BLIT_MOD_C 0x25        // (R /W) blit line XOR modifier for C_VAL const
-#define XR_BLIT_VAL_C 0x26        // (R /W) blit C XOR constant value
-#define XR_BLIT_MOD_D 0x27        // (R /W) blit modulo added to D destination after each line
-#define XR_BLIT_DST_D 0x28        // (R /W) blit D VRAM destination write address
-#define XR_BLIT_SHIFT 0x29        // (R /W) blit first and last word nibble masks and nibble right shift (0-3)
-#define XR_BLIT_LINES 0x2A        // (R /W) blit number of lines minus 1, (repeats blit word count after modulo calc)
-#define XR_BLIT_WORDS 0x2B        // (R /W) blit word count minus 1 per line (write starts blit operation)
-#define XR_UNUSED_2C  0x2C        // (- /-) TODO: unused XR 2C
-#define XR_UNUSED_2D  0x2D        // (- /-) TODO: unused XR 2D
-#define XR_UNUSED_2E  0x2E        // (- /-) TODO: unused XR 2E
-#define XR_UNUSED_2F  0x2F        // (- /-) TODO: unused XR 2F
-
 // Audio Registers
-#define XR_AUD0_VOL    0x30        // (WO) // TODO: WIP
-#define XR_AUD0_PERIOD 0x31        // (WO) // TODO: WIP
-#define XR_AUD0_START  0x32        // (WO) // TODO: WIP
-#define XR_AUD0_LENGTH 0x33        // (WO) // TODO: WIP
+#define XR_AUD0_VOL    0x20        // (WO) // TODO: WIP
+#define XR_AUD0_PERIOD 0x21        // (WO) // TODO: WIP
+#define XR_AUD0_START  0x22        // (WO) // TODO: WIP
+#define XR_AUD0_LENGTH 0x23        // (WO) // TODO: WIP
+#define XR_AUD1_VOL    0x24        // (WO) // TODO: WIP
+#define XR_AUD1_PERIOD 0x25        // (WO) // TODO: WIP
+#define XR_AUD1_START  0x26        // (WO) // TODO: WIP
+#define XR_AUD1_LENGTH 0x27        // (WO) // TODO: WIP
+#define XR_AUD2_VOL    0x28        // (WO) // TODO: WIP
+#define XR_AUD2_PERIOD 0x29        // (WO) // TODO: WIP
+#define XR_AUD2_START  0x2A        // (WO) // TODO: WIP
+#define XR_AUD2_LENGTH 0x2B        // (WO) // TODO: WIP
+#define XR_AUD3_VOL    0x2C        // (WO) // TODO: WIP
+#define XR_AUD3_PERIOD 0x2D        // (WO) // TODO: WIP
+#define XR_AUD3_START  0x2E        // (WO) // TODO: WIP
+#define XR_AUD3_LENGTH 0x2F        // (WO) // TODO: WIP
+
+// Blitter Registers
+#define XR_BLIT_CTRL  0x40        // (R /W) blit control (transparency control, logic op and op input flags)
+#define XR_BLIT_MOD_A 0x41        // (R /W) blit line modulo added to SRC_A (XOR if A const)
+#define XR_BLIT_SRC_A 0x42        // (R /W) blit A source VRAM read address / constant value
+#define XR_BLIT_MOD_B 0x43        // (R /W) blit line modulo added to SRC_B (XOR if B const)
+#define XR_BLIT_SRC_B 0x44        // (R /W) blit B AND source VRAM read address / constant value
+#define XR_BLIT_MOD_C 0x45        // (R /W) blit line XOR modifier for C_VAL const
+#define XR_BLIT_VAL_C 0x46        // (R /W) blit C XOR constant value
+#define XR_BLIT_MOD_D 0x47        // (R /W) blit modulo added to D destination after each line
+#define XR_BLIT_DST_D 0x48        // (R /W) blit D VRAM destination write address
+#define XR_BLIT_SHIFT 0x49        // (R /W) blit first and last word nibble masks and nibble right shift (0-3)
+#define XR_BLIT_LINES 0x4A        // (R /W) blit number of lines minus 1, (repeats blit word count after modulo calc)
+#define XR_BLIT_WORDS 0x4B        // (R /W) blit word count minus 1 per line (write starts blit operation)
+#define XR_UNUSED_2C  0x4C        // (- /-) TODO: unused XR 2C
+#define XR_UNUSED_2D  0x4D        // (- /-) TODO: unused XR 2D
+#define XR_UNUSED_2E  0x4E        // (- /-) TODO: unused XR 2E
+#define XR_UNUSED_2F  0x4F        // (- /-) TODO: unused XR 2F
 
 // constants
 #define XR_GFX_BPP_1 0        // Px_GFX_CTRL.bpp (1-bpp + fore/back attribute color)

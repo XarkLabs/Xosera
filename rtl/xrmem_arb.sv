@@ -361,10 +361,10 @@ tilemem #(
 );
 
 `ifdef ENABLE_COPP
-// copper RAM (even word)
+// copper RAM (even word, big-endian high word)
 coppermem #(
     .AWIDTH(xv::COPP_W),
-    .EVEN(1)
+    .ODDWORD(0)
     ) coppermem_e(
     .clk(clk),
     .rd_en_i(copp_rd_en),
@@ -376,10 +376,10 @@ coppermem #(
     .wr_data_i(xr_write_data)
 );
 
-// copper RAM (odd word)
+// copper RAM (odd word, big-endian low word)
 coppermem #(
     .AWIDTH(xv::COPP_W),
-    .EVEN(0)
+    .ODDWORD(1)
     ) coppermem_o(
     .clk(clk),
     .rd_en_i(copp_rd_en),

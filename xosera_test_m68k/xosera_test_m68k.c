@@ -15,6 +15,7 @@
  */
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -291,6 +292,35 @@ static void dprintf(const char * fmt, ...)
     vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
     dprint(dprint_buff);
     va_end(args);
+}
+
+static void hexdump(void * ptr, size_t bytes)
+{
+    uint8_t * p = (uint8_t *)ptr;
+    for (size_t i = 0; i < bytes; i++)
+    {
+        if ((i & 0xf) == 0)
+        {
+            if (i)
+            {
+                dprintf("    ");
+                for (size_t j = i - 16; j < i; j++)
+                {
+                    int c = p[j];
+                    dprintf("%c", c >= ' ' && c <= '~' ? c : '_');
+                    // dprintf("%c", isprint(c) ? c : '_');
+                }
+                dprintf("\n");
+            }
+            dprintf("%04x: ", i);
+        }
+        else
+        {
+            dprintf(", ");
+        }
+        dprintf("%02x", p[i]);
+    }
+    dprintf("\n");
 }
 
 static uint16_t screen_addr;
@@ -2234,7 +2264,6 @@ int    xosera_audio_len;
 uint32_t test_count;
 void     xosera_test()
 {
-
     printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
     dprintf("Xosera_test_m68k\n");
@@ -2250,6 +2279,9 @@ void     xosera_test()
     dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
 
     cpu_delay(1000);
+    xosera_get_info(&initinfo);
+    hexdump(&initinfo, sizeof(initinfo));
+    dprintf("ID: %s Githash:0x%08x\n", initinfo.description_str, initinfo.githash);
     while (checkchar())        // clear any queued input
     {
         readchar();
@@ -2257,9 +2289,6 @@ void     xosera_test()
     xv_prep();
     xm_setw(TIMER, 0xB007);
     cpu_delay(3000);
-
-    xosera_get_info(&initinfo);
-    dprintf("ID: %s Githash:0x%08x\n", initinfo.description_str, initinfo.githash);
 
 
     dprintf("\nBegin...\n");

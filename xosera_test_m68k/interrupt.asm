@@ -6,6 +6,9 @@
 
         include "../xosera_m68k_api/xosera_m68k_defs.inc"
 
+SPURIOUS_VEC    =       $60                     ; spurious handler (ignores interrupt)
+XOSERA_VEC      =       $68                     ; xosera interrupt vector
+
 install_intr::
                 movem.l D0-D7/A0-A6,-(A7)
 
@@ -17,7 +20,8 @@ install_intr::
                 move.w  #$0800,D0               ; enable vsync interrupt, clear any pending
                 movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
 
-                move.l  #Xosera_intr,$68        ; set interrupt vector
+                lea.l   (Xosera_intr,PC),A0
+                move.l  A0,XOSERA_VEC.w         ; set interrupt vector
                 and.w   #$F0FF,SR               ; enable interrupts
 
                 movem.l (A7)+,D0-D7/A0-A6
@@ -29,8 +33,8 @@ remove_intr::
                 lea.l   XM_BASEADDR,A0          ; get Xosera base addr
                 moveq.l #$000F,D0               ; disable interrupts, and clear pending
                 movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
-                move.l  $60,D0                  ; copy spurious int handler
-                move.l  D0,$68
+                move.l  SPURIOUS_VEC.w,D0       ; copy spurious int handler
+                move.l  D0,XOSERA_VEC.w         ; to xosera int handler
 
                 movem.l (A7)+,D0-D7/A0-A6
                 rts
@@ -62,7 +66,7 @@ Xosera_intr:
 
                 movep.w D1,XM_WR_XADDR(A0)      ; restore xmem write address
 
-NoNukeColor:    add.l   #1,XFrameCount          ; increment frame counter
+NoNukeColor:    addq.l  #1,XFrameCount          ; increment frame counter
 
 NotVblank:      movem.l (A7)+,D0-D1/A0          ; restore regs
                 rte

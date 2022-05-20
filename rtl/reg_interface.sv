@@ -211,6 +211,7 @@ always_ff @(posedge clk) begin
         regs_wr_o       <= 1'b0;
         regs_wrmask_o   <= 4'b1111;
         vram_rd         <= 1'b0;
+        vram_rw_wr      <= 1'b0;
         xr_rd           <= 1'b0;
         // addr/data out
         regs_addr_o     <= 16'h0000;

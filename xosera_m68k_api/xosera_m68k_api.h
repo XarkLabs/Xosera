@@ -130,11 +130,10 @@ typedef struct _xosera_info
 {
     char          description_str[48];        // ASCII description
     uint16_t      reserved_48[4];             // 8 reserved bytes (and force alignment)
-    unsigned char ver_bcd_major;              // major BCD version
-    unsigned char ver_bcd_minor;              // minor BCD version
-    unsigned char reserved_58;                // reserved byte
-    unsigned char git_modified;               // non-zero if modified from git
-    unsigned char githash[4];
+    uint16_t      version_bcd;                // BCD version number (xx.yy)
+    unsigned char git_modified;               // non-zero if design modified from githash version
+    unsigned char reserved_59;                // reserved byte
+    uint32_t      githash;                    // git "short hash" version from repository
 } xosera_info_t;
 
 static_assert(sizeof(xosera_info_t) == 64, "sizeof xosera_info mismatch");

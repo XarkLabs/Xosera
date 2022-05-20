@@ -153,7 +153,7 @@ bool xosera_get_info(xosera_info_t * info)
 
 // define xosera_ptr in a way that GCC can't see the immediate const value (causing it to keep it in a register).
 __asm__(
-    "               .section    .data\n"
+    "               .section    .text.postinit\n"
     "               .align      2\n"
     "               .globl      xosera_ptr\n"
     "               .type	    xosera_ptr, @object\n"

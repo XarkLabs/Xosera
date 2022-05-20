@@ -1938,11 +1938,10 @@ bool xansiterm_INIT()
     xv_prep();
     xreg_setw(PA_GFX_CTRL, td->gfx_ctrl);
 
-    // TODO: Improve numeric version code method
     xosera_get_info(&init_data);
-    td->ver_code[0] = '0' + init_data.ver_bcd_major;                // Xosera vX.xx
-    td->ver_code[1] = '0' + (init_data.ver_bcd_minor >> 4);         // Xosera vx.Xx
-    td->ver_code[2] = '0' + (init_data.ver_bcd_minor & 0xf);        // Xosera vx.xX
+    td->ver_code[0] = '0' + (init_data.version_bcd >> 8);                 // Xosera vX.xx
+    td->ver_code[1] = '0' + ((init_data.version_bcd >> 4) & 0x0f);        // Xosera vx.Xx
+    td->ver_code[2] = '0' + (init_data.version_bcd & 0xf);                // Xosera vx.xX
 
     xansi_reset(true);
     char verstr[10];

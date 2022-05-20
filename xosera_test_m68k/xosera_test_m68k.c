@@ -2280,8 +2280,12 @@ void     xosera_test()
 
     cpu_delay(1000);
     xosera_get_info(&initinfo);
+    dprintf("xosera_get_info details:\n");
     hexdump(&initinfo, sizeof(initinfo));
-    dprintf("ID: %s Githash:0x%08x\n", initinfo.description_str, initinfo.githash);
+    dprintf("\n");
+    dprintf("Description : \"%s\"\n", initinfo.description_str);
+    dprintf("Version BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
+    dprintf("Git hash    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
     while (checkchar())        // clear any queued input
     {
         readchar();
@@ -2409,7 +2413,7 @@ void     xosera_test()
             cpu_delay(1000);        // give monitor time to adjust with grey screen (vs black)
         }
 
-        dprintf("*** xosera_test_m68k iteration: %u, running %u:%02u:%02u\n", test_count++, h, m, s);
+        dprintf("\n*** xosera_test_m68k iteration: %u, running %u:%02u:%02u\n", test_count++, h, m, s);
 
         xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
         xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
@@ -2421,21 +2425,29 @@ void     xosera_test()
         uint16_t monheight = xreg_getw(VID_VSIZE);
         //        uint16_t monfreq   = xreg_getw(VID_VFREQ);
 
+        uint16_t sysctrl  = xm_getw(SYS_CTRL);
+        uint16_t intctrl  = xm_getw(INT_CTRL);
         uint16_t gfxctrl  = xreg_getw(PA_GFX_CTRL);
         uint16_t tilectrl = xreg_getw(PA_TILE_CTRL);
         uint16_t dispaddr = xreg_getw(PA_DISP_ADDR);
         uint16_t linelen  = xreg_getw(PA_LINE_LEN);
         uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
         uint16_t hvfscale = xreg_getw(PA_HV_FSCALE);
-        uint16_t sysctrl  = xm_getw(SYS_CTRL);
         uint16_t vidctrl  = xreg_getw(VID_CTRL);
+        uint16_t coppctrl = xreg_getw(COPP_CTRL);
+        uint16_t audctrl  = xreg_getw(AUD_CTRL);
         uint16_t vidleft  = xreg_getw(VID_LEFT);
         uint16_t vidright = xreg_getw(VID_RIGHT);
 
-        dprintf("%s #%02x%02x%02x%02x ", initinfo.description_str, initinfo.githash);
-        dprintf("Features:0x%04x\n", features);
-        dprintf("Monitor Native Res: %dx%d\n", monwidth, monheight);
-        dprintf("SYS_CTRL    : 0x%04x  VID_CTRL    : 0x%04x\n", sysctrl, vidctrl);
+        dprintf("DESCRIPTION : \"%s\"\n", initinfo.description_str);
+        dprintf("VERSION BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
+        dprintf("GIT HASH    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
+        dprintf("FEATURES    : 0x%04x\n", features);
+        dprintf("MONITOR RES : %dx%d\n", monwidth, monheight);
+        dprintf("\nConfig:\n");
+        dprintf("SYS_CTRL    : 0x%04x  INT_CTRL    : 0x%04x\n", sysctrl, intctrl);
+        dprintf("VID_CTRL    : 0x%04x  COPP_CTRL   : 0x%04x\n", vidctrl, coppctrl);
+        dprintf("AUD_CTRL    : 0x%04x\n", audctrl);
         dprintf("VID_LEFT    : 0x%04x  VID_RIGHT   : 0x%04x\n", vidleft, vidright);
         dprintf("\nPlayfield A:\n");
         dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);

@@ -31,7 +31,7 @@
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
 
 // features that can be optionally disabled
-`define ENABLE_TIMER_INTR
+//`define ENABLE_TIMER_INTR
 `define ENABLE_RW_DATA                  // enable 2nd VRAM RW port
 `define ENABLE_COPP                     // enable copper
 

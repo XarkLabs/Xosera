@@ -12,6 +12,10 @@
 
 `include "xosera_pkg.sv"
 
+`ifndef SYNTHESIS
+`define NO_SPRAM
+`endif
+
 module vram(
            input  wire logic        clk,
            input  wire logic        sel,
@@ -22,7 +26,7 @@ module vram(
            output      word_t       data_out
        );
 
-`ifndef SYNTHESIS
+`ifdef NO_SPRAM
 
 word_t memory[0: 65535] /* verilator public*/;
 

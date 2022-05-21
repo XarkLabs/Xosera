@@ -214,6 +214,7 @@ always_ff @(posedge clk) begin
         regs_xr_sel_o   <= 1'b0;
         regs_wr_o       <= 1'b0;
         vram_rd         <= 1'b0;
+        vram_rw_wr      <= 1'b0;
         xr_rd           <= 1'b0;
 
         // addr/data out

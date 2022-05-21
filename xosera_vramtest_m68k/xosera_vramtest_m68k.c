@@ -889,13 +889,13 @@ void xosera_vramtest()
         uint16_t monwidth  = xreg_getw(VID_HSIZE);
         uint16_t monheight = xreg_getw(VID_VSIZE);
 
-        dprintf("    Config #%d [%04x]   Res:%ux%u   Git:0x%08x   ID:\"%.48s\"\n",
+        dprintf("    ID: %.48s\n", initinfo.description_str);
+        dprintf("    Config #%d [%04x]   Res:%ux%u   Git:0x%08x\n",
                 cur_xosera_config,
                 (unsigned int)features,
                 (unsigned int)monwidth,
                 (unsigned int)monheight,
-                (unsigned int)initinfo.githash,
-                initinfo.description_str);
+                (unsigned int)initinfo.githash);
 
         for (int i = 0; i < TEST_MODES; i++)
         {

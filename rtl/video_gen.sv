@@ -165,6 +165,7 @@ video_timing video_timing
 logic           audio_enable;
 
 logic           audio_0_fetch;
+logic           audio_0_ack;
 word_t          audio_0_vol;                    // audio 0 L+R 8-bit volume/pan
 logic [14:0]    audio_0_period;                 // audio 0 playback rate (TBD)
 addr_t          audio_0_start;                  // audio 0 start address
@@ -172,6 +173,10 @@ logic           audio_0_tile;                   // audio 0 memory (0=VRAM, 1=TIL
 logic [14:0]    audio_0_len;                    // audio 0 length in words
 addr_t          audio_0_addr;                   // audio 0 current address
 word_t          audio_0_word;                   // audio 0 current output
+
+
+logic       unused_pa_audio;
+assign      unused_pa_audio = &{ 1'b0, audio_0_ack };
 
 assign pb_stall = (pa_vram_sel && pb_vram_sel) || (pa_tile_sel && pb_tile_sel);
 assign vram_sel_o       = pa_vram_sel ? pa_vram_sel  : pb_vram_sel;
@@ -217,10 +222,11 @@ video_playfield #(
     .pf_line_start_addr_i(line_set_addr),
     .pf_gfx_ctrl_set_i(pa_gfx_ctrl_set),
     .pf_color_index_o(pa_color_index),
-    .audio_0_fetch_i(audio_0_fetch),
-    .audio_0_tile_i(audio_0_tile),
-    .audio_0_addr_i(audio_0_addr),
-    .audio_0_word_o(audio_0_word),
+    .audio_fetch_i(audio_0_fetch),
+    .audio_ack_o(audio_0_ack),
+    .audio_tile_i(audio_0_tile),
+    .audio_addr_i(audio_0_addr),
+    .audio_word_o(audio_0_word),
     .reset_i(reset_i),
     .clk(clk)
 );
@@ -234,10 +240,11 @@ generate
         logic       pb_tilemem_rd_save;                 // PB tilemem read data saved flag
         word_t      pb_tilemem_rd_data;                 // PB tilemem read data
 
+        logic       audio_dummy_ack;
         word_t      audio_dummy_word;
 
         logic       unused_pb_audio;
-        assign      unused_pb_audio = &{ 1'b0, audio_dummy_word };
+        assign      unused_pb_audio = &{ 1'b0, audio_dummy_ack, audio_dummy_word };
 
         always_ff @(posedge clk) begin
             // latch vram read data for playfield B
@@ -302,10 +309,11 @@ generate
             .pf_line_start_addr_i(line_set_addr),
             .pf_gfx_ctrl_set_i(pb_gfx_ctrl_set),
             .pf_color_index_o(pb_color_index),
-            .audio_0_fetch_i(1'b0),
-            .audio_0_tile_i(1'b0),
-            .audio_0_addr_i(16'b0),
-            .audio_0_word_o(audio_dummy_word),
+            .audio_fetch_i(1'b0),
+            .audio_ack_o(audio_dummy_ack),
+            .audio_tile_i(1'b0),
+            .audio_addr_i(16'b0),
+            .audio_word_o(audio_dummy_word),
             .reset_i(reset_i),
             .clk(clk)
         );
@@ -663,7 +671,7 @@ generate
         assign  audio_0_addr    = '0;
 
         logic   audio_unused;
-        assign  audio_unused = &{1'b0, audio_enable, audio_0_vol, audio_0_period, audio_0_start, audio_0_len, audio_0_word };
+        assign  audio_unused = &{1'b0, audio_enable, audio_0_ack, audio_0_vol, audio_0_period, audio_0_start, audio_0_len, audio_0_word };
     end
 endgenerate
 

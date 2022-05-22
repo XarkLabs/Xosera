@@ -193,7 +193,6 @@ always_comb begin
 
     case (pf_fetch)
         FETCH_IDLE: begin
-            fetch_addr_next     = audio_addr_i;         // put audio 0 address on bus
             if (mem_fetch_i) begin                 // delay scanline until mem_fetch_active
                 if (pf_bitmap_i) begin
                     pf_fetch_next   = FETCH_ADDR_BITMAP;
@@ -202,6 +201,7 @@ always_comb begin
                 end
             end else begin
                 if (EN_AUDIO && audio_fetch_i) begin
+                    fetch_addr_next     = audio_addr_i;         // put audio 0 address on bus
                     vram_sel_next       = ~audio_tile_i;        // select vram for audio0
                     tilemem_sel_next    = audio_tile_i;
                     pf_fetch_next       = FETCH_WAIT_AUDIO;

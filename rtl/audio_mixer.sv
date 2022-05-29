@@ -95,7 +95,7 @@ generate
     addr_t          audio_start_i[AUDIO_NCHAN];     // audio chan 0 sample start address (in VRAM or TILE)
     logic [14:0]    audio_len_i[AUDIO_NCHAN];       // audio chan 0 sample length in words
 
-// convert flat port vectors into arrays
+    // convert flat port vectors into arrays
     for (genvar i = 0; i < AUDIO_NCHAN; i = i + 1) begin
         // un-flatten port parameters
         assign audio_vol_i[i]       = audio_vol_nchan_i[i*16+:16];
@@ -107,6 +107,7 @@ generate
 endgenerate
 `endif
 
+// setup alias signals
 generate
     for (genvar i = 0; i < AUDIO_NCHAN; i = i + 1) begin
         assign chan_vol_l[i]    = { 1'b0, audio_vol_i[i][15:9] };
@@ -139,13 +140,8 @@ generate
                 chan_period[i]  <= 16'hFFFF;    // countdown for next sample load
                 chan_2nd[i]     <= '0;
             end else begin
-
                 if (chan_fetch[i] && chan_2nd[i]) begin
                     chan_fetch[i]     <= 1'b0;
-                    chan_word1[i]     <= chan_word0[i];
-                    chan_word1_ok[i]  <= chan_word0_ok[i];
-//                    chan_word0[i]     <= audio_word_i;
-                    chan_word0_ok[i]  <= 1'b1;
 
                     if (chan_restart[i]) begin
                         chan_tile[i]      <= audio_tile_i[i];
@@ -199,7 +195,7 @@ always_ff @(posedge clk) begin
         case (mix_state)
             // wait until DMA start
             AUD_IDLE: begin
-                if (audio_dma_start_i) begin
+                if (audio_enable_i && audio_dma_start_i) begin
                     mix_state       <= AUD_DMA_0;
                 end
             end
@@ -216,8 +212,11 @@ always_ff @(posedge clk) begin
                     mix_state       <= AUD_READ_0;
                 end else begin
                     if (audio_ack_i) begin
-                        chan_fetch[0]   <= 1'b0;
-                        chan_word0[0]   <= audio_word_i;
+                        chan_word1[0]       <= chan_word0[0];
+                        chan_word1_ok[0]    <= chan_word0_ok[0];
+                        chan_word0[0]       <= audio_word_i;
+                        chan_word0_ok[0]    <= 1'b1;
+                        chan_fetch[0]       <= 1'b0;
                     end
                     mix_state       <= AUD_MULT_0;
                 end

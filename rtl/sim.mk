@@ -99,6 +99,7 @@ TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 
 # Icarus Verilog
 IVERILOG := iverilog
+VVP := vvp
 IVERILOG_ARGS := -g2012 -I$(SRCDIR) -Wall -l $(TECH_LIB)
 
 # Verilator C++ definitions and options
@@ -143,7 +144,7 @@ vrun: sim/obj_dir/V$(VTOP) sim.mk
 # run Verilator to build and run native simulation executable
 irun: sim/$(TBTOP) sim.mk
 	@mkdir -p $(LOGS)
-	sim/$(TBTOP) -fst
+	$(VVP) sim/$(TBTOP) -fst
 
 # use Icarus Verilog to build vvp simulation executable
 sim/$(DEFTOP): $(INC) sim/$(DEFTOP).sv sim.mk

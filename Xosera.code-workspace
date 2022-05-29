@@ -124,6 +124,8 @@
 			"MOVEP",
 			"moveq",
 			"MPSSE",
+			"MULT",
+			"NCHAN",
 			"nettype",
 			"nextpnr",
 			"NOPs",

@@ -20,8 +20,9 @@
 `include "xosera_pkg.sv"
 
 module video_gen #(
-    parameter EN_VID_PF_B       = 1,
-    parameter EN_AUDIO          = 1
+    parameter   EN_VID_PF_B     = 1,
+    parameter   EN_AUDIO        = 1,
+    parameter   AUDIO_NCHAN     = 1
 )
 (
     // video registers and control
@@ -164,19 +165,17 @@ video_timing video_timing
 // audio
 logic           audio_enable;
 
-logic           audio_0_fetch;
-logic           audio_0_ack;
-word_t          audio_0_vol;                    // audio 0 L+R 8-bit volume/pan
-logic [14:0]    audio_0_period;                 // audio 0 playback rate (TBD)
-addr_t          audio_0_start;                  // audio 0 start address
-logic           audio_0_tile;                   // audio 0 memory (0=VRAM, 1=TILE)
-logic [14:0]    audio_0_len;                    // audio 0 length in words
-addr_t          audio_0_addr;                   // audio 0 current address
-word_t          audio_0_word;                   // audio 0 current output
+word_t          audio_vol[AUDIO_NCHAN];         // audio 0 L+R 8-bit volume/pan
+logic [14:0]    audio_period[AUDIO_NCHAN];      // audio 0 playback rate (TBD)
+addr_t          audio_start[AUDIO_NCHAN];       // audio 0 start address
+logic           audio_tile[AUDIO_NCHAN];        // audio 0 memory type (0=VRAM, 1=TILE)
+logic [14:0]    audio_len[AUDIO_NCHAN];         // audio 0 length in words
 
-
-logic       unused_pa_audio;
-assign      unused_pa_audio = &{ 1'b0, audio_0_ack };
+logic           audio_fetch;                    // audio DMA request signal
+logic           audio_ack;                      // audio DMA ack signal
+logic           audio_tilemem;                  // audio DMA memory type (0=VRAM, 1=TILE)
+addr_t          audio_addr;                     // audio DMA address
+word_t          audio_word;                     // audio DMA data out
 
 assign pb_stall = (pa_vram_sel && pb_vram_sel) || (pa_tile_sel && pb_tile_sel);
 assign vram_sel_o       = pa_vram_sel ? pa_vram_sel  : pb_vram_sel;
@@ -222,11 +221,11 @@ video_playfield #(
     .pf_line_start_addr_i(line_set_addr),
     .pf_gfx_ctrl_set_i(pa_gfx_ctrl_set),
     .pf_color_index_o(pa_color_index),
-    .audio_fetch_i(audio_0_fetch),
-    .audio_ack_o(audio_0_ack),
-    .audio_tile_i(audio_0_tile),
-    .audio_addr_i(audio_0_addr),
-    .audio_word_o(audio_0_word),
+    .audio_fetch_i(audio_fetch),
+    .audio_ack_o(audio_ack),
+    .audio_tile_i(audio_tilemem),
+    .audio_addr_i(audio_addr),
+    .audio_word_o(audio_word),
     .reset_i(reset_i),
     .clk(clk)
 );
@@ -351,6 +350,7 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         intr_signal_o       <= 4'b0;
         border_color        <= 8'h08;               // defaulting to dark grey to show operational
+        audio_enable        <= '0;
         vid_left            <= '0;
         vid_right           <= $bits(vid_right)'(xv::VISIBLE_WIDTH);
 
@@ -616,62 +616,96 @@ end
 // audio generation
 generate
     if (EN_AUDIO) begin : opt_AUDIO
+
+`ifdef NO_MODULE_PORT_ARRAYS    // Yosys doesn't allow arrays in module ports
+        logic [16*AUDIO_NCHAN-1:0]          audio_vol_nchan;        // audio chan 0 L+R volume/pan
+        logic [15*AUDIO_NCHAN-1:0]          audio_period_nchan;     // audio chan 0 playback rate
+        logic [AUDIO_NCHAN-1:0]             audio_tile_nchan;       // audio chan 0 sample memory (0=VRAM, 1=TILE)
+        logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  audio_start_nchan;      // audio chan 0 sample start address (in VRAM or TILE)
+        logic [15*AUDIO_NCHAN-1:0]          audio_len_nchan;        // audio chan 0 sample length in words
+`endif
+
+// convert flat port vectors into arrays
+`ifdef NO_MODULE_PORT_ARRAYS    // Yosys doesn't allow arrays in module ports
+        for (genvar i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+            // flatten port parameters
+            assign audio_vol_nchan[i*16+:16]            = audio_vol[i];
+            assign audio_period_nchan[i*15+:15]         = audio_period[i];
+            assign audio_tile_nchan[i]                  = audio_tile[i];
+            assign audio_start_nchan[i*xv::VRAM_W+:16]  = audio_start[i];
+            assign audio_len_nchan[i*15+:15]            = audio_len[i];
+        end
+`endif
         // audio channel mixer
-        audio_mixer audio_mixer
+        audio_mixer #(
+            .AUDIO_NCHAN(AUDIO_NCHAN)
+        ) audio_mixer
         (
             .audio_enable_i(audio_enable),
             .audio_dma_start_i(end_of_line),
-            .audio_0_vol_i(audio_0_vol),
-            .audio_0_period_i(audio_0_period),
-            .audio_0_start_i(audio_0_start),
-            .audio_0_len_i(audio_0_len),
-            .audio_0_fetch_o(audio_0_fetch),
-            .audio_0_addr_o(audio_0_addr),
-            .audio_0_word_i(audio_0_word),
+
+`ifndef NO_MODULE_PORT_ARRAYS   // Yosys doesn't allow arrays in module ports
+            .audio_vol_i(audio_vol),
+            .audio_period_i(audio_period),
+            .audio_tile_i(audio_tile),
+            .audio_start_i(audio_start),
+            .audio_len_i(audio_len),
+`else
+            .audio_vol_nchan_i(audio_vol_nchan),
+            .audio_period_nchan_i(audio_period_nchan),
+            .audio_tile_nchan_i(audio_tile_nchan),
+            .audio_start_nchan_i(audio_start_nchan),
+            .audio_len_nchan_i(audio_len_nchan),
+`endif
+            .audio_fetch_o(audio_fetch),
+            .audio_ack_i(audio_ack),
+            .audio_tile_o(audio_tilemem),
+            .audio_addr_o(audio_addr),
+            .audio_word_i(audio_word),
+
             .pdm_l_o(audio_pdm_l_o),
             .pdm_r_o(audio_pdm_r_o),
+
             .reset_i(reset_i),
             .clk(clk)
         );
-
-    always_ff @(posedge clk) begin
-        if (reset_i) begin
-            audio_0_vol         <= '0;
-            audio_0_period      <= '0;
-            audio_0_tile        <= '0;
-            audio_0_start       <= '0;
-            audio_0_len         <= '0;
-        end else begin
-            if (vgen_reg_wr_en_i) begin
-                case (7'(vgen_reg_num_i))
-                    xv::XR_AUD0_VOL: begin
-                        audio_0_vol     <= vgen_reg_data_i;
-                    end
-                    xv::XR_AUD0_PERIOD: begin
-                        audio_0_period  <= vgen_reg_data_i[14:0];
-                    end
-                    xv::XR_AUD0_START: begin
-                        audio_0_start   <= vgen_reg_data_i;
-                    end
-                    xv::XR_AUD0_LENGTH: begin
-                        audio_0_tile    <= vgen_reg_data_i[15];
-                        audio_0_len     <= vgen_reg_data_i[14:0];
-                    end
-                    default: begin
-                    end
-                endcase
-            end
-        end
-    end
-
     end else begin
         assign  audio_pdm_l_o   = 1'b0;
         assign  audio_pdm_r_o   = 1'b0;
-        assign  audio_0_fetch   = 1'b0;
-        assign  audio_0_addr    = '0;
+        assign  audio_fetch     = 1'b0;
+        assign  audio_addr      = '0;
+        assign  audio_tilemem   = 1'b0;
 
         logic   audio_unused;
-        assign  audio_unused = &{1'b0, audio_enable, audio_0_ack, audio_0_vol, audio_0_period, audio_0_start, audio_0_len, audio_0_word };
+        assign  audio_unused = &{ 1'b0, audio_enable, audio_ack, audio_vol, audio_period, audio_start, audio_len, audio_word };
+    end
+endgenerate
+
+generate
+    for (genvar i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        always_ff @(posedge clk) begin
+            if (reset_i) begin
+                audio_vol[i]    <= '0;
+                audio_period[i] <= '0;
+                audio_tile[i]   <= '0;
+                audio_start[i]  <= '0;
+                audio_len[i]    <= '0;
+            end else begin
+                if (vgen_reg_wr_en_i) begin
+                    case (7'(vgen_reg_num_i))
+                        xv::XR_AUD0_VOL+(i*4):
+                            audio_vol[i]                    <= vgen_reg_data_i;
+                        xv::XR_AUD0_PERIOD+(i*4):
+                            audio_period[i]                 <= vgen_reg_data_i[14:0];
+                        xv::XR_AUD0_START+(i*4):
+                            audio_start[i]                  <= vgen_reg_data_i;
+                        xv::XR_AUD0_LENGTH+(i*4):
+                            { audio_tile[i], audio_len[i] } <= vgen_reg_data_i;
+                        default: ;
+                    endcase
+                end
+            end
+        end
     end
 endgenerate
 

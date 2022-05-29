@@ -35,6 +35,11 @@
 `define ENABLE_RW_DATA                  // enable 2nd VRAM RW port
 `define ENABLE_COPP                     // enable copper
 
+// Yosys does not like arrays in module ports (they need to be flattened/un-flattened)
+//`ifdef YOSYS
+`define NO_MODULE_PORT_ARRAYS
+//`endif
+
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
 

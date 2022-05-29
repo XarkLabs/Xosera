@@ -386,6 +386,9 @@ always_ff @(posedge clk) begin
         pf_initial_buf      <= 1'b0;
         pf_words_ready      <= 1'b0;
 
+        audio_ack           <= 1'b0;
+        audio_word          <= 16'h0000;
+
         vram_sel            <= 1'b0;
         tilemem_sel         <= 1'b0;
 

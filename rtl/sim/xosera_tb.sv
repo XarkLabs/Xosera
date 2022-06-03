@@ -267,36 +267,30 @@ always begin
 
 // audio test
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_ADDR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_ADDR, 8'h00);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_INCR, 16'h0001);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0000);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_WR_INCR, 8'h00);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_WR_INCR, 8'h00);
+    inject_file("../testdata/raw/ramptable.raw", XM_DATA);
 
-    # 50ns;
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD0_VOL));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h8080);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, 8'h20);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, 8'hE0);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD0_PERIOD));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h1000);
 
-    # 50ns;
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD0_START));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0000);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, 8'h22);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, 8'hDE);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD0_LENGTH));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h00FF);
 
-    # 50ns;
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD_CTRL));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0001);
 
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, 8'h24);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, 8'hDC);
+// end audio test
 
-    # 50ns;
-
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, 8'h28);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, 8'hDA);
-
-    # 50ns;
-
-    #(M68K_PERIOD * 4)  write_reg(1'b0, XM_DATA, 8'h2A);
-    #(M68K_PERIOD * 4)  write_reg(1'b1, XM_DATA, 8'hD8);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_PA_GFX_CTRL));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0040);
 
 `ifdef LOAD_MONOBM
     while (xosera.video_gen.end_of_frame != 1'b1) begin

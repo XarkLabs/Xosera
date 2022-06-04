@@ -61,3 +61,6 @@ utils/image_pal
 **/*.swp
 
 utils/true_color_hack
+.vscode/configurationCache.log
+.vscode/dryrun.log
+.vscode/targets.log

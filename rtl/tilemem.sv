@@ -35,7 +35,7 @@ module tilemem
 )
 (
     input  wire logic         clk,
-    input  wire logic              rd_en_i,
+//    input  wire logic              rd_en_i,
     input  wire logic [AWIDTH-1:0] rd_address_i,
     output      word_t             rd_data_o,
     input  wire logic              wr_clk,
@@ -78,9 +78,10 @@ always_ff @(posedge wr_clk) begin
 end
 
 always_ff @(posedge clk) begin
-    if (rd_en_i) begin
+// TODO: Add read write conflict "don't care" logic (when Yosys is ready)
+//    if (rd_en_i) begin
         rd_data_o <= bram[rd_address_i];
-    end
+//    end
 end
 
 endmodule

@@ -162,12 +162,16 @@ logic           audio_enable;
 
 logic           audio_0_fetch;
 word_t          audio_0_vol;                    // audio 0 L+R 8-bit volume/pan
-logic [14:0]    audio_0_period;                   // audio 0 playback rate (TBD)
+logic           audio_0_restart;                // audio 0 force resttart (high bit of period)
+logic [14:0]    audio_0_period;                 // audio 0 playback rate (TBD)
 addr_t          audio_0_start;                  // audio 0 start address
 logic           audio_0_tile;                   // audio 0 memory (0=VRAM, 1=TILE)
 logic [14:0]    audio_0_len;                    // audio 0 length in words
 addr_t          audio_0_addr;                   // audio 0 current address
 word_t          audio_0_word;                   // audio 0 current output
+logic           audio_0_pending;                // audio 0 reload pending (set when start/len set, but not chan not restarted)
+logic           audio_0_reload;                 // audio 0 strobe when chan start/addr reloaded
+
 
 assign pb_stall = (pa_vram_sel && pb_vram_sel) || (pa_tile_sel && pb_tile_sel);
 assign vram_sel_o       = pa_vram_sel ? pa_vram_sel  : pb_vram_sel;
@@ -388,10 +392,12 @@ always_ff @(posedge clk) begin
 `endif
 
         audio_0_vol         <= '0;
+        audio_0_restart     <= 1'b0;
         audio_0_period      <= '0;
         audio_0_tile        <= '0;
         audio_0_start       <= '0;
         audio_0_len         <= '0;
+        audio_0_pending     <= '0;
 
 `ifndef SYNTHESIS
         pa_blank            <= 1'b0;            // don't blank playfield A in simulation
@@ -408,6 +414,12 @@ always_ff @(posedge clk) begin
 `ifdef ENABLE_COPP
         copp_reg_wr_o       <= 1'b0;
 `endif
+        audio_0_restart     <= 1'b0;
+
+        if (audio_0_reload) begin
+            audio_0_pending <= 1'b0;
+        end
+
         // video register write
         if (vgen_reg_wr_en_i) begin
             case ({1'b0, vgen_reg_num_i})
@@ -427,14 +439,17 @@ always_ff @(posedge clk) begin
                     audio_0_vol     <= vgen_reg_data_i;
                 end
                 xv::XR_AUD0_PERIOD: begin
+                    audio_0_restart <= vgen_reg_data_i[15];
                     audio_0_period  <= vgen_reg_data_i[14:0];
                 end
                 xv::XR_AUD0_START: begin
                     audio_0_start   <= vgen_reg_data_i;
+                    audio_0_pending <= 1'b1;
                 end
                 xv::XR_AUD0_LENGTH: begin
                     audio_0_tile    <= vgen_reg_data_i[15];
                     audio_0_len     <= vgen_reg_data_i[14:0];
+                    audio_0_pending <= 1'b1;
                 end
                 xv::XR_VID_LEFT: begin
                     vid_left        <= $bits(vid_left)'(vgen_reg_data_i);
@@ -531,7 +546,7 @@ end
 // video registers read
 always_comb begin
     case (vgen_reg_num_i[3:0])
-        xv::XR_VID_CTRL[3:0]:       rd_vid_regs = { border_color, 4'b0, intr_status_i };
+        xv::XR_VID_CTRL[3:0]:       rd_vid_regs = { border_color, 3'b0, audio_0_pending, intr_status_i };
 `ifdef ENABLE_COPP
         xv::XR_COPP_CTRL[3:0]:      rd_vid_regs = { copp_reg_data_o[15], 5'b0000, copp_reg_data_o[xv::COPP_W-1:0]};
 `endif
@@ -615,10 +630,12 @@ generate
             .audio_0_vol_i(audio_0_vol),
             .audio_0_period_i(audio_0_period),
             .audio_0_start_i(audio_0_start),
+            .audio_0_restart_i(audio_0_restart),
             .audio_0_len_i(audio_0_len),
             .audio_0_fetch_o(audio_0_fetch),
             .audio_0_addr_o(audio_0_addr),
             .audio_0_word_i(audio_0_word),
+            .audio_0_reload_o(audio_0_reload),
             .pdm_l_o(audio_pdm_l_o),
             .pdm_r_o(audio_pdm_r_o),
             .reset_i(reset_i),

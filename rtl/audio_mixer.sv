@@ -16,9 +16,11 @@ module audio_mixer(
     input       logic           audio_enable_i,
     input       logic           audio_dma_start_i,
     input  wire addr_t          audio_0_vol_i,                      // audio chan 0 L+R volume/pan
-    input  wire logic [14:0]    audio_0_period_i,                     // audio chan 0 playback rate
-    input  wire addr_t          audio_0_start_i,                     // audio chan 0 sample start address (in VRAM or TILE)
+    input  wire logic [14:0]    audio_0_period_i,                   // audio chan 0 playback rate
+    input  wire addr_t          audio_0_start_i,                    // audio chan 0 sample start address (in VRAM or TILE)
+    input  wire logic           audio_0_restart_i,                  // audio chan 0 force restart (high bit of LEN)
     input  wire logic [14:0]    audio_0_len_i,                      // audio chan 0 sample length in words
+    output      logic           audio_0_reload_o,                   // audio chan 0 has loaded start/addr
 
     output      logic           audio_0_fetch_o,
     output      addr_t          audio_0_addr_o,
@@ -108,7 +110,12 @@ always_ff @(posedge clk) begin
         chan0_length    <= '0;      // remaining length for sample data (bytes)
         chan0_period    <= '1;      // countdown for next sample load
         chan0_2nd       <= '0;
+
+        audio_0_reload_o <= 1'b0;
+
     end else begin
+
+        audio_0_reload_o <= 1'b0;
 
         if (chan0_fetch && chan0_2nd) begin
             chan0_fetch     <= 1'b0;
@@ -117,9 +124,10 @@ always_ff @(posedge clk) begin
             chan0_word0     <= audio_0_word_i;
             chan0_word0_ok  <= 1'b1;
 
-            if (chan0_restart) begin
+            if (chan0_restart || audio_0_restart_i) begin
                 chan0_addr    <= audio_0_start_i;
                 chan0_length  <= { 1'b0, audio_0_len_i };
+                audio_0_reload_o <= 1'b1;  // strobe for start/len reload
             end else begin
                 chan0_addr    <= chan0_addr + 1'b1;
                 chan0_length  <= chan0_length_n;

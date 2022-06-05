@@ -123,7 +123,9 @@ always_ff @(posedge clk) begin
             chan0_word1_ok  <= chan0_word0_ok;
             chan0_word0     <= audio_0_word_i;
             chan0_word0_ok  <= 1'b1;
+        end
 
+        if (audio_0_restart_i || chan0_fetch && chan0_2nd) begin
             if (chan0_restart || audio_0_restart_i) begin
                 chan0_addr    <= audio_0_start_i;
                 chan0_length  <= { 1'b0, audio_0_len_i };

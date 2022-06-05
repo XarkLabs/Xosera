@@ -170,6 +170,9 @@ logic [14:0]    audio_period[AUDIO_NCHAN];      // audio 0 playback rate (TBD)
 addr_t          audio_start[AUDIO_NCHAN];       // audio 0 start address
 logic           audio_tile[AUDIO_NCHAN];        // audio 0 memory type (0=VRAM, 1=TILE)
 logic [14:0]    audio_len[AUDIO_NCHAN];         // audio 0 length in words
+logic           audio_restart[AUDIO_NCHAN];     // audio 0 force restart strobe input
+logic           audio_reload[AUDIO_NCHAN];      // audio 0 start/length loaded strobe output
+logic           audio_pending[AUDIO_NCHAN];     // audio 0 start/length pending flag
 
 logic           audio_fetch;                    // audio DMA request signal
 logic           audio_ack;                      // audio DMA ack signal
@@ -557,7 +560,7 @@ always_comb begin
 `ifdef ENABLE_COPP
         4'(xv::XR_COPP_CTRL):       rd_vid_regs = { copp_reg_data_o[15], 15'(copp_reg_data_o[xv::COPP_W-1:0]) };
 `endif
-        4'(xv::XR_AUD_CTRL):        rd_vid_regs = { 15'b0, audio_enable };
+        4'(xv::XR_AUD_CTRL):        rd_vid_regs = { 11'b0, audio_pending[0], 3'b0, audio_enable };
         4'(xv::XR_VID_LEFT):        rd_vid_regs = 16'(vid_left);
         4'(xv::XR_VID_RIGHT):       rd_vid_regs = 16'(vid_right);
         4'(xv::XR_SCANLINE):        rd_vid_regs = 16'(v_count);
@@ -623,6 +626,8 @@ generate
         logic [AUDIO_NCHAN-1:0]             audio_tile_nchan;       // audio chan 0 sample memory (0=VRAM, 1=TILE)
         logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  audio_start_nchan;      // audio chan 0 sample start address (in VRAM or TILE)
         logic [15*AUDIO_NCHAN-1:0]          audio_len_nchan;        // audio chan 0 sample length in words
+        logic [AUDIO_NCHAN-1:0]             audio_restart_nchan;    // audio chan 0 sample memory (0=VRAM, 1=TILE)
+        logic [AUDIO_NCHAN-1:0]             audio_reload_nchan;     // audio chan 0 sample memory (0=VRAM, 1=TILE)
 `endif
 
 // convert flat port vectors into arrays
@@ -634,6 +639,8 @@ generate
             assign audio_tile_nchan[i]                  = audio_tile[i];
             assign audio_start_nchan[i*xv::VRAM_W+:16]  = audio_start[i];
             assign audio_len_nchan[i*15+:15]            = audio_len[i];
+            assign audio_restart_nchan[i]               = audio_restart[i];
+            assign audio_reload[i]                      = audio_reload_nchan[i];
         end
 `endif
         // audio channel mixer
@@ -650,12 +657,16 @@ generate
             .audio_tile_i(audio_tile),
             .audio_start_i(audio_start),
             .audio_len_i(audio_len),
+            .audio_restart_i(audio_restart),
+            .audio_reload_o(audio_reload),
 `else
             .audio_vol_nchan_i(audio_vol_nchan),
             .audio_period_nchan_i(audio_period_nchan),
             .audio_tile_nchan_i(audio_tile_nchan),
             .audio_start_nchan_i(audio_start_nchan),
             .audio_len_nchan_i(audio_len_nchan),
+            .audio_restart_nchan_i(audio_restart_nchan),
+            .audio_reload_nchan_o(audio_reload_nchan),
 `endif
             .audio_fetch_o(audio_fetch),
             .audio_ack_i(audio_ack),
@@ -690,17 +701,22 @@ generate
                 audio_tile[i]   <= '0;
                 audio_start[i]  <= '0;
                 audio_len[i]    <= '0;
+                audio_pending[i]<= '0;
             end else begin
+                if (audio_reload[i]) begin
+                    audio_pending[i]<= 1'b0;
+                end
                 if (vgen_reg_wr_en_i) begin
+                    audio_restart[i]    <= 1'b0;
                     case (7'(vgen_reg_num_i))
                         xv::XR_AUD0_VOL+(i*4):
-                            audio_vol[i]                    <= vgen_reg_data_i;
+                            audio_vol[i]                                        <= vgen_reg_data_i;
                         xv::XR_AUD0_PERIOD+(i*4):
-                            audio_period[i]                 <= vgen_reg_data_i[14:0];
+                            { audio_restart[i], audio_period[i] }               <= vgen_reg_data_i;
                         xv::XR_AUD0_START+(i*4):
-                            audio_start[i]                  <= vgen_reg_data_i;
+                            { audio_pending[i], audio_start[i] }                <= { 1'b1, vgen_reg_data_i };
                         xv::XR_AUD0_LENGTH+(i*4):
-                            { audio_tile[i], audio_len[i] } <= vgen_reg_data_i;
+                            { audio_pending[i], audio_tile[i], audio_len[i] }   <= { 1'b1, vgen_reg_data_i };
                         default: ;
                     endcase
                 end

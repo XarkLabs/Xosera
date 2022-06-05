@@ -917,7 +917,7 @@ uint16_t     BusInterface::test_data[32768] = {
     XREG_SETW(AUD0_LENGTH, 0x007F),        // sample length 128 words
     XREG_SETW(AUD0_VOL, 0x8040),
 
-    XREG_SETW(VID_CTRL, 0x0010),        // enable audio
+    XREG_SETW(VID_CTRL, 0x0010),            // enable audio
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
@@ -928,11 +928,11 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVSYNC(),
 
     XREG_SETW(AUD0_START, 0xFF00),         // sample start address
-    XREG_SETW(AUD0_LENGTH, 0x007F),        // sample length 128 words
+    XREG_SETW(AUD0_LENGTH, 0x007F),        // sample length 64 words
 
     REG_WAITVTOP(),
 
-    XREG_SETW(AUD0_PERIOD, 0x8000 | 801),        // sample period (very fast), force restart
+    XREG_SETW(AUD0_PERIOD, 0x8000 | 801),  // sample period (very fast + 1), force restart
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),

@@ -40,12 +40,12 @@
 module xosera_main#(
     parameter   EN_VID_PF_B             = 1,        // enable playfield B
     parameter   EN_BLEND                = 1,        // enable pf B blending (else overlay only)
-    parameter   EN_BLEND_ADDCLAMP       = 1,        // enable pf B clamped RGB blending
+    parameter   EN_BLEND_ADDCLAMP       = 1,        // TODO: enable pf B clamped RGB blending?
     parameter   EN_BLIT                 = 1,        // enable blit unit
     parameter   EN_BLIT_DECR_MODE       = 1,        // enable blit pointer decrementing
-    parameter   EN_BLIT_DECR_LSHIFT     = 1,        // enable blit left shift when decrementing
-    parameter   EN_AUDIO                = 1 //,        // enable audio output
-//    parameter   AUDIO_NCHAN             = 1         // number of audio channels
+    parameter   EN_BLIT_DECR_LSHIFT     = 1,        // TODO: enable blit left shift when decrementing?
+    parameter   EN_AUDIO                = 1,        // enable audio output
+    parameter   AUDIO_NCHAN             = 1         // number of audio channels
 )
 (
     input  wire logic         bus_cs_n_i,           // register select strobe (active low)
@@ -209,9 +209,8 @@ reg_interface reg_interface(
 //  video generation
 video_gen#(
     .EN_VID_PF_B(EN_VID_PF_B),
-    .EN_AUDIO(EN_AUDIO)
-    // ,
-    // .AUDIO_NCHAN(AUDIO_NCHAN)
+    .EN_AUDIO(EN_AUDIO),
+    .AUDIO_NCHAN(AUDIO_NCHAN)
 ) video_gen(
     .vgen_reg_wr_en_i(vgen_reg_wr_en),
     .vgen_reg_num_i(xr_regs_addr[5:0]),

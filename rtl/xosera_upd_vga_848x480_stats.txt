@@ -1,9 +1,9 @@
 === UPduino Xosera: PMOD_DIGILENT_VGA MODE_848x480
-Package: oss-cad-suite-linux-x64-20220518
-Yosys 0.17+16 (git sha1 06ef3f264, clang 10.0.0-4ubuntu1 -fPIC -Os)
-nextpnr-ice40 -- Next Generation Place and Route (Version nextpnr-0.3-25-g4ecbf6c6)
+Package: oss-cad-suite-darwin-x64-20220605
+Yosys 0.17+76 (git sha1 aa0b47c74, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
+nextpnr-ice40 -- Next Generation Place and Route (Version nextpnr-0.3-31-g997af6d7)
 Info: Device utilisation:
-Info: 	         ICESTORM_LC:  4766/ 5280    90%
+Info: 	         ICESTORM_LC:  4810/ 5280    91%
 Info: 	        ICESTORM_RAM:    30/   30   100%
 Info: 	               SB_IO:    36/   96    37%
 Info: 	               SB_GB:     8/    8   100%
@@ -12,4 +12,4 @@ Info: 	         SB_WARMBOOT:     1/    1   100%
 Info: 	        ICESTORM_DSP:     2/    8    25%
 Info: 	      ICESTORM_SPRAM:     4/    4   100%
 
-Info: Max frequency for clock 'pclk': 34.71 MHz (PASS at 33.77 MHz)
+Info: Max frequency for clock 'pclk': 34.61 MHz (PASS at 33.77 MHz)

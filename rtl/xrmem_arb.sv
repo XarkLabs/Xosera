@@ -61,7 +61,6 @@ module xrmem_arb#(
 );
 
 // internal COLORMEM signals
-logic                           color_rd_en;
 logic                           color_wr_en;
 logic [xv::COLOR_W-1:0]         colorA_addr;
 argb_t                          colorA_data_out ;
@@ -69,7 +68,6 @@ logic [xv::COLOR_W-1:0]         colorB_addr;
 argb_t                          colorB_data_out;
 
 // internal TILEMEM signals
-logic                           tile_rd_en;
 logic                           tile_wr_en;
 tile_addr_t                     tile_addr;
 tile_addr_t                     tile_addr_next;
@@ -78,7 +76,6 @@ word_t                          tile2_data_out;
 
 `ifdef ENABLE_COPP
 // internal COPPERMEM signals
-logic                           copp_rd_en;
 logic                           copp_wr_en;
 logic [xv::COPP_W-1:0]          copp_addr;
 logic [31:0]                    copp_data_out;
@@ -222,20 +219,17 @@ end
 // color mem read (vgen or reg XR memory)
 always_comb begin
     color_rd_ack_next   = 1'b0;
-    color_rd_en         = 1'b0;
     colorA_addr         = vgen_colorA_addr_i;
     if (EN_VID_PF_B) begin
         colorB_addr         = vgen_colorB_addr_i;
     end
     if (vgen_color_sel_i) begin
-        color_rd_en         = 1'b1;
         colorA_addr         = vgen_colorA_addr_i;
         if (EN_VID_PF_B) begin
             colorB_addr         = vgen_colorB_addr_i;
         end
     end else if (xr_sel_i & ~xr_ack_o) begin
         color_rd_ack_next   = xr_color_sel & ~xr_wr_i;;
-        color_rd_en         = xr_color_sel & ~xr_wr_i;;
         colorA_addr         = $bits(colorA_addr)'(xr_addr_i);
         if (EN_VID_PF_B) begin
             colorB_addr         = $bits(colorB_addr)'(xr_addr_i);
@@ -246,14 +240,11 @@ end
 // tile mem read (vgen or reg XR memory)
 always_comb begin
     tile_rd_ack_next    = 1'b0;
-    tile_rd_en          = 1'b0;
     tile_addr_next           = vgen_tile_addr_i;
     if (vgen_tile_sel_i) begin
-        tile_rd_en          = 1'b1;
         tile_addr_next      = vgen_tile_addr_i;
     end else if (xr_sel_i & ~xr_ack_o) begin
         tile_rd_ack_next    = xr_tile_sel & ~xr_wr_i;
-        tile_rd_en          = xr_tile_sel & ~xr_wr_i;
         tile_addr_next      = $bits(tile_addr_next)'(xr_addr_i);
     end
 end
@@ -262,14 +253,11 @@ end
 // copp mem read (copper or reg XR memory)
 always_comb begin
     copp_rd_ack_next    = 1'b0;
-    copp_rd_en          = 1'b0;
     copp_addr           = copp_prog_addr_i;
     if (copp_prog_sel_i) begin
-        copp_rd_en          = 1'b1;
         copp_addr           = copp_prog_addr_i;
     end else if (xr_sel_i & ~xr_ack_o) begin
         copp_rd_ack_next    = xr_copp_sel & ~xr_wr_i;;
-        copp_rd_en          = xr_copp_sel & ~xr_wr_i;;
         copp_addr           = xr_addr_i[xv::COPP_W:1];
     end
 end
@@ -295,7 +283,6 @@ colormem #(
     .PLAYFIELD("A")
     ) colormem(
     .clk(clk),
-    .rd_en_i(color_rd_en),
     .rd_address_i(colorA_addr),
     .rd_data_o(colorA_data_out),
     .wr_clk(clk),
@@ -312,7 +299,6 @@ generate
             .PLAYFIELD("B")
             ) colormem2(
             .clk(clk),
-            .rd_en_i(color_rd_en),
             .rd_address_i(colorB_addr),
             .rd_data_o(colorB_data_out),
             .wr_clk(clk),
@@ -336,7 +322,6 @@ tilemem #(
     )
     tilemem(
     .clk(clk),
-    .rd_en_i(tile_rd_en & ~tile_addr_next[xv::TILE_W-1]),
     .rd_address_i(tile_addr_next[xv::TILE_W-2:0]),
     .rd_data_o(tile_data_out),
     .wr_clk(clk),
@@ -351,7 +336,6 @@ tilemem #(
     )
     tile2mem(
     .clk(clk),
-    .rd_en_i(tile_rd_en & tile_addr_next[xv::TILE_W-1]),
     .rd_address_i(tile_addr_next[xv::TILE2_W-1:0]),
     .rd_data_o(tile2_data_out),
     .wr_clk(clk),
@@ -367,7 +351,6 @@ coppermem #(
     .ODDWORD(0)
     ) coppermem_e(
     .clk(clk),
-    .rd_en_i(copp_rd_en),
     .rd_address_i(copp_addr),
     .rd_data_o(copp_data_out[31:16]),
     .wr_clk(clk),
@@ -382,7 +365,6 @@ coppermem #(
     .ODDWORD(1)
     ) coppermem_o(
     .clk(clk),
-    .rd_en_i(copp_rd_en),
     .rd_address_i(copp_addr),
     .rd_data_o(copp_data_out[15:0]),
     .wr_clk(clk),

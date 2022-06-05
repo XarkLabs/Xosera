@@ -18,14 +18,13 @@ module coppermem
         parameter   ODDWORD = 0
     )
     (
-           input  wire logic                clk,
-           input  wire logic                rd_en_i,
            input  wire logic [AWIDTH-1:0]   rd_address_i,
            output      word_t               rd_data_o,
            input  wire logic                wr_clk,
            input  wire logic                wr_en_i,
            input  wire logic [AWIDTH-1:0]   wr_address_i,
-           input  wire word_t               wr_data_i
+           input  wire word_t               wr_data_i,
+           input  wire logic                clk
     );
 
 // Note this is only half of copper mem - there are two
@@ -98,9 +97,8 @@ always_ff @(posedge wr_clk) begin
 end
 
 always_ff @(posedge clk) begin
-    if (rd_en_i) begin
-        rd_data_o <= bram[rd_address_i];
-    end
+    rd_data_o <= bram[rd_address_i];
+    // TODO: add read vs write "don't care"
 end
 
 endmodule

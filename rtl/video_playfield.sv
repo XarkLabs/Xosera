@@ -392,10 +392,20 @@ always_ff @(posedge clk) begin
         vram_sel            <= 1'b0;
         tilemem_sel         <= 1'b0;
 
+        pf_initial_buf      <= 1'b0;
         pf_pixels_buf_full  <= 1'b0;            // flag when pf_pixels_buf is empty (continue fetching)
         pf_pixels_buf_hrev  <= 1'b0;            // flag to horizontally reverse pf_pixels_buf
         pf_pixels_buf       <= 64'h00000000;    // next 8 8-bpp pixels to scan out
         pf_pixels           <= 64'h00000000;    // 8 8-bpp pixels currently scanning out
+
+        pf_h_frac_count     <= '0;
+        pf_v_frac_count     <= '0;
+        pf_h_count          <= '0;
+        pf_v_count          <= '0;
+        pf_tile_x           <= '0;
+        pf_tile_y           <= '0;
+        pf_line_start       <= '0;
+
     end else begin
 
         // fetch FSM clocked process

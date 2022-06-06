@@ -292,29 +292,27 @@ colormem #(
 );
 
 // playfield B color lookup RAM
-generate
-    if (EN_VID_PF_B) begin : opt_PF_B_COLOR
-        colormem #(
-            .AWIDTH(xv::COLOR_W),
-            .PLAYFIELD("B")
-            ) colormem2(
-            .clk(clk),
-            .rd_address_i(colorB_addr),
-            .rd_data_o(colorB_data_out),
-            .wr_clk(clk),
-            .wr_en_i(color_wr_en & xr_addr[xv::COLOR_W]),
-            .wr_address_i(xr_addr[xv::COLOR_W-1:0]),
-            .wr_data_i(xr_write_data)
-        );
-    end else begin : no_PF_B_COLOR
-        logic unused_pf_b;
-        assign unused_pf_b = &{1'b0,
-            colorB_addr
-        };
+if (EN_VID_PF_B) begin : opt_PF_B_COLOR
+    colormem #(
+        .AWIDTH(xv::COLOR_W),
+        .PLAYFIELD("B")
+        ) colormem2(
+        .clk(clk),
+        .rd_address_i(colorB_addr),
+        .rd_data_o(colorB_data_out),
+        .wr_clk(clk),
+        .wr_en_i(color_wr_en & xr_addr[xv::COLOR_W]),
+        .wr_address_i(xr_addr[xv::COLOR_W-1:0]),
+        .wr_data_i(xr_write_data)
+    );
+end else begin : no_PF_B_COLOR
+    logic unused_pf_b;
+    assign unused_pf_b = &{1'b0,
+        colorB_addr
+    };
 
-        assign colorB_data_out = '0;
-    end
-endgenerate
+    assign colorB_data_out = '0;
+end
 
 // tile RAM
 tilemem #(

@@ -99,7 +99,7 @@ always_ff @(posedge clk) begin
 
         // blit register write
         if (xreg_wr_en_i) begin
-            case ({ 2'b10, xreg_num_i })
+            case ({ xv::XR_BLIT_CTRL[6:4], xreg_num_i })
                 xv::XR_BLIT_CTRL: begin
                     xreg_ctrl_transp_T  <= xreg_data_i[15:8];
                     xreg_ctrl_transp_8b <= xreg_data_i[5];
@@ -188,40 +188,36 @@ word_t      last_B;         // last B word save
 word_t      last_word;      // last word to shift in
 word_t      shift_out;      // word 0 to 3 nibble rotated ()
 
-generate
-    if (EN_BLIT_DECR_LSHIFT) begin : opt_LSHIFT
-        always_comb begin
-            case ({ blit_ctrl_decrement, blit_shift_amount })
-                // right shift
-                3'b000:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
-                3'b001:   shift_out = {   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4]  };
-                3'b010:   shift_out = {   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4]  };
-                3'b011:   shift_out = {   last_word[ 8+:4],   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4]  };
-                // left shift (decrement)
-                3'b100:   shift_out = { blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4],   last_word[ 4+:4]  };
-                3'b101:   shift_out = { blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4]  };
-                3'b110:   shift_out = { blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4]  };
-                3'b111:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
-            endcase
-        end
+if (EN_BLIT_DECR_LSHIFT) begin : opt_LSHIFT
+    always_comb begin
+        case ({ blit_ctrl_decrement, blit_shift_amount })
+            // right shift
+            3'b000:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
+            3'b001:   shift_out = {   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4]  };
+            3'b010:   shift_out = {   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4]  };
+            3'b011:   shift_out = {   last_word[ 8+:4],   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4]  };
+            // left shift (decrement)
+            3'b100:   shift_out = { blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4],   last_word[ 4+:4]  };
+            3'b101:   shift_out = { blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4],   last_word[ 8+:4]  };
+            3'b110:   shift_out = { blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4],   last_word[12+:4]  };
+            3'b111:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
+        endcase
     end
-endgenerate
+end
 
-generate
-    if (!EN_BLIT_DECR_LSHIFT) begin : no_LSHIFT
-        logic unused_bits;
-        assign unused_bits = &{1'b0, last_word};
-        always_comb begin
-            case (blit_shift_amount)
-                // right shift
-                2'b00:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
-                2'b01:   shift_out = {   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4]  };
-                2'b10:   shift_out = {   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4]  };
-                2'b11:   shift_out = {   last_word[ 8+:4],   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4]  };
-            endcase
-        end
+if (!EN_BLIT_DECR_LSHIFT) begin : no_LSHIFT
+    logic unused_bits;
+    assign unused_bits = &{1'b0, last_word};
+    always_comb begin
+        case (blit_shift_amount)
+            // right shift
+            2'b00:   shift_out = { blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4], blit_data_i[ 0+:4]  };
+            2'b01:   shift_out = {   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4], blit_data_i[ 4+:4]  };
+            2'b10:   shift_out = {   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4], blit_data_i[ 8+:4]  };
+            2'b11:   shift_out = {   last_word[ 8+:4],   last_word[ 4+:4],   last_word[ 0+:4], blit_data_i[12+:4]  };
+        endcase
     end
-endgenerate
+end
 
 // logic op calculation
 

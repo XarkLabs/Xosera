@@ -67,19 +67,17 @@ always_comb bB      = 8'(colorB_xrgb_i[ 3:0]) * inv_alphaA;
 logic unused_bits;
 always_comb unused_bits = &{ 1'b0, colorA_xrgb_i, colorB_xrgb_i, rA, gA, bA, rB, gB, bB, EN_BLEND_ADDCLAMP || EN_BLEND ? 1'b0 : 1'b0 };
 
-//generate
-//    if (EN_BLEND) begin : opt_BLEND
-        // always_comb begin
-        //     // Conceptually, for alpha purposes A is the bottom "destination" surface,
-        //     // and B is "source" playfield blended on top, over it.
-        //     blend_result  = {   rA[3:0] + rB[3:0],
-        //                         gA[3:0] + gB[3:0],
-        //                         bA[3:0] + bB[3:0] };
-        // end
-    // end else begin
-    //     assign blend_result = (~colorA_xrgb_i[15] & colorB_xrgb_i[15]) ? colorB_xrgb_i[11:0] : colorA_xrgb_i[11:0];
+// if (EN_BLEND) begin : opt_BLEND
+    // always_comb begin
+    //     // Conceptually, for alpha purposes A is the bottom "destination" surface,
+    //     // and B is "source" playfield blended on top, over it.
+    //     blend_result  = {   rA[3:0] + rB[3:0],
+    //                         gA[3:0] + gB[3:0],
+    //                         bA[3:0] + bB[3:0] };
     // end
-//endgenerate
+// end else begin
+//     assign blend_result = (~colorA_xrgb_i[15] & colorB_xrgb_i[15]) ? colorB_xrgb_i[11:0] : colorA_xrgb_i[11:0];
+// end
 
 // color RAM lookup (delays video 1 cycle for BRAM)
 always_ff @(posedge clk) begin

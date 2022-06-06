@@ -143,20 +143,20 @@ typedef enum logic [6:0] {
     // Audio
     XR_AUD0_VOL     = 7'h20,            // (WO) // TODO: WIP
     XR_AUD0_PERIOD  = 7'h21,            // (WO) // TODO: WIP
-    XR_AUD0_START   = 7'h22,            // (WO) // TODO: WIP
-    XR_AUD0_LENGTH  = 7'h23,            // (WO) // TODO: WIP
+    XR_AUD0_LENGTH  = 7'h22,            // (WO) // TODO: WIP
+    XR_AUD0_START   = 7'h23,            // (WO) // TODO: WIP
     XR_AUD1_VOL     = 7'h24,            // (WO) // TODO: WIP
     XR_AUD1_PERIOD  = 7'h25,            // (WO) // TODO: WIP
-    XR_AUD1_START   = 7'h26,            // (WO) // TODO: WIP
-    XR_AUD1_LENGTH  = 7'h27,            // (WO) // TODO: WIP
+    XR_AUD1_LENGTH  = 7'h26,            // (WO) // TODO: WIP
+    XR_AUD1_START   = 7'h27,            // (WO) // TODO: WIP
     XR_AUD2_VOL     = 7'h28,            // (WO) // TODO: WIP
     XR_AUD2_PERIOD  = 7'h29,            // (WO) // TODO: WIP
-    XR_AUD2_START   = 7'h2A,            // (WO) // TODO: WIP
-    XR_AUD2_LENGTH  = 7'h2B,            // (WO) // TODO: WIP
+    XR_AUD2_LENGTH  = 7'h2A,            // (WO) // TODO: WIP
+    XR_AUD2_START   = 7'h2B,            // (WO) // TODO: WIP
     XR_AUD3_VOL     = 7'h2C,            // (WO) // TODO: WIP
     XR_AUD3_PERIOD  = 7'h2D,            // (WO) // TODO: WIP
-    XR_AUD3_START   = 7'h2E,            // (WO) // TODO: WIP
-    XR_AUD3_LENGTH  = 7'h2F,            // (WO) // TODO: WIP
+    XR_AUD3_LENGTH  = 7'h2E,            // (WO) // TODO: WIP
+    XR_AUD3_START   = 7'h2F,            // (WO) // TODO: WIP
     // Blitter Registers
     XR_BLIT_CTRL    = 7'h40,            // (WO) blit control (transparency control, logic op and op input flags)
     XR_BLIT_MOD_A   = 7'h41,            // (WO) blit line modulo added to SRC_A (XOR if A const)

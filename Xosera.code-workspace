@@ -35,6 +35,7 @@
 			"blits",
 			"Blitter",
 			"BRAM",
+			"BUFFSZ",
 			"bus_bytesel",
 			"bytesel",
 			"casm",

@@ -127,20 +127,20 @@
 // Audio Registers
 #define XR_AUD0_VOL    0x20        // (WO) // TODO: WIP
 #define XR_AUD0_PERIOD 0x21        // (WO) // TODO: WIP
-#define XR_AUD0_START  0x22        // (WO) // TODO: WIP
-#define XR_AUD0_LENGTH 0x23        // (WO) // TODO: WIP
+#define XR_AUD0_LENGTH 0x22        // (WO) // TODO: WIP
+#define XR_AUD0_START  0x23        // (WO) // TODO: WIP
 #define XR_AUD1_VOL    0x24        // (WO) // TODO: WIP
 #define XR_AUD1_PERIOD 0x25        // (WO) // TODO: WIP
-#define XR_AUD1_START  0x26        // (WO) // TODO: WIP
-#define XR_AUD1_LENGTH 0x27        // (WO) // TODO: WIP
+#define XR_AUD1_LENGTH 0x26        // (WO) // TODO: WIP
+#define XR_AUD1_START  0x27        // (WO) // TODO: WIP
 #define XR_AUD2_VOL    0x28        // (WO) // TODO: WIP
 #define XR_AUD2_PERIOD 0x29        // (WO) // TODO: WIP
-#define XR_AUD2_START  0x2A        // (WO) // TODO: WIP
-#define XR_AUD2_LENGTH 0x2B        // (WO) // TODO: WIP
+#define XR_AUD2_LENGTH 0x2A        // (WO) // TODO: WIP
+#define XR_AUD2_START  0x2B        // (WO) // TODO: WIP
 #define XR_AUD3_VOL    0x2C        // (WO) // TODO: WIP
 #define XR_AUD3_PERIOD 0x2D        // (WO) // TODO: WIP
-#define XR_AUD3_START  0x2E        // (WO) // TODO: WIP
-#define XR_AUD3_LENGTH 0x2F        // (WO) // TODO: WIP
+#define XR_AUD3_LENGTH 0x2E        // (WO) // TODO: WIP
+#define XR_AUD3_START  0x2F        // (WO) // TODO: WIP
 
 // Blitter Registers
 #define XR_BLIT_CTRL  0x40        // (R /W) blit control (transparency control, logic op and op input flags)

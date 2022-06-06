@@ -262,42 +262,40 @@ copper copper(
 `endif
 
 // blitter - blit block transfer unit
-generate
-    if (EN_BLIT) begin : opt_EN_BLIT
-        blitter2#(
-            .EN_BLIT_DECR_MODE(EN_BLIT_DECR_MODE),
-            .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT)
-        ) blitter(
-            .xreg_wr_en_i(blit_reg_wr_en),
-            .xreg_num_i(xr_regs_addr[3:0]),
-            .xreg_data_i(xr_regs_data_in),
-            .blit_busy_o(blit_busy),
-            .blit_full_o(blit_full),
-            .blit_done_intr_o(blit_intr),
-            .blit_vram_sel_o(blit_vram_sel),
-            .blit_vram_ack_i(blit_vram_ack),
-            .blit_wr_o(blit_wr),
-            .blit_wr_mask_o(blit_wr_mask),
-            .blit_addr_o(blit_vram_addr),
-            .blit_data_i(vram_data_out),
-            .blit_data_o(blit_vram_data),
-            .reset_i(reset_i),
-            .clk(clk)
-        );
-    end else begin
+if (EN_BLIT) begin : opt_EN_BLIT
+    blitter2#(
+        .EN_BLIT_DECR_MODE(EN_BLIT_DECR_MODE),
+        .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT)
+    ) blitter(
+        .xreg_wr_en_i(blit_reg_wr_en),
+        .xreg_num_i(xr_regs_addr[3:0]),
+        .xreg_data_i(xr_regs_data_in),
+        .blit_busy_o(blit_busy),
+        .blit_full_o(blit_full),
+        .blit_done_intr_o(blit_intr),
+        .blit_vram_sel_o(blit_vram_sel),
+        .blit_vram_ack_i(blit_vram_ack),
+        .blit_wr_o(blit_wr),
+        .blit_wr_mask_o(blit_wr_mask),
+        .blit_addr_o(blit_vram_addr),
+        .blit_data_i(vram_data_out),
+        .blit_data_o(blit_vram_data),
+        .reset_i(reset_i),
+        .clk(clk)
+    );
+end else begin
 
-        logic unused_blit;
-        assign unused_blit = &{1'b0, blit_vram_ack };
-        assign blit_vram_sel    = '0;
-        assign blit_wr          = '0;
-        assign blit_wr_mask     = '0;
-        assign blit_vram_addr   = '0;
-        assign blit_vram_data   = '0;
-        assign blit_busy        = '0;
-        assign blit_full        = '0;
-        assign blit_intr        = '0;
-    end
-endgenerate
+    logic unused_blit;
+    assign unused_blit = &{1'b0, blit_vram_ack };
+    assign blit_vram_sel    = '0;
+    assign blit_wr          = '0;
+    assign blit_wr_mask     = '0;
+    assign blit_vram_addr   = '0;
+    assign blit_vram_data   = '0;
+    assign blit_busy        = '0;
+    assign blit_full        = '0;
+    assign blit_intr        = '0;
+end
 
 // VRAM memory arbitration
 vram_arb #(
@@ -378,25 +376,23 @@ xrmem_arb#(
 );
 
 // video blending - alpha and other color belding between playfield A and B
-generate
-    if (EN_VID_PF_B) begin : opt_PF_B_BLEND
-        video_blend#(
-            .EN_BLEND(EN_BLEND),
-            .EN_BLEND_ADDCLAMP(EN_BLEND_ADDCLAMP)
-        ) video_blend(
-            .vsync_i(vsync),
-            .hsync_i(hsync),
-            .dv_de_i(dv_de),
-            .colorA_xrgb_i(colorA_xrgb),
-            .colorB_xrgb_i(colorB_xrgb),
-            .blend_rgb_o({ red_o, green_o, blue_o }),
-            .hsync_o(hsync_o),
-            .vsync_o(vsync_o),
-            .dv_de_o(dv_de_o),
-            .clk(clk)
-        );
-    end
-endgenerate
+if (EN_VID_PF_B) begin : opt_PF_B_BLEND
+    video_blend#(
+        .EN_BLEND(EN_BLEND),
+        .EN_BLEND_ADDCLAMP(EN_BLEND_ADDCLAMP)
+    ) video_blend(
+        .vsync_i(vsync),
+        .hsync_i(hsync),
+        .dv_de_i(dv_de),
+        .colorA_xrgb_i(colorA_xrgb),
+        .colorB_xrgb_i(colorB_xrgb),
+        .blend_rgb_o({ red_o, green_o, blue_o }),
+        .hsync_o(hsync_o),
+        .vsync_o(vsync_o),
+        .dv_de_o(dv_de_o),
+        .clk(clk)
+    );
+end
 
 // interrupt handling
 always_ff @(posedge clk) begin

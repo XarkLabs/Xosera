@@ -126,20 +126,7 @@ end
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        mix_state       <= AUD_MIX_0;
         fetch_state     <= AUD_DMA_0;
-
-`ifndef SYNTHESIS
-        output_l        <= '1;      // HACK: to force full scale display for analog signal view in GTKWave
-        output_r        <= '1;
-`else
-        output_l        <= '0;
-        output_r        <= '0;
-`endif
-        mix_l_temp      <= '0;
-        mix_r_temp      <= '0;
-        vol_l_temp      <= '0;
-        vol_r_temp      <= '0;
 
         audio_fetch_o   <= '0;
         audio_tile_o    <= '0;
@@ -238,25 +225,41 @@ always_comb begin
 end
 
 always_ff @(posedge clk) begin
-    case (mix_state)
-        AUD_MULT_0: begin
-            mix_l_temp      <= chan_val[0];
-            mix_r_temp      <= chan_val[0];
-            vol_l_temp      <= chan_vol_l[0];
-            vol_r_temp      <= chan_vol_r[0];
-            mix_state       <= AUD_MIX_0;
-        end
-        AUD_MIX_0: begin
-            // convert to unsigned for DAC
-            output_l        <= { ~mix_l_result[13], mix_l_result[12:6] };      // unsigned result for DAC
-            output_r        <= { ~mix_r_result[13], mix_r_result[12:6] };
+    if (reset_i) begin
+        mix_state       <= AUD_MIX_0;
 
-            mix_state       <= AUD_MULT_0;
-        end
-        default: begin
-            mix_state       <= AUD_MULT_0;
-        end
-    endcase
+        mix_l_temp      <= '0;
+        mix_r_temp      <= '0;
+        vol_l_temp      <= '0;
+        vol_r_temp      <= '0;
+`ifndef SYNTHESIS
+        output_l        <= '1;      // HACK: to force full scale display for analog signal view in GTKWave
+        output_r        <= '1;
+`else
+        output_l        <= '0;
+        output_r        <= '0;
+`endif
+    end else begin
+        case (mix_state)
+            AUD_MULT_0: begin
+                mix_l_temp      <= chan_val[0];
+                mix_r_temp      <= chan_val[0];
+                vol_l_temp      <= chan_vol_l[0];
+                vol_r_temp      <= chan_vol_r[0];
+                mix_state       <= AUD_MIX_0;
+            end
+            AUD_MIX_0: begin
+                // convert to unsigned for DAC
+                output_l        <= { ~mix_l_result[13], mix_l_result[12:6] };      // unsigned result for DAC
+                output_r        <= { ~mix_r_result[13], mix_r_result[12:6] };
+
+                mix_state       <= AUD_MULT_0;
+            end
+            default: begin
+                mix_state       <= AUD_MULT_0;
+            end
+        endcase
+    end
 end
 
 // audio left DAC outout

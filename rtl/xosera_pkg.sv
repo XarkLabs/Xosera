@@ -31,7 +31,7 @@
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
 
 // features that can be optionally disabled
-//`define ENABLE_TIMER_INTR
+`define ENABLE_TIMER_INTR
 `define ENABLE_RW_DATA                  // enable 2nd VRAM RW port
 `define ENABLE_COPP                     // enable copper
 
@@ -183,7 +183,7 @@ typedef enum integer {
     AUDIO_INTR      = 0
 } intr_bit_t;
 
-typedef enum logic [1:0] {
+typedef enum logic [1:0] {Í
     BPP_1_ATTR      = 2'b00,
     BPP_4           = 2'b01,
     BPP_8           = 2'b10,

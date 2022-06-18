@@ -183,7 +183,7 @@ typedef enum integer {
     AUDIO_INTR      = 0
 } intr_bit_t;
 
-typedef enum logic [1:0] {Í
+typedef enum logic [1:0] {
     BPP_1_ATTR      = 2'b00,
     BPP_4           = 2'b01,
     BPP_8           = 2'b10,

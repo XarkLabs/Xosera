@@ -27,14 +27,13 @@ logic [WIDTH:0] accumulator;
 // simple 1st order sigma-delta DAC
 // See https://www.fpga4fun.com/PWM_DAC_2.html
 // and http://retroramblings.net/?p=1686
-
-assign  pulse_o     = accumulator[WIDTH];
-
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        accumulator <= 9'b0;
+        accumulator <= '0;
+        pulse_o     <= '0;
     end else begin
         accumulator <= accumulator[WIDTH-1:0] + value_i;
+        pulse_o     <= accumulator[WIDTH];
     end
 end
 

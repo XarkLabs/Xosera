@@ -11,7 +11,11 @@
 			"files.trimTrailingWhitespace": false
 		},
 		"editor.acceptSuggestionOnCommitCharacter": false,
-		"editor.quickSuggestions": false,
+		"editor.quickSuggestions": {
+			"comments": "off",
+			"strings": "off",
+			"other": "off"
+		},
 		"editor.formatOnSave": true,
 		"editor.dragAndDrop": false,
 		"editor.codeActionsOnSave": {

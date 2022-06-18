@@ -41,6 +41,8 @@ module audio_mixer #(
     output      addr_t          audio_addr_o,
     input       word_t          audio_word_i,
 
+    output      logic           audio_interrupt_o,
+
     output      logic           pdm_l_o,
     output      logic           pdm_r_o,
 
@@ -83,7 +85,7 @@ word_t              chan_length_n[AUDIO_NCHAN];     // audio sample byte length 
 word_t              chan_period[AUDIO_NCHAN];       // audio frequency period counter (15=underflow flag)
 logic signed [7:0]  chan_val[AUDIO_NCHAN];          // current channel value sent to DAC
 word_t              chan_buff[AUDIO_NCHAN];         // DMA word buffer
-logic               chan_buff_ok[AUDIO_NCHAN];      // DMA buffer has data
+logic [1:0]         chan_buff_ok[AUDIO_NCHAN];      // DMA buffer has data
 logic signed [7:0]  chan_vol_l[AUDIO_NCHAN];
 logic signed [7:0]  chan_vol_r[AUDIO_NCHAN];
 /* verilator lint_on UNUSED */
@@ -126,28 +128,31 @@ end
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        fetch_state     <= AUD_DMA_0;
+        fetch_state         <= AUD_DMA_0;
 
-        audio_fetch_o   <= '0;
-        audio_tile_o    <= '0;
-        audio_addr_o    <= '0;
+        audio_fetch_o       <= '0;
+        audio_tile_o        <= '0;
+        audio_addr_o        <= '0;
+
+        audio_interrupt_o   <=  '0;
 
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-            chan_tile[i]    <= '0;          // current mem type
-            chan_addr[i]    <= '0;          // current address for sample data
-            chan_length[i]  <= '0;          // remaining length for sample data (bytes)
-            chan_period[i]  <= '0;          // countdown for next sample load
+            chan_tile[i]        <= '0;          // current mem type
+            chan_addr[i]        <= '0;          // current address for sample data
+            chan_length[i]      <= '0;          // remaining length for sample data (bytes)
+            chan_period[i]      <= '0;          // countdown for next sample load
 
-            chan_fetch[i]   <= '0;
-            chan_buff_ok[i] <= '0;
-            chan_2nd[i]     <= '0;
+            chan_fetch[i]       <= '0;
+            chan_buff_ok[i]     <= '0;
+            chan_2nd[i]         <= '0;
 
-            chan_val[i]     <= '0;
-            chan_buff[i]    <= '0;
+            chan_val[i]         <= '0;
+            chan_buff[i]        <= '0;
         end
 
     end else begin
         // loop over all audio channels
+        audio_interrupt_o   <= 1'b0;            // clear interrupt
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             audio_reload_o[i]   <= 1'b0;        // clear reload strobe
             // decrement period
@@ -163,7 +168,7 @@ always_ff @(posedge clk) begin
 `ifndef SYNTHESIS
                 chan_buff[i][7]     <= ~chan_buff[i][7];
 `endif
-                chan_buff_ok[i]     <= !chan_2nd[i];
+                chan_buff_ok[i]     <= { chan_buff_ok[i][0], 1'b0 };
 
                 // if 2nd sample of sample word, prepare sample address
                 if (!chan_2nd[i]) begin
@@ -173,7 +178,8 @@ always_ff @(posedge clk) begin
                         chan_tile[i]        <= audio_tile_i[i];
                         chan_addr[i]        <= audio_start_i[i];
                         chan_length[i]      <= { 1'b0, audio_len_i[i] };
-                        audio_reload_o[i]   <= 1'b1;                        // set reload strobe
+                        audio_reload_o[i]   <= 1'b1;            // set reload strobe
+                        audio_interrupt_o   <= 1'b1;            // signal interrupt
                     end else begin
                         // increment sample address, decrement remaining length
                         chan_addr[i]        <= chan_addr[i] + 1'b1;
@@ -191,7 +197,7 @@ always_ff @(posedge clk) begin
         case (fetch_state)
             // setup DMA fetch for channel (no effect unless chan_fetch set)
             AUD_DMA_0: begin
-                    if (chan_fetch[0] && !chan_buff_ok[0]) begin
+                    if (chan_fetch[0] && chan_buff_ok[0] == 2'b00) begin
                         audio_fetch_o   <= 1'b1;
                     end
                     audio_tile_o    <= chan_tile[0];
@@ -205,7 +211,7 @@ always_ff @(posedge clk) begin
                         audio_fetch_o           <= 1'b0;
                         chan_fetch[0]           <= 1'b0;
                         chan_buff[0][15:0]      <= audio_word_i;
-                        chan_buff_ok[0]         <= 1'b1;
+                        chan_buff_ok[0]         <= 2'b11;
                         fetch_state             <= AUD_DMA_0;
                     end
                 end else begin
@@ -252,7 +258,6 @@ always_ff @(posedge clk) begin
                 // convert to unsigned for DAC
                 output_l        <= { ~mix_l_result[13], mix_l_result[12:6] };      // unsigned result for DAC
                 output_r        <= { ~mix_r_result[13], mix_r_result[12:6] };
-
                 mix_state       <= AUD_MULT_0;
             end
             default: begin

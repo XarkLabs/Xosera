@@ -1970,12 +1970,19 @@ int    testsampsize;
 
 static void test_audio_sample(const char * name, int8_t * samp, int bytesize, int speed)
 {
-    xm_setw(WR_INCR, 0x0001);
-    xm_setw(WR_ADDR, 0x8000);
-    xm_setw(SYS_CTRL, 0x000F);
     xreg_setw(AUD0_VOL, 0x0000);           // set volume to 0%
     xreg_setw(AUD0_PERIOD, 0x0000);        // 1000 clocks per each sample byte
     xreg_setw(AUD0_LENGTH, 0x0000);        // 1000 clocks per each sample byte
+    xreg_setw(AUD_CTRL, 0x0000);           // enable audio DMA to start playing
+
+    xm_setw(SYS_CTRL, 0x000F);        // make sure no nibbles masked
+    xm_setw(WR_INCR, 0x0001);         // set write increment
+    xm_setw(WR_ADDR, 0x0000);         // set write address
+    xm_setw(DATA, 0);
+    xreg_setw(AUD_CTRL, 0x0001);        // enable audio DMA to start playing
+
+    xm_setw(WR_INCR, 0x0001);        // set write increment
+    xm_setw(WR_ADDR, 0x8000);        // set write address
 
     for (int i = 0; i < bytesize; i += 2)
     {
@@ -1984,8 +1991,8 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
     }
 
     uint16_t p  = speed;
-    uint8_t  lv = 0x80;
-    uint8_t  rv = 0x80;
+    uint8_t  lv = 0x40;
+    uint8_t  rv = 0x40;
 
     xr_printfxy(0, 0, "Xosera audio test\n%s: %d B\n", name, bytesize);
 
@@ -1999,11 +2006,10 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
 
     dprintf("Volume (128=1.0): L:%3d/R:%3d    Period (1/pclk): %5d", lv, rv, p);
 
+    xreg_setw(AUD0_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
     xreg_setw(AUD0_PERIOD, p);                         // 1000 clocks per each sample byte
     xreg_setw(AUD0_START, 0x8000);                     // address in VRAM
     xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
-    xreg_setw(AUD0_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
-    xreg_setw(AUD_CTRL, 0x0001);                       // enable audio DMA to start playing
 
     bool done = false;
 
@@ -2084,9 +2090,9 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
     }
 
     xreg_setw(AUD0_VOL, 0x0000);           // set volume to 0%
-    xreg_setw(AUD_CTRL, 0x0000);           // disable audio DMA
     xreg_setw(AUD0_PERIOD, 0x0000);        // 1000 clocks per each sample byte
     xreg_setw(AUD0_LENGTH, 0x0000);        // 1000 clocks per each sample byte
+    xreg_setw(AUD_CTRL, 0x0000);           // disable audio DMA
 
     dprintf("\rSample playback done.                                       \n");
     xr_printfxy(0, 0, "Xosera audio test\n\n");
@@ -2108,38 +2114,49 @@ void wait_scanline()
         ;
 }
 
-#define SILENCE_VADDR 0xffff
+#define SILENCE_VADDR 0xffff        // end of VRAM (or TILE)
+#define SILENCE_TILE  0x8000        // tilemem flag
 
 static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 {
-    xreg_setw(AUD0_START, vaddr);
-    xreg_setw(AUD0_LENGTH, (len / 2) - 1);
 
     uint32_t clk_hz = xreg_getw(VID_HSIZE) > 640 ? 33750000 : 25125000;
     uint16_t period = (clk_hz + rate - 1) / rate;
-    xreg_setw(AUD0_PERIOD, period);
 
-    wait_scanline();
 
-    xreg_setw(AUD0_START, SILENCE_VADDR);
-    xreg_setw(AUD0_LENGTH, 0);
+    xreg_setw(AUD0_START, vaddr);
+    xreg_setw(AUD0_LENGTH, (len / 2) - 1);
+    xreg_setw(AUD0_PERIOD, period | 0x8000);        // force instant sample start
+
+    dprintf("Initial AUD_CTRL = 0x%04x\n", xreg_getw(AUD_CTRL));
+
+    xreg_setw(AUD0_START, SILENCE_VADDR);                  // queue silence
+    xreg_setw(AUD0_LENGTH, SILENCE_TILE | (1 - 1));        // length 1 -1 and TILE flag
+
+    dprintf("Audio Started AUD_CTRL = 0x%04x\n", xreg_getw(AUD_CTRL));
+
+    // AUD_CTRL high byte = channel start/len load pending, low byte = channel enables
+    while ((xreg_getw(AUD_CTRL) & 0x0100) != 0)        // while silence is still pending, wait
+    {
+    }
+    dprintf("Audio Finished AUD_CTRL = 0x%04x\n", xreg_getw(AUD_CTRL));
 }
 
 static void upload_audio(void * memdata, uint16_t vaddr, int len)
 {
-    xm_setw(WR_INCR, 0x0001);
-    xm_setw(WR_ADDR, SILENCE_VADDR);
-    xm_setw(DATA, 0x0000);        // zero = silence sample
+    xm_setw(WR_XADDR, vaddr);
+    xm_setw(XDATA, 0);
     xreg_setw(AUD0_START, SILENCE_VADDR);
-    xreg_setw(AUD0_LENGTH, 0);
+    xreg_setw(AUD0_LENGTH, 0x8000 | 0);
+    xreg_setw(AUD0_VOL, 0x8080);
+    xreg_setw(AUD_CTRL, 0x0001);
+    xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, vaddr);
     uint16_t * wp = memdata;
     for (int i = len; i > 0; i -= 2)
     {
         xm_setw(DATA, *wp++);
     }
-    xreg_setw(AUD0_VOL, 0x8080);
-    xreg_setw(AUD_CTRL, 0x0001);
 }
 
 const char blurb[] =
@@ -2509,7 +2526,7 @@ void     xosera_test()
         play_sample(0x2000, xosera_audio_len, 8000);
 #endif
 
-        delay_check(DELAY_TIME * 10);
+        delay_check(DELAY_TIME * 5);
 
         if (use_sd)
         {

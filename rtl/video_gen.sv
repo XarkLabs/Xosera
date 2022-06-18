@@ -172,6 +172,7 @@ logic [14:0]    audio_len[AUDIO_NCHAN];         // audio length in words
 logic           audio_restart[AUDIO_NCHAN];     // audio force restart strobe input
 logic           audio_reload[AUDIO_NCHAN];      // audio start/length loaded strobe output
 logic           audio_pending[AUDIO_NCHAN];     // audio start/length pending flag
+logic           audio_interrupt;                // audio start/length pending flag
 
 logic           audio_fetch;                    // audio DMA request signal
 logic           audio_ack;                      // audio DMA ack signal
@@ -500,49 +501,60 @@ always_ff @(posedge clk) begin
                 end
                 6'(xv::XR_PA_UNUSED_17): begin
                 end
-                // playfield B
-                6'(xv::XR_PB_GFX_CTRL): begin
-                    pb_colorbase    <= vgen_reg_data_i[15:8];
-                    pb_blank        <= vgen_reg_data_i[7];
-                    pb_bitmap       <= vgen_reg_data_i[6];
-                    pb_bpp          <= vgen_reg_data_i[5:4];
-                    pb_h_repeat     <= vgen_reg_data_i[3:2];
-                    pb_v_repeat     <= vgen_reg_data_i[1:0];
-                end
-                6'(xv::XR_PB_TILE_CTRL): begin
-                    pb_tile_bank    <= vgen_reg_data_i[15:10];
-                    pb_disp_in_tile <= vgen_reg_data_i[9];
-                    pb_tile_in_vram <= vgen_reg_data_i[8];
-                    pb_tile_height  <= vgen_reg_data_i[3:0];
-                end
-                6'(xv::XR_PB_DISP_ADDR): begin
-                    pb_start_addr   <= vgen_reg_data_i;
-                end
-                6'(xv::XR_PB_LINE_LEN): begin
-                    pb_line_len     <= vgen_reg_data_i;
-                end
-                6'(xv::XR_PB_HV_SCROLL): begin
-                    pb_fine_hscroll <= vgen_reg_data_i[12:8];
-                    pb_fine_vscroll <= vgen_reg_data_i[5:0];
-                end
-                6'(xv::XR_PB_HV_FSCALE): begin
-                    pb_h_frac_repeat <= vgen_reg_data_i[6:4];
-                    pb_v_frac_repeat <= vgen_reg_data_i[2:0];
-                end
-                6'(xv::XR_PB_LINE_ADDR): begin
-                    pb_line_start_set <= 1'b1;
-                    line_set_addr   <= vgen_reg_data_i;
-                end
-                6'(xv::XR_PB_UNUSED_1F): begin
-                end
                 default: begin
                 end
             endcase
+
+            if (EN_VID_PF_B) begin
+                case (vgen_reg_num_i)
+                    // playfield B
+                    6'(xv::XR_PB_GFX_CTRL): begin
+                        pb_colorbase    <= vgen_reg_data_i[15:8];
+                        pb_blank        <= vgen_reg_data_i[7];
+                        pb_bitmap       <= vgen_reg_data_i[6];
+                        pb_bpp          <= vgen_reg_data_i[5:4];
+                        pb_h_repeat     <= vgen_reg_data_i[3:2];
+                        pb_v_repeat     <= vgen_reg_data_i[1:0];
+                    end
+                    6'(xv::XR_PB_TILE_CTRL): begin
+                        pb_tile_bank    <= vgen_reg_data_i[15:10];
+                        pb_disp_in_tile <= vgen_reg_data_i[9];
+                        pb_tile_in_vram <= vgen_reg_data_i[8];
+                        pb_tile_height  <= vgen_reg_data_i[3:0];
+                    end
+                    6'(xv::XR_PB_DISP_ADDR): begin
+                        pb_start_addr   <= vgen_reg_data_i;
+                    end
+                    6'(xv::XR_PB_LINE_LEN): begin
+                        pb_line_len     <= vgen_reg_data_i;
+                    end
+                    6'(xv::XR_PB_HV_SCROLL): begin
+                        pb_fine_hscroll <= vgen_reg_data_i[12:8];
+                        pb_fine_vscroll <= vgen_reg_data_i[5:0];
+                    end
+                    6'(xv::XR_PB_HV_FSCALE): begin
+                        pb_h_frac_repeat <= vgen_reg_data_i[6:4];
+                        pb_v_frac_repeat <= vgen_reg_data_i[2:0];
+                    end
+                    6'(xv::XR_PB_LINE_ADDR): begin
+                        pb_line_start_set <= 1'b1;
+                        line_set_addr   <= vgen_reg_data_i;
+                    end
+                    6'(xv::XR_PB_UNUSED_1F): begin
+                    end
+                    default: begin
+                    end
+                endcase
+            end
         end
 
         // vsync interrupt generation
         if (end_of_visible) begin
-            intr_signal_o[xv::VSYNC_INTR]  <= 1'b1;
+            intr_signal_o[xv::VSYNC_INTR]   <= 1'b1;
+        end
+
+        if (audio_interrupt) begin
+            intr_signal_o[xv::AUDIO_INTR]   <= 1'b1;
         end
     end
 end
@@ -565,8 +577,8 @@ always_comb begin
         4'(xv::XR_AUD_CTRL): begin
             rd_vid_regs     = '0;
             for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-                rd_vid_regs[8+i]    = audio_enable[i];
-                rd_vid_regs[i]      = audio_pending[i];
+                rd_vid_regs[8+i]  = audio_pending[i];
+                rd_vid_regs[i]    = audio_enable[i];
             end
         end
         4'(xv::XR_VID_LEFT):        rd_vid_regs = 16'(vid_left);
@@ -682,6 +694,8 @@ if (EN_AUDIO) begin : opt_AUDIO
         .audio_addr_o(audio_addr),
         .audio_word_i(audio_word),
 
+        .audio_interrupt_o(audio_interrupt),
+
         .pdm_l_o(audio_pdm_l_o),
         .pdm_r_o(audio_pdm_r_o),
 
@@ -694,6 +708,7 @@ end else begin
     assign  audio_fetch     = 1'b0;
     assign  audio_addr      = '0;
     assign  audio_tilemem   = 1'b0;
+    assign  audio_interrupt = 1'b0;
 
     logic   audio_unused;
     assign  audio_unused = &{ 1'b0, audio_enable, audio_ack, audio_vol, audio_period, audio_start, audio_len, audio_word };

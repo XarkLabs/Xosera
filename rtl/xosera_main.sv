@@ -392,6 +392,14 @@ if (EN_VID_PF_B) begin : opt_PF_B_BLEND
         .dv_de_o(dv_de_o),
         .clk(clk)
     );
+end else begin
+    assign hsync_o                      = hsync;
+    assign vsync_o                      = vsync;
+    assign dv_de_o                      = dv_de;
+    assign { red_o, green_o, blue_o }   = dv_de ? colorA_xrgb[11:0] : '0;
+
+    logic unused_pfb;
+    assign unused_pfb = &{1'b0, colorA_xrgb[15:12], colorB_xrgb };
 end
 
 // interrupt handling

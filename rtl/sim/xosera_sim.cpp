@@ -21,7 +21,7 @@
 #include "Vxosera_main_vram.h"
 #include "Vxosera_main_vram_arb.h"
 #include "Vxosera_main_xosera_main.h"
-#include "Vxosera_main_xrmem_arb.h"
+//#include "Vxosera_main_xrmem_arb.h"
 
 #define USE_FST 1
 #if USE_FST
@@ -848,7 +848,7 @@ uint16_t     BusInterface::test_data[32768] = {
 
 
     XREG_SETW(AUD0_VOL, 0x8040),
-    XREG_SETW(AUD0_PERIOD, 800),
+    XREG_SETW(AUD0_PERIOD, 3140),
     XREG_SETW(AUD0_LENGTH, 0x007F),
     XREG_SETW(AUD0_START, 0xFF00),
     REG_WAITHSYNC(),
@@ -863,12 +863,13 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
-    XREG_SETW(AUD0_PERIOD, 0x8000 | 800),
+    XREG_SETW(AUD0_PERIOD, 0x8000 | 3140),
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
 #endif
-
 
     REG_W(INT_CTRL, 0x8100),
 

@@ -24,7 +24,7 @@
 `define GITHASH 00000000                // unknown Git hash (not using Git)
 `endif
 
-`define VERSION 0_30                    // BCD version code (x.xx)
+`define VERSION 0_31                    // BCD version code (x.xx)
 
 //`define USE_HEXFONT                     // use hex font instead of default fonts
 //`define NO_TESTPATTERN                  // don't initialize VRAM with test pattern and fonts in simulation

@@ -1,23 +1,23 @@
 {
     "reg": [
         {
-            "bits": 13,
-            "name": "XR register number / 13-bit XR offset",
+            "bits": 14,
+            "name": "XR register number / XR memory offset",
             "type": 4,
             "attr": [
-                "video/config xregs",
+                "config/video xregs",
                 "video playfield A xregs",
                 "video playfield B xregs",
+                "audio control xregs",
                 "blitter unit xregs",
+                "5K-word tile/tilemap memory",
                 "256-word color A look-up memory",
                 "256-word color B look-up memory",
-                "5K-word tile/tilemap memory",
-                "2K-word copper program memory",
-                "unused (E000-FFFF)"
+                "2K-word copper program memory"
             ]
         },
         {
-            "bits": 3,
+            "bits": 2,
             "name": "region",
             "type": 2,
             "attr": [
@@ -25,11 +25,11 @@
                 "<tt>$0010-$0017</tt>",
                 "<tt>$0018-$001F</tt>",
                 "<tt>$0020-$002F</tt>",
+                "<tt>$0040-$004F</tt>",
+                "<tt>$4000-$53FF</tt>",
                 "<tt>$8000-$80FF</tt>",
                 "<tt>$8100-$81FF</tt>",
-                "<tt>$A000-$B3FF</tt>",
-                "<tt>$C000-$C7FF</tt>",
-                "<tt>$E000-$FFFF</tt>"
+                "<tt>$C000-$C7FF</tt>"
             ]
         }
     ],

@@ -1,0 +1,49 @@
+{
+    "reg": [
+        {
+            "bits": 4,
+            "name": "interrupt status",
+            "type": 1,
+            "attr": [
+                "[3] = vblank start",
+                "[2] = timer count",
+                "[1] = blit empty",
+                "[0] = audio reload"
+            ]
+        },
+        {
+            "bits": 4,
+            "type": 4
+        },
+        {
+            "bits": 4,
+            "name": "interrupt mask",
+            "type": 3,
+            "attr": [
+                "[11] = vblank start",
+                "[10] = timer count",
+                "[9] = blit empty",
+                "[8] = audio reload"
+            ]
+        },
+        {
+            "bits": 3,
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "reconfig",
+            "type": 1,
+            "attr": [
+                "reconfig",
+                "to low",
+                "two bits",
+                "of write",
+                "mask"
+            ]
+        },
+    ],
+    "config": {
+        "bits": 16
+    }
+}

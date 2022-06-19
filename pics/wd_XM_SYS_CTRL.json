@@ -3,97 +3,92 @@
         {
             "bits": 4,
             "name": "VRAM nibble write mask",
-            "type": 4,
+            "type": 1,
             "attr": [
-                "<tt>XM_DATA</tt>/<tt>XM_DATA_2</tt>",
+                "<tt>XM_DATA*</tt>/<tt>RW_DATA*</tt>",
                 "VRAM word nibble mask",
                 "<tt>0</tt>=mask write to nibble",
                 "<tt>1</tt>=allow write to nibble"
             ]
         },
         {
+            "bits": 4,
+            "type": 4
+        },
+        {
             "bits": 1,
             "name": "rwrdinc",
-            "type": 6,
+            "type": 2,
             "attr": [
                 "read of",
                 "<tt>RW_DATA</tt>",
                 "adds",
                 "<tt>RW_INCR</tt>",
-                "<tt>0=no</tt>",
-                "<tt>1=yes</tt>"
+                "<tt>0</tt> no",
+                "<tt>1</tt> yes"
+            ]
+        },
+        {
+            "bits": 1,
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "V-blank",
+            "type": 3,
+            "attr": [
+                "in",
+                "V-blank",
+                "<tt>0</tt> no",
+                "<tt>1</tt> yes"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "H-blank",
+            "type": 3,
+            "attr": [
+                "in",
+                "H-blank",
+                "<tt>0</tt> no",
+                "<tt>1</tt> yes"
+            ]
+        },
+        {
+            "bits": 1,
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "busy",
+            "type": 5,
+            "attr": [
+                "blit",
+                "working",
+                "<tt>0</tt> idle",
+                "<tt>1</tt> busy"
             ]
         },
         {
             "bits": 1,
             "name": "full",
-            "type": 3,
+            "type": 2,
             "attr": [
                 "blit",
-                "queue:",
+                "queue",
                 "<tt>0</tt> ready",
                 "<tt>1</tt> full"
             ]
         },
         {
             "bits": 1,
-            "name": "busy",
-            "type": 3,
-            "attr": [
-                "blit",
-                "working",
-                "<tt>0</tt> done",
-                "<tt>1</tt> busy"
-            ]
-        },
-        {
-            "bits": 1,
             "name": "wait",
-            "type": 6,
+            "type": 1,
             "attr": [
                 "memory",
                 "ready",
                 "<tt>0</tt> ready",
                 "<tt>1</tt> wait"
-            ]
-        },
-        {
-            "bits": 4,
-            "name": "interrupt enable mask",
-            "type": 5,
-            "attr": [
-                "<tt>0=mask</tt>, <tt>1=allow</tt>",
-                "[11]=vsync",
-                "[10]=copper",
-                "[9]=draw done",
-                "[8]=audio"
-            ]
-        },
-        {
-            "bits": 1,
-            "type": 1
-        },
-        {
-            "bits": 2,
-            "name": "boot config",
-            "type": 2,
-            "attr": [
-                "<tt>00=640x480</tt>",
-                "<tt>01=848x480</tt>",
-                "<tt>10=custom2 </tt>",
-                "<tt>11=custom3 </tt>"
-            ]
-        },
-        {
-            "bits": 1,
-            "name": "boot",
-            "type": 2,
-            "attr": [
-                "write",
-                "<tt>1</tt> to",
-                "reboot",
-                "FPGA",
-                "to config"
             ]
         }
     ],

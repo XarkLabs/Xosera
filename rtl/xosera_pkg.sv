@@ -106,10 +106,10 @@ typedef enum logic [15:0] {
 // XR read/write registers/memory regions
 typedef enum logic [6:0] {
     // Video Config / Copper XR Registers
-    XR_VID_CTRL     = 7'h00,            // (R /W) display control and border color index
+    XR_VID_CTRL     = 7'h00,            // (R /W) border color index
     XR_COPP_CTRL    = 7'h01,            // (R /W) display synchronized coprocessor control
-    XR_AUD_CTRL     = 7'h02,            // (- /-) TODO: audio channel control
-    XR_UNUSED_03    = 7'h03,            // (- /-) TODO: unused XR 03
+    XR_AUD_CTRL     = 7'h02,            // (R /W) audio channel control
+    XR_VID_INTR     = 7'h03,             // (WO  ) video interrupt trigger
     XR_VID_LEFT     = 7'h04,            // (R /W) left edge of active display window (typically 0)
     XR_VID_RIGHT    = 7'h05,            // (R /W) right edge of active display window +1 (typically 640 or 848)
     XR_UNUSED_06    = 7'h06,            // (- /-) TODO: unused XR 06
@@ -141,22 +141,22 @@ typedef enum logic [6:0] {
     XR_PB_LINE_ADDR = 7'h1E,            // (R /W) playfield B scanline start address (loaded at start of line)
     XR_PB_UNUSED_1F = 7'h1F,            // TODO: unused XR PB 1F
     // Audio
-    XR_AUD0_VOL     = 7'h20,            // (WO) // TODO: WIP
-    XR_AUD0_PERIOD  = 7'h21,            // (WO) // TODO: WIP
-    XR_AUD0_LENGTH  = 7'h22,            // (WO) // TODO: WIP
-    XR_AUD0_START   = 7'h23,            // (WO) // TODO: WIP
-    XR_AUD1_VOL     = 7'h24,            // (WO) // TODO: WIP
-    XR_AUD1_PERIOD  = 7'h25,            // (WO) // TODO: WIP
-    XR_AUD1_LENGTH  = 7'h26,            // (WO) // TODO: WIP
-    XR_AUD1_START   = 7'h27,            // (WO) // TODO: WIP
-    XR_AUD2_VOL     = 7'h28,            // (WO) // TODO: WIP
-    XR_AUD2_PERIOD  = 7'h29,            // (WO) // TODO: WIP
-    XR_AUD2_LENGTH  = 7'h2A,            // (WO) // TODO: WIP
-    XR_AUD2_START   = 7'h2B,            // (WO) // TODO: WIP
-    XR_AUD3_VOL     = 7'h2C,            // (WO) // TODO: WIP
-    XR_AUD3_PERIOD  = 7'h2D,            // (WO) // TODO: WIP
-    XR_AUD3_LENGTH  = 7'h2E,            // (WO) // TODO: WIP
-    XR_AUD3_START   = 7'h2F,            // (WO) // TODO: WIP
+    XR_AUD0_VOL     = 7'h20,            // (WO) left volume [15:8] / right volume [7:0] (0x80 is 1.0)
+    XR_AUD0_PERIOD  = 7'h21,            // (WO) sample period in pixel clocks, high bit RESTART flag
+    XR_AUD0_LENGTH  = 7'h22,            // (WO) sample word length-1, high bit TILE mem flag
+    XR_AUD0_START   = 7'h23,            // (WO) sample start address (VRAM or TILE mem as set in LENGTH)
+    XR_AUD1_VOL     = 7'h24,            // (WO) left volume [15:8] / right volume [7:0] (0x80 is 1.0)
+    XR_AUD1_PERIOD  = 7'h25,            // (WO) sample period in pixel clocks, high bit RESTART flag
+    XR_AUD1_LENGTH  = 7'h26,            // (WO) sample word length-1, high bit TILE mem flag
+    XR_AUD1_START   = 7'h27,            // (WO) sample start address (VRAM or TILE mem as set in LENGTH)
+    XR_AUD2_VOL     = 7'h28,            // (WO) left volume [15:8] / right volume [7:0] (0x80 is 1.0)
+    XR_AUD2_PERIOD  = 7'h29,            // (WO) sample period in pixel clocks, high bit RESTART flag
+    XR_AUD2_LENGTH  = 7'h2A,            // (WO) sample word length-1, high bit TILE mem flag
+    XR_AUD2_START   = 7'h2B,            // (WO) sample start address (VRAM or TILE mem as set in LENGTH)
+    XR_AUD3_VOL     = 7'h2C,            // (WO) left volume [15:8] / right volume [7:0] (0x80 is 1.0)
+    XR_AUD3_PERIOD  = 7'h2D,            // (WO) sample period in pixel clocks, high bit RESTART flag
+    XR_AUD3_LENGTH  = 7'h2E,            // (WO) sample word length-1, high bit TILE mem flag
+    XR_AUD3_START   = 7'h2F,            // (WO) sample start address (VRAM or TILE mem as set in LENGTH)
     // Blitter Registers
     XR_BLIT_CTRL    = 7'h40,            // (WO) blit control (transparency control, logic op and op input flags)
     XR_BLIT_MOD_A   = 7'h41,            // (WO) blit line modulo added to SRC_A (XOR if A const)
@@ -177,10 +177,10 @@ typedef enum logic [6:0] {
 } xr_register_t;
 
 typedef enum integer {
-    VSYNC_INTR      = 3,
-    TIMER_INTR      = 2,
-    DONE_INTR       = 1,
-    AUDIO_INTR      = 0
+    VIDEO_INTR      = 3,                // v-blank or copper
+    TIMER_INTR      = 2,                // timer match
+    BLIT_INTR       = 1,                // blitter ready
+    AUDIO_INTR      = 0                 // audio ready
 } intr_bit_t;
 
 typedef enum logic [1:0] {

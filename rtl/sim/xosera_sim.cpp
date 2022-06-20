@@ -451,7 +451,7 @@ const char * BusInterface::reg_name[] = {"XM_SYS_CTRL ",
 BusInterface bus;
 int          BusInterface::test_data_len    = 32767;
 uint16_t     BusInterface::test_data[32768] = {
-    // test data
+        // test data
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
@@ -851,8 +851,23 @@ uint16_t     BusInterface::test_data[32768] = {
     XREG_SETW(AUD0_PERIOD, 3140),
     XREG_SETW(AUD0_LENGTH, 0x007F),
     XREG_SETW(AUD0_START, 0xFF00),
+
+    XREG_SETW(AUD1_VOL, 0x8040),
+    XREG_SETW(AUD1_PERIOD, 3141),
+    XREG_SETW(AUD1_LENGTH, 0x007F),
+    XREG_SETW(AUD1_START, 0xFF00),
+
+    XREG_SETW(AUD2_VOL, 0x8040),
+    XREG_SETW(AUD2_PERIOD, 3142),
+    XREG_SETW(AUD2_LENGTH, 0x007F),
+    XREG_SETW(AUD2_START, 0xFF00),
+
+    XREG_SETW(AUD3_VOL, 0x8040),
+    XREG_SETW(AUD3_PERIOD, 3143),
+    XREG_SETW(AUD3_LENGTH, 0x007F),
+    XREG_SETW(AUD3_START, 0xFF00),
     REG_WAITHSYNC(),
-    XREG_SETW(AUD_CTRL, 0x0001),
+    XREG_SETW(AUD_CTRL, 0x000F),
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
@@ -867,6 +882,9 @@ uint16_t     BusInterface::test_data[32768] = {
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(AUD_CTRL, 0x0001),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 #endif

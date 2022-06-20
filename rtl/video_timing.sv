@@ -237,7 +237,7 @@ module video_timing #(
     parameter V_FRONTPORCH = xv::V_FRONT_PORCH,
     parameter V_SYNC = xv::V_SYNC_PULSE,
     parameter V_BACKPORCH = xv::V_BACK_PORCH
-) (
+)(
     output hres_t h_count_o,
     output vres_t v_count_o,
     output reg v_visible_o,

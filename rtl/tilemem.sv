@@ -29,11 +29,9 @@
 // `define FONT_FILE_3
 // `define FONT_ADDR_3
 
-module tilemem
-#(
+module tilemem #(
     parameter   AWIDTH   = 12
-)
-(
+)(
     input  wire logic [AWIDTH-1:0]  rd_address_i,
     output      word_t              rd_data_o,
     input  wire logic               wr_clk,

@@ -12,11 +12,10 @@
 
 `include "xosera_pkg.sv"
 
-module video_blend2#(
+module video_blend2 #(
     parameter EN_BLEND          = 1,// only overlap, no blending
     parameter EN_BLEND_ADDCLAMP = 1 // additive blend with clamp
-)
-(
+) (
     // video RGB inputs
     input wire  logic           vsync_i,
     input wire  logic           hsync_i,

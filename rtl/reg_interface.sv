@@ -11,7 +11,9 @@
 
 `include "xosera_pkg.sv"
 
-module reg_interface(
+module reg_interface #(
+        AUDIO_NCHAN     =   1
+)(
     // bus interface signals
     input  wire logic            bus_cs_n_i,        // register select strobe
     input  wire logic            bus_rd_nwr_i,      // 0 = write, 1 = read
@@ -44,6 +46,7 @@ module reg_interface(
     output      intr_t           intr_mask_o,       // enabled interrupts (which signal CPU interrupt)
     output      intr_t           intr_clear_o,      // pending interrupts CPU acknowledge (clear)
     input  wire intr_t           intr_status_i,     // pending interrupts CPU status read
+    input  wire logic [AUDIO_NCHAN-1:0] audio_ready_i, // audio channels that need new START
 
 `ifdef BUS_DEBUG_SIGNALS
     output      logic            bus_ack_o,         // ACK strobe for bus debug
@@ -142,7 +145,7 @@ always_comb begin
             rd_temp_word  = { mem_wait, blit_full_i, blit_busy_i, 1'b0, h_blank_i, v_blank_i, 1'b0, 5'b0, regs_wrmask_o };
 `endif
         xv::XM_INT_CTRL:
-            rd_temp_word  = { 4'b0, intr_mask, 4'b0, intr_status_i };
+            rd_temp_word  = { 4'b0, intr_mask, 4'(audio_ready_i), intr_status_i };
         xv::XM_TIMER:
             rd_temp_word  = { reg_timer[15:8], timer_latch_val };
         xv::XM_RD_XADDR:

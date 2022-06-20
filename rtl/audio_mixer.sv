@@ -14,7 +14,7 @@
 
 module audio_mixer #(
     parameter AUDIO_NCHAN = 1
-    )(
+)(
 `ifndef NO_MODULE_PORT_ARRAYS   // Yosys doesn't allow arrays in module ports
     input  wire logic           audio_enable_i[AUDIO_NCHAN],    // channel enabled
     input  wire logic [15:0]    audio_vol_i[AUDIO_NCHAN],       // channel L+R volume/pan
@@ -40,8 +40,6 @@ module audio_mixer #(
     output      logic           audio_tile_o,
     output      addr_t          audio_addr_o,
     input       word_t          audio_word_i,
-
-    output      logic           audio_interrupt_o,
 
     output      logic           pdm_l_o,
     output      logic           pdm_r_o,
@@ -134,8 +132,6 @@ always_ff @(posedge clk) begin
         audio_tile_o        <= '0;
         audio_addr_o        <= '0;
 
-        audio_interrupt_o   <=  '0;
-
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             chan_tile[i]        <= '0;          // current mem type
             chan_addr[i]        <= '0;          // current address for sample data
@@ -152,7 +148,6 @@ always_ff @(posedge clk) begin
 
     end else begin
         // loop over all audio channels
-        audio_interrupt_o   <= 1'b0;            // clear interrupt
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             audio_reload_o[i]   <= 1'b0;        // clear reload strobe
             // decrement period
@@ -179,7 +174,6 @@ always_ff @(posedge clk) begin
                         chan_addr[i]        <= audio_start_i[i];
                         chan_length[i]      <= { 1'b0, audio_len_i[i] };
                         audio_reload_o[i]   <= 1'b1;            // set reload strobe
-                        audio_interrupt_o   <= 1'b1;            // signal interrupt
                     end else begin
                         // increment sample address, decrement remaining length
                         chan_addr[i]        <= chan_addr[i] + 1'b1;
@@ -256,8 +250,16 @@ always_ff @(posedge clk) begin
             end
             AUD_MIX_0: begin
                 // convert to unsigned for DAC
-                output_l        <= { ~mix_l_result[13], mix_l_result[12:6] };      // unsigned result for DAC
-                output_r        <= { ~mix_r_result[13], mix_r_result[12:6] };
+                if (mix_l_result[14] != mix_l_result[15]) begin
+                    output_l        <= mix_l_result[15] ? 8'h00 : 8'hFF;
+                end else begin
+                    output_l        <= { ~mix_l_result[13], mix_l_result[12:6] };      // unsigned result for DAC
+                end
+                if (mix_r_result[14] != mix_r_result[15]) begin
+                    output_r        <= mix_r_result[15] ? 8'h00 : 8'hFF;
+                end else begin
+                    output_r        <= { ~mix_r_result[13], mix_r_result[12:6] };
+                end
                 mix_state       <= AUD_MULT_0;
             end
             default: begin
@@ -268,7 +270,7 @@ always_ff @(posedge clk) begin
 end
 
 // audio left DAC outout
-audio_dac#(
+audio_dac #(
     .WIDTH(8)
 ) audio_l_dac (
     .value_i(output_l),
@@ -277,7 +279,7 @@ audio_dac#(
     .clk(clk)
 );
 // audio right DAC outout
-audio_dac#(
+audio_dac #(
     .WIDTH(8)
 ) audio_r_dac (
     .value_i(output_r),

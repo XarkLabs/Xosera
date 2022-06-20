@@ -1,15 +1,16 @@
 {
     "reg": [
         {
-            "bits": 8,
-            "name": "border color A index",
+            "bits": 4,
+            "name": "audio channel enable",
             "type": 2,
             "attr": [
-                "color A index of border or blanked pixels"
+                "1 to enable audio channel",
+                "(if channel not disabled)"
             ]
         },
         {
-            "bits": 8,
+            "bits": 12,
             "name": "0",
             "type": 1
         }

@@ -5,16 +5,17 @@
             "name": "copper start address (in copper XR memory region)",
             "type": 4,
             "attr": [
-                "copper starting PC address for video frame"
+                "copper starting PC address for each video frame"
             ]
         },
         {
             "bits": 4,
+            "name": "0",
             "type": 1
         },
         {
-            "name": "Enable",
             "bits": 1,
+            "name": "Enable",
             "type": 5,
             "attr": [
                 "0 = off",

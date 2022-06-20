@@ -3,9 +3,9 @@
         {
             "bits": 4,
             "name": "VRAM nibble write mask",
-            "type": 1,
+            "type": 2,
             "attr": [
-                "<tt>XM_DATA*</tt>/<tt>RW_DATA*</tt>",
+                "<tt>XM_DATA*</tt>/<tt>XM_RW_DATA*</tt>",
                 "VRAM word nibble mask",
                 "<tt>0</tt>=mask write to nibble",
                 "<tt>1</tt>=allow write to nibble"
@@ -13,24 +13,26 @@
         },
         {
             "bits": 4,
-            "type": 4
+            "name": "0",
+            "type": 1
         },
         {
             "bits": 1,
-            "name": "rwrdinc",
-            "type": 2,
+            "name": "rdrwinc",
+            "type": 4,
             "attr": [
                 "read of",
-                "<tt>RW_DATA</tt>",
+                "<tt>XM_RW_DATA</tt>",
                 "adds",
-                "<tt>RW_INCR</tt>",
-                "<tt>0</tt> no",
-                "<tt>1</tt> yes"
+                "<tt>XM_RW_INCR</tt>",
+                "<tt>0</tt>=no",
+                "<tt>1</tt>=yes"
             ]
         },
         {
             "bits": 1,
-            "type": 4
+            "name": "0",
+            "type": 1
         },
         {
             "bits": 1,
@@ -39,56 +41,57 @@
             "attr": [
                 "in",
                 "V-blank",
-                "<tt>0</tt> no",
-                "<tt>1</tt> yes"
+                "<tt>0</tt>=no",
+                "<tt>1</tt>=yes"
             ]
         },
         {
             "bits": 1,
             "name": "H-blank",
-            "type": 3,
+            "type": 2,
             "attr": [
                 "in",
                 "H-blank",
-                "<tt>0</tt> no",
-                "<tt>1</tt> yes"
+                "<tt>0</tt>=no",
+                "<tt>1</tt>=yes"
             ]
         },
         {
             "bits": 1,
-            "type": 4
+            "name": "0",
+            "type": 1
         },
         {
             "bits": 1,
             "name": "busy",
-            "type": 5,
+            "type": 4,
             "attr": [
                 "blit",
                 "working",
-                "<tt>0</tt> idle",
-                "<tt>1</tt> busy"
+                "<tt>0</tt>=idle",
+                "<tt>1</tt>=busy"
             ]
         },
         {
             "bits": 1,
             "name": "full",
-            "type": 2,
+            "type": 3,
             "attr": [
                 "blit",
                 "queue",
-                "<tt>0</tt> ready",
-                "<tt>1</tt> full"
+                "<tt>0</tt>=ready",
+                "<tt>1</tt>=wait"
             ]
         },
         {
             "bits": 1,
             "name": "wait",
-            "type": 1,
+            "type": 2,
             "attr": [
                 "memory",
                 "ready",
-                "<tt>0</tt> ready",
-                "<tt>1</tt> wait"
+                "<tt>0</tt>=ready",
+                "<tt>1</tt>=wait"
             ]
         }
     ],

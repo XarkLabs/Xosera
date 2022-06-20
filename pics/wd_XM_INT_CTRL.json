@@ -3,37 +3,44 @@
         {
             "bits": 4,
             "name": "interrupt status",
-            "type": 1,
+            "type": 2,
             "attr": [
-                "[3] = vblank start",
-                "[2] = timer count",
+                "[3] = vblank/copper",
+                "[2] = timer match",
                 "[1] = blit empty",
                 "[0] = audio reload"
             ]
         },
         {
             "bits": 4,
-            "type": 4
+            "name": "audio channel ready",
+            "type": 3,
+            "attr": [
+                "1 = channel AUDn_START was",
+                "loaded, ready for next",
+                "AUDn_START to be set"
+            ]
         },
         {
             "bits": 4,
             "name": "interrupt mask",
-            "type": 3,
+            "type": 4,
             "attr": [
-                "[11] = vblank start",
-                "[10] = timer count",
+                "[11] = vblank/copper",
+                "[10] = timer match",
                 "[9] = blit empty",
                 "[8] = audio reload"
             ]
         },
         {
             "bits": 3,
-            "type": 4
+            "name": "0",
+            "type": 1
         },
         {
             "bits": 1,
             "name": "reconfig",
-            "type": 1,
+            "type": 2,
             "attr": [
                 "reconfig",
                 "to low",
@@ -41,7 +48,7 @@
                 "of write",
                 "mask"
             ]
-        },
+        }
     ],
     "config": {
         "bits": 16

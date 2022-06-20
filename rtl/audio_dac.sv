@@ -14,8 +14,7 @@
 
 module audio_dac #(
     parameter WIDTH = 8
-)
-(
+)(
     input wire  logic [WIDTH-1:0]   value_i,
     output      logic               pulse_o,
     input wire  logic               reset_i,

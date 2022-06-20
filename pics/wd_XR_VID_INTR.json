@@ -1,0 +1,15 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "0",
+            "type": 1,
+            "attr": [
+                "(write triggers video interrupt)"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

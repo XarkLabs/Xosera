@@ -12,10 +12,9 @@
 
 `include "xosera_pkg.sv"
 
-module xrmem_arb#(
+module xrmem_arb #(
     parameter EN_VID_PF_B       = 1
-)
-(
+)(
     // regs XR register/memory interface (read/write)
     input  wire logic                           xr_sel_i,
     output      logic                           xr_ack_o,
@@ -281,7 +280,7 @@ end
 colormem #(
     .AWIDTH(xv::COLOR_W),
     .PLAYFIELD("A")
-    ) colormem(
+) colormem_A(
     .clk(clk),
     .rd_address_i(colorA_addr),
     .rd_data_o(colorA_data_out),
@@ -296,7 +295,7 @@ if (EN_VID_PF_B) begin : opt_PF_B_COLOR
     colormem #(
         .AWIDTH(xv::COLOR_W),
         .PLAYFIELD("B")
-        ) colormem2(
+    ) colormem_B(
         .clk(clk),
         .rd_address_i(colorB_addr),
         .rd_data_o(colorB_data_out),
@@ -317,8 +316,7 @@ end
 // tile RAM
 tilemem #(
     .AWIDTH(xv::TILE_W-1)
-    )
-    tilemem(
+) tilemem(
     .clk(clk),
     .rd_address_i(tile_addr_next[xv::TILE_W-2:0]),
     .rd_data_o(tile_data_out),
@@ -331,8 +329,7 @@ tilemem #(
 // tile+sprite additional 1KB RAM
 tilemem #(
     .AWIDTH(xv::TILE2_W)
-    )
-    tile2mem(
+) tilemem_2(
     .clk(clk),
     .rd_address_i(tile_addr_next[xv::TILE2_W-1:0]),
     .rd_data_o(tile2_data_out),
@@ -347,7 +344,7 @@ tilemem #(
 coppermem #(
     .AWIDTH(xv::COPP_W),
     .ODDWORD(0)
-    ) coppermem_e(
+) coppermem_e(
     .clk(clk),
     .rd_address_i(copp_addr),
     .rd_data_o(copp_data_out[31:16]),

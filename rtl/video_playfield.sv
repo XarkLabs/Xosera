@@ -12,10 +12,9 @@
 
 `include "xosera_pkg.sv"
 
-module video_playfield#(
+module video_playfield #(
     parameter EN_AUDIO = 1
-)
-(
+)(
     // video control signals
     input  wire logic           stall_i,
     input  wire logic           mem_fetch_i,

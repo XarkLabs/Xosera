@@ -37,7 +37,7 @@
 
 `include "xosera_pkg.sv"
 
-module xosera_main#(
+module xosera_main #(
     parameter   EN_VID_PF_B             = 1,        // enable playfield B
     parameter   EN_BLEND                = 1,        // enable pf B blending (else overlay only)
     parameter   EN_BLEND_ADDCLAMP       = 1,        // TODO: enable pf B clamped RGB blending?
@@ -46,8 +46,7 @@ module xosera_main#(
     parameter   EN_BLIT_DECR_LSHIFT     = 1,        // TODO: enable blit left shift when decrementing?
     parameter   EN_AUDIO                = 1,        // enable audio output
     parameter   AUDIO_NCHAN             = 1         // number of audio channels
-)
-(
+)(
     input  wire logic         bus_cs_n_i,           // register select strobe (active low)
     input  wire logic         bus_rd_nwr_i,         // 0 = write, 1 = read
     input  wire logic [3:0]   bus_reg_num_i,        // register number
@@ -84,6 +83,9 @@ argb_t                  colorA_xrgb;        // pf A ARGB output
 
 color_t                 colorB_index;       // pf B color index
 argb_t                  colorB_xrgb;        // pf B ARGB output
+
+// audio management
+logic [AUDIO_NCHAN-1:0] audio_ready;
 
 //  VRAM read output data (for vgen, regs, blit)
 word_t                  vram_data_out;
@@ -145,10 +147,12 @@ word_t                  vgen_tile_data;
 // interrupt management signals
 intr_t                  intr_mask;          // true for each enabled interrupt
 intr_t                  intr_status;        // pending interrupt status
-intr_t                  vid_intr_signal;    // any interrupt signalled VID_CTRL
 intr_t                  intr_clear;         // interrupt cleared by CPU
-logic                   blit_intr;          // blit done interrupt
-logic                   timer_intr;         // blit done interrupt
+
+logic                   audio_intr;         // audio channel ready (bit AUDIO_INTR)
+logic                   blit_intr;          // blitter ready (bit BLIT_INTR)
+logic                   timer_intr;         // timer compare (bit TIMER_INTR)
+logic                   video_intr;         // video blank/copper (bit VIDEO_INTR)
 
 `ifdef BUS_DEBUG_SIGNALS
 logic                   dbug_cs_strobe;     // debug "ack" bus strobe
@@ -166,7 +170,9 @@ assign timer_intr       = 1'b0;             // timer compare interrupt
 `endif
 
 // register interface for CPU access
-reg_interface reg_interface(
+reg_interface #(
+    .AUDIO_NCHAN(AUDIO_NCHAN)
+) reg_interface(
     // bus
     .bus_cs_n_i(bus_cs_n_i),            // bus chip select
     .bus_rd_nwr_i(bus_rd_nwr_i),        // 0=write, 1=read
@@ -199,6 +205,7 @@ reg_interface reg_interface(
     .intr_mask_o(intr_mask),            // enabled interrupts from INT_CTRL high byte
     .intr_clear_o(intr_clear),          // strobe clears pending INT_CTRL interrupt
     .intr_status_i(intr_status),        // status read from pending INT_CTRL interrupt
+    .audio_ready_i(audio_ready),
 `ifdef BUS_DEBUG_SIGNALS
     .bus_ack_o(dbug_cs_strobe),         // debug "ack" bus strobe
 `endif
@@ -207,7 +214,7 @@ reg_interface reg_interface(
 );
 
 //  video generation
-video_gen#(
+video_gen #(
     .EN_VID_PF_B(EN_VID_PF_B),
     .EN_AUDIO(EN_AUDIO),
     .AUDIO_NCHAN(AUDIO_NCHAN)
@@ -216,7 +223,8 @@ video_gen#(
     .vgen_reg_num_i(xr_regs_addr[5:0]),
     .vgen_reg_data_i(xr_regs_data_in),
     .vgen_reg_data_o(xr_regs_data_out),
-    .intr_signal_o(vid_intr_signal),        // signaled by write to VID_CTRL
+    .video_intr_o(video_intr),          // signaled by write to XR_VID_INTR
+    .audio_intr_o(audio_intr),          // signaled by audio channel ready
     .vram_sel_o(vgen_vram_sel),
     .vram_addr_o(vgen_vram_addr),
     .vram_data_i(vram_data_out),
@@ -236,6 +244,7 @@ video_gen#(
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
 `endif
+    .audio_ready_o(audio_ready),
     .audio_pdm_l_o(audio_l_o),
     .audio_pdm_r_o(audio_r_o),
     .reset_i(reset_i),
@@ -263,7 +272,7 @@ copper copper(
 
 // blitter - blit block transfer unit
 if (EN_BLIT) begin : opt_EN_BLIT
-    blitter2#(
+    blitter2 #(
         .EN_BLIT_DECR_MODE(EN_BLIT_DECR_MODE),
         .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT)
     ) blitter(
@@ -328,7 +337,7 @@ vram_arb #(
 // XR memory arbitration (combines all other memory regions)
 assign vgen_reg_wr_en = xr_regs_wr_en && ~xr_regs_addr[6];    // video register (also handles audio)
 assign blit_reg_wr_en = xr_regs_wr_en && xr_regs_addr[6];     // blit reg register
-xrmem_arb#(
+xrmem_arb #(
     .EN_VID_PF_B(EN_VID_PF_B)
 ) xrmem_arb(
     // regs XR register/memory interface (read/write)
@@ -377,7 +386,7 @@ xrmem_arb#(
 
 // video blending - alpha and other color belding between playfield A and B
 if (EN_VID_PF_B) begin : opt_PF_B_BLEND
-    video_blend#(
+    video_blend #(
         .EN_BLEND(EN_BLEND),
         .EN_BLEND_ADDCLAMP(EN_BLEND_ADDCLAMP)
     ) video_blend(
@@ -409,13 +418,13 @@ always_ff @(posedge clk) begin
         intr_status <= 4'b0;
     end else begin
         // generate bus interrupt if signal bit set, not masked and not already set
-        if (((vid_intr_signal | { 1'b0, timer_intr, blit_intr, 1'b0 } ) & intr_mask & (~intr_status)) != 4'b0) begin
+        if (({ video_intr, timer_intr, blit_intr, audio_intr } & intr_mask & (~intr_status)) != 4'b0) begin
             bus_intr_o  <= 1'b1;
         end else begin
             bus_intr_o  <= 1'b0;
         end
         // remember interrupt signal and clear cleared interrupts
-        intr_status <= (intr_status | vid_intr_signal | { 1'b0, timer_intr, blit_intr, 1'b0 } ) & (~intr_clear);
+        intr_status <= intr_status | { video_intr, timer_intr, blit_intr, audio_intr } & (~intr_clear);
     end
 end
 

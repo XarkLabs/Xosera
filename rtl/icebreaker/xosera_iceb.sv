@@ -130,26 +130,26 @@ logic [7:0] bus_data_in;
 // NOTE: Use SB_IO DDR to help assure clock arrives a bit before signal
 //       Also register the other signals.
 SB_IO #(
-          .PIN_TYPE(6'b010000)   // PIN_OUTPUT_DDR
-      ) dvi_clk_sbio (
-          .PACKAGE_PIN(P1B2),
-          //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
-          .OUTPUT_CLK(pclk),
-          .D_OUT_0(1'b0),                   // output on rising edge
-          .D_OUT_1(1'b1)                    // output on falling edge
-      );
+    .PIN_TYPE(6'b010000)   // PIN_OUTPUT_DDR
+) dvi_clk_sbio (
+    .PACKAGE_PIN(P1B2),
+    //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
+    .OUTPUT_CLK(pclk),
+    .D_OUT_0(1'b0),                   // output on rising edge
+    .D_OUT_1(1'b1)                    // output on falling edge
+);
 
 SB_IO #(
-          .PIN_TYPE(6'b010100)   // PIN_OUTPUT_REGISTERED
-      ) dvi_signals_sbio [14: 0] (
-          .PACKAGE_PIN({P1B9, P1B10, P1B4, P1A1, P1A7, P1A2, P1A8, P1A3, P1A9, P1A4, P1A10, P1B1, P1B7, P1B8, P1B3}),
+    .PIN_TYPE(6'b010100)   // PIN_OUTPUT_REGISTERED
+) dvi_signals_sbio [14: 0] (
+    .PACKAGE_PIN({P1B9, P1B10, P1B4, P1A1, P1A7, P1A2, P1A8, P1A3, P1A9, P1A4, P1A10, P1B1, P1B7, P1B8, P1B3}),
           //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
-          .OUTPUT_CLK(pclk),
-          .D_OUT_0({dv_de, vga_vs, vga_hs, vga_r, vga_g, vga_b}),
-          /* verilator lint_off PINCONNECTEMPTY */
-          .D_OUT_1()
-          /* verilator lint_on PINCONNECTEMPTY */
-      );
+    .OUTPUT_CLK(pclk),
+    .D_OUT_0({dv_de, vga_vs, vga_hs, vga_r, vga_g, vga_b}),
+    /* verilator lint_off PINCONNECTEMPTY */
+    .D_OUT_1()
+    /* verilator lint_on PINCONNECTEMPTY */
+);
 `else
 // Generic VGA mode (for simulation)
 assign {P1A1, P1A2, P1A3, P1A4, P1A7, P1A8, P1A9, P1A10} =
@@ -191,22 +191,20 @@ logic pll_lock;              // indicates when PLL frequency has locked-on
 
 `ifdef SYNTHESIS
 /* verilator lint_off PINMISSING */
-SB_PLL40_PAD
-    #(
-        .DIVR(xv::PLL_DIVR),        // DIVR from video mode
-        .DIVF(xv::PLL_DIVF),        // DIVF from video mode
-        .DIVQ(xv::PLL_DIVQ),        // DIVQ from video mode
-        .FEEDBACK_PATH("SIMPLE"),
-        .FILTER_RANGE(3'b001),
-        .PLLOUT_SELECT("GENCLK")
-    )
-    pll_inst (
-        .LOCK(pll_lock),        // signal indicates PLL lock
-        .RESETB(1'b1),
-        .BYPASS(1'b0),
-        .PACKAGEPIN(CLK),       // input reference clock
-        .PLLOUTGLOBAL(pclk)     // PLL output clock (via global buffer)
-    );
+SB_PLL40_PAD #(
+    .DIVR(xv::PLL_DIVR),        // DIVR from video mode
+    .DIVF(xv::PLL_DIVF),        // DIVF from video mode
+    .DIVQ(xv::PLL_DIVQ),        // DIVQ from video mode
+    .FEEDBACK_PATH("SIMPLE"),
+    .FILTER_RANGE(3'b001),
+    .PLLOUT_SELECT("GENCLK")
+) pll_inst (
+    .LOCK(pll_lock),        // signal indicates PLL lock
+    .RESETB(1'b1),
+    .BYPASS(1'b0),
+    .PACKAGEPIN(CLK),       // input reference clock
+    .PLLOUTGLOBAL(pclk)     // PLL output clock (via global buffer)
+);
 /* verilator lint_on PINMISSING */
 `else
 // for simulation use 1:1 input clock (and testbench can simulate proper frequency)
@@ -264,6 +262,7 @@ xosera_main xosera_main(
             .reset_i(reset),
             .clk(pclk)
 );
+
 `ifdef SPI_INTERFACE
 // operate Xosera bus interface via SPI commands
 

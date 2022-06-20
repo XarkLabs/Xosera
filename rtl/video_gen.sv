@@ -23,14 +23,14 @@ module video_gen #(
     parameter   EN_VID_PF_B     = 1,
     parameter   EN_AUDIO        = 1,
     parameter   AUDIO_NCHAN     = 1
-)
-(
+)(
     // video registers and control
     input  wire logic           vgen_reg_wr_en_i,       // strobe to write internal config register number
     input  wire logic  [5:0]    vgen_reg_num_i,         // internal config register number (for reads)
     input  wire word_t          vgen_reg_data_i,        // data for internal config register
     output      word_t          vgen_reg_data_o,        // register/status data reads
-    output      intr_t          intr_signal_o,          // generate interrupt signal
+    output      logic           video_intr_o,           // vblank or copper interrupt signal
+    output      logic           audio_intr_o,           // audio ready interrupt signal
 `ifdef ENABLE_COPP
     // outputs for copper
     output      logic           copp_reg_wr_o,          // COPP_CTRL write strobe
@@ -53,6 +53,7 @@ module video_gen #(
     output      logic           vsync_o, hsync_o,       // video sync outputs
     output      logic           dv_de_o,                // video active signal (needed for HDMI)
     // audio outputs
+    output      logic [AUDIO_NCHAN-1:0] audio_ready_o, // audio start/length pending flag
     output      logic           audio_pdm_l_o,          // audio left channel PDM output
     output      logic           audio_pdm_r_o,          // audio left channel PDM output
     // standard signals
@@ -170,9 +171,7 @@ logic [14:0]    audio_period[AUDIO_NCHAN];      // audio playback rate
 logic           audio_tile[AUDIO_NCHAN];        // audio memory type (0=VRAM, 1=TILE)
 logic [14:0]    audio_len[AUDIO_NCHAN];         // audio length in words
 logic           audio_restart[AUDIO_NCHAN];     // audio force restart strobe input
-logic           audio_reload[AUDIO_NCHAN];      // audio start/length loaded strobe output
-logic           audio_pending[AUDIO_NCHAN];     // audio start/length pending flag
-logic           audio_interrupt;                // audio start/length pending flag
+logic           audio_reload[AUDIO_NCHAN];      // audio start loaded strobe output
 
 logic           audio_fetch;                    // audio DMA request signal
 logic           audio_ack;                      // audio DMA ack signal
@@ -273,8 +272,7 @@ if (EN_VID_PF_B) begin : opt_PF_B
 
     video_playfield #(
         .EN_AUDIO(0)
-    )
-    video_pf_b(
+    ) video_pf_b(
         .stall_i(pb_stall),
         .mem_fetch_i(mem_fetch & ~pb_blank),
         .mem_fetch_start_i(mem_fetch_h_start),
@@ -349,7 +347,7 @@ end
 // video config registers read/write
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        intr_signal_o       <= 4'b0;
+        video_intr_o        <= 1'b0;
         border_color        <= 8'h08;               // defaulting to dark grey to show operational
 
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
@@ -414,7 +412,8 @@ always_ff @(posedge clk) begin
         pb_line_start_set   <= 1'b0;            // indicates user line address set
         pb_gfx_ctrl_set     <= 1'b0;
 
-        intr_signal_o       <= 4'b0;
+        video_intr_o        <= end_of_visible;
+
 `ifdef ENABLE_COPP
         copp_reg_wr_o       <= 1'b0;
 `endif
@@ -422,14 +421,13 @@ always_ff @(posedge clk) begin
         if (vgen_reg_wr_en_i) begin
             case (vgen_reg_num_i)
                 6'(xv::XR_VID_CTRL): begin
-                    border_color    <= vgen_reg_data_i[15:8];
-                    intr_signal_o   <= vgen_reg_data_i[3:0];
+                    border_color    <= vgen_reg_data_i[7:0];
                 end
                 6'(xv::XR_COPP_CTRL): begin
 `ifdef ENABLE_COPP
-                    copp_reg_wr_o   <= 1'b1;
-                    copp_reg_data_o[15] <= vgen_reg_data_i[15];
-                    copp_reg_data_o[xv::COPP_W-1:0]  <= vgen_reg_data_i[xv::COPP_W-1:0];
+                    copp_reg_wr_o                   <= 1'b1;
+                    copp_reg_data_o[15]             <= vgen_reg_data_i[15];
+                    copp_reg_data_o[xv::COPP_W-1:0] <= vgen_reg_data_i[xv::COPP_W-1:0];
 `endif
                 end
                 6'(xv::XR_AUD_CTRL): begin
@@ -437,7 +435,8 @@ always_ff @(posedge clk) begin
                         audio_enable[i] <= vgen_reg_data_i[i];
                     end
                 end
-                6'(xv::XR_UNUSED_03): begin
+                6'(xv::XR_VID_INTR): begin
+                    video_intr_o    <= 1'b1;
                 end
                 6'(xv::XR_VID_LEFT): begin
                     vid_left        <= $bits(vid_left)'(vgen_reg_data_i);
@@ -547,15 +546,6 @@ always_ff @(posedge clk) begin
                 endcase
             end
         end
-
-        // vsync interrupt generation
-        if (end_of_visible) begin
-            intr_signal_o[xv::VSYNC_INTR]   <= 1'b1;
-        end
-
-        if (audio_interrupt) begin
-            intr_signal_o[xv::AUDIO_INTR]   <= 1'b1;
-        end
     end
 end
 
@@ -570,14 +560,13 @@ end
 // video registers read
 always_comb begin
     case (vgen_reg_num_i[3:0])
-        4'(xv::XR_VID_CTRL):        rd_vid_regs = { border_color, 8'h00 };
+        4'(xv::XR_VID_CTRL):        rd_vid_regs = { 8'h00, border_color};
 `ifdef ENABLE_COPP
         4'(xv::XR_COPP_CTRL):       rd_vid_regs = { copp_reg_data_o[15], 15'(copp_reg_data_o[xv::COPP_W-1:0]) };
 `endif
         4'(xv::XR_AUD_CTRL): begin
             rd_vid_regs     = '0;
             for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-                rd_vid_regs[8+i]  = audio_pending[i];
                 rd_vid_regs[i]    = audio_enable[i];
             end
         end
@@ -593,6 +582,8 @@ end
 
 // video registers read
 always_comb begin
+    rd_pf_regs = 16'h0000;
+
     case (vgen_reg_num_i[3:0])
         4'(xv::XR_PA_GFX_CTRL):     rd_pf_regs = { pa_colorbase, pa_blank, pa_bitmap, pa_bpp, pa_h_repeat, pa_v_repeat };
         4'(xv::XR_PA_TILE_CTRL):    rd_pf_regs = { pa_tile_bank, pa_disp_in_tile, pa_tile_in_vram, 4'b0, pa_tile_height };
@@ -600,14 +591,20 @@ always_comb begin
         4'(xv::XR_PA_LINE_LEN):     rd_pf_regs = pa_line_len;
         4'(xv::XR_PA_HV_SCROLL):    rd_pf_regs = { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
         4'(xv::XR_PA_HV_FSCALE):    rd_pf_regs = { 8'h00, 4'(pa_h_frac_repeat), 4'(pa_v_frac_repeat) };
-        4'(xv::XR_PB_GFX_CTRL):     rd_pf_regs = { pb_colorbase, pb_blank, pb_bitmap, pb_bpp, pb_h_repeat, pb_v_repeat };
-        4'(xv::XR_PB_TILE_CTRL):    rd_pf_regs = { pb_tile_bank, pb_disp_in_tile, pb_tile_in_vram, 4'b0, pb_tile_height };
-        4'(xv::XR_PB_DISP_ADDR):    rd_pf_regs = pb_start_addr;
-        4'(xv::XR_PB_LINE_LEN):     rd_pf_regs = pb_line_len;
-        4'(xv::XR_PB_HV_SCROLL):    rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
-        4'(xv::XR_PB_HV_FSCALE):    rd_pf_regs = { 8'h00, 4'(pb_h_frac_repeat), 4'(pb_v_frac_repeat) };
-        default:                    rd_pf_regs = 16'h0000;
+        default:                    ;
     endcase
+
+    if (EN_VID_PF_B) begin
+        case (vgen_reg_num_i[3:0])
+            4'(xv::XR_PB_GFX_CTRL):     rd_pf_regs = { pb_colorbase, pb_blank, pb_bitmap, pb_bpp, pb_h_repeat, pb_v_repeat };
+            4'(xv::XR_PB_TILE_CTRL):    rd_pf_regs = { pb_tile_bank, pb_disp_in_tile, pb_tile_in_vram, 4'b0, pb_tile_height };
+            4'(xv::XR_PB_DISP_ADDR):    rd_pf_regs = pb_start_addr;
+            4'(xv::XR_PB_LINE_LEN):     rd_pf_regs = pb_line_len;
+            4'(xv::XR_PB_HV_SCROLL):    rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
+            4'(xv::XR_PB_HV_FSCALE):    rd_pf_regs = { 8'h00, 4'(pb_h_frac_repeat), 4'(pb_v_frac_repeat) };
+            default:                    ;
+        endcase
+    end
 end
 
 // combinational block for video fetch start and stop
@@ -667,8 +664,7 @@ if (EN_AUDIO) begin : opt_AUDIO
     // audio channel mixer
     audio_mixer #(
         .AUDIO_NCHAN(AUDIO_NCHAN)
-    ) audio_mixer
-    (
+    ) audio_mixer(
 `ifndef NO_MODULE_PORT_ARRAYS   // Yosys doesn't allow arrays in module ports
         .audio_enable_i(audio_enable),
         .audio_vol_i(audio_vol),
@@ -694,56 +690,70 @@ if (EN_AUDIO) begin : opt_AUDIO
         .audio_addr_o(audio_addr),
         .audio_word_i(audio_word),
 
-        .audio_interrupt_o(audio_interrupt),
-
         .pdm_l_o(audio_pdm_l_o),
         .pdm_r_o(audio_pdm_r_o),
 
         .reset_i(reset_i),
         .clk(clk)
     );
+
+    // if any chanel reloads, trigger interrupt strobe
+    always_ff @(posedge clk) begin
+        if (reset_i) begin
+            audio_intr_o    <= 1'b0;
+        end else begin
+            audio_intr_o    <= 1'b0;
+            for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+                if (audio_reload[i]) begin
+                    audio_intr_o    <= 1'b1;
+                end
+            end
+        end
+    end
+
+    // audio channel register writes
+    for (genvar i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        always_ff @(posedge clk) begin
+            if (reset_i) begin
+                audio_vol[i]        <= '0;
+                audio_period[i]     <= '0;
+                audio_tile[i]       <= '0;
+                audio_start[i]      <= '0;
+                audio_len[i]        <= '0;
+                audio_restart[i]    <= 1'b0;
+                audio_ready_o[i]    <= 1'b0;
+            end else begin
+                audio_restart[i]    <= 1'b0;
+                if (audio_reload[i]) begin
+                    audio_ready_o[i]  <= 1'b1;                                                      // START used
+                end
+                if (vgen_reg_wr_en_i) begin
+                    case (7'(vgen_reg_num_i))
+                        xv::XR_AUD0_VOL+(i*4):
+                            audio_vol[i]                            <= vgen_reg_data_i;
+                        xv::XR_AUD0_PERIOD+(i*4):
+                            { audio_restart[i], audio_period[i] }   <= vgen_reg_data_i;
+                        xv::XR_AUD0_LENGTH+(i*4):
+                            { audio_tile[i], audio_len[i] }         <= vgen_reg_data_i;
+                        xv::XR_AUD0_START+(i*4):
+                            { audio_ready_o[i], audio_start[i] }    <= { 1'b0, vgen_reg_data_i };   // START set
+                        default: ;
+                    endcase
+                end
+            end
+        end
+    end
+
 end else begin
     assign  audio_pdm_l_o   = 1'b0;
     assign  audio_pdm_r_o   = 1'b0;
     assign  audio_fetch     = 1'b0;
     assign  audio_addr      = '0;
     assign  audio_tilemem   = 1'b0;
-    assign  audio_interrupt = 1'b0;
+    assign  audio_intr_o    = 1'b0;
 
     logic   audio_unused;
     assign  audio_unused = &{ 1'b0, audio_enable, audio_ack, audio_vol, audio_period, audio_start, audio_len, audio_word };
-end
-
-for (genvar i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-    always_ff @(posedge clk) begin
-        if (reset_i) begin
-            audio_vol[i]        <= '0;
-            audio_period[i]     <= '0;
-            audio_tile[i]       <= '0;
-            audio_start[i]      <= '0;
-            audio_len[i]        <= '0;
-            audio_pending[i]    <= 1'b0;
-            audio_restart[i]    <= 1'b0;
-        end else begin
-            audio_restart[i]    <= 1'b0;
-            if (audio_reload[i]) begin
-                audio_pending[i]    <= 1'b0;
-            end
-            if (vgen_reg_wr_en_i) begin
-                case (7'(vgen_reg_num_i))
-                    xv::XR_AUD0_VOL+(i*4):
-                        audio_vol[i]                            <= vgen_reg_data_i;
-                    xv::XR_AUD0_PERIOD+(i*4):
-                        { audio_restart[i], audio_period[i] }   <= vgen_reg_data_i;
-                    xv::XR_AUD0_LENGTH+(i*4):
-                        { audio_tile[i], audio_len[i] }         <= vgen_reg_data_i;
-                    xv::XR_AUD0_START+(i*4):
-                        { audio_pending[i], audio_start[i] }    <= { 1'b1, vgen_reg_data_i };
-                    default: ;
-                endcase
-            end
-        end
-    end
 end
 
 endmodule

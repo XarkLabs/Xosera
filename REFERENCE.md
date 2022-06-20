@@ -36,8 +36,8 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
     - [Video Config and Copper XR Registers Details](#video-config-and-copper-xr-registers-details)
       - [0x00 **`XR_VID_CTRL` (R/W) - interrupt status/signal and border color**](#0x00-xr_vid_ctrl-rw---interrupt-statussignal-and-border-color)
       - [0x01 **`XR_COPP_CTRL` (R/W) - copper start address and enable**](#0x01-xr_copp_ctrl-rw---copper-start-address-and-enable)
-      - [0x02 **`XR_UNUSED_02` (--) - unused XR register 0x02**](#0x02-xr_unused_02------unused-xr-register-0x02)
-      - [0x03 **`XR_UNUSED_03` (--) - unused XR register 0x03**](#0x03-xr_unused_03------unused-xr-register-0x03)
+      - [0x02 **`XR_AUD_CTRL` (R/W) - audio channel control register 0x02**](#0x02-xr_aud_ctrl-rw---audio-channel-control-register-0x02)
+      - [0x03 **`XR_VID_INTR` (WO) - trigger Xosera host CPU video interrupt**](#0x03-xr_vid_intr-wo---trigger-xosera-host-cpu-video-interrupt)
       - [0x04 **`XR_UNUSED_04` (--) - unused XR register 0x04**](#0x04-xr_unused_04------unused-xr-register-0x04)
       - [0x05 **`XR_UNUSED_05` (--) - unused XR register 0x05**](#0x05-xr_unused_05------unused-xr-register-0x05)
       - [0x06 **`XR_VID_LEFT` (R/W) - video display window left edge**](#0x06-xr_vid_left-rw---video-display-window-left-edge)
@@ -127,8 +127,8 @@ Read-only:
 &nbsp;&nbsp;&nbsp;&nbsp;`[10]` vertical blank flag (i.e., current line is not visible, off top/bottom edge)  
 &nbsp;&nbsp;&nbsp;&nbsp;`[9]` unused  
 Read/Write:  
-&nbsp;&nbsp;&nbsp;&nbsp;`[8]` `RD_RW_INCR` option. When set a read of `RW_DATA`/`RW_DATA_2` adds `RW_INCR` to `RW_ADDR`  
-&nbsp;&nbsp;&nbsp;&nbsp;`[3:0]` `XM_DATA`/`XM_DATA_2`/`RW_DATA`/`RW_DATA_2` nibble write masks  
+&nbsp;&nbsp;&nbsp;&nbsp;`[8]` `RD_RW_INCR` option. When set a read of `XM_RW_DATA`/`XM_RW_DATA_2` adds `XM_RW_INCR` to `XM_RW_ADDR`  
+&nbsp;&nbsp;&nbsp;&nbsp;`[3:0]` `XM_DATA`/`XM_DATA_2`/`XM_RW_DATA`/`XM_RW_DATA_2` nibble write masks.  When a bit corresponding to a given nibble is zero, writes to that nibble are ignored and the original value is retained. For example, if the nibble mask is `0010` then only bits `[7:3]` of VRAM would be written.  This can be useful to isolate a pixel within a word of VRAM.
 
 #### 0x1 **`XM_INT_CTRL`** (R/W+) - FPGA reconfigure, interrupt masking and interrupt status
 
@@ -137,15 +137,20 @@ Read/Write:
 **Reconfigure (write=1)**:  
 &nbsp;&nbsp;&nbsp;&nbsp;`[15]` Reconfig FPGA using low two bits of `XM_SYS_CTRL` for new configuration (takes ~100ms, blanks screen)  
 **Interrupt mask (1=enabled, 0=masked)**:  
-&nbsp;&nbsp;&nbsp;&nbsp;`[11]` V-blank start interrupt  
+&nbsp;&nbsp;&nbsp;&nbsp;`[11]` video (vblank/COPPER) interrupt  
 &nbsp;&nbsp;&nbsp;&nbsp;`[10]` timer count match interrupt  
 &nbsp;&nbsp;&nbsp;&nbsp;`[9]` blitter queue empty interrupt  
 &nbsp;&nbsp;&nbsp;&nbsp;`[8]` audio channel reload interrupt  
+**Audio channel status (channel ready to queue next AUDn_START/AUDn_LENGTH)**:  
+&nbsp;&nbsp;&nbsp;&nbsp;`[7]` channel 3 ready to queue next `XR_AUD3_START`/`XR_AUD3_LENGTH`  
+&nbsp;&nbsp;&nbsp;&nbsp;`[6]` channel 2 ready to queue next `XR_AUD2_START`/`XR_AUD2_LENGTH`  
+&nbsp;&nbsp;&nbsp;&nbsp;`[5]` channel 1 ready to queue next `XR_AUD1_START`/`XR_AUD1_LENGTH`  
+&nbsp;&nbsp;&nbsp;&nbsp;`[4]` channel 0 ready to queue next `XR_AUD0_START`/`XR_AUD0_LENGTH`  
 **Interrupt status (read 1=pending, write 1=acknowledge & clear)**:  
-&nbsp;&nbsp;&nbsp;&nbsp;`[3]` V-blank start interrupt  
+&nbsp;&nbsp;&nbsp;&nbsp;`[3]` video (vblank/COPPER) interrupt  
 &nbsp;&nbsp;&nbsp;&nbsp;`[2]` timer count match interrupt  
 &nbsp;&nbsp;&nbsp;&nbsp;`[1]` blitter queue empty interrupt  
-&nbsp;&nbsp;&nbsp;&nbsp;`[0]` audio channel reload interrupt  
+&nbsp;&nbsp;&nbsp;&nbsp;`[0]` audio channel ready interrupt  
 
 #### 0x2 **`XM_TIMER`** (R/W) - tenth millisecond timer (0 - 6553.5 ms) / timer interrupt
 
@@ -156,7 +161,7 @@ Can be used for fairly accurate timing. Internal fractional value is maintined (
 clock).  Can be used for elapsed time up to ~6.5 seconds (or unlimited, if the cumulative elapsed time is updated at least as often as timer wrap value).
 **NOTE:** To assure an atomic incrementing 16-bit value, when the high byte of TIMER is read, the low byte is saved into an internal register and returned when TIMER low byte is read. Because of this reading the full 16-bit TIMER register is recommended (or first even byte, then odd byte, or odd byte value may not update).  
 **Write to set timer maximum count/interrupt interval**  
-When set interrupt generated when TIMER value matches value and TIMER count reset to 0x0000.  Default 0x0000 (every 6.5535 seconds), will interrupt if not masked.
+When set interrupt generated when TIMER value matches value and TIMER count reset to 0x0000.  Default 0x0000 (every 6.5535 seconds), will interrupt each TIMER match (if not masked).
 
 #### 0x3 **`XM_RD_XADDR`** (R/W+) - Read XR Register / Memory Address
 
@@ -289,7 +294,8 @@ ___
 | XR video config  | 0x0000-0x000F   | R/W | config XR registers                        |
 | XR playfield A   | 0x0010-0x0017   | R/W | playfield A XR registers                   |
 | XR playfield B   | 0x0018-0x001F   | R/W | playfield B XR registers                   |
-| XR blit engine   | 0x0020-0x002F   | R/W | 2D-blit XR registers                       |
+| XR audio channels| 0x0020-0x002F   | WO  | audio channel XR registers                 |
+| XR blit engine   | 0x0040-0x004B   | WO  | 2D-blit XR registers                       |
 | `XR_TILE_ADDR`   | 0x4000-0x53FF   | R/W | 5KW 16-bit tilemap/tile storage memory     |
 | `XR_COLOR_ADDR`  | 0x8000-0x81FF   | R/W | 2 x 256W 16-bit color lookup memory (XRGB) |
 | `XR_COPPER_ADDR` | 0xC000-0xC7FF   | R/W | 2KW 16-bit copper program memory           |
@@ -299,15 +305,15 @@ While all XR registers and memory regions can be read, when there is high memory
 video generation or other use), there is a `mem_wait` bit in `XM_SYS_CTRL` that will indicate when the last memory
 operation is still pending.  
 Also note that unlike the main 16 `XM` registers, the XR region can only be accessed as full 16-bit words (either
-reading or writing). The full 16-bits of the `XM_XDATA` value are pre-read when `XM_RD_ADDR` is written or incremented and a full 16-bit word is written when the odd (low-byte) of `XM_XR_DATA` is written (the even/upper byte is latched).
+reading or writing). The full 16-bits of the `XM_XDATA` value are pre-read when `XM_RD_XADDR` is written or incremented and a full 16-bit word is written when the odd (low-byte) of `XM_XDATA` is written (the even/upper byte is latched).
 ___
 
 ### Xosera Extended Registers Details (XR Registers)
 
 This XR registers are used to control of most Xosera operation other than CPU VRAM access and a few miscellaneous
 control functions (which accessed directly via the main registers).  
-To access these XR registers, first write the register address to `XM_XR_ADDR`, then read or write register data to `XM_XR_DATA`
-(and when *writing only*, the low 13-bits of `XM_XR_DATA` will be auto-incremented for each word written).
+To write to these XR registers, write an XR address to `XM_WR_XADDR` then write data to `XM_XDATA`. Each write to `XM_XDATA` will increment `XM_WR_XADDR` address by one (so you can repeatedly write to `XR_XDATA` for contiguous registers or XR memory).
+Reading is similar, write the address to `XM_RD_XADDR` then read `XM_XDATA`. Each read of `XM_XDATA` will increment `XM_RD_XADDR` address by one (so you can repeatedly read `XR_XDATA` for contiguous registers or XR memory).
 
 ### Video Config and Copper XR Registers Summary
 
@@ -341,10 +347,7 @@ ___
 
 <img src="./pics/wd_XR_VID_CTRL.svg">  
 
-Pixels outside video window (`VID_TOP`, `VID_BOTTOM`, `VID_LEFT`, `VID_RIGHT`) will use border color index. Sprite cursor will
-also use upper 4-bits of border color (with lower 4-bits from sprite data).  
-Writing 1 to interrupt bit will generate CPU interrupt (if not already pending). Read will give pending interrupts (which CPU can
-clear writing to `XM_TIMER`).
+Pixels outside video window (`VID_LEFT`, `VID_RIGHT`) or when blanked will use border color index.  This always uses playfield A color (playfield B always uses color index 0 for border or blanked pixels).  
 
 #### 0x01 **`XR_COPP_CTRL` (R/W) - copper start address and enable**  
 
@@ -352,11 +355,17 @@ clear writing to `XM_TIMER`).
 
 Display synchronized co-processor enable and starting PC address for each video frame within copper XR memory region.
 
-#### 0x02 **`XR_UNUSED_02` (--) - unused XR register 0x02**  
+#### 0x02 **`XR_AUD_CTRL` (R/W) - audio channel control register 0x02**  
 
-Unused XR register 0x02
+<img src="./pics/wd_XR_AUD_CTRL.svg">
 
-#### 0x03 **`XR_UNUSED_03` (--) - unused XR register 0x03**  
+Enable corresponding audio channel processing (if present in design).
+
+#### 0x03 **`XR_VID_INTR` (WO) - trigger Xosera host CPU video interrupt**  
+
+<img src="./pics/wd_XR_VID_INTR.svg">
+
+A write to this register will trigger Xosera host CPU video interrupt (if unmasked and one is not already pending in `XM_INT_CTRL`).  This is mainly useful to allow COPPER to generate an arbitrary screen position synchronized CPU interrupt (in addition to the normal end of visible display v-blank interrupt).
 
 Unused XR register 0x03
 

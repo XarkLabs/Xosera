@@ -161,7 +161,7 @@ Can be used for fairly accurate timing. Internal fractional value is maintined (
 clock).  Can be used for elapsed time up to ~6.5 seconds (or unlimited, if the cumulative elapsed time is updated at least as often as timer wrap value).
 **NOTE:** To assure an atomic incrementing 16-bit value, when the high byte of TIMER is read, the low byte is saved into an internal register and returned when TIMER low byte is read. Because of this reading the full 16-bit TIMER register is recommended (or first even byte, then odd byte, or odd byte value may not update).  
 **Write to set timer maximum count/interrupt interval**  
-When set interrupt generated when TIMER value matches value and TIMER count reset to 0x0000.  Default 0x0000 (every 6.5535 seconds), will interrupt each TIMER match (if not masked).
+When set interrupt generated when TIMER value matches value and TIMER count reset to 0x0000.  Default 0xFFFF (so full timer range, with interrupt every 6.5535 seconds), will interrupt each TIMER match (if not masked).
 
 #### 0x3 **`XM_RD_XADDR`** (R/W+) - Read XR Register / Memory Address
 

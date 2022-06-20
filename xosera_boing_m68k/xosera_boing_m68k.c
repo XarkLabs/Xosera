@@ -16,12 +16,13 @@ extern char _binary_Boing_raw_start[];
 extern char _binary_Boing_raw_end[];
 #endif
 
-const uint16_t vram_audio_base = 0x0080;
-const uint16_t vram_base_a     = 0x4000;
-const uint16_t vram_base_b     = 0xA000;
-const uint16_t vram_base_blank = 0xB800;
-const uint16_t vram_base_ball  = 0xBC00;
-const uint16_t tile_base_b     = 0xC000;
+const uint16_t vram_audio_base  = 0x0080;
+const uint16_t vram_silence_len = 0x0002;
+const uint16_t vram_base_a      = 0x4000;
+const uint16_t vram_base_b      = 0xA000;
+const uint16_t vram_base_blank  = 0xB800;
+const uint16_t vram_base_ball   = 0xBC00;
+const uint16_t tile_base_b      = 0xC000;
 
 #define PI  3.1415926f
 #define PAU (1.5f * PI)
@@ -85,6 +86,9 @@ const uint16_t tile_base_b     = 0xC000;
 #define WIDESCREEN true
 #define PAINT_BALL true
 #define USE_COPPER true
+
+uint16_t vid_hsize;        // this is cached xreg_getw(VID_HSIZE)
+uint32_t clk_hz;           // pixel clock Hz (25125000 at 640x480 or 33750000 at 848x480)
 
 uint8_t  bg_bitmap[HEIGHT_A][WIDTH_A]                                                                     = {0};
 uint8_t  ball_bitmap[BALL_BITMAP_HEIGHT][BALL_BITMAP_WIDTH]                                               = {0};
@@ -558,64 +562,45 @@ uint32_t copper_list[] = {
 #endif
 
 #if USE_AUDIO
-static inline void wait_scanline()
-{
-    uint16_t l = xreg_getw(SCANLINE);
-    while (l == xreg_getw(SCANLINE))
-        ;
-    l = xreg_getw(SCANLINE);
-    while (l == xreg_getw(SCANLINE))
-        ;
-    l = xreg_getw(SCANLINE);
-    while (l == xreg_getw(SCANLINE))
-        ;
-    l = xreg_getw(SCANLINE);
-    while (l == xreg_getw(SCANLINE))
-        ;
-}
-
-void play_audio()
-{
-    xreg_setw(AUD0_START, vram_audio_base);
-    xreg_setw(AUD0_LENGTH, 0);
-    wait_scanline();
-    xreg_setw(VID_CTRL, 0x0000);
-    wait_scanline();
-    xreg_setw(AUD0_START, vram_audio_base + 1);
-    uint16_t bytesize = (_binary_Boing_raw_end - _binary_Boing_raw_start) / 2;
-    xreg_setw(AUD0_LENGTH, bytesize);
-
-    uint32_t clk_hz = xreg_getw(VID_HSIZE) > 640 ? 33750000 : 25125000;
-    uint16_t rate   = 8000 - 256 + (xm_getw(TIMER) & 0x1ff);
-    uint16_t period = (clk_hz + rate - 1) / rate;
-    xreg_setw(AUD0_PERIOD, period);
-
-    wait_scanline();
-    xreg_setw(VID_CTRL, 0x0010);
-    wait_scanline();
-    xreg_setw(AUD0_START, vram_audio_base);
-    xreg_setw(AUD0_LENGTH, 0);
-}
-
 void upload_audio()
 {
-    xm_setw(WR_ADDR, vram_audio_base);
-    xm_setw(WR_INCR, 0x0001);
-    xm_setw(DATA, 0x0000);        // zero = silence sample
+    xreg_setw(AUD_CTRL, 0x0000);              // disable audio
+    xm_setbl(SYS_CTRL, 0x0F);                 // make sure write masks set
+    xm_setw(WR_INCR, 0x0001);                 // set write increment of 1
+    xm_setw(WR_ADDR, vram_audio_base);        // VRAM address for audio sample
+    for (uint16_t i = 0; i < vram_silence_len; i++)
+    {
+        xm_setw(DATA, 0x0000);        // zero = silence sample
+    }
+    // upload boing audio sample (from embedded binary data)
     for (uint16_t * wp = (uint16_t *)_binary_Boing_raw_start; wp < (uint16_t *)_binary_Boing_raw_end; wp++)
     {
         xm_setw(DATA, *wp);
     }
 
-    uint32_t clk_hz = xreg_getw(VID_HSIZE) > 640 ? 33750000 : 25125000;
     uint16_t rate   = 8000;
     uint16_t period = (clk_hz + rate - 1) / rate;
     xreg_setw(AUD0_PERIOD, period);
-    xreg_setw(AUD0_START, vram_audio_base);
-    xreg_setw(AUD0_LENGTH, 0);
-    xreg_setw(VID_CTRL, 0x0010);
-    xreg_setw(AUD0_VOL, 0x8080);
+    // start silence sample
+    xreg_setw(AUD0_LENGTH, vram_silence_len - 1);        // 1 word length (-1)
+    xreg_setw(AUD0_START, vram_audio_base);              // sample start
+    xreg_setw(AUD0_VOL, 0x8080);                         // full volume l+r
+    xreg_setw(AUD_CTRL, 0x0001);                         // enable audio (and leave on)
 }
+
+void play_audio()
+{
+    uint16_t wordsize = ((_binary_Boing_raw_end - _binary_Boing_raw_start) / 2) - 1;
+    uint16_t rate     = 8000 - 256 + (xm_getw(TIMER) & 0x1ff);        // randomize a bit
+    uint16_t period   = (clk_hz + rate - 1) / rate;
+    xreg_setw(AUD0_LENGTH, wordsize);
+    xreg_setw(AUD0_START, vram_audio_base + vram_silence_len);
+    xreg_setw(AUD0_PERIOD, period | 0x8000);        // force new sound start immediately
+    xreg_setw(AUD0_PERIOD, period | 0x8000);        // TODO: Why twice? force new sound start immediately
+    xreg_setw(AUD0_START, vram_audio_base);
+    xreg_setw(AUD0_LENGTH, vram_silence_len - 1);        // then queue silence sample
+}
+
 #endif
 
 #define BITS_PER_PIXEL_1BPP 1
@@ -836,14 +821,22 @@ void copper_load_list(uint16_t length, uint32_t list[length], uint16_t base)
 
 void xosera_boing()
 {
+    // re-initialize Xosera to current config
     xosera_init(xreg_getw(VID_HSIZE) > 640 ? 1 : 0);
+    delay(5000);        // let monitor sync
+
+    vid_hsize = xreg_getw(VID_HSIZE);
+    clk_hz    = (vid_hsize > 640) ? 33750000 : 25125000;
+    // print ANSI codes to reset screen and disable cursor
     printf("\033c\033[?25l");
+    // set playfield A display address to VRAM 0x0000
     xreg_setw(PA_DISP_ADDR, 0);
-    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) - 640) / 2);
-    xreg_setw(VID_RIGHT, xreg_getw(VID_HSIZE) - (xreg_getw(VID_HSIZE) - 640) / 2);
+    // set screen width to 640 (adjusting LEFT and RIGHT margins if in 848 mode)
+    xreg_setw(VID_LEFT, (vid_hsize - 640) / 2);
+    xreg_setw(VID_RIGHT, vid_hsize - (vid_hsize - 640) / 2);
     printf("Xoboing: Copyright (c) 2022 Thomas Jager - Preparing assets, one moment...");        // ANSI reset, disable
                                                                                                  // input cursor
-    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0x00, 0));
+    xreg_setw(VID_CTRL, 0x0000);        // set border to colorA #0
 
     draw_bg();
     fill_ball();
@@ -1053,11 +1046,11 @@ void xosera_boing()
     xreg_setw(VID_CTRL, 0x0800);
     xreg_setw(COPP_CTRL, 0x0000);        // disable copper
     xreg_setw(VID_LEFT, 0);
-    xreg_setw(VID_RIGHT, xreg_getw(VID_HSIZE));
+    xreg_setw(VID_RIGHT, vid_hsize);
     xreg_setw(PA_GFX_CTRL, 0x0000);
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) / 8);        // line len
+    xreg_setw(PA_LINE_LEN, vid_hsize / 8);        // line len
     xreg_setw(PA_HV_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
     xreg_setw(PB_GFX_CTRL, 0x0080);

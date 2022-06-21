@@ -17,7 +17,7 @@ extern char _binary_Boing_raw_end[];
 #endif
 
 const uint16_t vram_audio_base  = 0x0080;
-const uint16_t vram_silence_len = 0x0002;
+const uint16_t vram_silence_len = 0x0001;
 const uint16_t vram_base_a      = 0x4000;
 const uint16_t vram_base_b      = 0xA000;
 const uint16_t vram_base_blank  = 0xB800;
@@ -596,7 +596,6 @@ void play_audio()
     xreg_setw(AUD0_LENGTH, wordsize);
     xreg_setw(AUD0_START, vram_audio_base + vram_silence_len);
     xreg_setw(AUD0_PERIOD, period | 0x8000);        // force new sound start immediately
-    xreg_setw(AUD0_PERIOD, period | 0x8000);        // TODO: Why twice? force new sound start immediately
     xreg_setw(AUD0_START, vram_audio_base);
     xreg_setw(AUD0_LENGTH, vram_silence_len - 1);        // then queue silence sample
 }

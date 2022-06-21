@@ -14,7 +14,8 @@
 
 module blitter2 #(
     parameter   EN_BLIT_DECR_MODE       = 1,        // enable blit pointer decrementing
-    parameter   EN_BLIT_DECR_LSHIFT     = 1         // enable blit left shift when decrementing
+    parameter   EN_BLIT_DECR_LSHIFT     = 1,        // enable blit left shift when decrementing
+    parameter   EN_BLIT_XOR_CONST       = 1         // enable XOR of modulo with constant values (dither?)
 )(
     // video registers and control
     input  wire logic           xreg_wr_en_i,       // strobe to write internal config register number
@@ -521,10 +522,13 @@ always_comb begin
             blit_src_A_next = blit_src_A + blit_mod_A;
             blit_src_B_next = blit_src_B + blit_mod_B;
             blit_dst_D_next = blit_dst_D + blit_mod_D;
-            // update constants using modulo value as XOR
-            val_A_next      = val_A ^ blit_mod_A;
-            val_B_next      = val_B ^ blit_mod_B;
-            blit_val_C_next = blit_val_C ^ blit_mod_C;
+
+            if (EN_BLIT_XOR_CONST) begin
+                // update constants using modulo value as XOR
+                val_A_next      = val_A ^ blit_mod_A;
+                val_B_next      = val_B ^ blit_mod_B;
+                blit_val_C_next = blit_val_C ^ blit_mod_C;
+            end
 
             if (blit_last_line) begin
                 blit_done_intr_next = 1'b1;

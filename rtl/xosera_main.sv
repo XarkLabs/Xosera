@@ -44,6 +44,7 @@ module xosera_main #(
     parameter   EN_BLIT                 = 1,        // enable blit unit
     parameter   EN_BLIT_DECR_MODE       = 1,        // enable blit pointer decrementing
     parameter   EN_BLIT_DECR_LSHIFT     = 1,        // TODO: enable blit left shift when decrementing?
+    parameter   EN_BLIT_XOR_CONST       = 1,        // TODO: enable blit XOR modulo with constants?
     parameter   EN_AUDIO                = 1,        // enable audio output
     parameter   AUDIO_NCHAN             = 1         // number of audio channels
 )(
@@ -274,7 +275,8 @@ copper copper(
 if (EN_BLIT) begin : opt_EN_BLIT
     blitter2 #(
         .EN_BLIT_DECR_MODE(EN_BLIT_DECR_MODE),
-        .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT)
+        .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT),
+        .EN_BLIT_XOR_CONST(EN_BLIT_XOR_CONST)
     ) blitter(
         .xreg_wr_en_i(blit_reg_wr_en),
         .xreg_num_i(xr_regs_addr[3:0]),

@@ -166,14 +166,16 @@ video_timing video_timing
 );
 
 // audio
-logic           audio_enable[AUDIO_NCHAN];      // audio channel enable
-word_t          audio_vol[AUDIO_NCHAN];         // audio L+R 8-bit volume/pan
-addr_t          audio_start[AUDIO_NCHAN];       // audio start address
-logic [14:0]    audio_period[AUDIO_NCHAN];      // audio playback rate
-logic           audio_tile[AUDIO_NCHAN];        // audio memory type (0=VRAM, 1=TILE)
-logic [14:0]    audio_len[AUDIO_NCHAN];         // audio length in words
-logic           audio_restart[AUDIO_NCHAN];     // audio force restart strobe input
-logic           audio_reload[AUDIO_NCHAN];      // audio start loaded strobe output
+
+logic [AUDIO_NCHAN-1:0]             audio_enable_nchan;     // channel enabled
+logic [7*AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
+logic [7*AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
+logic [15*AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
+logic [AUDIO_NCHAN-1:0]             audio_tile_nchan;       // channel sample memory (0=VRAM, 1=TILE)
+logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  audio_start_nchan;      // channel sample start address (in VRAM or TILE)
+logic [15*AUDIO_NCHAN-1:0]          audio_len_nchan;        // channel sample length in words
+logic [AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel sample memory (0=VRAM, 1=TILE)
+logic [AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample memory (0=VRAM, 1=TILE)
 
 logic           audio_fetch;                    // audio DMA request signal
 logic           audio_ack;                      // audio DMA ack signal
@@ -353,7 +355,7 @@ always_ff @(posedge clk) begin
         border_color        <= 8'h08;               // defaulting to dark grey to show operational
 
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-            audio_enable[i] <= 1'b0;
+            audio_enable_nchan[i] <= 1'b0;
         end
         vid_left            <= '0;
         vid_right           <= $bits(vid_right)'(xv::VISIBLE_WIDTH);
@@ -435,7 +437,7 @@ always_ff @(posedge clk) begin
                 6'(xv::XR_AUD_CTRL): begin
                     if (EN_AUDIO) begin
                         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-                            audio_enable[i] <= vgen_reg_data_i[i];
+                            audio_enable_nchan[i] <= vgen_reg_data_i[i];
                         end
                     end
                 end
@@ -571,7 +573,7 @@ always_comb begin
         4'(xv::XR_AUD_CTRL): begin
             rd_vid_regs     = '0;
             for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-                rd_vid_regs[i]    = audio_enable[i];
+                rd_vid_regs[i]    = audio_enable_nchan[i];
             end
         end
         4'(xv::XR_VID_LEFT):        rd_vid_regs = 16'(vid_left);
@@ -639,55 +641,19 @@ end
 
 // audio generation
 if (EN_AUDIO) begin : opt_AUDIO
-
-`ifdef NO_MODULE_PORT_ARRAYS    // Yosys doesn't allow arrays in module ports
-    logic [AUDIO_NCHAN-1:0]             audio_enable_nchan;     // channel enabled
-    logic [16*AUDIO_NCHAN-1:0]          audio_vol_nchan;        // channel L+R volume/pan
-    logic [15*AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
-    logic [AUDIO_NCHAN-1:0]             audio_tile_nchan;       // channel sample memory (0=VRAM, 1=TILE)
-    logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  audio_start_nchan;      // channel sample start address (in VRAM or TILE)
-    logic [15*AUDIO_NCHAN-1:0]          audio_len_nchan;        // channel sample length in words
-    logic [AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel sample memory (0=VRAM, 1=TILE)
-    logic [AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample memory (0=VRAM, 1=TILE)
-`endif
-
-// convert flat port vectors into arrays
-`ifdef NO_MODULE_PORT_ARRAYS    // Yosys doesn't allow arrays in module ports
-    for (genvar i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-        // flatten port parameters
-        assign audio_enable_nchan[i]                = audio_enable[i];
-        assign audio_vol_nchan[i*16+:16]            = audio_vol[i];
-        assign audio_period_nchan[i*15+:15]         = audio_period[i];
-        assign audio_tile_nchan[i]                  = audio_tile[i];
-        assign audio_start_nchan[i*xv::VRAM_W+:16]  = audio_start[i];
-        assign audio_len_nchan[i*15+:15]            = audio_len[i];
-        assign audio_restart_nchan[i]               = audio_restart[i];
-        assign audio_reload[i]                      = audio_reload_nchan[i];
-    end
-`endif
     // audio channel mixer
     audio_mixer #(
         .AUDIO_NCHAN(AUDIO_NCHAN)
     ) audio_mixer(
-`ifndef NO_MODULE_PORT_ARRAYS   // Yosys doesn't allow arrays in module ports
-        .audio_enable_i(audio_enable),
-        .audio_vol_i(audio_vol),
-        .audio_period_i(audio_period),
-        .audio_tile_i(audio_tile),
-        .audio_start_i(audio_start),
-        .audio_len_i(audio_len),
-        .audio_restart_i(audio_restart),
-        .audio_reload_o(audio_reload),
-`else
         .audio_enable_nchan_i(audio_enable_nchan),
-        .audio_vol_nchan_i(audio_vol_nchan),
+        .audio_vol_l_nchan_i(audio_vol_l_nchan),
+        .audio_vol_r_nchan_i(audio_vol_r_nchan),
         .audio_period_nchan_i(audio_period_nchan),
         .audio_tile_nchan_i(audio_tile_nchan),
         .audio_start_nchan_i(audio_start_nchan),
         .audio_len_nchan_i(audio_len_nchan),
         .audio_restart_nchan_i(audio_restart_nchan),
         .audio_reload_nchan_o(audio_reload_nchan),
-`endif
         .audio_fetch_o(audio_fetch),
         .audio_ack_i(audio_ack),
         .audio_tile_o(audio_tilemem),
@@ -708,7 +674,7 @@ if (EN_AUDIO) begin : opt_AUDIO
         end else begin
             audio_intr_o    <= 1'b0;
             for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-                if (audio_reload[i]) begin
+                if (audio_reload_nchan[i]) begin
                     audio_intr_o    <= 1'b1;
                 end
             end
@@ -719,28 +685,29 @@ if (EN_AUDIO) begin : opt_AUDIO
     for (genvar i = 0; i < AUDIO_NCHAN; i = i + 1) begin
         always_ff @(posedge clk) begin
             if (reset_i) begin
-                audio_vol[i]        <= '0;
-                audio_period[i]     <= '0;
-                audio_tile[i]       <= '0;
-                audio_start[i]      <= '0;
-                audio_len[i]        <= '0;
-                audio_restart[i]    <= 1'b0;
-                audio_ready_o[i]    <= 1'b0;
+                audio_vol_l_nchan[i*7+:7]       <= '0;
+                audio_vol_r_nchan[i*7+:7]       <= '0;
+                audio_period_nchan[i*15+:15]    <= '0;
+                audio_tile_nchan[i]             <= '0;
+                audio_start_nchan[i*xv::VRAM_W+:16] <= '0;
+                audio_len_nchan[i*15+:15]       <= '0;
+                audio_restart_nchan[i]          <= 1'b0;
+                audio_ready_o[i]                <= 1'b0;
             end else begin
-                audio_restart[i]    <= 1'b0;
-                if (audio_reload[i]) begin
+                audio_restart_nchan[i]    <= 1'b0;
+                if (audio_reload_nchan[i]) begin
                     audio_ready_o[i]  <= 1'b1;                                                      // START used
                 end
                 if (vgen_reg_wr_en_i) begin
                     case (7'(vgen_reg_num_i))
                         xv::XR_AUD0_VOL+(i*4):
-                            audio_vol[i]                            <= vgen_reg_data_i;
+                            { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] };
                         xv::XR_AUD0_PERIOD+(i*4):
-                            { audio_restart[i], audio_period[i] }   <= vgen_reg_data_i;
+                            { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
                         xv::XR_AUD0_LENGTH+(i*4):
-                            { audio_tile[i], audio_len[i] }         <= vgen_reg_data_i;
+                            { audio_tile_nchan[i], audio_len_nchan[i*15+:15] }          <= vgen_reg_data_i;
                         xv::XR_AUD0_START+(i*4):
-                            { audio_ready_o[i], audio_start[i] }    <= { 1'b0, vgen_reg_data_i };   // START set
+                            { audio_ready_o[i], audio_start_nchan[i*xv::VRAM_W+:16] }   <= { 1'b0, vgen_reg_data_i };   // START set
                         default: ;
                     endcase
                 end
@@ -760,32 +727,14 @@ end else begin
     logic   audio_unused;
     assign  audio_unused = &{ 1'b0, audio_ack, audio_word };
 
-    always_comb begin
-        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-            audio_vol[i]       = '0;
-            audio_start[i]     = '0;
-            audio_period[i]    = '0;
-            audio_tile[i]      = '0;
-            audio_len[i]       = '0;
-            audio_restart[i]   = '0;
-            audio_reload[i]    = '0;
-        end
-    end
-
-    logic   audio_array_unused;
-    always_comb begin
-        audio_array_unused = '0;
-        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-            audio_array_unused |= &audio_enable[i];
-            audio_array_unused |= &audio_vol[i];
-            audio_array_unused |= &audio_start[i];
-            audio_array_unused |= &audio_period[i];
-            audio_array_unused |= &audio_tile[i];
-            audio_array_unused |= &audio_len[i];
-            audio_array_unused |= &audio_restart[i];
-            audio_array_unused |= &audio_reload[i];
-        end
-    end
+    assign audio_vol_l_nchan    = '0;
+    assign audio_vol_r_nchan    = '0;
+    assign audio_period_nchan   = '0;
+    assign audio_tile_nchan     = '0;
+    assign audio_start_nchan    = '0;
+    assign audio_len_nchan      = '0;
+    assign audio_restart_nchan  = '0;
+    assign audio_ready_o        = '0;
 end
 
 endmodule

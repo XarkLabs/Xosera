@@ -15,25 +15,15 @@
 module audio_mixer #(
     parameter AUDIO_NCHAN = 1
 )(
-`ifndef NO_MODULE_PORT_ARRAYS   // Yosys doesn't allow arrays in module ports
-    input  wire logic           audio_enable_i[AUDIO_NCHAN],    // channel enabled
-    input  wire logic [15:0]    audio_vol_i[AUDIO_NCHAN],       // channel L+R volume/pan
-    input  wire logic [14:0]    audio_period_i[AUDIO_NCHAN],    // channel playback rate
-    input  wire logic           audio_tile_i[AUDIO_NCHAN],      // channel sample memory (0=VRAM, 1=TILE)
-    input  wire addr_t          audio_start_i[AUDIO_NCHAN],     // channel sample start address (in VRAM or TILE)
-    input  wire logic [14:0]    audio_len_i[AUDIO_NCHAN],       // channel sample length in words
-    input  wire logic           audio_restart_i[AUDIO_NCHAN],   // channel force sample restart
-    output      logic           audio_reload_o[AUDIO_NCHAN],    // channel sample reloaded start/addr
-`else   // must flatten and pass as vectors
     input  wire logic [AUDIO_NCHAN-1:0]             audio_enable_nchan_i,
-    input  wire logic [16*AUDIO_NCHAN-1:0]          audio_vol_nchan_i,
+    input  wire logic [7*AUDIO_NCHAN-1:0]           audio_vol_l_nchan_i,
+    input  wire logic [7*AUDIO_NCHAN-1:0]           audio_vol_r_nchan_i,
     input  wire logic [15*AUDIO_NCHAN-1:0]          audio_period_nchan_i,
     input  wire logic [AUDIO_NCHAN-1:0]             audio_tile_nchan_i,
     input  wire logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  audio_start_nchan_i,
     input  wire logic [15*AUDIO_NCHAN-1:0]          audio_len_nchan_i,
     input  wire logic [AUDIO_NCHAN-1:0]             audio_restart_nchan_i,
     output      logic [AUDIO_NCHAN-1:0]             audio_reload_nchan_o,
-`endif
 
     output      logic           audio_fetch_o,
     input wire  logic           audio_ack_i,
@@ -79,8 +69,9 @@ logic               chan_fetch[AUDIO_NCHAN];
 logic               chan_tile[AUDIO_NCHAN];         // current sample mem type
 addr_t              chan_addr[AUDIO_NCHAN];         // current sample address
 word_t              chan_length[AUDIO_NCHAN];       // audio sample byte length counter (15=underflow flag)
-word_t              chan_length_n[AUDIO_NCHAN];     // audio sample byte length counter (15=underflow flag)
+word_t              chan_length_n[AUDIO_NCHAN];     // audio sample byte length counter next (15=underflow flag)
 word_t              chan_period[AUDIO_NCHAN];       // audio frequency period counter (15=underflow flag)
+word_t              chan_period_n[AUDIO_NCHAN];     // audio frequency period counter next (15=underflow flag)
 logic signed [7:0]  chan_val[AUDIO_NCHAN];          // current channel value sent to DAC
 word_t              chan_buff[AUDIO_NCHAN];         // DMA word buffer
 logic [1:0]         chan_buff_ok[AUDIO_NCHAN];      // DMA buffer has data
@@ -91,37 +82,14 @@ logic signed [7:0]  chan_vol_r[AUDIO_NCHAN];
 logic unused_bits;
 assign unused_bits = &{ 1'b0, mix_l_result[15:14], mix_l_result[5:0], mix_r_result[15:14], mix_r_result[5:0] };
 
-`ifdef NO_MODULE_PORT_ARRAYS    // Yosys doesn't allow arrays in module ports
-logic           audio_enable_i[AUDIO_NCHAN];
-logic [15:0]    audio_vol_i[AUDIO_NCHAN];
-logic [14:0]    audio_period_i[AUDIO_NCHAN];
-logic           audio_tile_i[AUDIO_NCHAN];
-addr_t          audio_start_i[AUDIO_NCHAN];
-logic [14:0]    audio_len_i[AUDIO_NCHAN];
-logic           audio_restart_i[AUDIO_NCHAN];
-logic           audio_reload_o[AUDIO_NCHAN];
-
-// convert flat port vectors into arrays
-for (genvar i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-    // un-flatten port parameters
-    assign audio_enable_i[i]    = audio_enable_nchan_i[i];
-    assign audio_vol_i[i]       = audio_vol_nchan_i[i*16+:16];
-    assign audio_period_i[i]    = audio_period_nchan_i[i*15+:15];
-    assign audio_tile_i[i]      = audio_tile_nchan_i[i];
-    assign audio_start_i[i]     = audio_start_nchan_i[i*xv::VRAM_W+:16];
-    assign audio_len_i[i]       = audio_len_nchan_i[i*15+:15];
-    assign audio_restart_i[i]   = audio_restart_nchan_i[i];
-    assign audio_reload_nchan_o[i] = audio_reload_o[i];
-end
-`endif
-
 // setup alias signals
 for (genvar i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-    assign chan_vol_l[i]    = { 1'b0, audio_vol_i[i][15:9] };
-    assign chan_vol_r[i]    = { 1'b0, audio_vol_i[i][7:1] };
+    assign chan_vol_l[i]    = { 1'b0, audio_vol_l_nchan_i[i*7+:7] };
+    assign chan_vol_r[i]    = { 1'b0, audio_vol_r_nchan_i[i*7+:7] };
     assign chan_length_n[i] = chan_length[i] - 1'b1;
-    assign chan_restart[i]  = chan_length_n[i][15] || audio_restart_i[i];
-    assign chan_sendout[i]  = chan_period[i][15] || audio_restart_i[i];
+    assign chan_restart[i]  = chan_length_n[i][15];
+    assign chan_period_n[i] = chan_period[i] - 1'b1;
+    assign chan_sendout[i]  = chan_period[i][15];
 end
 
 always_ff @(posedge clk) begin
@@ -149,49 +117,61 @@ always_ff @(posedge clk) begin
     end else begin
         // loop over all audio channels
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-            audio_reload_o[i]   <= 1'b0;        // clear reload strobe
-            // decrement period
-            if (audio_enable_i[i]) begin
-                chan_period[i]      <= chan_period[i] - 1'b1;
-            end
-            // if period underflowed, output next sample
-            if (chan_sendout[i]) begin
-                chan_2nd[i]         <= !chan_2nd[i];
-                chan_period[i]      <= { !audio_enable_i[i], audio_period_i[i] };
-                chan_val[i]         <= chan_buff[i][15:8];
-                chan_buff[i][15:8]  <= chan_buff[i][7:0];
-`ifndef SYNTHESIS
-                chan_buff[i][7]     <= ~chan_buff[i][7];
-`endif
-                chan_buff_ok[i]     <= { chan_buff_ok[i][0], 1'b0 };
+            audio_reload_nchan_o[i]   <= 1'b0;        // clear reload strobe
 
-                // if 2nd sample of sample word, prepare sample address
-                if (!chan_2nd[i]) begin
-                    chan_fetch[i]           <= audio_enable_i[i];
-                    if (chan_restart[i]) begin
-                        // if restart, reload sample parameters from registers
-                        chan_tile[i]        <= audio_tile_i[i];
-                        chan_addr[i]        <= audio_start_i[i];
-                        chan_length[i]      <= { 1'b0, audio_len_i[i] };
-                        audio_reload_o[i]   <= 1'b1;            // set reload strobe
-                    end else begin
-                        // increment sample address, decrement remaining length
-                        chan_addr[i]        <= chan_addr[i] + 1'b1;
-                        chan_length[i]      <= chan_length_n[i];
+            // decrement period
+            if (audio_enable_nchan_i[i]) begin
+                chan_period[i]      <= chan_period_n[i];
+
+                // if period underflowed, output next sample
+                if (chan_sendout[i]) begin
+                    chan_2nd[i]         <= !chan_2nd[i];
+                    chan_period[i]      <= { 1'b0, audio_period_nchan_i[i*15+:15] };
+                    chan_val[i]         <= chan_buff[i][15:8];
+                    chan_buff[i][15:8]  <= chan_buff[i][7:0];
+    `ifndef SYNTHESIS
+                    chan_buff[i][7]     <= ~chan_buff[i][7];
+    `endif
+                    chan_buff_ok[i]     <= { chan_buff_ok[i][0], 1'b0 };
+
+                    // if 2nd sample of sample word, prepare sample address
+                    if (!chan_2nd[i]) begin
+                        chan_fetch[i]           <= 1'b1;
+                        if (chan_restart[i]) begin
+                            // if restart, reload sample parameters from registers
+                            chan_tile[i]        <= audio_tile_nchan_i[i];
+                            chan_addr[i]        <= audio_start_nchan_i[i*xv::VRAM_W+:16];
+                            chan_length[i]      <= { 1'b0, audio_len_nchan_i[i*15+:15] };
+                            audio_reload_nchan_o[i] <= 1'b1;            // set reload strobe
+                        end else begin
+                            // increment sample address, decrement remaining length
+                            chan_addr[i]        <= chan_addr[i] + 1'b1;
+                            chan_length[i]      <= chan_length_n[i];
+                        end
                     end
                 end
-            end
 
-            // silent if disabled
-            if (!audio_enable_i[i]) begin
-                chan_val[i]     <= '0;
+                if (audio_restart_nchan_i[i]) begin
+                    chan_tile[i]        <= audio_tile_nchan_i[i];
+                    chan_addr[i]        <= audio_start_nchan_i[i*xv::VRAM_W+:16];
+                    chan_length[i]      <= { 1'b0, audio_len_nchan_i[i*15+:15] };
+                    chan_period[i]      <= { 1'b0, audio_period_nchan_i[i*15+:15] };
+                    audio_reload_nchan_o[i] <= 1'b1;            // set reload strobe
+                    chan_fetch[i]       <= 1'b1;
+                    chan_buff_ok[i]     <= 2'b00;
+                end
+
+            end else begin
+                chan_val[i]     <= '0;            // silent if disabled
             end
         end
 
         case (fetch_state)
             // setup DMA fetch for channel (no effect unless chan_fetch set)
             AUD_DMA_0: begin
-                    if (chan_fetch[0] && chan_buff_ok[0] == 2'b00) begin
+                    // HACK: || audio_restart_nchan_i[i];
+                    // if (chan_fetch[0] && chan_buff_ok[0] == 2'b00) begin
+                    if (chan_fetch[0] && (audio_restart_nchan_i[0] || chan_buff_ok[0] == 2'b00)) begin
                         audio_fetch_o   <= 1'b1;
                     end
                     audio_tile_o    <= chan_tile[0];

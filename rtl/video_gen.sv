@@ -141,10 +141,12 @@ logic           dv_de;
 assign hsync_o      = hsync;
 assign vsync_o      = vsync;
 assign dv_de_o      = dv_de;
-assign h_count_o    = h_count;
-assign v_count_o    = v_count;
 assign h_blank_o    = ~h_visible;
 assign v_blank_o    = ~v_visible;
+`ifdef ENABLE_COPP
+assign h_count_o    = h_count;
+assign v_count_o    = v_count;
+`endif
 
 video_timing video_timing
 (
@@ -351,7 +353,7 @@ always_ff @(posedge clk) begin
         border_color        <= 8'h08;               // defaulting to dark grey to show operational
 
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-            audio_enable[i] <= '0;
+            audio_enable[i] <= 1'b0;
         end
         vid_left            <= '0;
         vid_right           <= $bits(vid_right)'(xv::VISIBLE_WIDTH);
@@ -431,8 +433,10 @@ always_ff @(posedge clk) begin
 `endif
                 end
                 6'(xv::XR_AUD_CTRL): begin
-                    for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-                        audio_enable[i] <= vgen_reg_data_i[i];
+                    if (EN_AUDIO) begin
+                        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+                            audio_enable[i] <= vgen_reg_data_i[i];
+                        end
                     end
                 end
                 6'(xv::XR_VID_INTR): begin
@@ -751,9 +755,37 @@ end else begin
     assign  audio_addr      = '0;
     assign  audio_tilemem   = 1'b0;
     assign  audio_intr_o    = 1'b0;
+    assign  audio_ready_o   = '0;
 
     logic   audio_unused;
-    assign  audio_unused = &{ 1'b0, audio_enable, audio_ack, audio_vol, audio_period, audio_start, audio_len, audio_word };
+    assign  audio_unused = &{ 1'b0, audio_ack, audio_word };
+
+    always_comb begin
+        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+            audio_vol[i]       = '0;
+            audio_start[i]     = '0;
+            audio_period[i]    = '0;
+            audio_tile[i]      = '0;
+            audio_len[i]       = '0;
+            audio_restart[i]   = '0;
+            audio_reload[i]    = '0;
+        end
+    end
+
+    logic   audio_array_unused;
+    always_comb begin
+        audio_array_unused = '0;
+        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+            audio_array_unused |= &audio_enable[i];
+            audio_array_unused |= &audio_vol[i];
+            audio_array_unused |= &audio_start[i];
+            audio_array_unused |= &audio_period[i];
+            audio_array_unused |= &audio_tile[i];
+            audio_array_unused |= &audio_len[i];
+            audio_array_unused |= &audio_restart[i];
+            audio_array_unused |= &audio_reload[i];
+        end
+    end
 end
 
 endmodule

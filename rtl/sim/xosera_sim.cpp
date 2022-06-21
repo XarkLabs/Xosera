@@ -19,7 +19,7 @@
 
 #include "Vxosera_main_colormem.h"
 #include "Vxosera_main_vram.h"
-#include "Vxosera_main_vram_arb.h"
+//#include "Vxosera_main_vram_arb.h"
 #include "Vxosera_main_xosera_main.h"
 //#include "Vxosera_main_xrmem_arb.h"
 
@@ -48,8 +48,8 @@ bool          sim_bus    = BUS_INTERFACE;
 bool          wait_close = false;
 
 bool vsync_detect = false;
-bool hsync_detect = false;
 bool vtop_detect  = false;
+bool hsync_detect = false;
 
 int          num_uploads;
 int          next_upload;
@@ -167,7 +167,8 @@ public:
                 if (vsync_detect)
                 {
                     logonly_printf("[@t=%lu  ... VSYNC arrives]\n", main_time);
-                    wait_vsync = false;
+                    wait_vsync   = false;
+                    vsync_detect = false;
                 }
                 return;
             }
@@ -176,8 +177,9 @@ public:
             {
                 if (vtop_detect)
                 {
-                    logonly_printf("[@t=%lu  ... VTOP arrives]\n", main_time);
-                    wait_vtop = false;
+                    logonly_printf("[@t=%lu  ... VSYNC end arrives]\n", main_time);
+                    wait_vtop   = false;
+                    vtop_detect = false;
                 }
                 return;
             }
@@ -227,8 +229,10 @@ public:
                 // REG_WAITVTOP
                 if (!data_upload && test_data[index] == 0xfffd)
                 {
-                    logonly_printf("[@t=%lu] Wait VTOP...\n", main_time);
-                    wait_vtop = true;
+                    logonly_printf("[@t=%lu] Wait VTOP (VSYNC end)...\n", main_time);
+                    //                    logonly_printf("[@t=%lu] belayed!\n", main_time);
+                    wait_vtop   = true;
+                    vtop_detect = false;
                     index++;
                     return;
                 }
@@ -1256,8 +1260,6 @@ int main(int argc, char ** argv)
         if (hsync)
             hsync_count++;
 
-        vtop_detect = top->xosera_main->dv_de_o;
-
         hsync_detect = false;
 
         // end of hsync
@@ -1282,6 +1284,11 @@ int main(int argc, char ** argv)
         vga_hsync_previous = hsync;
 
         vsync_detect = false;
+
+        if (vsync && !vga_vsync_previous)
+        {
+            vtop_detect = true;
+        }
 
         if (!vsync && vga_vsync_previous)
         {
@@ -1378,6 +1385,7 @@ int main(int argc, char ** argv)
 #endif
     }
 
+#if 0
     FILE * mfp = fopen(LOGDIR "xosera_vsim_text.txt", "w");
     if (mfp != nullptr)
     {
@@ -1436,7 +1444,7 @@ int main(int argc, char ** argv)
             fclose(tfp);
         }
     }
-
+#endif
 
     top->final();
 

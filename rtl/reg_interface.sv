@@ -217,7 +217,6 @@ always_ff @(posedge clk) begin
         regs_xr_sel_o   <= 1'b0;
         regs_wr_o       <= 1'b0;
         vram_rd         <= 1'b0;
-        vram_rw_wr      <= 1'b0;
         xr_rd           <= 1'b0;
 
         // addr/data out
@@ -232,6 +231,7 @@ always_ff @(posedge clk) begin
         reg_wr_addr     <= 16'h0000;
         reg_wr_incr     <= 16'h0000;
 `ifdef ENABLE_RW_DATA
+        vram_rw_wr      <= 1'b0;
         reg_rw_addr     <= 16'h0000;
         reg_rw_incr     <= 16'h0000;
         reg_rw_rd_inc   <= 1'b0;

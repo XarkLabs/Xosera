@@ -295,7 +295,7 @@ if (EN_BLIT) begin : opt_EN_BLIT
 end else begin
 
     logic unused_blit;
-    assign unused_blit = &{1'b0, blit_vram_ack };
+    assign unused_blit = &{1'b0, blit_vram_ack, blit_reg_wr_en };
     assign blit_vram_sel    = '0;
     assign blit_wr          = '0;
     assign blit_wr_mask     = '0;

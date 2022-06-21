@@ -2120,26 +2120,33 @@ void wait_scanline()
 
 static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 {
-    uint32_t clk_hz = xreg_getw(VID_HSIZE) > 640 ? 33750000 : 25125000;
-    uint16_t period = (clk_hz + rate - 1) / rate;
-
-
-    xreg_setw(AUD0_START, vaddr);
-    xreg_setw(AUD0_LENGTH, (len / 2) - 1);
-    xreg_setw(AUD0_PERIOD, period | 0x8000);        // force instant sample start
-
-    dprintf("Initial INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
-
-    xreg_setw(AUD0_START, SILENCE_VADDR);                  // queue silence
-    xreg_setw(AUD0_LENGTH, SILENCE_TILE | (1 - 1));        // length 1 -1 and TILE flag
-
-    dprintf("Audio Started INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
-
-    // AUD_CTRL high byte = channel start/len load pending, low byte = channel enables
-    while ((xm_getw(INT_CTRL) & 0x0010) == 0)        // while channel not ready for new START
+    if (xreg_getw(AUD_CTRL) & 1)
     {
+        uint32_t clk_hz = xreg_getw(VID_HSIZE) > 640 ? 33750000 : 25125000;
+        uint16_t period = (clk_hz + rate - 1) / rate;
+
+
+        xreg_setw(AUD0_START, vaddr);
+        xreg_setw(AUD0_LENGTH, (len / 2) - 1);
+        xreg_setw(AUD0_PERIOD, period | 0x8000);        // force instant sample start
+
+        dprintf("Initial INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
+
+        xreg_setw(AUD0_START, SILENCE_VADDR);                  // queue silence
+        xreg_setw(AUD0_LENGTH, SILENCE_TILE | (1 - 1));        // length 1 -1 and TILE flag
+
+        dprintf("Audio Started INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
+
+        // AUD_CTRL high byte = channel start/len load pending, low byte = channel enables
+        while ((xm_getw(INT_CTRL) & 0x0010) == 0)        // while channel not ready for new START
+        {
+        }
+        dprintf("Audio Finished INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
     }
-    dprintf("Audio Finished INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
+    else
+    {
+        dprintf("Audio disabled\n");
+    }
 }
 
 static void upload_audio(void * memdata, uint16_t vaddr, int len)
@@ -2296,7 +2303,7 @@ void     xosera_test()
     dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
 
     cpu_delay(1000);
-    xosera_get_info(&initinfo);
+    //    xosera_get_info(&initinfo);
     dprintf("xosera_get_info details:\n");
     hexdump(&initinfo, sizeof(initinfo));
     dprintf("\n");

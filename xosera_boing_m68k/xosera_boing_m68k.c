@@ -1016,7 +1016,7 @@ void xosera_boing()
         }
 #endif
 
-        wait_vblank_start();
+        xwait_vblank();
         draw_ball_at(WIDTH_WORDS_B, HEIGHT_WORDS_B, pos_x_int, pos_y_int);
         if (PAINT_BALL)
         {
@@ -1038,17 +1038,19 @@ void xosera_boing()
 #endif
     }
     readchar();
-    wait_vblank_start();
+    xwait_not_vblank();
+    xwait_vblank();
     clear_vram();
 
     xreg_setw(VID_CTRL, 0x0800);
-    xreg_setw(COPP_CTRL, 0x0000);        // disable copper
+    xreg_setw(COPP_CTRL, 0x0000);
+    xreg_setw(AUD_CTRL, 0x0000);
     xreg_setw(VID_LEFT, 0);
     xreg_setw(VID_RIGHT, vid_hsize);
     xreg_setw(PA_GFX_CTRL, 0x0000);
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_LEN, vid_hsize / 8);        // line len
+    xreg_setw(PA_LINE_LEN, vid_hsize / 8);
     xreg_setw(PA_HV_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
     xreg_setw(PB_GFX_CTRL, 0x0080);

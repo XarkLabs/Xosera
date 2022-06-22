@@ -822,7 +822,7 @@ void xosera_boing()
 {
     // re-initialize Xosera to current config
     xosera_init(xreg_getw(VID_HSIZE) > 640 ? 1 : 0);
-    delay(5000);        // let monitor sync
+    delay(100000);        // let monitor sync
 
     vid_hsize = xreg_getw(VID_HSIZE);
     clk_hz    = (vid_hsize > 640) ? 33750000 : 25125000;
@@ -831,11 +831,14 @@ void xosera_boing()
     // set playfield A display address to VRAM 0x0000
     xreg_setw(PA_DISP_ADDR, 0);
     // set screen width to 640 (adjusting LEFT and RIGHT margins if in 848 mode)
-    xreg_setw(VID_LEFT, (vid_hsize - 640) / 2);
-    xreg_setw(VID_RIGHT, vid_hsize - (vid_hsize - 640) / 2);
-    printf("Xoboing: Copyright (c) 2022 Thomas Jager - Preparing assets, one moment...");        // ANSI reset, disable
-                                                                                                 // input cursor
-    xreg_setw(VID_CTRL, 0x0000);        // set border to colorA #0
+    if (vid_hsize > 640)
+    {
+        xreg_setw(VID_CTRL, 0x0000);        // set border to colorA #0
+        xreg_setw(VID_LEFT, (vid_hsize - 640) / 2);
+        xreg_setw(VID_RIGHT, vid_hsize - (vid_hsize - 640) / 2);
+    }
+
+    printf("\rXoboing: Copyright (c) 2022 Thomas Jager - Preparing assets, one moment...");
 
     draw_bg();
     fill_ball();

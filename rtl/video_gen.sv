@@ -716,25 +716,28 @@ if (EN_AUDIO) begin : opt_AUDIO
     end
 
 end else begin
-    assign  audio_pdm_l_o   = 1'b0;
-    assign  audio_pdm_r_o   = 1'b0;
-    assign  audio_fetch     = 1'b0;
-    assign  audio_addr      = '0;
-    assign  audio_tilemem   = 1'b0;
-    assign  audio_intr_o    = 1'b0;
-    assign  audio_ready_o   = '0;
+    assign  audio_pdm_l_o       = 1'b0;
+    assign  audio_pdm_r_o       = 1'b0;
+    assign  audio_fetch         = 1'b0;
+    assign  audio_addr          = '0;
+    assign  audio_tilemem       = 1'b0;
+    assign  audio_intr_o        = 1'b0;
+    assign  audio_ready_o       = '0;
+    assign  audio_vol_l_nchan   = '0;
+    assign  audio_vol_r_nchan   = '0;
+    assign  audio_period_nchan  = '0;
+    assign  audio_tile_nchan    = '0;
+    assign  audio_start_nchan   = '0;
+    assign  audio_len_nchan     = '0;
+    assign  audio_restart_nchan = '0;
+    assign  audio_reload_nchan  = '0;
+    assign  audio_ready_o       = '0;
 
     logic   audio_unused;
-    assign  audio_unused = &{ 1'b0, audio_ack, audio_word };
+    assign  audio_unused = &{ 1'b0, audio_ack, audio_word, audio_vol_l_nchan, audio_vol_r_nchan,
+                            audio_period_nchan, audio_tile_nchan, audio_start_nchan, audio_len_nchan,
+                            audio_restart_nchan, audio_reload_nchan };
 
-    assign audio_vol_l_nchan    = '0;
-    assign audio_vol_r_nchan    = '0;
-    assign audio_period_nchan   = '0;
-    assign audio_tile_nchan     = '0;
-    assign audio_start_nchan    = '0;
-    assign audio_len_nchan      = '0;
-    assign audio_restart_nchan  = '0;
-    assign audio_ready_o        = '0;
 end
 
 endmodule

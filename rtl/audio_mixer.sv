@@ -116,45 +116,45 @@ always_ff @(posedge clk) begin
             audio_reload_nchan_o[i]   <= 1'b0;        // clear reload strobe
 
             // decrement period
-            if (audio_enable_nchan_i[i]) begin
-                chan_period[i]      <= chan_period[i] - 1'b1;
+            chan_period[i]      <= chan_period[i] - 1'b1;
 
-                // if period underflowed, output next sample
-                if (chan_period[i][15]) begin
-                    chan_2nd[i]         <= !chan_2nd[i];
-                    chan_period[i]      <= { 1'b0, audio_period_nchan_i[i*15+:15] };
-                    chan_val[i]         <= chan_buff[i][15:8];
-                    chan_buff[i][15:8]  <= chan_buff[i][7:0];
-    `ifndef SYNTHESIS
-                    chan_buff[i][7]     <= ~chan_buff[i][7];    // obvious "glitch" to verify not used again
-    `endif
-                    chan_buff_ok[i]     <= { chan_buff_ok[i][0], 1'b0 };
+            // if period underflowed, output next sample
+            if (chan_period[i][15]) begin
+                chan_2nd[i]         <= !chan_2nd[i];
+                chan_period[i]      <= { 1'b0, audio_period_nchan_i[i*15+:15] };
+                chan_val[i]         <= chan_buff[i][15:8];
+                chan_buff[i][15:8]  <= chan_buff[i][7:0];
+`ifndef SYNTHESIS
+                chan_buff[i][7]     <= ~chan_buff[i][7];    // obvious "glitch" to verify not used again
+`endif
+                chan_buff_ok[i]     <= { chan_buff_ok[i][0], 1'b0 };
 
-                    // if 2nd sample of sample word, prepare sample address
-                    if (chan_2nd[i]) begin
-                        chan_fetch[i]           <= 1'b1;
-                        if (chan_restart[i]) begin
-                            // if restart, reload sample parameters from registers
-                            chan_tile[i]        <= audio_tile_nchan_i[i];
-                            chan_addr[i]        <= audio_start_nchan_i[i*xv::VRAM_W+:16];
-                            chan_length[i]      <= { 1'b0, audio_len_nchan_i[i*15+:15] };
-                            audio_reload_nchan_o[i] <= 1'b1;            // set reload strobe
-                        end else begin
-                            // increment sample address, decrement remaining length
-                            chan_addr[i]        <= chan_addr[i] + 1'b1;
-                            chan_length[i]      <= chan_length_n[i];
-                        end
+                // if 2nd sample of sample word, prepare sample address
+                if (chan_2nd[i]) begin
+                    chan_fetch[i]           <= 1'b1;
+                    if (chan_restart[i]) begin
+                        // if restart, reload sample parameters from registers
+                        chan_tile[i]        <= audio_tile_nchan_i[i];
+                        chan_addr[i]        <= audio_start_nchan_i[i*xv::VRAM_W+:16];
+                        chan_length[i]      <= { 1'b0, audio_len_nchan_i[i*15+:15] };
+                        audio_reload_nchan_o[i] <= 1'b1;            // set reload strobe
+                    end else begin
+                        // increment sample address, decrement remaining length
+                        chan_addr[i]        <= chan_addr[i] + 1'b1;
+                        chan_length[i]      <= chan_length_n[i];
                     end
                 end
+            end
 
-                if (audio_restart_nchan_i[i]) begin
-                    chan_length[i][15]      <= 1'b1;    // force sample addr, tile, len reload
-                    chan_buff_ok[i]         <= 2'b00;   // clear sample buffer status
-                    chan_2nd[i]             <= 1'b1;    // set 2nd sample to switch next sendout
-                end
+            if (audio_restart_nchan_i[i] || !audio_enable_nchan_i[i]) begin
+                chan_length[i][15]      <= 1'b1;    // force sample addr, tile, len reload
+                chan_period[i][15]      <= 1'b1;
+                chan_buff_ok[i]         <= 2'b00;   // clear sample buffer status
+                chan_2nd[i]             <= 1'b1;    // set 2nd sample to switch next sendout
+            end
 
-            end else begin
-                chan_val[i]     <= '0;            // silent if disabled
+            if (!audio_enable_nchan_i[i]) begin
+                chan_val[i]         <= '0;            // silent if disabled
             end
         end
 

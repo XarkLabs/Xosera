@@ -40,11 +40,11 @@
 module xosera_main #(
     parameter   EN_VID_PF_B             = 1,        // enable playfield B
     parameter   EN_BLEND                = 1,        // enable pf B blending (else overlay only)
-    parameter   EN_BLEND_ADDCLAMP       = 1,        // TODO: enable pf B clamped RGB blending?
+    parameter   EN_BLEND_ADDCLAMP       = 1,        // enable pf B clamped RGB blending (cheap)
     parameter   EN_BLIT                 = 1,        // enable blit unit
-    parameter   EN_BLIT_DECR_MODE       = 1,        // enable blit pointer decrementing
-    parameter   EN_BLIT_DECR_LSHIFT     = 1,        // TODO: enable blit left shift when decrementing?
-    parameter   EN_BLIT_XOR_CONST       = 1,        // TODO: enable blit XOR modulo with constants?
+    parameter   EN_BLIT_DECR_MODE       = 0,        // TODO: enable blit pointer decrementing
+    parameter   EN_BLIT_DECR_LSHIFT     = 0,        // TODO: enable blit left shift when decrementing?
+    parameter   EN_BLIT_XOR_CONST       = 0,        // TODO: enable blit XOR modulo with constants?
     parameter   EN_AUDIO                = 1,        // enable audio output
     parameter   AUDIO_NCHAN             = 1         // number of audio channels
 )(

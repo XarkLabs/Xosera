@@ -13,65 +13,66 @@
 `include "xosera_pkg.sv"
 
 module video_playfield #(
-    parameter EN_AUDIO = 1
+    parameter EN_DMA = 1
 )(
     // video control signals
-    input  wire logic           stall_i,
-    input  wire logic           mem_fetch_i,
-    input  wire logic           mem_fetch_start_i,
-    input  wire hres_t          h_count_i,
-    input  wire logic           end_of_line_i,
-    input  wire logic           end_of_frame_i,
-    input  wire color_t         border_color_i,
-    input  wire hres_vis_t      vid_left_i,
-    input  wire hres_vis_t      vid_right_i,
+    input  wire logic           stall_i,                    // stall this cycle (memory contention)
+    input  wire hres_t          h_count_i,                  // horizontal video timing counter
+    input  wire logic           mem_fetch_i,                // playfield memory fetch enable
+    input  wire logic           mem_fetch_start_i,          // strobe when memory fetch starts
+    input  wire logic           end_of_line_i,              // strobe at end of scanline
+    input  wire logic           end_of_frame_i,             // strobe at end of frame
+    input  wire color_t         border_color_i,             // color index for border/blanked pixels
+    input  wire hres_vis_t      vid_left_i,                 // left edge of screen (leftmost visible pixel is 0)
+    input  wire hres_vis_t      vid_right_i,                // right edge of screen +1 (aka 640/848 for full width)
     // video memories
-    output      logic           vram_sel_o,                         // vram read select
-    output      addr_t          vram_addr_o,                        // vram word address out (16x64K)
-    input  wire word_t          vram_data_i,                        // vram word data in
-    output      logic           tilemem_sel_o,                      // tile mem read select
-    output      tile_addr_t     tilemem_addr_o,                     // tile mem word address out (16x5K)
-    input  wire word_t          tilemem_data_i,                     // tile mem word data in
+    output      logic           vram_sel_o,                 // vram read select
+    output      addr_t          vram_addr_o,                // vram word address out (16x64K)
+    input  wire word_t          vram_data_i,                // vram word data in
+    output      logic           tilemem_sel_o,              // tile mem read select
+    output      tile_addr_t     tilemem_addr_o,             // tile mem word address out (16x5K)
+    input  wire word_t          tilemem_data_i,             // tile mem word data in
     // playfield generation control signals
-    input  wire logic           pf_blank_i,                         // disable plane
-    input  wire addr_t          pf_start_addr_i,                    // display data start address (word address)
-    input  wire word_t          pf_line_len_i,                      // words per disply line (added to line_addr each line)
-    input  wire color_t         pf_colorbase_i,                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
-    input  wire logic  [1:0]    pf_bpp_i,                           // bpp code (bpp_depth_t)
-    input  wire logic           pf_bitmap_i,                        // bitmap enable (else text mode)
-    input  wire logic  [5:0]    pf_tile_bank_i,                     // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
-    input  wire logic           pf_disp_in_tile_i,                  // display memory 0=vram, 1=tileram
-    input  wire logic           pf_tile_in_vram_i,                  // tile memory 0=tilemem, 1=vram
-    input  wire logic  [3:0]    pf_tile_height_i,                   // max height of tile cell
-    input  wire logic  [1:0]    pf_h_repeat_i,                      // horizontal pixel repeat
-    input  wire logic  [1:0]    pf_v_repeat_i,                      // vertical pixel repeat
-    input  wire logic  [2:0]    pf_h_frac_repeat_i,                 // horizontal fractional pixel repeat
-    input  wire logic  [2:0]    pf_v_frac_repeat_i,                 // vertical fractional pixel repeat
-    input  wire logic  [4:0]    pf_fine_hscroll_i,                  // horizontal fine scroll (8 pixel * 4 for repeat)
-    input  wire logic  [5:0]    pf_fine_vscroll_i,                  // vertical fine scroll (16 lines * 4 for repeat)
-    input  wire logic           pf_gfx_ctrl_set_i,                  // true if pf_gfx_ctrl_i changed (register write)
-    input  wire logic           pf_line_start_set_i,                // true if pf_line_start_i changed (register write)
-    input  wire addr_t          pf_line_start_addr_i,               // address of next line display data start
-    output      color_t         pf_color_index_o,                   // output color
-    // audio
-    input       logic           audio_fetch_i,                      // audio DMA request
-    output      logic           audio_ack_o,                        // audio DMA acknowledge
-    input  wire logic           audio_tile_i,                       // audio DMA memory (0=VRAM, 1=TILE)
-    input  wire addr_t          audio_addr_i,                       // audio DMA address
-    output      word_t          audio_word_o,                       // audio DMA data out
+    input  wire logic           pf_blank_i,                 // disable plane
+    input  wire addr_t          pf_start_addr_i,            // display data start address (word address)
+    input  wire word_t          pf_line_len_i,              // words per disply line (added to line_addr each line)
+    input  wire color_t         pf_colorbase_i,             // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
+    input  wire logic  [1:0]    pf_bpp_i,                   // bpp code (bpp_depth_t)
+    input  wire logic           pf_bitmap_i,                // bitmap enable (else text mode)
+    input  wire logic  [5:0]    pf_tile_bank_i,             // vram/tilemem tile bank 0-3 (0/1 with 8x16) tilemem, or 2KB/4K
+    input  wire logic           pf_disp_in_tile_i,          // display memory 0=vram, 1=tileram
+    input  wire logic           pf_tile_in_vram_i,          // tile memory 0=tilemem, 1=vram
+    input  wire logic  [3:0]    pf_tile_height_i,           // max height of tile cell
+    input  wire logic  [1:0]    pf_h_repeat_i,              // horizontal pixel repeat
+    input  wire logic  [1:0]    pf_v_repeat_i,              // vertical pixel repeat
+    input  wire logic  [2:0]    pf_h_frac_repeat_i,         // horizontal fractional pixel repeat
+    input  wire logic  [2:0]    pf_v_frac_repeat_i,         // vertical fractional pixel repeat
+    input  wire logic  [4:0]    pf_fine_hscroll_i,          // horizontal fine scroll (8 pixel * 4 for repeat)
+    input  wire logic  [5:0]    pf_fine_vscroll_i,          // vertical fine scroll (16 lines * 4 for repeat)
+    input  wire logic           pf_gfx_ctrl_set_i,          // true if pf_gfx_ctrl_i changed (register write)
+    input  wire logic           pf_line_start_set_i,        // true if pf_line_start_i changed (register write)
+    input  wire addr_t          pf_line_start_addr_i,       // address of next line display data start
+    // video color index output
+    output      color_t         pf_color_index_o,           // output color index
+    // DMA
+    input       logic           dma_fetch_i,                // DMA request
+    output      logic           dma_ack_o,                  // DMA acknowledge
+    input  wire logic           dma_tile_i,                 // DMA memory (0=VRAM, 1=TILE)
+    input  wire addr_t          dma_addr_i,                 // DMA address
+    output      word_t          dma_word_o,                 // DMA data out
     // standard signals
-    input  wire logic           reset_i,                            // system reset in
-    input  wire clk                                                 // pixel clock
+    input  wire logic           reset_i,                    // system reset
+    input  wire                 clk                         // pixel clock
 );
 
 localparam H_SCANOUT_BEGIN  = xv::OFFSCREEN_WIDTH-2;                // h count for start line scanout
 
 // display line fetch generation FSM
 typedef enum logic [4:0] {
-    FETCH_IDLE          =   5'h0,
-    FETCH_WAIT_AUDIO    =   5'h1,
-    FETCH_READ_AUDIO    =   5'h2,
-    FETCH_BITMAP        =   5'h3,               // output bitmap VRAM address
+    FETCH_IDLE          =   5'h00,
+    FETCH_WAIT_DMA      =   5'h01,
+    FETCH_READ_DMA      =   5'h02,
+    FETCH_BITMAP        =   5'h03,               // output bitmap VRAM address
     // bitmap
     FETCH_ADDR_BITMAP   =   5'h04,              // output bitmap VRAM address
     FETCH_WAIT_BITMAP   =   5'h05,              // wait for bitmap data
@@ -112,8 +113,8 @@ logic [4:0]     pf_fetch, pf_fetch_next;            // playfield A generation FS
 addr_t          pf_addr, pf_addr_next;              // address to fetch display bitmap/tilemap
 addr_t          pf_tile_addr;                       // tile start address (VRAM or TILERAM)
 
-logic           audio_ack, audio_ack_next;          // audio data acknowledge
-word_t          audio_word, audio_word_next;        // audio data being fetched
+logic           dma_ack, dma_ack_next;              // DMA data acknowledge
+word_t          dma_word, dma_word_next;            // DMA data being fetched
 
 logic           vram_sel, vram_sel_next;            // vram select output
 logic           tilemem_sel, tilemem_sel_next;      // tilemem select output
@@ -183,12 +184,14 @@ always_comb begin
 
     pf_tile_addr        = calc_tile_addr(pf_tile_attr_next[xv::TILE_INDEX+:10], pf_tile_y, pf_tile_bank_i, pf_bpp_i, pf_tile_height_i[3], pf_tile_attr_next[xv::TILE_ATTR_VREV]);
 
-    audio_word_next     = audio_word;
+    if (EN_DMA) begin
+        dma_word_next       = dma_word;
+        dma_ack_next        = 1'b0;
+    end
 
     pf_words_ready_next = 1'b0;
     vram_sel_next       = 1'b0;
     tilemem_sel_next    = 1'b0;
-    audio_ack_next      = 1'b0;
 
     case (pf_fetch)
         FETCH_IDLE: begin
@@ -199,25 +202,27 @@ always_comb begin
                     pf_fetch_next   = FETCH_ADDR_TILEMAP;
                 end
             end else begin
-                if (EN_AUDIO && audio_fetch_i) begin
-                    fetch_addr_next     = audio_addr_i;         // put audio 0 address on bus
-                    vram_sel_next       = ~audio_tile_i;        // select vram for audio0
-                    tilemem_sel_next    = audio_tile_i;
-                    pf_fetch_next       = FETCH_WAIT_AUDIO;
+                if (EN_DMA && dma_fetch_i) begin
+                    fetch_addr_next     = dma_addr_i;         // put DMA address on bus
+                    vram_sel_next       = ~dma_tile_i;        // select VRAM/TILE for DMA
+                    tilemem_sel_next    = dma_tile_i;
+                    pf_fetch_next       = FETCH_WAIT_DMA;
                 end
             end
         end
-        FETCH_WAIT_AUDIO: begin
-            if (EN_AUDIO) begin
-                pf_fetch_next   = FETCH_READ_AUDIO;
-            end
-        end
-        FETCH_READ_AUDIO: begin
-            if (EN_AUDIO) begin
-                audio_word_next = audio_tile_i ? tilemem_data_i : vram_data_i;  // read audio word
-                audio_ack_next  = 1'b1;                                         // signal audio data ready
+        FETCH_WAIT_DMA: begin
+            if (EN_DMA) begin
+                pf_fetch_next   = FETCH_READ_DMA;
+            end else begin
                 pf_fetch_next   = FETCH_IDLE;
             end
+        end
+        FETCH_READ_DMA: begin
+            if (EN_DMA) begin
+                dma_word_next = dma_tile_i ? tilemem_data_i : vram_data_i;  // read audio word
+                dma_ack_next  = 1'b1;                                       // signal audio data ready
+            end
+            pf_fetch_next   = FETCH_IDLE;
         end
         FETCH_ADDR_BITMAP: begin
             if (!mem_fetch_i) begin                    // stop if no longer fetching
@@ -360,8 +365,8 @@ always_comb begin
 end
 
 assign  pf_color_index_o    = pf_pixels[63:56] ^ pf_colorbase_i;   // XOR colorbase bits here
-assign  audio_word_o        = audio_word;
-assign  audio_ack_o         = audio_ack;
+assign  dma_word_o          = dma_word;
+assign  dma_ack_o           = dma_ack;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -385,8 +390,8 @@ always_ff @(posedge clk) begin
         pf_initial_buf      <= 1'b0;
         pf_words_ready      <= 1'b0;
 
-        audio_ack           <= 1'b0;
-        audio_word          <= 16'h0000;
+        dma_ack           <= 1'b0;
+        dma_word          <= 16'h0000;
 
         vram_sel            <= 1'b0;
         tilemem_sel         <= 1'b0;
@@ -431,9 +436,9 @@ always_ff @(posedge clk) begin
             tilemem_addr_o  <= $bits(tilemem_addr_o)'(fetch_addr_next);
         end
 
-        if (EN_AUDIO) begin
-            audio_word      <= audio_word_next;
-            audio_ack       <= audio_ack_next;
+        if (EN_DMA) begin
+            dma_word      <= dma_word_next;
+            dma_ack       <= dma_ack_next;
         end
 
         // have display words been fetched?

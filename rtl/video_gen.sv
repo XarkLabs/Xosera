@@ -190,7 +190,7 @@ assign tilemem_sel_o    = pa_tile_sel ? pa_tile_sel  : pb_tile_sel;
 assign tilemem_addr_o   = pa_tile_sel ? pa_tile_addr : pb_tile_addr;
 
 video_playfield #(
-    .EN_AUDIO(EN_AUDIO)
+    .EN_DMA(EN_AUDIO)
 ) video_pf_a(
     .stall_i(1'b0),                                     // playfield A never stalls
     .mem_fetch_i(mem_fetch & ~pa_blank),
@@ -227,11 +227,11 @@ video_playfield #(
     .pf_line_start_addr_i(line_set_addr),
     .pf_gfx_ctrl_set_i(pa_gfx_ctrl_set),
     .pf_color_index_o(pa_color_index),
-    .audio_fetch_i(audio_fetch),
-    .audio_ack_o(audio_ack),
-    .audio_tile_i(audio_tilemem),
-    .audio_addr_i(audio_addr),
-    .audio_word_o(audio_word),
+    .dma_fetch_i(audio_fetch),
+    .dma_ack_o(audio_ack),
+    .dma_tile_i(audio_tilemem),
+    .dma_addr_i(audio_addr),
+    .dma_word_o(audio_word),
     .reset_i(reset_i),
     .clk(clk)
 );
@@ -275,7 +275,7 @@ if (EN_VID_PF_B) begin : opt_PF_B
     end
 
     video_playfield #(
-        .EN_AUDIO(0)
+        .EN_DMA(0)
     ) video_pf_b(
         .stall_i(pb_stall),
         .mem_fetch_i(mem_fetch & ~pb_blank),
@@ -312,11 +312,11 @@ if (EN_VID_PF_B) begin : opt_PF_B
         .pf_line_start_addr_i(line_set_addr),
         .pf_gfx_ctrl_set_i(pb_gfx_ctrl_set),
         .pf_color_index_o(pb_color_index),
-        .audio_fetch_i(1'b0),
-        .audio_ack_o(audio_dummy_ack),
-        .audio_tile_i(1'b0),
-        .audio_addr_i(16'b0),
-        .audio_word_o(audio_dummy_word),
+        .dma_fetch_i(1'b0),
+        .dma_ack_o(audio_dummy_ack),
+        .dma_tile_i(1'b0),
+        .dma_addr_i(16'b0),
+        .dma_word_o(audio_dummy_word),
         .reset_i(reset_i),
         .clk(clk)
     );

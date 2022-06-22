@@ -592,7 +592,7 @@ void upload_audio()
     }
 
     uint16_t rate   = 8000;
-    uint16_t period = (clk_hz + rate - 1) / rate;
+    uint16_t period = (clk_hz + (rate / 2)) / rate;
     xreg_setw(AUD0_PERIOD, period);
     // start silence sample
     xreg_setw(AUD0_LENGTH, vram_silence_len - 1);        // 1 word length (-1)
@@ -604,8 +604,8 @@ void upload_audio()
 void play_audio()
 {
     uint16_t wordsize = ((_binary_Boing_raw_end - _binary_Boing_raw_start) / 2) - 1;
-    uint16_t rate     = 8000 - 256 + (xm_getw(TIMER) & 0x1ff);        // randomize a bit
-    uint16_t period   = (clk_hz + rate - 1) / rate;
+    uint16_t rate     = 8000 + ((xm_getw(TIMER) & 0xfff) - 0x800);        // randomize rate a bit
+    uint16_t period   = (clk_hz + (rate / 2)) / rate;
     xreg_setw(AUD0_LENGTH, wordsize);
     xreg_setw(AUD0_START, vram_audio_base + vram_silence_len);
     xreg_setw(AUD0_PERIOD, period | 0x8000);        // force new sound start immediately

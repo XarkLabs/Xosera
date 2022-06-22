@@ -207,15 +207,28 @@ static inline long scale_coord(long v, long scale, long v_center, long scale_cen
     return (v - v_center) * scale / scale_center + v_center;
 }
 
-static inline void wait_vblank()
-{
-    xwait_vblank();
-}
-
 static inline void wait_vblank_start()
 {
     xwait_not_vblank();
     xwait_vblank();
+}
+
+static void clear_vram()
+{
+    // use blitter to clear VRAM
+    xreg_setw(BLIT_CTRL, 0x0003);
+    xreg_setw_next(0x0000);             // BLIT_MOD_A
+    xreg_setw_next(0x0000);             // BLIT_SRC_A constA (fill value)
+    xreg_setw_next(0x0000);             // BLIT_MOD_B
+    xreg_setw_next(0xFFFF);             // BLIT_SRC_B constB AND (also no transparency)
+    xreg_setw_next(0x0000);             // BLIT_MOD_C
+    xreg_setw_next(0x0000);             // BLIT_VAL_C constC
+    xreg_setw_next(0x0000);             // BLIT_MOD_D
+    xreg_setw_next(0x0000);             // BLIT_DST_D VRAM address (dest)
+    xreg_setw_next(0xFF00);             // BLIT_SHIFT (no edge masking, no shifting)
+    xreg_setw_next(0x0000);             // BLIT_LINES (1-D blit)
+    xreg_setw_next(0x10000 - 1);        // BLIT_WORDS = all 64KW VRAM
+    xwait_blit_done();
 }
 
 void draw_line_scale(int     width,
@@ -823,6 +836,7 @@ void xosera_boing()
     // re-initialize Xosera to current config
     xosera_init(xreg_getw(VID_HSIZE) > 640 ? 1 : 0);
     delay(100000);        // let monitor sync
+    clear_vram();
 
     vid_hsize = xreg_getw(VID_HSIZE);
     clk_hz    = (vid_hsize > 640) ? 33750000 : 25125000;
@@ -860,9 +874,8 @@ void xosera_boing()
     xreg_setw(PB_DISP_ADDR, vram_base_b);
 
     // PA Colours:
-    wait_vblank_start();
-    xmem_setw(XR_COLOR_A_ADDR + 0x0, 0x0BBB);        // Grey
-    xmem_setw(XR_COLOR_A_ADDR + 0x1, 0x0B0B);        // Purple
+    xmem_setw_wait(XR_COLOR_A_ADDR + 0x0, 0x0BBB);        // Grey
+    xmem_setw_wait(XR_COLOR_A_ADDR + 0x1, 0x0B0B);        // Purple
 
     // PB Colours:
     if (PAINT_BALL)
@@ -871,52 +884,34 @@ void xosera_boing()
         {
             uint8_t  colour_base  = palette_index * 16;
             uint16_t palette_base = XR_COLOR_B_ADDR + colour_base;
-            wait_vblank();
-            xmem_setw(palette_base + 0, 0x0000);        // Transparent Black
-            wait_vblank();
-            xmem_setw(palette_base + 1, 0x6000);        // Translucent Black
+            xmem_setw_wait(palette_base + 0, 0x0000);        // Transparent Black
+            xmem_setw_wait(palette_base + 1, 0x6000);        // Translucent Black
             for (uint16_t colour = 0; colour < 7; ++colour)
             {
-                wait_vblank();
-                xmem_setw(palette_base + 2 + (palette_index + colour) % 14, 0xFFFF);        // White
+                xmem_setw_wait(palette_base + 2 + (palette_index + colour) % 14, 0xFFFF);        // White
             }
             for (uint16_t colour = 7; colour < 14; ++colour)
             {
-                wait_vblank();
-                xmem_setw(palette_base + 2 + (palette_index + colour) % 14, 0xFF00);        // Red
+                xmem_setw_wait(palette_base + 2 + (palette_index + colour) % 14, 0xFF00);        // Red
             }
         }
     }
     else
     {
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0x2, 0xF000);        // Black
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0x3, 0xFFFF);        // White
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0x4, 0xFF00);        // Red
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0x5, 0xFF70);        // Orange
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0x6, 0xFFF0);        // Yellow
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0x7, 0xF7F0);        // Spring Green
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0x8, 0xF0F0);        // Green
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0x9, 0xF0F7);        // Turquoise
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0xA, 0xF0FF);        // Cyan
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0xB, 0xF07F);        // Ocean
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0xC, 0xF00F);        // Blue
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0xD, 0xF70F);        // Violet
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0xE, 0xFF0F);        // Magenta
-        wait_vblank();
-        xmem_setw(XR_COLOR_B_ADDR + 0xF, 0xFF07);        // Raspberry
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0x2, 0xF000);        // Black
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0x3, 0xFFFF);        // White
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0x4, 0xFF00);        // Red
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0x5, 0xFF70);        // Orange
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0x6, 0xFFF0);        // Yellow
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0x7, 0xF7F0);        // Spring Green
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0x8, 0xF0F0);        // Green
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0x9, 0xF0F7);        // Turquoise
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0xA, 0xF0FF);        // Cyan
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0xB, 0xF07F);        // Ocean
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0xC, 0xF00F);        // Blue
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0xD, 0xF70F);        // Violet
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0xE, 0xFF0F);        // Magenta
+        xmem_setw_wait(XR_COLOR_B_ADDR + 0xF, 0xFF07);        // Raspberry
     }
 
     xreg_setw(PA_LINE_LEN, WIDTH_WORDS_A);
@@ -1021,14 +1016,14 @@ void xosera_boing()
         }
 #endif
 
+        wait_vblank_start();
         draw_ball_at(WIDTH_WORDS_B, HEIGHT_WORDS_B, pos_x_int, pos_y_int);
         if (PAINT_BALL)
         {
             set_ball_colour(colour_base);
         }
-
 #if USE_AUDIO
-        if (bounced && xm_get_sys_ctrlb(VBLANK))
+        if (bounced)
         {
             play_audio();
             bounced = false;
@@ -1044,6 +1039,7 @@ void xosera_boing()
     }
     readchar();
     wait_vblank_start();
+    clear_vram();
 
     xreg_setw(VID_CTRL, 0x0800);
     xreg_setw(COPP_CTRL, 0x0000);        // disable copper

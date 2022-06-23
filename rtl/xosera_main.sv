@@ -38,9 +38,13 @@
 `include "xosera_pkg.sv"
 
 module xosera_main #(
-    parameter   EN_VID_PF_B             = 1,        // enable playfield B
-    parameter   EN_BLEND                = 1,        // enable pf B blending (else overlay only)
-    parameter   EN_BLEND_ADDCLAMP       = 1,        // enable pf B clamped RGB blending (cheap)
+    parameter   EN_PF_A_TILEMAP         = 1,        // PF A supports tilemap
+    parameter   EN_PF_A_BITMAP          = 1,        // PF A supports bitmap
+    parameter   EN_PF_B                 = 1,        // PF B (2nd playfield)
+    parameter   EN_PF_B_TILEMAP         = 1,        // PF B supports tilemap
+    parameter   EN_PF_B_BITMAP          = 1,        // PF B supports bitmap
+    parameter   EN_PF_B_ALPHA           = 1,        // enable pf B blending (else overlay only)
+    parameter   EN_PF_B_ALPHACLAMP      = 1,        // enable pf B clamped RGB blending (cheap)
     parameter   EN_BLIT                 = 1,        // enable blit unit
     parameter   EN_BLIT_DECR_MODE       = 0,        // TODO: enable blit pointer decrementing
     parameter   EN_BLIT_DECR_LSHIFT     = 0,        // TODO: enable blit left shift when decrementing?
@@ -216,7 +220,11 @@ reg_interface #(
 
 //  video generation
 video_gen #(
-    .EN_VID_PF_B(EN_VID_PF_B),
+    .EN_PF_A_TILEMAP(EN_PF_A_TILEMAP),
+    .EN_PF_A_BITMAP(EN_PF_A_BITMAP),
+    .EN_PF_B(EN_PF_B),
+    .EN_PF_B_TILEMAP(EN_PF_B_TILEMAP),
+    .EN_PF_B_BITMAP(EN_PF_B_BITMAP),
     .EN_AUDIO(EN_AUDIO),
     .AUDIO_NCHAN(AUDIO_NCHAN)
 ) video_gen(
@@ -272,7 +280,7 @@ copper copper(
 `endif
 
 // blitter - blit block transfer unit
-if (EN_BLIT) begin : opt_EN_BLIT
+if (EN_BLIT) begin
     blitter2 #(
         .EN_BLIT_DECR_MODE(EN_BLIT_DECR_MODE),
         .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT),
@@ -295,7 +303,6 @@ if (EN_BLIT) begin : opt_EN_BLIT
         .clk(clk)
     );
 end else begin
-
     logic unused_blit;
     assign unused_blit = &{1'b0, blit_vram_ack, blit_reg_wr_en };
     assign blit_vram_sel    = '0;
@@ -340,7 +347,7 @@ vram_arb #(
 assign vgen_reg_wr_en = xr_regs_wr_en && ~xr_regs_addr[6];    // video register (also handles audio)
 assign blit_reg_wr_en = xr_regs_wr_en && xr_regs_addr[6];     // blit reg register
 xrmem_arb #(
-    .EN_VID_PF_B(EN_VID_PF_B)
+    .EN_PF_B(EN_PF_B)
 ) xrmem_arb(
     // regs XR register/memory interface (read/write)
     .xr_sel_i(regs_xr_sel),
@@ -387,10 +394,10 @@ xrmem_arb #(
 );
 
 // video blending - alpha and other color belding between playfield A and B
-if (EN_VID_PF_B) begin : opt_PF_B_BLEND
+if (EN_PF_B) begin
     video_blend #(
-        .EN_BLEND(EN_BLEND),
-        .EN_BLEND_ADDCLAMP(EN_BLEND_ADDCLAMP)
+        .EN_PF_B_ALPHA(EN_PF_B_ALPHA),
+        .EN_PF_B_ALPHACLAMP(EN_PF_B_ALPHACLAMP)
     ) video_blend(
         .vsync_i(vsync),
         .hsync_i(hsync),

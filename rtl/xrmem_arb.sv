@@ -13,50 +13,50 @@
 `include "xosera_pkg.sv"
 
 module xrmem_arb #(
-    parameter EN_VID_PF_B       = 1
+    parameter EN_PF_B           = 1
 )(
     // regs XR register/memory interface (read/write)
-    input  wire logic                           xr_sel_i,
-    output      logic                           xr_ack_o,
-    input  wire logic                           xr_wr_i,
-    input  wire addr_t                          xr_addr_i,
-    input  wire word_t                          xr_data_i,
-    output      word_t                          xr_data_o,
+    input  wire logic                   xr_sel_i,
+    output      logic                   xr_ack_o,
+    input  wire logic                   xr_wr_i,
+    input  wire addr_t                  xr_addr_i,
+    input  wire word_t                  xr_data_i,
+    output      word_t                  xr_data_o,
 
 `ifdef ENABLE_COPP
     // copper XR register/memory interface (write-only)
-    input  wire logic                           copp_xr_sel_i,
-    output      logic                           copp_xr_ack_o,
-    input  wire addr_t                          copp_xr_addr_i,
-    input  wire word_t                          copp_xr_data_i,
+    input  wire logic                   copp_xr_sel_i,
+    output      logic                   copp_xr_ack_o,
+    input  wire addr_t                  copp_xr_addr_i,
+    input  wire word_t                  copp_xr_data_i,
 `endif
 
     // XR register bus (read/write)
-    output      logic                           xreg_wr_o,
-    output      logic  [6:0]                    xreg_addr_o,
-    input  wire word_t                          xreg_data_i,
-    output      word_t                          xreg_data_o,
+    output      logic                   xreg_wr_o,
+    output      logic  [6:0]            xreg_addr_o,
+    input  wire word_t                  xreg_data_i,
+    output      word_t                  xreg_data_o,
 
     // color lookup colormem A+B 2 x 16-bit bus (read-only)
-    input  wire logic                           vgen_color_sel_i,
-    input  wire color_t                         vgen_colorA_addr_i,
-    output      argb_t                          vgen_colorA_data_o,
-    input  wire color_t                         vgen_colorB_addr_i,
-    output      argb_t                          vgen_colorB_data_o,
+    input  wire logic                   vgen_color_sel_i,
+    input  wire color_t                 vgen_colorA_addr_i,
+    output      argb_t                  vgen_colorA_data_o,
+    input  wire color_t                 vgen_colorB_addr_i,
+    output      argb_t                  vgen_colorB_data_o,
 
     // video generation tilemem bus (read-only)
-    input  wire logic                           vgen_tile_sel_i,
-    input  wire tile_addr_t                     vgen_tile_addr_i,
-    output      word_t                          vgen_tile_data_o,
+    input  wire logic                   vgen_tile_sel_i,
+    input  wire tile_addr_t             vgen_tile_addr_i,
+    output      word_t                  vgen_tile_data_o,
 
 `ifdef ENABLE_COPP
     // copper program coppermem 32-bit bus (read-only)
-    input  wire logic                           copp_prog_sel_i,
-    input  wire logic [xv::COPP_W-1:0]          copp_prog_addr_i,
-    output      logic [31:0]                    copp_prog_data_o,
+    input  wire logic                   copp_prog_sel_i,
+    input  wire logic [xv::COPP_W-1:0]  copp_prog_addr_i,
+    output      logic [31:0]            copp_prog_data_o,
 `endif
 
-    input  wire logic                           clk
+    input  wire logic                   clk
 );
 
 // internal COLORMEM signals
@@ -219,18 +219,18 @@ end
 always_comb begin
     color_rd_ack_next   = 1'b0;
     colorA_addr         = vgen_colorA_addr_i;
-    if (EN_VID_PF_B) begin
+    if (EN_PF_B) begin
         colorB_addr         = vgen_colorB_addr_i;
     end
     if (vgen_color_sel_i) begin
         colorA_addr         = vgen_colorA_addr_i;
-        if (EN_VID_PF_B) begin
+        if (EN_PF_B) begin
             colorB_addr         = vgen_colorB_addr_i;
         end
     end else if (xr_sel_i & ~xr_ack_o) begin
         color_rd_ack_next   = xr_color_sel & ~xr_wr_i;;
         colorA_addr         = $bits(colorA_addr)'(xr_addr_i);
-        if (EN_VID_PF_B) begin
+        if (EN_PF_B) begin
             colorB_addr         = $bits(colorB_addr)'(xr_addr_i);
         end
     end
@@ -291,7 +291,7 @@ colormem #(
 );
 
 // playfield B color lookup RAM
-if (EN_VID_PF_B) begin : opt_PF_B_COLOR
+if (EN_PF_B) begin
     colormem #(
         .AWIDTH(xv::COLOR_W),
         .PLAYFIELD("B")
@@ -304,11 +304,9 @@ if (EN_VID_PF_B) begin : opt_PF_B_COLOR
         .wr_address_i(xr_addr[xv::COLOR_W-1:0]),
         .wr_data_i(xr_write_data)
     );
-end else begin : no_PF_B_COLOR
+end else begin
     logic unused_pf_b;
-    assign unused_pf_b = &{1'b0,
-        colorB_addr
-    };
+    assign unused_pf_b = &{1'b0, colorB_addr };
 
     assign colorB_data_out = '0;
 end

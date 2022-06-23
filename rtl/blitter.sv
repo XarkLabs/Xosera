@@ -187,7 +187,7 @@ word_t      last_B;         // last B word save
 word_t      last_word;      // last word to shift in
 word_t      shift_out;      // word 0 to 3 nibble rotated ()
 
-if (EN_BLIT_DECR_LSHIFT) begin : opt_LSHIFT
+if (EN_BLIT_DECR_LSHIFT) begin
     always_comb begin
         case ({ blit_ctrl_decrement, blit_shift_amount })
             // right shift
@@ -204,7 +204,7 @@ if (EN_BLIT_DECR_LSHIFT) begin : opt_LSHIFT
     end
 end
 
-if (!EN_BLIT_DECR_LSHIFT) begin : no_LSHIFT
+if (!EN_BLIT_DECR_LSHIFT) begin
     logic unused_bits;
     assign unused_bits = &{1'b0, last_word};
     always_comb begin

@@ -20,7 +20,11 @@
 `include "xosera_pkg.sv"
 
 module video_gen #(
-    parameter   EN_VID_PF_B     = 1,
+    parameter   EN_PF_A_TILEMAP = 1,
+    parameter   EN_PF_A_BITMAP  = 1,
+    parameter   EN_PF_B         = 1,
+    parameter   EN_PF_B_TILEMAP = 1,
+    parameter   EN_PF_B_BITMAP  = 1,
     parameter   EN_AUDIO        = 1,
     parameter   AUDIO_NCHAN     = 1
 )(
@@ -53,7 +57,7 @@ module video_gen #(
     output      logic           vsync_o, hsync_o,       // video sync outputs
     output      logic           dv_de_o,                // video active signal (needed for HDMI)
     // audio outputs
-    output      logic [AUDIO_NCHAN-1:0] audio_ready_o, // audio start/length pending flag
+    output      logic [AUDIO_NCHAN-1:0] audio_ready_o,  // audio start/length pending flag
     output      logic           audio_pdm_l_o,          // audio left channel PDM output
     output      logic           audio_pdm_r_o,          // audio left channel PDM output
     // standard signals
@@ -190,7 +194,9 @@ assign tilemem_sel_o    = pa_tile_sel ? pa_tile_sel  : pb_tile_sel;
 assign tilemem_addr_o   = pa_tile_sel ? pa_tile_addr : pb_tile_addr;
 
 video_playfield #(
-    .EN_DMA(EN_AUDIO)
+    .EN_DMA(EN_AUDIO),
+    .EN_TILEMAP(EN_PF_A_TILEMAP),
+    .EN_BITMAP(EN_PF_A_BITMAP)
 ) video_pf_a(
     .stall_i(1'b0),                                     // playfield A never stalls
     .mem_fetch_i(mem_fetch & ~pa_blank),
@@ -236,7 +242,7 @@ video_playfield #(
     .clk(clk)
 );
 
-if (EN_VID_PF_B) begin : opt_PF_B
+if (EN_PF_B) begin
     logic       pb_vram_rd;                         // last cycle was PB vram read flag
     logic       pb_vram_rd_save;                    // PB vram read data saved flag
     word_t      pb_vram_rd_data;                    // PB vram read data
@@ -275,7 +281,9 @@ if (EN_VID_PF_B) begin : opt_PF_B
     end
 
     video_playfield #(
-        .EN_DMA(0)
+        .EN_DMA(0),
+        .EN_TILEMAP(EN_PF_B_TILEMAP),
+        .EN_BITMAP(EN_PF_B_BITMAP)
     ) video_pf_b(
         .stall_i(pb_stall),
         .mem_fetch_i(mem_fetch & ~pb_blank),
@@ -320,7 +328,7 @@ if (EN_VID_PF_B) begin : opt_PF_B
         .reset_i(reset_i),
         .clk(clk)
     );
-end else begin : no_PF_B
+end else begin
     logic unused_pf_b;
     assign unused_pf_b = &{ 1'b0,
         pb_stall,
@@ -510,7 +518,7 @@ always_ff @(posedge clk) begin
                 end
             endcase
 
-            if (EN_VID_PF_B) begin
+            if (EN_PF_B) begin
                 case (vgen_reg_num_i)
                     // playfield B
                     6'(xv::XR_PB_GFX_CTRL): begin
@@ -600,7 +608,7 @@ always_comb begin
         default:                    ;
     endcase
 
-    if (EN_VID_PF_B) begin
+    if (EN_PF_B) begin
         case (vgen_reg_num_i[3:0])
             4'(xv::XR_PB_GFX_CTRL):     rd_pf_regs = { pb_colorbase, pb_blank, pb_bitmap, pb_bpp, pb_h_repeat, pb_v_repeat };
             4'(xv::XR_PB_TILE_CTRL):    rd_pf_regs = { pb_tile_bank, pb_disp_in_tile, pb_tile_in_vram, 4'b0, pb_tile_height };
@@ -640,7 +648,7 @@ always_ff @(posedge clk) begin
 end
 
 // audio generation
-if (EN_AUDIO) begin : opt_AUDIO
+if (EN_AUDIO) begin
     // audio channel mixer
     audio_mixer #(
         .AUDIO_NCHAN(AUDIO_NCHAN)

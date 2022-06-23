@@ -13,8 +13,8 @@
 `include "xosera_pkg.sv"
 
 module video_blend #(
-    parameter EN_BLEND          = 1, // only overlap, no blending
-    parameter EN_BLEND_ADDCLAMP = 1 // additive blend with clamp
+    parameter EN_PF_B_ALPHA         = 1, // only overlap, no blending
+    parameter EN_PF_B_ALPHACLAMP    = 1 // additive blend with clamp
 )(
     // video RGB inputs
     input wire  logic           vsync_i,
@@ -47,7 +47,7 @@ assign unused   = &{    1'b0, colorA_xrgb_i[14:12], colorB_xrgb_i[14:12],
                         r_alpha25, g_alpha25, b_alpha25,
                         r_alpha50, g_alpha50, b_alpha50     };
 
-if (EN_BLEND) begin : opt_ALPHA
+if (EN_PF_B_ALPHA) begin
     always_comb begin
         // (A/4)+(A/2)+(B/4) = 6/8 A + 2/8 B
         r_alpha25 = {2'b00, colorA_xrgb_i[11:8]} + {1'b0, colorA_xrgb_i[11:8], 1'b0} + {2'b00, colorB_xrgb_i[11:8] };
@@ -68,7 +68,7 @@ end else begin
     assign b_alpha50 = '0;
 end
 
-if (EN_BLEND) begin : opt_BLEND
+if (EN_PF_B_ALPHA) begin
     always_comb begin
         case (colorA_xrgb_i[15:14])
             2'b00:          // A alpha 00xx = Use 2-bit alpha B blend value for alpha blend
@@ -90,7 +90,7 @@ if (EN_BLEND) begin : opt_BLEND
                                     g_alpha50[3:0],
                                     b_alpha50[3:0] };
             2'b10:  // A alpha 01XX = additive clamp (clamped at 0xf)
-                blend_result    = EN_BLEND_ADDCLAMP ?
+                blend_result    = EN_PF_B_ALPHACLAMP ?
                                     {   (colorA_xrgb_i[11] & colorB_xrgb_i[11]) ? 4'hF : r_alpha50[3:0],
                                         (colorA_xrgb_i[7] & colorB_xrgb_i[7])   ? 4'hF : g_alpha50[3:0],
                                         (colorA_xrgb_i[3] & colorB_xrgb_i[3])   ? 4'hF : b_alpha50[3:0] } :

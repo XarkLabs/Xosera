@@ -553,12 +553,10 @@ static void xr_printfxy(int x, int y, const char * fmt, ...)
 
 static void install_copper()
 {
-    dprintf("Loading copper list...");
-
     wait_vblank_start();
     xmem_set_addr(XR_COPPER_ADDR);
 
-#if 0        // copper torture test
+#if 1        // copper torture test
     for (uint16_t i = 0; i < 1024; i++)
     {
         xmem_setw_next(0xA000);
@@ -572,8 +570,6 @@ static void install_copper()
         xmem_setw_next(op & 0xffff);
     }
 #endif
-
-    dprintf("okay\n");
 }
 
 enum TEST_MODE
@@ -1039,8 +1035,7 @@ struct bob
 };
 
 struct bob      bobs[NUM_BOBS];
-static uint16_t blit_shift[4]  = {0xF000, 0x7801, 0x3C02, 0x1E03};
-static uint16_t blit_rshift[4] = {0x8700, 0xC301, 0xE102, 0xF003};
+static uint16_t blit_shift[4] = {0xF000, 0x7801, 0x3C02, 0x1E03};
 
 static uint16_t get_lfsr()
 {
@@ -1095,7 +1090,7 @@ void test_blit()
                 ;
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xf0f0);        // set write address
 
-            xreg_setw(BLIT_CTRL, 0x0013);              // constA, constB, decrement
+            xreg_setw(BLIT_CTRL, 0x0003);              // constA, constB, decrement
             xreg_setw(BLIT_MOD_A, 0x0000);             // no modulo A
             xreg_setw(BLIT_SRC_A, i << 8 | i);         // A = fill pattern
             xreg_setw(BLIT_MOD_B, 0x0000);             // no modulo B
@@ -1103,7 +1098,7 @@ void test_blit()
             xreg_setw(BLIT_MOD_C, 0x0000);             // no modulo C
             xreg_setw(BLIT_VAL_C, 0x0000);             // XOR with C
             xreg_setw(BLIT_MOD_D, 0x0000);             // no modulo D
-            xreg_setw(BLIT_DST_D, 0xFFFF);             // VRAM display end address
+            xreg_setw(BLIT_DST_D, 0x0000);             // VRAM display end address
             xreg_setw(BLIT_SHIFT, 0xFF00);             // no edge masking or shifting
             xreg_setw(BLIT_LINES, 0x0000);             // 1D
             xreg_setw(BLIT_WORDS, 0x10000 - 1);        // 64KW VRAM
@@ -1167,6 +1162,9 @@ void test_blit()
         checkbail();
         xmem_setw(XR_COLOR_A_ADDR + 255, 0xFF0F);        // set write address
         delay_check(DELAY_TIME);
+#if 0        // no left shift
+        static uint16_t blit_rshift[4] = {0x8700, 0xC301, 0xE102, 0xF003};
+
         xr_printfxy(0, 0, "Blit 320x240 16 color\nShift left (decrement)\n");        // set write address
         wait_vblank_start();
         for (int i = 127; i >= 3; i--)
@@ -1192,6 +1190,7 @@ void test_blit()
             wait_vblank_start();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xff00);        // set write address
         }
+#endif
         checkbail();
 
         xmem_setw(XR_COLOR_A_ADDR + 255, 0xFF0F);        // set write address
@@ -2428,9 +2427,9 @@ void     xosera_test()
         if (test_count && (test_count & 3) == 0)
         {
             config_num++;
-            dprintf("\nxosera_init(%u)...", config_num % 3);
+            dprintf("\n [ xosera_init(%u)...", config_num % 3);
             bool success = xosera_init(config_num % 3);
-            dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+            dprintf("%s (%dx%d) ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
 #if COPPER_TEST
             install_copper();
 #endif

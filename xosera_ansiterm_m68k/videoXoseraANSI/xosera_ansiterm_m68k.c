@@ -455,9 +455,8 @@ static inline void xansi_draw_cursor(xansiterm_data * td)
             return;
 
         td->cursor_drawn = true;
-        xm_setw(RW_INCR, 0x0000);
-        xm_setw(RW_ADDR, td->cur_addr);
-        uint16_t data   = xm_getw(RW_DATA);
+        xm_setw(RD_ADDR, td->cur_addr);
+        uint16_t data   = xm_getw(DATA);
         td->cursor_save = data;
 
         // calculate cursor color:
@@ -485,7 +484,8 @@ static inline void xansi_draw_cursor(xansiterm_data * td)
 
         uint16_t newcursor = (uint16_t)(cursor_color | (uint16_t)(data & 0x00ff));
 
-        xm_setw(RW_DATA, newcursor);        // draw char with cursor colors
+        xm_setw(WR_ADDR, td->cur_addr);
+        xm_setw(DATA, newcursor);           // draw char with cursor colors
         td->cursor_word = newcursor;        // save cursor word (to check for overwrite)
     }
 }
@@ -498,13 +498,12 @@ static inline void xansi_erase_cursor(xansiterm_data * td)
         xv_prep();
 
         td->cursor_drawn = false;
-        xm_setw(RW_INCR, 0x0000);
-        xm_setw(RW_ADDR, td->cur_addr);
-
-        uint16_t cursor_read = xm_getw(RW_DATA);
+        xm_setw(RD_ADDR, td->cur_addr);
+        uint16_t cursor_read = xm_getw(DATA);
         if (cursor_read == td->cursor_word)        // don't erase cursor if it was overwritten
         {
-            xm_setw(RW_DATA, td->cursor_save);
+            xm_setw(WR_ADDR, td->cur_addr);
+            xm_setw(DATA, td->cursor_save);
         }
     }
 }

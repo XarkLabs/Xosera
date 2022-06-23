@@ -222,10 +222,10 @@ function automatic logic [63:0] regname(
             4'h9: regname = "WR_ADDR ";
             4'hA: regname = "DATA    ";
             4'hB: regname = "DATA_2  ";
-            4'hC: regname = "RW_INCR ";
-            4'hD: regname = "RW_ADDR ";
-            4'hE: regname = "RW_DATA ";
-            4'hF: regname = "RW_DATA2";
+            4'hC: regname = "UNUSED_C";
+            4'hD: regname = "UNUSED_D";
+            4'hE: regname = "UNUSED_E";
+            4'hF: regname = "UNUSED_F";
             default: regname = "????????";
         endcase
     end

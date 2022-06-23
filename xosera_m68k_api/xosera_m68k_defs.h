@@ -73,10 +73,10 @@
 #define XM_WR_ADDR   0x24        // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
 #define XM_DATA      0x28        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
 #define XM_DATA_2    0x2C        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
-#define XM_RW_INCR   0x30        // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
-#define XM_RW_ADDR   0x34        // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
-#define XM_RW_DATA   0x38        // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
-#define XM_RW_DATA_2 0x3C        // (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
+#define XM_UNUSED_0C 0x30        // (- /- )
+#define XM_UNUSED_0D 0x34        // (- /- )
+#define XM_UNUSED_0E 0x38        // (- /- )
+#define XM_UNUSED_0F 0x3C        // (- /- )
 
 // NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register indirect with no offset)
 #define SYS_CTRL_MEM_BUSY_B   7        // (RO   )  memory read/write operation pending (with contended memory)

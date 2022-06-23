@@ -324,36 +324,20 @@ void print_xm_reg(int reg_num)
             xm_setw(RD_ADDR, prev - incr);
             xwait_mem_ready();
             break;
-        case XM_RW_INCR:
-            v = xm_getw(RW_INCR);
+        case XM_UNUSED_0C:
+            v = xm_getw(UNUSED_0C);
             dprintf("0x%04x", v);
             break;
-        case XM_RW_ADDR:
-            v = xm_getw(RW_ADDR);
+        case XM_UNUSED_0D:
+            v = xm_getw(UNUSED_0D);
             dprintf("0x%04x", v);
             break;
-        case XM_RW_DATA:
-            xwait_mem_ready();
-            prev = xm_getw(RW_ADDR);
-            incr = xm_get_sys_ctrlb(RD_RW_INCR) ? xm_getw(RW_INCR) : 0;
-            v    = xm_getw(RW_DATA);
-            dprintf("[0x%04x]", v);
-            read = xm_getw(RW_ADDR);
-            ASSERT(read == (prev + incr), "0x%04x vs 0x%04x + 0x%04x", read, prev, incr);
-            xm_setw(RW_ADDR, prev - incr);
-            xwait_mem_ready();
+        case XM_UNUSED_0E:
+            v = xm_getw(UNUSED_0E);
+            dprintf("0x%04x", v);
             break;
-        case XM_RW_DATA_2:
-            xwait_mem_ready();
-            prev = xm_getw(RW_ADDR);
-            incr = xm_get_sys_ctrlb(RD_RW_INCR) ? xm_getw(RW_INCR) << 1 : 0;
-            l    = xm_getl(RW_DATA);
-            v    = (uint16_t)l;
-            dprintf("[0x%04x]", v);
-            read = xm_getw(RW_ADDR);
-            ASSERT(read == (prev + incr), "0x%04x vs 0x%04x + 0x%04x", read, prev, incr);
-            xm_setw(RW_ADDR, prev - incr);
-            xwait_mem_ready();
+        case XM_UNUSED_0F:
+            v = xm_getw(UNUSED_0F);
             break;
     }
 }

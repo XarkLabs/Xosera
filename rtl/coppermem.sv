@@ -51,12 +51,12 @@ localparam [8:1]    clean   = `GITCLEAN ? " " : "+";    // '+' appended to versi
 localparam [31:0]   githash = 32'H`GITHASH;             // git short hash
 
 localparam [16*8:1] hex_str = "FEDCBA9876543210";
-localparam [48*8:1] description_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]), clean,
+localparam [48*8:1] description_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]),
                                         " [#",
                                         hex_str[((githash[31:28])*8)+1+:8], hex_str[((githash[27:24])*8)+1+:8],
                                         hex_str[((githash[23:20])*8)+1+:8], hex_str[((githash[19:16])*8)+1+:8],
                                         hex_str[((githash[15:12])*8)+1+:8], hex_str[((githash[11: 8])*8)+1+:8],
-                                        hex_str[((githash[ 7: 4])*8)+1+:8], hex_str[((githash[ 3: 0])*8)+1+:8],
+                                        hex_str[((githash[ 7: 4])*8)+1+:8], hex_str[((githash[ 3: 0])*8)+1+:8], clean,
                                         "] iCE40UP5K w/128KB VRAM" };
 initial begin
 
@@ -83,10 +83,9 @@ initial begin
     bram[offset + 14]  = !ODDWORD ? 16'(version)     : { `GITCLEAN ? 8'b0 : 8'b1, 8'b0 };
     bram[offset + 15]  = !ODDWORD ? githash[31:16]   : githash[15:0];
 
-    // for (integer i = offset; i < (2**AWIDTH); i = i + 1) begin
-    //     $display("%x bram[%d] = %04x %c %c", ODDWORD, i, bram[i], bram[i][15:8], bram[i][7:0]);
-    // end
-    // $display("");
+    if (!ODDWORD) begin
+        $display("XOSERA INFO: \"%s\"", description_str);
+    end
 end
 
 // infer BRAM block

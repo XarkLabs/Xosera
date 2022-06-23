@@ -114,24 +114,24 @@ const addr_range_t xm_regs[] = {
     {"RD_ADDR", 0x07, 0x01},         // (R /W+) VRAM address for reading from VRAM when XM_DATA/XM_DATA_2 is read
     {"WR_INCR", 0x08, 0x01},         // (R /W ) increment value for XM_WR_ADDR on write to XM_DATA/XM_DATA_2
     {"WR_ADDR", 0x09, 0x01},         // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
-    {"DATA", 0x0A, 0x01},           // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
-    {"DATA_2", 0x0B, 0x01},         // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
-    {"RW_INCR", 0x0C, 0x01},        // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
-    {"RW_ADDR", 0x0D, 0x01},        // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
-    {"RW_DATA", 0x0E, 0x01},        // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
-    {"RW_DATA_2", 0x0F, 0x01},        // (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
+    {"DATA", 0x0A, 0x01},          // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
+    {"DATA_2", 0x0B, 0x01},        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
+    {"UNUSED_C", 0x0C, 0x01},
+    {"UNUSED_D", 0x0D, 0x01},
+    {"UNUSED_E", 0x0E, 0x01},
+    {"UNUSED_F", 0x0F, 0x01},
     {NULL, 0, 0}};
 
 // NOTE: These are bits in high byte of SYS_CTRL word (fastest to access)
 const addr_range_t sys_ctrl_status[] = {
-    {"MEM_BUSY", 7, 1},          // (RO   )  memory read/write operation pending (with contended memory)
-    {"BLIT_FULL", 6, 1},         // (RO   )  blitter queue is full, do not write new operation to blitter registers
-    {"BLIT_BUSY", 5, 1},         // (RO   )  blitter is still busy performing an operation (not done)
-    {"UNUSED_12", 4, 1},         // (RO   )  unused (reads 0)
-    {"HBLANK", 3, 1},            // (RO   )  video signal is in horizontal blank period
-    {"VBLANK", 2, 1},            // (RO   )  video signal is in vertical blank period
-    {"UNUSED_9", 1, 1},          // (RO   )  unused (reads 0)
-    {"RD_RW_INCR", 0, 1},        // (R / W)  increment XM_RW_ADDR after XM_RW_DATA/XM_RW_DATA_2 read
+    {"MEM_BUSY", 7, 1},         // (RO   )  memory read/write operation pending (with contended memory)
+    {"BLIT_FULL", 6, 1},        // (RO   )  blitter queue is full, do not write new operation to blitter registers
+    {"BLIT_BUSY", 5, 1},        // (RO   )  blitter is still busy performing an operation (not done)
+    {"SC_BIT_12", 4, 1},        // (RO   )  unused (reads 0)
+    {"HBLANK", 3, 1},           // (RO   )  video signal is in horizontal blank period
+    {"VBLANK", 2, 1},           // (RO   )  video signal is in vertical blank period
+    {"SC_BIT_9", 1, 1},         // (RO   )  unused (reads 0)
+    {"SC_BIT_8", 0, 1},         // (RO   )  unused (reads 0)
     {NULL, 0, 0}};
 
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)

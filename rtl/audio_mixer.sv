@@ -62,7 +62,6 @@ logic signed [7:0]  vol_l_temp;
 logic signed [15:0] mix_l_result;
 logic signed [15:0] mix_r_result;
 
-logic               chan_restart[AUDIO_NCHAN];      // flag when length underflows (reload sample addr and length)
 logic               chan_2nd[AUDIO_NCHAN];
 logic               chan_fetch[AUDIO_NCHAN];
 logic               chan_tile[AUDIO_NCHAN];         // current sample mem type
@@ -86,7 +85,6 @@ always_comb begin : alias_block
         chan_vol_l[i]    = { 1'b0, audio_vol_l_nchan_i[i*7+:7] };    // positive 7 bit signed L volume
         chan_vol_r[i]    = { 1'b0, audio_vol_r_nchan_i[i*7+:7] };    // positive 7 bit signed R volume
         chan_length_n[i] = chan_length[i] - 1'b1;                    // length next cycle
-        chan_restart[i]  = chan_length_n[i][15];                     // restart channel if length next cycle will underflow
     end
 end
 
@@ -134,7 +132,8 @@ always_ff @(posedge clk) begin : chan_process
                 // if 2nd sample of sample word, prepare sample address
                 if (chan_2nd[i]) begin
                     chan_fetch[i]           <= 1'b1;
-                    if (chan_restart[i]) begin
+                    // if length already underflowed, or will next cycle
+                    if (chan_length[i][15] || chan_length_n[i][15]) begin
                         // if restart, reload sample parameters from registers
                         chan_tile[i]        <= audio_tile_nchan_i[i];
                         chan_addr[i]        <= audio_start_nchan_i[i*xv::VRAM_W+:16];
@@ -150,7 +149,7 @@ always_ff @(posedge clk) begin : chan_process
 
             if (audio_restart_nchan_i[i] || !audio_enable_nchan_i[i]) begin
                 chan_length[i][15]      <= 1'b1;    // force sample addr, tile, len reload
-                chan_period[i][15]      <= 1'b1;
+                chan_period[i][15]      <= 1'b1;    // force sample period expire
                 chan_buff_ok[i]         <= 2'b00;   // clear sample buffer status
                 chan_2nd[i]             <= 1'b1;    // set 2nd sample to switch next sendout
             end

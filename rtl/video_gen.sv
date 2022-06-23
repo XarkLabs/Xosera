@@ -65,8 +65,6 @@ module video_gen #(
     input  wire logic           clk                     // clock (video pixel clock)
 );
 
-integer i;
-
 // video generation signals
 color_t             border_color;
 hres_vis_t          vid_left;
@@ -364,7 +362,7 @@ always_ff @(posedge clk) begin
         video_intr_o        <= 1'b0;
         border_color        <= 8'h08;               // defaulting to dark grey to show operational
 
-        for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             audio_enable_nchan[i] <= 1'b0;
         end
         vid_left            <= '0;
@@ -446,7 +444,7 @@ always_ff @(posedge clk) begin
                 end
                 6'(xv::XR_AUD_CTRL): begin
                     if (EN_AUDIO) begin
-                        for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+                        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
                             audio_enable_nchan[i] <= vgen_reg_data_i[i];
                         end
                     end
@@ -582,7 +580,7 @@ always_comb begin
 `endif
         4'(xv::XR_AUD_CTRL): begin
             rd_vid_regs     = '0;
-            for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+            for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
                 rd_vid_regs[i]    = audio_enable_nchan[i];
             end
         end
@@ -683,7 +681,7 @@ if (EN_AUDIO) begin : opt_AUDIO
             audio_intr_o    <= 1'b0;
         end else begin
             audio_intr_o    <= 1'b0;
-            for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+            for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
                 if (audio_reload_nchan[i]) begin
                     audio_intr_o    <= 1'b1;
                 end
@@ -693,7 +691,7 @@ if (EN_AUDIO) begin : opt_AUDIO
 
     // audio channel register writes
     always_ff @(posedge clk) begin
-        for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             if (reset_i) begin
                 audio_vol_l_nchan[i*7+:7]       <= '0;
                 audio_vol_r_nchan[i*7+:7]       <= '0;

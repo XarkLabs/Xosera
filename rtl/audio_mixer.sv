@@ -48,8 +48,6 @@ typedef enum logic [1:0] {
     AUD_MIX_0       = 2'h1
 } audio_mix_st;
 
-integer i;
-
 byte_t              output_l;   // mixed left channel to output to DAC
 byte_t              output_r;   // mixed right channel to output to DAC
 
@@ -84,7 +82,7 @@ assign unused_bits = &{ 1'b0, mix_l_result[15:14], mix_l_result[5:0], mix_r_resu
 
 // setup alias signals
 always_comb begin : alias_block
-    for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+    for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
         chan_vol_l[i]    = { 1'b0, audio_vol_l_nchan_i[i*7+:7] };    // positive 7 bit signed L volume
         chan_vol_r[i]    = { 1'b0, audio_vol_r_nchan_i[i*7+:7] };    // positive 7 bit signed R volume
         chan_length_n[i] = chan_length[i] - 1'b1;                    // length next cycle
@@ -100,7 +98,7 @@ always_ff @(posedge clk) begin : chan_process
         audio_tile_o        <= '0;
         audio_addr_o        <= '0;
 
-        for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             chan_tile[i]        <= '0;          // current mem type
             chan_addr[i]        <= '0;          // current address for sample data
             chan_length[i]      <= '0;          // remaining length for sample data (bytes)
@@ -116,7 +114,7 @@ always_ff @(posedge clk) begin : chan_process
 
     end else begin
         // loop over all audio channels
-        for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             audio_reload_nchan_o[i]   <= 1'b0;        // clear reload strobe
 
             // decrement period

@@ -3,7 +3,7 @@ Package: oss-cad-suite-darwin-x64-20220620
 Yosys 0.18+20 (git sha1 90147f5fb, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
 nextpnr-ice40 -- Next Generation Place and Route (Version nextpnr-0.3-37-g8d063d38)
 Info: Device utilisation:
-Info: 	         ICESTORM_LC:  4992/ 5280    94%
+Info: 	         ICESTORM_LC:  4628/ 5280    87%
 Info: 	        ICESTORM_RAM:    30/   30   100%
 Info: 	               SB_IO:    36/   96    37%
 Info: 	               SB_GB:     8/    8   100%
@@ -12,4 +12,4 @@ Info: 	         SB_WARMBOOT:     1/    1   100%
 Info: 	        ICESTORM_DSP:     2/    8    25%
 Info: 	      ICESTORM_SPRAM:     4/    4   100%
 
-Info: Max frequency for clock 'pclk': 35.58 MHz (PASS at 25.14 MHz)
+Info: Max frequency for clock 'pclk': 38.41 MHz (PASS at 25.14 MHz)

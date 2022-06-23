@@ -27,8 +27,6 @@ module coppermem
            input  wire logic                clk
     );
 
-integer i;
-
 // Note this is only half of copper mem - there are two
 // of these memories (odd and even) to give 32-bit
 // interface internally to the copper.
@@ -62,7 +60,7 @@ localparam [48*8:1] description_str = { "Xosera v", "0" + 8'(version[11:8]), "."
                                         "] iCE40UP5K w/128KB VRAM" };
 initial begin
     // Fill with numbers
-    for (i = 0; i < (2**AWIDTH); i = i + 1) begin
+    for (integer i = 0; i < (2**AWIDTH); i = i + 1) begin
         bram[i] = !ODDWORD ? 16'h0000 : 16'h0003;   // COP_END
     end
 
@@ -85,7 +83,7 @@ initial begin
     bram[offset + 15]  = !ODDWORD ? githash[31:16]   : githash[15:0];
 
     if (!ODDWORD) begin
-        $display("XOSERA INFO: \"%s\" (%1dx%1d)", description_str, xv::VISIBLE_WIDTH, xv::VISIBLE_HEIGHT);
+        $display("XOSERA INFO: \"%s\" (%dx%d)", description_str, xv::VISIBLE_WIDTH, xv::VISIBLE_HEIGHT);
     end
 end
 

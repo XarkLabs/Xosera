@@ -280,7 +280,7 @@ copper copper(
 `endif
 
 // blitter - blit block transfer unit
-if (EN_BLIT) begin
+if (EN_BLIT) begin : opt_BLIT
     blitter2 #(
         .EN_BLIT_DECR_MODE(EN_BLIT_DECR_MODE),
         .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT),
@@ -302,7 +302,7 @@ if (EN_BLIT) begin
         .reset_i(reset_i),
         .clk(clk)
     );
-end else begin
+end else begin : opt_NO_BLIT
     logic unused_blit;
     assign unused_blit = &{1'b0, blit_vram_ack, blit_reg_wr_en };
     assign blit_vram_sel    = '0;
@@ -394,7 +394,7 @@ xrmem_arb #(
 );
 
 // video blending - alpha and other color belding between playfield A and B
-if (EN_PF_B) begin
+if (EN_PF_B) begin : opt_PF_B
     video_blend #(
         .EN_PF_B_ALPHA(EN_PF_B_ALPHA),
         .EN_PF_B_ALPHACLAMP(EN_PF_B_ALPHACLAMP)
@@ -410,7 +410,7 @@ if (EN_PF_B) begin
         .dv_de_o(dv_de_o),
         .clk(clk)
     );
-end else begin
+end else begin : opt_NO_PF_B
     assign hsync_o                      = hsync;
     assign vsync_o                      = vsync;
     assign dv_de_o                      = dv_de;

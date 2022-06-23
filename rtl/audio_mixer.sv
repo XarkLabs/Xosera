@@ -48,6 +48,8 @@ typedef enum logic [1:0] {
     AUD_MIX_0       = 2'h1
 } audio_mix_st;
 
+integer i;
+
 byte_t              output_l;   // mixed left channel to output to DAC
 byte_t              output_r;   // mixed right channel to output to DAC
 
@@ -81,14 +83,16 @@ logic unused_bits;
 assign unused_bits = &{ 1'b0, mix_l_result[15:14], mix_l_result[5:0], mix_r_result[15:14], mix_r_result[5:0] };
 
 // setup alias signals
-for (genvar i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-    assign chan_vol_l[i]    = { 1'b0, audio_vol_l_nchan_i[i*7+:7] };    // positive 7 bit signed L volume
-    assign chan_vol_r[i]    = { 1'b0, audio_vol_r_nchan_i[i*7+:7] };    // positive 7 bit signed R volume
-    assign chan_length_n[i] = chan_length[i] - 1'b1;                    // length next cycle
-    assign chan_restart[i]  = chan_length_n[i][15];                     // restart channel if length next cycle will underflow
+always_comb begin : alias_block
+    for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        chan_vol_l[i]    = { 1'b0, audio_vol_l_nchan_i[i*7+:7] };    // positive 7 bit signed L volume
+        chan_vol_r[i]    = { 1'b0, audio_vol_r_nchan_i[i*7+:7] };    // positive 7 bit signed R volume
+        chan_length_n[i] = chan_length[i] - 1'b1;                    // length next cycle
+        chan_restart[i]  = chan_length_n[i][15];                     // restart channel if length next cycle will underflow
+    end
 end
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk) begin : chan_process
     if (reset_i) begin
         fetch_state         <= AUD_DMA_0;
 
@@ -96,7 +100,7 @@ always_ff @(posedge clk) begin
         audio_tile_o        <= '0;
         audio_addr_o        <= '0;
 
-        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             chan_tile[i]        <= '0;          // current mem type
             chan_addr[i]        <= '0;          // current address for sample data
             chan_length[i]      <= '0;          // remaining length for sample data (bytes)
@@ -112,7 +116,7 @@ always_ff @(posedge clk) begin
 
     end else begin
         // loop over all audio channels
-        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             audio_reload_nchan_o[i]   <= 1'b0;        // clear reload strobe
 
             // decrement period
@@ -191,12 +195,12 @@ always_ff @(posedge clk) begin
     end
 end
 
-always_comb begin
+always_comb begin : mix_block
     mix_l_result    = mix_l_temp * vol_l_temp;
     mix_r_result    = mix_r_temp * vol_r_temp;
 end
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk) begin : mix_fsm
     if (reset_i) begin
         mix_state       <= AUD_MIX_0;
 

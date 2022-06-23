@@ -65,6 +65,8 @@ module video_gen #(
     input  wire logic           clk                     // clock (video pixel clock)
 );
 
+integer i;
+
 // video generation signals
 color_t             border_color;
 hres_vis_t          vid_left;
@@ -242,7 +244,7 @@ video_playfield #(
     .clk(clk)
 );
 
-if (EN_PF_B) begin
+if (EN_PF_B) begin : opt_PF_B
     logic       pb_vram_rd;                         // last cycle was PB vram read flag
     logic       pb_vram_rd_save;                    // PB vram read data saved flag
     word_t      pb_vram_rd_data;                    // PB vram read data
@@ -328,7 +330,7 @@ if (EN_PF_B) begin
         .reset_i(reset_i),
         .clk(clk)
     );
-end else begin
+end else begin : opt_NO_PF_B
     logic unused_pf_b;
     assign unused_pf_b = &{ 1'b0,
         pb_stall,
@@ -362,7 +364,7 @@ always_ff @(posedge clk) begin
         video_intr_o        <= 1'b0;
         border_color        <= 8'h08;               // defaulting to dark grey to show operational
 
-        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             audio_enable_nchan[i] <= 1'b0;
         end
         vid_left            <= '0;
@@ -444,7 +446,7 @@ always_ff @(posedge clk) begin
                 end
                 6'(xv::XR_AUD_CTRL): begin
                     if (EN_AUDIO) begin
-                        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+                        for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
                             audio_enable_nchan[i] <= vgen_reg_data_i[i];
                         end
                     end
@@ -580,7 +582,7 @@ always_comb begin
 `endif
         4'(xv::XR_AUD_CTRL): begin
             rd_vid_regs     = '0;
-            for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+            for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
                 rd_vid_regs[i]    = audio_enable_nchan[i];
             end
         end
@@ -648,7 +650,7 @@ always_ff @(posedge clk) begin
 end
 
 // audio generation
-if (EN_AUDIO) begin
+if (EN_AUDIO) begin : opt_AUDIO
     // audio channel mixer
     audio_mixer #(
         .AUDIO_NCHAN(AUDIO_NCHAN)
@@ -681,7 +683,7 @@ if (EN_AUDIO) begin
             audio_intr_o    <= 1'b0;
         end else begin
             audio_intr_o    <= 1'b0;
-            for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+            for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
                 if (audio_reload_nchan[i]) begin
                     audio_intr_o    <= 1'b1;
                 end
@@ -690,8 +692,8 @@ if (EN_AUDIO) begin
     end
 
     // audio channel register writes
-    for (genvar i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-        always_ff @(posedge clk) begin
+    always_ff @(posedge clk) begin
+        for (i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             if (reset_i) begin
                 audio_vol_l_nchan[i*7+:7]       <= '0;
                 audio_vol_r_nchan[i*7+:7]       <= '0;
@@ -708,13 +710,13 @@ if (EN_AUDIO) begin
                 end
                 if (vgen_reg_wr_en_i) begin
                     case (7'(vgen_reg_num_i))
-                        xv::XR_AUD0_VOL+(i*4):
+                        7'(xv::XR_AUD0_VOL+7'(i*4)):
                             { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] };
-                        xv::XR_AUD0_PERIOD+(i*4):
+                        7'(xv::XR_AUD0_PERIOD+7'(i*4)):
                             { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
-                        xv::XR_AUD0_LENGTH+(i*4):
+                        7'(xv::XR_AUD0_LENGTH+7'(i*4)):
                             { audio_tile_nchan[i], audio_len_nchan[i*15+:15] }          <= vgen_reg_data_i;
-                        xv::XR_AUD0_START+(i*4):
+                        7'(xv::XR_AUD0_START+7'(i*4)):
                             { audio_ready_o[i], audio_start_nchan[i*xv::VRAM_W+:16] }   <= { 1'b0, vgen_reg_data_i };   // START set
                         default: ;
                     endcase
@@ -723,7 +725,7 @@ if (EN_AUDIO) begin
         end
     end
 
-end else begin
+end else begin : opt_NO_AUDIO
     assign  audio_pdm_l_o       = 1'b0;
     assign  audio_pdm_r_o       = 1'b0;
     assign  audio_fetch         = 1'b0;

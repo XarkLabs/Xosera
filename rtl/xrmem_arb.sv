@@ -291,7 +291,7 @@ colormem #(
 );
 
 // playfield B color lookup RAM
-if (EN_PF_B) begin
+if (EN_PF_B) begin : opt_PF_B
     colormem #(
         .AWIDTH(xv::COLOR_W),
         .PLAYFIELD("B")
@@ -304,7 +304,7 @@ if (EN_PF_B) begin
         .wr_address_i(xr_addr[xv::COLOR_W-1:0]),
         .wr_data_i(xr_write_data)
     );
-end else begin
+end else begin : opt_NO_PF_B
     logic unused_pf_b;
     assign unused_pf_b = &{1'b0, colorB_addr };
 

@@ -24,12 +24,16 @@ module vram(
 
 `ifndef SYNTHESIS
 
+`ifndef NO_TESTPATTERN
+integer i;
+`endif
+
 word_t memory[0: 65535] /* verilator public*/;
 
 // clear RAM to avoid simulation errors
 initial begin
 `ifndef NO_TESTPATTERN
-    for (integer i = 0; i < 65536; i = i + 1) begin : TESTPATTERN
+    for (i = 0; i < 65536; i = i + 1) begin : TESTPATTERN
         if (i[3:0] == 4'h1) begin
             memory[i] =  { 8'h02, i[15:8] };
         end else if (i[3:0] == 4'h2) begin

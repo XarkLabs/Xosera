@@ -2303,7 +2303,7 @@ void     xosera_test()
     dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
 
     cpu_delay(1000);
-    //    xosera_get_info(&initinfo);
+    xosera_get_info(&initinfo);
     dprintf("xosera_get_info details:\n");
     hexdump(&initinfo, sizeof(initinfo));
     dprintf("\n");

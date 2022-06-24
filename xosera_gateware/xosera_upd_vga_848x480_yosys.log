@@ -19,10 +19,10 @@
  |                                                                            |
  \----------------------------------------------------------------------------/
 
- Yosys 0.18+20 (git sha1 90147f5fb, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
+ Yosys 0.18+29 (git sha1 b2408df31, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
 
 
--- Running command `verilog_defines -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=f25e1e7 -DMODE_848x480 -DPMOD_DIGILENT_VGA -DICE40UP5K -DUPDUINO ; read_verilog -I. -sv upduino/xosera_upd.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_blend2.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv  ; synth_ice40 -device u -no-rw-check -dsp -abc9 -top xosera_upd -json upduino/xosera_upd_vga_848x480.json' --
+-- Running command `verilog_defines -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=05843b0 -DMODE_848x480 -DPMOD_DIGILENT_VGA -DICE40UP5K -DUPDUINO ; read_verilog -I. -sv upduino/xosera_upd.sv ./audio_dac.sv ./audio_mixer.sv ./blitter.sv ./blitter2.sv ./bus_interface.sv ./colormem.sv ./copper.sv ./coppermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend.sv ./video_blend2.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv  ; synth_ice40 -device u -no-rw-check -dsp -abc9 -top xosera_upd -json upduino/xosera_upd_vga_848x480.json' --
 
 1. Executing Verilog-2005 frontend: upduino/xosera_upd.sv
 Parsing SystemVerilog input from `upduino/xosera_upd.sv' to AST representation.
@@ -80,7 +80,7 @@ Successfully finished Verilog frontend.
 9. Executing Verilog-2005 frontend: ./coppermem.sv
 Parsing SystemVerilog input from `./coppermem.sv' to AST representation.
 Generating RTLIL representation for module `\coppermem'.
-XOSERA INFO: "Xosera v0.31 [#0F25E1E7 ] iCE40UP5K w/128KB VRAM" (848x480)
+XOSERA INFO: "Xosera v0.31 [#005843B0 ] iCE40UP5K w/128KB VRAM" (848x480)
 Successfully finished Verilog frontend.
 
 10. Executing Verilog-2005 frontend: ./reg_interface.sv
@@ -335,7 +335,7 @@ Parameter \ODDWORD = 0
 Parameter \AWIDTH = 10
 Parameter \ODDWORD = 0
 Generating RTLIL representation for module `$paramod$53d592381284b4ceed35438d547eecc411a8160a\coppermem'.
-XOSERA INFO: "Xosera v0.31 [#0F25E1E7 ] iCE40UP5K w/128KB VRAM" (848x480)
+XOSERA INFO: "Xosera v0.31 [#005843B0 ] iCE40UP5K w/128KB VRAM" (848x480)
 Parameter \AWIDTH = 10
 
 23.2.15. Executing AST frontend in derive mode using pre-parsed AST for module `\tilemem'.
@@ -9156,14 +9156,14 @@ Successfully finished Verilog frontend.
 
 23.31.3. Continuing TECHMAP pass.
 Using template $paramod$dd9f7a419b36c11e7c388a13668e8593696fe7e8\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$d71265eb2e463bcf771fa0e56d12ce7d541533bc\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$1517348d2ffab77dddca956f68b4d34daa384f68\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$5ab2a95f1e63fe679fc223f2055a26f4d10e1573\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$e617eaa965b9a9dd3229a29552635135b6c6bed6\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$2a68eafd4b38d055f94be0aa04d88fff682d323c\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$c859f3fb83a337a123c8f9b686e65609c3ee8cfb\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$ca79bce6e70fdcca65d2f8eb400bbf86295db3f9\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$c9d8c7ec7bc8d3ccbfb7e9ac3f845f775a89529e\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$0e19471dd90c1365c6d4e7520f390b6bff8b962a\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$bfe9188eeda37b172beb06b38e8b32cd030d050f\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$1530f35849fe72cd3b58979785b1723048158334\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$c1380d60b1a753fae7ad72e9412a07d48ca75e0b\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$66fcf792787b1ee539e7294d84bade2cc548a37e\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$dd258b1beb8f58a33ece41e356f66c97111ffa0e\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$2bb86ed3b381c461ea00c18cce38d6d9801e27ad\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$f551f1ac9fc6a79c5e5c63bb39045c293701f55b\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$d16029c9605ea7ff2b75264b9952a17be19a1435\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$385303267beae408c8105c97b6bc1d50a76abbc6\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$ac334883a942b3b1461157364f08e545ab8ada8b\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
@@ -10014,15 +10014,15 @@ Module xosera_upd: replaced 4720 cells with 27927 new cells, skipped 8379 cells.
        1 $paramod$9afc244c5f6012269448954e8a55e7f7bbd372c4\SB_RAM40_4K
        1 $paramod$935cdf74fbbd2275daa33632b74de5af5882b288\SB_RAM40_4K
        1 $paramod$8a6c78f32887384822bc76ea2c613edf64941ddf\SB_RAM40_4K
-       1 $paramod$4acde982a1f7268622bfaf23b3043fc65337d870\SB_RAM40_4K
-       1 $paramod$7299f9e8fb59f6ef0096e784ab163db56c28bd44\SB_RAM40_4K
-       1 $paramod$4717688a42bf25d7279f14817c916e5ed3c9137c\SB_RAM40_4K
-       1 $paramod$a1edd0b94743adf7e47cd4574f9f27ecb32b1375\SB_RAM40_4K
-       1 $paramod$1593642559f60ad4a7ae94f148dda36a3ff9f0db\SB_RAM40_4K
-       1 $paramod$0e259e177041f6c9e34b10f724e63d7359440e45\SB_RAM40_4K
+       1 $paramod$2f5bdadac89f91b07ae69c64b5890726ba324142\SB_RAM40_4K
+       1 $paramod$e279657ef75d4dc66428cfef1ded4994a8ea6c18\SB_RAM40_4K
+       1 $paramod$899a4ab6d16877568133cb41af2877fd85e19670\SB_RAM40_4K
+       1 $paramod$3c2548d8ed8d07a76b0c774203195cdd897e5ac2\SB_RAM40_4K
+       1 $paramod$38fed3475ad3be56e9b15ad850b8c80b4e3b1897\SB_RAM40_4K
+       1 $paramod$61fc0252a6b8ff9be63c7460f8177c5fd9ceb82a\SB_RAM40_4K
        1 $paramod$bead1acc41e125c0d4dc1234ed19de291bed98ca\SB_RAM40_4K
-       1 $paramod$15f02c00b6a594e597cc67e482eb8466623f8b2f\SB_RAM40_4K
-       1 $paramod$c89186233122909a770e35184e8a5f46554e5e9e\SB_RAM40_4K
+       1 $paramod$84f3685e6bc46c3c0ef38b276bc85374112c3e30\SB_RAM40_4K
+       1 $paramod$7a15df8ab275576557655409d81225a6a8e4b1fd\SB_RAM40_4K
      449 $paramod$__ICE40_CARRY_WRAPPER\LUT=16'0110100110010110\I3_IS_CI=1'1
       60 $paramod$__ABC9_DELAY\DELAY=32'00000000000000000000000111110111
      330 $paramod$__ABC9_DELAY\DELAY=32'00000000000000000000000110101000
@@ -10077,7 +10077,7 @@ ABC: Mapping (K=4)  :  lut =   3160  edge =   10543  lev =    7 (0.59)  levB =  
 ABC: LUT = 3160 : 2=398 12.6 %  3=1301 41.2 %  4=1461 46.2 %  Ave = 3.34
 ABC: + &write -n <abc-temp-dir>/output.aig 
 ABC: + time 
-ABC: elapse: 0.96 seconds, total: 0.96 seconds
+ABC: elapse: 0.97 seconds, total: 0.97 seconds
 
 23.47.16.6. Executing AIGER frontend.
 <suppressed ~15590 debug messages>
@@ -10102,14 +10102,14 @@ Successfully finished Verilog frontend.
 Using template $paramod$__ICE40_CARRY_WRAPPER\LUT=16'0110100110010110\I3_IS_CI=1'1 for cells of type $paramod$__ICE40_CARRY_WRAPPER\LUT=16'0110100110010110\I3_IS_CI=1'1.
 Using template $paramod$bead1acc41e125c0d4dc1234ed19de291bed98ca\SB_RAM40_4K for cells of type $paramod$bead1acc41e125c0d4dc1234ed19de291bed98ca\SB_RAM40_4K.
 Using template $paramod$8a6c78f32887384822bc76ea2c613edf64941ddf\SB_RAM40_4K for cells of type $paramod$8a6c78f32887384822bc76ea2c613edf64941ddf\SB_RAM40_4K.
-Using template $paramod$0e259e177041f6c9e34b10f724e63d7359440e45\SB_RAM40_4K for cells of type $paramod$0e259e177041f6c9e34b10f724e63d7359440e45\SB_RAM40_4K.
-Using template $paramod$1593642559f60ad4a7ae94f148dda36a3ff9f0db\SB_RAM40_4K for cells of type $paramod$1593642559f60ad4a7ae94f148dda36a3ff9f0db\SB_RAM40_4K.
-Using template $paramod$c89186233122909a770e35184e8a5f46554e5e9e\SB_RAM40_4K for cells of type $paramod$c89186233122909a770e35184e8a5f46554e5e9e\SB_RAM40_4K.
-Using template $paramod$a1edd0b94743adf7e47cd4574f9f27ecb32b1375\SB_RAM40_4K for cells of type $paramod$a1edd0b94743adf7e47cd4574f9f27ecb32b1375\SB_RAM40_4K.
-Using template $paramod$4717688a42bf25d7279f14817c916e5ed3c9137c\SB_RAM40_4K for cells of type $paramod$4717688a42bf25d7279f14817c916e5ed3c9137c\SB_RAM40_4K.
-Using template $paramod$7299f9e8fb59f6ef0096e784ab163db56c28bd44\SB_RAM40_4K for cells of type $paramod$7299f9e8fb59f6ef0096e784ab163db56c28bd44\SB_RAM40_4K.
-Using template $paramod$15f02c00b6a594e597cc67e482eb8466623f8b2f\SB_RAM40_4K for cells of type $paramod$15f02c00b6a594e597cc67e482eb8466623f8b2f\SB_RAM40_4K.
-Using template $paramod$4acde982a1f7268622bfaf23b3043fc65337d870\SB_RAM40_4K for cells of type $paramod$4acde982a1f7268622bfaf23b3043fc65337d870\SB_RAM40_4K.
+Using template $paramod$61fc0252a6b8ff9be63c7460f8177c5fd9ceb82a\SB_RAM40_4K for cells of type $paramod$61fc0252a6b8ff9be63c7460f8177c5fd9ceb82a\SB_RAM40_4K.
+Using template $paramod$38fed3475ad3be56e9b15ad850b8c80b4e3b1897\SB_RAM40_4K for cells of type $paramod$38fed3475ad3be56e9b15ad850b8c80b4e3b1897\SB_RAM40_4K.
+Using template $paramod$7a15df8ab275576557655409d81225a6a8e4b1fd\SB_RAM40_4K for cells of type $paramod$7a15df8ab275576557655409d81225a6a8e4b1fd\SB_RAM40_4K.
+Using template $paramod$3c2548d8ed8d07a76b0c774203195cdd897e5ac2\SB_RAM40_4K for cells of type $paramod$3c2548d8ed8d07a76b0c774203195cdd897e5ac2\SB_RAM40_4K.
+Using template $paramod$899a4ab6d16877568133cb41af2877fd85e19670\SB_RAM40_4K for cells of type $paramod$899a4ab6d16877568133cb41af2877fd85e19670\SB_RAM40_4K.
+Using template $paramod$e279657ef75d4dc66428cfef1ded4994a8ea6c18\SB_RAM40_4K for cells of type $paramod$e279657ef75d4dc66428cfef1ded4994a8ea6c18\SB_RAM40_4K.
+Using template $paramod$84f3685e6bc46c3c0ef38b276bc85374112c3e30\SB_RAM40_4K for cells of type $paramod$84f3685e6bc46c3c0ef38b276bc85374112c3e30\SB_RAM40_4K.
+Using template $paramod$2f5bdadac89f91b07ae69c64b5890726ba324142\SB_RAM40_4K for cells of type $paramod$2f5bdadac89f91b07ae69c64b5890726ba324142\SB_RAM40_4K.
 Using template $paramod$935cdf74fbbd2275daa33632b74de5af5882b288\SB_RAM40_4K for cells of type $paramod$935cdf74fbbd2275daa33632b74de5af5882b288\SB_RAM40_4K.
 Using template $paramod$b0ef1672242ca073e27257a125b4452e30f99550\SB_RAM40_4K for cells of type $paramod$b0ef1672242ca073e27257a125b4452e30f99550\SB_RAM40_4K.
 Using template $paramod$a626dfcaf228f61baa267b495235e0b32421b741\SB_RAM40_4K for cells of type $paramod$a626dfcaf228f61baa267b495235e0b32421b741\SB_RAM40_4K.
@@ -10641,6 +10641,6 @@ Found and reported 0 problems.
 
 23.56. Executing JSON backend.
 
-End of script. Logfile hash: 4d0371ac2e, CPU: user 33.04s system 0.20s
-Yosys 0.18+20 (git sha1 90147f5fb, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
+End of script. Logfile hash: b06175ceb3, CPU: user 33.71s system 0.43s
+Yosys 0.18+29 (git sha1 b2408df31, x86_64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
 Time spent: 55% 12x techmap (19 sec), 7% 31x opt_merge (2 sec), ...

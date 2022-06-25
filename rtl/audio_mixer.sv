@@ -12,9 +12,7 @@
 
 `include "xosera_pkg.sv"
 
-module audio_mixer #(
-    parameter AUDIO_NCHAN = 1
-)(
+module audio_mixer (
     input  wire logic [AUDIO_NCHAN-1:0]             audio_enable_nchan_i,
     input  wire logic [7*AUDIO_NCHAN-1:0]           audio_vol_l_nchan_i,
     input  wire logic [7*AUDIO_NCHAN-1:0]           audio_vol_r_nchan_i,
@@ -25,7 +23,7 @@ module audio_mixer #(
     input  wire logic [AUDIO_NCHAN-1:0]             audio_restart_nchan_i,
     output      logic [AUDIO_NCHAN-1:0]             audio_reload_nchan_o,
 
-    output      logic           audio_fetch_o,
+    output      logic           audio_req_o,
     input wire  logic           audio_ack_i,
     output      logic           audio_tile_o,
     output      addr_t          audio_addr_o,
@@ -92,7 +90,7 @@ always_ff @(posedge clk) begin : chan_process
     if (reset_i) begin
         fetch_state         <= AUD_DMA_0;
 
-        audio_fetch_o       <= '0;
+        audio_req_o         <= '0;
         audio_tile_o        <= '0;
         audio_addr_o        <= '0;
 
@@ -165,7 +163,7 @@ always_ff @(posedge clk) begin : chan_process
                     // HACK: || audio_restart_nchan_i[i];
                     // if (chan_fetch[0] && chan_buff_ok[0] == 2'b00) begin
                     if (chan_fetch[0] && (audio_restart_nchan_i[0] || chan_buff_ok[0] == 2'b00)) begin
-                        audio_fetch_o   <= 1'b1;
+                        audio_req_o     <= 1'b1;
                     end
                     audio_tile_o    <= chan_tile[0];
                     audio_addr_o    <= chan_addr[0];
@@ -173,13 +171,13 @@ always_ff @(posedge clk) begin : chan_process
             end
             // if chan_fetch, wait for ack, latch new word if ack, get ready to mix channel
             AUD_READ_0: begin
-                if (audio_fetch_o) begin
+                if (audio_req_o) begin
                     if (audio_ack_i) begin
-                        audio_fetch_o           <= 1'b0;
-                        chan_fetch[0]           <= 1'b0;
-                        chan_buff[0][15:0]      <= audio_word_i;
-                        chan_buff_ok[0]         <= 2'b11;
-                        fetch_state             <= AUD_DMA_0;
+                        audio_req_o         <= 1'b0;
+                        chan_fetch[0]       <= 1'b0;
+                        chan_buff[0][15:0]  <= audio_word_i;
+                        chan_buff_ok[0]     <= 2'b11;
+                        fetch_state         <= AUD_DMA_0;
                     end
                 end else begin
                     fetch_state           <= AUD_DMA_0;

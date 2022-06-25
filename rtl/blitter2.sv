@@ -12,11 +12,7 @@
 
 `include "xosera_pkg.sv"
 
-module blitter2 #(
-    parameter   EN_BLIT_DECR_MODE       = 1,        // enable blit pointer decrementing
-    parameter   EN_BLIT_DECR_LSHIFT     = 1,        // enable blit left shift when decrementing
-    parameter   EN_BLIT_XOR_CONST       = 1         // enable XOR of modulo with constant values (dither?)
-)(
+module blitter2(
     // video registers and control
     input  wire logic           xreg_wr_en_i,       // strobe to write internal config register number
     input  wire logic  [3:0]    xreg_num_i,         // internal config register number (for reads)
@@ -43,7 +39,9 @@ logic           xreg_ctrl_A_const;
 logic           xreg_ctrl_B_const;
 logic           xreg_ctrl_B_not;
 logic           xreg_ctrl_C_use_B;
+`ifdef EN_BLIT_DECR
 logic           xreg_ctrl_decrement;
+`endif
 logic           xreg_ctrl_transp_8b;                // 4-bit/8-bit transparency zero check
 logic [7:0]     xreg_ctrl_transp_T;                 // 8-bit transparency value
 
@@ -54,7 +52,9 @@ word_t          xreg_mod_A;
 word_t          xreg_src_A;
 word_t          xreg_mod_B;
 word_t          xreg_src_B;
+`ifdef EN_BLIT_XOR_CONST_C
 word_t          xreg_mod_C;
+`endif
 word_t          xreg_val_C;
 word_t          xreg_mod_D;
 word_t          xreg_dst_D;
@@ -75,7 +75,9 @@ always_ff @(posedge clk) begin
         xreg_ctrl_B_const   <= '0;
         xreg_ctrl_B_not     <= '0;
         xreg_ctrl_C_use_B   <= '0;
+`ifdef EN_BLIT_DECR
         xreg_ctrl_decrement <= '0;
+`endif
         xreg_ctrl_transp_8b <= '0;
         xreg_ctrl_transp_T  <= '0;
         xreg_shift_amount    <= '0;
@@ -83,7 +85,9 @@ always_ff @(posedge clk) begin
         xreg_shift_l_mask   <= '0;
         xreg_mod_A          <= '0;
         xreg_mod_B          <= '0;
+`ifdef EN_BLIT_XOR_CONST_C
         xreg_mod_C          <= '0;
+`endif
         xreg_mod_D          <= '0;
         xreg_src_A          <= '0;
         xreg_src_B          <= '0;
@@ -104,7 +108,9 @@ always_ff @(posedge clk) begin
                 xv::XR_BLIT_CTRL: begin
                     xreg_ctrl_transp_T  <= xreg_data_i[15:8];
                     xreg_ctrl_transp_8b <= xreg_data_i[5];
-                    xreg_ctrl_decrement <= EN_BLIT_DECR_MODE ? xreg_data_i[4] : '0;
+`ifdef EN_BLIT_DECR
+                    xreg_ctrl_decrement <= xreg_data_i[4];
+`endif
                     xreg_ctrl_C_use_B   <= xreg_data_i[3];
                     xreg_ctrl_B_not     <= xreg_data_i[2];
                     xreg_ctrl_B_const   <= xreg_data_i[1];
@@ -122,7 +128,9 @@ always_ff @(posedge clk) begin
                     xreg_mod_B          <= xreg_data_i;
                 end
                 xv::XR_BLIT_MOD_C: begin
+`ifdef EN_BLIT_XOR_CONST_C
                     xreg_mod_C          <= xreg_data_i;
+`endif
                 end
                 xv::XR_BLIT_MOD_D: begin
                     xreg_mod_D          <= xreg_data_i;
@@ -158,7 +166,9 @@ logic           blit_ctrl_A_const;
 logic           blit_ctrl_B_const;
 logic           blit_ctrl_B_not;
 logic           blit_ctrl_C_use_B;
+`ifdef EN_BLIT_DECR
 logic           blit_ctrl_decrement;
+`endif
 logic           blit_ctrl_transp_8b;
 logic  [7:0]    blit_ctrl_transp_T;
 logic  [1:0]    blit_shift_amount;
@@ -166,7 +176,9 @@ logic  [3:0]    blit_shift_f_mask;
 logic  [3:0]    blit_shift_l_mask;
 word_t          blit_mod_A;
 word_t          blit_mod_B;
+`ifdef EN_BLIT_XOR_CONST_C
 word_t          blit_mod_C;
+`endif
 word_t          blit_mod_D;
 word_t          blit_src_A;
 word_t          blit_src_B;
@@ -212,13 +224,20 @@ assign          blit_last_line  = blit_lines[15];   // underflow flag for last l
 
 // nibble shifter
 function automatic word_t shifter(
+`ifdef EN_BLIT_DECR_LSHIFT
         input           decr,           // 1'b0 = increment, 1'b1 = decrement
+`endif
         input  [1:0]    shift_amount,   // nibbles to shift (right for inc, left for dec)
         input [15:0]    data_word,      // incoming data word to shift
+`ifdef EN_BLIT_DECR_LSHIFT
         input [15:0]    prev_word       // previous data word to shift in
+`else
+        input [11:0]    prev_word       // previous data word to shift in
+`endif
     );
     begin
-        if (EN_BLIT_DECR_LSHIFT && decr) begin
+`ifdef EN_BLIT_DECR_LSHIFT
+        if (decr) begin
             case (shift_amount)
                 // left shift (decrement)
                 2'b00:  shifter =   {   data_word[0*4+:4],  prev_word[3*4+:4],  prev_word[2*4+:4],  prev_word[1*4+:4]   };  // Dabc
@@ -226,7 +245,9 @@ function automatic word_t shifter(
                 2'b10:  shifter =   {   data_word[2*4+:4],  data_word[1*4+:4],  data_word[0*4+:4],  prev_word[3*4+:4]   };  // BCDa
                 2'b11:  shifter =   {   data_word[3*4+:4],  data_word[2*4+:4],  data_word[1*4+:4],  data_word[0*4+:4]   };  // ABCD
             endcase
-        end else begin
+        end else
+`endif
+        begin
             case (shift_amount)
                 // right shift (increment)
                 2'b00:  shifter =   {   data_word[3*4+:4],  data_word[2*4+:4],  data_word[1*4+:4],  data_word[0*4+:4]   };  // ABCD
@@ -284,7 +305,9 @@ always_ff @(posedge clk) begin
         blit_ctrl_B_const   <= '0;
         blit_ctrl_B_not     <= '0;
         blit_ctrl_C_use_B   <= '0;
+`ifdef EN_BLIT_DECR
         blit_ctrl_decrement <= '0;
+`endif
         blit_ctrl_transp_8b <= '0;
         blit_ctrl_transp_T  <= '0;
         blit_shift_f_mask   <= '0;
@@ -292,7 +315,9 @@ always_ff @(posedge clk) begin
         blit_shift_amount   <= '0;
         blit_mod_A          <= '0;
         blit_mod_B          <= '0;
+`ifdef EN_BLIT_XOR_CONST_C
         blit_mod_C          <= '0;
+`endif
         blit_mod_D          <= '0;
         blit_src_A          <= '0;
         blit_src_B          <= '0;
@@ -349,7 +374,9 @@ always_ff @(posedge clk) begin
             blit_ctrl_B_const   <= xreg_ctrl_B_const;
             blit_ctrl_B_not     <= xreg_ctrl_B_not;
             blit_ctrl_C_use_B   <= xreg_ctrl_C_use_B;
-            blit_ctrl_decrement <= EN_BLIT_DECR_MODE ? xreg_ctrl_decrement : '0;
+`ifdef EN_BLIT_DECR
+            blit_ctrl_decrement <= xreg_ctrl_decrement;
+`endif
             blit_ctrl_transp_8b <= xreg_ctrl_transp_8b;
             blit_ctrl_transp_T  <= xreg_ctrl_transp_T;
             blit_shift_amount    <= xreg_shift_amount;
@@ -357,7 +384,9 @@ always_ff @(posedge clk) begin
             blit_shift_l_mask   <= xreg_shift_l_mask;
             blit_mod_A          <= xreg_mod_A;
             blit_mod_B          <= xreg_mod_B;
+`ifdef EN_BLIT_XOR_CONST_C
             blit_mod_C          <= xreg_mod_C;
+`endif
             blit_mod_D          <= xreg_mod_D;
             blit_src_A          <= xreg_src_A;
             blit_src_B          <= xreg_src_B;
@@ -443,12 +472,19 @@ always_comb begin
             end
         end
         RD_A: begin
+`ifdef EN_BLIT_DECR_LSHIFT
             val_A_next          = shifter(blit_ctrl_decrement, blit_shift_amount, blit_data_i, last_A);
+`else
+            val_A_next          = shifter(blit_shift_amount, blit_data_i, 12'(last_A));
+`endif
             last_A_next         = blit_data_i;
 
-            if (EN_BLIT_DECR_MODE && blit_ctrl_decrement) begin
+`ifdef EN_BLIT_DECR
+            if (blit_ctrl_decrement) begin
                 blit_src_A_next     = blit_addr - 1'b1;      // update A addr
-            end else begin
+            end else
+`endif
+            begin
                 blit_src_A_next     = blit_addr + 1'b1;      // update A addr
             end
 
@@ -467,12 +503,19 @@ always_comb begin
             end
         end
         RD_B: begin
+`ifdef EN_BLIT_DECR_LSHIFT
             val_B_next          = shifter(blit_ctrl_decrement, blit_shift_amount, blit_data_i, last_B);
+`else
+            val_B_next          = shifter(blit_shift_amount, blit_data_i, 12'(last_B));
+`endif
             last_B_next         = blit_data_i;
 
-            if (EN_BLIT_DECR_MODE && blit_ctrl_decrement) begin
+`ifdef EN_BLIT_DECR
+            if (blit_ctrl_decrement) begin
                 blit_src_B_next     = blit_addr - 1'b1;      // update A addr
-            end else begin
+            end else
+`endif
+            begin
                 blit_src_B_next     = blit_addr + 1'b1;      // update A addr
             end
 
@@ -483,10 +526,13 @@ always_comb begin
             blit_state_next     = WR_D;
         end
         WR_D: begin
-            if (EN_BLIT_DECR_MODE && blit_ctrl_decrement) begin
+`ifdef EN_BLIT_DECR
+            if (blit_ctrl_decrement) begin
                 blit_dst_D_next     = blit_addr - 1'b1;       // update D addr
                 blit_addr_next      = blit_addr - 1'b1;       // setup VRAM addr for constant write
-            end else begin
+            end else
+`endif
+            begin
                 blit_dst_D_next     = blit_addr + 1'b1;       // update D addr
                 blit_addr_next      = blit_addr + 1'b1;       // setup VRAM addr for constant write
             end
@@ -523,12 +569,14 @@ always_comb begin
             blit_src_B_next = blit_src_B + blit_mod_B;
             blit_dst_D_next = blit_dst_D + blit_mod_D;
 
-            if (EN_BLIT_XOR_CONST) begin
-                // update constants using modulo value as XOR
-                val_A_next      = val_A ^ blit_mod_A;
-                val_B_next      = val_B ^ blit_mod_B;
-                blit_val_C_next = blit_val_C ^ blit_mod_C;
-            end
+`ifdef EN_BLIT_XOR_CONST_AB
+            // update constants using modulo value as XOR
+            val_A_next      = val_A ^ blit_mod_A;
+            val_B_next      = val_B ^ blit_mod_B;
+`endif
+`ifdef EN_BLIT_XOR_CONST_C
+            blit_val_C_next = blit_val_C ^ blit_mod_C;
+`endif
 
             if (blit_last_line) begin
                 blit_done_intr_next = 1'b1;

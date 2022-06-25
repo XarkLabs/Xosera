@@ -10,12 +10,11 @@
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
+`ifdef MODULE_SLATED_FOR_DEMOLITION
+
 `include "xosera_pkg.sv"
 
-module video_blend2 #(
-    parameter EN_PF_B_ALPHA         = 1,// only overlap, no blending
-    parameter EN_PF_B_ALPHACLAMP    = 1 // additive blend with clamp
-) (
+module video_blend2(
     // video RGB inputs
     input wire  logic           vsync_i,
     input wire  logic           hsync_i,
@@ -103,4 +102,6 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
+
+`endif
 `default_nettype wire               // restore default

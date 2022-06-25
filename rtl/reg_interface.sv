@@ -11,9 +11,7 @@
 
 `include "xosera_pkg.sv"
 
-module reg_interface #(
-        AUDIO_NCHAN     =   1
-)(
+module reg_interface (
     // bus interface signals
     input  wire logic            bus_cs_n_i,        // register select strobe
     input  wire logic            bus_rd_nwr_i,      // 0 = write, 1 = read
@@ -33,20 +31,24 @@ module reg_interface #(
     input  wire word_t           regs_data_i,       // VRAM read data in
     input  wire word_t           xr_data_i,         // XR read data in
     // status signals
+`ifdef EN_BLIT
     input  wire logic            blit_full_i,       // blit register queue full
     input  wire logic            blit_busy_i,       // blit operation in progress
+`endif
     input  wire logic            h_blank_i,         // pixel outside of visible range (before left edge)
     input  wire logic            v_blank_i,         // line outside of visible range (after bottom line)
     // iCE40 reconfigure
     output      logic            reconfig_o,        // reconfigure iCE40 from flash
     // interrupt management
-`ifdef ENABLE_TIMER_INTR
+`ifdef EN_TIMER_INTR
     output      logic            timer_intr_o,      // timer compare interrrupt
 `endif
     output      intr_t           intr_mask_o,       // enabled interrupts (which signal CPU interrupt)
     output      intr_t           intr_clear_o,      // pending interrupts CPU acknowledge (clear)
     input  wire intr_t           intr_status_i,     // pending interrupts CPU status read
+`ifdef EN_AUDIO
     input  wire logic [AUDIO_NCHAN-1:0] audio_ready_i, // audio channels that need new START
+`endif
 
 `ifdef BUS_DEBUG_SIGNALS
     output      logic            bus_ack_o,         // ACK strobe for bus debug
@@ -71,11 +73,11 @@ addr_t          reg_wr_addr;            // VRAM write address
 localparam      TIMER_TICK = xv::PCLK_HZ / 10000;
 localparam      TIMER_FRAC = $clog2(TIMER_TICK);
 
-word_t          reg_timer;              // 1/10 ms timer (visible 16 bits)
-`ifdef ENABLE_TIMER_INTR
+word_t          reg_timer;              // 1/10 ms timer (visible 16 bits) + underflow
+`ifdef EN_TIMER_INTR
 word_t          reg_timer_cmp;          // timer compare interrupt
 `endif
-logic [TIMER_FRAC-1:0] reg_timer_frac; // internal fraction counter for 1/10 ms
+logic [TIMER_FRAC-1:0] reg_timer_frac;  // internal fraction counter for 1/10 ms
 
 intr_t         intr_mask;              // interrupt mask
 
@@ -127,9 +129,17 @@ always_comb bus_data_o = !bus_bytesel ? rd_temp_word[15:8] : rd_temp_word[7:0];
 always_comb begin
     case (bus_reg_num)
         xv::XM_SYS_CTRL:
-            rd_temp_word  = { mem_wait, blit_full_i, blit_busy_i, 1'b0, h_blank_i, v_blank_i, 1'b0, 1'b0, 8'(regs_wrmask_o) };
+`ifdef EN_BLIT
+            rd_temp_word  = { mem_wait, blit_full_i, blit_busy_i, 1'b0, h_blank_i, v_blank_i, 1'b0, 1'b0, 4'b0, regs_wrmask_o };
+`else
+            rd_temp_word  = { mem_wait, 1'b0, 1'b0, 1'b0, h_blank_i, v_blank_i, 1'b0, 1'b0, 4'b0, regs_wrmask_o };
+`endif
         xv::XM_INT_CTRL:
+`ifdef EN_AUDIO
             rd_temp_word  = { 4'b0, intr_mask, 4'(audio_ready_i), intr_status_i };
+`else
+            rd_temp_word  = { 4'b0, intr_mask, 4'(0), intr_status_i };
+`endif
         xv::XM_TIMER:
             rd_temp_word  = { reg_timer[15:8], timer_latch_val };
         xv::XM_RD_XADDR:
@@ -165,18 +175,18 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         reg_timer       <= '0;
         reg_timer_frac  <= '0;
-`ifdef ENABLE_TIMER_INTR
+`ifdef EN_TIMER_INTR
         timer_intr_o    <= 1'b0;
 `endif
     end else begin
-`ifdef ENABLE_TIMER_INTR
+`ifdef EN_TIMER_INTR
         timer_intr_o    <= 1'b0;
 `endif
         reg_timer_frac  <= reg_timer_frac + 1'b1;
         if (reg_timer_frac == TIMER_FRAC'(TIMER_TICK)) begin
             reg_timer_frac  <= '0;
             reg_timer       <= reg_timer + 1'b1;
-`ifdef ENABLE_TIMER_INTR
+`ifdef EN_TIMER_INTR
             if (reg_timer == reg_timer_cmp) begin
                 reg_timer       <= '0;
                 timer_intr_o    <= 1'b1;
@@ -221,7 +231,7 @@ always_ff @(posedge clk) begin
         reg_data        <= '0;
         reg_xdata       <= '0;
 
-`ifdef ENABLE_TIMER_INTR
+`ifdef EN_TIMER_INTR
         reg_timer_cmp   <= 16'hFFFF;
 `endif
 
@@ -281,7 +291,7 @@ always_ff @(posedge clk) begin
                     end
                 end
                 xv::XM_TIMER: begin
-`ifdef ENABLE_TIMER_INTR
+`ifdef EN_TIMER_INTR
                     if (!bus_bytesel) begin
                         reg_timer_cmp[15:8] <= bus_data_byte;
                     end else begin

@@ -150,6 +150,8 @@
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
+`ifdef EN_COPP
+
 `include "xosera_pkg.sv"
 
 module copper(
@@ -494,4 +496,5 @@ end
 
 endmodule
 
+`endif
 `default_nettype wire               // restore default

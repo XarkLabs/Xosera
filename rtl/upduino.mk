@@ -156,6 +156,8 @@ $(DOT): %.dot: %.sv upduino.mk
 	@mkdir -p $(LOGS)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
 	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
+	@grep "\(Number of cells\|Number of wires\)" $(LOGS)/$(OUTNAME)_yosys.log
+
 
 # make ASCII bitstream from JSON description and device parameters
 upduino/%_$(OUTSUFFIX).asc: upduino/%_$(OUTSUFFIX).json $(PIN_DEF) upduino.mk

@@ -12,22 +12,22 @@
 `include "xosera_pkg.sv"
 
 module bus_interface(
-            // bus interface signals
-           input  wire logic         bus_cs_n_i,             // register select strobe
-           input  wire logic         bus_rd_nwr_i,           // 0 = write, 1 = read
-           input  wire logic  [3:0]  bus_reg_num_i,          // register number
-           input  wire logic         bus_bytesel_i,          // 0=even byte, 1=odd byte
-           input  wire logic  [7:0]  bus_data_i,             // 8-bit data bus input (broken out from bi-dir data bus)
-           // register interface signals
-           output      logic         write_strobe_o,         // strobe for register write
-           output      logic         read_strobe_o,          // strobe for register read
-           output      logic  [3:0]  reg_num_o,              // register number read/written
-           output      logic         bytesel_o,              // byte selected of register read/written
-           output      logic  [7:0]  bytedata_o,             // byte written to register
-           // standard signals
-           input  wire logic         clk,                    // input clk (should be > 2x faster than bus signals)
-           input  wire logic         reset_i                 // reset
-       );
+    // bus interface signals
+    input  wire logic         bus_cs_n_i,             // register select strobe
+    input  wire logic         bus_rd_nwr_i,           // 0 = write, 1 = read
+    input  wire logic  [3:0]  bus_reg_num_i,          // register number
+    input  wire logic         bus_bytesel_i,          // 0=even byte, 1=odd byte
+    input  wire logic  [7:0]  bus_data_i,             // 8-bit data bus input (broken out from bi-dir data bus)
+    // register interface signals
+    output      logic         write_strobe_o,         // strobe for register write
+    output      logic         read_strobe_o,          // strobe for register read
+    output      logic  [3:0]  reg_num_o,              // register number read/written
+    output      logic         bytesel_o,              // byte selected of register read/written
+    output      logic  [7:0]  bytedata_o,             // byte written to register
+    // standard signals
+    input  wire logic         clk,                    // input clk (should be > 2x faster than bus signals)
+    input  wire logic         reset_i                 // reset
+);
 
 // input synchronizers
 logic       cs_n_ff0;

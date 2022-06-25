@@ -17,22 +17,48 @@
 
 /* verilator lint_off UNUSED */
 
+//=================================
+//                               //
+// Xosera configuration options  //
+//                               //
+//===============================//
+
+// debug options that can be enabled (remove comment)
+//
+//`define USE_HEXFONT                     // use hex font instead of default fonts
+//`define NO_TESTPATTERN                  // don't initialize VRAM with test pattern and fonts in simulation
+//`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
+
+// features that can be optionally disabled (comment out)
+//
+`define EN_TIMER_INTR                   // enable timer interrupt
+`define EN_COPP                         // enable copper
+//`define EN_PF_A_TILEMAP                 // enable PF A tilemap modes
+//`define EN_PF_A_BITMAP                  // enable PF A bitmap modes
+`define EN_PF_B                         // enable PF B (2nd overlay playfield)
+//`define EN_PF_B_TILEMAP                 // enable PF B tilemap modes
+//`define EN_PF_B_BITMAP                  // enable PF B bitmap modes
+`define EN_PF_B_ALPHA                   // enable pf B blending (else overlay only)
+`define EN_PF_B_ALPHACLAMP              // enable pf B clamped RGB blending (cheap)
+`define EN_BLIT                         // enable blit unit
+//`define EN_BLIT_DECR                    // TODO: enable blit pointer decrementing
+//`define EN_BLIT_DECR_LSHIFT             // TODO: enable blit left shift when decrementing?
+//`define EN_BLIT_XOR_CONST_AB            // TODO: enable blit XOR modulo with constants?
+//`define EN_BLIT_XOR_CONST_C             // TODO: enable blit XOR modulo with constants?
+`define EN_AUDIO                        // TODO: number of audio channels
+
+localparam  AUDIO_NCHAN =   1;            // with EN_AUDIO, number of channels (1 to 4)
+
+//=================================
+
+`define VERSION 0_32                    // Xosera BCD version code (x.xx)
+
 `ifndef GITCLEAN
 `define GITCLEAN 0                      // unknown Git state (assumed dirty)
 `endif
 `ifndef GITHASH
 `define GITHASH 00000000                // unknown Git hash (not using Git)
 `endif
-
-`define VERSION 0_31                    // BCD version code (x.xx)
-
-//`define USE_HEXFONT                     // use hex font instead of default fonts
-//`define NO_TESTPATTERN                  // don't initialize VRAM with test pattern and fonts in simulation
-//`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
-
-// features that can be optionally disabled
-`define ENABLE_TIMER_INTR
-`define ENABLE_COPP                     // enable copper
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;

@@ -10,12 +10,11 @@
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
+`ifdef MODULE_SLATED_FOR_DEMOLITION
+
 `include "xosera_pkg.sv"
 
-module blitter #(
-    parameter   EN_BLIT_DECR_MODE       = 1,        // enable blit pointer decrementing
-    parameter   EN_BLIT_DECR_LSHIFT     = 1         // enable blit left shift when decrementing
-)(
+module blitter(
     // video registers and control
     input  wire logic           xreg_wr_en_i,       // strobe to write internal config register number
     input  wire logic  [3:0]    xreg_num_i,         // internal config register number (for reads)
@@ -528,5 +527,8 @@ always_ff @(posedge clk) begin
     end
 end
 
+
 endmodule
+
+`endif
 `default_nettype wire               // restore default

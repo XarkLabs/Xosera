@@ -19,23 +19,17 @@
 
 `include "xosera_pkg.sv"
 
-module video_gen #(
-    parameter   EN_PF_A_TILEMAP = 1,
-    parameter   EN_PF_A_BITMAP  = 1,
-    parameter   EN_PF_B         = 1,
-    parameter   EN_PF_B_TILEMAP = 1,
-    parameter   EN_PF_B_BITMAP  = 1,
-    parameter   EN_AUDIO        = 1,
-    parameter   AUDIO_NCHAN     = 1
-)(
+module video_gen (
     // video registers and control
     input  wire logic           vgen_reg_wr_en_i,       // strobe to write internal config register number
     input  wire logic  [5:0]    vgen_reg_num_i,         // internal config register number (for reads)
     input  wire word_t          vgen_reg_data_i,        // data for internal config register
     output      word_t          vgen_reg_data_o,        // register/status data reads
     output      logic           video_intr_o,           // vblank or copper interrupt signal
+`ifdef EN_AUDIO
     output      logic           audio_intr_o,           // audio ready interrupt signal
-`ifdef ENABLE_COPP
+`endif
+`ifdef EN_COPP
     // outputs for copper
     output      logic           copp_reg_wr_o,          // COPP_CTRL write strobe
     output      word_t          copp_reg_data_o,        // copper reg data
@@ -53,13 +47,17 @@ module video_gen #(
     output      logic           v_blank_o,              // line blanked (off bottom of visible)
     output      logic           h_blank_o,              // pixel blanked (off left of visible)
     output      color_t         colorA_index_o,         // color palette index output (16x256)
+`ifdef EN_PF_B
     output      color_t         colorB_index_o,         // color palette index output (16x256)
+`endif
     output      logic           vsync_o, hsync_o,       // video sync outputs
     output      logic           dv_de_o,                // video active signal (needed for HDMI)
+`ifdef EN_AUDIO
     // audio outputs
     output      logic [AUDIO_NCHAN-1:0] audio_ready_o,  // audio start/length pending flag
     output      logic           audio_pdm_l_o,          // audio left channel PDM output
     output      logic           audio_pdm_r_o,          // audio left channel PDM output
+`endif
     // standard signals
     input  wire logic           reset_i,                // system reset in
     input  wire logic           clk                     // clock (video pixel clock)
@@ -98,6 +96,7 @@ addr_t              pa_vram_addr;                       // vram word address out
 logic               pa_tile_sel;                        // tile mem read select
 tile_addr_t         pa_tile_addr;                       // tile mem word address out (16x5K)
 
+`ifdef EN_PF_B
 // playfield B generation control signals
 logic               pb_blank;                           // disable plane B
 logic [15:0]        pb_start_addr;                      // display data start address (word address)
@@ -119,12 +118,13 @@ logic               pb_line_start_set;                  // true if pa_line_start
 logic               pb_gfx_ctrl_set;                    // true if pa_gfx_ctrl changed (register write)
 color_t             pb_color_index;                     // colorbase XOR'd with pixel index (e.g. to set upper bits or alter index)
 
-// video memories
+// playfield B video memories
 logic               pb_stall;
 logic               pb_vram_sel;                        // vram read select
 addr_t              pb_vram_addr;                       // vram word address out (16x64K)
 logic               pb_tile_sel;                        // tile mem read select
 tile_addr_t         pb_tile_addr;                       // tile mem word address out (16x5K)
+`endif
 
 localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;               // memory prefetch starts early
 localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fetch can end a bit early
@@ -142,14 +142,14 @@ logic           hsync;
 logic           vsync;
 logic           dv_de;
 
-assign hsync_o      = hsync;
-assign vsync_o      = vsync;
-assign dv_de_o      = dv_de;
-assign h_blank_o    = ~h_visible;
-assign v_blank_o    = ~v_visible;
-`ifdef ENABLE_COPP
-assign h_count_o    = h_count;
-assign v_count_o    = v_count;
+assign hsync_o          = hsync;
+assign vsync_o          = vsync;
+assign dv_de_o          = dv_de;
+assign h_blank_o        = ~h_visible;
+assign v_blank_o        = ~v_visible;
+`ifdef EN_COPP
+assign h_count_o        = h_count;
+assign v_count_o        = v_count;
 `endif
 
 video_timing video_timing
@@ -169,8 +169,8 @@ video_timing video_timing
     .clk(clk)
 );
 
+`ifdef EN_AUDIO
 // audio
-
 logic [AUDIO_NCHAN-1:0]             audio_enable_nchan;     // channel enabled
 logic [7*AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
 logic [7*AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
@@ -181,23 +181,28 @@ logic [15*AUDIO_NCHAN-1:0]          audio_len_nchan;        // channel sample le
 logic [AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel sample memory (0=VRAM, 1=TILE)
 logic [AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample memory (0=VRAM, 1=TILE)
 
-logic           audio_fetch;                    // audio DMA request signal
+logic           audio_req;                    // audio DMA request signal
 logic           audio_ack;                      // audio DMA ack signal
 logic           audio_tilemem;                  // audio DMA memory type (0=VRAM, 1=TILE)
 addr_t          audio_addr;                     // audio DMA address
 word_t          audio_word;                     // audio DMA data out
+`endif
 
-assign pb_stall = (pa_vram_sel && pb_vram_sel) || (pa_tile_sel && pb_tile_sel);
+`ifdef EN_PF_B
+assign pb_stall         = (pa_vram_sel && pb_vram_sel) || (pa_tile_sel && pb_tile_sel);
 assign vram_sel_o       = pa_vram_sel ? pa_vram_sel  : pb_vram_sel;
 assign vram_addr_o      = pa_vram_sel ? pa_vram_addr : pb_vram_addr;
 assign tilemem_sel_o    = pa_tile_sel ? pa_tile_sel  : pb_tile_sel;
 assign tilemem_addr_o   = pa_tile_sel ? pa_tile_addr : pb_tile_addr;
+`else
+assign vram_sel_o       = pa_vram_sel;
+assign vram_addr_o      = pa_vram_addr;
+assign tilemem_sel_o    = pa_tile_sel;
+assign tilemem_addr_o   = pa_tile_addr;
+`endif
 
-video_playfield #(
-    .EN_DMA(EN_AUDIO),
-    .EN_TILEMAP(EN_PF_A_TILEMAP),
-    .EN_BITMAP(EN_PF_A_BITMAP)
-) video_pf_a(
+/* verilator lint_off PINCONNECTEMPTY */
+video_playfield video_pf_a(
     .stall_i(1'b0),                                     // playfield A never stalls
     .mem_fetch_i(mem_fetch & ~pa_blank),
     .mem_fetch_start_i(mem_fetch_h_start),
@@ -233,28 +238,31 @@ video_playfield #(
     .pf_line_start_addr_i(line_set_addr),
     .pf_gfx_ctrl_set_i(pa_gfx_ctrl_set),
     .pf_color_index_o(pa_color_index),
-    .dma_fetch_i(audio_fetch),
+`ifdef EN_AUDIO
+    .dma_req_i(audio_req),
     .dma_ack_o(audio_ack),
     .dma_tile_i(audio_tilemem),
     .dma_addr_i(audio_addr),
     .dma_word_o(audio_word),
+`else
+    .dma_req_i(1'b0),
+    .dma_ack_o(),
+    .dma_tile_i(1'b0),
+    .dma_addr_i(0),
+    .dma_word_o(),
+`endif
     .reset_i(reset_i),
     .clk(clk)
 );
+/* verilator lint_on PINCONNECTEMPTY */
 
-if (EN_PF_B) begin : opt_PF_B
+`ifdef EN_PF_B
     logic       pb_vram_rd;                         // last cycle was PB vram read flag
     logic       pb_vram_rd_save;                    // PB vram read data saved flag
     word_t      pb_vram_rd_data;                    // PB vram read data
     logic       pb_tilemem_rd;                      // last cycle was PB tilemem read flag
     logic       pb_tilemem_rd_save;                 // PB tilemem read data saved flag
     word_t      pb_tilemem_rd_data;                 // PB tilemem read data
-
-    logic       audio_dummy_ack;
-    word_t      audio_dummy_word;
-
-    logic       unused_pb_audio;
-    assign      unused_pb_audio = &{ 1'b0, audio_dummy_ack, audio_dummy_word };
 
     always_ff @(posedge clk) begin
         // latch vram read data for playfield B
@@ -280,11 +288,8 @@ if (EN_PF_B) begin : opt_PF_B
         pb_tilemem_rd  <= pb_tile_sel;              // remember if this cycle was reading tilemem
     end
 
-    video_playfield #(
-        .EN_DMA(0),
-        .EN_TILEMAP(EN_PF_B_TILEMAP),
-        .EN_BITMAP(EN_PF_B_BITMAP)
-    ) video_pf_b(
+/* verilator lint_off PINCONNECTEMPTY */
+    video_playfield video_pf_b(
         .stall_i(pb_stall),
         .mem_fetch_i(mem_fetch & ~pb_blank),
         .mem_fetch_start_i(mem_fetch_h_start),
@@ -320,51 +325,51 @@ if (EN_PF_B) begin : opt_PF_B
         .pf_line_start_addr_i(line_set_addr),
         .pf_gfx_ctrl_set_i(pb_gfx_ctrl_set),
         .pf_color_index_o(pb_color_index),
-        .dma_fetch_i(1'b0),
-        .dma_ack_o(audio_dummy_ack),
+
+        .dma_req_i(1'b0),
+        .dma_ack_o(),
         .dma_tile_i(1'b0),
-        .dma_addr_i(16'b0),
-        .dma_word_o(audio_dummy_word),
+        .dma_addr_i(0),
+        .dma_word_o(),
+
         .reset_i(reset_i),
         .clk(clk)
     );
-end else begin : opt_NO_PF_B
-    logic unused_pf_b;
-    assign unused_pf_b = &{ 1'b0,
-        pb_stall,
-        pb_blank,
-        pb_start_addr,
-        pb_line_len,
-        pb_colorbase,
-        pb_bpp,
-        pb_bitmap,
-        pb_tile_bank,
-        pb_disp_in_tile,
-        pb_tile_in_vram,
-        pb_tile_height,
-        pb_h_repeat,
-        pb_v_repeat,
-        pb_fine_hscroll,
-        pb_fine_vscroll,
-        pb_line_start_set,
-        pb_gfx_ctrl_set
-    };
-    assign pb_color_index   = '0;
-    assign pb_vram_sel      = '0;
-    assign pb_vram_addr     = '0;
-    assign pb_tile_sel      = '0;
-    assign pb_tile_addr     = '0;
-end
+/* verilator lint_on PINCONNECTEMPTY */
+`endif
+// end else begin : opt_NO_PF_B
+//     logic unused_pf_b;
+//     assign unused_pf_b = &{ 1'b0,
+//         pb_stall,
+//         pb_blank,
+//         pb_start_addr,
+//         pb_line_len,
+//         pb_colorbase,
+//         pb_bpp,
+//         pb_bitmap,
+//         pb_tile_bank,
+//         pb_disp_in_tile,
+//         pb_tile_in_vram,
+//         pb_tile_height,
+//         pb_h_repeat,
+//         pb_v_repeat,
+//         pb_fine_hscroll,
+//         pb_fine_vscroll,
+//         pb_line_start_set,
+//         pb_gfx_ctrl_set
+//     };
+//     assign pb_color_index   = '0;
+//     assign pb_vram_sel      = '0;
+//     assign pb_vram_addr     = '0;
+//     assign pb_tile_sel      = '0;
+//     assign pb_tile_addr     = '0;
+// end
 
 // video config registers read/write
 always_ff @(posedge clk) begin
     if (reset_i) begin
         video_intr_o        <= 1'b0;
         border_color        <= 8'h08;               // defaulting to dark grey to show operational
-
-        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-            audio_enable_nchan[i] <= 1'b0;
-        end
         vid_left            <= '0;
         vid_right           <= $bits(vid_right)'(xv::VISIBLE_WIDTH);
 
@@ -387,6 +392,7 @@ always_ff @(posedge clk) begin
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_gfx_ctrl_set     <= 1'b0;
 
+`ifdef EN_PF_B
         pb_blank            <= 1'b1;            // playfield B starts blanked
         pb_start_addr       <= 16'h0000;
         pb_line_len         <= xv::TILES_WIDE[15:0];
@@ -405,12 +411,19 @@ always_ff @(posedge clk) begin
         pb_v_frac_repeat    <= '0;
         pb_line_start_set   <= 1'b0;            // indicates user line address set
         pb_gfx_ctrl_set     <= 1'b0;
+`endif
 
         line_set_addr       <= 16'h0000;        // user set display addr
 
-`ifdef ENABLE_COPP
+`ifdef EN_COPP
         copp_reg_wr_o       <= 1'b0;
         copp_reg_data_o     <= 16'h0000;
+`endif
+
+`ifdef EN_AUDIO
+        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+            audio_enable_nchan[i] <= 1'b0;
+        end
 `endif
 
 `ifndef SYNTHESIS
@@ -421,12 +434,14 @@ always_ff @(posedge clk) begin
         pa_line_start_set   <= 1'b0;            // indicates user line address set
         pa_gfx_ctrl_set     <= 1'b0;
 
+`ifdef EN_PF_B
         pb_line_start_set   <= 1'b0;            // indicates user line address set
         pb_gfx_ctrl_set     <= 1'b0;
+`endif
 
         video_intr_o        <= end_of_visible;
 
-`ifdef ENABLE_COPP
+`ifdef EN_COPP
         copp_reg_wr_o       <= 1'b0;
 `endif
         // video register write
@@ -436,18 +451,18 @@ always_ff @(posedge clk) begin
                     border_color    <= vgen_reg_data_i[7:0];
                 end
                 6'(xv::XR_COPP_CTRL): begin
-`ifdef ENABLE_COPP
+`ifdef EN_COPP
                     copp_reg_wr_o                   <= 1'b1;
                     copp_reg_data_o[15]             <= vgen_reg_data_i[15];
                     copp_reg_data_o[xv::COPP_W-1:0] <= vgen_reg_data_i[xv::COPP_W-1:0];
 `endif
                 end
                 6'(xv::XR_AUD_CTRL): begin
-                    if (EN_AUDIO) begin
-                        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-                            audio_enable_nchan[i] <= vgen_reg_data_i[i];
-                        end
-                    end
+`ifdef EN_AUDIO
+                for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+                    audio_enable_nchan[i] <= vgen_reg_data_i[i];
+                end
+`endif
                 end
                 6'(xv::XR_VID_INTR): begin
                     video_intr_o    <= 1'b1;
@@ -514,51 +529,45 @@ always_ff @(posedge clk) begin
                 end
                 6'(xv::XR_PA_UNUSED_17): begin
                 end
+`ifdef EN_PF_B
+                6'(xv::XR_PB_GFX_CTRL): begin
+                    pb_colorbase    <= vgen_reg_data_i[15:8];
+                    pb_blank        <= vgen_reg_data_i[7];
+                    pb_bitmap       <= vgen_reg_data_i[6];
+                    pb_bpp          <= vgen_reg_data_i[5:4];
+                    pb_h_repeat     <= vgen_reg_data_i[3:2];
+                    pb_v_repeat     <= vgen_reg_data_i[1:0];
+                end
+                6'(xv::XR_PB_TILE_CTRL): begin
+                    pb_tile_bank    <= vgen_reg_data_i[15:10];
+                    pb_disp_in_tile <= vgen_reg_data_i[9];
+                    pb_tile_in_vram <= vgen_reg_data_i[8];
+                    pb_tile_height  <= vgen_reg_data_i[3:0];
+                end
+                6'(xv::XR_PB_DISP_ADDR): begin
+                    pb_start_addr   <= vgen_reg_data_i;
+                end
+                6'(xv::XR_PB_LINE_LEN): begin
+                    pb_line_len     <= vgen_reg_data_i;
+                end
+                6'(xv::XR_PB_HV_SCROLL): begin
+                    pb_fine_hscroll <= vgen_reg_data_i[12:8];
+                    pb_fine_vscroll <= vgen_reg_data_i[5:0];
+                end
+                6'(xv::XR_PB_HV_FSCALE): begin
+                    pb_h_frac_repeat <= vgen_reg_data_i[6:4];
+                    pb_v_frac_repeat <= vgen_reg_data_i[2:0];
+                end
+                6'(xv::XR_PB_LINE_ADDR): begin
+                    pb_line_start_set <= 1'b1;
+                    line_set_addr   <= vgen_reg_data_i;
+                end
+                6'(xv::XR_PB_UNUSED_1F): begin
+                end
+`endif
                 default: begin
                 end
             endcase
-
-            if (EN_PF_B) begin
-                case (vgen_reg_num_i)
-                    // playfield B
-                    6'(xv::XR_PB_GFX_CTRL): begin
-                        pb_colorbase    <= vgen_reg_data_i[15:8];
-                        pb_blank        <= vgen_reg_data_i[7];
-                        pb_bitmap       <= vgen_reg_data_i[6];
-                        pb_bpp          <= vgen_reg_data_i[5:4];
-                        pb_h_repeat     <= vgen_reg_data_i[3:2];
-                        pb_v_repeat     <= vgen_reg_data_i[1:0];
-                    end
-                    6'(xv::XR_PB_TILE_CTRL): begin
-                        pb_tile_bank    <= vgen_reg_data_i[15:10];
-                        pb_disp_in_tile <= vgen_reg_data_i[9];
-                        pb_tile_in_vram <= vgen_reg_data_i[8];
-                        pb_tile_height  <= vgen_reg_data_i[3:0];
-                    end
-                    6'(xv::XR_PB_DISP_ADDR): begin
-                        pb_start_addr   <= vgen_reg_data_i;
-                    end
-                    6'(xv::XR_PB_LINE_LEN): begin
-                        pb_line_len     <= vgen_reg_data_i;
-                    end
-                    6'(xv::XR_PB_HV_SCROLL): begin
-                        pb_fine_hscroll <= vgen_reg_data_i[12:8];
-                        pb_fine_vscroll <= vgen_reg_data_i[5:0];
-                    end
-                    6'(xv::XR_PB_HV_FSCALE): begin
-                        pb_h_frac_repeat <= vgen_reg_data_i[6:4];
-                        pb_v_frac_repeat <= vgen_reg_data_i[2:0];
-                    end
-                    6'(xv::XR_PB_LINE_ADDR): begin
-                        pb_line_start_set <= 1'b1;
-                        line_set_addr   <= vgen_reg_data_i;
-                    end
-                    6'(xv::XR_PB_UNUSED_1F): begin
-                    end
-                    default: begin
-                    end
-                endcase
-            end
         end
     end
 end
@@ -575,14 +584,16 @@ end
 always_comb begin
     case (vgen_reg_num_i[3:0])
         4'(xv::XR_VID_CTRL):        rd_vid_regs = { 8'h00, border_color};
-`ifdef ENABLE_COPP
+`ifdef EN_COPP
         4'(xv::XR_COPP_CTRL):       rd_vid_regs = { copp_reg_data_o[15], 15'(copp_reg_data_o[xv::COPP_W-1:0]) };
 `endif
         4'(xv::XR_AUD_CTRL): begin
             rd_vid_regs     = '0;
+`ifdef EN_AUDIO
             for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
                 rd_vid_regs[i]    = audio_enable_nchan[i];
             end
+`endif
         end
         4'(xv::XR_VID_LEFT):        rd_vid_regs = 16'(vid_left);
         4'(xv::XR_VID_RIGHT):       rd_vid_regs = 16'(vid_right);
@@ -605,20 +616,16 @@ always_comb begin
         4'(xv::XR_PA_LINE_LEN):     rd_pf_regs = pa_line_len;
         4'(xv::XR_PA_HV_SCROLL):    rd_pf_regs = { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
         4'(xv::XR_PA_HV_FSCALE):    rd_pf_regs = { 8'h00, 4'(pa_h_frac_repeat), 4'(pa_v_frac_repeat) };
+`ifdef EN_PF_B
+        4'(xv::XR_PB_GFX_CTRL):     rd_pf_regs = { pb_colorbase, pb_blank, pb_bitmap, pb_bpp, pb_h_repeat, pb_v_repeat };
+        4'(xv::XR_PB_TILE_CTRL):    rd_pf_regs = { pb_tile_bank, pb_disp_in_tile, pb_tile_in_vram, 4'b0, pb_tile_height };
+        4'(xv::XR_PB_DISP_ADDR):    rd_pf_regs = pb_start_addr;
+        4'(xv::XR_PB_LINE_LEN):     rd_pf_regs = pb_line_len;
+        4'(xv::XR_PB_HV_SCROLL):    rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
+        4'(xv::XR_PB_HV_FSCALE):    rd_pf_regs = { 8'h00, 4'(pb_h_frac_repeat), 4'(pb_v_frac_repeat) };
+`endif
         default:                    ;
     endcase
-
-    if (EN_PF_B) begin
-        case (vgen_reg_num_i[3:0])
-            4'(xv::XR_PB_GFX_CTRL):     rd_pf_regs = { pb_colorbase, pb_blank, pb_bitmap, pb_bpp, pb_h_repeat, pb_v_repeat };
-            4'(xv::XR_PB_TILE_CTRL):    rd_pf_regs = { pb_tile_bank, pb_disp_in_tile, pb_tile_in_vram, 4'b0, pb_tile_height };
-            4'(xv::XR_PB_DISP_ADDR):    rd_pf_regs = pb_start_addr;
-            4'(xv::XR_PB_LINE_LEN):     rd_pf_regs = pb_line_len;
-            4'(xv::XR_PB_HV_SCROLL):    rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
-            4'(xv::XR_PB_HV_FSCALE):    rd_pf_regs = { 8'h00, 4'(pb_h_frac_repeat), 4'(pb_v_frac_repeat) };
-            default:                    ;
-        endcase
-    end
 end
 
 // combinational block for video fetch start and stop
@@ -634,119 +641,122 @@ always_comb     mem_fetch_next = (!mem_fetch ? mem_fetch_h_start : !mem_fetch_h_
 always_ff @(posedge clk) begin
     if (reset_i) begin
         colorA_index_o      <= 8'b0;
+`ifdef EN_PF_B
         colorB_index_o      <= 8'b0;
+`endif
 
         mem_fetch           <= 1'b0;
 
     end else begin
         // set output pixel index from pixel shift-out
         colorA_index_o      <= pa_color_index;
+`ifdef EN_PF_B
         colorB_index_o      <= pb_color_index;
+`endif
 
         mem_fetch           <= mem_fetch_next;
     end
 end
 
 // audio generation
-if (EN_AUDIO) begin : opt_AUDIO
-    // audio channel mixer
-    audio_mixer #(
-        .AUDIO_NCHAN(AUDIO_NCHAN)
-    ) audio_mixer(
-        .audio_enable_nchan_i(audio_enable_nchan),
-        .audio_vol_l_nchan_i(audio_vol_l_nchan),
-        .audio_vol_r_nchan_i(audio_vol_r_nchan),
-        .audio_period_nchan_i(audio_period_nchan),
-        .audio_tile_nchan_i(audio_tile_nchan),
-        .audio_start_nchan_i(audio_start_nchan),
-        .audio_len_nchan_i(audio_len_nchan),
-        .audio_restart_nchan_i(audio_restart_nchan),
-        .audio_reload_nchan_o(audio_reload_nchan),
-        .audio_fetch_o(audio_fetch),
-        .audio_ack_i(audio_ack),
-        .audio_tile_o(audio_tilemem),
-        .audio_addr_o(audio_addr),
-        .audio_word_i(audio_word),
+`ifdef EN_AUDIO
+// audio channel mixer
+audio_mixer audio_mixer(
+    .audio_enable_nchan_i(audio_enable_nchan),
+    .audio_vol_l_nchan_i(audio_vol_l_nchan),
+    .audio_vol_r_nchan_i(audio_vol_r_nchan),
+    .audio_period_nchan_i(audio_period_nchan),
+    .audio_tile_nchan_i(audio_tile_nchan),
+    .audio_start_nchan_i(audio_start_nchan),
+    .audio_len_nchan_i(audio_len_nchan),
+    .audio_restart_nchan_i(audio_restart_nchan),
+    .audio_reload_nchan_o(audio_reload_nchan),
+    .audio_req_o(audio_req),
+    .audio_ack_i(audio_ack),
+    .audio_tile_o(audio_tilemem),
+    .audio_addr_o(audio_addr),
+    .audio_word_i(audio_word),
 
-        .pdm_l_o(audio_pdm_l_o),
-        .pdm_r_o(audio_pdm_r_o),
+    .pdm_l_o(audio_pdm_l_o),
+    .pdm_r_o(audio_pdm_r_o),
 
-        .reset_i(reset_i),
-        .clk(clk)
-    );
+    .reset_i(reset_i),
+    .clk(clk)
+);
 
-    // if any chanel reloads, trigger interrupt strobe
-    always_ff @(posedge clk) begin
-        if (reset_i) begin
-            audio_intr_o    <= 1'b0;
-        end else begin
-            audio_intr_o    <= 1'b0;
-            for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-                if (audio_reload_nchan[i]) begin
-                    audio_intr_o    <= 1'b1;
-                end
-            end
-        end
-    end
-
-    // audio channel register writes
-    always_ff @(posedge clk) begin
+// if any chanel reloads, trigger interrupt strobe
+always_ff @(posedge clk) begin
+    if (reset_i) begin
+        audio_intr_o    <= 1'b0;
+    end else begin
+        audio_intr_o    <= 1'b0;
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-            if (reset_i) begin
-                audio_vol_l_nchan[i*7+:7]       <= '0;
-                audio_vol_r_nchan[i*7+:7]       <= '0;
-                audio_period_nchan[i*15+:15]    <= '0;
-                audio_tile_nchan[i]             <= '0;
-                audio_start_nchan[i*xv::VRAM_W+:16] <= '0;
-                audio_len_nchan[i*15+:15]       <= '0;
-                audio_restart_nchan[i]          <= 1'b0;
-                audio_ready_o[i]                <= 1'b0;
-            end else begin
-                audio_restart_nchan[i]    <= 1'b0;
-                if (audio_reload_nchan[i]) begin
-                    audio_ready_o[i]  <= 1'b1;                                                      // START used
-                end
-                if (vgen_reg_wr_en_i) begin
-                    case (7'(vgen_reg_num_i))
-                        7'(xv::XR_AUD0_VOL+7'(i*4)):
-                            { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] };
-                        7'(xv::XR_AUD0_PERIOD+7'(i*4)):
-                            { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
-                        7'(xv::XR_AUD0_LENGTH+7'(i*4)):
-                            { audio_tile_nchan[i], audio_len_nchan[i*15+:15] }          <= vgen_reg_data_i;
-                        7'(xv::XR_AUD0_START+7'(i*4)):
-                            { audio_ready_o[i], audio_start_nchan[i*xv::VRAM_W+:16] }   <= { 1'b0, vgen_reg_data_i };   // START set
-                        default: ;
-                    endcase
-                end
+            if (audio_reload_nchan[i]) begin
+                audio_intr_o    <= 1'b1;
             end
         end
     end
-
-end else begin : opt_NO_AUDIO
-    assign  audio_pdm_l_o       = 1'b0;
-    assign  audio_pdm_r_o       = 1'b0;
-    assign  audio_fetch         = 1'b0;
-    assign  audio_addr          = '0;
-    assign  audio_tilemem       = 1'b0;
-    assign  audio_intr_o        = 1'b0;
-    assign  audio_ready_o       = '0;
-    assign  audio_vol_l_nchan   = '0;
-    assign  audio_vol_r_nchan   = '0;
-    assign  audio_period_nchan  = '0;
-    assign  audio_tile_nchan    = '0;
-    assign  audio_start_nchan   = '0;
-    assign  audio_len_nchan     = '0;
-    assign  audio_restart_nchan = '0;
-    assign  audio_reload_nchan  = '0;
-    assign  audio_ready_o       = '0;
-
-    logic   audio_unused;
-    assign  audio_unused = &{ 1'b0, audio_ack, audio_word, audio_vol_l_nchan, audio_vol_r_nchan,
-                            audio_period_nchan, audio_tile_nchan, audio_start_nchan, audio_len_nchan,
-                            audio_restart_nchan, audio_reload_nchan };
-
 end
+
+// audio channel register writes
+always_ff @(posedge clk) begin
+    for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        if (reset_i) begin
+            audio_vol_l_nchan[i*7+:7]       <= '0;
+            audio_vol_r_nchan[i*7+:7]       <= '0;
+            audio_period_nchan[i*15+:15]    <= '0;
+            audio_tile_nchan[i]             <= '0;
+            audio_start_nchan[i*xv::VRAM_W+:16] <= '0;
+            audio_len_nchan[i*15+:15]       <= '0;
+            audio_restart_nchan[i]          <= 1'b0;
+            audio_ready_o[i]                <= 1'b0;
+        end else begin
+            audio_restart_nchan[i]    <= 1'b0;
+            if (audio_reload_nchan[i]) begin
+                audio_ready_o[i]  <= 1'b1;                                                      // START used
+            end
+            if (vgen_reg_wr_en_i) begin
+                case (7'(vgen_reg_num_i))
+                    7'(xv::XR_AUD0_VOL+7'(i*4)):
+                        { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] };
+                    7'(xv::XR_AUD0_PERIOD+7'(i*4)):
+                        { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
+                    7'(xv::XR_AUD0_LENGTH+7'(i*4)):
+                        { audio_tile_nchan[i], audio_len_nchan[i*15+:15] }          <= vgen_reg_data_i;
+                    7'(xv::XR_AUD0_START+7'(i*4)):
+                        { audio_ready_o[i], audio_start_nchan[i*xv::VRAM_W+:16] }   <= { 1'b0, vgen_reg_data_i };   // START set
+                    default: ;
+                endcase
+            end
+        end
+    end
+end
+`endif
+
+// end else begin : opt_NO_AUDIO
+//     assign  audio_pdm_l_o       = 1'b0;
+//     assign  audio_pdm_r_o       = 1'b0;
+//     assign  audio_req         = 1'b0;
+//     assign  audio_addr          = '0;
+//     assign  audio_tilemem       = 1'b0;
+//     assign  audio_intr_o        = 1'b0;
+//     assign  audio_ready_o       = '0;
+//     assign  audio_vol_l_nchan   = '0;
+//     assign  audio_vol_r_nchan   = '0;
+//     assign  audio_period_nchan  = '0;
+//     assign  audio_tile_nchan    = '0;
+//     assign  audio_start_nchan   = '0;
+//     assign  audio_len_nchan     = '0;
+//     assign  audio_restart_nchan = '0;
+//     assign  audio_reload_nchan  = '0;
+//     assign  audio_ready_o       = '0;
+
+//     logic   audio_unused;
+//     assign  audio_unused = &{ 1'b0, audio_ack, audio_word, audio_vol_l_nchan, audio_vol_r_nchan,
+//                             audio_period_nchan, audio_tile_nchan, audio_start_nchan, audio_len_nchan,
+//                             audio_restart_nchan, audio_reload_nchan };
+
+// end
 
 endmodule
 `default_nettype wire               // restore default

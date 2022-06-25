@@ -37,39 +37,25 @@
 
 `include "xosera_pkg.sv"
 
-module xosera_main #(
-    parameter   EN_PF_A_TILEMAP         = 1,        // PF A supports tilemap
-    parameter   EN_PF_A_BITMAP          = 1,        // PF A supports bitmap
-    parameter   EN_PF_B                 = 1,        // PF B (2nd playfield)
-    parameter   EN_PF_B_TILEMAP         = 1,        // PF B supports tilemap
-    parameter   EN_PF_B_BITMAP          = 1,        // PF B supports bitmap
-    parameter   EN_PF_B_ALPHA           = 1,        // enable pf B blending (else overlay only)
-    parameter   EN_PF_B_ALPHACLAMP      = 1,        // enable pf B clamped RGB blending (cheap)
-    parameter   EN_BLIT                 = 1,        // enable blit unit
-    parameter   EN_BLIT_DECR_MODE       = 0,        // TODO: enable blit pointer decrementing
-    parameter   EN_BLIT_DECR_LSHIFT     = 0,        // TODO: enable blit left shift when decrementing?
-    parameter   EN_BLIT_XOR_CONST       = 0,        // TODO: enable blit XOR modulo with constants?
-    parameter   EN_AUDIO                = 1,        // enable audio output
-    parameter   AUDIO_NCHAN             = 1         // number of audio channels
-)(
-    input  wire logic         bus_cs_n_i,           // register select strobe (active low)
-    input  wire logic         bus_rd_nwr_i,         // 0 = write, 1 = read
-    input  wire logic [3:0]   bus_reg_num_i,        // register number
-    input  wire logic         bus_bytesel_i,        // 0 = even byte, 1 = odd byte
-    input  wire logic [7:0]   bus_data_i,           // 8-bit data bus input
-    output logic      [7:0]   bus_data_o,           // 8-bit data bus output
-    output logic              bus_intr_o,           // Xosera CPU interrupt strobe
-    output logic      [3:0]   red_o,                // red color gun output
-    output logic      [3:0]   green_o,              // green color gun output
-    output logic      [3:0]   blue_o,               // blue color gun output
-    output logic              hsync_o, vsync_o,     // horizontal and vertical sync
-    output logic              dv_de_o,              // pixel visible (aka display enable)
-    output logic              audio_l_o,            // left channel audio PWM output
-    output logic              audio_r_o,            // right channel audio PWM output
-    output logic              reconfig_o,           // reconfigure iCE40 from flash
-    output logic      [1:0]   boot_select_o,        // reconfigure configuration number (0-3)
-    input  wire logic         reset_i,              // reset signal
-    input  wire logic         clk                   // pixel clock
+module xosera_main(
+    input  wire logic           bus_cs_n_i,         // register select strobe (active low)
+    input  wire logic           bus_rd_nwr_i,       // 0 = write, 1 = read
+    input  wire logic [3:0]     bus_reg_num_i,      // register number
+    input  wire logic           bus_bytesel_i,      // 0 = even byte, 1 = odd byte
+    input  wire logic [7:0]     bus_data_i,         // 8-bit data bus input
+    output logic      [7:0]     bus_data_o,         // 8-bit data bus output
+    output logic                bus_intr_o,         // Xosera CPU interrupt strobe
+    output logic      [3:0]     red_o,              // red color gun output
+    output logic      [3:0]     green_o,            // green color gun output
+    output logic      [3:0]     blue_o,             // blue color gun output
+    output logic                hsync_o, vsync_o,   // horizontal and vertical sync
+    output logic                dv_de_o,            // pixel visible (aka display enable)
+    output logic                audio_l_o,          // left channel audio PWM output
+    output logic                audio_r_o,          // right channel audio PWM output
+    output logic                reconfig_o,         // reconfigure iCE40 from flash
+    output logic      [1:0]     boot_select_o,      // reconfigure configuration number (0-3)
+    input  wire logic           reset_i,            // reset signal
+    input  wire logic           clk                 // pixel clock
 );
 
 // video generation
@@ -86,11 +72,18 @@ logic                   v_blank;             // off bottom edge
 color_t                 colorA_index;       // pf A color index
 argb_t                  colorA_xrgb;        // pf A ARGB output
 
+`ifdef EN_PF_B
 color_t                 colorB_index;       // pf B color index
 argb_t                  colorB_xrgb;        // pf B ARGB output
+`else
+logic unused_alpha;
+assign unused_alpha = &{ 1'b0, colorA_xrgb[15:12] };
+`endif
 
+`ifdef EN_AUDIO
 // audio management
 logic [AUDIO_NCHAN-1:0] audio_ready;
+`endif
 
 //  VRAM read output data (for vgen, regs, blit)
 word_t                  vram_data_out;
@@ -103,6 +96,7 @@ logic                   regs_xr_ack;
 logic                   regs_wr;
 logic  [3:0]            regs_wr_mask;
 
+`ifdef EN_BLIT
 // blit vram/xr access
 logic                   blit_vram_sel;
 logic                   blit_vram_ack;
@@ -112,8 +106,9 @@ addr_t                  blit_vram_addr;
 word_t                  blit_vram_data;
 logic                   blit_busy;
 logic                   blit_full;
+`endif
 
-`ifdef ENABLE_COPP
+`ifdef EN_COPP
 // copper bus signals
 /* verilator lint_off UNUSED */
 logic                   copp_prog_rd_en;
@@ -137,7 +132,9 @@ word_t                  xr_regs_data_in;
 
 // XR register unit select signals
 logic                   vgen_reg_wr_en;     // vgen XR register 0x000X & 0x001X
+`ifdef EN_BLIT
 logic                   blit_reg_wr_en;     // blit XR register 0x002X
+`endif
 
 // XM top-level register signals
 addr_t                  xm_regs_addr;       // register interface VRAM/XR addr
@@ -154,9 +151,15 @@ intr_t                  intr_mask;          // true for each enabled interrupt
 intr_t                  intr_status;        // pending interrupt status
 intr_t                  intr_clear;         // interrupt cleared by CPU
 
+`ifdef EN_AUDIO
 logic                   audio_intr;         // audio channel ready (bit AUDIO_INTR)
+`endif
+`ifdef EN_BLIT
 logic                   blit_intr;          // blitter ready (bit BLIT_INTR)
+`endif
+`ifdef EN_TIMER_INTR
 logic                   timer_intr;         // timer compare (bit TIMER_INTR)
+`endif
 logic                   video_intr;         // video blank/copper (bit VIDEO_INTR)
 
 `ifdef BUS_DEBUG_SIGNALS
@@ -166,18 +169,17 @@ logic                   dbug_cs_strobe;     // debug "ack" bus strobe
 `ifdef BUS_DEBUG_SIGNALS
 assign audio_l_o    =   dbug_cs_strobe;     // debug to see when CS noticed
 assign audio_r_o    =   regs_xr_sel;        // debug to see when XR bus selected
+`else
+`ifndef EN_AUDIO
+assign audio_l_o    =   1'b0;
+assign audio_r_o    =   1'b0;
+`endif
 `endif
 
 assign boot_select_o    = intr_mask[1:0];   // low two bits of interrupt mask used as boot config
 
-`ifndef ENABLE_TIMER_INTR
-assign timer_intr       = 1'b0;             // timer compare interrupt
-`endif
-
 // register interface for CPU access
-reg_interface #(
-    .AUDIO_NCHAN(AUDIO_NCHAN)
-) reg_interface(
+reg_interface reg_interface(
     // bus
     .bus_cs_n_i(bus_cs_n_i),            // bus chip select
     .bus_rd_nwr_i(bus_rd_nwr_i),        // 0=write, 1=read
@@ -199,18 +201,22 @@ reg_interface #(
     // status flags
     .h_blank_i(h_blank),                // horizontal blank (non-visible)
     .v_blank_i(v_blank),                // vertical blank (non-visible)
+`ifdef EN_BLIT
     .blit_busy_i(blit_busy),            // blit engine busy
     .blit_full_i(blit_full),            // blit engine queue full
+`endif
     // reconfig
     .reconfig_o(reconfig_o),
     // interrupts
-`ifdef ENABLE_TIMER_INTR
+`ifdef EN_TIMER_INTR
     .timer_intr_o(timer_intr),          // timer compare interrupt
 `endif
     .intr_mask_o(intr_mask),            // enabled interrupts from INT_CTRL high byte
     .intr_clear_o(intr_clear),          // strobe clears pending INT_CTRL interrupt
     .intr_status_i(intr_status),        // status read from pending INT_CTRL interrupt
+`ifdef EN_AUDIO
     .audio_ready_i(audio_ready),
+`endif
 `ifdef BUS_DEBUG_SIGNALS
     .bus_ack_o(dbug_cs_strobe),         // debug "ack" bus strobe
 `endif
@@ -219,21 +225,15 @@ reg_interface #(
 );
 
 //  video generation
-video_gen #(
-    .EN_PF_A_TILEMAP(EN_PF_A_TILEMAP),
-    .EN_PF_A_BITMAP(EN_PF_A_BITMAP),
-    .EN_PF_B(EN_PF_B),
-    .EN_PF_B_TILEMAP(EN_PF_B_TILEMAP),
-    .EN_PF_B_BITMAP(EN_PF_B_BITMAP),
-    .EN_AUDIO(EN_AUDIO),
-    .AUDIO_NCHAN(AUDIO_NCHAN)
-) video_gen(
+video_gen video_gen(
     .vgen_reg_wr_en_i(vgen_reg_wr_en),
     .vgen_reg_num_i(xr_regs_addr[5:0]),
     .vgen_reg_data_i(xr_regs_data_in),
     .vgen_reg_data_o(xr_regs_data_out),
     .video_intr_o(video_intr),          // signaled by write to XR_VID_INTR
+`ifdef EN_AUDIO
     .audio_intr_o(audio_intr),          // signaled by audio channel ready
+`endif
     .vram_sel_o(vgen_vram_sel),
     .vram_addr_o(vgen_vram_addr),
     .vram_data_i(vram_data_out),
@@ -243,24 +243,28 @@ video_gen #(
     .h_blank_o(h_blank),
     .v_blank_o(v_blank),
     .colorA_index_o(colorA_index),
+`ifdef EN_PF_B
     .colorB_index_o(colorB_index),
+`endif
     .hsync_o(hsync),
     .vsync_o(vsync),
     .dv_de_o(dv_de),
-`ifdef ENABLE_COPP
+`ifdef EN_COPP
     .copp_reg_wr_o(copp_reg_wr),
     .copp_reg_data_o(copp_reg_data),
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
 `endif
+`ifdef EN_AUDIO
     .audio_ready_o(audio_ready),
     .audio_pdm_l_o(audio_l_o),
     .audio_pdm_r_o(audio_r_o),
+`endif
     .reset_i(reset_i),
     .clk(clk)
 );
 
-`ifdef ENABLE_COPP
+`ifdef EN_COPP
 // copper - video synchronized co-processor
 copper copper(
     .xr_wr_en_o(copp_xr_wr_en),
@@ -280,12 +284,8 @@ copper copper(
 `endif
 
 // blitter - blit block transfer unit
-if (EN_BLIT) begin : opt_BLIT
-    blitter2 #(
-        .EN_BLIT_DECR_MODE(EN_BLIT_DECR_MODE),
-        .EN_BLIT_DECR_LSHIFT(EN_BLIT_DECR_LSHIFT),
-        .EN_BLIT_XOR_CONST(EN_BLIT_XOR_CONST)
-    ) blitter(
+`ifdef EN_BLIT
+    blitter2 blitter(
         .xreg_wr_en_i(blit_reg_wr_en),
         .xreg_num_i(xr_regs_addr[3:0]),
         .xreg_data_i(xr_regs_data_in),
@@ -302,23 +302,22 @@ if (EN_BLIT) begin : opt_BLIT
         .reset_i(reset_i),
         .clk(clk)
     );
-end else begin : opt_NO_BLIT
-    logic unused_blit;
-    assign unused_blit = &{1'b0, blit_vram_ack, blit_reg_wr_en };
-    assign blit_vram_sel    = '0;
-    assign blit_wr          = '0;
-    assign blit_wr_mask     = '0;
-    assign blit_vram_addr   = '0;
-    assign blit_vram_data   = '0;
-    assign blit_busy        = '0;
-    assign blit_full        = '0;
-    assign blit_intr        = '0;
-end
+`endif
+// end else begin : opt_NO_BLIT
+//     logic unused_blit;
+//     assign unused_blit = &{1'b0, blit_vram_ack, blit_reg_wr_en };
+//     assign blit_vram_sel    = '0;
+//     assign blit_wr          = '0;
+//     assign blit_wr_mask     = '0;
+//     assign blit_vram_addr   = '0;
+//     assign blit_vram_data   = '0;
+//     assign blit_busy        = '0;
+//     assign blit_full        = '0;
+//     assign blit_intr        = '0;
+// end
 
 // VRAM memory arbitration
-vram_arb #(
-    .EN_BLIT(EN_BLIT)
-) vram_arb(
+vram_arb vram_arb(
     // video gen
     .vram_data_o(vram_data_out),
     .vgen_sel_i(vgen_vram_sel),
@@ -332,6 +331,7 @@ vram_arb #(
     .regs_addr_i(xm_regs_addr),
     .regs_data_i(xm_regs_data_out),
 
+`ifdef EN_BLIT
     // blitter access
     .blit_sel_i(blit_vram_sel),
     .blit_ack_o(blit_vram_ack),
@@ -339,16 +339,18 @@ vram_arb #(
     .blit_wr_mask_i(blit_wr_mask),
     .blit_addr_i(blit_vram_addr),
     .blit_data_i(blit_vram_data),
+`endif
 
     .clk(clk)
 );
 
 // XR memory arbitration (combines all other memory regions)
 assign vgen_reg_wr_en = xr_regs_wr_en && ~xr_regs_addr[6];    // video register (also handles audio)
+`ifdef EN_BLIT
 assign blit_reg_wr_en = xr_regs_wr_en && xr_regs_addr[6];     // blit reg register
-xrmem_arb #(
-    .EN_PF_B(EN_PF_B)
-) xrmem_arb(
+`endif
+
+xrmem_arb xrmem_arb(
     // regs XR register/memory interface (read/write)
     .xr_sel_i(regs_xr_sel),
     .xr_ack_o(regs_xr_ack),
@@ -357,7 +359,7 @@ xrmem_arb #(
     .xr_data_i(xm_regs_data_out),
     .xr_data_o(xm_regs_data_in),
 
-`ifdef ENABLE_COPP
+`ifdef EN_COPP
     // copper XR register/memory interface (write-only)
     .copp_xr_sel_i(copp_xr_wr_en),
     .copp_xr_ack_o(copp_xr_ack),
@@ -375,15 +377,17 @@ xrmem_arb #(
     .vgen_color_sel_i(dv_de),
     .vgen_colorA_addr_i(colorA_index),
     .vgen_colorA_data_o(colorA_xrgb),
+`ifdef EN_PF_B
     .vgen_colorB_data_o(colorB_xrgb),
     .vgen_colorB_addr_i(colorB_index),
+`endif
 
     // video generation tilemem bus (read-only)
     .vgen_tile_sel_i(vgen_tile_sel),
     .vgen_tile_addr_i(vgen_tile_addr),
     .vgen_tile_data_o(vgen_tile_data),
 
-`ifdef ENABLE_COPP
+`ifdef EN_COPP
     // copper program coppermem 32-bit bus (read-only)
     .copp_prog_sel_i(copp_prog_rd_en),
     .copp_prog_addr_i(copper_pc),
@@ -394,31 +398,25 @@ xrmem_arb #(
 );
 
 // video blending - alpha and other color belding between playfield A and B
-if (EN_PF_B) begin : opt_PF_B
-    video_blend #(
-        .EN_PF_B_ALPHA(EN_PF_B_ALPHA),
-        .EN_PF_B_ALPHACLAMP(EN_PF_B_ALPHACLAMP)
-    ) video_blend(
-        .vsync_i(vsync),
-        .hsync_i(hsync),
-        .dv_de_i(dv_de),
-        .colorA_xrgb_i(colorA_xrgb),
-        .colorB_xrgb_i(colorB_xrgb),
-        .blend_rgb_o({ red_o, green_o, blue_o }),
-        .hsync_o(hsync_o),
-        .vsync_o(vsync_o),
-        .dv_de_o(dv_de_o),
-        .clk(clk)
-    );
-end else begin : opt_NO_PF_B
+`ifdef EN_PF_B
+video_blend video_blend(
+    .vsync_i(vsync),
+    .hsync_i(hsync),
+    .dv_de_i(dv_de),
+    .colorA_xrgb_i(colorA_xrgb),
+    .colorB_xrgb_i(colorB_xrgb),
+    .blend_rgb_o({ red_o, green_o, blue_o }),
+    .hsync_o(hsync_o),
+    .vsync_o(vsync_o),
+    .dv_de_o(dv_de_o),
+    .clk(clk)
+);
+`else
     assign hsync_o                      = hsync;
     assign vsync_o                      = vsync;
     assign dv_de_o                      = dv_de;
     assign { red_o, green_o, blue_o }   = dv_de ? colorA_xrgb[11:0] : '0;
-
-    logic unused_pfb;
-    assign unused_pfb = &{1'b0, colorA_xrgb[15:12], colorB_xrgb };
-end
+`endif
 
 // interrupt handling
 always_ff @(posedge clk) begin
@@ -427,13 +425,46 @@ always_ff @(posedge clk) begin
         intr_status <= 4'b0;
     end else begin
         // generate bus interrupt if signal bit set, not masked and not already set
-        if (({ video_intr, timer_intr, blit_intr, audio_intr } & intr_mask & (~intr_status)) != 4'b0) begin
+
+        if (({ video_intr,
+`ifdef EN_TIMER_INTR
+               timer_intr,
+`else
+               1'b0,
+`endif
+`ifdef EN_BLIT
+               blit_intr,
+`else
+               1'b0,
+`endif
+`ifdef EN_AUDIO
+               audio_intr
+`else
+               1'b0
+`endif
+            } & intr_mask & (~intr_status)) != 4'b0) begin
             bus_intr_o  <= 1'b1;
         end else begin
             bus_intr_o  <= 1'b0;
         end
         // remember interrupt signal and clear cleared interrupts
-        intr_status <= intr_status | { video_intr, timer_intr, blit_intr, audio_intr } & (~intr_clear);
+        intr_status <= intr_status | { video_intr,
+`ifdef EN_TIMER_INTR
+                                       timer_intr,
+`else
+                                       1'b0,
+`endif
+`ifdef EN_BLIT
+                                       blit_intr,
+`else
+                                       1'b0,
+`endif
+`ifdef EN_AUDIO
+                                       audio_intr
+`else
+                                       1'b0
+`endif
+                                     } & (~intr_clear);
     end
 end
 

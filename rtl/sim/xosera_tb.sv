@@ -6,13 +6,10 @@
 //
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
-//`default_nettype none    // mandatory for Verilog sanity
-//`timescale 1ns/1ps
-
-`include "xosera_pkg.sv"
-
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
+
+`include "xosera_pkg.sv"
 
 `define MEMDUMP                     // dump VRAM contents to file
 `define BUSTEST

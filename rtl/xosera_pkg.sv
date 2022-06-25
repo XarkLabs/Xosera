@@ -29,6 +29,7 @@
 //`define NO_TESTPATTERN                  // don't initialize VRAM with test pattern and fonts in simulation
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
 
+
 // features that can be optionally disabled (comment out)
 //
 `define EN_TIMER_INTR                   // enable timer interrupt
@@ -46,6 +47,11 @@
 //`define EN_BLIT_XOR_CONST_AB            // TODO: enable blit XOR modulo with constants?
 //`define EN_BLIT_XOR_CONST_C             // TODO: enable blit XOR modulo with constants?
 `define EN_AUDIO                        // TODO: number of audio channels
+
+// experimental options (uncomment)
+//
+//`define OPT_BUS_DATAOUT_REG             // register 8-bit data bus out signal (helpful?)
+
 
 localparam  AUDIO_NCHAN =   1;            // with EN_AUDIO, number of channels (1 to 4)
 

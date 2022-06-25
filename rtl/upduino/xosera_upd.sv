@@ -127,8 +127,10 @@ assign gpio_10      = bus_intr_r;         // interrupt signal
 
 // split tri-state data lines into in/out signals for inside FPGA
 logic bus_out_ena;
-logic [7:0] bus_data_out_r;             // registered bus_data_out signal, this helps timing
 logic [7:0] bus_data_out;               // bus out from Xosera
+`ifdef OPT_BUS_DATAOUT_REG
+logic [7:0] bus_data_out_r;             // registered bus_data_out signal (experimental)
+`endif
 logic [7:0] bus_data_in;                // bus input to Xosera
 
 // only set bus to output if Xosera is selected and read is selected
@@ -136,14 +138,20 @@ assign bus_out_ena  = (bus_cs_n == xv::CS_ENABLED && bus_rd_nwr == xv::RnW_READ)
 
 // tri-state data bus unless Xosera is both selected and bus is reading
 // NOTE: No longer need to use iCE40 SB_IO primitive to control tri-state properly here
-// NOTE: Using the registered ("_r") signal was a nice win for <posedge pclk> -> async
-//        timing on bus_data_out signals
-assign bus_data     = bus_out_ena ? bus_data_out_r : 8'bZ;
+`ifdef OPT_BUS_DATAOUT_REG
+// NOTE: Using the registered ("_r") signal may be a win for <posedge pclk> -> async
+//        timing on bus_data_out signals (but might cause issues?)
+assign bus_data     = bus_out_ena ? bus_data_out_r  : 8'bZ;
+`else
+assign bus_data     = bus_out_ena ? bus_data_out    : 8'bZ;
+`endif
 assign bus_data_in  = bus_data;
 
 // update registered signals each clock
 always_ff @(posedge pclk) begin
+`ifdef OPT_BUS_DATAOUT_REG
     bus_data_out_r  <= bus_data_out;
+`endif
     bus_intr_r      <= bus_intr;
     reconfig_r      <= reconfig;
     boot_select_r   <= boot_select;

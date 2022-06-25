@@ -34,11 +34,7 @@
 //
 `define EN_TIMER_INTR                   // enable timer interrupt
 `define EN_COPP                         // enable copper
-//`define EN_PF_A_TILEMAP                 // enable PF A tilemap modes
-//`define EN_PF_A_BITMAP                  // enable PF A bitmap modes
 `define EN_PF_B                         // enable PF B (2nd overlay playfield)
-//`define EN_PF_B_TILEMAP                 // enable PF B tilemap modes
-//`define EN_PF_B_BITMAP                  // enable PF B bitmap modes
 `define EN_PF_B_ALPHA                   // enable pf B blending (else overlay only)
 `define EN_PF_B_ALPHACLAMP              // enable pf B clamped RGB blending (cheap)
 `define EN_BLIT                         // enable blit unit
@@ -46,12 +42,11 @@
 //`define EN_BLIT_DECR_LSHIFT             // TODO: enable blit left shift when decrementing?
 //`define EN_BLIT_XOR_CONST_AB            // TODO: enable blit XOR modulo with constants?
 //`define EN_BLIT_XOR_CONST_C             // TODO: enable blit XOR modulo with constants?
-`define EN_AUDIO                        // TODO: number of audio channels
+`define EN_AUDIO                        // TODO: enable audio
 
 // experimental options (uncomment)
 //
 //`define OPT_BUS_DATAOUT_REG             // register 8-bit data bus out signal (helpful?)
-
 
 localparam  AUDIO_NCHAN =   1;            // with EN_AUDIO, number of channels (1 to 4)
 

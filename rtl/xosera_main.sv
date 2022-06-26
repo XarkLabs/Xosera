@@ -66,8 +66,8 @@ logic                   dv_de;              // display enable
 logic                   hsync;              // hsync
 logic                   vsync;              // vsync
 
-logic                   h_blank;             // off left edge
-logic                   v_blank;             // off bottom edge
+logic                   h_blank;            // off left edge
+logic                   v_blank;            // off bottom edge
 
 color_t                 colorA_index;       // pf A color index
 argb_t                  colorA_xrgb;        // pf A ARGB output
@@ -76,8 +76,8 @@ argb_t                  colorA_xrgb;        // pf A ARGB output
 color_t                 colorB_index;       // pf B color index
 argb_t                  colorB_xrgb;        // pf B ARGB output
 `else
-logic unused_alpha;
-assign unused_alpha = &{ 1'b0, colorA_xrgb[15:12] };
+logic unused;
+assign unused = &{1'b0, colorA_xrgb[15:12] }; // unused alpha
 `endif
 
 `ifdef EN_AUDIO
@@ -303,18 +303,6 @@ copper copper(
         .clk(clk)
     );
 `endif
-// end else begin : opt_NO_BLIT
-//     logic unused_blit;
-//     assign unused_blit = &{1'b0, blit_vram_ack, blit_reg_wr_en };
-//     assign blit_vram_sel    = '0;
-//     assign blit_wr          = '0;
-//     assign blit_wr_mask     = '0;
-//     assign blit_vram_addr   = '0;
-//     assign blit_vram_data   = '0;
-//     assign blit_busy        = '0;
-//     assign blit_full        = '0;
-//     assign blit_intr        = '0;
-// end
 
 // VRAM memory arbitration
 vram_arb vram_arb(

@@ -37,6 +37,7 @@ module audio_mixer (
 );
 
 localparam  CHAN_W  = $clog2(AUDIO_NCHAN);
+localparam  DAC_W   = 9;
 
 typedef enum logic {
     AUD_FETCH_DMA       = 0,
@@ -63,8 +64,8 @@ sword_t             mult_r_result;
 sword_t             mix_l_accum;
 sword_t             mix_r_accum;
 
-byte_t              output_l;   // mixed left channel to output to DAC
-byte_t              output_r;   // mixed right channel to output to DAC
+logic [DAC_W-1:0]                   output_l;   // mixed left channel to output to DAC
+logic [DAC_W-1:0]                   output_r;   // mixed right channel to output to DAC
 
 logic [AUDIO_NCHAN-1:0]             chan_output;        // channel sample output strobe
 logic [AUDIO_NCHAN-1:0]             chan_2nd;           // 2nd sample from sample word
@@ -81,6 +82,8 @@ logic [16*AUDIO_NCHAN-1:0]          chan_period;        // audio frequency perio
 byte_t                  chan_raw[AUDIO_NCHAN];          // current channel value sent to DAC
 logic [5:0]             chan_vol_l[AUDIO_NCHAN];
 logic [5:0]             chan_vol_r[AUDIO_NCHAN];
+addr_t                  chan_ptr[AUDIO_NCHAN];          // current channel value sent to DAC
+logic                   chan_restart[AUDIO_NCHAN];
 
 word_t                  chan_length_n[AUDIO_NCHAN];     // audio sample byte length counter next (15=underflow flag)
 
@@ -89,11 +92,13 @@ word_t                  chan_length_n[AUDIO_NCHAN];     // audio sample byte len
 // setup alias signals
 always_comb begin : alias_block
     for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-        chan_vol_l[i]       = { audio_vol_l_nchan_i[7*i+:6] };      // 6 bit L volume
-        chan_vol_r[i]       = { audio_vol_r_nchan_i[7*i+:6] };      // 6 bit R volume
+        chan_vol_l[i]       = { audio_vol_l_nchan_i[6*i+:6] };      // 6 bit L volume
+        chan_vol_r[i]       = { audio_vol_r_nchan_i[6*i+:6] };      // 6 bit R volume
+        chan_raw[i]         = chan_val[i*8+:8] ^ 8'h80;             // debug channel output
+        chan_ptr[i]         = chan_addr[xv::VRAM_W*i+:xv::VRAM_W] - 1'b1; // debug channel addr
         chan_length_n[i]    = chan_length[16*i+:16] - 1'b1;         // length next cycle
         chan_output[i]      = chan_period[16*i+15];                 // length next cycle
-        chan_raw[i]         = chan_val[i*8+:8] ^ 8'h80;             // debug channel output
+        chan_restart[i]     = audio_reload_nchan_o[i];
     end
 end
 
@@ -245,20 +250,20 @@ always_ff @(posedge clk) begin : mix_fsm
         case (mix_phase)
             AUD_MIX_MULT: begin
                 if (mix_chan == 0) begin
-                    output_l        <= { ~mix_l_accum[15], mix_l_accum[14:8] };      // unsigned result for DAC
-                    output_r        <= { ~mix_r_accum[15], mix_r_accum[14:8] };
+                    output_l        <= { ~mix_l_accum[15], mix_l_accum[14:7] };      // unsigned result for DAC
+                    output_r        <= { ~mix_r_accum[15], mix_r_accum[14:7] };
                     mix_l_accum     <= '0;
                     mix_r_accum     <= '0;
                 end
                 mix_val_temp    <= chan_val[mix_chan*8+:8];
-                vol_l_temp      <= { 1'b0, audio_vol_l_nchan_i[mix_chan*7+:6], 1'b0 };
-                vol_r_temp      <= { 1'b0, audio_vol_r_nchan_i[mix_chan*7+:6], 1'b0 };
+                vol_l_temp      <= { 1'b0, audio_vol_l_nchan_i[mix_chan*6+:6], 1'b0 };
+                vol_r_temp      <= { 1'b0, audio_vol_r_nchan_i[mix_chan*6+:6], 1'b0 };
 
                 mix_phase       <= AUD_MIX_ACCUM;
             end
             AUD_MIX_ACCUM: begin
-                mix_l_accum     <= mix_l_accum + mult_l_result;
-                mix_r_accum     <= mix_r_accum + mult_r_result;
+                mix_l_accum     <= mix_l_accum + (mult_l_result >>> 1);
+                mix_r_accum     <= mix_r_accum + (mult_r_result >>> 1);
 
                 mix_chan        <= mix_chan + 1'b1;
 
@@ -270,7 +275,7 @@ end
 
 // audio left DAC outout
 audio_dac #(
-    .WIDTH(8)
+    .WIDTH(9)
 ) audio_l_dac (
     .value_i(output_l),
     .pulse_o(pdm_l_o),
@@ -279,7 +284,7 @@ audio_dac #(
 );
 // audio right DAC outout
 audio_dac #(
-    .WIDTH(8)
+    .WIDTH(9)
 ) audio_r_dac (
     .value_i(output_r),
     .pulse_o(pdm_r_o),

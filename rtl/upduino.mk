@@ -20,6 +20,7 @@
 SHELL := /bin/bash -o pipefail
 
 # Version bookkeeping
+BUILDDATE := $(shell date -u "+%Y%m%d")
 GITSHORTHASH := $(shell git rev-parse --short HEAD)
 DIRTYFILES := $(shell git status --porcelain --untracked-files=no | grep rtl/ | grep -v _stats.txt | cut -d " " -f 3-)
 ifeq ($(strip $(DIRTYFILES)),)
@@ -101,7 +102,7 @@ YOSYS_SYNTH_ARGS := -device u -no-rw-check -dsp -abc9 -top $(TOP)
 #FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
 
 # Verilator tool (used for "lint")
 VERILATOR := verilator

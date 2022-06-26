@@ -51,15 +51,21 @@ localparam          offset  = (2**AWIDTH) - (64/4);
 localparam [11:0]   version = 12'H`VERSION;
 localparam [8:1]    clean   = `GITCLEAN ? " " : "+";    // '+' appended to version if non-clean
 localparam [31:0]   githash = 32'H`GITHASH;             // git short hash
+localparam [31:0]   builddate = 32'H`BUILDDATE;         // YYYYMMDD
 
 localparam [16*8:1] hex_str = "FEDCBA9876543210";
 localparam [48*8:1] description_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]),
-                                        " [#",
+                                        " ",
+                                        hex_str[((builddate[31:28])*8)+1+:8], hex_str[((builddate[27:24])*8)+1+:8],
+                                        hex_str[((builddate[23:20])*8)+1+:8], hex_str[((builddate[19:16])*8)+1+:8],
+                                        hex_str[((builddate[15:12])*8)+1+:8], hex_str[((builddate[11: 8])*8)+1+:8],
+                                        hex_str[((builddate[ 7: 4])*8)+1+:8], hex_str[((builddate[ 3: 0])*8)+1+:8],
+                                        " iCE40UP5K 128KB #",
                                         hex_str[((githash[31:28])*8)+1+:8], hex_str[((githash[27:24])*8)+1+:8],
                                         hex_str[((githash[23:20])*8)+1+:8], hex_str[((githash[19:16])*8)+1+:8],
                                         hex_str[((githash[15:12])*8)+1+:8], hex_str[((githash[11: 8])*8)+1+:8],
-                                        hex_str[((githash[ 7: 4])*8)+1+:8], hex_str[((githash[ 3: 0])*8)+1+:8], clean,
-                                        "] iCE40UP5K w/128KB VRAM" };
+                                        hex_str[((githash[ 7: 4])*8)+1+:8], hex_str[((githash[ 3: 0])*8)+1+:8],
+                                        clean };
 initial begin
     // Fill with numbers
     for (integer i = 0; i < (2**AWIDTH); i = i + 1) begin
@@ -85,7 +91,35 @@ initial begin
     bram[offset + 15]  = !ODDWORD ? githash[31:16]   : githash[15:0];
 
     if (!ODDWORD) begin
-        $display("XOSERA INFO: \"%s\" (%dx%d)", description_str, xv::VISIBLE_WIDTH, xv::VISIBLE_HEIGHT);
+`ifdef EN_AUDIO
+        $display("XOSERA INFO: \"%s\" Opts:%d x%d%s%s%s AUD%x",
+`else
+        $display("XOSERA INFO: \"%s\" Opts:%d x%d%s%s%s",
+`endif
+        description_str, 11'(xv::VISIBLE_WIDTH), 10'(xv::VISIBLE_HEIGHT),
+`ifdef EN_PF_B
+`ifdef EN_PF_B_ALPHA
+        " PF_B BLND",
+`else
+        " PF_B",
+`endif
+`else
+        "",
+`endif
+`ifdef EN_COPP
+        " COPP",
+`else
+        "",
+`endif
+`ifdef EN_BLIT
+        " BLIT"
+`else
+        ""
+`endif
+`ifdef EN_AUDIO
+        , 4'(AUDIO_NCHAN)
+`endif
+        );
     end
 end
 

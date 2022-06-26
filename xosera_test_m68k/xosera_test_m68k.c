@@ -2152,10 +2152,45 @@ static void upload_audio(void * memdata, uint16_t vaddr, int len)
 {
     xm_setw(WR_XADDR, vaddr);
     xm_setw(XDATA, 0);
-    xreg_setw(AUD0_START, SILENCE_VADDR);
-    xreg_setw(AUD0_LENGTH, 0x8000 | 0);
+
     xreg_setw(AUD0_VOL, 0x8080);
-    xreg_setw(AUD_CTRL, 0x0001);
+    xreg_setw(AUD0_PERIOD, 0x7FFF);
+    xreg_setw(AUD0_LENGTH, 0x8000 | 0);
+    xreg_setw(AUD0_START, SILENCE_VADDR);
+
+    xreg_setw(AUD1_VOL, 0x8080);
+    xreg_setw(AUD1_PERIOD, 0x7FFF);
+    xreg_setw(AUD1_LENGTH, 0x8000 | 0);
+    xreg_setw(AUD1_START, SILENCE_VADDR);
+
+    xreg_setw(AUD2_VOL, 0x8080);
+    xreg_setw(AUD2_PERIOD, 0x7FFF);
+    xreg_setw(AUD2_LENGTH, 0x8000 | 0);
+    xreg_setw(AUD2_START, SILENCE_VADDR);
+
+    xreg_setw(AUD3_VOL, 0x8080);
+    xreg_setw(AUD3_PERIOD, 0x7FFF);
+    xreg_setw(AUD3_LENGTH, 0x8000 | 0);
+    xreg_setw(AUD3_START, SILENCE_VADDR);
+
+    xreg_setw(AUD_CTRL, 0x000F);
+
+    uint16_t ac = xreg_getw(AUD_CTRL);
+
+    int nc = 0;
+    while (ac & 1)
+    {
+        nc++;
+        ac >>= 1;
+    }
+
+    dprintf("Audio channels supported = %d\n", nc);
+
+    if (nc == 0)
+    {
+        return;
+    }
+
     xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, vaddr);
     uint16_t * wp = memdata;

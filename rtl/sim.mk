@@ -16,6 +16,7 @@
 SHELL := /bin/bash -o pipefail
 
 # Version bookkeeping
+BUILDDATE := $(shell date -u "+%Y%m%d")
 GITSHORTHASH := $(shell git rev-parse --short HEAD)
 DIRTYFILES := $(shell git status --porcelain --untracked-files=no | grep rtl/ | grep -v _stats.txt | cut -d " " -f 3-)
 ifeq ($(strip $(DIRTYFILES)),)
@@ -57,8 +58,9 @@ VIDEO_MODE ?= MODE_640x480
 #VRUN_TESTDATA ?= -u ../testdata/raw/space_shuttle_color_small.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/pacbox-320x240_pal.raw -u ../testdata/raw/pacbox-320x240.raw ../testdata/raw/xosera_r1_pal.raw -u ../testdata/raw/xosera_r1.raw -u ../testdata/raw/color_cube_320x240_256_pal_alpha.raw -u ../testdata/raw/color_cube_320x240_256.raw -u ../testdata/raw/pacbox-320x240_pal.raw -u ../testdata/raw/pacbox-320x240.raw -u ../testdata/raw/mountains_mono_640x480w.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw
-VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw -u ../testdata/raw/ramptable.raw
+#VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw -u ../testdata/raw/ramptable.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw
+VRUN_TESTDATA ?=   -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
 
@@ -83,7 +85,7 @@ INC := $(wildcard $(SRCDIR)/*.svh)
 BUS_INTERFACE	:= 1
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -DICE40UP5K
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
 
 ifeq ($(strip $(BUS_INTERFACE)),1)
 DEFINES += -DBUS_INTERFACE

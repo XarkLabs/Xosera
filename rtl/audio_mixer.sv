@@ -14,8 +14,8 @@
 
 module audio_mixer (
     input  wire logic [AUDIO_NCHAN-1:0]             audio_enable_nchan_i,
-    input  wire logic [7*AUDIO_NCHAN-1:0]           audio_vol_l_nchan_i,
-    input  wire logic [7*AUDIO_NCHAN-1:0]           audio_vol_r_nchan_i,
+    input  wire logic [6*AUDIO_NCHAN-1:0]           audio_vol_l_nchan_i,
+    input  wire logic [6*AUDIO_NCHAN-1:0]           audio_vol_r_nchan_i,
     input  wire logic [15*AUDIO_NCHAN-1:0]          audio_period_nchan_i,
     input  wire logic [AUDIO_NCHAN-1:0]             audio_tile_nchan_i,
     input  wire logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  audio_start_nchan_i,
@@ -36,173 +36,204 @@ module audio_mixer (
     input wire  logic           clk
 );
 
-typedef enum logic [1:0] {
-    AUD_DMA_0       = 2'h0,
-    AUD_READ_0      = 2'h1
-} audio_fetch_st;
+localparam  CHAN_W  = $clog2(AUDIO_NCHAN);
 
-typedef enum logic [1:0] {
-    AUD_MULT_0      = 2'h0,
-    AUD_MIX_0       = 2'h1
-} audio_mix_st;
+typedef enum logic {
+    AUD_FETCH_DMA       = 0,
+    AUD_FETCH_READ      = 1
+} audio_fetch_ph;
+
+typedef enum logic {
+    AUD_MIX_MULT        = 0,
+    AUD_MIX_ACCUM       = 1
+} audio_mix_ph;
+
+/* verilator lint_off UNUSED */
+logic [CHAN_W-1:0]  fetch_chan;
+logic               fetch_phase;
+
+logic [CHAN_W-1:0]  mix_chan;
+logic               mix_phase;
+
+sbyte_t             mix_val_temp;
+sbyte_t             vol_l_temp;
+sbyte_t             vol_r_temp;
+sword_t             mult_l_result;
+sword_t             mult_r_result;
+sword_t             mix_l_accum;
+sword_t             mix_r_accum;
 
 byte_t              output_l;   // mixed left channel to output to DAC
 byte_t              output_r;   // mixed right channel to output to DAC
 
-/* verilator lint_off UNUSED */
-logic [1:0] fetch_state;  // fetch state
-logic [1:0] mix_state;  // mixer state
+logic [AUDIO_NCHAN-1:0]             chan_output;        // channel sample output strobe
+logic [AUDIO_NCHAN-1:0]             chan_2nd;           // 2nd sample from sample word
+logic [AUDIO_NCHAN-1:0]             chan_buff_ok;       // DMA buffer has data
+logic [AUDIO_NCHAN-1:0]             chan_fetch;         // channel DMA fetch flag
+logic [AUDIO_NCHAN-1:0]             chan_tile;          // current sample memtile flag
+logic [8*AUDIO_NCHAN-1:0]           chan_val;           // current channel value sent to DAC
+logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  chan_addr;          // current sample address
+logic [16*AUDIO_NCHAN-1:0]          chan_buff;          // channel DMA word buffer
+logic [16*AUDIO_NCHAN-1:0]          chan_length;        // audio sample byte length counter (15=underflow flag)
+logic [16*AUDIO_NCHAN-1:0]          chan_period;        // audio frequency period counter (15=underflow flag)
 
-logic signed [7:0]  mix_l_temp;
-logic signed [7:0]  mix_r_temp;
-logic signed [7:0]  vol_r_temp;
-logic signed [7:0]  vol_l_temp;
-logic signed [15:0] mix_l_result;
-logic signed [15:0] mix_r_result;
 
-logic               chan_2nd[AUDIO_NCHAN];
-logic               chan_fetch[AUDIO_NCHAN];
-logic               chan_tile[AUDIO_NCHAN];         // current sample mem type
-addr_t              chan_addr[AUDIO_NCHAN];         // current sample address
-word_t              chan_length[AUDIO_NCHAN];       // audio sample byte length counter (15=underflow flag)
-word_t              chan_length_n[AUDIO_NCHAN];     // audio sample byte length counter next (15=underflow flag)
-word_t              chan_period[AUDIO_NCHAN];       // audio frequency period counter (15=underflow flag)
-logic signed [7:0]  chan_val[AUDIO_NCHAN];          // current channel value sent to DAC
-word_t              chan_buff[AUDIO_NCHAN];         // DMA word buffer
-logic [1:0]         chan_buff_ok[AUDIO_NCHAN];      // DMA buffer has data
-logic signed [7:0]  chan_vol_l[AUDIO_NCHAN];
-logic signed [7:0]  chan_vol_r[AUDIO_NCHAN];
+byte_t                  chan_raw[AUDIO_NCHAN];          // current channel value sent to DAC
+logic [5:0]             chan_vol_l[AUDIO_NCHAN];
+logic [5:0]             chan_vol_r[AUDIO_NCHAN];
+
+word_t                  chan_length_n[AUDIO_NCHAN];     // audio sample byte length counter next (15=underflow flag)
+
 /* verilator lint_on UNUSED */
-
-logic unused_bits;
-assign unused_bits = &{ 1'b0, mix_l_result[15:14], mix_l_result[5:0], mix_r_result[15:14], mix_r_result[5:0] };
 
 // setup alias signals
 always_comb begin : alias_block
     for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-        chan_vol_l[i]    = { 1'b0, audio_vol_l_nchan_i[i*7+:7] };    // positive 7 bit signed L volume
-        chan_vol_r[i]    = { 1'b0, audio_vol_r_nchan_i[i*7+:7] };    // positive 7 bit signed R volume
-        chan_length_n[i] = chan_length[i] - 1'b1;                    // length next cycle
+        chan_vol_l[i]       = { audio_vol_l_nchan_i[7*i+:6] };      // 6 bit L volume
+        chan_vol_r[i]       = { audio_vol_r_nchan_i[7*i+:6] };      // 6 bit R volume
+        chan_length_n[i]    = chan_length[16*i+:16] - 1'b1;         // length next cycle
+        chan_output[i]      = chan_period[16*i+15];                 // length next cycle
+        chan_raw[i]         = chan_val[i*8+:8] ^ 8'h80;             // debug channel output
     end
 end
 
 always_ff @(posedge clk) begin : chan_process
     if (reset_i) begin
-        fetch_state         <= AUD_DMA_0;
+        fetch_chan          <= '0;
+        fetch_phase         <= AUD_FETCH_DMA;
 
         audio_req_o         <= '0;
         audio_tile_o        <= '0;
         audio_addr_o        <= '0;
 
+        chan_val            <= '0;
+        chan_addr           <= '0;
+        chan_buff           <= '0;
+        chan_period         <= '0;
+        chan_length         <= '0;          // remaining length for sample data (bytes)
+        chan_buff_ok        <= '0;
+
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-            chan_tile[i]        <= '0;          // current mem type
-            chan_addr[i]        <= '0;          // current address for sample data
-            chan_length[i]      <= '0;          // remaining length for sample data (bytes)
-            chan_period[i]      <= '0;          // countdown for next sample load
-
-            chan_fetch[i]       <= '0;
-            chan_buff_ok[i]     <= '0;
             chan_2nd[i]         <= '0;
+            chan_fetch[i]       <= '0;
+            chan_tile[i]        <= '0;          // current mem type
 
-            chan_val[i]         <= '0;
-            chan_buff[i]        <= '0;
         end
 
     end else begin
+
+        // if (0) begin
+        //     for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        //         chan_2nd     [i]       <= chan_2nd      [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
+        //         chan_fetch   [i]       <= chan_fetch    [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
+        //         chan_tile    [i]       <= chan_tile     [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
+        //         chan_addr    [i]       <= chan_addr     [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
+        //         chan_length  [i]       <= chan_length   [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
+        //         chan_period  [i]       <= chan_period   [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
+        //         chan_val     [i]       <= chan_val      [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
+        //         chan_buff    [i]       <= chan_buff     [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
+        //         chan_buff_ok [i]       <= chan_buff_ok  [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
+        //     end
+        // end
+
         // loop over all audio channels
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             audio_reload_nchan_o[i]   <= 1'b0;        // clear reload strobe
 
             // decrement period
-            chan_period[i]      <= chan_period[i] - 1'b1;
+            chan_period[16*i+:16]<= chan_period[16*i+:16] - 1'b1;
 
             // if period underflowed, output next sample
-            if (chan_period[i][15]) begin
-                chan_2nd[i]         <= !chan_2nd[i];
-                chan_period[i]      <= { 1'b0, audio_period_nchan_i[i*15+:15] };
-                chan_val[i]         <= chan_buff[i][15:8];
-                chan_buff[i][15:8]  <= chan_buff[i][7:0];
-`ifndef SYNTHESIS
-                chan_buff[i][7]     <= ~chan_buff[i][7];    // obvious "glitch" to verify not used again
-`endif
-                chan_buff_ok[i]     <= { chan_buff_ok[i][0], 1'b0 };
+            if (chan_output[i]) begin
+                chan_2nd[i]             <= !chan_2nd[i];
+                chan_period[16*i+:16]   <= { 1'b0, audio_period_nchan_i[i*15+:15] };
+                chan_val[i*8+:8]        <= chan_buff[16*i+8+:8];
+                chan_buff[16*i+8+:8]    <= chan_buff[16*i+:8];
+// `ifndef SYNTHESIS
+//              chan_buff[16*i+7]   <= ~chan_buff[16*i+7];  // obvious "glitch" to verify not used again
+// `endif
+                chan_buff_ok[i]     <= chan_buff_ok[i] & chan_2nd[i];
 
                 // if 2nd sample of sample word, prepare sample address
                 if (chan_2nd[i]) begin
                     chan_fetch[i]           <= 1'b1;
                     // if length already underflowed, or will next cycle
-                    if (chan_length[i][15] || chan_length_n[i][15]) begin
+                    if (chan_length[16*i+15] || chan_length_n[i][15]) begin
                         // if restart, reload sample parameters from registers
                         chan_tile[i]        <= audio_tile_nchan_i[i];
-                        chan_addr[i]        <= audio_start_nchan_i[i*xv::VRAM_W+:16];
-                        chan_length[i]      <= { 1'b0, audio_len_nchan_i[i*15+:15] };
-                        audio_reload_nchan_o[i] <= 1'b1;            // set reload strobe
+                        chan_addr[i*xv::VRAM_W+:xv::VRAM_W] <= audio_start_nchan_i[i*xv::VRAM_W+:xv::VRAM_W];
+                        chan_length[16*i+:16]               <= { 1'b0, audio_len_nchan_i[i*15+:15] };
+                        audio_reload_nchan_o[i]             <= 1'b1;            // set reload/ready strobe
                     end else begin
                         // increment sample address, decrement remaining length
-                        chan_addr[i]        <= chan_addr[i] + 1'b1;
-                        chan_length[i]      <= chan_length_n[i];
+                        chan_addr[i*xv::VRAM_W+:xv::VRAM_W] <= chan_addr[i*xv::VRAM_W+:xv::VRAM_W] + 1'b1;
+                        chan_length[16*i+:16]               <= chan_length_n[i];
                     end
                 end
             end
 
             if (audio_restart_nchan_i[i] || !audio_enable_nchan_i[i]) begin
-                chan_length[i][15]      <= 1'b1;    // force sample addr, tile, len reload
-                chan_period[i][15]      <= 1'b1;    // force sample period expire
-                chan_buff_ok[i]         <= 2'b00;   // clear sample buffer status
+                chan_length[16*i+15]    <= 1'b1;    // force sample addr, tile, len reload
+                chan_period[16*i+15]    <= 1'b1;    // force sample period expire
+                chan_buff_ok[i]         <= 1'b0;    // clear sample buffer status
                 chan_2nd[i]             <= 1'b1;    // set 2nd sample to switch next sendout
             end
 
             if (!audio_enable_nchan_i[i]) begin
-                chan_val[i]         <= '0;            // silent if disabled
+                chan_val[i]         <= '0;      // silent if disabled
             end
         end
 
-        case (fetch_state)
+        case (fetch_phase)
             // setup DMA fetch for channel (no effect unless chan_fetch set)
-            AUD_DMA_0: begin
-                    // HACK: || audio_restart_nchan_i[i];
-                    // if (chan_fetch[0] && chan_buff_ok[0] == 2'b00) begin
-                    if (chan_fetch[0] && (audio_restart_nchan_i[0] || chan_buff_ok[0] == 2'b00)) begin
+            AUD_FETCH_DMA: begin
+                    audio_req_o         <= 1'b0;
+                    if (chan_fetch[fetch_chan] && (audio_restart_nchan_i[fetch_chan] || !chan_buff_ok[fetch_chan])) begin
                         audio_req_o     <= 1'b1;
                     end
-                    audio_tile_o    <= chan_tile[0];
-                    audio_addr_o    <= chan_addr[0];
-                    fetch_state     <= AUD_READ_0;
+                    audio_tile_o    <= chan_tile[fetch_chan];
+                    audio_addr_o    <= chan_addr[fetch_chan*xv::VRAM_W+:xv::VRAM_W];
+                    fetch_phase     <= AUD_FETCH_READ;
             end
             // if chan_fetch, wait for ack, latch new word if ack, get ready to mix channel
-            AUD_READ_0: begin
+            AUD_FETCH_READ: begin
                 if (audio_req_o) begin
                     if (audio_ack_i) begin
-                        audio_req_o         <= 1'b0;
-                        chan_fetch[0]       <= 1'b0;
-                        chan_buff[0][15:0]  <= audio_word_i;
-                        chan_buff_ok[0]     <= 2'b11;
-                        fetch_state         <= AUD_DMA_0;
+                        audio_req_o                     <= 1'b0;
+                        chan_fetch[fetch_chan]          <= 1'b0;
+                        chan_buff[16*fetch_chan+:16]    <= audio_word_i;
+                        chan_buff_ok[fetch_chan]        <= 1'b1;
+
+                        fetch_chan          <= fetch_chan + 1'b1;
+                        fetch_phase         <= AUD_FETCH_DMA;
                     end
                 end else begin
-                    fetch_state           <= AUD_DMA_0;
+                    fetch_chan          <= fetch_chan + 1'b1;
+
+                    fetch_phase           <= AUD_FETCH_DMA;
                 end
-            end
-            default: begin
-                fetch_state       <= AUD_DMA_0;
             end
         endcase
     end
 end
 
 always_comb begin : mix_block
-    mix_l_result    = mix_l_temp * vol_l_temp;
-    mix_r_result    = mix_r_temp * vol_r_temp;
+    mult_l_result    = mix_val_temp * vol_l_temp;
+    mult_r_result    = mix_val_temp * vol_r_temp;
 end
 
 always_ff @(posedge clk) begin : mix_fsm
     if (reset_i) begin
-        mix_state       <= AUD_MIX_0;
+        mix_chan        <= '0;
+        mix_phase       <= AUD_MIX_MULT;
 
-        mix_l_temp      <= '0;
-        mix_r_temp      <= '0;
+        mix_val_temp    <= '0;
         vol_l_temp      <= '0;
         vol_r_temp      <= '0;
+
+        mix_l_accum     <= '0;
+        mix_r_accum     <= '0;
+
 `ifndef SYNTHESIS
         output_l        <= '1;      // HACK: to force full scale display for analog signal view in GTKWave
         output_r        <= '1;
@@ -211,30 +242,27 @@ always_ff @(posedge clk) begin : mix_fsm
         output_r        <= '0;
 `endif
     end else begin
-        case (mix_state)
-            AUD_MULT_0: begin
-                mix_l_temp      <= chan_val[0];
-                mix_r_temp      <= chan_val[0];
-                vol_l_temp      <= chan_vol_l[0];
-                vol_r_temp      <= chan_vol_r[0];
-                mix_state       <= AUD_MIX_0;
-            end
-            AUD_MIX_0: begin
-                // convert to unsigned for DAC
-                if (mix_l_result[14] != mix_l_result[15]) begin
-                    output_l        <= mix_l_result[15] ? 8'h00 : 8'hFF;
-                end else begin
-                    output_l        <= { ~mix_l_result[13], mix_l_result[12:6] };      // unsigned result for DAC
+        case (mix_phase)
+            AUD_MIX_MULT: begin
+                if (mix_chan == 0) begin
+                    output_l        <= { ~mix_l_accum[15], mix_l_accum[14:8] };      // unsigned result for DAC
+                    output_r        <= { ~mix_r_accum[15], mix_r_accum[14:8] };
+                    mix_l_accum     <= '0;
+                    mix_r_accum     <= '0;
                 end
-                if (mix_r_result[14] != mix_r_result[15]) begin
-                    output_r        <= mix_r_result[15] ? 8'h00 : 8'hFF;
-                end else begin
-                    output_r        <= { ~mix_r_result[13], mix_r_result[12:6] };
-                end
-                mix_state       <= AUD_MULT_0;
+                mix_val_temp    <= chan_val[mix_chan*8+:8];
+                vol_l_temp      <= { 1'b0, audio_vol_l_nchan_i[mix_chan*7+:6], 1'b0 };
+                vol_r_temp      <= { 1'b0, audio_vol_r_nchan_i[mix_chan*7+:6], 1'b0 };
+
+                mix_phase       <= AUD_MIX_ACCUM;
             end
-            default: begin
-                mix_state       <= AUD_MULT_0;
+            AUD_MIX_ACCUM: begin
+                mix_l_accum     <= mix_l_accum + mult_l_result;
+                mix_r_accum     <= mix_r_accum + mult_r_result;
+
+                mix_chan        <= mix_chan + 1'b1;
+
+                mix_phase       <= AUD_MIX_MULT;
             end
         endcase
     end

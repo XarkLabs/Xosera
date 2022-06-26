@@ -460,6 +460,8 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
+#if 0
+
     REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
     REG_W(WR_ADDR, 0xF000),
     REG_UPLOAD(),
@@ -842,24 +844,30 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
+#endif
+
 #if 1                              // lame audio test
     REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
     REG_W(WR_ADDR, 0xFF00),
+    REG_UPLOAD(),        // upload sine data
+
+    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
+    REG_W(WR_ADDR, 0xFE00),
     REG_UPLOAD(),        // upload sine data
 
     XREG_SETW(PA_GFX_CTRL, 0x0080),        // pf a blank
     XREG_SETW(PB_GFX_CTRL, 0x0080),        // pf b blank
 
 
-    XREG_SETW(AUD0_VOL, 0x8040),
+    XREG_SETW(AUD0_VOL, 0xFF7F),
     XREG_SETW(AUD0_PERIOD, 3140),
     XREG_SETW(AUD0_LENGTH, 0x007F),
     XREG_SETW(AUD0_START, 0xFF00),
 
-    XREG_SETW(AUD1_VOL, 0x8040),
-    XREG_SETW(AUD1_PERIOD, 3141),
+    XREG_SETW(AUD1_VOL, 0xFF7F),
+    XREG_SETW(AUD1_PERIOD, 2000),
     XREG_SETW(AUD1_LENGTH, 0x007F),
-    XREG_SETW(AUD1_START, 0xFF00),
+    XREG_SETW(AUD1_START, 0xFE00),
 
     XREG_SETW(AUD2_VOL, 0x8040),
     XREG_SETW(AUD2_PERIOD, 3142),

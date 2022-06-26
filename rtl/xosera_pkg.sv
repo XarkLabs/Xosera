@@ -13,7 +13,7 @@
 `define XOSERA_PKG
 
 `default_nettype none               // mandatory for Verilog sanity
-`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
+//`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
 /* verilator lint_off UNUSED */
 
@@ -32,9 +32,10 @@
 
 // features that can be optionally disabled (comment out)
 //
+// TODO: PF_A & B options
 `define EN_TIMER_INTR                   // enable timer interrupt
 `define EN_COPP                         // enable copper
-`define EN_PF_B                         // enable PF B (2nd overlay playfield)
+//`define EN_PF_B                         // enable PF B (2nd overlay playfield)
 `define EN_PF_B_ALPHA                   // enable pf B blending (else overlay only)
 `define EN_PF_B_ALPHACLAMP              // enable pf B clamped RGB blending (cheap)
 `define EN_BLIT                         // enable blit unit
@@ -42,13 +43,11 @@
 //`define EN_BLIT_DECR_LSHIFT             // TODO: enable blit left shift when decrementing?
 //`define EN_BLIT_XOR_CONST_AB            // TODO: enable blit XOR modulo with constants?
 //`define EN_BLIT_XOR_CONST_C             // TODO: enable blit XOR modulo with constants?
-`define EN_AUDIO                        // TODO: enable audio
+`define EN_AUDIO                4       // TODO: enable audio (with number of channels)
 
 // experimental options (uncomment)
 //
-//`define OPT_BUS_DATAOUT_REG             // register 8-bit data bus out signal (helpful?)
-
-localparam  AUDIO_NCHAN =   1;            // with EN_AUDIO, number of channels (1 to 4)
+//`define OPT_BUS_DATAOUT_REG             // BUG: register 8-bit data bus out signal
 
 //=================================
 
@@ -60,6 +59,11 @@ localparam  AUDIO_NCHAN =   1;            // with EN_AUDIO, number of channels (
 `ifndef GITHASH
 `define GITHASH 00000000                // unknown Git hash (not using Git)
 `endif
+`ifndef BUILDDATE
+`define BUILDDATE 00000000              // unknown build date
+`endif
+
+localparam AUDIO_NCHAN =   2;//`EN_AUDIO;  // parameter for # audio channels
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
@@ -466,7 +470,9 @@ endpackage
 
 // Xosera types (NOTE: in global space, due to iVerilog)
 typedef logic  [7:0]                            byte_t;         // byte size (8-bit)
+typedef logic signed [7:0]                      sbyte_t;        // byte size (8-bit)
 typedef logic [15:0]                            word_t;         // word size (16-bit)
+typedef logic signed [15:0]                     sword_t;        // word size (16-bit)
 typedef logic [31:0]                            long_t;         // long size (32-bit)
 typedef logic [15:0]                            argb_t;         // ARGB color (16-bit)
 typedef logic [11:0]                            rgb_t;          // RGB color (12-bit)

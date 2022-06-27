@@ -33,12 +33,12 @@
 // features that can be optionally disabled (comment out)
 //
 // TODO: PF_A & B options
-`define EN_TIMER_INTR                   // enable timer interrupt
-`define EN_COPP                         // enable copper
+//`define EN_TIMER_INTR                   // enable timer interrupt
+//`define EN_COPP                         // enable copper
 //`define EN_PF_B                         // enable PF B (2nd overlay playfield)
 //`define EN_PF_B_ALPHA                   // enable pf B blending (else overlay only)
 //`define EN_PF_B_ALPHACLAMP              // enable pf B clamped RGB blending (cheap)
-`define EN_BLIT                         // enable blit unit
+//`define EN_BLIT                         // enable blit unit
 //`define EN_BLIT_DECR                    // TODO: enable blit pointer decrementing
 //`define EN_BLIT_DECR_LSHIFT             // TODO: enable blit left shift when decrementing?
 //`define EN_BLIT_XOR_CONST_AB            // TODO: enable blit XOR modulo with constants?
@@ -63,7 +63,7 @@
 `define BUILDDATE 00000000              // unknown build date
 `endif
 
-localparam AUDIO_NCHAN =   4;           //`EN_AUDIO;  // parameter for # audio channels
+localparam AUDIO_NCHAN  = `EN_AUDIO;    // set parameter for # audio channels
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;

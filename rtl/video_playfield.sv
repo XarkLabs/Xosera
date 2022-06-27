@@ -195,7 +195,7 @@ always_comb begin
                 end else begin
                     pf_fetch_next   = FETCH_ADDR_TILEMAP;
                 end
-            end else if (dma_req_i) begin
+            end else if (dma_req_i && !dma_ack) begin
                 fetch_addr_next     = dma_addr_i;         // put DMA address on bus
                 vram_sel_next       = ~dma_tile_i;        // select VRAM/TILE for DMA
                 tilemem_sel_next    = dma_tile_i;

@@ -74,6 +74,7 @@ logic [AUDIO_NCHAN-1:0]             chan_buff_ok;       // DMA buffer has data
 logic [AUDIO_NCHAN-1:0]             chan_fetch;         // channel DMA fetch flag
 logic [AUDIO_NCHAN-1:0]             chan_tile;          // current sample memtile flag
 logic [8*AUDIO_NCHAN-1:0]           chan_val;           // current channel value sent to DAC
+logic [8*AUDIO_NCHAN-1:0]           chan_val2;          // current channel value sent to DAC
 logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  chan_addr;          // current sample address
 logic [16*AUDIO_NCHAN-1:0]          chan_buff;          // channel DMA word buffer
 logic [16*AUDIO_NCHAN-1:0]          chan_length;        // audio sample byte length counter (15=underflow flag)
@@ -81,6 +82,8 @@ logic [16*AUDIO_NCHAN-1:0]          chan_period;        // audio frequency perio
 
 
 byte_t                  chan_raw[AUDIO_NCHAN];          // current channel value sent to DAC
+byte_t                  chan_raw2[AUDIO_NCHAN];          // current channel value sent to DAC
+word_t                  chan_word[AUDIO_NCHAN];          // current channel value sent to DAC
 logic [5:0]             chan_vol_l[AUDIO_NCHAN];
 logic [5:0]             chan_vol_r[AUDIO_NCHAN];
 addr_t                  chan_ptr[AUDIO_NCHAN];          // current channel value sent to DAC
@@ -96,7 +99,9 @@ always_comb begin : alias_block
         chan_vol_l[i]       = { audio_vol_l_nchan_i[6*i+:6] };      // 6 bit L volume
         chan_vol_r[i]       = { audio_vol_r_nchan_i[6*i+:6] };      // 6 bit R volume
         chan_raw[i]         = chan_val[i*8+:8] ^ 8'h80;             // debug channel output
+        chan_raw2[i]        = chan_val2[i*8+:8] ^ 8'h80;             // debug channel output
         chan_ptr[i]         = chan_addr[xv::VRAM_W*i+:xv::VRAM_W] - 1'b1; // debug channel addr
+        chan_word[i]        = chan_buff[16*i+:16] - 1'b1; // debug channel addr
         chan_length_n[i]    = chan_length[16*i+:16] - 1'b1;         // length next cycle
         chan_output[i]      = chan_period[16*i+15];                 // length next cycle
         chan_restart[i]     = audio_reload_nchan_o[i];
@@ -105,42 +110,25 @@ end
 
 always_ff @(posedge clk) begin : chan_process
     if (reset_i) begin
-        fetch_chan          <= '0;
-        fetch_phase         <= AUD_FETCH_DMA;
-
         audio_req_o         <= '0;
         audio_tile_o        <= '0;
         audio_addr_o        <= '0;
 
+        fetch_chan          <= '0;
+        fetch_phase         <= AUD_FETCH_DMA;
+
         chan_val            <= '0;
+        chan_val2           <= '0;
         chan_addr           <= '0;
         chan_buff           <= '0;
         chan_period         <= '0;
         chan_length         <= '0;          // remaining length for sample data (bytes)
         chan_buff_ok        <= '0;
-
-        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-            chan_2nd[i]         <= '0;
-            chan_fetch[i]       <= '0;
-            chan_tile[i]        <= '0;          // current mem type
-
-        end
+        chan_2nd            <= '0;
+        chan_fetch          <= '0;
+        chan_tile           <= '0;          // current mem type
 
     end else begin
-
-        // if (0) begin
-        //     for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-        //         chan_2nd     [i]       <= chan_2nd      [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
-        //         chan_fetch   [i]       <= chan_fetch    [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
-        //         chan_tile    [i]       <= chan_tile     [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
-        //         chan_addr    [i]       <= chan_addr     [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
-        //         chan_length  [i]       <= chan_length   [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
-        //         chan_period  [i]       <= chan_period   [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
-        //         chan_val     [i]       <= chan_val      [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
-        //         chan_buff    [i]       <= chan_buff     [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
-        //         chan_buff_ok [i]       <= chan_buff_ok  [i+1 >= AUDIO_NCHAN ? 0 : i + 1];
-        //     end
-        // end
 
         // loop over all audio channels
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
@@ -153,16 +141,15 @@ always_ff @(posedge clk) begin : chan_process
             if (chan_output[i]) begin
                 chan_2nd[i]             <= !chan_2nd[i];
                 chan_period[16*i+:16]   <= { 1'b0, audio_period_nchan_i[i*15+:15] };
-                chan_val[i*8+:8]        <= chan_buff[16*i+8+:8];
-                chan_buff[16*i+8+:8]    <= chan_buff[16*i+:8];
-// `ifndef SYNTHESIS
-//              chan_buff[16*i+7]   <= ~chan_buff[16*i+7];  // obvious "glitch" to verify not used again
-// `endif
-                chan_buff_ok[i]     <= chan_buff_ok[i] & chan_2nd[i];
-
+                chan_val[i*8+:8]        <= chan_2nd[i] ? chan_val2[8*i+:8] : chan_buff[16*i+8+:8];
+                chan_val2[i*8+:8]       <= chan_buff[16*i+:8];
+                chan_buff_ok[i]         <= 1'b0;
                 // if 2nd sample of sample word, prepare sample address
                 if (chan_2nd[i]) begin
-                    chan_fetch[i]           <= 1'b1;
+`ifndef SYNTHESIS
+//                    chan_val2[8*i+7]    <= ~chan_val2[8*i+7];  // obvious "glitch" to verify not used again
+`endif
+                    chan_fetch[i]       <= 1'b1;
                     // if length already underflowed, or will next cycle
                     if (chan_length[16*i+15] || chan_length_n[i][15]) begin
                         // if restart, reload sample parameters from registers
@@ -178,7 +165,7 @@ always_ff @(posedge clk) begin : chan_process
                 end
             end
 
-            if (audio_restart_nchan_i[i] || !audio_enable_nchan_i[i]) begin
+            if (audio_restart_nchan_i[i]) begin
                 chan_length[16*i+15]    <= 1'b1;    // force sample addr, tile, len reload
                 chan_period[16*i+15]    <= 1'b1;    // force sample period expire
                 chan_buff_ok[i]         <= 1'b0;    // clear sample buffer status
@@ -186,7 +173,10 @@ always_ff @(posedge clk) begin : chan_process
             end
 
             if (!audio_enable_nchan_i[i]) begin
-                chan_val[i]         <= '0;      // silent if disabled
+                chan_length[16*i+15]    <= 1'b1;    // force sample addr, tile, len reload
+                chan_period[16*i+15]    <= 1'b1;    // force sample period expire
+                chan_2nd[i]             <= 1'b0;    // set 2nd sample to switch next sendout
+                chan_val[i]             <= '0;      // silent if disabled
             end
         end
 
@@ -194,7 +184,7 @@ always_ff @(posedge clk) begin : chan_process
             // setup DMA fetch for channel (no effect unless chan_fetch set)
             AUD_FETCH_DMA: begin
                     audio_req_o         <= 1'b0;
-                    if (chan_fetch[fetch_chan] && (audio_restart_nchan_i[fetch_chan] || !chan_buff_ok[fetch_chan])) begin
+                    if (chan_fetch[fetch_chan] && !chan_buff_ok[fetch_chan]) begin
                         audio_req_o     <= 1'b1;
                     end
                     audio_tile_o    <= chan_tile[fetch_chan];

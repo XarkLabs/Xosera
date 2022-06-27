@@ -129,6 +129,12 @@ tile_addr_t         pb_tile_addr;                       // tile mem word address
 localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;               // memory prefetch starts early
 localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fetch can end a bit early
 
+// debug signals
+/* verilator lint_off UNUSED */
+xv::xr_register_t   xr_reg_enum;
+assign xr_reg_enum = vgen_reg_wr_en_i ? $bits(xr_reg_enum)'(vgen_reg_num_i) : xv::XR_none;
+/* verilator lint_off UNUSED */
+
 // sync generation signals (and combinatorial logic "next" versions)
 
 logic           end_of_line;

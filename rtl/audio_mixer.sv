@@ -36,8 +36,8 @@ module audio_mixer (
     input wire  logic           clk
 );
 
-localparam  CHAN_W  = $clog2(AUDIO_NCHAN);
-localparam  DAC_W   = 9;
+localparam  CHAN_W  = 2;
+localparam  DAC_W   = 8;
 
 typedef enum logic {
     AUD_FETCH_DMA       = 0,
@@ -50,22 +50,23 @@ typedef enum logic {
 } audio_mix_ph;
 
 /* verilator lint_off UNUSED */
-logic [CHAN_W-1:0]  fetch_chan;
-logic               fetch_phase;
 
-logic [CHAN_W-1:0]  mix_chan;
-logic               mix_phase;
+logic [CHAN_W-1:0]                  fetch_chan;
+logic                               fetch_phase;
 
-sbyte_t             mix_val_temp;
-sbyte_t             vol_l_temp;
-sbyte_t             vol_r_temp;
-sword_t             mult_l_result;
-sword_t             mult_r_result;
-sword_t             mix_l_accum;
-sword_t             mix_r_accum;
+logic [CHAN_W-1:0]                  mix_chan;
+logic                               mix_phase;
 
-logic [DAC_W-1:0]                   output_l;   // mixed left channel to output to DAC
-logic [DAC_W-1:0]                   output_r;   // mixed right channel to output to DAC
+sbyte_t                             mix_val_temp;
+sbyte_t                             vol_l_temp;
+sbyte_t                             vol_r_temp;
+sword_t                             mult_l_result;
+sword_t                             mult_r_result;
+sword_t                             mix_l_accum;
+sword_t                             mix_r_accum;
+
+logic [DAC_W-1:0]                   output_l;           // mixed left channel to output to DAC (unsigned)
+logic [DAC_W-1:0]                   output_r;           // mixed right channel to output to DAC (unsigned)
 
 logic [AUDIO_NCHAN-1:0]             chan_output;        // channel sample output strobe
 logic [AUDIO_NCHAN-1:0]             chan_2nd;           // 2nd sample from sample word
@@ -213,7 +214,9 @@ always_ff @(posedge clk) begin : chan_process
                         fetch_phase         <= AUD_FETCH_DMA;
                     end
                 end else begin
-                    fetch_chan          <= fetch_chan + 1'b1;
+                    if (AUDIO_NCHAN > 1) begin
+                        fetch_chan          <= fetch_chan + 1'b1;
+                    end
 
                     fetch_phase           <= AUD_FETCH_DMA;
                 end
@@ -250,8 +253,8 @@ always_ff @(posedge clk) begin : mix_fsm
         case (mix_phase)
             AUD_MIX_MULT: begin
                 if (mix_chan == 0) begin
-                    output_l        <= { ~mix_l_accum[15], mix_l_accum[14:7] };      // unsigned result for DAC
-                    output_r        <= { ~mix_r_accum[15], mix_r_accum[14:7] };
+                    output_l        <= { ~mix_l_accum[15], mix_l_accum[12:6] };      // unsigned result for DAC
+                    output_r        <= { ~mix_r_accum[15], mix_r_accum[12:6] };
                     mix_l_accum     <= '0;
                     mix_r_accum     <= '0;
                 end
@@ -262,10 +265,12 @@ always_ff @(posedge clk) begin : mix_fsm
                 mix_phase       <= AUD_MIX_ACCUM;
             end
             AUD_MIX_ACCUM: begin
-                mix_l_accum     <= mix_l_accum + (mult_l_result >>> 1);
-                mix_r_accum     <= mix_r_accum + (mult_r_result >>> 1);
+                mix_l_accum     <= mix_l_accum + mult_l_result;
+                mix_r_accum     <= mix_r_accum + mult_r_result;
 
-                mix_chan        <= mix_chan + 1'b1;
+                if (AUDIO_NCHAN > 1) begin
+                    mix_chan        <= mix_chan + 1'b1;
+                end
 
                 mix_phase       <= AUD_MIX_MULT;
             end
@@ -275,7 +280,7 @@ end
 
 // audio left DAC outout
 audio_dac #(
-    .WIDTH(9)
+    .WIDTH(DAC_W)
 ) audio_l_dac (
     .value_i(output_l),
     .pulse_o(pdm_l_o),
@@ -284,7 +289,7 @@ audio_dac #(
 );
 // audio right DAC outout
 audio_dac #(
-    .WIDTH(9)
+    .WIDTH(DAC_W)
 ) audio_r_dac (
     .value_i(output_r),
     .pulse_o(pdm_r_o),

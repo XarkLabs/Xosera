@@ -63,9 +63,9 @@ always_comb gB      = 8'(colorB_xrgb_i[ 7:4]) * inv_alphaA;
 always_comb bB      = 8'(colorB_xrgb_i[ 3:0]) * inv_alphaA;
 
 logic unused_bits;
-always_comb unused_bits = &{ 1'b0, colorA_xrgb_i, colorB_xrgb_i, rA, gA, bA, rB, gB, bB, EN_PF_B_ALPHACLAMP || EN_PF_B_ALPHA ? 1'b0 : 1'b0 };
+always_comb unused_bits = &{ 1'b0, colorA_xrgb_i, colorB_xrgb_i, rA, gA, bA, rB, gB, bB, EN_PF_B_BLEND ? 1'b0 : 1'b0 };
 
-// if (EN_PF_B_ALPHA) begin
+// if (EN_PF_B_BLEND) begin
     // always_comb begin
     //     // Conceptually, for alpha purposes A is the bottom "destination" surface,
     //     // and B is "source" playfield blended on top, over it.

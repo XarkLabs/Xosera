@@ -12,6 +12,9 @@
 
 `include "xosera_pkg.sv"
 
+`ifdef EN_PF_B
+`ifdef EN_PF_B_BLEND
+
 module video_blend (
     // video RGB inputs
     input wire  logic           vsync_i,
@@ -31,7 +34,7 @@ logic           hsync_1;            // hsync delayed
 logic           vsync_1;            // vsync delayed
 rgb_t           blend_result;
 
-`ifdef EN_PF_B_ALPHA
+`ifdef EN_PF_B_BLEND
 logic [5:0]     r_alpha25;
 logic [5:0]     g_alpha25;
 logic [5:0]     b_alpha25;
@@ -43,12 +46,12 @@ logic [4:0]     b_alpha50;
 
 logic unused;
 assign unused   =   &{ 1'b0, colorA_xrgb_i[14:12], colorB_xrgb_i[14:12]
-`ifdef EN_PF_B_ALPHA
+`ifdef EN_PF_B_BLEND
                     , r_alpha25[1:0], g_alpha25[1:0], b_alpha25[1:0]
 `endif
                     };
 
-`ifdef EN_PF_B_ALPHA
+`ifdef EN_PF_B_BLEND
 always_comb begin
     // (A/4)+(A/2)+(B/4) = 6/8 A + 2/8 B
     r_alpha25 = {2'b00, colorA_xrgb_i[11:8]} + {1'b0, colorA_xrgb_i[11:8], 1'b0} + {2'b00, colorB_xrgb_i[11:8] };
@@ -61,7 +64,7 @@ always_comb begin
 end
 `endif
 
-`ifdef EN_PF_B_ALPHA
+`ifdef EN_PF_B_BLEND
 always_comb begin
     case (colorA_xrgb_i[15:14])
         2'b00:  // A alpha 00xx = Use 2-bit alpha B blend value for alpha blend
@@ -81,13 +84,9 @@ always_comb begin
         2'b01:  // A alpha 10XX = signed blend (wrap allowed)
             blend_result    =   {   r_alpha50[3:0], g_alpha50[3:0], b_alpha50[3:0] };
         2'b10:  // A alpha 01XX = additive clamp (clamped at 0xf)
-`ifdef EN_PF_B_ALPHACLAMP
             blend_result    =   {   (colorA_xrgb_i[11] & colorB_xrgb_i[11]) ? 4'hF : r_alpha50[3:0],
                                     (colorA_xrgb_i[7] & colorB_xrgb_i[7])   ? 4'hF : g_alpha50[3:0],
                                     (colorA_xrgb_i[3] & colorB_xrgb_i[3])   ? 4'hF : b_alpha50[3:0] };
-`else
-            blend_result    =   {   r_alpha50[3:0], g_alpha50[3:0], b_alpha50[3:0] };
-`endif
         2'b11:  // A alpha = 11XX = 100% A, ignore B (aka A on top)
             blend_result    = colorA_xrgb_i[11:0];
     endcase
@@ -118,4 +117,7 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
+
+`endif
+`endif
 `default_nettype wire               // restore default

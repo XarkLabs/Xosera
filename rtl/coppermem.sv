@@ -98,7 +98,7 @@ initial begin
 `endif
         description_str, 11'(xv::VISIBLE_WIDTH), 10'(xv::VISIBLE_HEIGHT),
 `ifdef EN_PF_B
-`ifdef EN_PF_B_ALPHA
+`ifdef EN_PF_B_BLEND
         " PF_B BLND",
 `else
         " PF_B",

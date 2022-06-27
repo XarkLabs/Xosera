@@ -12,6 +12,8 @@
 
 `include "xosera_pkg.sv"
 
+`ifdef EN_BLIT
+
 module blitter2(
     // video registers and control
     input  wire logic           xreg_wr_en_i,       // strobe to write internal config register number
@@ -597,4 +599,6 @@ always_comb begin
 end
 
 endmodule
+
+`endif
 `default_nettype wire               // restore default

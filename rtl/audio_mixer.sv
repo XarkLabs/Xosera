@@ -12,6 +12,8 @@
 
 `include "xosera_pkg.sv"
 
+`ifdef EN_AUDIO
+
 module audio_mixer (
     input  wire logic [AUDIO_NCHAN-1:0]             audio_enable_nchan_i,
     input  wire logic [6*AUDIO_NCHAN-1:0]           audio_vol_l_nchan_i,
@@ -38,6 +40,7 @@ module audio_mixer (
 
 localparam  CHAN_W  = 2;
 localparam  DAC_W   = 8;
+localparam  ACC_W   = 16;
 
 typedef enum logic {
     AUD_FETCH_DMA       = 0,
@@ -62,8 +65,8 @@ sbyte_t                             vol_l_temp;
 sbyte_t                             vol_r_temp;
 sword_t                             mult_l_result;
 sword_t                             mult_r_result;
-sword_t                             mix_l_accum;
-sword_t                             mix_r_accum;
+logic signed [ACC_W-1:0]            mix_l_acc;
+logic signed [ACC_W-1:0]            mix_r_acc;
 
 logic [DAC_W-1:0]                   output_l;           // mixed left channel to output to DAC (unsigned)
 logic [DAC_W-1:0]                   output_r;           // mixed right channel to output to DAC (unsigned)
@@ -229,8 +232,8 @@ always_ff @(posedge clk) begin : mix_fsm
         vol_l_temp      <= '0;
         vol_r_temp      <= '0;
 
-        mix_l_accum     <= '0;
-        mix_r_accum     <= '0;
+        mix_l_acc       <= '0;
+        mix_r_acc       <= '0;
 
 `ifndef SYNTHESIS
         output_l        <= '1;      // HACK: to force full scale display for analog signal view in GTKWave
@@ -243,20 +246,28 @@ always_ff @(posedge clk) begin : mix_fsm
         case (mix_phase)
             AUD_MIX_MULT: begin
                 if (mix_chan == 0) begin
-                    output_l        <= { ~mix_l_accum[15], mix_l_accum[12:6] };      // unsigned result for DAC
-                    output_r        <= { ~mix_r_accum[15], mix_r_accum[12:6] };
-                    mix_l_accum     <= '0;
-                    mix_r_accum     <= '0;
+                    if (mix_l_acc[ACC_W-1] != mix_l_acc[ACC_W-2]) begin
+                        output_l        <= mix_l_acc[ACC_W-1] ? 8'h00 : 8'hFF;       // clamp result for DAC
+                    end else begin
+                        output_l        <= { ~mix_l_acc[ACC_W-1], mix_l_acc[ACC_W-9+:7] }; // unsigned result for DAC
+                    end
+                    if (mix_r_acc[ACC_W-1] != mix_r_acc[ACC_W-2]) begin
+                        output_r        <= mix_r_acc[ACC_W-1] ? 8'h00 : 8'hFF;       // clamp result for DAC
+                    end else begin
+                        output_r        <= { ~mix_r_acc[ACC_W-1], mix_r_acc[ACC_W-9+:7] };
+                    end
+                    mix_l_acc       <= '0;
+                    mix_r_acc       <= '0;
                 end
                 mix_val_temp    <= chan_val[mix_chan*8+:8];
-                vol_l_temp      <= { 1'b0, audio_vol_l_nchan_i[mix_chan*6+:6], 1'b0 };
-                vol_r_temp      <= { 1'b0, audio_vol_r_nchan_i[mix_chan*6+:6], 1'b0 };
+                vol_l_temp      <= { 2'b00, audio_vol_l_nchan_i[mix_chan*6+:6] };
+                vol_r_temp      <= { 2'b00, audio_vol_r_nchan_i[mix_chan*6+:6] };
 
                 mix_phase       <= AUD_MIX_ACCUM;
             end
             AUD_MIX_ACCUM: begin
-                mix_l_accum     <= mix_l_accum + mult_l_result;
-                mix_r_accum     <= mix_r_accum + mult_r_result;
+                mix_l_acc       <= mix_l_acc + ACC_W'(mult_l_result);
+                mix_r_acc       <= mix_r_acc + ACC_W'(mult_r_result);
 
                 if (AUDIO_NCHAN > 1) begin
                     mix_chan        <= mix_chan + 1'b1;
@@ -288,4 +299,6 @@ audio_dac #(
 );
 
 endmodule
+
+`endif
 `default_nettype wire               // restore default

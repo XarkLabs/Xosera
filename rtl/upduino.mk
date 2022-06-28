@@ -157,7 +157,7 @@ $(DOT): %.dot: %.sv upduino.mk
 	@rm -f $@
 	@mkdir -p $(LOGS)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
-	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
+	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w "Warning" -e "no driver" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
 	@grep -m1 "XOSERA config" $(LOGS)/$(OUTNAME)_yosys.log
 	@grep -m1 "XOSERA info" $(LOGS)/$(OUTNAME)_yosys.log
 	@grep "\(Number of cells\|Number of wires\)" $(LOGS)/$(OUTNAME)_yosys.log

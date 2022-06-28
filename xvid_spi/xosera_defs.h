@@ -57,32 +57,31 @@
 #define XV_(v, right_bit, bit_width) ((((uint16_t)(v)) >> (right_bit)) & ((1 << (bit_width)) - 1))
 
 // Xosera Main Registers (XM Registers, directly CPU accessable)
-#define XM_SYS_CTRL  0x00        // (R /W+) status bits, FPGA config, write masking
-#define XM_INT_CTRL  0x01        // (R /W ) interrupt status/control
-#define XM_TIMER     0x02        // (RO   ) read 1/10th millisecond timer
-#define XM_RD_XADDR  0x03        // (R /W+) XR register/address for XM_XDATA read access
-#define XM_WR_XADDR  0x04        // (R /W ) XR register/address for XM_XDATA write access
-#define XM_XDATA     0x05        // (R /W+) read/write XR register/memory at XM_RD_XADDR/XM_WR_XADDR
-#define XM_RD_INCR   0x06        // (R /W ) increment value for XM_RD_ADDR read from XM_DATA/XM_DATA_2
-#define XM_RD_ADDR   0x07        // (R /W+) VRAM address for reading from VRAM when XM_DATA/XM_DATA_2 is read
-#define XM_WR_INCR   0x08        // (R /W ) increment value for XM_WR_ADDR on write to XM_DATA/XM_DATA_2
-#define XM_WR_ADDR   0x09        // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
-#define XM_DATA      0x0A        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
-#define XM_DATA_2    0x0B        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
-#define XM_RW_INCR   0x0C        // (R /W ) XM_RW_ADDR increment value on read/write of XM_RW_DATA/XM_RW_DATA_2
-#define XM_RW_ADDR   0x0D        // (R /W+) read/write address for VRAM access from XM_RW_DATA/XM_RW_DATA_2
-#define XM_RW_DATA   0x0E        // (R+/W+) read/write VRAM word at XM_RW_ADDR (and add XM_RW_INCR)
-#define XM_RW_DATA_2 0x0F        // (R+/W+) 2nd XM_RW_DATA(to allow for 32-bit read/write access)
+#define XR_VID_CTRL  0x00        // (R /W) display control and border color index
+#define XR_COPP_CTRL 0x01        // (R /W) display synchronized coprocessor control
+#define XR_AUD_CTRL  0x02        // (- /-) TODO: audio channel control
+#define XR_VID_INTR  0x03        // (WO)   video interrupt trigger
+#define XR_VID_LEFT  0x04        // (R /W) left edge of active display window (typically 0)
+#define XR_VID_RIGHT 0x05        // (R /W) right edge of active display window +1 (typically 640 or 848)
+#define XR_UNUSED_06 0x06        // (- /-) TODO: unused XR 06
+#define XR_UNUSED_07 0x07        // (- /-) TODO: unused XR 07
+#define XR_SCANLINE  0x08        // (RO  ) scanline (including offscreen >= 480)
+#define XR_FEATURES  0x09        // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+#define XR_VID_HSIZE 0x0A        // (RO  ) native pixel width of monitor mode (e.g. 640/848)
+#define XR_VID_VSIZE 0x0B        // (RO  ) native pixel height of monitor mode (e.g. 480)
+#define XR_UNUSED_0C 0x0C        // (- /-) TODO: unused XR 0C
+#define XR_UNUSED_0D 0x0D        // (- /-) TODO: unused XR 0D
+#define XR_UNUSED_0E 0x0E        // (- /-) TODO: unused XR 0E
+#define XR_UNUSED_0F 0x0F        // (- /-) TODO: unused XR 0F
 
 // NOTE: These are bits in high byte of SYS_CTRL word (fastest to access)
-#define SYS_CTRL_MEM_BUSY_B   7        // (RO   )  memory read/write operation pending (with contended memory)
-#define SYS_CTRL_BLIT_FULL_B  6        // (RO   )  blitter queue is full, do not write new operation to blitter registers
-#define SYS_CTRL_BLIT_BUSY_B  5        // (RO   )  blitter is still busy performing an operation (not done)
-#define SYS_CTRL_UNUSED_12_B  4        // (RO   )  unused (reads 0)
-#define SYS_CTRL_HBLANK_B     3        // (RO   )  video signal is in horizontal blank period
-#define SYS_CTRL_VBLANK_B     2        // (RO   )  video signal is in vertical blank period
-#define SYS_CTRL_UNUSED_9_B   1        // (RO   )  unused (reads 0)
-#define SYS_CTRL_RD_RW_INCR_B 0        // (R / W)  increment XM_RW_ADDR after XM_RW_DATA/XM_RW_DATA_2 read
+#define SYS_CTRL_MEM_BUSY_B  7        // (RO   )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_BLIT_FULL_B 6        // (RO   )  blitter queue is full, do not write new operation to blitter registers
+#define SYS_CTRL_BLIT_BUSY_B 5        // (RO   )  blitter is still busy performing an operation (not done)
+#define SYS_CTRL_UNUSED_12_B 4        // (RO   )  unused (reads 0)
+#define SYS_CTRL_HBLANK_B    3        // (RO   )  video signal is in horizontal blank period
+#define SYS_CTRL_VBLANK_B    2        // (RO   )  video signal is in vertical blank period
+#define SYS_CTRL_UNUSED_9_B  1        // (RO   )  unused (reads 0)
 
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 
@@ -90,7 +89,7 @@
 #define XR_VID_CTRL  0x00        // (R /W) display control and border color index
 #define XR_COPP_CTRL 0x01        // (R /W) display synchronized coprocessor control
 #define XR_AUD_CTRL  0x02        // (- /-) TODO: audio channel control
-#define XR_UNUSED_03 0x03        // (- /-) TODO: unused XR 03
+#define XR_VID_INTR  0x03        // (WO)   video interrupt trigger
 #define XR_VID_LEFT  0x04        // (R /W) left edge of active display window (typically 0)
 #define XR_VID_RIGHT 0x05        // (R /W) right edge of active display window +1 (typically 640 or 848)
 #define XR_UNUSED_06 0x06        // (- /-) TODO: unused XR 06

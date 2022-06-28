@@ -178,15 +178,14 @@ video_timing video_timing
 `ifdef EN_AUDIO
 // audio
 logic [AUDIO_NCHAN-1:0]             audio_enable_nchan;     // channel enabled
-logic [6*AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
-logic [6*AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
+logic [7*AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
+logic [7*AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
 logic [15*AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
 logic [AUDIO_NCHAN-1:0]             audio_tile_nchan;       // channel sample memory (0=VRAM, 1=TILE)
 logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  audio_start_nchan;      // channel sample start address (in VRAM or TILE)
 logic [15*AUDIO_NCHAN-1:0]          audio_len_nchan;        // channel sample length in words
 logic [AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel sample memory (0=VRAM, 1=TILE)
-logic [AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample memory (0=VRAM, 1=TILE)
-
+logic [AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample ready
 logic           audio_req;                    // audio DMA request signal
 logic           audio_ack;                      // audio DMA ack signal
 logic           audio_tilemem;                  // audio DMA memory type (0=VRAM, 1=TILE)
@@ -708,8 +707,8 @@ end
 always_ff @(posedge clk) begin
     for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
         if (reset_i) begin
-            audio_vol_l_nchan[i*6+:6]       <= '0;
-            audio_vol_r_nchan[i*6+:6]       <= '0;
+            audio_vol_l_nchan[i*7+:7]       <= '0;
+            audio_vol_r_nchan[i*7+:7]       <= '0;
             audio_period_nchan[i*15+:15]    <= '0;
             audio_tile_nchan[i]             <= '0;
             audio_start_nchan[i*xv::VRAM_W+:16] <= '0;
@@ -719,18 +718,18 @@ always_ff @(posedge clk) begin
         end else begin
             audio_restart_nchan[i]    <= 1'b0;
             if (audio_reload_nchan[i]) begin
-                audio_ready_o[i]  <= 1'b1;                                                      // START used
+                audio_ready_o[i]  <= 1'b1;                                                                          // ready set
             end
             if (vgen_reg_wr_en_i) begin
                 case (7'(vgen_reg_num_i))
                     7'(xv::XR_AUD0_VOL+7'(i*4)):
-                        { audio_vol_l_nchan[i*6+:6], audio_vol_r_nchan[i*6+:6] }    <= { vgen_reg_data_i[15:10], vgen_reg_data_i[7:2] };
+                        { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*6+:7] }    <= { vgen_reg_data_i[14:8], vgen_reg_data_i[6:0] };
                     7'(xv::XR_AUD0_PERIOD+7'(i*4)):
                         { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
                     7'(xv::XR_AUD0_LENGTH+7'(i*4)):
                         { audio_tile_nchan[i], audio_len_nchan[i*15+:15] }          <= vgen_reg_data_i;
                     7'(xv::XR_AUD0_START+7'(i*4)):
-                        { audio_ready_o[i], audio_start_nchan[i*xv::VRAM_W+:16] }   <= { 1'b0, vgen_reg_data_i };   // START set
+                        { audio_ready_o[i], audio_start_nchan[i*xv::VRAM_W+:16] }   <= { 1'b0, vgen_reg_data_i };   // ready cleared
                     default: ;
                 endcase
             end
@@ -739,30 +738,6 @@ always_ff @(posedge clk) begin
 end
 `endif
 
-// end else begin : opt_NO_AUDIO
-//     assign  audio_pdm_l_o       = 1'b0;
-//     assign  audio_pdm_r_o       = 1'b0;
-//     assign  audio_req         = 1'b0;
-//     assign  audio_addr          = '0;
-//     assign  audio_tilemem       = 1'b0;
-//     assign  audio_intr_o        = 1'b0;
-//     assign  audio_ready_o       = '0;
-//     assign  audio_vol_l_nchan   = '0;
-//     assign  audio_vol_r_nchan   = '0;
-//     assign  audio_period_nchan  = '0;
-//     assign  audio_tile_nchan    = '0;
-//     assign  audio_start_nchan   = '0;
-//     assign  audio_len_nchan     = '0;
-//     assign  audio_restart_nchan = '0;
-//     assign  audio_reload_nchan  = '0;
-//     assign  audio_ready_o       = '0;
-
-//     logic   audio_unused;
-//     assign  audio_unused = &{ 1'b0, audio_ack, audio_word, audio_vol_l_nchan, audio_vol_r_nchan,
-//                             audio_period_nchan, audio_tile_nchan, audio_start_nchan, audio_len_nchan,
-//                             audio_restart_nchan, audio_reload_nchan };
-
-// end
-
 endmodule
+
 `default_nettype wire               // restore default

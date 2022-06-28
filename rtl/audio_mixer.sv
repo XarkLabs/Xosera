@@ -14,14 +14,16 @@
 
 `ifdef EN_AUDIO
 
+// TODO: try packed struct
+
 module audio_mixer (
     input  wire logic [AUDIO_NCHAN-1:0]             audio_enable_nchan_i,
-    input  wire logic [6*AUDIO_NCHAN-1:0]           audio_vol_l_nchan_i,
-    input  wire logic [6*AUDIO_NCHAN-1:0]           audio_vol_r_nchan_i,
-    input  wire logic [15*AUDIO_NCHAN-1:0]          audio_period_nchan_i,
+    input  wire logic [7*AUDIO_NCHAN-1:0]           audio_vol_l_nchan_i,    // TODO: VOL_W
+    input  wire logic [7*AUDIO_NCHAN-1:0]           audio_vol_r_nchan_i,
+    input  wire logic [15*AUDIO_NCHAN-1:0]          audio_period_nchan_i,   // TODO: PERIOD_W
     input  wire logic [AUDIO_NCHAN-1:0]             audio_tile_nchan_i,
     input  wire logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  audio_start_nchan_i,
-    input  wire logic [15*AUDIO_NCHAN-1:0]          audio_len_nchan_i,
+    input  wire logic [15*AUDIO_NCHAN-1:0]          audio_len_nchan_i,      // TODO: LENGTH_W
     input  wire logic [AUDIO_NCHAN-1:0]             audio_restart_nchan_i,
     output      logic [AUDIO_NCHAN-1:0]             audio_reload_nchan_o,
 
@@ -38,27 +40,26 @@ module audio_mixer (
     input wire  logic           clk
 );
 
-localparam  CHAN_W  = 2;
-localparam  DAC_W   = 8;
-localparam  ACC_W   = 16;
+localparam  CHAN_W      = $clog2(AUDIO_NCHAN-1);    // NOTE: must have > 1 channel
+localparam  DAC_W       = 8;
+localparam  ACC_W       = 18;
+localparam  VOL_SHIFT   = 6;
 
-typedef enum logic {
-    AUD_FETCH_DMA       = 0,
-    AUD_FETCH_READ      = 1
+typedef enum {
+    AUD_FETCH_DMA,
+    AUD_FETCH_READ
 } audio_fetch_ph;
 
-typedef enum logic {
-    AUD_MIX_MULT        = 0,
-    AUD_MIX_ACCUM       = 1
+typedef enum {
+    AUD_MIX_MULT,
+    AUD_MIX_ACCUM
 } audio_mix_ph;
 
-/* verilator lint_off UNUSED */
-
 logic [CHAN_W-1:0]                  fetch_chan;
-logic                               fetch_phase;
+audio_fetch_ph                      fetch_phase;
 
 logic [CHAN_W-1:0]                  mix_chan;
-logic                               mix_phase;
+audio_mix_ph                        mix_phase;
 
 sbyte_t                             mix_val_temp;
 sbyte_t                             vol_l_temp;
@@ -83,31 +84,44 @@ logic [16*AUDIO_NCHAN-1:0]          chan_buff;          // channel DMA word buff
 logic [16*AUDIO_NCHAN-1:0]          chan_length;        // audio sample byte length counter (15=underflow flag)
 logic [16*AUDIO_NCHAN-1:0]          chan_period;        // audio frequency period counter (15=underflow flag)
 
+word_t                              chan_length_n[AUDIO_NCHAN];     // audio sample byte length -1 for next cycle (15=underflow flag)
 
-byte_t                  chan_raw[AUDIO_NCHAN];          // current channel value sent to DAC
-byte_t                  chan_raw2[AUDIO_NCHAN];          // current channel value sent to DAC
-word_t                  chan_word[AUDIO_NCHAN];          // current channel value sent to DAC
-logic [5:0]             chan_vol_l[AUDIO_NCHAN];
-logic [5:0]             chan_vol_r[AUDIO_NCHAN];
-addr_t                  chan_ptr[AUDIO_NCHAN];          // current channel value sent to DAC
-logic                   chan_restart[AUDIO_NCHAN];
-
-word_t                  chan_length_n[AUDIO_NCHAN];     // audio sample byte length counter next (15=underflow flag)
-
+// debug aid signals
+`ifndef SYNTHESIS
+/* verilator lint_off UNUSED */
+byte_t                              chan_raw[AUDIO_NCHAN];          // channel value sent to DAC
+byte_t                              chan_raw_u[AUDIO_NCHAN];          // channel value sent to DAC
+word_t                              chan_word[AUDIO_NCHAN];         // channel DMA word buffer
+addr_t                              chan_ptr[AUDIO_NCHAN];          // channel DMA address
+logic [7:0]                         chan_vol_l[AUDIO_NCHAN];
+logic [7:0]                         chan_vol_r[AUDIO_NCHAN];
+sword_t                             chan_res_l[AUDIO_NCHAN];          // current channel value sent to DAC
+sword_t                             chan_res_r[AUDIO_NCHAN];          // current channel value sent to DAC
+logic                               chan_restart[AUDIO_NCHAN];
+logic signed [ACC_W-1:0]            mix_res_l;
+logic signed [ACC_W-1:0]            mix_res_r;
+logic [ACC_W-1:0]                   mix_res_l_u;
+logic [ACC_W-1:0]                   mix_res_r_u;
 /* verilator lint_on UNUSED */
+`endif
+
 
 // setup alias signals
 always_comb begin : alias_block
     for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-        chan_vol_l[i]       = { audio_vol_l_nchan_i[6*i+:6] };      // 6 bit L volume
-        chan_vol_r[i]       = { audio_vol_r_nchan_i[6*i+:6] };      // 6 bit R volume
-        chan_raw[i]         = chan_val[i*8+:8] ^ 8'h80;             // debug channel output
-        chan_raw2[i]        = chan_val2[i*8+:8] ^ 8'h80;             // debug channel output
-        chan_ptr[i]         = chan_addr[xv::VRAM_W*i+:xv::VRAM_W] - 1'b1; // debug channel addr
-        chan_word[i]        = chan_buff[16*i+:16] - 1'b1; // debug channel addr
         chan_length_n[i]    = chan_length[16*i+:16] - 1'b1;         // length next cycle
-        chan_output[i]      = chan_period[16*i+15];                 // length next cycle
+
+        // debug aliases for easy viewing
+`ifndef SYNTHESIS
+        chan_vol_l[i]       = { 1'b0, audio_vol_l_nchan_i[7*i+:7]};
+        chan_vol_r[i]       = { 1'b0, audio_vol_r_nchan_i[7*i+:7]};
+        chan_raw[i]         = chan_val[i*8+:8];
+        chan_raw_u[i]       = chan_val[i*8+:8] ^ 8'h80;
+        chan_ptr[i]         = chan_addr[xv::VRAM_W*i+:xv::VRAM_W] - 1'b1;
+        chan_word[i]        = chan_buff[16*i+:16] - 1'b1;
+        chan_output[i]      = chan_period[16*i+15];
         chan_restart[i]     = audio_reload_nchan_o[i];
+`endif
     end
 end
 
@@ -150,7 +164,7 @@ always_ff @(posedge clk) begin : chan_process
                 // if 2nd sample of sample word, prepare sample address
                 if (chan_2nd[i]) begin
 `ifndef SYNTHESIS
-//                    chan_val2[8*i+7]    <= ~chan_val2[8*i+7];  // obvious "glitch" to verify not used again
+                    chan_val2[8*i+7]    <= ~chan_val2[8*i+7];  // obvious "glitch" to verify not used again
 `endif
                     chan_fetch[i]       <= 1'b1;
                     // if length already underflowed, or will next cycle
@@ -179,7 +193,7 @@ always_ff @(posedge clk) begin : chan_process
                 chan_length[16*i+15]    <= 1'b1;    // force sample addr, tile, len reload
                 chan_period[16*i+15]    <= 1'b1;    // force sample period expire
                 chan_2nd[i]             <= 1'b0;    // set 2nd sample to switch next sendout
-                chan_val[i]             <= '0;      // silent if disabled
+//                chan_val[i]             <= '0;      // silent if disabled   // TODO: is this desirable?
             end
         end
 
@@ -242,30 +256,59 @@ always_ff @(posedge clk) begin : mix_fsm
         output_l        <= '0;
         output_r        <= '0;
 `endif
+
+`ifndef SYNTHESIS
+        // reset debug signals
+        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+            chan_res_l[i]   <= '0;
+            chan_res_r[i]   <= '0;
+            mix_res_l       <= '0;
+            mix_res_r       <= '0;
+            mix_res_l_u     <= '0;
+            mix_res_r_u     <= '0;
+        end
+`endif
+
     end else begin
         case (mix_phase)
             AUD_MIX_MULT: begin
                 if (mix_chan == 0) begin
-                    if (mix_l_acc[ACC_W-1] != mix_l_acc[ACC_W-2]) begin
-                        output_l        <= mix_l_acc[ACC_W-1] ? 8'h00 : 8'hFF;       // clamp result for DAC
+`ifndef SYNTHESIS
+                    // debug mix result signals
+                    mix_res_l   <= mix_l_acc;
+                    mix_res_r   <= mix_r_acc;
+                    mix_res_l_u <= mix_l_acc ^ (ACC_W'(1'b1) << ACC_W-1);
+                    mix_res_r_u <= mix_r_acc ^ (ACC_W'(1'b1) << ACC_W-1);
+`endif
+                     // clamp and convert to unsigned result for DAC
+                    if (mix_l_acc < (-128 <<< VOL_SHIFT)) begin
+                        output_l        <= 8'h00;
+                    end else if (mix_l_acc > (127 <<< VOL_SHIFT)) begin
+                        output_l        <= 8'hFF;
                     end else begin
-                        output_l        <= { ~mix_l_acc[ACC_W-1], mix_l_acc[ACC_W-9+:7] }; // unsigned result for DAC
+                        output_l        <= 8'(mix_l_acc >> VOL_SHIFT) ^ 8'h80;
                     end
-                    if (mix_r_acc[ACC_W-1] != mix_r_acc[ACC_W-2]) begin
-                        output_r        <= mix_r_acc[ACC_W-1] ? 8'h00 : 8'hFF;       // clamp result for DAC
+                    if (mix_r_acc < (-128 <<< VOL_SHIFT)) begin
+                        output_r        <= 8'h00;
+                    end else if (mix_r_acc > (127 <<< VOL_SHIFT)) begin
+                        output_r        <= 8'hFF;
                     end else begin
-                        output_r        <= { ~mix_r_acc[ACC_W-1], mix_r_acc[ACC_W-9+:7] };
+                        output_r        <= 8'(mix_r_acc >> VOL_SHIFT) ^ 8'h80;
                     end
                     mix_l_acc       <= '0;
                     mix_r_acc       <= '0;
                 end
                 mix_val_temp    <= chan_val[mix_chan*8+:8];
-                vol_l_temp      <= { 2'b00, audio_vol_l_nchan_i[mix_chan*6+:6] };
-                vol_r_temp      <= { 2'b00, audio_vol_r_nchan_i[mix_chan*6+:6] };
+                vol_l_temp      <= { 1'b0, audio_vol_l_nchan_i[7*mix_chan+:7] };
+                vol_r_temp      <= { 1'b0, audio_vol_r_nchan_i[7*mix_chan+:7] };
 
                 mix_phase       <= AUD_MIX_ACCUM;
             end
             AUD_MIX_ACCUM: begin
+`ifndef SYNTHESIS
+                chan_res_l[mix_chan]  <= mult_l_result;
+                chan_res_r[mix_chan]  <= mult_r_result;
+`endif
                 mix_l_acc       <= mix_l_acc + ACC_W'(mult_l_result);
                 mix_r_acc       <= mix_r_acc + ACC_W'(mult_r_result);
 

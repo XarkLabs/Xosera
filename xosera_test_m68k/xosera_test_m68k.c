@@ -2438,10 +2438,13 @@ void     xosera_test()
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
 
-#if 0
-    dprintf("Installing interrupt handler...");
+#if 1
+    dprintf("Installing interrupt handler...using TIMER");
     install_intr();
     dprintf("okay.\n");
+
+    xm_setw(TIMER, 166 - 1);        // almost vsync...
+
 #else
     dprintf("NOT Installing interrupt handler\n");
 #endif

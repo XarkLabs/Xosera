@@ -102,8 +102,7 @@ typedef enum {
     SYS_CTRL_UNUSED_12_B = 12,          // unused (reads 0)
     SYS_CTRL_HBLANK_B = 11,             // video signal is in horizontal blank period
     SYS_CTRL_VBLANK_B = 10,             // video signal is in vertical blank period
-    SYS_CTRL_UNUSED_9_B = 9,            // unused (reads 0)
-    SYS_CTRL_RD_RW_INCR_B = 8           // increment XM_RW_ADDR with XM_RW_INCR after read
+    SYS_CTRL_UNUSED_9_B = 9             // unused (reads 0)
 } xm_sys_ctrl_t;
 
 // XR register / memory regions
@@ -126,7 +125,7 @@ typedef enum logic [6:0] {
     XR_VID_CTRL     = 7'h00,            // (R /W) border color index
     XR_COPP_CTRL    = 7'h01,            // (R /W) display synchronized coprocessor control
     XR_AUD_CTRL     = 7'h02,            // (R /W) audio channel control
-    XR_VID_INTR     = 7'h03,             // (WO  ) video interrupt trigger
+    XR_VID_INTR     = 7'h03,            // (WO  ) video interrupt trigger
     XR_VID_LEFT     = 7'h04,            // (R /W) left edge of active display window (typically 0)
     XR_VID_RIGHT    = 7'h05,            // (R /W) right edge of active display window +1 (typically 640 or 848)
     XR_UNUSED_06    = 7'h06,            // (- /-) TODO: unused XR 06
@@ -235,6 +234,7 @@ localparam  AUDIO_MAX_HZ    = 24_000;   // NOTE: frequency assumed to be multipl
 
 `ifdef    MODE_640x400
 // VGA mode 640x400 @ 70Hz (pixel clock 25.175Mhz)
+`define VIDEO_MODE_NAME     "640x400@70"
 localparam PIXEL_FREQ        = 25_175_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h7000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
@@ -250,6 +250,7 @@ localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
 `elsif    MODE_640x400_85
 // VGA mode 640x400 @ 85Hz (pixel clock 31.500Mhz)
+`define VIDEO_MODE_NAME     "640x400@85"
 localparam PIXEL_FREQ        = 31_500_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h8500;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
@@ -265,6 +266,7 @@ localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
 `elsif    MODE_640x480
 // VGA mode 640x480 @ 60Hz (pixel clock 25.175Mhz)
+`define VIDEO_MODE_NAME     "640x480@60"
 localparam PIXEL_FREQ        = 25_175_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
@@ -280,6 +282,7 @@ localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 
 `elsif    MODE_640x480_75
 // VGA mode 640x480 @ 75Hz (pixel clock 31.500Mhz)
+`define VIDEO_MODE_NAME     "640x480@75"
 localparam PIXEL_FREQ        = 31_500_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h7500;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
@@ -295,6 +298,7 @@ localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 
 `elsif    MODE_640x480_85
 // VGA mode 640x480 @ 85Hz (pixel clock 36.000Mhz)
+`define VIDEO_MODE_NAME     "640x480@85"
 localparam PIXEL_FREQ        = 36_000_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h8500;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
@@ -310,6 +314,7 @@ localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 
 `elsif    MODE_720x400
 // VGA mode 720x400 @ 70Hz (pixel clock 28.322Mhz)
+`define VIDEO_MODE_NAME     "720x400@70"
 localparam PIXEL_FREQ        = 28_322_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h7000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 720;         // horizontal active pixels
@@ -325,6 +330,7 @@ localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
 `elsif    MODE_848x480
 // VGA mode 848x480 @ 60Hz (pixel clock 33.750Mhz)
+`define VIDEO_MODE_NAME     "848x480@60"
 localparam PIXEL_FREQ        = 33_750_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 848;         // horizontal active pixels
@@ -340,6 +346,7 @@ localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
 `elsif    MODE_800x600
 // VGA mode 800x600 @ 60Hz (pixel clock 40.000Mhz)
+`define VIDEO_MODE_NAME     "800x600@60"
 localparam PIXEL_FREQ        = 40_000_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 800;         // horizontal active pixels
@@ -355,6 +362,7 @@ localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
 `elsif    MODE_1024x768
 // VGA mode 1024x768 @ 60Hz (pixel clock 65.000Mhz)
+`define VIDEO_MODE_NAME     "1024x768@60"
 localparam PIXEL_FREQ        = 65_000_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 1024;        // horizontal active pixels
@@ -370,6 +378,7 @@ localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 
 `elsif    MODE_1280x720
 // VGA mode 1280x720 @ 60Hz (pixel clock 74.250Mhz)
+`define VIDEO_MODE_NAME     "1280x720@60"
 localparam PIXEL_FREQ        = 74_250_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 1280;        // horizontal active pixels

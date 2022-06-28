@@ -34,7 +34,7 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 15        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 30        // video frames to dump to VCD file (and then screen-shot and exit)
 #define MAX_UPLOADS      8         // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
@@ -455,12 +455,12 @@ const char * BusInterface::reg_name[] = {"XM_SYS_CTRL ",
 BusInterface bus;
 int          BusInterface::test_data_len    = 32767;
 uint16_t     BusInterface::test_data[32768] = {
-    // test data
+        // test data
 
     REG_WAITHSYNC(),
 
     REG_W(INT_CTRL, 0x0F0F),
-    REG_W(TIMER, 4 - 1),
+    REG_W(TIMER, 166 - 1),        // timer interupt interval -1
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
@@ -868,44 +868,52 @@ uint16_t     BusInterface::test_data[32768] = {
     XREG_SETW(PB_GFX_CTRL, 0x0080),        // pf b blank
 
 
-    XREG_SETW(AUD0_VOL, 0x80FF),
-    XREG_SETW(AUD0_PERIOD, 1000),
+    XREG_SETW(AUD0_PERIOD, 6400),
     XREG_SETW(AUD0_LENGTH, 0x007F),
-    XREG_SETW(AUD0_START, 0xFE00),
+    XREG_SETW(AUD0_START, 0xFF00),
 
-    XREG_SETW(AUD1_VOL, 0x8000),
-    XREG_SETW(AUD1_PERIOD, 1000),
+    XREG_SETW(AUD1_PERIOD, 6400),
     XREG_SETW(AUD1_LENGTH, 0x007F),
-    XREG_SETW(AUD1_START, 0xFE00),
+    XREG_SETW(AUD1_START, 0xFF00),
 
-    XREG_SETW(AUD2_VOL, 0x8000),
-    XREG_SETW(AUD2_PERIOD, 1000),
+    XREG_SETW(AUD2_PERIOD, 6400),
     XREG_SETW(AUD2_LENGTH, 0x007F),
-    XREG_SETW(AUD2_START, 0xFE00),
+    XREG_SETW(AUD2_START, 0xFF00),
 
-    XREG_SETW(AUD3_VOL, 0x8000),
-    XREG_SETW(AUD3_PERIOD, 1000),
+    XREG_SETW(AUD3_PERIOD, 6400),
     XREG_SETW(AUD3_LENGTH, 0x007F),
-    XREG_SETW(AUD3_START, 0xFE00),
+    XREG_SETW(AUD3_START, 0xFF00),
+
+    XREG_SETW(AUD0_VOL, 0x4020),
+    XREG_SETW(AUD1_VOL, 0x0000),
+    XREG_SETW(AUD2_VOL, 0x0000),
+    XREG_SETW(AUD3_VOL, 0x0000),
+
+    XREG_SETW(AUD_CTRL, 0x000F),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+    XREG_SETW(AUD0_VOL, 0x4020),
+    XREG_SETW(AUD1_VOL, 0x4020),
+    XREG_SETW(AUD2_VOL, 0x0000),
+    XREG_SETW(AUD3_VOL, 0x0000),
+
+    XREG_SETW(AUD_CTRL, 0x0000),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
     REG_WAITHSYNC(),
     XREG_SETW(AUD_CTRL, 0x000F),
 
     REG_WAITVTOP(),
-
-    // XREG_SETW(AUD0_LENGTH, 0x003F),
-    // XREG_SETW(AUD0_START, 0xFE00),
-
-    REG_WAITVTOP(),
-
-    // XREG_SETW(AUD0_PERIOD, 0x8000 | 3140),
-    // REG_WAITVTOP(),
-    // XREG_SETW(AUD0_PERIOD, 0x8000 | 1200),
-
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-    REG_WAITVTOP(),
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
@@ -914,10 +922,18 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
-    XREG_SETW(AUD0_VOL, 0xFFFF),
-    XREG_SETW(AUD1_VOL, 0xFFFF),
-    XREG_SETW(AUD2_VOL, 0xFFFF),
-    XREG_SETW(AUD3_VOL, 0xFFFF),
+    XREG_SETW(AUD0_VOL, 0x4020),
+    XREG_SETW(AUD1_VOL, 0x4020),
+    XREG_SETW(AUD2_VOL, 0x4020),
+    XREG_SETW(AUD3_VOL, 0x0000),
+
+    XREG_SETW(AUD_CTRL, 0x0000),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD_CTRL, 0x000F),
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
@@ -927,6 +943,51 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+
+    XREG_SETW(AUD0_VOL, 0x4020),
+    XREG_SETW(AUD1_VOL, 0x4020),
+    XREG_SETW(AUD2_VOL, 0x4020),
+    XREG_SETW(AUD3_VOL, 0x4020),
+
+    XREG_SETW(AUD_CTRL, 0x0000),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD_CTRL, 0x000F),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+    XREG_SETW(AUD0_VOL, 0x0100),
+    XREG_SETW(AUD1_VOL, 0x0000),
+    XREG_SETW(AUD2_VOL, 0x0000),
+    XREG_SETW(AUD3_VOL, 0x0000),
+
+    XREG_SETW(AUD_CTRL, 0x0000),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD_CTRL, 0x000F),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
     XREG_SETW(AUD_CTRL, 0x0000),
     REG_WAITHSYNC(),
     REG_WAITHSYNC(),

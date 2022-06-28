@@ -13,7 +13,6 @@
 `include "xosera_pkg.sv"
 
 `ifdef EN_PF_B
-`ifdef EN_PF_B_BLEND
 
 module video_blend (
     // video RGB inputs
@@ -118,6 +117,5 @@ end
 
 endmodule
 
-`endif
 `endif
 `default_nettype wire               // restore default

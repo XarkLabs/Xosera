@@ -15,10 +15,16 @@ install_intr::
                 or.w    #$0200,SR               ; disable interrupts
 
                 lea.l   XM_BASEADDR,A0          ; get Xosera base addr
-                move.w  #$000F,D0               ; enable vsync interrupt, clear any pending
-                movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
-                move.w  #$0800,D0               ; enable vsync interrupt, clear any pending
-                movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
+;                move.w  #$000F,D0               ; clear any pending interrupt
+;                movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
+;                move.w  #$0800,D0               ; enable VSYNC interrupt, clear any pending
+;                movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
+
+                move.w  #$000F,D0               ; enable TIMER interrupt, clear any pending
+                movep.w D0,XM_INT_CTRL(A0)      ; enable TIMER interrupt
+                move.w  #$0400,D0               ; enable TIMER interrupt, clear any pending
+                movep.w D0,XM_INT_CTRL(A0)      ; enable TIMER interrupt
+
 
                 lea.l   (Xosera_intr,PC),A0
                 move.l  A0,XOSERA_VEC.w         ; set interrupt vector
@@ -32,7 +38,7 @@ remove_intr::
 
                 lea.l   XM_BASEADDR,A0          ; get Xosera base addr
                 moveq.l #$000F,D0               ; disable interrupts, and clear pending
-                movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
+                movep.w D0,XM_INT_CTRL(A0)      ; clear and mask interrupts
                 move.l  SPURIOUS_VEC.w,D0       ; copy spurious int handler
                 move.l  D0,XOSERA_VEC.w         ; to xosera int handler
 
@@ -44,8 +50,8 @@ Xosera_intr:
                 movem.l D0-D1/A0,-(A7)          ; save minimal regs
 
                 move.l  #XM_BASEADDR,A0         ; get Xosera base addr
-                move.b  XM_INT_CTRL+2(A0),D0       ; read pending interrupts
-                move.b  D0,XM_INT_CTRL+2(A0)       ; acknowledge and clear all interrupts
+                movep.w XM_INT_CTRL(A0),D0       ; read pending interrupts
+                movep.w D0,XM_INT_CTRL(A0)       ; acknowledge and clear all interrupts
 
                 ; NOTE: could check D0 bits [3:0] for
                 ;       interrupt sources, but for now

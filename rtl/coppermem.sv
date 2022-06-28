@@ -50,7 +50,7 @@ word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 
 localparam          offset  = (2**AWIDTH) - (64/4);
 localparam [11:0]   version = 12'H`VERSION;
-localparam [8:1]    clean   = `GITCLEAN ? " " : "+";    // '+' appended to version if non-clean
+localparam [8:1]    clean   = `GITCLEAN ? "=" : ">";    // '+' appended to version if non-clean
 localparam [31:0]   githash = 32'H`GITHASH;             // git short hash
 localparam [31:0]   builddate = 32'H`BUILDDATE;         // YYYYMMDD
 
@@ -61,12 +61,12 @@ localparam [48*8:1] description_str = { "Xosera v", "0" + 8'(version[11:8]), "."
                                         hex_str[((builddate[23:20])*8)+1+:8], hex_str[((builddate[19:16])*8)+1+:8],
                                         hex_str[((builddate[15:12])*8)+1+:8], hex_str[((builddate[11: 8])*8)+1+:8],
                                         hex_str[((builddate[ 7: 4])*8)+1+:8], hex_str[((builddate[ 3: 0])*8)+1+:8],
-                                        " iCE40UP5K 128KB #",
+                                        " ", clean, "#",
                                         hex_str[((githash[31:28])*8)+1+:8], hex_str[((githash[27:24])*8)+1+:8],
                                         hex_str[((githash[23:20])*8)+1+:8], hex_str[((githash[19:16])*8)+1+:8],
                                         hex_str[((githash[15:12])*8)+1+:8], hex_str[((githash[11: 8])*8)+1+:8],
                                         hex_str[((githash[ 7: 4])*8)+1+:8], hex_str[((githash[ 3: 0])*8)+1+:8],
-                                        clean };
+                                        " iCE40UP5K 128KB" };
 initial begin
     // Fill with numbers
     for (integer i = 0; i < (2**AWIDTH); i = i + 1) begin
@@ -93,9 +93,9 @@ initial begin
 
     if (!ODDWORD) begin
 `ifdef EN_AUDIO
-        $display("   XOSERA configuration:          %s%s%sAUD%x mode: %s",
+        $display("   XOSERA configuration:          %s%s%sAUD%x (mode %s)",
 `else
-        $display("   XOSERA configuration:          %s%s%s mode: %s",
+        $display("   XOSERA configuration:          %s%s%s (mode %s)",
 `endif
 `ifdef EN_PF_B
 `ifdef EN_PF_B_BLEND

@@ -30,6 +30,9 @@ extern volatile uint32_t XFrameCount;
 uint32_t elapsed_tenthms;        // alternate timer since interrupts not reliable
 uint16_t last_timer_val;
 
+bool     has_PF_B;
+uint16_t colormem_size;
+
 static void update_elapsed()
 {
     xv_prep();
@@ -132,10 +135,10 @@ const char *          vram_mode_names[TEST_MODES] = {"1-BPP", "4-BPP", "8-BPP", 
 const char *          speed_names[TEST_SPEEDS]    = {"SLOW", "BYTE", "WORD", "LONG", "XMEM"};
 const uint16_t        vram_modes[TEST_MODES]      = {0x0040, 0x0050, 0x0060, 0x0070, 0x0080};
 const uint16_t        vram_mode_flags[TEST_MODES] = {MODEFLAG_1BPP,
-                                              MODEFLAG_4BPP,
-                                              MODEFLAG_8BPP,
-                                              MODEFLAG_XBPP,
-                                              MODEFLAG_BLANK};
+                                                     MODEFLAG_4BPP,
+                                                     MODEFLAG_8BPP,
+                                                     MODEFLAG_XBPP,
+                                                     MODEFLAG_BLANK};
 
 int  vram_test_count;             // total number of test iterations
 int  vram_test_fail_count;        // number of failed tests
@@ -662,7 +665,7 @@ static int verify_xmem(bool LFSR, int mode)
     int xmem_errs = 0;
 
     // read XMEM back into vram_buffer
-    for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + XR_COLOR_SIZE); addr++)
+    for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + colormem_size); addr++)
     {
         uint16_t data = vram_buffer[addr];
         if (data != pattern_buffer[addr])
@@ -708,7 +711,7 @@ static void read_xmem_buffer()
 
     // read XMEM back into vram_buffer
     xmem_get_addr(XR_COLOR_ADDR);
-    for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + XR_COLOR_SIZE); addr++)
+    for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + colormem_size); addr++)
     {
         uint16_t data     = xmem_getw_next_wait();
         vram_buffer[addr] = data;
@@ -779,7 +782,7 @@ int test_xmem(bool LFSR, int mode)
 
         // word color mem
         xmem_set_addr(XR_COLOR_ADDR);
-        for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + XR_COLOR_SIZE); addr++)
+        for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + colormem_size); addr++)
         {
             xmem_setw_next(pattern_buffer[addr]);
         }
@@ -843,6 +846,11 @@ void xosera_vramtest()
     dprintf("\033c\nXosera_vramtest_m68k\n");
 
     uint8_t cur_xosera_config = ~0;
+
+    xreg_setw(PB_GFX_CTRL, 0x0080);
+    has_PF_B = xreg_getw(PB_GFX_CTRL) & 0x0080;
+    dprintf("PF_B is %s testing COLOR_B XMEM.\n", has_PF_B ? "present," : "disabled, not");
+    colormem_size = has_PF_B ? (XR_COLOR_A_SIZE + XR_COLOR_B_SIZE) : XR_COLOR_A_SIZE;
 
 #if 1
     dprintf("Installing interrupt handler...");

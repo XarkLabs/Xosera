@@ -13,6 +13,7 @@
 `ifdef EN_COPP
 
 `include "xosera_pkg.sv"
+`define STRINGIFY(x) `"x`"
 
 module coppermem
     #(
@@ -92,34 +93,36 @@ initial begin
 
     if (!ODDWORD) begin
 `ifdef EN_AUDIO
-        $display("XOSERA INFO: \"%s\" Opts:%d x%d%s%s%s AUD%x",
+        $display("   XOSERA configuration:          %s%s%sAUD%x mode: %s",
 `else
-        $display("XOSERA INFO: \"%s\" Opts:%d x%d%s%s%s",
+        $display("   XOSERA configuration:          %s%s%s mode: %s",
 `endif
-        description_str, 11'(xv::VISIBLE_WIDTH), 10'(xv::VISIBLE_HEIGHT),
 `ifdef EN_PF_B
 `ifdef EN_PF_B_BLEND
-        " PF_B BLND",
+            "PF_B BLND ",
 `else
-        " PF_B",
+            "PF_B ",
 `endif
 `else
-        "",
+            "",
 `endif
 `ifdef EN_COPP
-        " COPP",
+            "COPP ",
 `else
-        "",
+            "",
 `endif
 `ifdef EN_BLIT
-        " BLIT"
+            "BLIT ",
 `else
-        ""
+            "",
 `endif
 `ifdef EN_AUDIO
-        , 4'(AUDIO_NCHAN)
+            4'(AUDIO_NCHAN),
 `endif
+            `VIDEO_MODE_NAME
         );
+
+        $display("   XOSERA info:                   \"%s\"", description_str);
     end
 end
 

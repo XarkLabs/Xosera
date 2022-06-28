@@ -166,7 +166,7 @@ public:
             {
                 if (vsync_detect)
                 {
-                    logonly_printf("[@t=%lu  ... VSYNC arrives]\n", main_time);
+                    logonly_printf("[@t=%8lu  ... VSYNC arrives]\n", main_time);
                     wait_vsync   = false;
                     vsync_detect = false;
                 }
@@ -177,7 +177,7 @@ public:
             {
                 if (vtop_detect)
                 {
-                    logonly_printf("[@t=%lu  ... VSYNC end arrives]\n", main_time);
+                    logonly_printf("[@t=%8lu  ... VSYNC end arrives]\n", main_time);
                     wait_vtop   = false;
                     vtop_detect = false;
                 }
@@ -188,7 +188,7 @@ public:
             {
                 if (hsync_detect)
                 {
-                    logonly_printf("[@t=%lu  ... HSYNC arrives]\n", main_time);
+                    logonly_printf("[@t=%8lu  ... HSYNC arrives]\n", main_time);
                     wait_hsync = false;
                 }
                 return;
@@ -211,7 +211,7 @@ public:
                 // REG_END
                 if (!data_upload && test_data[index] == 0xffff)
                 {
-                    logonly_printf("[@t=%lu] REG_END hit\n", main_time);
+                    logonly_printf("[@t=%8lu] REG_END hit\n", main_time);
                     done      = true;
                     enable    = false;
                     last_time = bus_time - 1;
@@ -221,7 +221,7 @@ public:
                 // REG_WAITVSYNC
                 if (!data_upload && test_data[index] == 0xfffe)
                 {
-                    logonly_printf("[@t=%lu] Wait VSYNC...\n", main_time);
+                    logonly_printf("[@t=%8lu] Wait VSYNC...\n", main_time);
                     wait_vsync = true;
                     index++;
                     return;
@@ -229,8 +229,8 @@ public:
                 // REG_WAITVTOP
                 if (!data_upload && test_data[index] == 0xfffd)
                 {
-                    logonly_printf("[@t=%lu] Wait VTOP (VSYNC end)...\n", main_time);
-                    //                    logonly_printf("[@t=%lu] belayed!\n", main_time);
+                    logonly_printf("[@t=%8lu] Wait VTOP (VSYNC end)...\n", main_time);
+                    //                    logonly_printf("[@t=%8lu] belayed!\n", main_time);
                     wait_vtop   = true;
                     vtop_detect = false;
                     index++;
@@ -242,7 +242,7 @@ public:
                     last_time = bus_time - 1;
                     if (!(last_read_val & (0x0100 << SYS_CTRL_BLIT_FULL_B)))        // blit_full bit
                     {
-                        logonly_printf("[@t=%lu] blit_full clear (SYS_CTRL.L=0x%02x)\n", main_time, last_read_val);
+                        logonly_printf("[@t=%8lu] blit_full clear (SYS_CTRL.L=0x%02x)\n", main_time, last_read_val);
                         index++;
                         last_read_val = 0;
                         wait_blit     = false;
@@ -250,7 +250,7 @@ public:
                     }
                     else if (!wait_blit)
                     {
-                        logonly_printf("[@t=%lu] Waiting until SYS_CTRL.L blit_full is clear...\n", main_time);
+                        logonly_printf("[@t=%8lu] Waiting until SYS_CTRL.L blit_full is clear...\n", main_time);
                     }
                     wait_blit = true;
                     index--;
@@ -262,7 +262,7 @@ public:
                     last_time = bus_time - 1;
                     if (!(last_read_val & (0x0100 << SYS_CTRL_BLIT_BUSY_B)))        // blit_busy bit
                     {
-                        logonly_printf("[@t=%lu] blit_busy clear (SYS_CTRL.L=0x%02x)\n", main_time, last_read_val);
+                        logonly_printf("[@t=%8lu] blit_busy clear (SYS_CTRL.L=0x%02x)\n", main_time, last_read_val);
                         index++;
                         last_read_val = 0;
                         wait_blit     = false;
@@ -272,7 +272,7 @@ public:
                     }
                     else if (!wait_blit)
                     {
-                        logonly_printf("[@t=%lu] Waiting until SYS_CTRL.L blit_busy is clear...\n", main_time);
+                        logonly_printf("[@t=%8lu] Waiting until SYS_CTRL.L blit_busy is clear...\n", main_time);
                     }
                     wait_blit = true;
                     index--;
@@ -281,7 +281,7 @@ public:
                 // REG_WAITHSYNC
                 if (!data_upload && test_data[index] == 0xfffa)
                 {
-                    logonly_printf("[@t=%lu] Wait HSYNC...\n", main_time);
+                    logonly_printf("[@t=%8lu] Wait HSYNC...\n", main_time);
                     wait_hsync = true;
                     index++;
                     return;
@@ -323,7 +323,7 @@ public:
                         top->bus_data_i    = data;
                         if (data_upload && data_upload_index < 16)
                         {
-                            logonly_printf("[@t=%lu] ", main_time);
+                            logonly_printf("[@t=%8lu] ", main_time);
                             sprintf(tempstr, "r[0x%x] %s.%3s", reg_num, reg_name[reg_num], bytesel ? "lsb*" : "msb");
                             logonly_printf("  %-25.25s <= %s%02x%s\n",
                                            tempstr,
@@ -343,7 +343,7 @@ public:
                         {
                             if (!wait_blit)
                             {
-                                logonly_printf("[@t=%lu] Read  Reg %s (#%02x.%s) => %s%02x%s\n",
+                                logonly_printf("[@t=%8lu] Read  Reg %s (#%02x.%s) => %s%02x%s\n",
                                                main_time,
                                                reg_name[reg_num],
                                                reg_num,
@@ -363,7 +363,7 @@ public:
                         }
                         else if (!data_upload)
                         {
-                            logonly_printf("[@t=%lu] Write Reg %s (#%02x.%s) <= %s%02x%s\n",
+                            logonly_printf("[@t=%8lu] Write Reg %s (#%02x.%s) <= %s%02x%s\n",
                                            main_time,
                                            reg_name[reg_num],
                                            reg_num,
@@ -455,7 +455,17 @@ const char * BusInterface::reg_name[] = {"XM_SYS_CTRL ",
 BusInterface bus;
 int          BusInterface::test_data_len    = 32767;
 uint16_t     BusInterface::test_data[32768] = {
-// test data
+    // test data
+
+    REG_WAITHSYNC(),
+
+    REG_W(INT_CTRL, 0x0F0F),
+    REG_W(TIMER, 4 - 1),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+    REG_W(INT_CTRL, 0x0F0F),
 
 #if 0
     REG_WAITVTOP(),
@@ -1190,7 +1200,7 @@ int main(int argc, char ** argv)
 
         if (top->bus_intr_o)
         {
-            logonly_printf("[@t=%lu FPGA INTERRUPT]\n", main_time);
+            logonly_printf("[@t=%8lu FPGA INTERRUPT]\n", main_time);
         }
 
         if (frame_num > 1)
@@ -1336,7 +1346,7 @@ int main(int argc, char ** argv)
                 }
                 vluint64_t frame_time = (main_time - frame_start_time) / 2;
                 logonly_printf(
-                    "[@t=%lu] Frame %3d, %lu pixel-clocks (% 0.03f msec real-time), %dx%d hsync %d, vsync %d\n",
+                    "[@t=%8lu] Frame %3d, %lu pixel-clocks (% 0.03f msec real-time), %dx%d hsync %d, vsync %d\n",
                     main_time,
                     frame_num,
                     frame_time,
@@ -1363,7 +1373,7 @@ int main(int argc, char ** argv)
                         IMG_SavePNG(screen_shot, save_name);
                         SDL_FreeSurface(screen_shot);
                         float fnum = ((1.0 / PIXEL_CLOCK_MHZ) * ((main_time - first_frame_start) / 2)) / 1000.0;
-                        log_printf("[@t=%lu] %8.03f ms frame #%3u saved as \"%s\" (%dx%d)\n",
+                        log_printf("[@t=%8lu] %8.03f ms frame #%3u saved as \"%s\" (%dx%d)\n",
                                    main_time,
                                    fnum,
                                    frame_num,

@@ -147,6 +147,7 @@ tile_addr_t             vgen_tile_addr;
 word_t                  vgen_tile_data;
 
 // interrupt management signals
+intr_t                  intr_trigger;       // true for each enabled interrupt
 intr_t                  intr_mask;          // true for each enabled interrupt
 intr_t                  intr_status;        // pending interrupt status
 intr_t                  intr_clear;         // interrupt cleared by CPU
@@ -407,52 +408,38 @@ video_blend video_blend(
 `endif
 
 // interrupt handling
+always_comb intr_trigger = {
+    video_intr,
+`ifdef EN_TIMER_INTR
+    timer_intr,
+`else
+    1'b0,
+`endif
+`ifdef EN_BLIT
+    blit_intr,
+`else
+    1'b0,
+`endif
+`ifdef EN_AUDIO
+    audio_intr
+`else
+    1'b0
+`endif
+};
+
 always_ff @(posedge clk) begin
     if (reset_i) begin
         bus_intr_o  <= 1'b0;
         intr_status <= 4'b0;
     end else begin
         // generate bus interrupt if signal bit set, not masked and not already set
-
-        if (({ video_intr,
-`ifdef EN_TIMER_INTR
-               timer_intr,
-`else
-               1'b0,
-`endif
-`ifdef EN_BLIT
-               blit_intr,
-`else
-               1'b0,
-`endif
-`ifdef EN_AUDIO
-               audio_intr
-`else
-               1'b0
-`endif
-            } & intr_mask & (~intr_status)) != 4'b0) begin
+        if ((intr_trigger & intr_mask & ~intr_status) != 4'b0) begin
             bus_intr_o  <= 1'b1;
         end else begin
             bus_intr_o  <= 1'b0;
         end
-        // remember interrupt signal and clear cleared interrupts
-        intr_status <= intr_status | { video_intr,
-`ifdef EN_TIMER_INTR
-                                       timer_intr,
-`else
-                                       1'b0,
-`endif
-`ifdef EN_BLIT
-                                       blit_intr,
-`else
-                                       1'b0,
-`endif
-`ifdef EN_AUDIO
-                                       audio_intr
-`else
-                                       1'b0
-`endif
-                                     } & (~intr_clear);
+        // remember interrupt signal and clear acknowledged interrupts
+        intr_status <= intr_status | intr_trigger & ~intr_clear;
     end
 end
 

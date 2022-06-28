@@ -187,7 +187,7 @@ always_ff @(posedge clk) begin
             reg_timer_frac  <= '0;
             reg_timer       <= reg_timer + 1'b1;
 `ifdef EN_TIMER_INTR
-            if (reg_timer == reg_timer_cmp) begin
+            if (reg_timer >= reg_timer_cmp) begin
                 reg_timer       <= '0;
                 timer_intr_o    <= 1'b1;
             end

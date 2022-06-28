@@ -110,6 +110,7 @@ logic [ACC_W-1:0]                   mix_res_r_u;
 always_comb begin : alias_block
     for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
         chan_length_n[i]    = chan_length[16*i+:16] - 1'b1;         // length next cycle
+        chan_output[i]      = chan_period[16*i+15];
 
         // debug aliases for easy viewing
 `ifndef SYNTHESIS
@@ -119,7 +120,6 @@ always_comb begin : alias_block
         chan_raw_u[i]       = chan_val[i*8+:8] ^ 8'h80;
         chan_ptr[i]         = chan_addr[xv::VRAM_W*i+:xv::VRAM_W] - 1'b1;
         chan_word[i]        = chan_buff[16*i+:16] - 1'b1;
-        chan_output[i]      = chan_period[16*i+15];
         chan_restart[i]     = audio_reload_nchan_o[i];
 `endif
     end

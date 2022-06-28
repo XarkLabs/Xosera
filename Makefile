@@ -120,7 +120,7 @@ utils:
 # Build image/font mem utility
 m68k:
 	cd xosera_m68k_api/ && $(MAKE)
-	cd xosera_ansiterm_m68k/ && $(MAKE)
+	cd xosera_ansiterm_m68k/ && $(MAKE) update && $(MAKE)
 	cd xosera_boing_m68k/ && $(MAKE)
 	cd xosera_vramtest_m68k && $(MAKE)
 	cd xosera_test_m68k && $(MAKE)

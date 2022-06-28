@@ -42,7 +42,7 @@
 //`define EN_BLIT_DECR_LSHIFT             // TODO: enable blit left shift when decrementing?
 //`define EN_BLIT_XOR_CONST_AB            // TODO: enable blit XOR modulo with constants?
 //`define EN_BLIT_XOR_CONST_C             // TODO: enable blit XOR modulo with constants?
-`define EN_AUDIO                4       // TODO: enable audio (with number of channels)
+`define EN_AUDIO                4       // TODO: enable audio (with number of channels 2/4)
 
 // experimental options (uncomment)
 //

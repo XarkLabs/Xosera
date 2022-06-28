@@ -2119,25 +2119,34 @@ void wait_scanline()
 
 static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 {
-    if (xreg_getw(AUD_CTRL) & 1)
+    uint16_t channels = xreg_getw(AUD_CTRL) & 0xF;
+    if (channels != 0)
     {
+        dprintf("Initial INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
         uint32_t clk_hz = xreg_getw(VID_HSIZE) > 640 ? 33750000 : 25125000;
         uint16_t period = (clk_hz + rate - 1) / rate;
 
+        for (int v = 0; v < 4; v++)
+        {
+            dprintf("Playing Channel %d\n", v);
+            xreg_setw(AUD0_START + (v * 4), vaddr);
+            xreg_setw(AUD0_LENGTH + (v * 4), (len / 2) - 1);
+            xreg_setw(AUD0_PERIOD + (v * 4), period | 0x8000);        // force instant sample start
 
-        xreg_setw(AUD0_START, vaddr);
-        xreg_setw(AUD0_LENGTH, (len / 2) - 1);
-        xreg_setw(AUD0_PERIOD, period | 0x8000);        // force instant sample start
+            xreg_setw(AUD0_LENGTH + (v * 4), SILENCE_TILE | (1 - 1));        // length 1 -1 and TILE flag
+            xreg_setw(AUD0_START + (v * 4), SILENCE_VADDR);                  // queue silence
 
-        dprintf("Initial INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
+            dprintf("Audio Channel %d started INT_CTRL = 0x%04x...\n", v, xm_getw(INT_CTRL));
 
-        xreg_setw(AUD0_START, SILENCE_VADDR);                  // queue silence
-        xreg_setw(AUD0_LENGTH, SILENCE_TILE | (1 - 1));        // length 1 -1 and TILE flag
-
-        dprintf("Audio Started INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
+            delay_check(1200);
+            period -= 350;
+        }
 
         // AUD_CTRL high byte = channel start/len load pending, low byte = channel enables
-        while ((xm_getw(INT_CTRL) & 0x0010) == 0)        // while channel not ready for new START
+        dprintf("Before waiting INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
+
+        // wait for all channels to be ready (after they have started SILENCE)
+        while ((xm_getw(INT_CTRL) & (channels << 4)) == 0)
         {
         }
         dprintf("Audio Finished INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));

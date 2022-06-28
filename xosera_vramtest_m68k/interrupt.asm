@@ -12,8 +12,12 @@ install_intr::
                 or.w    #$0200,SR               ; disable interrupts
 
                 lea.l   XM_BASEADDR,A0          ; get Xosera base addr
-                move.w  #$080F,D0               ; enable vsync interrupt, clear any pending
-                movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
+
+;                move.w  #$080F,D0               ; enable vsync interrupt, clear any pending
+;                movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
+
+                move.w  #$040F,D0               ; enable TIMER interrupt, clear any pending
+                movep.w D0,XM_INT_CTRL(A0)      ; enable TIMER interrupt
 
                 move.l  #Xosera_intr,$68        ; set interrupt vector
                 and.w   #$F0FF,SR               ; enable interrupts

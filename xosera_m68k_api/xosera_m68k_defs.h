@@ -45,7 +45,7 @@
 
 // Xosera version info put in COPPER memory after FPGA reconfigure
 #define XV_INFO_ADDR        (XR_COPPER_ADDR + XR_COPPER_SIZE - (XV_INFO_SIZE >> 1))
-#define XV_INFO_SIZE        64        // 64 bytes total for "struct _xosera_info"
+#define XV_INFO_SIZE        64        // 64 bytes total for "struct _xosera_info" (32 words in copper memory)
 #define XV_INFO_DESCRIPTION 0         // 48 character description string
 #define XV_INFO_VER_MAJOR   56        // BCD major version number
 #define XV_INFO_VER_MINOR   57        // BCD minor version number
@@ -87,6 +87,25 @@
 #define SYS_CTRL_VBLANK_B    2        // (RO   )  video signal is in vertical blank period
 #define SYS_CTRL_UNUSED_9_B  1        // (RO   )  unused (reads 0)
 #define SYS_CTRL_UNUSED_8_B  0        // (- /- )
+
+// NOTE: These are word bits for INT_CTRL word ()
+#define INT_CTRL_UNUSED_15    15
+#define INT_CTRL_UNUSED_14    14
+#define INT_CTRL_UNUSED_13    13
+#define INT_CTRL_UNUSED_12    12
+#define INT_CTRL_VIDEO_EN_B   11        // v-blank or copper interrupt mask
+#define INT_CTRL_TIMER_EN_B   10        // timer match interrupt mask
+#define INT_CTRL_BLIT_EN_B    9         // blitter ready interrupt mask
+#define INT_CTRL_AUDIO_EN_B   8         // audio ready interrupt mask
+#define INT_CTRL_AUD3_READY_B 7         // audio channel 3 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_AUD2_READY_B 6         // audio channel 2 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_AUD1_READY_B 5         // audio channel 1 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_AUD0_READY_B 4         // audio channel 0 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_VIDEO_B      3         // v-blank or copper interrupt (read status, write acknowledge)
+#define INT_CTRL_TIMER_INTR_B 2         // timer match read interrupt (status, write acknowledge)
+#define INT_CTRL_BLIT_B       1         // blitter ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUDIO_B      0         // audio channel ready interrupt (read status, write acknowledge)
+
 
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 

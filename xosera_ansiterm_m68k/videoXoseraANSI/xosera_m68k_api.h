@@ -136,7 +136,9 @@ typedef struct _xosera_info
     uint32_t      githash;                    // git "short hash" version from repository
 } xosera_info_t;
 
-static_assert(sizeof(xosera_info_t) == 64, "sizeof xosera_info mismatch");
+#ifndef __INTELLISENSE__        // vscode intellisense does not grok m68k (flags as error, but correct for m68k-gcc)
+static_assert(sizeof(xosera_info_t) == XV_INFO_SIZE, "sizeof xosera_info_t mismatch");
+#endif
 
 // Xosera XM register base ptr
 #if !defined(XV_PREP_REQUIRED)

@@ -78,7 +78,7 @@ _NOINLINE static bool delay_check(int ms)
     return false;
 }
 
-void wait_start_vblank()
+void wait_vblank_start()
 {
     xwait_not_vblank();
     xwait_vblank();
@@ -146,6 +146,155 @@ bool first_failure;               // bool indicating first failure of current te
 
 #define VRAM_WR_DELAY() mcBusywait(1)        // delay for "SLOW" write
 #define VRAM_RD_DELAY() mcBusywait(1)        // delay for "SLOW" read
+
+// test display
+static uint16_t xr_fontsave[4096];
+static char     xr_dprint_buff[4096];
+static uint16_t xr_screen_addr = XR_TILE_ADDR + 0x1000;
+static uint8_t  xr_text_columns;
+static uint8_t  xr_text_rows;
+static uint8_t  xr_text_color = 0x07;        // white on gray
+static uint8_t  xr_x;
+static uint8_t  xr_y;
+
+static void xr_savefont()
+{
+    xmem_get_addr(XR_TILE_ADDR);
+    for (uint32_t i = 0; i < NUM_ELEMENTS(xr_fontsave); i++)
+    {
+        xr_fontsave[i] = xmem_getw_next_wait();
+    }
+    dprintf("Font XR memory area saved.\n");
+}
+
+static void xr_cls()
+{
+    if (!has_PF_B)
+    {
+        return;
+    }
+    xv_prep();
+    xr_x = 0;
+    xr_y = 0;
+    wait_vblank_start();
+    xmem_set_addr(xr_screen_addr);
+    for (int i = 0; i < xr_text_columns * xr_text_rows; i++)
+    {
+        xmem_setw_next(' ');
+    }
+}
+
+static void xr_textmode_pb()
+{
+    xr_text_columns = 28;
+    xr_text_rows    = 20;
+
+    if (!has_PF_B)
+    {
+        return;
+    }
+
+    wait_vblank_start();
+    xv_prep();
+    xreg_setw(PB_GFX_CTRL, 0x0080);
+#if 1
+    for (int i = 1; i < 256; i++)
+    {
+        uint16_t v = xmem_getw_wait(XR_COLOR_A_ADDR + i) & 0x0fff;
+        xmem_setw(XR_COLOR_A_ADDR + i, v);
+    }
+#endif
+    xr_cls();
+
+    xmem_setw(XR_COLOR_B_ADDR + 0xf0, 0x0000);        // set write address and 1st color transparent
+    for (int i = 1; i < 16; i++)
+    {
+        xmem_setw(XR_COLOR_B_ADDR + 0xf0 + i, 0xf202 | (i << 4));        // shades of opaque green
+    }
+    xmem_setw(XR_COLOR_B_ADDR, 0x0000);        // set write address
+
+    xwait_vblank();
+    xreg_setw(PB_GFX_CTRL, 0xF00A);         // colorbase = 0xF0 tiled + 1-bpp + Hx3 + Vx2
+    xreg_setw(PB_TILE_CTRL, 0x0E07);        // tile=0x0C00,tile=tile_mem, map=tile_mem, 8x8 tiles
+    xreg_setw(PB_LINE_LEN, xr_text_columns);
+    xreg_setw(PB_DISP_ADDR, xr_screen_addr);
+}
+
+static void xr_msg_color(uint8_t c)
+{
+    xr_text_color = c;
+}
+
+static void xr_pos(int x, int y)
+{
+    xr_x = x;
+    xr_y = y;
+}
+
+static void xr_putc(const char c)
+{
+    if (!has_PF_B)
+    {
+        return;
+    }
+    xmem_set_addr(xr_screen_addr + (xr_y * xr_text_columns) + xr_x);
+    if (c == '\n')
+    {
+        while (xr_x < xr_text_columns)
+        {
+            xmem_setw_next(' ');
+            xr_x++;
+        }
+        xr_x = 0;
+        xr_y += 1;
+    }
+    else if (c == '\r')
+    {
+        xr_x = 0;
+    }
+    else
+    {
+        xmem_setw_next((xr_text_color << 8) | (uint8_t)c);
+        xr_x++;
+        if (xr_x >= xr_text_columns)
+        {
+            xr_x = 0;
+            xr_y++;
+        }
+    }
+}
+
+static void xr_print(const char * str)
+{
+    if (!has_PF_B)
+    {
+        return;
+    }
+    register char c;
+    while ((c = *str++) != '\0')
+    {
+        xr_putc(c);
+    }
+}
+
+static void xr_printf(const char * fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(xr_dprint_buff, sizeof(xr_dprint_buff), fmt, args);
+    xr_print(xr_dprint_buff);
+    va_end(args);
+}
+
+static void xr_printfxy(int x, int y, const char * fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    xr_pos(x, y);
+    vsnprintf(xr_dprint_buff, sizeof(xr_dprint_buff), fmt, args);
+    xr_print(xr_dprint_buff);
+    va_end(args);
+}
 
 static void add_fail(int addr, int data, int expected, int flags)
 {
@@ -405,7 +554,7 @@ int test_vram(bool LFSR, int mode, int speed)
     xv_prep();
 
     // set funky mode to show VRAM
-    wait_start_vblank();
+    wait_vblank_start();
     xreg_setw(VID_CTRL, 0x0000);
     xreg_setw(PA_LINE_LEN, 136);        // ~65536/480 words per line
     xreg_setw(PA_DISP_ADDR, 0x0000);
@@ -737,14 +886,14 @@ int test_xmem(bool LFSR, int mode)
     xv_prep();
 
     // set funky mode to show XMEM
-    wait_start_vblank();
+    wait_vblank_start();
     xreg_setw(PA_GFX_CTRL, 0x0080);
     xmem_set_addr(XR_TILEMAP);
     for (int i = 0; i < (XR_COLS * XR_ROWS); i++)
     {
         xmem_setw_next(i);
     }
-    wait_start_vblank();
+    wait_vblank_start();
     xreg_setw(PA_GFX_CTRL, vram_modes[mode] & ~0x0040);        // text
     xreg_setw(PA_TILE_CTRL, 0x0207);                           // tile=0x0000,tile=tile_mem, map=tile_mem, 8x8 tiles
     xreg_setw(PA_LINE_LEN, XR_COLS);
@@ -755,7 +904,7 @@ int test_xmem(bool LFSR, int mode)
 
     dprintf("  > XMEM test=%s speed=%s mode=%s : ", LFSR ? "LFSR" : "ADDR", speed_names[4], vram_mode_names[mode]);
     // fill XMEM with pattern_buffer
-    wait_start_vblank();
+    wait_vblank_start();
     for (int r = 0; r < 16; r++)
     {
         // generate pattern_buffer data
@@ -852,6 +1001,8 @@ void xosera_vramtest()
     dprintf("PF_B is %s testing COLOR_B XMEM.\n", has_PF_B ? "present," : "disabled, not");
     colormem_size = has_PF_B ? (XR_COLOR_A_SIZE + XR_COLOR_B_SIZE) : XR_COLOR_A_SIZE;
 
+    xr_savefont();
+
 #if 1
     dprintf("Installing interrupt handler...");
     install_intr();
@@ -869,6 +1020,7 @@ void xosera_vramtest()
             dprintf("\n [Switching to Xosera config #%d...", cur_xosera_config);
             bool success   = xosera_init(cur_xosera_config);
             last_timer_val = xm_getw(TIMER);
+            xm_setw(TIMER, 500 - 1);        // color cycle twice a second as TIMER_INTR test
             dprintf("%s (%dx%d). ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
             xosera_get_info(&initinfo);
         }
@@ -963,7 +1115,7 @@ void xosera_vramtest()
             }
         }
     }
-    wait_start_vblank();
+    wait_vblank_start();
     remove_intr();
 
     // reset console

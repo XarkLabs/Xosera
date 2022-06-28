@@ -55,10 +55,6 @@ void kmain(void)
     nop();
     xm_setl(WR_INCR, 0x87654321);
     nop();
-    xm_set_rw_rd_incr();
-    nop();
-    xm_set_no_rw_rd_incr();
-    nop();
     xreg_setw(SCANLINE, 0x1337);
     nop();
     xreg_set_addr(SCANLINE);
@@ -74,12 +70,6 @@ void kmain(void)
     xmem_setw_wait(XR_COLOR_ADDR, 0xDEAD);
     nop();
     xmem_setw_next_wait(0xF00F);
-    nop();
-    if (!xm_get_sys_ctrlb(RD_RW_INCR))
-    {
-        nop();
-        xm_set_rw_rd_incr();
-    }
     nop();
     xm_getbh(TIMER);
     nop();

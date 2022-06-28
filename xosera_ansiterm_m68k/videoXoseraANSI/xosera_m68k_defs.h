@@ -79,14 +79,14 @@
 #define XM_UNUSED_0F 0x3C        // (- /- )
 
 // NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register indirect with no offset)
-#define SYS_CTRL_MEM_BUSY_B   7        // (RO   )  memory read/write operation pending (with contended memory)
-#define SYS_CTRL_BLIT_FULL_B  6        // (RO   )  blitter queue is full, do not write new operation to blitter registers
-#define SYS_CTRL_BLIT_BUSY_B  5        // (RO   )  blitter is still busy performing an operation (not done)
-#define SYS_CTRL_UNUSED_12_B  4        // (RO   )  unused (reads 0)
-#define SYS_CTRL_HBLANK_B     3        // (RO   )  video signal is in horizontal blank period
-#define SYS_CTRL_VBLANK_B     2        // (RO   )  video signal is in vertical blank period
-#define SYS_CTRL_UNUSED_9_B   1        // (RO   )  unused (reads 0)
-#define SYS_CTRL_RD_RW_INCR_B 0        // (R / W)  increment XM_RW_ADDR after XM_RW_DATA/XM_RW_DATA_2 read
+#define SYS_CTRL_MEM_BUSY_B  7        // (RO   )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_BLIT_FULL_B 6        // (RO   )  blitter queue is full, do not write new operation to blitter registers
+#define SYS_CTRL_BLIT_BUSY_B 5        // (RO   )  blitter is still busy performing an operation (not done)
+#define SYS_CTRL_UNUSED_12_B 4        // (RO   )  unused (reads 0)
+#define SYS_CTRL_HBLANK_B    3        // (RO   )  video signal is in horizontal blank period
+#define SYS_CTRL_VBLANK_B    2        // (RO   )  video signal is in vertical blank period
+#define SYS_CTRL_UNUSED_9_B  1        // (RO   )  unused (reads 0)
+#define SYS_CTRL_UNUSED_8_B  0        // (- /- )
 
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 

@@ -465,7 +465,9 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
+    REG_RW(INT_CTRL),
     REG_W(INT_CTRL, 0x0F0F),
+    REG_RW(INT_CTRL),
 
 #if 0
     REG_WAITVTOP(),
@@ -855,7 +857,9 @@ uint16_t     BusInterface::test_data[32768] = {
 
 #endif
 
-#if 1                              // lame audio test
+#if 1        // lame audio test
+    REG_RW(INT_CTRL),
+
     REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
     REG_W(WR_ADDR, 0xFF00),
     REG_UPLOAD(),        // upload sine data
@@ -891,6 +895,8 @@ uint16_t     BusInterface::test_data[32768] = {
 
     XREG_SETW(AUD_CTRL, 0x000F),
 
+    REG_RW(INT_CTRL),
+
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
@@ -921,6 +927,8 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+
+    REG_RW(INT_CTRL),
 
     XREG_SETW(AUD0_VOL, 0x4020),
     XREG_SETW(AUD1_VOL, 0x4020),

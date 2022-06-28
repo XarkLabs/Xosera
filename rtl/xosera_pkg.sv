@@ -102,7 +102,8 @@ typedef enum {
     SYS_CTRL_UNUSED_12_B = 12,          // unused (reads 0)
     SYS_CTRL_HBLANK_B = 11,             // video signal is in horizontal blank period
     SYS_CTRL_VBLANK_B = 10,             // video signal is in vertical blank period
-    SYS_CTRL_UNUSED_9_B = 9             // unused (reads 0)
+    SYS_CTRL_UNUSED_9_B = 9,            // unused (reads 0)
+    SYS_CTRL_UNUSED_8_B = 8             // unused (reads 0)
 } xm_sys_ctrl_t;
 
 // XR register / memory regions

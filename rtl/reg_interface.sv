@@ -58,9 +58,6 @@ module reg_interface (
     input  wire logic            clk                // pixel clock
 );
 
-logic unused;
-assign unused = &{1'b0, audio_ready_i };
-
 // read/write storage for main interface registers
 addr_t          reg_rd_xaddr;           // XR read address (RD_XADDR)
 addr_t          reg_wr_xaddr;           // XR write address (WR_XADDR)
@@ -139,7 +136,7 @@ always_comb begin
 `endif
         xv::XM_INT_CTRL:
 `ifdef EN_AUDIO
-            rd_temp_word  = { 4'b0, intr_mask, audio_ready_i, intr_status_i };
+            rd_temp_word  = { 4'b0, intr_mask, 4'(audio_ready_i), intr_status_i };      // FIXME: audio_ready_i reading as zeros always on FPGA?
 `else
             rd_temp_word  = { 4'b0, intr_mask, 4'(0), intr_status_i };
 `endif

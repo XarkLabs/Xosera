@@ -82,6 +82,7 @@
 #define SYS_CTRL_HBLANK_B    3        // (RO   )  video signal is in horizontal blank period
 #define SYS_CTRL_VBLANK_B    2        // (RO   )  video signal is in vertical blank period
 #define SYS_CTRL_UNUSED_9_B  1        // (RO   )  unused (reads 0)
+#define SYS_CTRL_UNUSED_8_B  0        // (RO   )  unused (reads 0)
 
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 

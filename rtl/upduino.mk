@@ -219,6 +219,7 @@ else
 endif
 endif
 	@echo === UPduino Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(OUTNAME)_stats.txt
+	@-grep "XOSERA" $(LOGS)/$(OUTNAME)_yosys.log | tee -a $(OUTNAME)_stats.txt
 	@-tabbyadm version | grep "Package" | tee -a $(OUTNAME)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(OUTNAME)_stats.txt
 	@$(NEXTPNR) -V 2>&1 | tee -a $(OUTNAME)_stats.txt

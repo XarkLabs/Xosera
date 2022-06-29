@@ -54,7 +54,7 @@ module video_gen (
     output      logic           dv_de_o,                // video active signal (needed for HDMI)
 `ifdef EN_AUDIO
     // audio outputs
-    output      logic [AUDIO_NCHAN-1:0] audio_ready_o,  // audio start/length pending flag
+    output      logic [3:0]     audio_ready_o,          // audio start/length pending flag
     output      logic           audio_pdm_l_o,          // audio left channel PDM output
     output      logic           audio_pdm_r_o,          // audio left channel PDM output
 `endif
@@ -65,6 +65,7 @@ module video_gen (
 
 // video generation signals
 color_t             border_color;
+logic               vid_colorswap;
 hres_vis_t          vid_left;
 hres_vis_t          vid_right;
 addr_t              line_set_addr;                      // address for on-the-fly addr set
@@ -137,8 +138,7 @@ assign xr_reg_enum = vgen_reg_wr_en_i ? $bits(xr_reg_enum)'(vgen_reg_num_i) : xv
 /* verilator lint_off UNUSED */
 `endif
 
-// sync generation signals (and combinatorial logic "next" versions)
-
+// video generation signals
 logic           end_of_line;
 logic           end_of_frame;
 logic           end_of_visible;
@@ -150,14 +150,14 @@ logic           hsync;
 logic           vsync;
 logic           dv_de;
 
-assign hsync_o          = hsync;
-assign vsync_o          = vsync;
-assign dv_de_o          = dv_de;
-assign h_blank_o        = ~h_visible;
-assign v_blank_o        = ~v_visible;
+assign          hsync_o          = hsync;
+assign          vsync_o          = vsync;
+assign          dv_de_o          = dv_de;
+assign          h_blank_o        = ~h_visible;
+assign          v_blank_o        = ~v_visible;
 `ifdef EN_COPP
-assign h_count_o        = h_count;
-assign v_count_o        = v_count;
+assign          h_count_o        = h_count;
+assign          v_count_o        = v_count;
 `endif
 
 video_timing video_timing
@@ -344,39 +344,13 @@ video_playfield video_pf_a(
     );
 /* verilator lint_on PINCONNECTEMPTY */
 `endif
-// end else begin : opt_NO_PF_B
-//     logic unused_pf_b;
-//     assign unused_pf_b = &{ 1'b0,
-//         pb_stall,
-//         pb_blank,
-//         pb_start_addr,
-//         pb_line_len,
-//         pb_colorbase,
-//         pb_bpp,
-//         pb_bitmap,
-//         pb_tile_bank,
-//         pb_disp_in_tile,
-//         pb_tile_in_vram,
-//         pb_tile_height,
-//         pb_h_repeat,
-//         pb_v_repeat,
-//         pb_fine_hscroll,
-//         pb_fine_vscroll,
-//         pb_line_start_set,
-//         pb_gfx_ctrl_set
-//     };
-//     assign pb_color_index   = '0;
-//     assign pb_vram_sel      = '0;
-//     assign pb_vram_addr     = '0;
-//     assign pb_tile_sel      = '0;
-//     assign pb_tile_addr     = '0;
-// end
 
 // video config registers read/write
 always_ff @(posedge clk) begin
     if (reset_i) begin
         video_intr_o        <= 1'b0;
         border_color        <= 8'h08;               // defaulting to dark grey to show operational
+        vid_colorswap       <= 1'b0;
         vid_left            <= '0;
         vid_right           <= $bits(vid_right)'(xv::VISIBLE_WIDTH);
 
@@ -455,7 +429,7 @@ always_ff @(posedge clk) begin
         if (vgen_reg_wr_en_i) begin
             case (vgen_reg_num_i)
                 6'(xv::XR_VID_CTRL): begin
-                    border_color    <= vgen_reg_data_i[7:0];
+                    { vid_colorswap, border_color}  <= vgen_reg_data_i[8:0];
                 end
                 6'(xv::XR_COPP_CTRL): begin
 `ifdef EN_COPP
@@ -590,7 +564,7 @@ end
 // video registers read
 always_comb begin
     case (vgen_reg_num_i[3:0])
-        4'(xv::XR_VID_CTRL):        rd_vid_regs = { 8'h00, border_color};
+        4'(xv::XR_VID_CTRL):        rd_vid_regs = { 7'h00, vid_colorswap, border_color};
 `ifdef EN_COPP
         4'(xv::XR_COPP_CTRL):       rd_vid_regs = { copp_reg_data_o[15], 15'(copp_reg_data_o[xv::COPP_W-1:0]) };
 `endif
@@ -653,12 +627,14 @@ always_ff @(posedge clk) begin
 `endif
 
         mem_fetch           <= 1'b0;
-
     end else begin
         // set output pixel index from pixel shift-out
-        colorA_index_o      <= pa_color_index;
 `ifdef EN_PF_B
-        colorB_index_o      <= pb_color_index;
+        colorA_index_o      <= !vid_colorswap ? pa_color_index : pb_color_index;
+        colorB_index_o      <= !vid_colorswap ? pb_color_index : pa_color_index;
+`else
+        colorA_index_o      <= pa_color_index;
+
 `endif
 
         mem_fetch           <= mem_fetch_next;
@@ -707,17 +683,17 @@ end
 
 // audio channel register writes
 always_ff @(posedge clk) begin
-    for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-        if (reset_i) begin
-            audio_vol_l_nchan[i*7+:7]       <= '0;
-            audio_vol_r_nchan[i*7+:7]       <= '0;
-            audio_period_nchan[i*15+:15]    <= '0;
-            audio_tile_nchan[i]             <= '0;
-            audio_start_nchan[i*xv::VRAM_W+:16] <= '0;
-            audio_len_nchan[i*15+:15]       <= '0;
-            audio_restart_nchan[i]          <= 1'b0;
-            audio_ready_o[i]                <= 1'b0;
-        end else begin
+    if (reset_i) begin
+        audio_vol_l_nchan       <= '0;
+        audio_vol_r_nchan       <= '0;
+        audio_period_nchan      <= '0;
+        audio_tile_nchan        <= '0;
+        audio_start_nchan       <= '0;
+        audio_len_nchan         <= '0;
+        audio_restart_nchan     <= '0;
+        audio_ready_o           <= '0;
+    end else begin
+        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             audio_restart_nchan[i]    <= 1'b0;
             if (audio_reload_nchan[i]) begin
                 audio_ready_o[i]  <= 1'b1;                                                                          // ready set
@@ -725,7 +701,7 @@ always_ff @(posedge clk) begin
             if (vgen_reg_wr_en_i) begin
                 case (7'(vgen_reg_num_i))
                     7'(xv::XR_AUD0_VOL+7'(i*4)):
-                        { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*6+:7] }    <= { vgen_reg_data_i[14:8], vgen_reg_data_i[6:0] };
+                        { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] }; // 0x80 = 1.0 volume
                     7'(xv::XR_AUD0_PERIOD+7'(i*4)):
                         { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
                     7'(xv::XR_AUD0_LENGTH+7'(i*4)):

@@ -82,7 +82,7 @@ assign unused = &{1'b0, colorA_xrgb[15:12] }; // unused alpha
 
 `ifdef EN_AUDIO
 // audio management
-logic [AUDIO_NCHAN-1:0] audio_ready;
+logic [3:0]             audio_ready;
 `endif
 
 //  VRAM read output data (for vgen, regs, blit)

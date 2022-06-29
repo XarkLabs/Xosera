@@ -2128,6 +2128,10 @@ static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 
         for (int v = 0; v < 4; v++)
         {
+            if (!(channels & (1 << v)))
+            {
+                continue;
+            }
             dprintf("Playing Channel %d\n", v);
             xreg_setw(AUD0_START + (v * 4), vaddr);
             xreg_setw(AUD0_LENGTH + (v * 4), (len / 2) - 1);

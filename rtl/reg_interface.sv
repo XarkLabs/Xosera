@@ -13,49 +13,47 @@
 
 module reg_interface (
     // bus interface signals
-    input  wire logic            bus_cs_n_i,        // register select strobe
-    input  wire logic            bus_rd_nwr_i,      // 0 = write, 1 = read
-    input  wire logic  [3:0]     bus_reg_num_i,     // register number
-    input  wire logic            bus_bytesel_i,     // 0=even byte, 1=odd byte
-    input  wire logic  [7:0]     bus_data_i,        // 8-bit data bus input
-    output      logic  [7:0]     bus_data_o,        // 8-bit data bus output
+    input  wire logic           bus_cs_n_i,        // register select strobe
+    input  wire logic           bus_rd_nwr_i,      // 0 = write, 1 = read
+    input  wire logic  [3:0]    bus_reg_num_i,     // register number
+    input  wire logic           bus_bytesel_i,     // 0=even byte, 1=odd byte
+    input  wire logic  [7:0]    bus_data_i,        // 8-bit data bus input
+    output      logic  [7:0]    bus_data_o,        // 8-bit data bus output
     // VRAM/XR access signals
-    input  wire logic            vram_ack_i,        // VRAM access ack (true when data read/written)
-    input  wire logic            xr_ack_i,          // XR bus access ack (true when data read/written)
-    output      logic            regs_vram_sel_o,   // VRAM select
-    output      logic            regs_xr_sel_o,     // XR select
-    output      logic            regs_wr_o,         // VRAM/XR read/write
-    output      logic  [3:0]     regs_wrmask_o,     // VRAM nibble write masks
-    output      addr_t           regs_addr_o,       // VRAM/XR address
-    output      word_t           regs_data_o,       // VRAM/XR write data out
-    input  wire word_t           regs_data_i,       // VRAM read data in
-    input  wire word_t           xr_data_i,         // XR read data in
+    input  wire logic           vram_ack_i,        // VRAM access ack (true when data read/written)
+    input  wire logic           xr_ack_i,          // XR bus access ack (true when data read/written)
+    output      logic           regs_vram_sel_o,   // VRAM select
+    output      logic           regs_xr_sel_o,     // XR select
+    output      logic           regs_wr_o,         // VRAM/XR read/write
+    output      logic  [3:0]    regs_wrmask_o,     // VRAM nibble write masks
+    output      addr_t          regs_addr_o,       // VRAM/XR address
+    output      word_t          regs_data_o,       // VRAM/XR write data out
+    input  wire word_t          regs_data_i,       // VRAM read data in
+    input  wire word_t          xr_data_i,         // XR read data in
     // status signals
 `ifdef EN_BLIT
-    input  wire logic            blit_full_i,       // blit register queue full
-    input  wire logic            blit_busy_i,       // blit operation in progress
+    input  wire logic           blit_full_i,       // blit register queue full
+    input  wire logic           blit_busy_i,       // blit operation in progress
 `endif
-    input  wire logic            h_blank_i,         // pixel outside of visible range (before left edge)
-    input  wire logic            v_blank_i,         // line outside of visible range (after bottom line)
+    input  wire logic           h_blank_i,         // pixel outside of visible range (before left edge)
+    input  wire logic           v_blank_i,         // line outside of visible range (after bottom line)
     // iCE40 reconfigure
-    output      logic            reconfig_o,        // reconfigure iCE40 from flash
+    output      logic           reconfig_o,        // reconfigure iCE40 from flash
     // interrupt management
 `ifdef EN_TIMER_INTR
-    output      logic            timer_intr_o,      // timer compare interrrupt
+    output      logic           timer_intr_o,      // timer compare interrrupt
 `endif
-    output      intr_t           intr_mask_o,       // enabled interrupts (which signal CPU interrupt)
-    output      intr_t           intr_clear_o,      // pending interrupts CPU acknowledge (clear)
-    input  wire intr_t           intr_status_i,     // pending interrupts CPU status read
+    output      intr_t          intr_mask_o,       // enabled interrupts (which signal CPU interrupt)
+    output      intr_t          intr_clear_o,      // pending interrupts CPU acknowledge (clear)
+    input  wire intr_t          intr_status_i,     // pending interrupts CPU status read
 `ifdef EN_AUDIO
-    input  wire logic [AUDIO_NCHAN-1:0] audio_ready_i, // audio channels that need new START
+    input  wire logic [3:0]     audio_ready_i,      // audio channels that need new START
 `endif
-
 `ifdef BUS_DEBUG_SIGNALS
-    output      logic            bus_ack_o,         // ACK strobe for bus debug
+    output      logic           bus_ack_o,         // ACK strobe for bus debug
 `endif
-
-    input  wire logic            reset_i,           // reset signal
-    input  wire logic            clk                // pixel clock
+    input  wire logic           reset_i,           // reset signal
+    input  wire logic           clk                // pixel clock
 );
 
 // read/write storage for main interface registers
@@ -138,7 +136,7 @@ always_comb begin
 `ifdef EN_AUDIO
             rd_temp_word  = { 4'b0, intr_mask, 4'(audio_ready_i), intr_status_i };      // FIXME: audio_ready_i reading as zeros always on FPGA?
 `else
-            rd_temp_word  = { 4'b0, intr_mask, 4'(0), intr_status_i };
+            rd_temp_word  = { 4'b0, intr_mask, 4'b0, intr_status_i };
 `endif
         xv::XM_TIMER:
             rd_temp_word  = { reg_timer[15:8], timer_latch_val };

@@ -144,7 +144,7 @@ show: $(DOT) upduino.mk
 count: $(SRC) $(INC) $(FONTFILES) upduino.mk
 	@mkdir -p $(LOGS)
 	@-cp $(LOGS)/$(OUTNAME)_yosys_count.log $(LOGS)/$(OUTNAME)_yosys_count_last.log
-	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
+	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 
 # run Verilator to check for Verilog issues
 lint: $(SRC) $(INC) $(FONTFILES) upduino.mk
@@ -152,7 +152,7 @@ lint: $(SRC) $(INC) $(FONTFILES) upduino.mk
 
 $(DOT): %.dot: %.sv upduino.mk
 	mkdir -p upduino/dot
-	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
+	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
 %.json: $(SRC) $(INC) $(FONTFILES) upduino.mk
@@ -219,6 +219,7 @@ else
 endif
 endif
 	@echo === UPduino Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) | tee $(OUTNAME)_stats.txt
+	@-grep "XOSERA" $(LOGS)/$(OUTNAME)_yosys.log | tee -a $(OUTNAME)_stats.txt
 	@-tabbyadm version | grep "Package" | tee -a $(OUTNAME)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(OUTNAME)_stats.txt
 	@$(NEXTPNR) -V 2>&1 | tee -a $(OUTNAME)_stats.txt

@@ -40,7 +40,7 @@ module audio_mixer (
     input wire  logic           clk
 );
 
-localparam  CHAN_W      = $clog2(AUDIO_NCHAN-1);    // NOTE: must have > 1 channel
+localparam  CHAN_W      = $clog2(AUDIO_NCHAN);
 localparam  DAC_W       = 8;
 localparam  ACC_W       = 18;
 localparam  VOL_SHIFT   = 6;

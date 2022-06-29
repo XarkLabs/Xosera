@@ -46,6 +46,7 @@ module reg_interface (
     output      intr_t          intr_mask_o,       // enabled interrupts (which signal CPU interrupt)
     output      intr_t          intr_clear_o,      // pending interrupts CPU acknowledge (clear)
     input  wire intr_t          intr_status_i,     // pending interrupts CPU status read
+    input  wire logic           end_of_line_i,
 `ifdef EN_AUDIO
     input  wire logic [3:0]     audio_ready_i,      // audio channels that need new START
 `endif
@@ -68,8 +69,16 @@ word_t          reg_data;               // word read from VRAM (for RD_ADDR)
 word_t          reg_wr_incr;            // VRAM write increment
 addr_t          reg_wr_addr;            // VRAM write address
 
+//`define USE_PIXELS_FOR_TIMEBASE
+`ifdef USE_PIXELS_FOR_TIMEBASE
 localparam      TIMER_TICK = xv::PCLK_HZ / 10000;
 localparam      TIMER_FRAC = $clog2(TIMER_TICK);
+local           unused_eol;
+assign          unused_eol = &{1'b0, end_of_line_i};
+`else
+localparam      TIMER_TICK = (xv::PCLK_HZ / xv::TOTAL_WIDTH) / 10000;
+localparam      TIMER_FRAC = $clog2(TIMER_TICK);
+`endif
 
 word_t          reg_timer;              // 1/10 ms timer (visible 16 bits) + underflow
 `ifdef EN_TIMER_INTR
@@ -168,7 +177,7 @@ always_comb begin
     endcase
 end
 
-// 1/10th ms timer counter
+// ~1/10th ms timer counter
 always_ff @(posedge clk) begin
     if (reset_i) begin
         reg_timer       <= '0;
@@ -180,16 +189,21 @@ always_ff @(posedge clk) begin
 `ifdef EN_TIMER_INTR
         timer_intr_o    <= 1'b0;
 `endif
-        reg_timer_frac  <= reg_timer_frac + 1'b1;
-        if (reg_timer_frac == TIMER_FRAC'(TIMER_TICK)) begin
-            reg_timer_frac  <= '0;
-            reg_timer       <= reg_timer + 1'b1;
-`ifdef EN_TIMER_INTR
-            if (reg_timer >= reg_timer_cmp) begin
-                reg_timer       <= '0;
-                timer_intr_o    <= 1'b1;
-            end
+`ifndef USE_PIXELS_FOR_TIMEBASE
+        if (end_of_line_i)
 `endif
+        begin
+            reg_timer_frac  <= reg_timer_frac + 1'b1;
+            if (reg_timer_frac == TIMER_FRAC'(TIMER_TICK)) begin
+                reg_timer_frac  <= '0;
+                reg_timer       <= reg_timer + 1'b1;
+`ifdef EN_TIMER_INTR
+                if (reg_timer >= reg_timer_cmp) begin
+                    reg_timer       <= '0;
+                    timer_intr_o    <= 1'b1;
+                end
+`endif
+            end
         end
     end
 end

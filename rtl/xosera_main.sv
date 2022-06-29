@@ -69,6 +69,8 @@ logic                   vsync;              // vsync
 logic                   h_blank;            // off left edge
 logic                   v_blank;            // off bottom edge
 
+logic                   end_of_line;
+
 color_t                 colorA_index;       // pf A color index
 argb_t                  colorA_xrgb;        // pf A ARGB output
 
@@ -213,6 +215,7 @@ reg_interface reg_interface(
     // reconfig
     .reconfig_o(reconfig_o),
     // interrupts
+    .end_of_line_i(end_of_line),
 `ifdef EN_TIMER_INTR
     .timer_intr_o(timer_intr),          // timer compare interrupt
 `endif
@@ -235,6 +238,7 @@ video_gen video_gen(
     .vgen_reg_num_i(xr_regs_addr[5:0]),
     .vgen_reg_data_i(xr_regs_data_in),
     .vgen_reg_data_o(xr_regs_data_out),
+    .end_of_line_o(end_of_line),
     .video_intr_o(video_intr),          // signaled by write to XR_VID_INTR
 `ifdef EN_AUDIO
     .audio_intr_o(audio_intr),          // signaled by audio channel ready

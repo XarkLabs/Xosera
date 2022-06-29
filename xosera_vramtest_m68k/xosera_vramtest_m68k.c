@@ -1020,7 +1020,7 @@ void xosera_vramtest()
             dprintf("\n [Switching to Xosera config #%d...", cur_xosera_config);
             bool success   = xosera_init(cur_xosera_config);
             last_timer_val = xm_getw(TIMER);
-            xm_setw(TIMER, 500 - 1);        // color cycle twice a second as TIMER_INTR test
+            //            xm_setw(TIMER, 500 - 1);        // color cycle twice a second as TIMER_INTR test
             dprintf("%s (%dx%d). ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
             xosera_get_info(&initinfo);
         }

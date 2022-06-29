@@ -25,6 +25,7 @@ module video_gen (
     input  wire logic  [5:0]    vgen_reg_num_i,         // internal config register number (for reads)
     input  wire word_t          vgen_reg_data_i,        // data for internal config register
     output      word_t          vgen_reg_data_o,        // register/status data reads
+    output      logic           end_of_line_o,          // vblank or copper interrupt signal
     output      logic           video_intr_o,           // vblank or copper interrupt signal
 `ifdef EN_AUDIO
     output      logic           audio_intr_o,           // audio ready interrupt signal
@@ -150,14 +151,15 @@ logic           hsync;
 logic           vsync;
 logic           dv_de;
 
-assign          hsync_o          = hsync;
-assign          vsync_o          = vsync;
-assign          dv_de_o          = dv_de;
-assign          h_blank_o        = ~h_visible;
-assign          v_blank_o        = ~v_visible;
+assign          hsync_o         = hsync;
+assign          vsync_o         = vsync;
+assign          dv_de_o         = dv_de;
+assign          h_blank_o       = ~h_visible;
+assign          v_blank_o       = ~v_visible;
+assign          end_of_line_o   = end_of_line;
 `ifdef EN_COPP
-assign          h_count_o        = h_count;
-assign          v_count_o        = v_count;
+assign          h_count_o       = h_count;
+assign          v_count_o       = v_count;
 `endif
 
 video_timing video_timing

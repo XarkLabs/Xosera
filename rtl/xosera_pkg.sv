@@ -40,7 +40,7 @@
 //`define EN_BLIT_DECR_LSHIFT             // TODO: enable blit left shift when decrementing?
 //`define EN_BLIT_XOR_CONST_AB            // TODO: enable blit XOR modulo with constants?
 //`define EN_BLIT_XOR_CONST_C             // TODO: enable blit XOR modulo with constants?
-`define EN_AUDIO                4       // TODO: enable audio (with number of channels 2/4)
+`define EN_AUDIO                4       // TODO: enable audio (with number of channels 2-4)
 
 // experimental options (uncomment)
 //
@@ -48,7 +48,7 @@
 
 //=================================
 
-`define VERSION 0_32                    // Xosera BCD version code (x.xx)
+`define VERSION 0_33                    // Xosera BCD version code (x.xx)
 
 `ifndef GITCLEAN
 `define GITCLEAN 0                      // unknown Git state (assumed dirty)
@@ -60,7 +60,9 @@
 `define BUILDDATE 00000000              // unknown build date
 `endif
 
+`ifdef EN_AUDIO
 localparam AUDIO_NCHAN  = `EN_AUDIO;    // set parameter for # audio channels
+`endif
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;

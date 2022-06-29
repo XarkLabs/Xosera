@@ -2451,9 +2451,6 @@ void     xosera_test()
     dprintf("Installing interrupt handler...using TIMER");
     install_intr();
     dprintf("okay.\n");
-
-    xm_setw(TIMER, 166 - 1);        // almost vsync...
-
 #else
     dprintf("NOT Installing interrupt handler\n");
 #endif
@@ -2488,12 +2485,9 @@ void     xosera_test()
         xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
         xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
 
-        uint16_t features = xreg_getw(FEATURES);
-        //        uint32_t githash   = ((uint32_t)xreg_getw(GITHASH_H) << 16) |
-        //        (uint32_t)xreg_getw(GITHASH_L);
+        uint16_t features  = xreg_getw(FEATURES);
         uint16_t monwidth  = xreg_getw(VID_HSIZE);
         uint16_t monheight = xreg_getw(VID_VSIZE);
-        //        uint16_t monfreq   = xreg_getw(VID_VFREQ);
 
         uint16_t sysctrl  = xm_getw(SYS_CTRL);
         uint16_t intctrl  = xm_getw(INT_CTRL);
@@ -2524,7 +2518,6 @@ void     xosera_test()
         dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
         dprintf("PA_HV_SCROLL: 0x%04x  PA_HV_FSCALE: 0x%04x\n", hvscroll, hvfscale);
         dprintf("\n");
-
 
 #if COPPER_TEST
         if (test_count & 1)

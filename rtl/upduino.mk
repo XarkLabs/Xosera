@@ -92,6 +92,9 @@ ICETIME := icetime
 ICEPROG := iceprog
 ICEMULTI := icemulti
 
+# Yosys generic arguments
+YOSYS_ARGS := -e "no driver" -w "tri-state" -w "list of registers"
+
 # Yosys synthesis arguments
 FLOW3 :=
 #YOSYS_SYNTH_ARGS := -device u -dsp -retime -top $(TOP)
@@ -157,11 +160,9 @@ $(DOT): %.dot: %.sv upduino.mk
 	@rm -f $@
 	@mkdir -p $(LOGS)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
-	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w "Warning" -e "no driver" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
-	@grep -m1 "XOSERA config" $(LOGS)/$(OUTNAME)_yosys.log
-	@grep -m1 "XOSERA info" $(LOGS)/$(OUTNAME)_yosys.log
-	@grep "\(Number of cells\|Number of wires\)" $(LOGS)/$(OUTNAME)_yosys.log
-
+	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
+	@-grep "XOSERA" $(LOGS)/$(OUTNAME)_yosys.log
+	@-grep "\(Number of cells\|Number of wires\)" $(LOGS)/$(OUTNAME)_yosys.log
 
 # make ASCII bitstream from JSON description and device parameters
 upduino/%_$(OUTSUFFIX).asc: upduino/%_$(OUTSUFFIX).json $(PIN_DEF) upduino.mk

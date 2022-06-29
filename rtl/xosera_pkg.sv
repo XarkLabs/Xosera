@@ -13,7 +13,6 @@
 `define XOSERA_PKG
 
 `default_nettype none               // mandatory for Verilog sanity
-//`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
 /* verilator lint_off UNUSED */
 
@@ -29,8 +28,7 @@
 //`define NO_TESTPATTERN                  // don't initialize VRAM with test pattern and fonts in simulation
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
 
-
-// features that can be optionally disabled (comment out)
+// features that can be optionally disabled (comment out to disable)
 //
 // TODO: PF_A & B options
 `define EN_TIMER_INTR                   // enable timer interrupt
@@ -187,12 +185,11 @@ typedef enum logic [6:0] {
     XR_BLIT_SHIFT   = 7'h49,            // (WO) blit first and last word nibble masks and nibble right shift (0-3)
     XR_BLIT_LINES   = 7'h4A,            // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
     XR_BLIT_WORDS   = 7'h4B,            // (WO+) blit word count minus 1 per line (write starts blit operation)
-    XR_UNUSED_2C    = 7'h4C,            // TODO: unused XR 2C
-    XR_UNUSED_2D    = 7'h4D,            // TODO: unused XR 2D
-    XR_UNUSED_2E    = 7'h4E,            // TODO: unused XR 2E
-    XR_UNUSED_2F    = 7'h4F,             // TODO: unused XR 2F
-
-    XR_none         = 7'h7F             // TODO: unused XR 2F
+    XR_UNUSED_4C    = 7'h4C,            // TODO: unused XR 2C
+    XR_UNUSED_4D    = 7'h4D,            // TODO: unused XR 2D
+    XR_UNUSED_4E    = 7'h4E,            // TODO: unused XR 2E
+    XR_UNUSED_4F    = 7'h4F,            // TODO: unused XR 2F
+    XR_none         = 7'h7F             // dummy reg for simulation
 } xr_register_t;
 
 typedef enum integer {
@@ -217,7 +214,43 @@ typedef enum {
     TILE_ATTR_BACK  = 12                // rightmost bit for backcolor (in BPP_1 only)
 } tile_index_attribute_bits_t;
 
-localparam  AUDIO_MAX_HZ    = 24_000;   // NOTE: frequency assumed to be multiple of 1000 Hz
+// Xosera init info stored in last 64 bytes of default copper memory
+//
+// typedef struct _xosera_info
+// {
+//     char          description_str[48];        // ASCII description // TODO: too small
+//     uint16_t      reserved_48[4];             // 8 reserved bytes (and force alignment)
+//     unsigned char ver_bcd_major;              // major BCD version
+//     unsigned char ver_bcd_minor;              // minor BCD version
+//     unsigned char git_modified;               // non-zero if modified from git
+//     unsigned char reserved_59;                // reserved byte
+//     unsigned char githash[4];
+// } xosera_info_t;
+
+localparam          offset  = (2**COPP_W) - (64/4);
+localparam [11:0]   version = 12'H`VERSION;
+localparam [31:0]   builddate = 32'H`BUILDDATE;         // YYYYMMDD
+localparam [8:1]    clean   = `GITCLEAN ? "=" : ">";    // '+' appended to version if non-clean
+localparam [31:0]   githash = 32'H`GITHASH;             // git short hash
+
+localparam [16*8:1] hex_str = "FEDCBA9876543210";
+localparam [48*8:1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]),
+                                " ",
+                                hex_str[((builddate[31:28])*8)+1+:8], hex_str[((builddate[27:24])*8)+1+:8],
+                                hex_str[((builddate[23:20])*8)+1+:8], hex_str[((builddate[19:16])*8)+1+:8],
+                                hex_str[((builddate[15:12])*8)+1+:8], hex_str[((builddate[11: 8])*8)+1+:8],
+                                hex_str[((builddate[ 7: 4])*8)+1+:8], hex_str[((builddate[ 3: 0])*8)+1+:8],
+                                " ", clean, "#",
+                                hex_str[((githash[31:28])*8)+1+:8], hex_str[((githash[27:24])*8)+1+:8],
+                                hex_str[((githash[23:20])*8)+1+:8], hex_str[((githash[19:16])*8)+1+:8],
+                                hex_str[((githash[15:12])*8)+1+:8], hex_str[((githash[11: 8])*8)+1+:8],
+                                hex_str[((githash[ 7: 4])*8)+1+:8], hex_str[((githash[ 3: 0])*8)+1+:8],
+`ifdef ICE40UP5K
+                                " iCE40UP5K 128KB"
+`else
+                                " Unknown FPGA   "
+`endif
+                                };
 
 `ifdef MODE_640x400                     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x400_75                  // 31.500 MHz (requested), 31.500 MHz (achieved)

@@ -35,95 +35,30 @@ module coppermem
 // interface internally to the copper.
 word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 
-// Xosera init info stored in last 64 bytes of default copper memory
-//
-// typedef struct _xosera_info
-// {
-//     char          description_str[48];        // ASCII description
-//     uint16_t      reserved_48[4];             // 8 reserved bytes (and force alignment)
-//     unsigned char ver_bcd_major;              // major BCD version
-//     unsigned char ver_bcd_minor;              // minor BCD version
-//     unsigned char git_modified;               // non-zero if modified from git
-//     unsigned char reserved_59;                // reserved byte
-//     unsigned char githash[4];
-// } xosera_info_t;
-
-localparam          offset  = (2**AWIDTH) - (64/4);
-localparam [11:0]   version = 12'H`VERSION;
-localparam [8:1]    clean   = `GITCLEAN ? "=" : ">";    // '+' appended to version if non-clean
-localparam [31:0]   githash = 32'H`GITHASH;             // git short hash
-localparam [31:0]   builddate = 32'H`BUILDDATE;         // YYYYMMDD
-
-localparam [16*8:1] hex_str = "FEDCBA9876543210";
-localparam [48*8:1] description_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]),
-                                        " ",
-                                        hex_str[((builddate[31:28])*8)+1+:8], hex_str[((builddate[27:24])*8)+1+:8],
-                                        hex_str[((builddate[23:20])*8)+1+:8], hex_str[((builddate[19:16])*8)+1+:8],
-                                        hex_str[((builddate[15:12])*8)+1+:8], hex_str[((builddate[11: 8])*8)+1+:8],
-                                        hex_str[((builddate[ 7: 4])*8)+1+:8], hex_str[((builddate[ 3: 0])*8)+1+:8],
-                                        " ", clean, "#",
-                                        hex_str[((githash[31:28])*8)+1+:8], hex_str[((githash[27:24])*8)+1+:8],
-                                        hex_str[((githash[23:20])*8)+1+:8], hex_str[((githash[19:16])*8)+1+:8],
-                                        hex_str[((githash[15:12])*8)+1+:8], hex_str[((githash[11: 8])*8)+1+:8],
-                                        hex_str[((githash[ 7: 4])*8)+1+:8], hex_str[((githash[ 3: 0])*8)+1+:8],
-                                        " iCE40UP5K 128KB" };
 initial begin
     // Fill with numbers
     for (integer i = 0; i < (2**AWIDTH); i = i + 1) begin
         bram[i] = !ODDWORD ? 16'h0000 : 16'h0003;   // COP_END
     end
+// Xosera init info stored in last 64 bytes of default copper memory (see xosera_pkg.sv)
 
-    bram[offset +  0]  = !ODDWORD ? { description_str[(47*8)+1+:8], description_str[(46*8)+1+:8] } : { description_str[(45*8)+1+:8], description_str[(44*8)+1+:8] };
-    bram[offset +  1]  = !ODDWORD ? { description_str[(43*8)+1+:8], description_str[(42*8)+1+:8] } : { description_str[(41*8)+1+:8], description_str[(40*8)+1+:8] };
-    bram[offset +  2]  = !ODDWORD ? { description_str[(39*8)+1+:8], description_str[(38*8)+1+:8] } : { description_str[(37*8)+1+:8], description_str[(36*8)+1+:8] };
-    bram[offset +  3]  = !ODDWORD ? { description_str[(35*8)+1+:8], description_str[(34*8)+1+:8] } : { description_str[(33*8)+1+:8], description_str[(32*8)+1+:8] };
-    bram[offset +  4]  = !ODDWORD ? { description_str[(31*8)+1+:8], description_str[(30*8)+1+:8] } : { description_str[(29*8)+1+:8], description_str[(28*8)+1+:8] };
-    bram[offset +  5]  = !ODDWORD ? { description_str[(27*8)+1+:8], description_str[(26*8)+1+:8] } : { description_str[(25*8)+1+:8], description_str[(24*8)+1+:8] };
-    bram[offset +  6]  = !ODDWORD ? { description_str[(23*8)+1+:8], description_str[(22*8)+1+:8] } : { description_str[(21*8)+1+:8], description_str[(20*8)+1+:8] };
-    bram[offset +  7]  = !ODDWORD ? { description_str[(19*8)+1+:8], description_str[(18*8)+1+:8] } : { description_str[(17*8)+1+:8], description_str[(16*8)+1+:8] };
-    bram[offset +  8]  = !ODDWORD ? { description_str[(15*8)+1+:8], description_str[(14*8)+1+:8] } : { description_str[(13*8)+1+:8], description_str[(12*8)+1+:8] };
-    bram[offset +  9]  = !ODDWORD ? { description_str[(11*8)+1+:8], description_str[(10*8)+1+:8] } : { description_str[( 9*8)+1+:8], description_str[( 8*8)+1+:8] };
-    bram[offset + 10]  = !ODDWORD ? { description_str[( 7*8)+1+:8], description_str[( 6*8)+1+:8] } : { description_str[( 5*8)+1+:8], description_str[( 4*8)+1+:8] };
-    bram[offset + 11]  = !ODDWORD ? { description_str[( 3*8)+1+:8], description_str[( 2*8)+1+:8] } : { description_str[( 1*8)+1+:8], description_str[( 0*8)+1+:8] };
+    bram[xv::offset +  0]  = !ODDWORD ? { xv::info_str[(47*8)+1+:8], xv::info_str[(46*8)+1+:8] } : { xv::info_str[(45*8)+1+:8], xv::info_str[(44*8)+1+:8] };
+    bram[xv::offset +  1]  = !ODDWORD ? { xv::info_str[(43*8)+1+:8], xv::info_str[(42*8)+1+:8] } : { xv::info_str[(41*8)+1+:8], xv::info_str[(40*8)+1+:8] };
+    bram[xv::offset +  2]  = !ODDWORD ? { xv::info_str[(39*8)+1+:8], xv::info_str[(38*8)+1+:8] } : { xv::info_str[(37*8)+1+:8], xv::info_str[(36*8)+1+:8] };
+    bram[xv::offset +  3]  = !ODDWORD ? { xv::info_str[(35*8)+1+:8], xv::info_str[(34*8)+1+:8] } : { xv::info_str[(33*8)+1+:8], xv::info_str[(32*8)+1+:8] };
+    bram[xv::offset +  4]  = !ODDWORD ? { xv::info_str[(31*8)+1+:8], xv::info_str[(30*8)+1+:8] } : { xv::info_str[(29*8)+1+:8], xv::info_str[(28*8)+1+:8] };
+    bram[xv::offset +  5]  = !ODDWORD ? { xv::info_str[(27*8)+1+:8], xv::info_str[(26*8)+1+:8] } : { xv::info_str[(25*8)+1+:8], xv::info_str[(24*8)+1+:8] };
+    bram[xv::offset +  6]  = !ODDWORD ? { xv::info_str[(23*8)+1+:8], xv::info_str[(22*8)+1+:8] } : { xv::info_str[(21*8)+1+:8], xv::info_str[(20*8)+1+:8] };
+    bram[xv::offset +  7]  = !ODDWORD ? { xv::info_str[(19*8)+1+:8], xv::info_str[(18*8)+1+:8] } : { xv::info_str[(17*8)+1+:8], xv::info_str[(16*8)+1+:8] };
+    bram[xv::offset +  8]  = !ODDWORD ? { xv::info_str[(15*8)+1+:8], xv::info_str[(14*8)+1+:8] } : { xv::info_str[(13*8)+1+:8], xv::info_str[(12*8)+1+:8] };
+    bram[xv::offset +  9]  = !ODDWORD ? { xv::info_str[(11*8)+1+:8], xv::info_str[(10*8)+1+:8] } : { xv::info_str[( 9*8)+1+:8], xv::info_str[( 8*8)+1+:8] };
+    bram[xv::offset + 10]  = !ODDWORD ? { xv::info_str[( 7*8)+1+:8], xv::info_str[( 6*8)+1+:8] } : { xv::info_str[( 5*8)+1+:8], xv::info_str[( 4*8)+1+:8] };
+    bram[xv::offset + 11]  = !ODDWORD ? { xv::info_str[( 3*8)+1+:8], xv::info_str[( 2*8)+1+:8] } : { xv::info_str[( 1*8)+1+:8], xv::info_str[( 0*8)+1+:8] };
 
-    bram[offset + 12]  = !ODDWORD ? 16'h0000         : 16'h0000;
-    bram[offset + 13]  = !ODDWORD ? 16'h0000         : 16'h0000;
-    bram[offset + 14]  = !ODDWORD ? 16'(version)     : { `GITCLEAN ? 8'b0 : 8'b1, 8'b0 };
-    bram[offset + 15]  = !ODDWORD ? githash[31:16]   : githash[15:0];
-
-    if (!ODDWORD) begin
-`ifdef EN_AUDIO
-        $display("   XOSERA configuration:          %s%s%sAUD%x (mode %s)",
-`else
-        $display("   XOSERA configuration:          %s%s%s (mode %s)",
-`endif
-`ifdef EN_PF_B
-`ifdef EN_PF_B_BLEND
-            "PF_B BLND ",
-`else
-            "PF_B ",
-`endif
-`else
-            "",
-`endif
-`ifdef EN_COPP
-            "COPP ",
-`else
-            "",
-`endif
-`ifdef EN_BLIT
-            "BLIT ",
-`else
-            "",
-`endif
-`ifdef EN_AUDIO
-            4'(AUDIO_NCHAN),
-`endif
-            `VIDEO_MODE_NAME
-        );
-
-        $display("   XOSERA info:                   \"%s\"", description_str);
-    end
+    bram[xv::offset + 12]  = !ODDWORD ? 16'h0000            : 16'h0000;
+    bram[xv::offset + 13]  = !ODDWORD ? 16'h0000            : 16'h0000;
+    bram[xv::offset + 14]  = !ODDWORD ? 16'(xv::version)    : { `GITCLEAN ? 8'b0 : 8'b1, 8'b0 };
+    bram[xv::offset + 15]  = !ODDWORD ? xv::githash[31:16]  : xv::githash[15:0];
 end
 
 // infer BRAM block

@@ -868,8 +868,8 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(WR_ADDR, 0xFE00),
     REG_UPLOAD(),        // upload sine data
 
-    XREG_SETW(PA_GFX_CTRL, 0x0080),        // pf a blank
-    XREG_SETW(PB_GFX_CTRL, 0x0080),        // pf b blank
+    //    XREG_SETW(PA_GFX_CTRL, 0x0080),        // pf a blank
+    //    XREG_SETW(PB_GFX_CTRL, 0x0080),        // pf b blank
 
 
     XREG_SETW(AUD0_PERIOD, 6400),

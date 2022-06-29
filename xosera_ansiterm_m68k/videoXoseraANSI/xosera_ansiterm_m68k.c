@@ -147,11 +147,11 @@ typedef struct xansiterm_data
 #if defined(TEST_FIRMWARE)                                           // building for RAM testing
 static_assert(sizeof(xansiterm_data) <= 128, "data too big");        // fit in reserved space at 0x0500
 // NOTE: address must be < 32KB, attribute is a bit of a hack (causes warning about section attributes)
-xansiterm_data                                                _private_xansiterm_data __attribute__((section(".text")));
+xansiterm_data                                                _private_xansiterm_data;
 static inline __attribute__((always_inline)) xansiterm_data * get_xansi_data()
 {
     xansiterm_data * ptr;
-    __asm__ __volatile__("   lea.l   _private_xansiterm_data.w,%[ptr]" : [ptr] "=a"(ptr));
+    __asm__ __volatile__("   lea.l   _private_xansiterm_data,%[ptr]" : [ptr] "=a"(ptr));
     return ptr;
 }
 #define xansi_memset(p, n) memset(p, 0, n)        // use regular memset

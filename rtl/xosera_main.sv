@@ -411,23 +411,57 @@ video_blend video_blend(
     assign { red_o, green_o, blue_o }   = dv_de ? colorA_xrgb[11:0] : '0;
 `endif
 
+// interrupt handling
 always_comb intr_trigger = { video_intr, timer_intr, blit_intr, audio_intr };
 
-// interrupt handling
 always_ff @(posedge clk) begin
     if (reset_i) begin
         bus_intr_o  <= 1'b0;
         intr_status <= 4'b0;
     end else begin
         // generate bus interrupt if signal bit set, not masked and not already set
-        if ((({ video_intr, timer_intr, blit_intr, audio_intr } & intr_mask) & (~intr_status)) != 4'b0) begin
+        if (((intr_trigger & intr_mask) & (~intr_status)) != 4'b0) begin
             bus_intr_o  <= 1'b1;
         end else begin
             bus_intr_o  <= 1'b0;
         end
         // remember interrupt signal and clear acknowledged interrupts
-        intr_status <= (intr_status | { video_intr, timer_intr, blit_intr, audio_intr }) & (~intr_clear);
+        intr_status <= (intr_status | intr_trigger) & (~intr_clear);
     end
+end
+
+// display configuration info at build time
+initial begin
+        $display("   XOSERA xosera_info:            \"%s\"", xv::info_str);
+`ifdef EN_AUDIO
+        $display("   XOSERA configuration:          MODE_%s %s%s%sAUD%x",
+`else
+        $display("   XOSERA configuration:          MODE_%s %s%s%s",
+`endif
+            `VIDEO_MODE_NAME,
+`ifdef EN_PF_B
+`ifdef EN_PF_B_BLEND
+            "PF_B BLND ",
+`else
+            "PF_B ",
+`endif
+`else
+            "",
+`endif
+`ifdef EN_COPP
+            "COPP ",
+`else
+            "",
+`endif
+`ifdef EN_BLIT
+            "BLIT "
+`else
+            ""
+`endif
+`ifdef EN_AUDIO
+            , 4'(`EN_AUDIO)
+`endif
+        );
 end
 
 endmodule

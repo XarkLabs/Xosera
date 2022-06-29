@@ -130,10 +130,12 @@ localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;               // memory pr
 localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fetch can end a bit early
 
 // debug signals
+`ifndef __ICARUS__  // NOTE: this makes icarus assert...
 /* verilator lint_off UNUSED */
 xv::xr_register_t   xr_reg_enum;
 assign xr_reg_enum = vgen_reg_wr_en_i ? $bits(xr_reg_enum)'(vgen_reg_num_i) : xv::XR_none;
 /* verilator lint_off UNUSED */
+`endif
 
 // sync generation signals (and combinatorial logic "next" versions)
 
@@ -253,7 +255,7 @@ video_playfield video_pf_a(
     .dma_req_i(1'b0),
     .dma_ack_o(),
     .dma_tile_i(1'b0),
-    .dma_addr_i(0),
+    .dma_addr_i(16'b0),
     .dma_word_o(),
 `endif
     .reset_i(reset_i),
@@ -334,7 +336,7 @@ video_playfield video_pf_a(
         .dma_req_i(1'b0),
         .dma_ack_o(),
         .dma_tile_i(1'b0),
-        .dma_addr_i(0),
+        .dma_addr_i(16'b0),
         .dma_word_o(),
 
         .reset_i(reset_i),

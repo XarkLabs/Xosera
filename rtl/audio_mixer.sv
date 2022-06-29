@@ -79,7 +79,6 @@ logic [AUDIO_NCHAN-1:0]             chan_buff_ok;       // DMA buffer has data
 logic [AUDIO_NCHAN-1:0]             chan_fetch;         // channel DMA fetch flag
 logic [AUDIO_NCHAN-1:0]             chan_tile;          // current sample memtile flag
 logic [8*AUDIO_NCHAN-1:0]           chan_val;           // current channel value sent to DAC
-logic [8*AUDIO_NCHAN-1:0]           chan_val2;          // current channel value sent to DAC
 logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  chan_addr;          // current sample address
 logic [16*AUDIO_NCHAN-1:0]          chan_buff;          // channel DMA word buffer
 logic [16*AUDIO_NCHAN-1:0]          chan_length;        // audio sample byte length counter (15=underflow flag)
@@ -136,7 +135,6 @@ always_ff @(posedge clk) begin : chan_process
         fetch_phase         <= AUD_FETCH_DMA;
 
         chan_val            <= '0;
-        chan_val2           <= '0;
         chan_addr           <= '0;
         chan_buff           <= '0;
         chan_period         <= '0;
@@ -159,14 +157,13 @@ always_ff @(posedge clk) begin : chan_process
             if (chan_output[i]) begin
                 chan_2nd[i]             <= !chan_2nd[i];
                 chan_period[16*i+:16]   <= { 1'b0, audio_period_nchan_i[i*15+:15] };
-                chan_val[i*8+:8]        <= chan_2nd[i] ? chan_val2[8*i+:8] : chan_buff[16*i+8+:8];
-                chan_val2[i*8+:8]       <= chan_buff[16*i+:8];
-                chan_buff_ok[i]         <= 1'b0;
+                chan_val[i*8+:8]        <= chan_2nd[i] ? chan_buff[16*i+:8] : chan_buff[16*i+8+:8];
                 // if 2nd sample of sample word, prepare sample address
                 if (chan_2nd[i]) begin
 `ifndef SYNTHESIS
-                    chan_val2[8*i+7]    <= ~chan_val2[8*i+7];  // obvious "glitch" to verify not used again
+                    chan_buff[16*i+:16] <= chan_buff[16*i+:16] ^ 16'h8080;  // obvious "glitch" to verify not used again
 `endif
+                    chan_buff_ok[i]     <= 1'b0;
                     chan_fetch[i]       <= 1'b1;
                     // if length already underflowed, or will next cycle
                     if (chan_length[16*i+15] || chan_length_n[i][15]) begin

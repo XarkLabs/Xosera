@@ -40,7 +40,7 @@ module audio_mixer (
     input wire  logic           clk
 );
 
-localparam  CHAN_W      = $clog2(AUDIO_NCHAN-1);    // NOTE: must have > 1 channel
+localparam  CHAN_W      = $clog2(AUDIO_NCHAN);
 localparam  DAC_W       = 8;
 localparam  ACC_W       = 18;
 localparam  VOL_SHIFT   = 6;
@@ -56,9 +56,10 @@ typedef enum {
 } audio_mix_ph;
 
 logic [CHAN_W-1:0]                  fetch_chan;
-audio_fetch_ph                      fetch_phase;
-
 logic [CHAN_W-1:0]                  mix_chan;
+//logic                               fetch_chan;
+//logic                               mix_chan;
+audio_fetch_ph                      fetch_phase;
 audio_mix_ph                        mix_phase;
 
 sbyte_t                             mix_val_temp;

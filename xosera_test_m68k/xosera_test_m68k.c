@@ -52,6 +52,7 @@ extern void install_intr(void);
 extern void remove_intr(void);
 
 extern volatile uint32_t XFrameCount;
+extern volatile uint16_t NukeColor;
 
 bool use_sd;
 
@@ -1069,6 +1070,7 @@ void test_blit()
     xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640 - 4);
     xreg_setw(VID_CTRL, 0x00FF);
 
+    bool no_blitter = false;
     do
     {
         xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 8-bpp + Hx1 + Vx1
@@ -1102,9 +1104,21 @@ void test_blit()
             xreg_setw(BLIT_SHIFT, 0xFF00);             // no edge masking or shifting
             xreg_setw(BLIT_LINES, 0x0000);             // 1D
             xreg_setw(BLIT_WORDS, 0x10000 - 1);        // 64KW VRAM
+            // assume no blitter if "instantly" done
+            if (!xm_get_sys_ctrlb(BLIT_BUSY))
+            {
+                no_blitter = true;
+                break;
+            }
             xwait_blit_done();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xff00);        // set write address
             xwait_vblank();
+        }
+
+        if (no_blitter)
+        {
+            dprintf("No blit unit detected.\n");
+            return;
         }
 
         uint16_t daddr = 0x1000;
@@ -2116,6 +2130,7 @@ void wait_scanline()
 
 #define SILENCE_VADDR 0xffff        // end of VRAM (or TILE)
 #define SILENCE_TILE  0x8000        // tilemem flag
+#define SILENCE_LEN   1             // 1 word (two samples)
 
 static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 {
@@ -2123,33 +2138,52 @@ static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
     if (channels != 0)
     {
         dprintf("Initial INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
+        uint16_t ic = xm_getw(INT_CTRL);
+        xm_setw(INT_CTRL, ic | INT_CTRL_CLEAR_ALL_F);
+        ic = xm_getw(INT_CTRL);
+        dprintf("Cleared INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
+
         uint32_t clk_hz = xreg_getw(VID_HSIZE) > 640 ? 33750000 : 25125000;
         uint16_t period = (clk_hz + rate - 1) / rate;
 
         for (int v = 0; v < 4; v++)
         {
-            dprintf("Playing Channel %d\n", v);
-            xreg_setw(AUD0_START + (v * 4), vaddr);
-            xreg_setw(AUD0_LENGTH + (v * 4), (len / 2) - 1);
-            xreg_setw(AUD0_PERIOD + (v * 4), period | 0x8000);        // force instant sample start
+            if (channels & (1 << v))
+            {
+                ic = xm_getw(INT_CTRL);
+                dprintf("Starting channel %d... INT_CTRL = 0x%04x\n", v, ic);
+                xreg_setw(AUD0_START + (v * 4), vaddr);
+                xreg_setw(AUD0_LENGTH + (v * 4), (len / 2) - 1);
+                xreg_setw(AUD0_PERIOD + (v * 4), period | 0x8000);        // force instant sample start
+                ic = xm_getw(INT_CTRL);
 
-            xreg_setw(AUD0_LENGTH + (v * 4), SILENCE_TILE | (1 - 1));        // length 1 -1 and TILE flag
-            xreg_setw(AUD0_START + (v * 4), SILENCE_VADDR);                  // queue silence
+                xreg_setw(AUD0_LENGTH + (v * 4), SILENCE_TILE | (SILENCE_LEN - 1));        // length-1 and TILE flag
+                xreg_setw(AUD0_START + (v * 4), SILENCE_VADDR);                            // queue silence
 
-            dprintf("Audio Channel %d started INT_CTRL = 0x%04x...\n", v, xm_getw(INT_CTRL));
+                xm_setw(INT_CTRL, ic | (INT_CTRL_AUD0_INTR_F << v));        // clear voice interrupt status
 
-            delay_check(1200);
-            period -= 350;
+                ic = xm_getw(INT_CTRL);
+                dprintf("Started               INT_CTRL = 0x%04x\n", ic);
+
+                delay_check(250);
+                period += 350;
+            }
         }
 
-        // AUD_CTRL high byte = channel start/len load pending, low byte = channel enables
-        dprintf("Before waiting INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
-
-        // wait for all channels to be ready (after they have started SILENCE)
-        while ((xm_getw(INT_CTRL) & (channels << 4)) == 0)
+        // wait for each channels to be ready (after they have started SILENCE)
+        for (int v = 0; v < 4; v++)
         {
+            if (channels & (1 << v))
+            {
+                ic = xm_getw(INT_CTRL);
+                dprintf("Waiting channel  %d... INT_CTRL = 0x%04x\n", v, ic);
+                do
+                {
+                    ic = xm_getw(INT_CTRL);
+                } while ((ic & (1 << (INT_CTRL_AUD0_INTR_B + v))) == 0);
+                dprintf("Finished              INT_CTRL = 0x%04x\n", ic);
+            }
         }
-        dprintf("Audio Finished INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
     }
     else
     {
@@ -2162,24 +2196,24 @@ static void upload_audio(void * memdata, uint16_t vaddr, int len)
     xm_setw(WR_XADDR, vaddr);
     xm_setw(XDATA, 0);
 
-    xreg_setw(AUD0_VOL, 0x4040);
+    xreg_setw(AUD0_VOL, 0x8080);
     xreg_setw(AUD0_PERIOD, 0x7FFF);
-    xreg_setw(AUD0_LENGTH, 0x8000 | 0);
+    xreg_setw(AUD0_LENGTH, 0x8000 | (SILENCE_LEN - 1));
     xreg_setw(AUD0_START, SILENCE_VADDR);
 
-    xreg_setw(AUD1_VOL, 0x4040);
+    xreg_setw(AUD1_VOL, 0x8080);
     xreg_setw(AUD1_PERIOD, 0x7FFF);
-    xreg_setw(AUD1_LENGTH, 0x8000 | 0);
+    xreg_setw(AUD1_LENGTH, 0x8000 | (SILENCE_LEN - 1));
     xreg_setw(AUD1_START, SILENCE_VADDR);
 
-    xreg_setw(AUD2_VOL, 0x4040);
+    xreg_setw(AUD2_VOL, 0x8080);
     xreg_setw(AUD2_PERIOD, 0x7FFF);
-    xreg_setw(AUD2_LENGTH, 0x8000 | 0);
+    xreg_setw(AUD2_LENGTH, 0x8000 | (SILENCE_LEN - 1));
     xreg_setw(AUD2_START, SILENCE_VADDR);
 
-    xreg_setw(AUD3_VOL, 0x4040);
+    xreg_setw(AUD3_VOL, 0x8080);
     xreg_setw(AUD3_PERIOD, 0x7FFF);
-    xreg_setw(AUD3_LENGTH, 0x8000 | 0);
+    xreg_setw(AUD3_LENGTH, 0x8000 | (SILENCE_LEN - 1));
     xreg_setw(AUD3_START, SILENCE_VADDR);
 
     xreg_setw(AUD_CTRL, 0x000F);
@@ -2358,9 +2392,7 @@ void     xosera_test()
         readchar();
     }
     xv_prep();
-    xm_setw(TIMER, 0xB007);
-    cpu_delay(3000);
-
+    cpu_delay(1000);
 
     dprintf("\nBegin...\n");
 
@@ -2447,10 +2479,14 @@ void     xosera_test()
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
 
-#if 0
-    dprintf("Installing interrupt handler...using TIMER");
+#if 1
+    uint16_t ic = xm_getw(INT_CTRL);
+    dprintf("Installing interrupt handler.  INT_CTRL=0x%04x\n", ic);
     install_intr();
-    dprintf("okay.\n");
+    xm_setw(TIMER, 10 - 1);        // color cycle twice a second as TIMER_INTR test
+    ic = xm_getw(INT_CTRL);
+    dprintf("Done.                          INT_CTRL=0x%04x\n", ic);
+
 #else
     dprintf("NOT Installing interrupt handler\n");
 #endif
@@ -2520,17 +2556,27 @@ void     xosera_test()
         dprintf("\n");
 
 #if COPPER_TEST
-        if (test_count & 1)
-        {
-            dprintf("Copper test disabled for this iteration.\n");
-            xreg_setw(COPP_CTRL, 0x0000);
-        }
-        else
+        if (test_count & 2)
         {
             dprintf("Copper test enabled for this interation.\n");
             xreg_setw(COPP_CTRL, 0x8000);
         }
+        else
+        {
+            dprintf("Copper test disabled for this iteration.\n");
+            xreg_setw(COPP_CTRL, 0x0000);
+        }
 #endif
+        if (test_count & 1)
+        {
+            dprintf("Color cycling enabled for this iteration.\n");
+            NukeColor = 0;
+        }
+        else
+        {
+            dprintf("Color cycling disabled for this iteration.\n");
+            NukeColor = 0xffff;
+        }
 
         wait_vblank_start();
         restore_colors();

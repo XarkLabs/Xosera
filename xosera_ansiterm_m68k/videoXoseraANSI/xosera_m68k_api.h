@@ -76,9 +76,8 @@
 // uint16_t xmem_getw_next()
 // uint16_t xmem_getw_wait(xrmem)
 // uint16_t xmem_getw_next_wait()
-
 // wait for status (busy wait until condition true)
-// NOTE: May hang if Xosera not present/operating
+// NOTE: May hang if condition not met (or Xosera not present/operating)
 // void     xwait_ctrl_bit(bit_name)
 // void     xwait_not_ctrl_bit(bit_name)
 // void     xwait_mem_ready()

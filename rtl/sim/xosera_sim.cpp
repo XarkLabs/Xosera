@@ -459,14 +459,14 @@ uint16_t     BusInterface::test_data[32768] = {
 
     REG_WAITHSYNC(),
 
-    REG_W(INT_CTRL, 0x0F0F),
-    REG_W(TIMER, 166 - 1),        // timer interupt interval -1
+    REG_W(INT_CTRL, 0x7FFF),
+    REG_W(TIMER, 10 - 1),        // timer interupt interval -1
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
     REG_RW(INT_CTRL),
-    REG_W(INT_CTRL, 0x0F0F),
+    REG_W(INT_CTRL, 0x7FFF),
     REG_RW(INT_CTRL),
 
 #if 0
@@ -888,7 +888,7 @@ uint16_t     BusInterface::test_data[32768] = {
     XREG_SETW(AUD3_LENGTH, 0x007F),
     XREG_SETW(AUD3_START, 0xFF00),
 
-    XREG_SETW(AUD0_VOL, 0x4020),
+    XREG_SETW(AUD0_VOL, 0x8040),
     XREG_SETW(AUD1_VOL, 0x0000),
     XREG_SETW(AUD2_VOL, 0x0000),
     XREG_SETW(AUD3_VOL, 0x0000),
@@ -899,6 +899,12 @@ uint16_t     BusInterface::test_data[32768] = {
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    REG_WAITHSYNC(),
+    XREG_SETW(AUD0_START, 0xFF00),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
@@ -906,8 +912,8 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
-    XREG_SETW(AUD0_VOL, 0x4020),
-    XREG_SETW(AUD1_VOL, 0x4020),
+    XREG_SETW(AUD0_VOL, 0x8040),
+    XREG_SETW(AUD1_VOL, 0x8040),
     XREG_SETW(AUD2_VOL, 0x0000),
     XREG_SETW(AUD3_VOL, 0x0000),
 
@@ -930,9 +936,9 @@ uint16_t     BusInterface::test_data[32768] = {
 
     REG_RW(INT_CTRL),
 
-    XREG_SETW(AUD0_VOL, 0x4020),
-    XREG_SETW(AUD1_VOL, 0x4020),
-    XREG_SETW(AUD2_VOL, 0x4020),
+    XREG_SETW(AUD0_VOL, 0x8040),
+    XREG_SETW(AUD1_VOL, 0x8040),
+    XREG_SETW(AUD2_VOL, 0x8040),
     XREG_SETW(AUD3_VOL, 0x0000),
 
     XREG_SETW(AUD_CTRL, 0x0000),
@@ -952,10 +958,10 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
-    XREG_SETW(AUD0_VOL, 0x4020),
-    XREG_SETW(AUD1_VOL, 0x4020),
-    XREG_SETW(AUD2_VOL, 0x4020),
-    XREG_SETW(AUD3_VOL, 0x4020),
+    XREG_SETW(AUD0_VOL, 0x8040),
+    XREG_SETW(AUD1_VOL, 0x8040),
+    XREG_SETW(AUD2_VOL, 0x8040),
+    XREG_SETW(AUD3_VOL, 0x8040),
 
     XREG_SETW(AUD_CTRL, 0x0000),
     REG_WAITHSYNC(),
@@ -974,7 +980,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
-    XREG_SETW(AUD0_VOL, 0x0100),
+    XREG_SETW(AUD0_VOL, 0x0200),        // minimum
     XREG_SETW(AUD1_VOL, 0x0000),
     XREG_SETW(AUD2_VOL, 0x0000),
     XREG_SETW(AUD3_VOL, 0x0000),

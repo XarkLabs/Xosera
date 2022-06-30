@@ -195,10 +195,13 @@ typedef enum logic [6:0] {
 } xr_register_t;
 
 typedef enum integer {
-    VIDEO_INTR      = 3,                // v-blank or copper
-    TIMER_INTR      = 2,                // timer match
-    BLIT_INTR       = 1,                // blitter ready
-    AUDIO_INTR      = 0                 // audio ready
+    AUD0_INTR       = 0,                // audio ready
+    AUD1_INTR       = 1,                // audio ready
+    AUD2_INTR       = 2,                // audio ready
+    AUD3_INTR       = 3,                // audio ready
+    VIDEO_INTR      = 4,                // v-blank or copper
+    TIMER_INTR      = 5,                // timer match
+    BLIT_INTR       = 6                 // blitter ready
 } intr_bit_t;
 
 typedef enum logic [1:0] {
@@ -522,7 +525,7 @@ typedef logic signed [15:0]                     sword_t;        // word size (16
 typedef logic [31:0]                            long_t;         // long size (32-bit)
 typedef logic [15:0]                            argb_t;         // ARGB color (16-bit)
 typedef logic [11:0]                            rgb_t;          // RGB color (12-bit)
-typedef logic [3:0]                             intr_t;         // interrupt bits
+typedef logic [6:0]                             intr_t;         // interrupt bits
 
 typedef logic [xv::VRAM_W-1:0]                  addr_t;         // vram or xmem address (16-bit)
 typedef logic [xv::TILE_W-1:0]                  tile_addr_t;    // tile address

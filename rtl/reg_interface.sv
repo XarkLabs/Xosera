@@ -46,9 +46,6 @@ module reg_interface (
     output      intr_t           intr_mask_o,       // enabled interrupts (which signal CPU interrupt)
     output      intr_t           intr_clear_o,      // pending interrupts CPU acknowledge (clear)
     input  wire intr_t           intr_status_i,     // pending interrupts CPU status read
-`ifdef EN_AUDIO
-    input  wire logic [AUDIO_NCHAN-1:0] audio_ready_i, // audio channels that need new START
-`endif
 
 `ifdef BUS_DEBUG_SIGNALS
     output      logic            bus_ack_o,         // ACK strobe for bus debug
@@ -79,8 +76,6 @@ word_t          reg_timer_cmp;          // timer compare interrupt
 `endif
 logic [TIMER_FRAC-1:0] reg_timer_frac;  // internal fraction counter for 1/10 ms
 
-intr_t         intr_mask;              // interrupt mask
-
 // read flags
 logic           xr_rd;                  // flag for XR_DATA read outstanding
 logic           vram_rd;                // flag for DATA read outstanding
@@ -97,9 +92,6 @@ byte_t          reg_data_even;          // byte written to even byte of XM_DATA/
 
 logic mem_wait;
 assign mem_wait    = regs_wr_o | xr_rd | vram_rd;
-
-// output interrupt mask
-assign intr_mask_o = intr_mask;
 
 `ifdef BUS_DEBUG_SIGNALS    // debug "ack" bus strobe
 assign bus_ack_o = (bus_write_strobe | bus_read_strobe);
@@ -135,11 +127,7 @@ always_comb begin
             rd_temp_word  = { mem_wait, 1'b0, 1'b0, 1'b0, h_blank_i, v_blank_i, 1'b0, 1'b0, 4'b0, regs_wrmask_o };
 `endif
         xv::XM_INT_CTRL:
-`ifdef EN_AUDIO
-            rd_temp_word  = { 4'b0, intr_mask, 4'(audio_ready_i), intr_status_i };      // FIXME: audio_ready_i reading as zeros always on FPGA?
-`else
-            rd_temp_word  = { 4'b0, intr_mask, 4'(0), intr_status_i };
-`endif
+            rd_temp_word  = { 1'b0, intr_mask_o, 1'b0, intr_status_i };
         xv::XM_TIMER:
             rd_temp_word  = { reg_timer[15:8], timer_latch_val };
         xv::XM_RD_XADDR:
@@ -200,7 +188,7 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         // control signal strobes
         reconfig_o      <= 1'b0;
-        intr_clear_o    <= 4'b0000;
+        intr_clear_o    <= '0;
 
         // control signals
         regs_vram_sel_o <= 1'b0;
@@ -221,7 +209,7 @@ always_ff @(posedge clk) begin
         reg_wr_addr     <= 16'h0000;
         reg_wr_incr     <= 16'h0000;
         regs_wrmask_o   <= 4'b1111;
-        intr_mask       <= 4'b0000;
+        intr_mask_o       <= '0;
 
         // temp registers
         timer_latch_val <= 8'h00;
@@ -237,7 +225,7 @@ always_ff @(posedge clk) begin
 
     end else begin
         // clear strobe signals
-        intr_clear_o    <= 4'b0000;
+        intr_clear_o    <= '0;
 
         // VRAM access acknowledge
         if (vram_ack_i) begin
@@ -285,9 +273,9 @@ always_ff @(posedge clk) begin
                 xv::XM_INT_CTRL: begin
                     if (!bus_bytesel) begin
                         reconfig_o          <= bus_data_byte[7];
-                        intr_mask           <= bus_data_byte[3:0];
+                        intr_mask_o         <= bus_data_byte[6:0];
                     end else begin
-                        intr_clear_o        <= bus_data_byte[3:0];
+                        intr_clear_o        <= bus_data_byte[6:0];
                     end
                 end
                 xv::XM_TIMER: begin

@@ -5,7 +5,7 @@
             "name": "VRAM nibble write mask",
             "type": 2,
             "attr": [
-                "<tt>XM_DATA*</tt>/<tt>XM_RW_DATA*</tt>",
+                "<tt>XM_DATA/XM_DATA_2</tt>",
                 "VRAM word nibble mask",
                 "<tt>0</tt>=mask write to nibble",
                 "<tt>1</tt>=allow write to nibble"
@@ -17,20 +17,7 @@
             "type": 1
         },
         {
-            "bits": 1,
-            "name": "rdrwinc",
-            "type": 4,
-            "attr": [
-                "read of",
-                "<tt>XM_RW_DATA</tt>",
-                "adds",
-                "<tt>XM_RW_INCR</tt>",
-                "<tt>0</tt>=no",
-                "<tt>1</tt>=yes"
-            ]
-        },
-        {
-            "bits": 1,
+            "bits": 2,
             "name": "0",
             "type": 1
         },

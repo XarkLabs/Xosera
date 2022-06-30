@@ -708,7 +708,7 @@ always_ff @(posedge clk) begin
             if (vgen_reg_wr_en_i) begin
                 case (7'(vgen_reg_num_i))
                     7'(xv::XR_AUD0_VOL+7'(i*4)):
-                        { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[14:8], vgen_reg_data_i[6:0] }; // 7-bit vol 0x40 = 1.0
+                        { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] }; // 7-bit vol 0x80 = 1.0
                     7'(xv::XR_AUD0_PERIOD+7'(i*4)):
                         { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
                     7'(xv::XR_AUD0_LENGTH+7'(i*4)):

@@ -2196,22 +2196,22 @@ static void upload_audio(void * memdata, uint16_t vaddr, int len)
     xm_setw(WR_XADDR, vaddr);
     xm_setw(XDATA, 0);
 
-    xreg_setw(AUD0_VOL, 0x4040);
+    xreg_setw(AUD0_VOL, 0x8080);
     xreg_setw(AUD0_PERIOD, 0x7FFF);
     xreg_setw(AUD0_LENGTH, 0x8000 | (SILENCE_LEN - 1));
     xreg_setw(AUD0_START, SILENCE_VADDR);
 
-    xreg_setw(AUD1_VOL, 0x4040);
+    xreg_setw(AUD1_VOL, 0x8080);
     xreg_setw(AUD1_PERIOD, 0x7FFF);
     xreg_setw(AUD1_LENGTH, 0x8000 | (SILENCE_LEN - 1));
     xreg_setw(AUD1_START, SILENCE_VADDR);
 
-    xreg_setw(AUD2_VOL, 0x4040);
+    xreg_setw(AUD2_VOL, 0x8080);
     xreg_setw(AUD2_PERIOD, 0x7FFF);
     xreg_setw(AUD2_LENGTH, 0x8000 | (SILENCE_LEN - 1));
     xreg_setw(AUD2_START, SILENCE_VADDR);
 
-    xreg_setw(AUD3_VOL, 0x4040);
+    xreg_setw(AUD3_VOL, 0x8080);
     xreg_setw(AUD3_PERIOD, 0x7FFF);
     xreg_setw(AUD3_LENGTH, 0x8000 | (SILENCE_LEN - 1));
     xreg_setw(AUD3_START, SILENCE_VADDR);

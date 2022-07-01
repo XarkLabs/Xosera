@@ -17,7 +17,7 @@
 // TODO: try packed struct
 
 module audio_mixer (
-    input  wire logic [AUDIO_NCHAN-1:0]             audio_enable_nchan_i,
+    input  wire logic                               audio_enable_i,
     input  wire logic [7*AUDIO_NCHAN-1:0]           audio_vol_l_nchan_i,    // TODO: VOL_W
     input  wire logic [7*AUDIO_NCHAN-1:0]           audio_vol_r_nchan_i,
     input  wire logic [15*AUDIO_NCHAN-1:0]          audio_period_nchan_i,   // TODO: PERIOD_W
@@ -168,7 +168,7 @@ always_ff @(posedge clk) begin : chan_process
                     // if length already underflowed, or will next cycle
                     if (chan_length[16*i+15] || chan_length_n[i][15]) begin
                         // if restart, reload sample parameters from registers
-                        chan_tile[i]        <= audio_tile_nchan_i[i];
+                        chan_tile[i]                        <= audio_tile_nchan_i[i];
                         chan_addr[i*xv::VRAM_W+:xv::VRAM_W] <= audio_start_nchan_i[i*xv::VRAM_W+:xv::VRAM_W];
                         chan_length[16*i+:16]               <= { 1'b0, audio_len_nchan_i[i*15+:15] };
                         audio_reload_nchan_o[i]             <= 1'b1;            // set reload/ready strobe
@@ -187,11 +187,10 @@ always_ff @(posedge clk) begin : chan_process
                 chan_2nd[i]             <= 1'b1;    // set 2nd sample to switch next sendout
             end
 
-            if (!audio_enable_nchan_i[i]) begin
+            if (!audio_enable_i) begin
                 chan_length[16*i+15]    <= 1'b1;    // force sample addr, tile, len reload
                 chan_period[16*i+15]    <= 1'b1;    // force sample period expire
-                chan_2nd[i]             <= 1'b0;    // set 2nd sample to switch next sendout
-//                chan_val[i]             <= '0;      // silent if disabled   // TODO: is this desirable?
+                chan_2nd[i]             <= 1'b0;    // set 1nd sample for next sendout
             end
         end
 
@@ -204,6 +203,7 @@ always_ff @(posedge clk) begin : chan_process
                     end
                     audio_tile_o    <= chan_tile[fetch_chan];
                     audio_addr_o    <= chan_addr[fetch_chan*xv::VRAM_W+:xv::VRAM_W];
+
                     fetch_phase     <= AUD_FETCH_READ;
             end
             // if chan_fetch, wait for ack, latch new word if ack, get ready to mix channel
@@ -214,16 +214,14 @@ always_ff @(posedge clk) begin : chan_process
                         chan_fetch[fetch_chan]          <= 1'b0;
                         chan_buff[16*fetch_chan+:16]    <= audio_word_i;
                         chan_buff_ok[fetch_chan]        <= 1'b1;
+                        fetch_chan                      <= fetch_chan + 1'b1;
 
-                        fetch_chan          <= fetch_chan + 1'b1;
                         fetch_phase         <= AUD_FETCH_DMA;
                     end
                 end else begin
-                    if (AUDIO_NCHAN > 1) begin
-                        fetch_chan          <= fetch_chan + 1'b1;
-                    end
+                    fetch_chan          <= fetch_chan + 1'b1;
 
-                    fetch_phase           <= AUD_FETCH_DMA;
+                    fetch_phase         <= AUD_FETCH_DMA;
                 end
             end
         endcase

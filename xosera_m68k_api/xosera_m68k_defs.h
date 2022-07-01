@@ -103,10 +103,10 @@
 #define INT_CTRL_BLIT_EN_B    14        // blitter ready interrupt mask
 #define INT_CTRL_TIMER_EN_B   13        // timer match interrupt mask
 #define INT_CTRL_VIDEO_EN_B   12        // v-blank or copper interrupt mask
-#define INT_CTRL_AUD3_EN_B    11        // audio channel 3 ready (START addr was loaded) // TODO: move these
-#define INT_CTRL_AUD2_EN_B    10        // audio channel 2 ready (START addr was loaded) // TODO: move these
-#define INT_CTRL_AUD1_EN_B    9         // audio channel 1 ready (START addr was loaded) // TODO: move these
-#define INT_CTRL_AUD0_EN_B    8         // audio channel 0 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_AUD3_EN_B    11        // audio channel 3 ready (START addr was loaded)
+#define INT_CTRL_AUD2_EN_B    10        // audio channel 2 ready (START addr was loaded)
+#define INT_CTRL_AUD1_EN_B    9         // audio channel 1 ready (START addr was loaded)
+#define INT_CTRL_AUD0_EN_B    8         // audio channel 0 ready (START addr was loaded)
 #define INT_CTRL_UNUSED_7_B   7         // timer match read interrupt (status, write acknowledge)
 #define INT_CTRL_BLIT_INTR_B  6         // blitter ready interrupt (read status, write acknowledge)
 #define INT_CTRL_TIMER_INTR_B 5         // timer match read interrupt (status, write acknowledge)
@@ -117,14 +117,15 @@
 #define INT_CTRL_AUD0_INTR_B  0         // audio channel ready interrupt (read status, write acknowledge)
 // INT_CTRL bit flags
 #define INT_CTRL_RECONFIG_F   0x8000        // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
-#define INT_CTRL_BLIT_EN_F    0x4000        // blitter ready interrupt mask
-#define INT_CTRL_TIMER_EN_F   0x2000        // timer match interrupt mask
-#define INT_CTRL_VIDEO_EN_F   0x1000        // v-blank or copper interrupt mask
-#define INT_CTRL_AUD3_EN_F    0x0800        // audio channel 3 ready (START addr was loaded) // TODO: move these
-#define INT_CTRL_AUD2_EN_F    0x0400        // audio channel 2 ready (START addr was loaded) // TODO: move these
-#define INT_CTRL_AUD1_EN_F    0x0200        // audio channel 1 ready (START addr was loaded) // TODO: move these
-#define INT_CTRL_AUD0_EN_F    0x0100        // audio channel 0 ready (START addr was loaded) // TODO: move these
-#define INT_CTRL_EN_ALL_F     0x7F00        // audio channel 0 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_BLIT_EN_F    0x4000        // blitter ready interrupt enable
+#define INT_CTRL_TIMER_EN_F   0x2000        // timer match interrupt enable
+#define INT_CTRL_VIDEO_EN_F   0x1000        // v-blank or copper interrupt enable
+#define INT_CTRL_AUD3_EN_F    0x0800        // audio channel 3 interrupt enable
+#define INT_CTRL_AUD2_EN_F    0x0400        // audio channel 2 interrupt enable
+#define INT_CTRL_AUD1_EN_F    0x0200        // audio channel 1 interrupt enable
+#define INT_CTRL_AUD0_EN_F    0x0100        // audio channel 0 interrupt enable
+#define INT_CTRL_AUD_ALL_EN_F 0x0F00        // all audio channel interrupts enable
+#define INT_CTRL_EN_ALL_F     0x7F00        // enable all interrupts
 #define INT_CTRL_UNUSED_7_F   0x0080        // timer match read interrupt (status, write acknowledge)
 #define INT_CTRL_BLIT_INTR_F  0x0040        // blitter ready interrupt (read status, write acknowledge)
 #define INT_CTRL_TIMER_INTR_F 0x0020        // timer match read interrupt (status, write acknowledge)
@@ -133,7 +134,8 @@
 #define INT_CTRL_AUD2_INTR_F  0x0004        // audio channel ready interrupt (read status, write acknowledge)
 #define INT_CTRL_AUD1_INTR_F  0x0002        // audio channel ready interrupt (read status, write acknowledge)
 #define INT_CTRL_AUD0_INTR_F  0x0001        // audio channel ready interrupt (read status, write acknowledge)
-#define INT_CTRL_CLEAR_ALL_F  0x007F        // audio channel 0 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_AUD_ALL_F    0x000F        // all audio channels status/acknowledge
+#define INT_CTRL_CLEAR_ALL_F  0x007F        // clear all interrupts
 
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 

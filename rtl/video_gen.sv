@@ -176,7 +176,7 @@ video_timing video_timing
 
 `ifdef EN_AUDIO
 // audio
-logic [AUDIO_NCHAN-1:0]             audio_enable_nchan;     // channel enabled
+logic                               audio_enable;           // all channel enable
 logic [7*AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
 logic [7*AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
 logic [15*AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
@@ -399,9 +399,7 @@ always_ff @(posedge clk) begin
 `endif
 
 `ifdef EN_AUDIO
-        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-            audio_enable_nchan[i] <= 1'b0;
-        end
+        audio_enable        <= 1'b0;
 `endif
 
 `ifndef SYNTHESIS
@@ -437,9 +435,7 @@ always_ff @(posedge clk) begin
                 end
                 6'(xv::XR_AUD_CTRL): begin
 `ifdef EN_AUDIO
-                for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-                    audio_enable_nchan[i] <= vgen_reg_data_i[i];
-                end
+                audio_enable        <= vgen_reg_data_i[0];
 `endif
                 end
                 6'(xv::XR_VID_INTR): begin
@@ -568,9 +564,7 @@ always_comb begin
         4'(xv::XR_AUD_CTRL): begin
             rd_vid_regs     = '0;
 `ifdef EN_AUDIO
-            for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-                rd_vid_regs[i]    = audio_enable_nchan[i];
-            end
+            rd_vid_regs[0]  = audio_enable;
 `endif
         end
         4'(xv::XR_VID_LEFT):        rd_vid_regs = 16'(vid_left);
@@ -642,7 +636,7 @@ end
 `ifdef EN_AUDIO
 // audio channel mixer
 audio_mixer audio_mixer(
-    .audio_enable_nchan_i(audio_enable_nchan),
+    .audio_enable_i(audio_enable),
     .audio_vol_l_nchan_i(audio_vol_l_nchan),
     .audio_vol_r_nchan_i(audio_vol_r_nchan),
     .audio_period_nchan_i(audio_period_nchan),

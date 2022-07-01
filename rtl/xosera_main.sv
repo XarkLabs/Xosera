@@ -148,7 +148,7 @@ intr_t                  intr_clear;         // interrupt cleared by CPU (write o
 
 intr_t                  intr_trigger;       // true for each enabled interrupt (internal)
 `ifndef EN_AUDIO
-assign                  intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]    = 1'b0;
+assign                  intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]    = 4'b0000;
 `endif
 `ifndef EN_BLIT
 assign                  intr_trigger[xv::BLIT_INTR]     = 1'b0;
@@ -223,7 +223,9 @@ video_gen video_gen(
     .vgen_reg_data_i(xr_regs_data_in),
     .vgen_reg_data_o(xr_regs_data_out),
     .video_intr_o(intr_trigger[xv::VIDEO_INTR]),          // signaled by write to XR_VID_INTR
+`ifdef EN_AUDIO
     .audio_intr_o(intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]),          // signaled by audio channel ready
+`endif
     .vram_sel_o(vgen_vram_sel),
     .vram_addr_o(vgen_vram_addr),
     .vram_data_i(vram_data_out),

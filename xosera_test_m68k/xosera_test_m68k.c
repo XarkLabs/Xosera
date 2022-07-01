@@ -2132,10 +2132,87 @@ void wait_scanline()
 #define SILENCE_TILE  0x8000        // tilemem flag
 #define SILENCE_LEN   1             // 1 word (two samples)
 
+uint8_t num_audio_channels;
+uint8_t audio_channel_mask;
+
+static int init_audio()
+{
+    // upload word of silence
+    if (SILENCE_TILE)
+    {
+        xm_setw(WR_XADDR, SILENCE_VADDR);
+        xm_setw(XDATA, 0);
+    }
+    else
+    {
+        xm_setw(WR_ADDR, SILENCE_VADDR);
+        xm_setw(DATA, 0);
+    }
+
+    // play "really high pitch" silence to detect channels
+    for (int v = 0; v < 4; v++)
+    {
+        uint16_t vo = 1 << v;
+        xreg_setw(AUD0_VOL + vo, 0);
+        xreg_setw(AUD0_PERIOD + vo, 0);
+        xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));
+        xreg_setw(AUD0_START + vo, SILENCE_VADDR);
+    }
+
+    num_audio_channels = 0;
+    audio_channel_mask = 0;
+
+    xreg_setw(AUD_CTRL, 0x0001);        // enable audio
+    // check if audio fully disbled
+    uint8_t aud_ena = xreg_getw(AUD_CTRL) & 1;
+    if (!aud_ena)
+    {
+        dprintf("Xosera audio support disabled.\n");
+        return 0;
+    }
+
+    // channels should instantly trigger ready interrupt
+    audio_channel_mask = xm_getbl(INT_CTRL) & INT_CTRL_AUD_ALL_F;
+    while (audio_channel_mask & (1 << num_audio_channels))
+    {
+        num_audio_channels++;
+    }
+
+    if (num_audio_channels == 0)
+    {
+        dprintf("Strange... Xosera has audio support, but no channels?\n");
+    }
+
+    dprintf("Xosera audio channels = %d\n", num_audio_channels);
+
+    // set all channels to "full volume" silence at very slow period
+    for (int v = 0; v < 4; v++)
+    {
+        uint16_t vo = 1 << v;
+        xreg_setw(AUD0_VOL + vo, 0x8080);
+        xreg_setw(AUD0_PERIOD + vo, 0x8000 | 0x7FFF);
+        xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));
+        xreg_setw(AUD0_START + vo, SILENCE_VADDR);
+    }
+
+    return num_audio_channels;
+}
+
+static void upload_audio(void * memdata, uint16_t vaddr, int len)
+{
+    xm_setbl(SYS_CTRL, 0x0F);        // vram mask
+    xm_setw(WR_INCR, 0x0001);
+    xm_setw(WR_ADDR, vaddr);
+    uint16_t * wp = memdata;
+    for (int i = len; i > 0; i -= 2)
+    {
+        xm_setw(DATA, *wp++);
+    }
+}
+
 static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 {
-    uint16_t channels = xreg_getw(AUD_CTRL) & 0xF;
-    if (channels != 0)
+    if (num_audio_channels != 0)
     {
         dprintf("Initial INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
         uint16_t ic = xm_getw(INT_CTRL);
@@ -2148,7 +2225,7 @@ static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 
         for (int v = 0; v < 4; v++)
         {
-            if (channels & (1 << v))
+            if (audio_channel_mask & (1 << v))
             {
                 ic = xm_getw(INT_CTRL);
                 dprintf("Starting channel %d... INT_CTRL = 0x%04x\n", v, ic);
@@ -2173,12 +2250,13 @@ static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
         // wait for each channels to be ready (after they have started SILENCE)
         for (int v = 0; v < 4; v++)
         {
-            if (channels & (1 << v))
+            if (audio_channel_mask & (1 << v))
             {
                 ic = xm_getw(INT_CTRL);
                 dprintf("Waiting channel  %d... INT_CTRL = 0x%04x\n", v, ic);
                 do
                 {
+                    delay_check(1);
                     ic = xm_getw(INT_CTRL);
                 } while ((ic & (1 << (INT_CTRL_AUD0_INTR_B + v))) == 0);
                 dprintf("Finished              INT_CTRL = 0x%04x\n", ic);
@@ -2191,66 +2269,14 @@ static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
     }
 }
 
-static void upload_audio(void * memdata, uint16_t vaddr, int len)
-{
-    xm_setw(WR_XADDR, vaddr);
-    xm_setw(XDATA, 0);
-
-    xreg_setw(AUD0_VOL, 0x8080);
-    xreg_setw(AUD0_PERIOD, 0x7FFF);
-    xreg_setw(AUD0_LENGTH, 0x8000 | (SILENCE_LEN - 1));
-    xreg_setw(AUD0_START, SILENCE_VADDR);
-
-    xreg_setw(AUD1_VOL, 0x8080);
-    xreg_setw(AUD1_PERIOD, 0x7FFF);
-    xreg_setw(AUD1_LENGTH, 0x8000 | (SILENCE_LEN - 1));
-    xreg_setw(AUD1_START, SILENCE_VADDR);
-
-    xreg_setw(AUD2_VOL, 0x8080);
-    xreg_setw(AUD2_PERIOD, 0x7FFF);
-    xreg_setw(AUD2_LENGTH, 0x8000 | (SILENCE_LEN - 1));
-    xreg_setw(AUD2_START, SILENCE_VADDR);
-
-    xreg_setw(AUD3_VOL, 0x8080);
-    xreg_setw(AUD3_PERIOD, 0x7FFF);
-    xreg_setw(AUD3_LENGTH, 0x8000 | (SILENCE_LEN - 1));
-    xreg_setw(AUD3_START, SILENCE_VADDR);
-
-    xreg_setw(AUD_CTRL, 0x000F);
-
-    uint16_t ac = xreg_getw(AUD_CTRL);
-
-    int nc = 0;
-    while (ac & 1)
-    {
-        nc++;
-        ac >>= 1;
-    }
-
-    dprintf("Audio channels supported = %d\n", nc);
-
-    if (nc == 0)
-    {
-        return;
-    }
-
-    xm_setw(WR_INCR, 0x0001);
-    xm_setw(WR_ADDR, vaddr);
-    uint16_t * wp = memdata;
-    for (int i = len; i > 0; i -= 2)
-    {
-        xm_setw(DATA, *wp++);
-    }
-}
-
 const char blurb[] =
     "\n"
     "\n"
     "Xosera is an FPGA based video adapter designed with the rosco_m68k retro\n"
     "computer in mind. Inspired in concept by it's \"namesake\" the Commander X16's\n"
     "VERA, Xosera is an original open-source video adapter design, built with open-\n"
-    "source tools and is tailored with features generally appropriate for a Motorola\n"
-    "68K era retro computer like the rosco_m68k (or even an 8-bit CPU).\n"
+    "source tools and is tailored with features generally appropriate for a\n"
+    "Motorola 68K era retro computer like the rosco_m68k (or even an 8-bit CPU).\n"
     "\n"
     "  \xf9  Uses low-cost FPGA instead of expensive semiconductor fabrication :)\n"
     "  \xf9  128KB of embedded video VRAM (16-bit words at 33 or 25 MHz)\n"
@@ -2458,6 +2484,8 @@ void     xosera_test()
     xr_msg_color(0x0f);
     xr_printfxy(5, 0, "xosera_test_m68k\n");
 
+    init_audio();
+
     if (use_sd)
     {
         xr_printf("\nLoading test assets:\n");
@@ -2472,8 +2500,11 @@ void     xosera_test()
         xr_printf(" \xAF Xosera 8-bpp     ");
         load_test_image(BM_8_BIT, "/xosera_r1.raw", "/xosera_r1_pal.raw");
 #if BLURB_AUDIO
-        xr_printf(" \xAF Xark audio clip  ");
-        load_test_audio("/xosera_8000.raw", &xosera_audio, &xosera_audio_len);
+        if (num_audio_channels)
+        {
+            xr_printf(" \xAF Xark audio clip  ");
+            load_test_audio("/xosera_8000.raw", &xosera_audio, &xosera_audio_len);
+        }
 #endif
     }
 
@@ -2510,6 +2541,7 @@ void     xosera_test()
             dprintf("\n [ xosera_init(%u)...", config_num % 3);
             bool success = xosera_init(config_num % 3);
             dprintf("%s (%dx%d) ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+            init_audio();
 #if COPPER_TEST
             install_copper();
 #endif
@@ -2614,8 +2646,11 @@ void     xosera_test()
         }
 
 #if BLURB_AUDIO
-        upload_audio(xosera_audio, 0x2000, xosera_audio_len);
-        play_sample(0x2000, xosera_audio_len, 8000);
+        if (num_audio_channels)
+        {
+            upload_audio(xosera_audio, 0x2000, xosera_audio_len);
+            play_sample(0x2000, xosera_audio_len, 8000);
+        }
 #endif
 
         delay_check(DELAY_TIME * 5);

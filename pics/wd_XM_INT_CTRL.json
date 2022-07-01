@@ -1,51 +1,49 @@
 {
     "reg": [
         {
-            "bits": 4,
-            "name": "interrupt status",
-            "type": 2,
-            "attr": [
-                "[3] = vblank/copper",
-                "[2] = timer match",
-                "[1] = blit empty",
-                "[0] = audio reload"
-            ]
-        },
-        {
-            "bits": 4,
-            "name": "audio channel ready",
+            "bits": 7,
+            "name": "interrupt status/clear",
             "type": 3,
             "attr": [
-                "1 = channel AUDn_START was",
-                "loaded, ready for next",
-                "AUDn_START to be set"
+                "[6] = blit unit ready",
+                "[5] = timer compare",
+                "[4] = vblank/copper",
+                "[3] = audio 3 ready",
+                "[2] = audio 2 ready",
+                "[1] = audio 1 ready",
+                "[0] = audio 0 ready"
             ]
         },
         {
-            "bits": 4,
-            "name": "interrupt mask",
-            "type": 4,
-            "attr": [
-                "[11] = vblank/copper",
-                "[10] = timer match",
-                "[9] = blit empty",
-                "[8] = audio reload"
-            ]
-        },
-        {
-            "bits": 3,
+            "bits": 1,
             "name": "0",
             "type": 1
+        },
+        {
+            "bits": 7,
+            "name": "interrupt enable mask",
+            "type": 4,
+            "attr": [
+                "[14] = blit unit ready",
+                "[13] = timer compare",
+                "[12] = vblank/copper",
+                "[11] = audio 3 ready",
+                "[10] = audio 2 ready",
+                "[9] = audio 1 ready",
+                "[8] = audio 0 ready"
+            ]
         },
         {
             "bits": 1,
             "name": "reconfig",
             "type": 2,
             "attr": [
+                "write 1",
+                "to force",
                 "reconfig",
-                "to low",
-                "two bits",
-                "of write",
+                "to config",
+                "in bits",
+                "[9:8] of",
                 "mask"
             ]
         }

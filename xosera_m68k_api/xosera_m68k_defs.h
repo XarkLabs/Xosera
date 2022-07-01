@@ -78,7 +78,8 @@
 #define XM_UNUSED_0E 0x38        // (- /- )
 #define XM_UNUSED_0F 0x3C        // (- /- )
 
-// NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register indirect with no offset)
+// SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
+// indirect with no offset)
 #define SYS_CTRL_MEM_BUSY_B  7        // (RO   )  memory read/write operation pending (with contended memory)
 #define SYS_CTRL_BLIT_FULL_B 6        // (RO   )  blitter queue is full, do not write new operation to blitter registers
 #define SYS_CTRL_BLIT_BUSY_B 5        // (RO   )  blitter is still busy performing an operation (not done)
@@ -87,25 +88,52 @@
 #define SYS_CTRL_VBLANK_B    2        // (RO   )  video signal is in vertical blank period
 #define SYS_CTRL_UNUSED_9_B  1        // (RO   )  unused (reads 0)
 #define SYS_CTRL_UNUSED_8_B  0        // (- /- )
+// SYS_CTRL bit flags
+#define SYS_CTRL_MEM_BUSY_F  0x80        // (RO   )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_BLIT_FULL_F 0x40        // (RO   )  blitter queue is full (do not write to blitter registers)
+#define SYS_CTRL_BLIT_BUSY_F 0x20        // (RO   )  blitter is still busy performing an operation (not done)
+#define SYS_CTRL_UNUSED_12_F 0x10        // (RO   )  unused (reads 0)
+#define SYS_CTRL_HBLANK_F    0x08        // (RO   )  video signal is in horizontal blank period
+#define SYS_CTRL_VBLANK_F    0x04        // (RO   )  video signal is in vertical blank period
+#define SYS_CTRL_UNUSED_9_F  0x02        // (RO   )  unused (reads 0)
+#define SYS_CTRL_UNUSED_8_F  0x01        // (- /- )
 
-// NOTE: These are word bits for INT_CTRL word ()
-#define INT_CTRL_UNUSED_15    15
-#define INT_CTRL_UNUSED_14    14
-#define INT_CTRL_UNUSED_13    13
-#define INT_CTRL_UNUSED_12    12
-#define INT_CTRL_VIDEO_EN_B   11        // v-blank or copper interrupt mask
-#define INT_CTRL_TIMER_EN_B   10        // timer match interrupt mask
-#define INT_CTRL_BLIT_EN_B    9         // blitter ready interrupt mask
-#define INT_CTRL_AUDIO_EN_B   8         // audio ready interrupt mask
-#define INT_CTRL_AUD3_READY_B 7         // audio channel 3 ready (START addr was loaded) // TODO: move these
-#define INT_CTRL_AUD2_READY_B 6         // audio channel 2 ready (START addr was loaded) // TODO: move these
-#define INT_CTRL_AUD1_READY_B 5         // audio channel 1 ready (START addr was loaded) // TODO: move these
-#define INT_CTRL_AUD0_READY_B 4         // audio channel 0 ready (START addr was loaded) // TODO: move these
-#define INT_CTRL_VIDEO_B      3         // v-blank or copper interrupt (read status, write acknowledge)
-#define INT_CTRL_TIMER_INTR_B 2         // timer match read interrupt (status, write acknowledge)
-#define INT_CTRL_BLIT_B       1         // blitter ready interrupt (read status, write acknowledge)
-#define INT_CTRL_AUDIO_B      0         // audio channel ready interrupt (read status, write acknowledge)
-
+// INT_CTRL bit numbers NOTE: These are word bits for INT_CTRL word
+#define INT_CTRL_RECONFIG_B   15        // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
+#define INT_CTRL_BLIT_EN_B    14        // blitter ready interrupt mask
+#define INT_CTRL_TIMER_EN_B   13        // timer match interrupt mask
+#define INT_CTRL_VIDEO_EN_B   12        // v-blank or copper interrupt mask
+#define INT_CTRL_AUD3_EN_B    11        // audio channel 3 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_AUD2_EN_B    10        // audio channel 2 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_AUD1_EN_B    9         // audio channel 1 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_AUD0_EN_B    8         // audio channel 0 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_UNUSED_7_B   7         // timer match read interrupt (status, write acknowledge)
+#define INT_CTRL_BLIT_INTR_B  6         // blitter ready interrupt (read status, write acknowledge)
+#define INT_CTRL_TIMER_INTR_B 5         // timer match read interrupt (status, write acknowledge)
+#define INT_CTRL_VIDEO_INTR_B 4         // v-blank or copper interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD3_INTR_B  3         // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD2_INTR_B  2         // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD1_INTR_B  1         // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD0_INTR_B  0         // audio channel ready interrupt (read status, write acknowledge)
+// INT_CTRL bit flags
+#define INT_CTRL_RECONFIG_F   0x8000        // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
+#define INT_CTRL_BLIT_EN_F    0x4000        // blitter ready interrupt mask
+#define INT_CTRL_TIMER_EN_F   0x2000        // timer match interrupt mask
+#define INT_CTRL_VIDEO_EN_F   0x1000        // v-blank or copper interrupt mask
+#define INT_CTRL_AUD3_EN_F    0x0800        // audio channel 3 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_AUD2_EN_F    0x0400        // audio channel 2 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_AUD1_EN_F    0x0200        // audio channel 1 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_AUD0_EN_F    0x0100        // audio channel 0 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_EN_ALL_F     0x7F00        // audio channel 0 ready (START addr was loaded) // TODO: move these
+#define INT_CTRL_UNUSED_7_F   0x0080        // timer match read interrupt (status, write acknowledge)
+#define INT_CTRL_BLIT_INTR_F  0x0040        // blitter ready interrupt (read status, write acknowledge)
+#define INT_CTRL_TIMER_INTR_F 0x0020        // timer match read interrupt (status, write acknowledge)
+#define INT_CTRL_VIDEO_INTR_F 0x0010        // v-blank or copper interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD3_INTR_F  0x0008        // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD2_INTR_F  0x0004        // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD1_INTR_F  0x0002        // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD0_INTR_F  0x0001        // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_CLEAR_ALL_F  0x007F        // audio channel 0 ready (START addr was loaded) // TODO: move these
 
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 
@@ -148,22 +176,22 @@
 #define XR_PB_UNUSED_1F 0x1F        // // TODO: colorbase?
 
 // Audio Registers
-#define XR_AUD0_VOL    0x20        // (WO) // TODO: WIP
-#define XR_AUD0_PERIOD 0x21        // (WO) // TODO: WIP
-#define XR_AUD0_LENGTH 0x22        // (WO) // TODO: WIP
-#define XR_AUD0_START  0x23        // (WO) // TODO: WIP
-#define XR_AUD1_VOL    0x24        // (WO) // TODO: WIP
-#define XR_AUD1_PERIOD 0x25        // (WO) // TODO: WIP
-#define XR_AUD1_LENGTH 0x26        // (WO) // TODO: WIP
-#define XR_AUD1_START  0x27        // (WO) // TODO: WIP
-#define XR_AUD2_VOL    0x28        // (WO) // TODO: WIP
-#define XR_AUD2_PERIOD 0x29        // (WO) // TODO: WIP
-#define XR_AUD2_LENGTH 0x2A        // (WO) // TODO: WIP
-#define XR_AUD2_START  0x2B        // (WO) // TODO: WIP
-#define XR_AUD3_VOL    0x2C        // (WO) // TODO: WIP
-#define XR_AUD3_PERIOD 0x2D        // (WO) // TODO: WIP
-#define XR_AUD3_LENGTH 0x2E        // (WO) // TODO: WIP
-#define XR_AUD3_START  0x2F        // (WO) // TODO: WIP
+#define XR_AUD0_VOL    0x20        // (WO/-) // TODO: WIP
+#define XR_AUD0_PERIOD 0x21        // (WO/-) // TODO: WIP
+#define XR_AUD0_LENGTH 0x22        // (WO/-) // TODO: WIP
+#define XR_AUD0_START  0x23        // (WO/-) // TODO: WIP
+#define XR_AUD1_VOL    0x24        // (WO/-) // TODO: WIP
+#define XR_AUD1_PERIOD 0x25        // (WO/-) // TODO: WIP
+#define XR_AUD1_LENGTH 0x26        // (WO/-) // TODO: WIP
+#define XR_AUD1_START  0x27        // (WO/-) // TODO: WIP
+#define XR_AUD2_VOL    0x28        // (WO/-) // TODO: WIP
+#define XR_AUD2_PERIOD 0x29        // (WO/-) // TODO: WIP
+#define XR_AUD2_LENGTH 0x2A        // (WO/-) // TODO: WIP
+#define XR_AUD2_START  0x2B        // (WO/-) // TODO: WIP
+#define XR_AUD3_VOL    0x2C        // (WO/-) // TODO: WIP
+#define XR_AUD3_PERIOD 0x2D        // (WO/-) // TODO: WIP
+#define XR_AUD3_LENGTH 0x2E        // (WO/-) // TODO: WIP
+#define XR_AUD3_START  0x2F        // (WO/-) // TODO: WIP
 
 // Blitter Registers
 #define XR_BLIT_CTRL  0x40        // (R /W) blit control (transparency control, logic op and op input flags)

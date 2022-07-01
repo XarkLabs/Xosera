@@ -25,11 +25,7 @@ module video_gen (
     input  wire logic  [5:0]    vgen_reg_num_i,         // internal config register number (for reads)
     input  wire word_t          vgen_reg_data_i,        // data for internal config register
     output      word_t          vgen_reg_data_o,        // register/status data reads
-    output      logic           end_of_line_o,          // vblank or copper interrupt signal
     output      logic           video_intr_o,           // vblank or copper interrupt signal
-`ifdef EN_AUDIO
-    output      logic           audio_intr_o,           // audio ready interrupt signal
-`endif
 `ifdef EN_COPP
     // outputs for copper
     output      logic           copp_reg_wr_o,          // COPP_CTRL write strobe
@@ -55,7 +51,7 @@ module video_gen (
     output      logic           dv_de_o,                // video active signal (needed for HDMI)
 `ifdef EN_AUDIO
     // audio outputs
-    output      logic [3:0]     audio_ready_o,          // audio start/length pending flag
+    output      logic [3:0]     audio_intr_o,           // audio START ready interrupt flags
     output      logic           audio_pdm_l_o,          // audio left channel PDM output
     output      logic           audio_pdm_r_o,          // audio left channel PDM output
 `endif
@@ -156,7 +152,6 @@ assign          vsync_o         = vsync;
 assign          dv_de_o         = dv_de;
 assign          h_blank_o       = ~h_visible;
 assign          v_blank_o       = ~v_visible;
-assign          end_of_line_o   = end_of_line;
 `ifdef EN_COPP
 assign          h_count_o       = h_count;
 assign          v_count_o       = v_count;
@@ -669,20 +664,6 @@ audio_mixer audio_mixer(
     .clk(clk)
 );
 
-// if any chanel reloads, trigger interrupt strobe
-always_ff @(posedge clk) begin
-    if (reset_i) begin
-        audio_intr_o    <= 1'b0;
-    end else begin
-        audio_intr_o    <= 1'b0;
-        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
-            if (audio_reload_nchan[i]) begin
-                audio_intr_o    <= 1'b1;
-            end
-        end
-    end
-end
-
 // audio channel register writes
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -693,23 +674,23 @@ always_ff @(posedge clk) begin
         audio_start_nchan       <= '0;
         audio_len_nchan         <= '0;
         audio_restart_nchan     <= '0;
-        audio_ready_o           <= '0;
+        audio_intr_o            <= '0;
     end else begin
         for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
             audio_restart_nchan[i]    <= 1'b0;
             if (audio_reload_nchan[i]) begin
-                audio_ready_o[i]  <= 1'b1;                                                                          // ready set
+                audio_intr_o[i]  <= 1'b1;                                                                          // ready set
             end
             if (vgen_reg_wr_en_i) begin
                 case (7'(vgen_reg_num_i))
                     7'(xv::XR_AUD0_VOL+7'(i*4)):
-                        { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] }; // 0x80 = 1.0 volume
+                        { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] }; // 7-bit vol 0x80 = 1.0
                     7'(xv::XR_AUD0_PERIOD+7'(i*4)):
                         { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
                     7'(xv::XR_AUD0_LENGTH+7'(i*4)):
                         { audio_tile_nchan[i], audio_len_nchan[i*15+:15] }          <= vgen_reg_data_i;
                     7'(xv::XR_AUD0_START+7'(i*4)):
-                        { audio_ready_o[i], audio_start_nchan[i*xv::VRAM_W+:16] }   <= { 1'b0, vgen_reg_data_i };   // ready cleared
+                        { audio_intr_o[i], audio_start_nchan[i*xv::VRAM_W+:16] }   <= { 1'b0, vgen_reg_data_i };   // ready cleared
                     default: ;
                 endcase
             end

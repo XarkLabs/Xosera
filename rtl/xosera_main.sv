@@ -69,8 +69,6 @@ logic                   vsync;              // vsync
 logic                   h_blank;            // off left edge
 logic                   v_blank;            // off bottom edge
 
-logic                   end_of_line;
-
 color_t                 colorA_index;       // pf A color index
 argb_t                  colorA_xrgb;        // pf A ARGB output
 
@@ -80,11 +78,6 @@ argb_t                  colorB_xrgb;        // pf B ARGB output
 `else
 logic unused;
 assign unused = &{1'b0, colorA_xrgb[15:12] }; // unused alpha
-`endif
-
-`ifdef EN_AUDIO
-// audio management
-logic [3:0]             audio_ready;
 `endif
 
 //  VRAM read output data (for vgen, regs, blit)
@@ -149,24 +142,19 @@ tile_addr_t             vgen_tile_addr;
 word_t                  vgen_tile_data;
 
 // interrupt management signals
-intr_t                  intr_trigger;       // true for each enabled interrupt
-intr_t                  intr_mask;          // true for each enabled interrupt
-intr_t                  intr_status;        // pending interrupt status
-intr_t                  intr_clear;         // interrupt cleared by CPU
+intr_t                  intr_mask;          // true for each enabled interrupt (even byte INT_CTRL)
+intr_t                  intr_status;        // pending interrupt status (read odd byte INT_CTRL)
+intr_t                  intr_clear;         // interrupt cleared by CPU (write odd byte INT_CTRL)
 
-logic                   audio_intr;         // audio channel ready (bit AUDIO_INTR)
-logic                   blit_intr;          // blitter ready (bit BLIT_INTR)
-logic                   timer_intr;         // timer compare (bit TIMER_INTR)
-logic                   video_intr;         // video blank/copper (bit VIDEO_INTR)
-
+intr_t                  intr_trigger;       // true for each enabled interrupt (internal)
 `ifndef EN_AUDIO
-assign                  audio_intr = 1'b0;
+assign                  intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]    = 1'b0;
 `endif
 `ifndef EN_BLIT
-assign                  blit_intr   = 1'b0;
+assign                  intr_trigger[xv::BLIT_INTR]     = 1'b0;
 `endif
 `ifndef EN_TIMER_INTR
-assign                  timer_intr  = 1'b0;
+assign                  intr_trigger[xv::TIMER_INTR]    = 1'b0;
 `endif
 
 `ifdef BUS_DEBUG_SIGNALS
@@ -215,16 +203,12 @@ reg_interface reg_interface(
     // reconfig
     .reconfig_o(reconfig_o),
     // interrupts
-    .end_of_line_i(end_of_line),
 `ifdef EN_TIMER_INTR
-    .timer_intr_o(timer_intr),          // timer compare interrupt
+    .timer_intr_o(intr_trigger[xv::TIMER_INTR]),          // timer compare interrupt
 `endif
     .intr_mask_o(intr_mask),            // enabled interrupts from INT_CTRL high byte
     .intr_clear_o(intr_clear),          // strobe clears pending INT_CTRL interrupt
     .intr_status_i(intr_status),        // status read from pending INT_CTRL interrupt
-`ifdef EN_AUDIO
-    .audio_ready_i(audio_ready),
-`endif
 `ifdef BUS_DEBUG_SIGNALS
     .bus_ack_o(dbug_cs_strobe),         // debug "ack" bus strobe
 `endif
@@ -238,11 +222,8 @@ video_gen video_gen(
     .vgen_reg_num_i(xr_regs_addr[5:0]),
     .vgen_reg_data_i(xr_regs_data_in),
     .vgen_reg_data_o(xr_regs_data_out),
-    .end_of_line_o(end_of_line),
-    .video_intr_o(video_intr),          // signaled by write to XR_VID_INTR
-`ifdef EN_AUDIO
-    .audio_intr_o(audio_intr),          // signaled by audio channel ready
-`endif
+    .video_intr_o(intr_trigger[xv::VIDEO_INTR]),          // signaled by write to XR_VID_INTR
+    .audio_intr_o(intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]),          // signaled by audio channel ready
     .vram_sel_o(vgen_vram_sel),
     .vram_addr_o(vgen_vram_addr),
     .vram_data_i(vram_data_out),
@@ -265,7 +246,6 @@ video_gen video_gen(
     .v_count_o(video_v_count),
 `endif
 `ifdef EN_AUDIO
-    .audio_ready_o(audio_ready),
     .audio_pdm_l_o(audio_l_o),
     .audio_pdm_r_o(audio_r_o),
 `endif
@@ -300,7 +280,7 @@ copper copper(
         .xreg_data_i(xr_regs_data_in),
         .blit_busy_o(blit_busy),
         .blit_full_o(blit_full),
-        .blit_done_intr_o(blit_intr),
+        .blit_done_intr_o(intr_trigger[xv::BLIT_INTR]),
         .blit_vram_sel_o(blit_vram_sel),
         .blit_vram_ack_i(blit_vram_ack),
         .blit_wr_o(blit_wr),
@@ -416,18 +396,15 @@ video_blend video_blend(
 `endif
 
 // interrupt handling
-always_comb intr_trigger = { video_intr, timer_intr, blit_intr, audio_intr };
-
 always_ff @(posedge clk) begin
     if (reset_i) begin
         bus_intr_o  <= 1'b0;
-        intr_status <= 4'b0;
+        intr_status <= '0;
     end else begin
+        bus_intr_o  <= 1'b0;
         // generate bus interrupt if signal bit set, not masked and not already set
-        if (((intr_trigger & intr_mask) & (~intr_status)) != 4'b0) begin
+        if (((intr_trigger & intr_mask) & (~intr_status)) != 7'b0) begin
             bus_intr_o  <= 1'b1;
-        end else begin
-            bus_intr_o  <= 1'b0;
         end
         // remember interrupt signal and clear acknowledged interrupts
         intr_status <= (intr_status | intr_trigger) & (~intr_clear);

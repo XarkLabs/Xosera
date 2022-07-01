@@ -114,7 +114,7 @@ bool xosera_init(int reconfig_num)
             detected = xosera_wait_sync();                     // wait for detect
             if (detected)
             {
-                xm_setw(INT_CTRL, int_ctrl_save | 0x000F);        // restore INT_CTRL
+                xm_setw(INT_CTRL, int_ctrl_save | 0x00FF);        // restore INT_CTRL, clear any interrupts
             }
         }
     }

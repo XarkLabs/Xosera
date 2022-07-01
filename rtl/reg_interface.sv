@@ -66,7 +66,7 @@ word_t          reg_data;               // word read from VRAM (for RD_ADDR)
 word_t          reg_wr_incr;            // VRAM write increment
 addr_t          reg_wr_addr;            // VRAM write address
 
-localparam      TIMER_TICK = (xv::PCLK_HZ / xv::TOTAL_WIDTH) / 10000;
+localparam      TIMER_TICK = xv::PCLK_HZ / 10000;
 localparam      TIMER_FRAC = $clog2(TIMER_TICK);
 
 word_t          reg_timer;              // 1/10 ms timer (visible 16 bits) + underflow
@@ -91,6 +91,10 @@ byte_t          reg_data_even;          // byte written to even byte of XM_DATA/
 
 logic mem_wait;
 assign mem_wait    = regs_wr_o | xr_rd | vram_rd;
+
+// output interrupt mask
+intr_t intr_mask;
+assign intr_mask_o = intr_mask;
 
 `ifdef BUS_DEBUG_SIGNALS    // debug "ack" bus strobe
 assign bus_ack_o = (bus_write_strobe | bus_read_strobe);
@@ -126,7 +130,7 @@ always_comb begin
             rd_temp_word  = { mem_wait, 1'b0, 1'b0, 1'b0, h_blank_i, v_blank_i, 1'b0, 1'b0, 4'b0, regs_wrmask_o };
 `endif
         xv::XM_INT_CTRL:
-            rd_temp_word  = { 1'b0, intr_mask_o, 1'b0, intr_status_i };
+            rd_temp_word  = { 1'b0, intr_mask, 1'b0, intr_status_i };
         xv::XM_TIMER:
             rd_temp_word  = { reg_timer[15:8], timer_latch_val };
         xv::XM_RD_XADDR:
@@ -208,7 +212,7 @@ always_ff @(posedge clk) begin
         reg_wr_addr     <= 16'h0000;
         reg_wr_incr     <= 16'h0000;
         regs_wrmask_o   <= 4'b1111;
-        intr_mask_o       <= '0;
+        intr_mask       <= '0;
 
         // temp registers
         timer_latch_val <= 8'h00;
@@ -272,7 +276,7 @@ always_ff @(posedge clk) begin
                 xv::XM_INT_CTRL: begin
                     if (!bus_bytesel) begin
                         reconfig_o          <= bus_data_byte[7];
-                        intr_mask_o         <= bus_data_byte[6:0];
+                        intr_mask           <= bus_data_byte[6:0];
                     end else begin
                         intr_clear_o        <= bus_data_byte[6:0];
                     end

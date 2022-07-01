@@ -66,9 +66,10 @@ word_t          reg_data;               // word read from VRAM (for RD_ADDR)
 word_t          reg_wr_incr;            // VRAM write increment
 addr_t          reg_wr_addr;            // VRAM write address
 
-word_t          reg_timer;              // 1/10 ms timer (visible 16 bits) + underflow
+word_t          reg_timer;              // 1/10 ms timer
 `ifdef EN_TIMER_INTR
-word_t          reg_timer_cmp;          // timer compare interrupt
+byte_t          reg_timer_interval;     // 8-bit 1/10 ms timer interrupt interval
+byte_t          reg_timer_countdown;    // 8-bit timer interrupt interval counter
 `endif
 
 // read flags
@@ -137,12 +138,16 @@ logic [FRAC_BITS-1:0]       reg_timer_frac;
 logic           tick;
 assign          tick        = !reg_timer_frac[FRAC_BITS-1];
 
+`ifdef EN_TIMER_INTR
+`endif
+
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        reg_timer       <= '0;
-        reg_timer_frac  <= '0;
+        reg_timer           <= '0;
+        reg_timer_frac      <= '0;
 `ifdef EN_TIMER_INTR
-        timer_intr_o    <= 1'b0;
+        reg_timer_countdown <= '0;
+        timer_intr_o        <= 1'b0;
 `endif
     end else begin
 `ifdef EN_TIMER_INTR
@@ -152,9 +157,10 @@ always_ff @(posedge clk) begin
             reg_timer_frac      <= reg_timer_frac + (HZ_REDUCED - CLK_REDUCED);
             reg_timer           <= reg_timer + 1'b1;
 `ifdef EN_TIMER_INTR
-            if (reg_timer >= reg_timer_cmp) begin
-                reg_timer       <= '0;
-                timer_intr_o    <= 1'b1;
+            reg_timer_countdown <= reg_timer_countdown - 1'b1;
+            if (reg_timer_countdown == 0) begin
+                reg_timer_countdown <= reg_timer_interval;
+                timer_intr_o        <= 1'b1;
             end
 `endif
         end else begin
@@ -245,7 +251,7 @@ always_ff @(posedge clk) begin
         reg_xdata       <= '0;
 
 `ifdef EN_TIMER_INTR
-        reg_timer_cmp   <= 16'hFFFF;
+        reg_timer_interval  <= '0;
 `endif
 
     end else begin
@@ -305,11 +311,7 @@ always_ff @(posedge clk) begin
                 end
                 xv::XM_TIMER: begin
 `ifdef EN_TIMER_INTR
-                    if (!bus_bytesel) begin
-                        reg_timer_cmp[15:8] <= bus_data_byte;
-                    end else begin
-                        reg_timer_cmp[7:0]  <= bus_data_byte;
-                    end
+                    reg_timer_interval      <= bus_data_byte;
 `endif
                 end
                 xv::XM_RD_XADDR: begin

@@ -66,14 +66,10 @@ word_t          reg_data;               // word read from VRAM (for RD_ADDR)
 word_t          reg_wr_incr;            // VRAM write increment
 addr_t          reg_wr_addr;            // VRAM write address
 
-localparam      TIMER_TICK = xv::PCLK_HZ / 10000;
-localparam      TIMER_FRAC = $clog2(TIMER_TICK);
-
 word_t          reg_timer;              // 1/10 ms timer (visible 16 bits) + underflow
 `ifdef EN_TIMER_INTR
 word_t          reg_timer_cmp;          // timer compare interrupt
 `endif
-logic [TIMER_FRAC-1:0] reg_timer_frac;  // internal fraction counter for 1/10 ms
 
 // read flags
 logic           xr_rd;                  // flag for XR_DATA read outstanding
@@ -116,11 +112,62 @@ bus_interface bus(
     .reset_i(reset_i)                     // reset
 );
 
-// continuously output byte selected for read from Xosera (to be put on bus when selected for read)
+// ~1/10th ms timer counter
+//
+// see https://www.excamera.com/sphinx/vhdl-clock.html
+`ifdef MODE_640x480
+// >>> Fraction(10000, 25125000)
+// Fraction(2, 5025)
+localparam  CLK_REDUCED     = 5025;
+localparam  HZ_REDUCED      = 2;
+`elsif MODE_848x480
+// >>> Fraction(10000, 33750000)
+// Fraction(1, 3375)
+localparam  CLK_REDUCED     = 3375;
+localparam  HZ_REDUCED      = 1;
+`else
+// NOTE: Assumes PCLK_HZ is divisible by 1000
+localparam  CLK_REDUCED     = xv::PCLK_HZ / 1000;
+localparam  HZ_REDUCED      = 10;
+`endif
 
+localparam  FRAC_BITS       = $clog2(CLK_REDUCED)+1;
+logic [FRAC_BITS-1:0]       reg_timer_frac;
+
+logic           tick;
+assign          tick        = !reg_timer_frac[FRAC_BITS-1];
+
+always_ff @(posedge clk) begin
+    if (reset_i) begin
+        reg_timer       <= '0;
+        reg_timer_frac  <= '0;
+`ifdef EN_TIMER_INTR
+        timer_intr_o    <= 1'b0;
+`endif
+    end else begin
+`ifdef EN_TIMER_INTR
+        timer_intr_o    <= 1'b0;
+`endif
+        if (tick) begin
+            reg_timer_frac      <= reg_timer_frac + (HZ_REDUCED - CLK_REDUCED);
+            reg_timer           <= reg_timer + 1'b1;
+`ifdef EN_TIMER_INTR
+            if (reg_timer >= reg_timer_cmp) begin
+                reg_timer       <= '0;
+                timer_intr_o    <= 1'b1;
+            end
+`endif
+        end else begin
+            reg_timer_frac      <= reg_timer_frac + HZ_REDUCED;
+        end
+    end
+end
+
+// continuously output byte selected for read from Xosera (to be put on bus when selected for read)
 word_t      rd_temp_word;
 always_comb bus_data_o = !bus_bytesel ? rd_temp_word[15:8] : rd_temp_word[7:0];
 
+// xm registers read
 always_comb begin
     case (bus_reg_num)
         xv::XM_SYS_CTRL:
@@ -161,32 +208,7 @@ always_comb begin
     endcase
 end
 
-// ~1/10th ms timer counter
-always_ff @(posedge clk) begin
-    if (reset_i) begin
-        reg_timer       <= '0;
-        reg_timer_frac  <= '0;
-`ifdef EN_TIMER_INTR
-        timer_intr_o    <= 1'b0;
-`endif
-    end else begin
-`ifdef EN_TIMER_INTR
-        timer_intr_o    <= 1'b0;
-`endif
-        reg_timer_frac  <= reg_timer_frac + 1'b1;
-        if (reg_timer_frac == TIMER_FRAC'(TIMER_TICK)) begin
-            reg_timer_frac  <= '0;
-            reg_timer       <= reg_timer + 1'b1;
-`ifdef EN_TIMER_INTR
-            if (reg_timer >= reg_timer_cmp) begin
-                reg_timer       <= '0;
-                timer_intr_o    <= 1'b1;
-            end
-`endif
-        end
-    end
-end
-
+// xm registers write
 always_ff @(posedge clk) begin
     if (reset_i) begin
         // control signal strobes
@@ -386,6 +408,7 @@ always_ff @(posedge clk) begin
         end
     end
 end
+
 endmodule
 
 `default_nettype wire               // restore default

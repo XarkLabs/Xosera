@@ -76,7 +76,6 @@ logic [DAC_W-1:0]                   output_r;           // mixed right channel t
 logic [AUDIO_NCHAN-1:0]             chan_output;        // channel sample output strobe
 logic [AUDIO_NCHAN-1:0]             chan_2nd;           // 2nd sample from sample word
 logic [AUDIO_NCHAN-1:0]             chan_buff_ok;       // DMA buffer has data
-logic [AUDIO_NCHAN-1:0]             chan_fetch;         // channel DMA fetch flag
 logic [AUDIO_NCHAN-1:0]             chan_tile;          // current sample memtile flag
 logic [8*AUDIO_NCHAN-1:0]           chan_val;           // current channel value sent to DAC
 logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  chan_addr;          // current sample address
@@ -141,7 +140,6 @@ always_ff @(posedge clk) begin : chan_process
         chan_length         <= '0;          // remaining length for sample data (bytes)
         chan_buff_ok        <= '0;
         chan_2nd            <= '0;
-        chan_fetch          <= '0;
         chan_tile           <= '0;          // current mem type
 
     end else begin
@@ -164,7 +162,6 @@ always_ff @(posedge clk) begin : chan_process
                     chan_buff[16*i+:16] <= chan_buff[16*i+:16] ^ 16'h8080;  // obvious "glitch" to verify not used again
 `endif
                     chan_buff_ok[i]     <= 1'b0;
-                    chan_fetch[i]       <= 1'b1;
                     // if length already underflowed, or will next cycle
                     if (chan_length[16*i+15] || chan_length_n[i][15]) begin
                         // if restart, reload sample parameters from registers
@@ -195,10 +192,10 @@ always_ff @(posedge clk) begin : chan_process
         end
 
         case (fetch_phase)
-            // setup DMA fetch for channel (no effect unless chan_fetch set)
+            // setup DMA fetch for channel
             AUD_FETCH_DMA: begin
                     audio_req_o         <= 1'b0;
-                    if (chan_fetch[fetch_chan] && !chan_buff_ok[fetch_chan]) begin
+                    if (audio_enable_i && !chan_buff_ok[fetch_chan]) begin
                         audio_req_o     <= 1'b1;
                     end
                     audio_tile_o    <= chan_tile[fetch_chan];
@@ -206,12 +203,11 @@ always_ff @(posedge clk) begin : chan_process
 
                     fetch_phase     <= AUD_FETCH_READ;
             end
-            // if chan_fetch, wait for ack, latch new word if ack, get ready to mix channel
+            // if req, wait for ack, latch new word if ack, get ready to mix channel
             AUD_FETCH_READ: begin
                 if (audio_req_o) begin
                     if (audio_ack_i) begin
                         audio_req_o                     <= 1'b0;
-                        chan_fetch[fetch_chan]          <= 1'b0;
                         chan_buff[16*fetch_chan+:16]    <= audio_word_i;
                         chan_buff_ok[fetch_chan]        <= 1'b1;
                         fetch_chan                      <= fetch_chan + 1'b1;

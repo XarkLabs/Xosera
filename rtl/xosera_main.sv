@@ -391,10 +391,29 @@ video_blend video_blend(
     .clk(clk)
 );
 `else
-    assign hsync_o                      = hsync;
-    assign vsync_o                      = vsync;
-    assign dv_de_o                      = dv_de;
-    assign { red_o, green_o, blue_o }   = dv_de ? colorA_xrgb[11:0] : '0;
+// TODO: Looks like a cycle delay is "assumed" in syncs & DE signals?
+logic           dv_de_1;            // display enable delayed
+logic           hsync_1;            // hsync delayed
+logic           vsync_1;            // vsync delayed
+
+always_ff @(posedge clk) begin
+    // color lookup happened on dv_de cycle
+    if (dv_de_1) begin
+        { red_o, green_o, blue_o } <= colorA_xrgb[11:0];
+    end else begin
+        { red_o, green_o, blue_o } <= '0;
+    end
+
+    // delay signals for color lookup
+    vsync_1     <= vsync;
+    hsync_1     <= hsync;
+    dv_de_1     <= dv_de;
+
+    // output signals with blend_rgb_o
+    dv_de_o     <= dv_de_1;
+    vsync_o     <= vsync_1;
+    hsync_o     <= hsync_1;
+end
 `endif
 
 // interrupt handling

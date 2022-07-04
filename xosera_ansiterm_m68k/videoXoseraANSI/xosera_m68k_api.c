@@ -139,6 +139,24 @@ bool xosera_get_info(xosera_info_t * info)
 
     xv_prep();
 
+    xwait_not_vblank();
+    xwait_vblank();
+
+    uint16_t copsave = xreg_getw(COPP_CTRL);        // save COPP_CTRL
+
+    xreg_setw(COPP_CTRL, 0x005A);        // set to test value 1
+    if (xreg_getw(COPP_CTRL) != 0x005A)
+    {
+        return false;
+    }
+    xreg_setw(COPP_CTRL, 0x00A5);        // set to test value 2
+    if (xreg_getw(COPP_CTRL) != 0x00A5)
+    {
+        return false;
+    }
+
+    xreg_setw(COPP_CTRL, copsave);        // restore
+
     uint16_t * wp = (uint16_t *)info;
 
     // xosera_info stored at end COPPER program memory
@@ -151,10 +169,9 @@ bool xosera_get_info(xosera_info_t * info)
     return true;        // TODO: Add CRC or similar?
 }
 
-// define xosera_ptr in a way that GCC can't see the immediate const value (causing it to keep it in a register).
+// define xosera_ptr so GCC doesn't see const value (so it tries to keep it in a register vs reloading it).
 __asm__(
-    "               .section    .text.postinit\n"
+    "               .section    .text\n"
     "               .align      2\n"
     "               .globl      xosera_ptr\n"
-    "               .type	    xosera_ptr, @object\n"
     "xosera_ptr:    .long       " XM_STR(XM_BASEADDR) "\n");

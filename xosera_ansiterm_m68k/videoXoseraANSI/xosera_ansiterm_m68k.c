@@ -74,7 +74,7 @@ extern void dprintf(const char * fmt, ...) __attribute__((format(__printf__, 1, 
 #define DEFAULT_COLOR         0x02        // rosco_m68k "retro" dark green on black
 #define MAX_CSI_PARMS         16          // max CSI parameters per sequence
 #define MAX_QUERY_LEN         16          // max query response length (including NUL terminator)
-#define USE_BLITTER           1           // 1 = use blitter for scrolling and clearing
+#define USE_BLITTER           0           // TODO: not yet...1 = use blitter for scrolling and clearing
 
 // terminal attribute and option flags
 enum e_term_flags
@@ -1937,10 +1937,17 @@ bool xansiterm_INIT()
     xv_prep();
     xreg_setw(PA_GFX_CTRL, td->gfx_ctrl);
 
-    xosera_get_info(&init_data);
-    td->ver_code[0] = '0' + (init_data.version_bcd >> 8);                 // Xosera vX.xx
-    td->ver_code[1] = '0' + ((init_data.version_bcd >> 4) & 0x0f);        // Xosera vx.Xx
-    td->ver_code[2] = '0' + (init_data.version_bcd & 0xf);                // Xosera vx.xX
+    // TODO: Not ideal no version code without COPPER
+    td->ver_code[0] = '?';
+    td->ver_code[1] = '?';
+    td->ver_code[2] = '?';
+
+    if (xosera_get_info(&init_data))
+    {
+        td->ver_code[0] = '0' + (init_data.version_bcd >> 8);                 // Xosera vX.xx
+        td->ver_code[1] = '0' + ((init_data.version_bcd >> 4) & 0x0f);        // Xosera vx.Xx
+        td->ver_code[2] = '0' + (init_data.version_bcd & 0xf);                // Xosera vx.xX
+    }
 
     xansi_reset(true);
     char verstr[10];
@@ -1974,6 +1981,7 @@ bool xansiterm_INIT()
     *ft++ = '\0';
     xansiterm_PRINTLN(verstr);
     xansiterm_PRINTLN(0);
+
     return true;
 }
 

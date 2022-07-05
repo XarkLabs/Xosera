@@ -1938,9 +1938,9 @@ bool xansiterm_INIT()
     xreg_setw(PA_GFX_CTRL, td->gfx_ctrl);
 
     // TODO: Not ideal no version code without COPPER
-    td->ver_code[0] = '?';
-    td->ver_code[1] = '?';
-    td->ver_code[2] = '?';
+    td->ver_code[0] = '0';
+    td->ver_code[1] = '0';
+    td->ver_code[2] = '0';
 
     if (xosera_get_info(&init_data))
     {
@@ -1950,17 +1950,17 @@ bool xansiterm_INIT()
     }
 
     xansi_reset(true);
-    char verstr[10];
     xansiterm_PRINT(xansiterm_banner);
-    char * vs = verstr;
-    *vs++     = td->ver_code[0];
-    *vs++     = '.';
-    *vs++     = td->ver_code[1];
-    *vs++     = td->ver_code[2];
-    *vs++     = '\0';
-    xansiterm_PRINT(verstr);
+    // NOTE: This crashes only in firmware?
+    // char * vs = init_data.description_str;
+    // *vs++     = td->ver_code[0];
+    // *vs++     = '.';
+    // *vs++     = td->ver_code[1];
+    // *vs++     = td->ver_code[2];
+    // *vs++     = '\0';
+    xansiterm_PRINT("?.??");    // TODO: Need better version code
     xansiterm_PRINT(xansiterm_banner2);
-    char * ft = verstr;
+    char * ft = init_data.description_str;
     if (!(_FIRMWARE_REV & (1U << 31)))
     {
         *ft++ = ' ';
@@ -1979,7 +1979,7 @@ bool xansiterm_INIT()
         *ft++ = 'V';
     }
     *ft++ = '\0';
-    xansiterm_PRINTLN(verstr);
+    xansiterm_PRINTLN(init_data.description_str);
     xansiterm_PRINTLN(0);
 
     return true;

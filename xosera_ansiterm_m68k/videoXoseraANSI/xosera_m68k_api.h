@@ -27,7 +27,6 @@
 #if !defined(XOSERA_M68K_API_H)
 #define XOSERA_M68K_API_H
 
-#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 // Low-level C API macro reference (act like functions as shown):
@@ -136,7 +135,7 @@ typedef struct _xosera_info
 } xosera_info_t;
 
 #ifndef __INTELLISENSE__        // vscode intellisense does not grok m68k (flags as error, but correct for m68k-gcc)
-static_assert(sizeof(xosera_info_t) == XV_INFO_SIZE, "sizeof xosera_info_t mismatch");
+typedef char _xosera_init_size_static_assert[sizeof(xosera_info_t) == XV_INFO_SIZE ? 1 : -1];
 #endif
 
 // Xosera XM register base ptr

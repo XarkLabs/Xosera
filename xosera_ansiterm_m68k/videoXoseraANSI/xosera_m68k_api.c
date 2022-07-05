@@ -21,8 +21,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include <machine.h>
 
@@ -30,6 +28,24 @@
 #include "xosera_m68k_api.h"
 
 #define SYNC_RETRIES 250        // ~1/4 second
+
+// GCC really wants to transform my code to call memset, even though I never reference it (it
+// sees loops zeroing memory and tries to optimize).  This is a problem because it causes a
+// link error in firmware-land (where some normal C libraries are missing). Since GCC seems
+// to ignore -fno-builtin, using an obfuscated version seems the best way to outsmart GCC
+// (for now...hopefully it won't learn how to parse inline asm anytime soon). :D
+static void xosera_memset(void * str, unsigned int n)
+{
+    uint8_t * buf = (uint8_t *)str;
+    uint8_t * end = buf + n;
+
+    __asm__ __volatile__(
+        "0:         clr.b   (%[buf])+\n"
+        "           cmp.l   %[buf],%[end]\n"
+        "           bne.s   0b\n"
+        :
+        : [buf] "a"(buf), [end] "a"(end));
+}
 
 // TODO: This is less than ideal (tuned for ~10MHz)
 __attribute__((noinline)) void cpu_delay(int ms)
@@ -125,12 +141,12 @@ bool xosera_init(int reconfig_num)
 // TODO: retrieve xosera_info (placed in COPPER memory after xosera reconfig)
 bool xosera_get_info(xosera_info_t * info)
 {
-    if (info == NULL)
+    if (!info)
     {
         return false;
     }
 
-    memset(info, 0, sizeof(xosera_info_t));
+    xosera_memset(info, sizeof(xosera_info_t));
 
     if (!xosera_sync())
     {

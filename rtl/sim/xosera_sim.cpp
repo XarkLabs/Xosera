@@ -868,30 +868,34 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(WR_ADDR, 0xFE00),
     REG_UPLOAD(),        // upload sine data
 
-    //    XREG_SETW(PA_GFX_CTRL, 0x0080),        // pf a blank
-    //    XREG_SETW(PB_GFX_CTRL, 0x0080),        // pf b blank
+//    XREG_SETW(PA_GFX_CTRL, 0x0080),        // pf a blank
+//    XREG_SETW(PB_GFX_CTRL, 0x0080),        // pf b blank
 
+#define PERIOD_TEST 799
+#define WAVE_TEST   0xFF00
 
-    XREG_SETW(AUD0_PERIOD, 799),
+    XREG_SETW(AUD0_PERIOD, PERIOD_TEST),
     XREG_SETW(AUD0_LENGTH, 0x007F),
-    XREG_SETW(AUD0_START, 0xFE00),
+    XREG_SETW(AUD0_START, WAVE_TEST),
 
-    XREG_SETW(AUD1_PERIOD, 799),
+    XREG_SETW(AUD1_PERIOD, PERIOD_TEST),
     XREG_SETW(AUD1_LENGTH, 0x007F),
-    XREG_SETW(AUD1_START, 0xFE00),
+    XREG_SETW(AUD1_START, WAVE_TEST),
 
-    XREG_SETW(AUD2_PERIOD, 799),
+    XREG_SETW(AUD2_PERIOD, PERIOD_TEST),
     XREG_SETW(AUD2_LENGTH, 0x007F),
-    XREG_SETW(AUD2_START, 0xFE00),
+    XREG_SETW(AUD2_START, WAVE_TEST),
 
-    XREG_SETW(AUD3_PERIOD, 799),
+    XREG_SETW(AUD3_PERIOD, PERIOD_TEST),
     XREG_SETW(AUD3_LENGTH, 0x007F),
-    XREG_SETW(AUD3_START, 0xFE00),
+    XREG_SETW(AUD3_START, WAVE_TEST),
 
     XREG_SETW(AUD0_VOL, 0x2020),
     XREG_SETW(AUD1_VOL, 0x2020),
     XREG_SETW(AUD2_VOL, 0x2020),
     XREG_SETW(AUD3_VOL, 0x2020),
+
+    REG_WAITVTOP(),
 
     XREG_SETW(AUD_CTRL, 0x000F),
 
@@ -979,7 +983,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
-
+#if 0        // min vol test
     XREG_SETW(AUD0_VOL, 0x0200),        // minimum
     XREG_SETW(AUD1_VOL, 0x0000),
     XREG_SETW(AUD2_VOL, 0x0000),
@@ -1001,7 +1005,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
-
+#endif
     XREG_SETW(AUD_CTRL, 0x0000),
     REG_WAITHSYNC(),
     REG_WAITHSYNC(),

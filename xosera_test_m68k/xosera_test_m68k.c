@@ -1689,6 +1689,45 @@ void test_vram_speed()
         "MOVE.L  main RAM read   128KB x 16 (2MB)    %u ms (%u KB/sec)\n", main_read, (1000U * 128 * reps) / main_read);
 }
 
+
+void test_8bpp_tiled()
+{
+    // setup 4-bpp 16 x 16 tiled screen showing 4 sample buffers
+    xreg_setw(PA_GFX_CTRL, 0x0020);             // colorbase = 0x00, tiled, 8-bpp, Hx2 Vx2
+                                                //    xreg_setw(PA_HV_FSCALE, 0x0044);            // set 512x384 scaling
+    xreg_setw(PA_HV_FSCALE, 0x0000);            // set 512x384 scaling
+    xreg_setw(PA_TILE_CTRL, 0x0000 | 7);        // tiledata @ 0x800, 8 high
+    xreg_setw(PA_DISP_ADDR, 0x0000);            // display VRAM @ 0x0000
+    xreg_setw(PA_LINE_LEN, 80);                 // 16 chars per line
+
+    // set colormap
+    for (uint16_t i = i; i < 16; i++)
+    {
+        xmem_setw(XR_COLOR_A_ADDR + 0 + i, (i << 8) | (i << 4) | (i << 0));
+        xmem_setw(XR_COLOR_A_ADDR + 16 + i, (i << 8) | (0 << 4) | (0 << 0));
+        xmem_setw(XR_COLOR_A_ADDR + 32 + i, (0 << 8) | (i << 4) | (0 << 0));
+        xmem_setw(XR_COLOR_A_ADDR + 48 + i, (i << 8) | (0 << 4) | (i << 0));
+    }
+
+    xm_setw(WR_INCR, 0x0001);
+    int c = 0;
+
+    xm_setw(WR_ADDR, 0x0000);
+    for (int x = 0; x < 0x1000; x += 1)
+    {
+        xm_setw(DATA, c);        // use colorbase for channel tint
+        c += 1;
+    }
+
+
+    xmem_set_addr(XR_TILE_ADDR + 0x0000);
+    for (int i = 0x0000; i < 0x1000; i++)
+    {
+        xmem_setw_next(i & 0x08 ? ~(uint16_t)i : (uint16_t)i);
+    }
+}
+
+
 #if 0        // TODO: needs recalibrating for VSync timer
 uint16_t rosco_m68k_CPUMHz()
 {
@@ -2478,13 +2517,26 @@ void     xosera_test()
     }
 #endif
 
+    init_audio();
+
+    // test_8bpp_tiled();
+
+    // play_sample(0, 0x7fff, 800);
+
+    // readchar();
+
+    // uint16_t v = 7;
+    // while (1)
+    // {
+    //     xmem_setw(XR_TILE_ADDR, v++);
+    // }
+
     xr_textmode_pb();
     xreg_setw(VID_CTRL, 0x0001);                      // border color #1
     xmem_setw(XR_COLOR_B_ADDR + 0xFF, 0xFfff);        // color # = black
     xr_msg_color(0x0f);
     xr_printfxy(5, 0, "xosera_test_m68k\n");
 
-    init_audio();
 
     if (use_sd)
     {

@@ -1004,7 +1004,7 @@ void xosera_vramtest()
 
     xr_savefont();
 
-#if 1
+#if 0
     dprintf("Installing interrupt handler...");
     install_intr();
     dprintf("okay.\n");

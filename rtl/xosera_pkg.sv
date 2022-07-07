@@ -44,7 +44,7 @@
 
 // experimental options (uncomment)
 //
-//`define OPT_BUS_DATAOUT_REG             // BUG: register 8-bit data bus out signal
+`define OPT_BUS_DATAOUT_REG             // register 8-bit data bus out signal [Seems critically needed]
 
 //=================================
 

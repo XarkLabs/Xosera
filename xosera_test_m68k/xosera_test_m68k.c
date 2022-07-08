@@ -557,7 +557,7 @@ static void install_copper()
     wait_vblank_start();
     xmem_set_addr(XR_COPPER_ADDR);
 
-#if 1        // copper torture test
+#if 0        // copper torture test
     for (uint16_t i = 0; i < 1024; i++)
     {
         xmem_setw_next(0xA000);
@@ -1055,6 +1055,274 @@ static uint16_t get_lfsr()
     return r;
 }
 
+uint32_t font[16 * 7] = {
+    // 0
+    0x00ff0000,        // .#..
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0x00ff0000,        // .#..
+    // 1
+    0x00ff0000,        // .#..
+    0xffff0000,        // ##..
+    0x00ff0000,        // .#..
+    0x00ff0000,        // .#..
+    0x00ff0000,        // .#..
+    0x00ff0000,        // .#..
+    0xffffff00,        // ###.
+    // 2
+    0xffffff00,        // ###.
+    0x0000ff00,        // ..#.
+    0x0000ff00,        // ..#.
+    0xffffff00,        // ###.
+    0xff000000,        // #...
+    0xff000000,        // #...
+    0xffffff00,        // ###.
+    // 3
+    0xffffff00,        // ###.
+    0x0000ff00,        // ..#.
+    0x0000ff00,        // ..#.
+    0xffffff00,        // ###.
+    0x0000ff00,        // ..#.
+    0x0000ff00,        // ..#.
+    0xffffff00,        // ###.
+    // 4
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xffffff00,        // ###.
+    0x0000ff00,        // ..#.
+    0x0000ff00,        // ..#.
+    0x0000ff00,        // ..#.
+    // 5
+    0xffffff00,        // ###.
+    0xff000000,        // #...
+    0xff000000,        // #...
+    0xffffff00,        // ###.
+    0x0000ff00,        // ..#.
+    0x0000ff00,        // ..#.
+    0xffffff00,        // ###.
+    // 6
+    0x00ffff00,        // ###.
+    0xff000000,        // #...
+    0xff000000,        // #...
+    0xffffff00,        // ###.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xffffff00,        // ###.
+    // 7
+    0xffffff00,        // ###.
+    0x0000ff00,        // ..#.
+    0x0000ff00,        // ..#.
+    0x0000ff00,        // ..#.
+    0x0000ff00,        // ..#.
+    0x0000ff00,        // ..#.
+    0x0000ff00,        // ..#.
+    // 8
+    0xffffff00,        // ###.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xffffff00,        // ###.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xffffff00,        // ###.
+    // 9
+    0xffffff00,        // ###.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xffffff00,        // ###.
+    0x0000ff00,        // ..#.
+    0x0000ff00,        // ..#.
+    0xffff0000,        // ###.
+    // 8
+    0x00ff0000,        // .#..
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xffffff00,        // ###.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    // 8
+    0xffff0000,        // ##..
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xffff0000,        // ##..
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xffff0000,        // ##..
+    // 8
+    0x00ffff00,        // .##.
+    0xff000000,        // #...
+    0xff000000,        // #...
+    0xff000000,        // #...
+    0xff000000,        // #...
+    0xff000000,        // #...
+    0x00ffff00,        // .##.
+    // 8
+    0xffff0000,        // ##..
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xff00ff00,        // #.#.
+    0xffff0000,        // ##..
+    // 8
+    0xffffff00,        // ###.
+    0xff000000,        // #...
+    0xff000000,        // #...
+    0xffffff00,        // ###.
+    0xff000000,        // #...
+    0xff000000,        // #...
+    0xffffff00,        // ###.
+    // 8
+    0xffffff00,        // ###.
+    0xff000000,        // #...
+    0xff000000,        // #...
+    0xffff0000,        // ##..
+    0xff000000,        // #...
+    0xff000000,        // #...
+    0xff000000         // #...
+};
+
+void print_digit(uint16_t off, uint16_t ll, uint16_t dig, uint16_t color)
+{
+    union lw
+    {
+        uint32_t l;
+        uint16_t w[2];
+    };
+
+    union lw * lwp = (union lw *)&font[dig * 7];
+
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+    for (uint16_t h = 0; h < 7; h++)
+    {
+        xm_setw(WR_ADDR, off + (h * ll));        // set write address
+        xm_setbl(SYS_CTRL, (lwp->w[0] & 0x8000 ? 0xc : 0) | (lwp->w[0] & 0x0080 ? 0x3 : 0));
+        xm_setw(DATA, lwp->w[0] & color);
+        xm_setbl(SYS_CTRL, (lwp->w[1] & 0x8000 ? 0xc : 0) | (lwp->w[1] & 0x0080 ? 0x3 : 0));
+        xm_setw(DATA, lwp->w[1] & color);
+        lwp++;
+    }
+    xm_setbl(SYS_CTRL, 0xf);
+}
+
+void test_colormap()
+{
+
+    xwait_not_vblank();
+    xwait_vblank();
+
+    xreg_setw(VID_CTRL, 0x0005);
+    xreg_setw(PA_GFX_CTRL, 0x0080);
+    xreg_setw(PB_GFX_CTRL, 0x0080);
+
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+    xm_setw(WR_ADDR, 0x0000);        // set write address
+
+    for (int i = 0; i < 65536; i++)
+    {
+        xm_setw(DATA, 0x0000);
+    }
+
+    xwait_not_vblank();
+    xwait_vblank();
+
+    uint16_t linelen = 160;
+    uint16_t w       = 10;
+    uint16_t h       = 14;
+
+    xreg_setw(VID_CTRL, 0x0000);
+    xreg_setw(COPP_CTRL, 0x0000);        // disable copper
+    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
+    xreg_setw(PA_GFX_CTRL, 0x0065);
+    xreg_setw(PA_TILE_CTRL, 0x0C07);
+    xreg_setw(PA_DISP_ADDR, 0x0000);
+    xreg_setw(PA_LINE_LEN, linelen);        // line len
+    xreg_setw(PA_HV_SCROLL, 0x0000);
+    xreg_setw(PA_HV_FSCALE, 0x0000);
+    xreg_setw(PB_GFX_CTRL, 0x0080);
+
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+    xm_setw(WR_ADDR, 0x0000);        // set write address
+
+    uint16_t c = 0;
+
+    for (uint16_t y = 0; y < 16; y++)
+    {
+        for (uint16_t yp = y * h; yp < ((y + 1) * h) - 2; yp++)
+        {
+            xm_setw(WR_ADDR, (linelen * (yp + 15)));
+            c = y * 16;
+            for (uint16_t x = 0; x < 16; x++)
+            {
+                for (uint16_t xp = x * w; xp < ((x + 1) * w) - 1; xp++)
+                {
+                    xm_setw(DATA, c << 8 | c);
+                }
+                xm_setw(DATA, 0x0000);
+                c++;
+            }
+        }
+    }
+
+    c = 0;
+    for (uint16_t y = 0; y < 16; y++)
+    {
+        for (uint16_t x = 0; x < 16; x++)
+        {
+            uint16_t col = xmem_getw_wait(XR_COLOR_A_ADDR + c);
+            uint16_t off = (linelen * (h * y + 18)) + (x * w) + 2;
+            print_digit(off, linelen, c / 100, ((col & 0x0880) == 0x880) ? 0x0000 : 0xffff);
+            off += 2;
+            print_digit(off, linelen, (c / 10) % 10, ((col & 0x0880) == 0x880) ? 0x0000 : 0xffff);
+            off += 2;
+            print_digit(off, linelen, c % 10, ((col & 0x0880) == 0x880) ? 0x0000 : 0xffff);
+            c++;
+        }
+    }
+
+    delay_check(DELAY_TIME * 3);
+
+    c = 0;
+    for (uint16_t y = 0; y < 16; y++)
+    {
+        for (uint16_t yp = y * h; yp < ((y + 1) * h) - 2; yp++)
+        {
+            xm_setw(WR_ADDR, (linelen * (yp + 15)));
+            c = y * 16;
+            for (uint16_t x = 0; x < 16; x++)
+            {
+                for (uint16_t xp = x * w; xp < ((x + 1) * w) - 1; xp++)
+                {
+                    xm_setw(DATA, c << 8 | c);
+                }
+                xm_setw(DATA, 0x0000);
+                c++;
+            }
+        }
+    }
+
+    c = 0;
+    for (uint16_t y = 0; y < 16; y++)
+    {
+        for (uint16_t x = 0; x < 16; x++)
+        {
+            uint16_t col = xmem_getw_wait(XR_COLOR_A_ADDR + c);
+            uint16_t off = (linelen * (h * y + 18)) + (x * w) + 3;
+            print_digit(off, linelen, c / 16, ((col & 0x0880) == 0x880) ? 0x0000 : 0xffff);
+            off += 2;
+            print_digit(off, linelen, c & 0xf, ((col & 0x0880) == 0x880) ? 0x0000 : 0xffff);
+            c++;
+        }
+    }
+
+    delay_check(DELAY_TIME * 3);
+}
+
 void test_blit()
 {
     static const int W_4BPP = 320 / 4;
@@ -1065,12 +1333,21 @@ void test_blit()
 
     dprintf("test_blit\n");
 
+    // clear ram with CPU in case no blitter
+
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+    xm_setw(WR_ADDR, 0x0000);        // set write address
+
+    for (int i = 0; i < 65536; i++)
+    {
+        xm_setw(DATA, 0x0000);
+    }
+
     // crop left and right 2 pixels
     xr_textmode_pb();
     xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640 - 4);
     xreg_setw(VID_CTRL, 0x00FF);
 
-    bool no_blitter = false;
     do
     {
         xreg_setw(PA_GFX_CTRL, 0x0040);        // bitmap + 8-bpp + Hx1 + Vx1
@@ -1104,21 +1381,9 @@ void test_blit()
             xreg_setw(BLIT_SHIFT, 0xFF00);             // no edge masking or shifting
             xreg_setw(BLIT_LINES, 0x0000);             // 1D
             xreg_setw(BLIT_WORDS, 0x10000 - 1);        // 64KW VRAM
-            // assume no blitter if "instantly" done
-            if (!xm_get_sys_ctrlb(BLIT_BUSY))
-            {
-                no_blitter = true;
-                break;
-            }
             xwait_blit_done();
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xff00);        // set write address
             xwait_vblank();
-        }
-
-        if (no_blitter)
-        {
-            dprintf("No blit unit detected.\n");
-            return;
         }
 
         uint16_t daddr = 0x1000;
@@ -2537,7 +2802,6 @@ void     xosera_test()
     xr_msg_color(0x0f);
     xr_printfxy(5, 0, "xosera_test_m68k\n");
 
-
     if (use_sd)
     {
         xr_printf("\nLoading test assets:\n");
@@ -2705,7 +2969,10 @@ void     xosera_test()
         }
 #endif
 
-        delay_check(DELAY_TIME * 5);
+        delay_check(DELAY_TIME);
+
+        restore_colors();
+        test_colormap();
 
         if (use_sd)
         {

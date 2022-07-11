@@ -31,7 +31,7 @@
 #include <stdint.h>
 // Low-level C API macro reference (act like functions as shown):
 
-// set XM registers (main registers, omit XM_ from xmreg name):
+// --- set XM registers (main registers, omit XM_ from xmreg name):
 // void     xm_setbh(xmreg, high_byte)
 // void     xm_setbl(xmreg, low_byte)
 // void     xm_setw(xmreg, word_value)
@@ -39,26 +39,33 @@
 // void     xm_set_rw_rd_incr()
 // void     xm_set_no_rw_rd_incr()
 
-// set XR register (extended registers, omit XR_ from xreg name):
+// --- set XR register (extended registers, omit XR_ from xreg name):
 // void     xreg_setw(xreg, word_value)
 // void     xreg_set_addr(xreg)
 // void     xreg_setw_next(word_value)
 
-// set XR memory address (or XR register):
+// --- set VRAM memory address: // TODO: actually implement these. 😅
+// void     vram_setw(vram, word_value)
+// void     vram_set_addr_incr(vram, incr)
+// void     vram_setw_next(word_value)
+// void     vram_setw_wait(vram, wordval)
+// void     vram_setw_next_wait(word_value)
+
+// --- set XR memory address (or XR register):
 // void     xmem_setw(xrmem, word_value)
 // void     xmem_set_addr(xrmem)
 // void     xmem_setw_next(word_value)
 // void     xmem_setw_wait(xrmem, wordval)
 // void     xmem_setw_next_wait(word_value)
 
-// get XM registers (main registers):
+// --- get XM registers (main registers):
 // uint8_t  xm_get_sys_ctrlb(bit_name)   (SYS_CTRL_<bit_name>_B)
 // uint8_t  xm_getbh(xmreg)             (omit XM_ from xmreg name)
 // uint8_t  xm_getbl(xmreg)             (omit XM_ from xmreg name)
 // uint16_t xm_getw(xmreg)              (omit XM_ from xmreg name)
 // uint32_t xm_getl(xmreg)              (omit XM_ from xmreg name)
 
-// get XR registers (extended registers):
+// --- get XR registers (extended registers):
 // uint16_t xreg_getw(xreg)             (omit XR_ from xreg name)
 // uint16_t xreg_get_addr(xreg)         (omit XR_ from xreg name)
 // uint16_t xreg_getw_next(xreg)        (omit XR_ from xreg name)
@@ -69,7 +76,14 @@
 // needed for reliable operation (especially when reading memories used during video display).
 // TODO: test and verify exactly when "*_wait" functions are required
 
-// get XR memory address (or XR register):
+// --- get VRAM data from VRAM address // TODO: actually implement these. 😅
+// uint16_t vram_getw(vram)
+// void vram_get_addr_incr(vram, incr)
+// uint16_t vram_getw_next()
+// uint16_t vram_getw_wait(vram)
+// uint16_t vram_getw_next_wait()
+
+// --- get XR data from XR address (or XR register):
 // uint16_t xmem_getw(xrmem)
 // void xmem_get_addr(xrmem)
 // uint16_t xmem_getw_next()

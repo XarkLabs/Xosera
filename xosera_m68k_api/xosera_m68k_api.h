@@ -154,8 +154,9 @@ typedef char _xosera_init_size_static_assert[sizeof(xosera_info_t) == XV_INFO_SI
 #endif
 
 // Xosera XM register base ptr
+typedef volatile xmreg_t * const xosera_ptr_t;
 #if !defined(XV_PREP_REQUIRED)
-extern volatile xmreg_t * const xosera_ptr;
+extern xosera_ptr_t xosera_ptr;
 #endif
 
 // Extra-credit function that saves 8 cycles per function that calls xosera API functions (call once at top).

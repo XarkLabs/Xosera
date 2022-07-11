@@ -283,7 +283,8 @@
 			"queue": "c",
 			"random": "c",
 			"machine.h": "c",
-			"bit": "c"
+			"bit": "c",
+			"filesystem": "c"
 		},
 		"workbench.colorCustomizations": {
 			"terminal.foreground": "#18E818",

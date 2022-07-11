@@ -14,7 +14,7 @@
 
 `ifdef EN_BLIT
 
-module blitter2(
+module blitter(
     // video registers and control
     input  wire logic           xreg_wr_en_i,       // strobe to write internal config register number
     input  wire logic  [3:0]    xreg_num_i,         // internal config register number (for reads)

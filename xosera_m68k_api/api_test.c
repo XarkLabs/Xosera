@@ -61,6 +61,16 @@ void kmain(void)
     nop();
     xreg_setw_next(0xC0DE);
     nop();
+    vram_setw(0xD00B, 0x1ee7);
+    nop();
+    vram_set_addr_incr(0x0B0B, 0x0001);
+    nop();
+    vram_setw_next(0x3456);
+    nop();
+    vram_setw_wait(0xB00B, 0x4004);
+    nop();
+    vram_setw_next_wait(0x7777);
+    nop();
     xmem_setw(XR_TILE_ADDR, 0xBEEF);
     nop();
     xmem_set_addr(XR_COPPER_ADDR);

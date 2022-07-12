@@ -128,30 +128,39 @@ assign gpio_10      = bus_intr_r;         // interrupt signal
 // split tri-state data lines into in/out signals for inside FPGA
 logic bus_out_ena;
 logic [7:0] bus_data_out;               // bus out from Xosera
-`ifdef OPT_BUS_DATAOUT_REG
 logic [7:0] bus_data_out_r;             // registered bus_data_out signal (experimental)
-`endif
 logic [7:0] bus_data_in;                // bus input to Xosera
 
 // only set bus to output if Xosera is selected and read is selected
 assign bus_out_ena  = (bus_cs_n == xv::CS_ENABLED && bus_rd_nwr == xv::RnW_READ);
 
-// tri-state data bus unless Xosera is both selected and bus is reading
-// NOTE: No longer need to use iCE40 SB_IO primitive to control tri-state properly here
-`ifdef OPT_BUS_DATAOUT_REG
+`ifdef SYNTHESIS
+`ifdef OPT_BUS_SB_IO
+// NOTE: Use iCE40 SB_IO primitive to control tri-state properly here
+/* verilator lint_off PINMISSING */
+SB_IO #(
+    .PIN_TYPE(6'b101001)    //PIN_OUTPUT_TRISTATE|PIN_INPUT
+) bus_tristate [7:0] (
+    .PACKAGE_PIN(bus_data),
+    .INPUT_CLK(pclk),
+    .OUTPUT_CLK(pclk),
+    //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
+    .OUTPUT_ENABLE(bus_out_ena),
+    .D_OUT_0(bus_data_out_r),
+    .D_IN_0(bus_data_in)
+);
+/* verilator lint_on PINMISSING */
+`endif
+`else
 // NOTE: Using the registered ("_r") signal may be a win for <posedge pclk> -> async
 //        timing on bus_data_out signals (but might cause issues?)
 assign bus_data     = bus_out_ena ? bus_data_out_r  : 8'bZ;
-`else
-assign bus_data     = bus_out_ena ? bus_data_out    : 8'bZ;
-`endif
 assign bus_data_in  = bus_data;
+`endif
 
 // update registered signals each clock
 always_ff @(posedge pclk) begin
-`ifdef OPT_BUS_DATAOUT_REG
     bus_data_out_r  <= bus_data_out;
-`endif
     bus_intr_r      <= bus_intr;
     reconfig_r      <= reconfig;
     boot_select_r   <= boot_select;

@@ -76,6 +76,11 @@ byte_t          reg_timer_countdown;    // 8-bit timer interrupt interval counte
 logic           xr_rd;                  // flag for XR_DATA read outstanding
 logic           vram_rd;                // flag for DATA read outstanding
 
+logic           rd_incr_flag;
+logic           wr_incr_flag;
+logic           xrd_incr_flag;
+logic           xwr_incr_flag;
+
 logic  [3:0]    bus_reg_num;            // bus register on bus
 logic           bus_write_strobe;       // strobe when a word of data written
 logic           bus_read_strobe;        // strobe when a word of data read
@@ -254,21 +259,31 @@ always_ff @(posedge clk) begin
         reg_timer_interval  <= '0;
 `endif
 
+        rd_incr_flag    <=  1'b0;
+        wr_incr_flag    <=  1'b0;
+        xrd_incr_flag   <=  1'b0;
+        xwr_incr_flag   <=  1'b0;
+
     end else begin
         // clear strobe signals
         intr_clear_o    <= '0;
+
+        rd_incr_flag    <=  1'b0;
+        wr_incr_flag    <=  1'b0;
+        xrd_incr_flag   <=  1'b0;
+        xwr_incr_flag   <=  1'b0;
 
         // VRAM access acknowledge
         if (vram_ack_i) begin
             // if rd read then save rd data, increment rd_addr
             if (vram_rd) begin
                 reg_data        <= regs_data_i;
-                reg_rd_addr     <= reg_rd_addr + reg_rd_incr;
+                rd_incr_flag    <= 1'b1;
             end
 
             // if we did a wr write, increment wr addr
             if (regs_wr_o) begin
-                reg_wr_addr     <= reg_wr_addr + reg_wr_incr;
+                wr_incr_flag    <= 1'b1;
             end
 
             regs_vram_sel_o <= 1'b0;
@@ -280,16 +295,32 @@ always_ff @(posedge clk) begin
         if (xr_ack_i) begin
             if (xr_rd) begin
                 reg_xdata       <= xr_data_i;
-                reg_rd_xaddr    <= reg_rd_xaddr + 1'b1;
+                xrd_incr_flag   <= 1'b1;
             end
 
             if (regs_wr_o) begin
-                reg_wr_xaddr    <= reg_wr_xaddr + 1'b1;
+                xwr_incr_flag   <= 1'b1;
             end
 
             regs_xr_sel_o   <= 1'b0;            // clear xr select
             regs_wr_o       <= 1'b0;            // clear write
             xr_rd           <= 1'b0;            // clear pending xr read
+        end
+
+        if (wr_incr_flag) begin
+            reg_wr_addr     <= reg_wr_addr + reg_wr_incr;
+        end
+
+        if (xwr_incr_flag) begin
+            reg_wr_xaddr    <= reg_wr_xaddr + 1'b1;
+        end
+
+        if (rd_incr_flag) begin
+            reg_rd_addr     <= reg_rd_addr + reg_rd_incr;
+        end
+
+        if (xrd_incr_flag) begin
+            reg_rd_xaddr    <= reg_rd_xaddr + 1'b1;
         end
 
         // register write

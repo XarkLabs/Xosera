@@ -44,8 +44,8 @@
 
 // experimental options (uncomment)
 //
-`define OPT_BUS_DATAOUT_REG             // register 8-bit data bus out signal [Seems critically needed]
-
+//`define OPT_BUS_DATAOUT_REG             // register 8-bit data bus out signal [Seems critically needed]
+`define OPT_BUS_SB_IO                   // experiment using SB_IO for tristate
 //=================================
 
 `define VERSION 0_33                    // Xosera BCD version code (x.xx)

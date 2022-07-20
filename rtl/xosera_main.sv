@@ -164,6 +164,9 @@ logic                   dbug_cs_strobe;     // debug "ack" bus strobe
 `ifdef BUS_DEBUG_SIGNALS
 assign audio_l_o    =   dbug_cs_strobe;     // debug to see when CS noticed
 assign audio_r_o    =   regs_xr_sel;        // debug to see when XR bus selected
+
+logic unused_l;
+logic unused_r;
 `else
 `ifndef EN_AUDIO
 assign audio_l_o    =   1'b0;
@@ -247,9 +250,14 @@ video_gen video_gen(
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
 `endif
+`ifdef BUS_DEBUG_SIGNALS
+    .audio_pdm_l_o(unused_l),
+    .audio_pdm_r_o(unused_r),
+`else
 `ifdef EN_AUDIO
     .audio_pdm_l_o(audio_l_o),
     .audio_pdm_r_o(audio_r_o),
+`endif
 `endif
     .reset_i(reset_i),
     .clk(clk)

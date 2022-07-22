@@ -329,9 +329,9 @@ always_ff @(posedge clk) begin : mix_fsm
     end
 end
 
-`ifndef BOOGA_ICE40UP5K    // iCE40UltraPlus5K specific
+`ifndef ICE40UP5K    // iCE40UltraPlus5K specific
 
-always_comb begin : mix_block
+always_comb begin
     mult_l_result    = mix_val_temp * vol_l_temp;
     mult_r_result    = mix_val_temp * vol_r_temp;
 end
@@ -349,6 +349,57 @@ always_ff @(posedge clk) begin
 end
 
 `else
+/* verilator lint_off PINCONNECTEMPTY */
+SB_MAC16 #(
+    .NEG_TRIGGER(1'b0),                 // 0=rising/1=falling clk edge
+    .C_REG(1'b0),                       // 1=register input C
+    .A_REG(1'b0),                       // 1=register input A
+    .B_REG(1'b0),                       // 1=register input B
+    .D_REG(1'b0),                       // 1=register input D
+    .TOP_8x8_MULT_REG(1'b0),            // 1=register top 8x8 output
+    .BOT_8x8_MULT_REG(1'b0),            // 1=register bot 8x8 output
+    .PIPELINE_16x16_MULT_REG1(1'b0),    // 1=register reg1 16x16 output
+    .PIPELINE_16x16_MULT_REG2(1'b0),    // 1=register reg2 16x16 output
+    .TOPOUTPUT_SELECT(2'b01),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPADDSUB_LOWERINPUT(2'b00),       // 00=input A, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPADDSUB_UPPERINPUT(1'b0),        // 0=add/sub accumulate, 1=input C
+    .TOPADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower add/sub ACCUMOUT, 11=lower add/sub CO
+    .BOTOUTPUT_SELECT(2'b01),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTADDSUB_LOWERINPUT(2'b00),       // 00=input A, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTADDSUB_UPPERINPUT(1'b0),        // 0=add/sub accumulate, 1=input D
+    .BOTADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower DSP ACCUMOUT, 11=lower DSP CO
+    .MODE_8x8(1'b0),                    // 0=8x8 mode, 1=16x16 mode
+    .A_SIGNED(1'b1),                    // 0=unsigned/1=signed input A
+    .B_SIGNED(1'b1)                     // 0=unsigned/1=signed input B
+) SB_MAC16_l (
+    .CLK(clk),                          // clock
+    .CE(mix_en),                        // clock enable
+    .C('0),                             // 16-bit input C
+    .A(mix_val_temp),                   // 16-bit input A
+    .B(vol_l_temp),                     // 16-bit input B
+    .D('0),                             // 16-bit input D
+    .AHOLD(1'b0),                       // 0=load, 1=hold input A
+    .BHOLD(1'b0),                       // 0=load, 1=hold input B
+    .CHOLD(1'b0),                       // 0=load, 1=hold input C
+    .DHOLD(1'b0),                       // 0=load, 1=hold input D
+    .IRSTTOP(1'b0),                     // 1=reset input A, C and 8x8 mult upper
+    .IRSTBOT(1'b0),                     // 1=reset input A, C and 8x8 mult lower
+    .ORSTTOP(mix_clr),                  // 1=reset output accumulator upper
+    .ORSTBOT(mix_clr),                  // 1=reset output accumulator lower
+    .OLOADTOP(1'b0),                    // 0=no load/1=load top accumulator from input C
+    .OLOADBOT(1'b0),                    // 0=no load/1=load bottom accumulator from input D
+    .ADDSUBTOP(1'b0),                   // 0=add/1=sub for top accumulator
+    .ADDSUBBOT(1'b0),                   // 0=add/1=sub for bottom accumulator
+    .OHOLDTOP(1'b0),                    // 0=load/1=hold into top accumulator
+    .OHOLDBOT(1'b0),                    // 0=load/1=hold into bottom accumulator
+    .CI(1'b0),                          // cascaded add/sub carry in from previous DSP block
+    .ACCUMCI(1'b0),                     // cascaded accumulator carry in from previous DSP block
+    .SIGNEXTIN(1'b0),                   // cascaded sign extension in from previous DSP block
+    .O(),                               // 32-bit result output
+    .CO(),                              // cascaded add/sub carry output to next DSP block
+    .ACCUMCO(),                         // cascaded accumulator carry output to next DSP block
+    .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block
+);
 
 SB_MAC16 #(
     .NEG_TRIGGER(1'b0),                 // 0=rising/1=falling clk edge
@@ -360,46 +411,48 @@ SB_MAC16 #(
     .BOT_8x8_MULT_REG(1'b0),            // 1=register bot 8x8 output
     .PIPELINE_16x16_MULT_REG1(1'b0),    // 1=register reg1 16x16 output
     .PIPELINE_16x16_MULT_REG2(1'b0),    // 1=register reg2 16x16 output
-    .TOPOUTPUT_SELECT(2'b00),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPOUTPUT_SELECT(2'b01),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
     .TOPADDSUB_LOWERINPUT(2'b00),       // 00=input A, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
     .TOPADDSUB_UPPERINPUT(1'b0),        // 0=add/sub accumulate, 1=input C
     .TOPADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower add/sub ACCUMOUT, 11=lower add/sub CO
-    .BOTOUTPUT_SELECT(2'b00),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTOUTPUT_SELECT(2'b01),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
     .BOTADDSUB_LOWERINPUT(2'b00),       // 00=input A, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
     .BOTADDSUB_UPPERINPUT(1'b0),        // 0=add/sub accumulate, 1=input D
     .BOTADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower DSP ACCUMOUT, 11=lower DSP CO
     .MODE_8x8(1'b0),                    // 0=8x8 mode, 1=16x16 mode
     .A_SIGNED(1'b1),                    // 0=unsigned/1=signed input A
     .B_SIGNED(1'b1)                     // 0=unsigned/1=signed input B
-) SB_MAC16_l (
+) SB_MAC16_r (
     .CLK(clk),                          // clock
-    .CE(dsp_ce),                        // clock enable
-    .C(dsp_c),                          // 16-bit input C
-    .A(dsp_a),                          // 16-bit input A
-    .B(dsp_b),                          // 16-bit input B
-    .D(dsp_d),                          // 16-bit input D
-    .AHOLD(dsp_ahold),                  // 0=load, 1=hold input A
-    .BHOLD(dsp_bhold),                  // 0=load, 1=hold input B
-    .CHOLD(dsp_chold),                  // 0=load, 1=hold input C
-    .DHOLD(dsp_dhold),                  // 0=load, 1=hold input D
-    .IRSTTOP(dsp_irsttop),              // 1=reset input A, C and 8x8 mult upper
-    .IRSTBOT(dsp_irstbot),              // 1=reset input A, C and 8x8 mult lower
-    .ORSTTOP(dsp_orsttop),              // 1=reset output accumulator upper
-    .ORSTBOT(dsp_orstbot),              // 1=reset output accumulator lower
-    .OLOADTOP(dsp_oloadtop),            // 0=no load/1=load top accumulator from input C
-    .OLOADBOT(dsp_oloadbot),            // 0=no load/1=load bottom accumulator from input D
-    .ADDSUBTOP(dsp_addsubtop),          // 0=add/1=sub for top accumulator
-    .ADDSUBBOT(dsp_addsubbot),          // 0=add/1=sub for bottom accumulator
-    .OHOLDTOP(dsp_oholdtop),            // 0=load/1=hold into top accumulator
-    .OHOLDBOT(dsp_oholdbot),            // 0=load/1=hold into bottom accumulator
-    .CI(dsp_ci),                        // cascaded add/sub carry in from previous DSP block
-    .ACCUMCI(),                         // cascaded accumulator carry in from previous DSP block
-    .SIGNEXTIN(),                       // cascaded sign extension in from previous DSP block
-    .O(dsp_o),                          // 32-bit result output
-    .CO(dsp_co),                        // cascaded add/sub carry output to next DSP block
+    .CE(mix_en),                        // clock enable
+    .C('0),                             // 16-bit input C
+    .A(mix_val_temp),                   // 16-bit input A
+    .B(vol_r_temp),                     // 16-bit input B
+    .D('0),                             // 16-bit input D
+    .AHOLD(1'b0),                       // 0=load, 1=hold input A
+    .BHOLD(1'b0),                       // 0=load, 1=hold input B
+    .CHOLD(1'b0),                       // 0=load, 1=hold input C
+    .DHOLD(1'b0),                       // 0=load, 1=hold input D
+    .IRSTTOP(1'b0),                     // 1=reset input A, C and 8x8 mult upper
+    .IRSTBOT(1'b0),                     // 1=reset input A, C and 8x8 mult lower
+    .ORSTTOP(mix_clr),                  // 1=reset output accumulator upper
+    .ORSTBOT(mix_clr),                  // 1=reset output accumulator lower
+    .OLOADTOP(1'b0),                    // 0=no load/1=load top accumulator from input C
+    .OLOADBOT(1'b0),                    // 0=no load/1=load bottom accumulator from input D
+    .ADDSUBTOP(1'b0),                   // 0=add/1=sub for top accumulator
+    .ADDSUBBOT(1'b0),                   // 0=add/1=sub for bottom accumulator
+    .OHOLDTOP(1'b0),                    // 0=load/1=hold into top accumulator
+    .OHOLDBOT(1'b0),                    // 0=load/1=hold into bottom accumulator
+    .CI(1'b0),                          // cascaded add/sub carry in from previous DSP block
+    .ACCUMCI(1'b0),                     // cascaded accumulator carry in from previous DSP block
+    .SIGNEXTIN(1'b0),                   // cascaded sign extension in from previous DSP block
+    .O(),                               // 32-bit result output
+    .CO(),                              // cascaded add/sub carry output to next DSP block
     .ACCUMCO(),                         // cascaded accumulator carry output to next DSP block
     .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block
 );
+/* verilator lint_on PINCONNECTEMPTY */
+
 `endif
 
 endmodule

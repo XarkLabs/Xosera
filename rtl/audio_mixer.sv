@@ -62,6 +62,8 @@ logic [CHAN_W-1:0]                  mix_chan;
 audio_fetch_ph                      fetch_phase;
 audio_mix_ph                        mix_phase;
 
+logic                               mix_en;             // enable multiply-add
+logic                               mix_clr;            // clear mix accumulator
 sbyte_t                             mix_val_temp;
 sbyte_t                             vol_l_temp;
 sbyte_t                             vol_r_temp;
@@ -104,7 +106,6 @@ logic [ACC_W-1:0]                   mix_res_r_u;
 /* verilator lint_on UNUSED */
 `endif
 
-
 // setup alias signals
 always_comb begin : alias_block
     for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
@@ -123,6 +124,25 @@ always_comb begin : alias_block
 `endif
     end
 end
+
+// audio left DAC outout
+audio_dac #(
+    .WIDTH(DAC_W)
+) audio_l_dac (
+    .value_i(output_l),
+    .pulse_o(pdm_l_o),
+    .reset_i(reset_i),
+    .clk(clk)
+);
+// audio right DAC outout
+audio_dac #(
+    .WIDTH(DAC_W)
+) audio_r_dac (
+    .value_i(output_r),
+    .pulse_o(pdm_r_o),
+    .reset_i(reset_i),
+    .clk(clk)
+);
 
 always_ff @(posedge clk) begin : chan_process
     if (reset_i) begin
@@ -224,22 +244,17 @@ always_ff @(posedge clk) begin : chan_process
     end
 end
 
-always_comb begin : mix_block
-    mult_l_result    = mix_val_temp * vol_l_temp;
-    mult_r_result    = mix_val_temp * vol_r_temp;
-end
-
 always_ff @(posedge clk) begin : mix_fsm
     if (reset_i) begin
+        mix_en          <= '0;
+        mix_clr         <= '0;
+
         mix_chan        <= '0;
         mix_phase       <= AUD_MIX_MULT;
 
         mix_val_temp    <= '0;
         vol_l_temp      <= '0;
         vol_r_temp      <= '0;
-
-        mix_l_acc       <= '0;
-        mix_r_acc       <= '0;
 
 `ifndef SYNTHESIS
         output_l        <= '1;      // HACK: to force full scale display for analog signal view in GTKWave
@@ -262,15 +277,18 @@ always_ff @(posedge clk) begin : mix_fsm
 `endif
 
     end else begin
+        mix_en          <= '0;
+        mix_clr         <= '0;
+
         case (mix_phase)
             AUD_MIX_MULT: begin
                 if (mix_chan == 0) begin
 `ifndef SYNTHESIS
                     // debug mix result signals
-                    mix_res_l   <= mix_l_acc;
-                    mix_res_r   <= mix_r_acc;
-                    mix_res_l_u <= mix_l_acc ^ (ACC_W'(1'b1) << ACC_W-1);
-                    mix_res_r_u <= mix_r_acc ^ (ACC_W'(1'b1) << ACC_W-1);
+                    mix_res_l       <= mix_l_acc;
+                    mix_res_r       <= mix_r_acc;
+                    mix_res_l_u     <= mix_l_acc ^ (ACC_W'(1'b1) << ACC_W-1);
+                    mix_res_r_u     <= mix_r_acc ^ (ACC_W'(1'b1) << ACC_W-1);
 `endif
                      // clamp and convert to unsigned result for DAC
                     if (mix_l_acc < (-128 <<< VOL_SHIFT)) begin
@@ -287,8 +305,7 @@ always_ff @(posedge clk) begin : mix_fsm
                     end else begin
                         output_r        <= 8'(mix_r_acc >> VOL_SHIFT) ^ 8'h80;
                     end
-                    mix_l_acc       <= '0;
-                    mix_r_acc       <= '0;
+                    mix_clr         <=  1'b1;
                 end
                 mix_val_temp    <= chan_val[mix_chan*8+:8];
                 vol_l_temp      <= { 1'b0, audio_vol_l_nchan_i[7*mix_chan+:7] };
@@ -297,13 +314,11 @@ always_ff @(posedge clk) begin : mix_fsm
                 mix_phase       <= AUD_MIX_ACCUM;
             end
             AUD_MIX_ACCUM: begin
+                mix_en          <= 1'b1;
 `ifndef SYNTHESIS
                 chan_res_l[mix_chan]  <= mult_l_result;
                 chan_res_r[mix_chan]  <= mult_r_result;
 `endif
-                mix_l_acc       <= mix_l_acc + ACC_W'(mult_l_result);
-                mix_r_acc       <= mix_r_acc + ACC_W'(mult_r_result);
-
                 if (AUDIO_NCHAN > 1) begin
                     mix_chan        <= mix_chan + 1'b1;
                 end
@@ -314,24 +329,78 @@ always_ff @(posedge clk) begin : mix_fsm
     end
 end
 
-// audio left DAC outout
-audio_dac #(
-    .WIDTH(DAC_W)
-) audio_l_dac (
-    .value_i(output_l),
-    .pulse_o(pdm_l_o),
-    .reset_i(reset_i),
-    .clk(clk)
+`ifndef BOOGA_ICE40UP5K    // iCE40UltraPlus5K specific
+
+always_comb begin : mix_block
+    mult_l_result    = mix_val_temp * vol_l_temp;
+    mult_r_result    = mix_val_temp * vol_r_temp;
+end
+
+always_ff @(posedge clk) begin
+    if (mix_clr) begin
+        mix_l_acc       <= '0;
+        mix_r_acc       <= '0;
+    end else begin
+        if (mix_en) begin
+            mix_l_acc       <= mix_l_acc + ACC_W'(mult_l_result);
+            mix_r_acc       <= mix_r_acc + ACC_W'(mult_r_result);
+        end
+    end
+end
+
+`else
+
+SB_MAC16 #(
+    .NEG_TRIGGER(1'b0),                 // 0=rising/1=falling clk edge
+    .C_REG(1'b0),                       // 1=register input C
+    .A_REG(1'b0),                       // 1=register input A
+    .B_REG(1'b0),                       // 1=register input B
+    .D_REG(1'b0),                       // 1=register input D
+    .TOP_8x8_MULT_REG(1'b0),            // 1=register top 8x8 output
+    .BOT_8x8_MULT_REG(1'b0),            // 1=register bot 8x8 output
+    .PIPELINE_16x16_MULT_REG1(1'b0),    // 1=register reg1 16x16 output
+    .PIPELINE_16x16_MULT_REG2(1'b0),    // 1=register reg2 16x16 output
+    .TOPOUTPUT_SELECT(2'b00),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPADDSUB_LOWERINPUT(2'b00),       // 00=input A, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPADDSUB_UPPERINPUT(1'b0),        // 0=add/sub accumulate, 1=input C
+    .TOPADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower add/sub ACCUMOUT, 11=lower add/sub CO
+    .BOTOUTPUT_SELECT(2'b00),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTADDSUB_LOWERINPUT(2'b00),       // 00=input A, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTADDSUB_UPPERINPUT(1'b0),        // 0=add/sub accumulate, 1=input D
+    .BOTADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower DSP ACCUMOUT, 11=lower DSP CO
+    .MODE_8x8(1'b0),                    // 0=8x8 mode, 1=16x16 mode
+    .A_SIGNED(1'b1),                    // 0=unsigned/1=signed input A
+    .B_SIGNED(1'b1)                     // 0=unsigned/1=signed input B
+) SB_MAC16_l (
+    .CLK(clk),                          // clock
+    .CE(dsp_ce),                        // clock enable
+    .C(dsp_c),                          // 16-bit input C
+    .A(dsp_a),                          // 16-bit input A
+    .B(dsp_b),                          // 16-bit input B
+    .D(dsp_d),                          // 16-bit input D
+    .AHOLD(dsp_ahold),                  // 0=load, 1=hold input A
+    .BHOLD(dsp_bhold),                  // 0=load, 1=hold input B
+    .CHOLD(dsp_chold),                  // 0=load, 1=hold input C
+    .DHOLD(dsp_dhold),                  // 0=load, 1=hold input D
+    .IRSTTOP(dsp_irsttop),              // 1=reset input A, C and 8x8 mult upper
+    .IRSTBOT(dsp_irstbot),              // 1=reset input A, C and 8x8 mult lower
+    .ORSTTOP(dsp_orsttop),              // 1=reset output accumulator upper
+    .ORSTBOT(dsp_orstbot),              // 1=reset output accumulator lower
+    .OLOADTOP(dsp_oloadtop),            // 0=no load/1=load top accumulator from input C
+    .OLOADBOT(dsp_oloadbot),            // 0=no load/1=load bottom accumulator from input D
+    .ADDSUBTOP(dsp_addsubtop),          // 0=add/1=sub for top accumulator
+    .ADDSUBBOT(dsp_addsubbot),          // 0=add/1=sub for bottom accumulator
+    .OHOLDTOP(dsp_oholdtop),            // 0=load/1=hold into top accumulator
+    .OHOLDBOT(dsp_oholdbot),            // 0=load/1=hold into bottom accumulator
+    .CI(dsp_ci),                        // cascaded add/sub carry in from previous DSP block
+    .ACCUMCI(),                         // cascaded accumulator carry in from previous DSP block
+    .SIGNEXTIN(),                       // cascaded sign extension in from previous DSP block
+    .O(dsp_o),                          // 32-bit result output
+    .CO(dsp_co),                        // cascaded add/sub carry output to next DSP block
+    .ACCUMCO(),                         // cascaded accumulator carry output to next DSP block
+    .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block
 );
-// audio right DAC outout
-audio_dac #(
-    .WIDTH(DAC_W)
-) audio_r_dac (
-    .value_i(output_r),
-    .pulse_o(pdm_r_o),
-    .reset_i(reset_i),
-    .clk(clk)
-);
+`endif
 
 endmodule
 

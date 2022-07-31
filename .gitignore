@@ -64,3 +64,4 @@ utils/image_pal
 
 utils/true_color_hack
 rtl/sim/xosera_def_files
+rtl/sim/ice40_config.vlt

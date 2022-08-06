@@ -4,7 +4,7 @@
 
 ### Xosera is an FPGA based video adapter designed with the [rosco_m68k](https://github.com/rosco-m68k/rosco_m68k) retro computer in mind (likely adaptable to most any computer with an 8-bit parallel bus and a few control signals)
 
-Inspired in concept only by it's "namesake" the [Commander X16](https://www.commanderx16.com/)'s VERA, Xosera is an original open-source video adapter design, built with open-source tools, that is being tailored with features appropriate for a Motorola 68K era retro computer.
+Inspired in concept only by its namesake the [Commander X16](https://www.commanderx16.com/)'s [VERA](https://github.com/fvdhoef/vera-module), Xosera is an original open-source video adapter design, built with open-source tools, that is being tailored with features appropriate for a Motorola 68K era retro computer.  When this project was started, it was thought that the X-16 VERA design would be closed source, but it has now also been released under the MIT license (so now _two_ "enhanced retro adapters" for homebrew retro designs, both somewhat similar but with different features and focus).
 
 ![Xosera board in rosco_m68k](pics/Xosera_audio_test.jpg)  
 Picture of Xosera board in rosco_m68k undgoing audio development with logic-analyzer

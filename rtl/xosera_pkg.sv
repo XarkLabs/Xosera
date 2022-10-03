@@ -32,10 +32,10 @@
 //
 // TODO: PF_A & B options
 `define EN_TIMER_INTR                   // enable timer interrupt
-//`define EN_COPP                         // enable copper
+`define EN_COPP                         // enable copper
 //`define EN_PF_B                         // enable PF B (2nd overlay playfield)
 //`define EN_PF_B_BLEND                   // enable pf B blending (else overlay only)
-//`define EN_BLIT                         // enable blit unit
+`define EN_BLIT                         // enable blit unit
 //`define EN_BLIT_DECR                    // TODO: enable blit pointer decrementing
 //`define EN_BLIT_DECR_LSHIFT             // TODO: enable blit left shift when decrementing?
 //`define EN_BLIT_XOR_CONST_AB            // TODO: enable blit XOR modulo with constants?

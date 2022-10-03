@@ -25,6 +25,9 @@ rtl/**/*.json
 # Verilator output
 rtl/sim/obj_dir/*
 
+# Verilator vlt
+**/*.vlt
+
 # iVerilog output files
 rtl/sim/xosera_tb
 
@@ -63,5 +66,4 @@ utils/image_pal
 .vscode/*.log
 
 utils/true_color_hack
-rtl/sim/xosera_def_files
-rtl/sim/ice40_config.vlt
+

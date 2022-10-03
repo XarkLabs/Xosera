@@ -97,20 +97,22 @@ YOSYS_ARGS := -e "no driver" -w "tri-state" -w "list of registers"
 
 # Yosys synthesis arguments
 FLOW3 :=
-#YOSYS_SYNTH_ARGS := -device u -dsp -retime -top $(TOP)
-#YOSYS_SYNTH_ARGS := -device u -dsp -abc2 -relut -retime -top $(TOP)
-#YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -relut -top $(TOP)
-#YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc2 -dsp -top $(TOP)
-YOSYS_SYNTH_ARGS := -device u -no-rw-check -dsp -abc9 -top $(TOP)
+#YOSYS_SYNTH_ARGS := -device u -retime -top $(TOP)
+#YOSYS_SYNTH_ARGS := -device u -abc2 -relut -retime -top $(TOP)
+#YOSYS_SYNTH_ARGS := -device u -abc9 -relut -top $(TOP)
+#YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc2 -top $(TOP)
+YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc9 -top $(TOP)
 #FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
 
+TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
+VLT_CONFIG := upduino/ice40_config.vlt
+
 # Verilator tool (used for "lint")
 VERILATOR := verilator
-VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -Werror-UNUSED -Wall -Wno-DECLFILENAME
-TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
+VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -v $(TECH_LIB) $(VLT_CONFIG) -Werror-UNUSED -Wall -Wno-DECLFILENAME
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
@@ -147,19 +149,19 @@ count: $(SRC) $(INC) $(FONTFILES) upduino.mk
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 
 # run Verilator to check for Verilog issues
-lint: $(SRC) $(INC) $(FONTFILES) upduino.mk
-	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC)
+lint: $(VLT_CONFIG) $(SRC) $(INC) $(FONTFILES) upduino.mk
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC)
 
 $(DOT): %.dot: %.sv upduino.mk
 	mkdir -p upduino/dot
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
-%.json: $(SRC) $(INC) $(FONTFILES) upduino.mk
+%.json: $(VLT_CONFIG) $(SRC) $(INC) $(FONTFILES) upduino.mk
 	@echo === Building UPduino Xosera ===
 	@rm -f $@
 	@mkdir -p $(LOGS)
-	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
 	@-grep "XOSERA" $(LOGS)/$(OUTNAME)_yosys.log
 	@-grep "\(Number of cells\|Number of wires\)" $(LOGS)/$(OUTNAME)_yosys.log
@@ -241,9 +243,18 @@ upduino/%_$(OUTSUFFIX).rpt: upduino/%_$(OUTSUFFIX).asc upduino.mk
 	@rm -f $@
 	$(ICETIME) -d $(DEVICE) -m -t -r $@ $<
 
+# disable warnings in cells_sim.v library for Verilator lint
+$(VLT_CONFIG):
+	@echo === Verilator cells_sim.v warning exceptions ===
+	@echo >$(VLT_CONFIG)
+	@echo >>$(VLT_CONFIG) \`verilator_config
+	@echo >>$(VLT_CONFIG) lint_off -rule UNUSED    -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN  -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule WIDTH     -file \"$(TECH_LIB)\"
+
 # delete all targets that will be re-generated
 clean:
-	rm -f xosera_upd.bin $(wildcard upduino/*.json) $(wildcard upduino/*.asc) $(wildcard upduino/*.rpt) $(wildcard upduino/*.bin)
+	rm -f $(VLT_CONFIG) xosera_upd.bin $(wildcard upduino/*.json) $(wildcard upduino/*.asc) $(wildcard upduino/*.rpt) $(wildcard upduino/*.bin)
 
 # prevent make from deleting any intermediate files
 .SECONDARY:

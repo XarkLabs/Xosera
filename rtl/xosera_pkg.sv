@@ -48,7 +48,7 @@
 `define OPT_BUS_SB_IO                   // experiment using SB_IO for tristate
 //=================================
 
-`define VERSION 0_33                    // Xosera BCD version code (x.xx)
+`define VERSION 0_34                    // Xosera BCD version code (x.xx)
 
 `ifndef GITCLEAN
 `define GITCLEAN 0                      // unknown Git state (assumed dirty)

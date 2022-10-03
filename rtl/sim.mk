@@ -116,7 +116,8 @@ CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-s
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
-VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -Mdir sim/obj_dir -Wall --trace-fst -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY
+VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -Mdir sim/obj_dir -Wall --trace-fst -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY -Wno-fatal
+VLT_CONFIG := sim/ice40_config.vlt
 
 # Verillator C++ source driver
 CSRC := sim/xosera_sim.cpp
@@ -148,14 +149,22 @@ irun: sim/$(TBTOP) sim.mk
 	@mkdir -p $(LOGS)
 	$(VVP) sim/$(TBTOP) -fst
 
+# disable UNUSED and UNDRIVEN warnings in cells_sim.v library for Verilator lint
+$(VLT_CONFIG):
+	@echo >$(VLT_CONFIG)
+	@echo >>$(VLT_CONFIG) \`verilator_config
+	@echo >>$(VLT_CONFIG) lint_off -rule WIDTH  -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule UNUSED  -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN  -file \"$(TECH_LIB)\"
+
 # use Icarus Verilog to build vvp simulation executable
 sim/$(DEFTOP): $(INC) sim/$(DEFTOP).sv sim.mk
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TBTOP) sim/$(TBTOP).sv
 	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -o sim/$(DEFTOP) $(current_dir)/sim/$(DEFTOP).sv
 
 # use Verilator to build native simulation executable
-sim/obj_dir/V$(VTOP): $(CSRC) $(INC) $(SRC) sim.mk
-	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(TECH_LIB) $(SRC) $(current_dir)/$(CSRC)
+sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) sim.mk
+	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(VLT_CONFIG) $(TECH_LIB) $(SRC) $(current_dir)/$(CSRC)
 	cd sim/obj_dir && make -f V$(VTOP).mk
 
 # use Icarus Verilog to build vvp simulation executable
@@ -165,7 +174,7 @@ sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) sim.mk
 
 # delete all targets that will be re-generated
 clean:
-	rm -rf sim/obj_dir sim/$(TBTOP)
+	rm -rf sim/obj_dir $(VLT_CONFIG) sim/$(TBTOP)
 
 # prevent make from deleting any intermediate files
 .SECONDARY:

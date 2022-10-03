@@ -224,7 +224,7 @@
 		"cSpell.diagnosticLevel": "Hint",
 		"terminal.integrated.fontSize": 11,
 		"workbench.editor.enablePreview": false,
-		"verilog.linting.verilator.arguments": "--sv --language 1800-2012 -Irtl -I.. -Wall -Wno-DECLFILENAME -Wno-STMTDLY", //  -Wno-UNUSED -Wno-VARHIDDEN -Wno-PINCONNECTEMPTY
+		"verilog.linting.verilator.arguments": "--sv --language 1800-2012 -Irtl -I.. -Wall -Wno-DECLFILENAME -Wno-STMTDLY  -DICE40UP5K /Users/kenj/Dev/oss-cad-suite/share/yosys/ice40/cells_sim.v", //  -Wno-UNUSED -Wno-VARHIDDEN -Wno-PINCONNECTEMPTY
 		"verilog.linting.linter": "verilator",
 		"todo-tree.highlights.defaultHighlight": {
 			"icon": "alert",

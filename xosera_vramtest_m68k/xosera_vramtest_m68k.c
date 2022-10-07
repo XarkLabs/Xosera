@@ -1010,10 +1010,16 @@ void xosera_vramtest()
     dprintf("okay.\n");
 #endif
 
+    uint8_t new_config = 0;
+
     while (true)
     {
         // switch between configurations every few test iterations
-        uint8_t new_config = (vram_test_count & MODE_TOGGLE_BIT) ? 1 : 0;
+        if (vram_test_count & MODE_TOGGLE_BIT)
+        {
+            new_config = (new_config + 1) & 0x3;
+        }
+
         if (new_config != cur_xosera_config)
         {
             update_elapsed();

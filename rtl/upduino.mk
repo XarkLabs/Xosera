@@ -58,6 +58,32 @@ VIDEO_MODE ?= MODE_848x480
 #   PMOD_MUSE_VGA       12-bit VGA, PMOD 1A&1B  https://www.tindie.com/products/johnnywu/pmod-vga-expansion-board/
 VIDEO_OUTPUT ?= PMOD_DIGILENT_VGA
 
+VERILOG_DEFS := -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT)
+
+ifeq ($(strip $(VIDEO_OUTPUT)), PMOD_1B2_DVI12)
+VMODENAME := dvi
+else
+VMODENAME := vga
+endif
+
+ifeq ($(strip $(AUDIO)),)
+AUDIO := 0
+endif
+
+ifeq ($(strip $(AUDIO)),0)
+VERILOG_DEFS += -DEN_PF_B
+OUTSUFFIX := $(VMODENAME)_$(subst MODE_,,$(VIDEO_MODE))
+else
+ifeq ($(strip $(AUDIO)),2)
+VERILOG_DEFS += -DEN_PF_B -DEN_AUDIO=2
+OUTSUFFIX := aud$(AUDIO)_$(VMODENAME)_$(subst MODE_,,$(VIDEO_MODE))
+else
+# NOTE: no PF_B with 4 channels currently
+VERILOG_DEFS += -DEN_AUDIO=$(AUDIO)
+OUTSUFFIX := aud$(AUDIO)_$(VMODENAME)_$(subst MODE_,,$(VIDEO_MODE))
+endif
+endif
+
 FONTFILES := $(wildcard tilesets/*.mem)
 
 # RTL source and include directory
@@ -105,7 +131,7 @@ YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc9 -top $(TOP)
 #FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) $(VERILOG_DEFS) -DICE40UP5K -DUPDUINO
 
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 VLT_CONFIG := upduino/ice40_config.vlt
@@ -117,12 +143,6 @@ VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -v $(TECH_LIB) $(VLT_CON
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
 NEXTPNR_ARGS :=  --randomize-seed --promote-logic --opt-timing --placer heap
-
-ifeq ($(strip $(VIDEO_OUTPUT)), PMOD_1B2_DVI12)
-OUTSUFFIX := dvi_$(subst MODE_,,$(VIDEO_MODE))
-else
-OUTSUFFIX := vga_$(subst MODE_,,$(VIDEO_MODE))
-endif
 
 OUTNAME := $(TOP)_$(OUTSUFFIX)
 

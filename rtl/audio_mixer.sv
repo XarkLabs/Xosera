@@ -41,7 +41,6 @@ module audio_mixer (
 );
 
 localparam  CHAN_W      = $clog2(AUDIO_NCHAN);
-localparam  CHAN_WPO    = $clog2(AUDIO_NCHAN+1);
 localparam  DAC_W       = 8;
 
 typedef enum {
@@ -52,7 +51,7 @@ typedef enum {
 logic [CHAN_W-1:0]                  fetch_chan;
 audio_fetch_ph                      fetch_phase;
 
-logic [CHAN_WPO:0]                  mix_chan;
+logic [CHAN_W:0]                    mix_chan;
 
 logic                               mix_clr;            // clear mix accumulator
 sbyte_t                             mix_val_temp;
@@ -245,7 +244,7 @@ always_ff @(posedge clk) begin : mix_fsm
         output_r        <= '0;
 `endif
     end else begin
-        if (mix_chan == AUDIO_NCHAN) begin
+        if (mix_chan[CHAN_W]) begin
             mix_chan        <=  '0;
             mix_clr         <=  1'b1;
 

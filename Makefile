@@ -138,16 +138,16 @@ xvid_spi:
 
 golden:
 	@echo === Last 640x480 bitstream stats:
-	@cat rtl/xosera_upd_vga_640x480_stats.txt
+	@cat rtl/xosera_upd_*vga_640x480_stats.txt
 	@echo === Last 848x480 bitstream stats:
-	@cat rtl/xosera_upd_vga_848x480_stats.txt
+	@cat rtl/xosera_upd_*vga_848x480_stats.txt
 	@echo Enshrine these bitstreams [y/N]?
 	@read ans && if [ $${ans:-'N'} = 'y' ] ; then \
 		echo === Copying xosera bitstreams to xosera_gateware... ; \
-		cp -v rtl/xosera_upd_vga_*_stats.txt ./xosera_gateware && \
-		cp -v rtl/upduino/logs/xosera_upd_vga_*_yosys.log ./xosera_gateware && \
-		cp -v rtl/upduino/logs/xosera_upd_vga_*_nextpnr.log ./xosera_gateware && \
-		cp -v rtl/upduino/xosera_upd_vga_*.json ./xosera_gateware && \
+		cp -v rtl/xosera_upd_*_vga_*_stats.txt ./xosera_gateware && \
+		cp -v rtl/upduino/logs/xosera_upd_*_vga_*_yosys.log ./xosera_gateware && \
+		cp -v rtl/upduino/logs/xosera_upd_*_vga_*_nextpnr.log ./xosera_gateware && \
+		cp -v rtl/upduino/xosera_upd_*_vga_*.json ./xosera_gateware && \
 		cp -v rtl/xosera_board_vga.bin ./xosera_gateware ; \
 	fi
 	@echo === Done

@@ -14,7 +14,7 @@
 #       nextpnr-ice40
 #       Verilator               (optional)
 #       Icarus Verilog          (optional)
-#       Built using macOS BigSur 11.5.2 and GNU/Linux Ubuntu 20.04 distribution
+#       Built using macOS BigSur and GNU/Linux Ubuntu distribution
 
 # This is a hack to get make to exit if command fails (even if command after pipe succeeds, e.g., tee)
 SHELL := /bin/bash -o pipefail

@@ -6,11 +6,12 @@
 # up5k_vga by E. Brombaugh (emeb) and further extensively
 # hacked by Xark for Xosera purposes
 
-# Tool versions used:
-#	Yosys 45cd323055270ff414419ddf8a9b5d08f40628b5 (open-tool-forge build) (git sha1 926d4d1, gcc 9.3.0-10ubuntu2 -Os)
-#	nextpnr-ice40 -- Next Generation Place and Route (Version nightly-20200602)
-#	Verilator 4.028 2020-02-06 rev v4.026-92-g890cecc1
-#	Built on GNU/Linux using Ubuntu 20.04 distribution
+# Primary tools (official binaries available from https://github.com/YosysHQ/oss-cad-suite-build/releases/latest)
+#       Yosys
+#       nextpnr-ice40
+#       Verilator               (optional)
+#       Icarus Verilog          (optional)
+#       Built using macOS BigSur and GNU/Linux Ubuntu distribution
 
 # This is a hack to get make to exit if command fails (even if command after pipe succeeds, e.g., tee)
 SHELL := /bin/bash -o pipefail
@@ -31,18 +32,22 @@ XOSERA_CLEAN := 0
 $(info === Xosera simulation [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
+# Maximum number of CPU cores to use before waiting with FMAX_TEST
+MAX_CPUS := 8
+
 # Xosera video mode selection:
-# Supported modes:
-#	MODE_640x400	640x400@70Hz 	clock 25.175 MHz
-#	MODE_640x480	640x480@60Hz	clock 25.175 MHz
-#	MODE_640x480_75	640x480@75Hz	clock 31.500 MHz
-#	MODE_640x480_85	640x480@85Hz	clock 36.000 MHz
-#	MODE_720x400	720x400@70Hz 	clock 28.322 MHz
-#	MODE_848x480	848x480@60Hz	clock 33.750 MHz (16:9 480p)
-#	MODE_800x600	800x600@60Hz	clock 40.000 MHz
-#	MODE_1024x768	1024x768@60Hz	clock 65.000 MHz
-#	MODE_1280x720	1280x720@60Hz	clock 74.176 MHz
+# Supported modes:                           (exact) (actual)
+#       MODE_640x400    640x400@70Hz    clock 25.175 (25.125) MHz
+#       MODE_640x480    640x480@60Hz    clock 25.175 (25.125) MHz
+#       MODE_640x480_75 640x480@75Hz    clock 31.500 (31.500) MHz
+#       MODE_640x480_85 640x480@85Hz    clock 36.000 (36.000) MHz
+#       MODE_720x400    720x400@70Hz    clock 28.322 (28.500) MHz
+#       MODE_848x480    848x480@60Hz    clock 33.750 (33.750) MHz (16:9 480p)
+#       MODE_800x600    800x600@60Hz    clock 40.000 (39.750) MHz
+#       MODE_1024x768   1024x768@60Hz   clock 65.000 (65.250) MHz [fails timing]
+#       MODE_1280x720   1280x720@60Hz   clock 74.176 (73.500) MHz [fails timing]
 VIDEO_MODE ?= MODE_640x480
+VERILOG_DEFS := -D$(VIDEO_MODE)
 
 # monochrome + color attribute byte
 #VRUN_TESTDATA ?= -u ../testdata/raw/space_shuttle_color_640x480.raw
@@ -64,10 +69,22 @@ VRUN_TESTDATA ?=   -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
 
-DEFTOP := xosera_def_files
-
 # Xosera main target top (for Verilator)
 VTOP := xosera_main
+ifeq ($(strip $(AUDIO)),)
+AUDIO := 0
+endif
+
+ifeq ($(strip $(AUDIO)),0)
+VERILOG_DEFS += -DEN_PF_B
+else
+ifeq ($(strip $(AUDIO)),2)
+VERILOG_DEFS += -DEN_PF_B -DEN_AUDIO=2
+else
+# NOTE: no PF_B with 4 channels currently
+VERILOG_DEFS += -DEN_AUDIO=$(AUDIO)
+endif
+endif
 
 # RTL source and include directory
 SRCDIR := .
@@ -85,7 +102,7 @@ INC := $(wildcard $(SRCDIR)/*.svh)
 BUS_INTERFACE	:= 1
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DUPDUINO
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) $(VERILOG_DEFS) -DICE40UP5K -DUPDUINO
 
 ifeq ($(strip $(BUS_INTERFACE)),1)
 DEFINES += -DBUS_INTERFACE
@@ -98,6 +115,7 @@ LOGS	:= sim/logs
 # icestorm tools
 YOSYS_CONFIG := yosys-config
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
+VLT_CONFIG := sim/ice40_config.vlt
 
 # Icarus Verilog
 IVERILOG := iverilog
@@ -116,8 +134,7 @@ CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-s
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
-VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -Mdir sim/obj_dir -Wall --trace-fst -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY -Wno-fatal
-VLT_CONFIG := sim/ice40_config.vlt
+VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -v $(TECH_LIB) $(VLT_CONFIG) -Mdir sim/obj_dir -Wall --trace-fst -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY -Wno-fatal
 
 # Verillator C++ source driver
 CSRC := sim/xosera_sim.cpp
@@ -125,13 +142,8 @@ CSRC := sim/xosera_sim.cpp
 # default build native simulation executable
 all: make_defs vsim isim
 
-def_files: sim/$(DEFTOP) sim.mk
-	@echo === Icarus Verilog creating C and asm definition files ===
-	@mkdir -p $(LOGS)
-	sim/$(DEFTOP)
-
 # build native simulation executable
-vsim: sim/obj_dir/V$(VTOP) sim.mk
+vsim: $(VLT_CONFIG) sim/obj_dir/V$(VTOP) sim.mk
 	@echo === Verilator simulation configured for: $(VIDEO_MODE) ===
 	@echo Completed building Verilator simulation, use \"make vrun\" to run.
 
@@ -157,14 +169,9 @@ $(VLT_CONFIG):
 	@echo >>$(VLT_CONFIG) lint_off -rule UNUSED  -file \"$(TECH_LIB)\"
 	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN  -file \"$(TECH_LIB)\"
 
-# use Icarus Verilog to build vvp simulation executable
-sim/$(DEFTOP): $(INC) sim/$(DEFTOP).sv sim.mk
-	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TBTOP) sim/$(TBTOP).sv
-	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -o sim/$(DEFTOP) $(current_dir)/sim/$(DEFTOP).sv
-
 # use Verilator to build native simulation executable
 sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) sim.mk
-	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(VLT_CONFIG) $(TECH_LIB) $(SRC) $(current_dir)/$(CSRC)
+	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(SRC) $(current_dir)/$(CSRC)
 	cd sim/obj_dir && make -f V$(VTOP).mk
 
 # use Icarus Verilog to build vvp simulation executable

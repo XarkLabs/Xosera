@@ -245,8 +245,8 @@ always_ff @(posedge clk) begin : mix_fsm
 `endif
     end else begin
         if (mix_chan[CHAN_W]) begin
-            mix_chan        <=  '0;
-            mix_clr         <=  1'b1;
+            mix_chan        <= '0;
+            mix_clr         <= 1'b1;
 
             // clamp and convert to unsigned result for DAC
             if (mix_l_acc < -128) begin
@@ -269,7 +269,7 @@ always_ff @(posedge clk) begin : mix_fsm
             vol_r_temp      <= { 1'b0, audio_vol_r_nchan_i[7*mix_chan+:7] };
             mix_val_temp    <= chan_val[mix_chan*8+:8];
             mix_chan        <= mix_chan + 1'b1;
-            mix_clr         <= !audio_enable_i;
+            mix_clr         <= 1'b0 | ~audio_enable_i;
         end
     end
 end

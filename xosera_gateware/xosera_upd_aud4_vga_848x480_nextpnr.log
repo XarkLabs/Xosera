@@ -38,6 +38,12 @@ Info: constrained 'gpio_2' to bel 'X8/Y0/io0'
 
 Info: Packing constants..
 Info: Packing IOs..
+Info: gpio_21 feeds SB_IO dv_signals_sbio[13], removing $nextpnr_obuf gpio_21.
+Info: gpio_2 feeds SB_IO dv_clk_sbio, removing $nextpnr_obuf gpio_2.
+Info: gpio_19 feeds SB_IO dv_signals_sbio[7], removing $nextpnr_obuf gpio_19.
+Info: gpio_18 feeds SB_IO dv_signals_sbio[3], removing $nextpnr_obuf gpio_18.
+Info: gpio_13 feeds SB_IO dv_signals_sbio[11], removing $nextpnr_obuf gpio_13.
+Info: gpio_12 feeds SB_IO dv_signals_sbio[12], removing $nextpnr_obuf gpio_12.
 Info: gpio_11 feeds SB_IO dv_signals_sbio[10], removing $nextpnr_obuf gpio_11.
 Info: gpio_42 feeds SB_IO bus_tristate[5], removing $nextpnr_iobuf gpio_42.
 Info: gpio_38 feeds SB_IO bus_tristate[6], removing $nextpnr_iobuf gpio_38.
@@ -56,21 +62,15 @@ Info: gpio_45 feeds SB_IO dv_signals_sbio[4], removing $nextpnr_obuf gpio_45.
 Info: gpio_44 feeds SB_IO dv_signals_sbio[9], removing $nextpnr_obuf gpio_44.
 Info: gpio_4 feeds SB_IO dv_signals_sbio[5], removing $nextpnr_obuf gpio_4.
 Info: gpio_3 feeds SB_IO dv_signals_sbio[1], removing $nextpnr_obuf gpio_3.
-Info: gpio_21 feeds SB_IO dv_signals_sbio[13], removing $nextpnr_obuf gpio_21.
-Info: gpio_2 feeds SB_IO dv_clk_sbio, removing $nextpnr_obuf gpio_2.
-Info: gpio_19 feeds SB_IO dv_signals_sbio[7], removing $nextpnr_obuf gpio_19.
-Info: gpio_18 feeds SB_IO dv_signals_sbio[3], removing $nextpnr_obuf gpio_18.
-Info: gpio_13 feeds SB_IO dv_signals_sbio[11], removing $nextpnr_obuf gpio_13.
-Info: gpio_12 feeds SB_IO dv_signals_sbio[12], removing $nextpnr_obuf gpio_12.
 Info: Packing LUT-FFs..
-Info:     2120 LCs used as LUT4 only
-Info:     1116 LCs used as LUT4 and DFF
+Info:     2109 LCs used as LUT4 only
+Info:     1117 LCs used as LUT4 and DFF
 Info: Packing non-LUT FFs..
 Info:      960 LCs used as DFF only
 Info: Packing carries..
 Info:       49 LCs used as CARRY only
 Info: Packing indirect carry+LUT pairs...
-Info:       35 LUTs merged into carry LCs
+Info:       36 LUTs merged into carry LCs
 Info: Packing RAMs..
 Info: Placing PLLs..
 Info:   constrained PLL 'pll_inst' to X12/Y31/pll_3
@@ -82,22 +82,22 @@ Info:     Derived frequency constraint of 33.8 MHz for net pclk
 Info:   PLL 'pll_inst' has LOCK output, need to pass all outputs via LUT
 Info:   constrained 'pll_lock_SB_LUT4_I3_LC' to X1/Y30/lc0
 Info: Promoting globals..
-Info: promoting reset [reset] (fanout 1862)
+Info: promoting bus_data_out_SB_LUT4_O_3_I0_SB_LUT4_O_I3_SB_LUT4_O_I3[0] [reset] (fanout 1862)
 Info: promoting $PACKER_VCC_NET [logic] (fanout 293)
-Info: promoting xosera_main.blitter.blit_addr_next_SB_LUT4_O_11_I1_SB_LUT4_O_I2_SB_LUT4_I2_1_I3[0] [logic] (fanout 168)
+Info: promoting xosera_main.blitter.blit_addr_next_SB_LUT4_O_10_I0_SB_LUT4_I2_I3[0] [logic] (fanout 168)
+Info: promoting xosera_main.video_gen.pa_bpp[1] [logic] (fanout 88)
 Info: promoting xosera_main.blitter.blit_mod_A_SB_DFFESR_Q_E[3] [cen] (fanout 87)
-Info: promoting xosera_main.video_gen.pa_bpp[1] [logic] (fanout 86)
-Info: promoting xosera_main.video_gen.mem_fetch_SB_LUT4_I3_O_SB_LUT4_I0_O_SB_LUT4_I0_O[1] [logic] (fanout 74)
+Info: promoting xosera_main.video_gen.pa_bpp[0] [logic] (fanout 76)
 Info: promoting xosera_main.video_gen.video_pf_a.pf_words_ready_SB_LUT4_I3_O [cen] (fanout 65)
 Info: Constraining chains...
 Info:       46 LCs used to legalise carry chains.
-Info: Checksum: 0x5dba7391
+Info: Checksum: 0xa827388a
 
 Info: Annotating ports with timing budgets for target frequency 12.00 MHz
-Info: Checksum: 0xa8b66385
+Info: Checksum: 0xb4c38971
 
 Info: Device utilisation:
-Info: 	         ICESTORM_LC:  4258/ 5280    80%
+Info: 	         ICESTORM_LC:  4247/ 5280    80%
 Info: 	        ICESTORM_RAM:    29/   30    96%
 Info: 	               SB_IO:    36/   96    37%
 Info: 	               SB_GB:     8/    8   100%
@@ -114,78 +114,84 @@ Info: 	         SB_RGBA_DRV:     0/    1     0%
 Info: 	      ICESTORM_SPRAM:     4/    4   100%
 
 Info: Placed 39 cells based on constraints.
-Info: Creating initial analytic placement for 3749 cells, random placement wirelen = 104620.
-Info:     at initial placer iter 0, wirelen = 1430
-Info:     at initial placer iter 1, wirelen = 1316
-Info:     at initial placer iter 2, wirelen = 1367
-Info:     at initial placer iter 3, wirelen = 1357
+Info: Creating initial analytic placement for 3738 cells, random placement wirelen = 104084.
+Info:     at initial placer iter 0, wirelen = 1567
+Info:     at initial placer iter 1, wirelen = 1367
+Info:     at initial placer iter 2, wirelen = 1462
+Info:     at initial placer iter 3, wirelen = 1366
 Info: Running main analytical placer.
-Info:     at iteration #1, type ALL: wirelen solved = 1377, spread = 40407, legal = 68226; time = 0.72s
-Info:     at iteration #2, type ALL: wirelen solved = 1759, spread = 35961, legal = 61439; time = 0.68s
-Info:     at iteration #3, type ALL: wirelen solved = 2486, spread = 27508, legal = 52210; time = 0.66s
-Info:     at iteration #4, type ALL: wirelen solved = 3886, spread = 26286, legal = 49121; time = 0.65s
-Info:     at iteration #5, type ALL: wirelen solved = 4853, spread = 24047, legal = 46877; time = 0.49s
-Info:     at iteration #6, type ALL: wirelen solved = 5950, spread = 23511, legal = 45101; time = 0.49s
-Info:     at iteration #7, type ALL: wirelen solved = 6727, spread = 23173, legal = 46087; time = 0.48s
-Info:     at iteration #8, type ALL: wirelen solved = 7491, spread = 22808, legal = 44518; time = 0.49s
-Info:     at iteration #9, type ALL: wirelen solved = 8866, spread = 22546, legal = 44366; time = 0.47s
-Info:     at iteration #10, type ALL: wirelen solved = 9489, spread = 21751, legal = 42848; time = 0.44s
-Info:     at iteration #11, type ALL: wirelen solved = 9822, spread = 21283, legal = 43917; time = 0.46s
-Info:     at iteration #12, type ALL: wirelen solved = 9606, spread = 21232, legal = 43548; time = 0.42s
-Info:     at iteration #13, type ALL: wirelen solved = 9948, spread = 21738, legal = 40861; time = 0.36s
-Info:     at iteration #14, type ALL: wirelen solved = 10786, spread = 21083, legal = 40653; time = 0.34s
-Info:     at iteration #15, type ALL: wirelen solved = 11654, spread = 21223, legal = 39651; time = 0.42s
-Info:     at iteration #16, type ALL: wirelen solved = 11206, spread = 21568, legal = 42435; time = 0.43s
-Info:     at iteration #17, type ALL: wirelen solved = 11390, spread = 21438, legal = 41767; time = 0.32s
-Info:     at iteration #18, type ALL: wirelen solved = 12510, spread = 21394, legal = 39798; time = 0.34s
-Info:     at iteration #19, type ALL: wirelen solved = 12668, spread = 21576, legal = 43676; time = 0.47s
-Info:     at iteration #20, type ALL: wirelen solved = 13324, spread = 21457, legal = 42231; time = 0.46s
-Info: HeAP Placer Time: 10.51s
-Info:   of which solving equations: 1.79s
-Info:   of which spreading cells: 0.15s
-Info:   of which strict legalisation: 8.17s
+Info:     at iteration #1, type ALL: wirelen solved = 1384, spread = 41371, legal = 67542; time = 1.69s
+Info:     at iteration #2, type ALL: wirelen solved = 1722, spread = 35371, legal = 60484; time = 1.23s
+Info:     at iteration #3, type ALL: wirelen solved = 2501, spread = 27168, legal = 53577; time = 0.84s
+Info:     at iteration #4, type ALL: wirelen solved = 3479, spread = 25208, legal = 53943; time = 0.73s
+Info:     at iteration #5, type ALL: wirelen solved = 4649, spread = 23794, legal = 51392; time = 0.81s
+Info:     at iteration #6, type ALL: wirelen solved = 5869, spread = 22758, legal = 49714; time = 0.64s
+Info:     at iteration #7, type ALL: wirelen solved = 5871, spread = 22900, legal = 50601; time = 0.73s
+Info:     at iteration #8, type ALL: wirelen solved = 6796, spread = 21285, legal = 45109; time = 0.72s
+Info:     at iteration #9, type ALL: wirelen solved = 7431, spread = 22077, legal = 44230; time = 0.62s
+Info:     at iteration #10, type ALL: wirelen solved = 7986, spread = 21425, legal = 47670; time = 0.59s
+Info:     at iteration #11, type ALL: wirelen solved = 7955, spread = 21531, legal = 46722; time = 0.74s
+Info:     at iteration #12, type ALL: wirelen solved = 8874, spread = 21023, legal = 48472; time = 0.78s
+Info:     at iteration #13, type ALL: wirelen solved = 9445, spread = 20593, legal = 44060; time = 0.67s
+Info:     at iteration #14, type ALL: wirelen solved = 9717, spread = 20599, legal = 45464; time = 0.68s
+Info:     at iteration #15, type ALL: wirelen solved = 9844, spread = 20366, legal = 44437; time = 0.55s
+Info:     at iteration #16, type ALL: wirelen solved = 9796, spread = 20490, legal = 43671; time = 0.66s
+Info:     at iteration #17, type ALL: wirelen solved = 10599, spread = 20711, legal = 42892; time = 0.49s
+Info:     at iteration #18, type ALL: wirelen solved = 11568, spread = 20877, legal = 45055; time = 0.59s
+Info:     at iteration #19, type ALL: wirelen solved = 10694, spread = 20511, legal = 42695; time = 0.57s
+Info:     at iteration #20, type ALL: wirelen solved = 11003, spread = 20805, legal = 44421; time = 0.66s
+Info:     at iteration #21, type ALL: wirelen solved = 11484, spread = 21036, legal = 42501; time = 0.48s
+Info:     at iteration #22, type ALL: wirelen solved = 11916, spread = 20819, legal = 40633; time = 0.58s
+Info:     at iteration #23, type ALL: wirelen solved = 12240, spread = 21452, legal = 40650; time = 0.49s
+Info:     at iteration #24, type ALL: wirelen solved = 13081, spread = 21144, legal = 42864; time = 0.64s
+Info:     at iteration #25, type ALL: wirelen solved = 12895, spread = 21456, legal = 40866; time = 0.47s
+Info:     at iteration #26, type ALL: wirelen solved = 13711, spread = 21988, legal = 44179; time = 0.60s
+Info:     at iteration #27, type ALL: wirelen solved = 14668, spread = 22867, legal = 41600; time = 0.53s
+Info: HeAP Placer Time: 20.24s
+Info:   of which solving equations: 2.92s
+Info:   of which spreading cells: 0.25s
+Info:   of which strict legalisation: 16.29s
 
 Info: Running simulated annealing placer for refinement.
-Info:   at iteration #1: temp = 0.000000, timing cost = 1647, wirelen = 39651
-Info:   at iteration #5: temp = 0.000000, timing cost = 1425, wirelen = 33147
-Info:   at iteration #10: temp = 0.000000, timing cost = 1186, wirelen = 30806
-Info:   at iteration #15: temp = 0.000000, timing cost = 1309, wirelen = 29789
-Info:   at iteration #20: temp = 0.000000, timing cost = 1200, wirelen = 29140
-Info:   at iteration #25: temp = 0.000000, timing cost = 1196, wirelen = 28976
-Info:   at iteration #30: temp = 0.000000, timing cost = 1186, wirelen = 28911
-Info:   at iteration #33: temp = 0.000000, timing cost = 1148, wirelen = 28903 
-Info: SA placement time 4.32s
+Info:   at iteration #1: temp = 0.000000, timing cost = 1980, wirelen = 40633
+Info:   at iteration #5: temp = 0.000000, timing cost = 1277, wirelen = 33603
+Info:   at iteration #10: temp = 0.000000, timing cost = 2200, wirelen = 31285
+Info:   at iteration #15: temp = 0.000000, timing cost = 2126, wirelen = 30241
+Info:   at iteration #20: temp = 0.000000, timing cost = 2172, wirelen = 29257
+Info:   at iteration #25: temp = 0.000000, timing cost = 2284, wirelen = 28970
+Info:   at iteration #29: temp = 0.000000, timing cost = 2263, wirelen = 28866 
+Info: SA placement time 6.04s
 
-Info: Max frequency for clock 'pclk': 36.69 MHz (PASS at 33.77 MHz)
+Info: Max frequency for clock 'pclk': 39.47 MHz (PASS at 33.77 MHz)
 
-Info: Max delay <async>      -> <async>     : 7.87 ns
+Info: Max delay <async>      -> <async>     : 7.94 ns
 Info: Max delay <async>      -> posedge pclk: 4.93 ns
-Info: Max delay posedge pclk -> <async>     : 8.74 ns
+Info: Max delay posedge pclk -> <async>     : 7.56 ns
 
 Info: Slack histogram:
-Info:  legend: * represents 52 endpoint(s)
-Info:          + represents [1,52) endpoint(s)
-Info: [  2361,   6195) |***+
-Info: [  6195,  10029) |*******************+
-Info: [ 10029,  13863) |*******************+
-Info: [ 13863,  17697) |************************************************************ 
-Info: [ 17697,  21531) |**********************************+
-Info: [ 21531,  25365) |**********************************+
-Info: [ 25365,  29199) |+
-Info: [ 29199,  33033) | 
-Info: [ 33033,  36867) | 
-Info: [ 36867,  40701) | 
-Info: [ 40701,  44535) | 
-Info: [ 44535,  48369) | 
-Info: [ 48369,  52203) | 
-Info: [ 52203,  56037) | 
-Info: [ 56037,  59871) | 
-Info: [ 59871,  63705) | 
-Info: [ 63705,  67539) | 
-Info: [ 67539,  71373) | 
-Info: [ 71373,  75207) |+
-Info: [ 75207,  79041) |+
-Info: Checksum: 0xd260b78c
+Info:  legend: * represents 55 endpoint(s)
+Info:          + represents [1,55) endpoint(s)
+Info: [  4280,   8076) |*********+
+Info: [  8076,  11872) |********************+
+Info: [ 11872,  15668) |****************************+
+Info: [ 15668,  19464) |************************************************************ 
+Info: [ 19464,  23260) |******************+
+Info: [ 23260,  27056) |************************+
+Info: [ 27056,  30852) | 
+Info: [ 30852,  34648) | 
+Info: [ 34648,  38444) | 
+Info: [ 38444,  42240) | 
+Info: [ 42240,  46036) | 
+Info: [ 46036,  49832) | 
+Info: [ 49832,  53628) | 
+Info: [ 53628,  57424) | 
+Info: [ 57424,  61220) | 
+Info: [ 61220,  65016) | 
+Info: [ 65016,  68812) | 
+Info: [ 68812,  72608) | 
+Info: [ 72608,  76404) |+
+Info: [ 76404,  80200) |+
+Info: Checksum: 0xf1006211
 Info: Running timing-driven placement optimisation...
 Info:    Iteration 0...
 Info:    Iteration 1...
@@ -220,254 +226,269 @@ Info:    Iteration 29...
 
 Info: Routing..
 Info: Setting up routing queue.
-Info: Routing 14515 arcs.
+Info: Routing 14516 arcs.
 Info:            |   (re-)routed arcs  |   delta    | remaining|       time spent     |
 Info:    IterCnt |  w/ripup   wo/ripup |  w/r  wo/r |      arcs| batch(sec) total(sec)|
-Info:       1000 |       45        954 |   45   954 |     13569|       0.70       0.70|
-Info:       2000 |      153       1846 |  108   892 |     12711|       0.51       1.21|
-Info:       3000 |      302       2697 |  149   851 |     11903|       0.39       1.60|
-Info:       4000 |      564       3435 |  262   738 |     11322|       0.49       2.09|
-Info:       5000 |      881       4118 |  317   683 |     10866|       0.46       2.55|
-Info:       6000 |     1259       4740 |  378   622 |     10587|       0.51       3.07|
-Info:       7000 |     1633       5366 |  374   626 |     10286|       0.40       3.46|
-Info:       8000 |     2116       5883 |  483   517 |     10112|       0.52       3.98|
-Info:       9000 |     2641       6358 |  525   475 |      9961|       0.50       4.48|
-Info:      10000 |     3166       6833 |  525   475 |      9841|       0.56       5.04|
-Info:      11000 |     3702       7297 |  536   464 |      9787|       0.50       5.54|
-Info:      12000 |     4202       7797 |  500   500 |      9652|       0.45       5.99|
-Info:      13000 |     4725       8274 |  523   477 |      9506|       0.46       6.45|
-Info:      14000 |     5231       8768 |  506   494 |      9422|       0.53       6.99|
-Info:      15000 |     5764       9235 |  533   467 |      9286|       0.51       7.50|
-Info:      16000 |     6236       9763 |  472   528 |      9110|       0.51       8.01|
-Info:      17000 |     6760      10239 |  524   476 |      8990|       0.49       8.50|
-Info:      18000 |     7307      10692 |  547   453 |      8984|       0.52       9.01|
-Info:      19000 |     7863      11136 |  556   444 |      8865|       0.45       9.46|
-Info:      20000 |     8412      11587 |  549   451 |      8744|       0.60      10.06|
-Info:      21000 |     8954      12045 |  542   458 |      8610|       0.55      10.61|
-Info:      22000 |     9534      12465 |  580   420 |      8592|       0.54      11.15|
-Info:      23000 |    10063      12936 |  529   471 |      8522|       0.71      11.86|
-Info:      24000 |    10620      13379 |  557   443 |      8414|       0.49      12.36|
-Info:      25000 |    11175      13824 |  555   445 |      8328|       0.62      12.98|
-Info:      26000 |    11685      14314 |  510   490 |      8224|       0.46      13.44|
-Info:      27000 |    12195      14804 |  510   490 |      8136|       0.52      13.97|
-Info:      28000 |    12718      15281 |  523   477 |      8010|       0.60      14.56|
-Info:      29000 |    13279      15720 |  561   439 |      7977|       0.44      15.00|
-Info:      30000 |    13786      16213 |  507   493 |      7868|       0.45      15.45|
-Info:      31000 |    14375      16624 |  589   411 |      7803|       0.52      15.97|
-Info:      32000 |    14923      17076 |  548   452 |      7744|       0.51      16.48|
-Info:      33000 |    15446      17553 |  523   477 |      7665|       0.54      17.02|
-Info:      34000 |    15994      18005 |  548   452 |      7632|       0.55      17.57|
-Info:      35000 |    16584      18415 |  590   410 |      7557|       0.61      18.19|
-Info:      36000 |    17117      18882 |  533   467 |      7393|       0.52      18.70|
-Info:      37000 |    17712      19287 |  595   405 |      7335|       0.59      19.29|
-Info:      38000 |    18328      19671 |  616   384 |      7333|       0.46      19.75|
-Info:      39000 |    18927      20072 |  599   401 |      7222|       0.44      20.18|
-Info:      40000 |    19515      20484 |  588   412 |      7188|       0.52      20.70|
-Info:      41000 |    20044      20955 |  529   471 |      7094|       0.59      21.30|
-Info:      42000 |    20650      21349 |  606   394 |      7075|       0.64      21.94|
-Info:      43000 |    21252      21747 |  602   398 |      7019|       0.59      22.53|
-Info:      44000 |    21786      22213 |  534   466 |      6906|       0.61      23.14|
-Info:      45000 |    22386      22613 |  600   400 |      6825|       0.44      23.58|
-Info:      46000 |    22956      23043 |  570   430 |      6733|       0.52      24.10|
-Info:      47000 |    23517      23482 |  561   439 |      6665|       0.60      24.70|
-Info:      48000 |    24120      23879 |  603   397 |      6615|       0.66      25.36|
-Info:      49000 |    24748      24251 |  628   372 |      6603|       0.64      26.00|
-Info:      50000 |    25270      24729 |  522   478 |      6592|       0.69      26.69|
-Info:      51000 |    25896      25103 |  626   374 |      6594|       0.50      27.19|
-Info:      52000 |    26487      25512 |  591   409 |      6565|       0.77      27.96|
-Info:      53000 |    27014      25972 |  527   460 |      6480|       0.50      28.47|
-Info:      54000 |    27577      26398 |  563   426 |      6375|       0.73      29.20|
-Info:      55000 |    28110      26865 |  533   467 |      6292|       0.64      29.83|
-Info:      56000 |    28678      27283 |  568   418 |      6201|       0.51      30.34|
-Info:      57000 |    29280      27681 |  602   398 |      6203|       0.68      31.02|
-Info:      58000 |    29872      28065 |  592   384 |      6079|       0.49      31.50|
-Info:      59000 |    30498      28439 |  626   374 |      6023|       0.70      32.20|
-Info:      60000 |    31020      28916 |  522   477 |      5977|       0.58      32.78|
-Info:      61000 |    31696      29240 |  676   324 |      5957|       0.79      33.58|
-Info:      62000 |    32268      29668 |  572   428 |      5929|       0.68      34.26|
-Info:      63000 |    32821      30114 |  553   446 |      5908|       0.93      35.19|
-Info:      64000 |    33377      30545 |  556   431 |      5841|       0.56      35.75|
-Info:      65000 |    34014      30895 |  637   350 |      5788|       0.52      36.27|
-Info:      66000 |    34643      31260 |  629   365 |      5727|       0.58      36.85|
-Info:      67000 |    35288      31615 |  645   355 |      5680|       0.71      37.56|
-Info:      68000 |    35778      32125 |  490   510 |      5612|       0.54      38.10|
-Info:      69000 |    36389      32501 |  611   376 |      5523|       0.55      38.65|
-Info:      70000 |    36979      32892 |  590   391 |      5457|       0.53      39.18|
-Info:      71000 |    37633      33234 |  654   342 |      5415|       0.57      39.75|
-Info:      72000 |    38225      33642 |  592   408 |      5404|       0.65      40.40|
-Info:      73000 |    38766      34094 |  541   452 |      5311|       0.55      40.95|
-Info:      74000 |    39358      34489 |  592   395 |      5226|       0.51      41.46|
-Info:      75000 |    40008      34839 |  650   350 |      5230|       0.66      42.12|
-Info:      76000 |    40693      35154 |  685   315 |      5223|       0.71      42.84|
-Info:      77000 |    41278      35569 |  585   415 |      5227|       0.61      43.45|
-Info:      78000 |    41849      35976 |  571   407 |      5092|       0.59      44.04|
-Info:      79000 |    42447      36365 |  598   389 |      5043|       0.45      44.49|
-Info:      80000 |    43045      36754 |  598   389 |      4973|       0.55      45.03|
-Info:      81000 |    43574      37207 |  529   453 |      4867|       0.48      45.51|
-Info:      82000 |    44201      37572 |  627   365 |      4811|       0.70      46.21|
-Info:      83000 |    44862      37903 |  661   331 |      4754|       0.55      46.76|
-Info:      84000 |    45509      38256 |  647   353 |      4749|       0.87      47.63|
-Info:      85000 |    46131      38629 |  622   373 |      4708|       0.89      48.53|
-Info:      86000 |    46786      38974 |  655   345 |      4755|       1.80      50.33|
-Info:      87000 |    47449      39311 |  663   337 |      4720|       0.72      51.05|
-Info:      88000 |    48005      39735 |  556   424 |      4559|       0.39      51.43|
-Info:      89000 |    48718      40022 |  713   287 |      4538|       0.73      52.16|
-Info:      90000 |    49312      40420 |  594   398 |      4519|       0.76      52.92|
-Info:      91000 |    49963      40769 |  651   349 |      4512|       0.61      53.52|
-Info:      92000 |    50607      41124 |  644   355 |      4464|       0.66      54.18|
-Info:      93000 |    51248      41483 |  641   359 |      4391|       0.54      54.72|
-Info:      94000 |    51842      41889 |  594   406 |      4393|       0.81      55.53|
-Info:      95000 |    52530      42201 |  688   312 |      4417|       0.73      56.26|
-Info:      96000 |    53193      42538 |  663   337 |      4394|       0.77      57.03|
-Info:      97000 |    53819      42905 |  626   367 |      4338|       0.62      57.65|
-Info:      98000 |    54435      43282 |  616   377 |      4257|       0.73      58.38|
-Info:      99000 |    54988      43717 |  553   435 |      4179|       0.57      58.96|
-Info:     100000 |    55494      44191 |  506   474 |      4001|       0.49      59.45|
-Info:     101000 |    56135      44550 |  641   359 |      3953|       0.72      60.17|
-Info:     102000 |    56743      44942 |  608   392 |      3885|       0.75      60.92|
-Info:     103000 |    57410      45275 |  667   333 |      3878|       0.70      61.62|
-Info:     104000 |    57936      45720 |  526   445 |      3716|       0.70      62.32|
-Info:     105000 |    58568      46088 |  632   368 |      3650|       0.59      62.91|
-Info:     106000 |    59174      46474 |  606   386 |      3604|       0.58      63.49|
-Info:     107000 |    59810      46838 |  636   364 |      3590|       0.86      64.35|
-Info:     108000 |    60442      47206 |  632   368 |      3574|       1.11      65.46|
-Info:     109000 |    61062      47577 |  620   371 |      3397|       0.54      66.00|
-Info:     110000 |    61713      47915 |  651   338 |      3367|       0.81      66.81|
-Info:     111000 |    62401      48227 |  688   312 |      3345|       1.07      67.88|
-Info:     112000 |    63039      48584 |  638   357 |      3279|       0.47      68.34|
-Info:     113000 |    63728      48895 |  689   311 |      3264|       1.16      69.51|
-Info:     114000 |    64294      49323 |  566   428 |      3119|       0.60      70.11|
-Info:     115000 |    64865      49737 |  571   414 |      2986|       0.45      70.56|
-Info:     116000 |    65484      50118 |  619   381 |      2966|       1.31      71.87|
-Info:     117000 |    66055      50545 |  571   427 |      2870|       0.84      72.72|
-Info:     118000 |    66719      50880 |  664   335 |      2785|       0.68      73.40|
-Info:     119000 |    67325      51266 |  606   386 |      2725|       1.17      74.57|
-Info:     120000 |    67979      51611 |  654   345 |      2703|       0.60      75.17|
-Info:     121000 |    68653      51930 |  674   319 |      2633|       0.58      75.76|
-Info:     122000 |    69275      52298 |  622   368 |      2532|       0.48      76.23|
-Info:     123000 |    69910      52650 |  635   352 |      2496|       0.74      76.98|
-Info:     124000 |    70501      53059 |  591   409 |      2483|       0.94      77.92|
-Info:     125000 |    71156      53404 |  655   345 |      2430|       0.59      78.51|
-Info:     126000 |    71790      53767 |  634   363 |      2307|       0.56      79.07|
-Info:     127000 |    72475      54082 |  685   315 |      2304|       0.65      79.72|
-Info:     128000 |    73131      54426 |  656   344 |      2266|       0.86      80.58|
-Info:     129000 |    73741      54816 |  610   390 |      2225|       0.53      81.11|
-Info:     130000 |    74299      55258 |  558   442 |      2140|       0.57      81.68|
-Info:     131000 |    75005      55552 |  706   294 |      2153|       0.65      82.34|
-Info:     132000 |    75694      55863 |  689   311 |      2103|       0.92      83.25|
-Info:     133000 |    76403      56154 |  709   291 |      2084|       0.80      84.06|
-Info:     134000 |    77019      56538 |  616   384 |      2008|       0.63      84.69|
-Info:     135000 |    77654      56903 |  635   365 |      1938|       0.87      85.55|
-Info:     136000 |    78308      57248 |  654   345 |      1796|       0.45      86.01|
-Info:     137000 |    78913      57633 |  605   385 |      1662|       0.62      86.63|
-Info:     138000 |    79564      57976 |  651   343 |      1574|       0.72      87.34|
-Info:     139000 |    79989      58547 |  425   571 |      1170|       0.19      87.54|
-Info:     140000 |    80542      58994 |  553   447 |      1012|       0.43      87.96|
-Info:     141000 |    80740      59796 |  198   802 |       294|       0.47      88.43|
-Info:     141862 |    81127      60272 |  387   476 |         0|       0.44      88.87|
+Info:       1000 |      437        562 |  437   562 |     14013|       2.59       2.59|
+Info:       2000 |      554       1445 |  117   883 |     13168|       1.04       3.63|
+Info:       3000 |      742       2257 |  188   812 |     12417|       0.91       4.54|
+Info:       4000 |     1009       2990 |  267   733 |     11786|       0.66       5.19|
+Info:       5000 |     1365       3634 |  356   644 |     11319|       0.84       6.04|
+Info:       6000 |     1775       4224 |  410   590 |     10992|       0.77       6.81|
+Info:       7000 |     2220       4779 |  445   555 |     10698|       1.27       8.08|
+Info:       8000 |     2667       5332 |  447   553 |     10478|       0.85       8.93|
+Info:       9000 |     3157       5842 |  490   510 |     10324|       1.09      10.02|
+Info:      10000 |     3612       6387 |  455   545 |     10136|       0.84      10.85|
+Info:      11000 |     4106       6893 |  494   506 |      9953|       0.96      11.81|
+Info:      12000 |     4622       7377 |  516   484 |      9846|       0.92      12.74|
+Info:      13000 |     5149       7850 |  527   473 |      9738|       1.02      13.76|
+Info:      14000 |     5698       8301 |  549   451 |      9638|       1.04      14.80|
+Info:      15000 |     6237       8762 |  539   461 |      9502|       0.71      15.51|
+Info:      16000 |     6777       9222 |  540   460 |      9399|       0.76      16.27|
+Info:      17000 |     7326       9673 |  549   451 |      9264|       0.84      17.12|
+Info:      18000 |     7909      10090 |  583   417 |      9236|       1.12      18.23|
+Info:      19000 |     8459      10540 |  550   450 |      9192|       0.88      19.11|
+Info:      20000 |     8988      11011 |  529   471 |      9104|       0.82      19.92|
+Info:      21000 |     9541      11458 |  553   447 |      9059|       0.93      20.85|
+Info:      22000 |    10118      11881 |  577   423 |      8964|       0.83      21.68|
+Info:      23000 |    10715      12284 |  597   403 |      8957|       0.77      22.44|
+Info:      24000 |    11193      12806 |  478   522 |      8794|       0.80      23.24|
+Info:      25000 |    11705      13294 |  512   488 |      8659|       1.03      24.28|
+Info:      26000 |    12310      13689 |  605   395 |      8614|       1.30      25.57|
+Info:      27000 |    12847      14152 |  537   463 |      8535|       0.90      26.47|
+Info:      28000 |    13374      14625 |  527   473 |      8399|       0.86      27.33|
+Info:      29000 |    13902      15097 |  528   472 |      8382|       0.90      28.23|
+Info:      30000 |    14443      15556 |  541   459 |      8288|       0.79      29.02|
+Info:      31000 |    14967      16032 |  524   476 |      8193|       0.91      29.93|
+Info:      32000 |    15514      16485 |  547   453 |      8136|       1.10      31.03|
+Info:      33000 |    16032      16967 |  518   482 |      8019|       0.78      31.81|
+Info:      34000 |    16589      17410 |  557   443 |      7887|       0.76      32.57|
+Info:      35000 |    17221      17778 |  632   368 |      7846|       0.91      33.48|
+Info:      36000 |    17797      18202 |  576   424 |      7788|       0.85      34.33|
+Info:      37000 |    18423      18576 |  626   374 |      7754|       1.02      35.35|
+Info:      38000 |    18954      19045 |  531   469 |      7655|       0.77      36.12|
+Info:      39000 |    19571      19428 |  617   383 |      7643|       0.88      36.99|
+Info:      40000 |    20128      19871 |  557   443 |      7627|       0.85      37.85|
+Info:      41000 |    20741      20258 |  613   387 |      7592|       1.05      38.89|
+Info:      42000 |    21328      20671 |  587   413 |      7495|       0.73      39.63|
+Info:      43000 |    21955      21044 |  627   373 |      7489|       0.82      40.44|
+Info:      44000 |    22508      21491 |  553   447 |      7413|       0.71      41.16|
+Info:      45000 |    23013      21986 |  505   495 |      7318|       0.64      41.80|
+Info:      46000 |    23630      22369 |  617   383 |      7215|       1.04      42.84|
+Info:      47000 |    24278      22721 |  648   352 |      7157|       0.87      43.71|
+Info:      48000 |    24871      23128 |  593   407 |      7085|       0.73      44.44|
+Info:      49000 |    25404      23595 |  533   467 |      7003|       0.82      45.25|
+Info:      50000 |    26014      23972 |  610   377 |      6883|       0.91      46.16|
+Info:      51000 |    26745      24241 |  731   269 |      6928|       1.34      47.50|
+Info:      52000 |    27331      24655 |  586   414 |      6850|       0.99      48.49|
+Info:      53000 |    27875      25111 |  544   456 |      6800|       0.94      49.44|
+Info:      54000 |    28485      25501 |  610   390 |      6811|       1.28      50.71|
+Info:      55000 |    29108      25878 |  623   377 |      6791|       1.00      51.72|
+Info:      56000 |    29703      26272 |  595   394 |      6716|       0.76      52.48|
+Info:      57000 |    30329      26646 |  626   374 |      6662|       0.89      53.37|
+Info:      58000 |    30968      27007 |  639   361 |      6670|       1.31      54.68|
+Info:      59000 |    31618      27357 |  650   350 |      6636|       1.43      56.10|
+Info:      60000 |    32235      27740 |  617   383 |      6578|       0.77      56.87|
+Info:      61000 |    32826      28148 |  591   408 |      6471|       0.59      57.46|
+Info:      62000 |    33438      28536 |  612   388 |      6395|       0.78      58.24|
+Info:      63000 |    34094      28880 |  656   344 |      6379|       1.15      59.39|
+Info:      64000 |    34714      29260 |  620   380 |      6307|       1.00      60.38|
+Info:      65000 |    35329      29645 |  615   385 |      6278|       1.10      61.49|
+Info:      66000 |    35974      30000 |  645   355 |      6250|       1.15      62.63|
+Info:      67000 |    36611      30363 |  637   363 |      6204|       0.65      63.29|
+Info:      68000 |    37193      30757 |  582   394 |      6115|       0.82      64.11|
+Info:      69000 |    37796      31154 |  603   397 |      6056|       0.95      65.06|
+Info:      70000 |    38429      31512 |  633   358 |      5994|       1.11      66.16|
+Info:      71000 |    38919      32000 |  490   488 |      5872|       0.81      66.97|
+Info:      72000 |    39601      32318 |  682   318 |      5863|       0.94      67.91|
+Info:      73000 |    40256      32663 |  655   345 |      5838|       1.09      69.00|
+Info:      74000 |    40894      33010 |  638   347 |      5791|       1.09      70.09|
+Info:      75000 |    41473      33418 |  579   408 |      5720|       1.01      71.10|
+Info:      76000 |    42195      33696 |  722   278 |      5712|       1.05      72.15|
+Info:      77000 |    42797      34094 |  602   398 |      5652|       0.89      73.04|
+Info:      78000 |    43428      34463 |  631   369 |      5639|       1.17      74.21|
+Info:      79000 |    43970      34887 |  542   424 |      5470|       0.51      74.72|
+Info:      80000 |    44558      35286 |  588   399 |      5362|       0.74      75.45|
+Info:      81000 |    45238      35606 |  680   320 |      5351|       1.01      76.46|
+Info:      82000 |    45864      35980 |  626   374 |      5297|       1.01      77.47|
+Info:      83000 |    46478      36355 |  614   375 |      5236|       0.74      78.21|
+Info:      84000 |    47074      36759 |  596   404 |      5221|       1.18      79.39|
+Info:      85000 |    47695      37119 |  621   360 |      5087|       0.64      80.03|
+Info:      86000 |    48315      37484 |  620   365 |      5028|       0.99      81.02|
+Info:      87000 |    48907      37892 |  592   408 |      5028|       1.12      82.14|
+Info:      88000 |    49596      38203 |  689   311 |      4996|       0.80      82.94|
+Info:      89000 |    50242      38557 |  646   354 |      5000|       0.78      83.72|
+Info:      90000 |    50873      38917 |  631   360 |      4936|       1.04      84.77|
+Info:      91000 |    51558      39232 |  685   315 |      4914|       1.02      85.78|
+Info:      92000 |    52213      39575 |  655   343 |      4853|       0.97      86.75|
+Info:      93000 |    52815      39959 |  602   384 |      4784|       0.89      87.64|
+Info:      94000 |    53431      40334 |  616   375 |      4664|       0.67      88.31|
+Info:      95000 |    54081      40679 |  650   345 |      4605|       0.77      89.08|
+Info:      96000 |    54738      41021 |  657   342 |      4612|       0.80      89.88|
+Info:      97000 |    55366      41393 |  628   372 |      4585|       0.87      90.75|
+Info:      98000 |    56112      41647 |  746   254 |      4602|       0.93      91.68|
+Info:      99000 |    56748      41999 |  636   352 |      4548|       1.07      92.75|
+Info:     100000 |    57474      42272 |  726   273 |      4511|       1.08      93.83|
+Info:     101000 |    58030      42694 |  556   422 |      4344|       0.78      94.60|
+Info:     102000 |    58635      43089 |  605   395 |      4288|       0.86      95.46|
+Info:     103000 |    59368      43356 |  733   267 |      4293|       1.45      96.91|
+Info:     104000 |    60018      43706 |  650   350 |      4277|       1.09      98.00|
+Info:     105000 |    60641      44083 |  623   377 |      4235|       1.16      99.16|
+Info:     106000 |    61308      44416 |  667   333 |      4235|       1.21     100.36|
+Info:     107000 |    61981      44743 |  673   327 |      4189|       0.80     101.16|
+Info:     108000 |    62646      45077 |  665   334 |      4155|       0.86     102.02|
+Info:     109000 |    63246      45461 |  600   384 |      4046|       1.12     103.14|
+Info:     110000 |    63897      45801 |  651   340 |      3960|       0.86     104.00|
+Info:     111000 |    64510      46176 |  613   375 |      3857|       1.08     105.08|
+Info:     112000 |    65161      46516 |  651   340 |      3839|       1.10     106.18|
+Info:     113000 |    65802      46875 |  641   359 |      3820|       0.99     107.17|
+Info:     114000 |    66445      47232 |  643   357 |      3831|       1.04     108.21|
+Info:     115000 |    67049      47628 |  604   396 |      3765|       0.95     109.15|
+Info:     116000 |    67643      48027 |  594   399 |      3718|       0.96     110.11|
+Info:     117000 |    68315      48338 |  672   311 |      3587|       0.60     110.71|
+Info:     118000 |    69039      48613 |  724   275 |      3521|       0.75     111.46|
+Info:     119000 |    69715      48925 |  676   312 |      3434|       0.53     112.00|
+Info:     120000 |    70349      49291 |  634   366 |      3436|       1.16     113.16|
+Info:     121000 |    70995      49632 |  646   341 |      3315|       0.76     113.92|
+Info:     122000 |    71698      49915 |  703   283 |      3264|       0.89     114.80|
+Info:     123000 |    72381      50208 |  683   293 |      3192|       0.67     115.47|
+Info:     124000 |    73073      50516 |  692   308 |      3120|       0.52     115.99|
+Info:     125000 |    73725      50864 |  652   348 |      3008|       0.65     116.65|
+Info:     126000 |    74365      51219 |  640   355 |      2894|       0.72     117.36|
+Info:     127000 |    75018      51554 |  653   335 |      2825|       0.67     118.04|
+Info:     128000 |    75735      51837 |  717   283 |      2780|       0.78     118.82|
+Info:     129000 |    76356      52209 |  621   372 |      2748|       0.91     119.73|
+Info:     130000 |    76982      52582 |  626   373 |      2736|       0.94     120.67|
+Info:     131000 |    77633      52929 |  651   347 |      2611|       0.58     121.25|
+Info:     132000 |    78254      53308 |  621   379 |      2558|       1.13     122.38|
+Info:     133000 |    78899      53663 |  645   355 |      2515|       0.81     123.19|
+Info:     134000 |    79662      53900 |  763   237 |      2489|       0.81     124.00|
+Info:     135000 |    80284      54277 |  622   377 |      2377|       0.72     124.73|
+Info:     136000 |    81055      54506 |  771   229 |      2373|       1.11     125.84|
+Info:     137000 |    81752      54809 |  697   303 |      2365|       0.86     126.70|
+Info:     138000 |    82488      55073 |  736   264 |      2321|       0.84     127.55|
+Info:     139000 |    83192      55369 |  704   296 |      2312|       0.87     128.41|
+Info:     140000 |    83818      55742 |  626   373 |      2281|       0.81     129.23|
+Info:     141000 |    84429      56122 |  611   380 |      2151|       0.57     129.80|
+Info:     142000 |    85119      56432 |  690   310 |      2137|       0.70     130.50|
+Info:     143000 |    85763      56788 |  644   356 |      2090|       0.74     131.24|
+Info:     144000 |    86442      57109 |  679   321 |      2077|       0.61     131.86|
+Info:     145000 |    87156      57395 |  714   286 |      2049|       0.92     132.77|
+Info:     146000 |    87823      57728 |  667   333 |      2047|       0.70     133.48|
+Info:     147000 |    88452      58099 |  629   371 |      2011|       0.73     134.21|
+Info:     148000 |    88986      58560 |  534   461 |      1707|       0.42     134.63|
+Info:     149000 |    89674      58872 |  688   312 |      1719|       0.72     135.35|
+Info:     150000 |    90380      59160 |  706   288 |      1643|       0.77     136.12|
+Info:     151000 |    90959      59577 |  579   417 |      1374|       0.46     136.58|
+Info:     152000 |    91567      59969 |  608   392 |      1252|       0.48     137.06|
+Info:     153000 |    92231      60305 |  664   336 |      1288|       1.00     138.06|
+Info:     154000 |    92918      60618 |  687   313 |      1238|       0.76     138.82|
+Info:     155000 |    93528      61008 |  610   390 |      1042|       0.58     139.41|
+Info:     156000 |    93708      61828 |  180   820 |       261|       0.78     140.19|
+Info:     156860 |    94116      62281 |  408   453 |         0|       0.51     140.70|
 Info: Routing complete.
-Info: Router1 time 88.87s
-Info: Checksum: 0x7fcf66bd
+Info: Router1 time 140.70s
+Info: Checksum: 0xd362525e
 
 Info: Critical path report for clock 'pclk' (posedge -> posedge):
 Info: curr total
-Info:  1.8  1.8  Source xosera_main.vram_arb.vram.umem0_RAM.DATAOUT_9
-Info:  5.7  7.5    Net xosera_main.vram_arb.vram.data0[9] budget 4.542000 ns (25,0) -> (5,3)
-Info:                Sink xosera_main.blitter.blit_data_i_SB_LUT4_O_11_I1_SB_LUT4_O_1_LC.I3
+Info:  1.4  1.4  Source xosera_main.video_gen.video_timing.h_count_SB_DFFSR_Q_D_SB_LUT4_O_2_LC.O
+Info:  3.1  4.4    Net xosera_main.video_h_count[1] budget 3.781000 ns (9,9) -> (9,6)
+Info:                Sink xosera_main.video_gen.mem_fetch_SB_LUT4_I3_O_SB_LUT4_I0_O_SB_LUT4_O_I3_SB_LUT4_O_LC.I1
 Info:                Defined in:
 Info:                  upduino/xosera_upd.sv:284.13-304.14
-Info:                  ./vram_arb.sv:95.6-102.2
-Info:                  ./vram.sv:68.17-68.22
-Info:                  ./xosera_main.sv:307.10-332.2
-Info:  0.9  8.4  Source xosera_main.blitter.blit_data_i_SB_LUT4_O_11_I1_SB_LUT4_O_1_LC.O
-Info:  1.8 10.1    Net xosera_main.blitter.blit_data_i_SB_LUT4_O_11_I1[1] budget 4.558000 ns (5,3) -> (5,4)
-Info:                Sink xosera_main.blitter.blit_data_i_SB_LUT4_O_11_LC.I2
+Info:                  ./xosera_main.sv:118.25-118.38
+Info:  1.2  5.7  Source xosera_main.video_gen.mem_fetch_SB_LUT4_I3_O_SB_LUT4_I0_O_SB_LUT4_O_I3_SB_LUT4_O_LC.O
+Info:  1.8  7.4    Net xosera_main.video_gen.mem_fetch_SB_LUT4_I3_O_SB_LUT4_I0_O_SB_LUT4_O_I3[2] budget 3.781000 ns (9,6) -> (10,7)
+Info:                Sink xosera_main.video_gen.mem_fetch_SB_LUT4_I3_O_SB_LUT4_I0_O_SB_LUT4_O_LC.I3
 Info:                Defined in:
 Info:                  /Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_map.v:6.21-6.22
-Info:  1.2 11.3  Source xosera_main.blitter.blit_data_i_SB_LUT4_O_11_LC.O
-Info:  4.8 16.1    Net xosera_main.vram_data_out[9] budget 4.557000 ns (5,4) -> (10,15)
-Info:                Sink xosera_main.video_gen.video_pf_a.pf_attr_word_next_SB_LUT4_O_8_I2_SB_LUT4_I2_1_O_SB_LUT4_O_LC.I3
-Info:                Defined in:
-Info:                  upduino/xosera_upd.sv:284.13-304.14
-Info:                  ./xosera_main.sv:84.25-84.38
-Info:  0.9 17.0  Source xosera_main.video_gen.video_pf_a.pf_attr_word_next_SB_LUT4_O_8_I2_SB_LUT4_I2_1_O_SB_LUT4_O_LC.O
-Info:  3.0 19.9    Net xosera_main.video_gen.video_pf_a.pf_attr_word_next_SB_LUT4_O_8_I2_SB_LUT4_I2_1_O[3] budget 4.557000 ns (10,15) -> (12,16)
-Info:                Sink xosera_main.video_gen.video_pf_a.pf_data_word0_next_SB_LUT4_O_5_I3_SB_LUT4_O_LC.I3
+Info:  0.9  8.3  Source xosera_main.video_gen.mem_fetch_SB_LUT4_I3_O_SB_LUT4_I0_O_SB_LUT4_O_LC.O
+Info:  2.4 10.7    Net xosera_main.video_gen.mem_fetch_SB_LUT4_I3_O_SB_LUT4_I0_O[0] budget 3.781000 ns (10,7) -> (10,9)
+Info:                Sink xosera_main.video_gen.mem_fetch_SB_LUT4_I3_O_SB_LUT4_I0_O_SB_LUT4_I0_LC.I0
 Info:                Defined in:
 Info:                  /Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_map.v:6.21-6.22
-Info:  0.9 20.8  Source xosera_main.video_gen.video_pf_a.pf_data_word0_next_SB_LUT4_O_5_I3_SB_LUT4_O_LC.O
-Info:  3.6 24.4    Net xosera_main.video_gen.video_pf_a.pf_data_word0_next_SB_LUT4_O_5_I3[2] budget 4.557000 ns (12,16) -> (15,23)
-Info:                Sink xosera_main.video_gen.video_pf_a.pf_data_word0_next_SB_LUT4_O_5_LC.I3
+Info:  1.3 12.0  Source xosera_main.video_gen.mem_fetch_SB_LUT4_I3_O_SB_LUT4_I0_O_SB_LUT4_I0_LC.O
+Info:  3.7 15.7    Net xosera_main.video_gen.mem_fetch_SB_LUT4_I3_O_SB_LUT4_I0_O_SB_LUT4_I0_O[2] budget 3.794000 ns (10,9) -> (10,18)
+Info:                Sink xosera_main.video_gen.video_pf_a.scanout_SB_LUT4_I2_1_O_SB_LUT4_O_LC.I3
 Info:                Defined in:
 Info:                  /Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_map.v:6.21-6.22
-Info:  0.8 25.2  Setup xosera_main.video_gen.video_pf_a.pf_data_word0_next_SB_LUT4_O_5_LC.I3
-Info: 6.5 ns logic, 18.8 ns routing
+Info:  0.9 16.6  Source xosera_main.video_gen.video_pf_a.scanout_SB_LUT4_I2_1_O_SB_LUT4_O_LC.O
+Info:  1.8 18.3    Net xosera_main.video_gen.video_pf_a.scanout_SB_LUT4_I2_1_O[1] budget 3.794000 ns (10,18) -> (9,19)
+Info:                Sink xosera_main.video_gen.video_pf_a.scanout_SB_LUT4_I2_1_O_SB_LUT4_I2_LC.I3
+Info:                Defined in:
+Info:                  /Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_map.v:6.21-6.22
+Info:  0.9 19.2  Source xosera_main.video_gen.video_pf_a.scanout_SB_LUT4_I2_1_O_SB_LUT4_I2_LC.O
+Info:  5.5 24.7    Net xosera_main.video_gen.video_pf_a.scanout_SB_LUT4_I2_1_O_SB_LUT4_I2_O budget 3.793000 ns (9,19) -> (3,6)
+Info:                Sink xosera_main.video_gen.video_pf_a.pf_tile_x_SB_DFFESR_Q_D_SB_LUT4_O_1_LC.CEN
+Info:  0.1 24.8  Setup xosera_main.video_gen.video_pf_a.pf_tile_x_SB_DFFESR_Q_D_SB_LUT4_O_1_LC.CEN
+Info: 6.6 ns logic, 18.2 ns routing
 
 Info: Critical path report for cross-domain path '<async>' -> '<async>':
 Info: curr total
-Info:  0.0  0.0  Source led_red$sb_io.D_IN_0
-Info:  3.0  3.0    Net led_red$SB_IO_IN budget 41.063999 ns (6,31) -> (4,30)
-Info:                Sink bus_out_ena_SB_LUT4_O_LC.I3
+Info:  0.0  0.0  Source led_green$sb_io.D_IN_0
+Info:  3.2  3.2    Net led_green$SB_IO_IN budget 41.063999 ns (4,31) -> (7,30)
+Info:                Sink bus_out_ena_SB_LUT4_O_LC.I2
 Info:                Defined in:
 Info:                  upduino/xosera_upd.sv:284.13-304.14
-Info:                  ./reg_interface.sv:16.33-16.43
+Info:                  ./reg_interface.sv:17.33-17.45
 Info:                  ./xosera_main.sv:180.15-220.2
-Info:  0.9  3.8  Source bus_out_ena_SB_LUT4_O_LC.O
-Info:  4.7  8.5    Net bus_out_ena budget 41.063999 ns (4,30) -> (17,31)
-Info:                Sink bus_tristate[7].OUTPUT_ENABLE
+Info:  1.2  4.4  Source bus_out_ena_SB_LUT4_O_LC.O
+Info:  4.0  8.4    Net bus_out_ena budget 41.063999 ns (7,30) -> (16,31)
+Info:                Sink bus_tristate[0].OUTPUT_ENABLE
 Info:                Defined in:
 Info:                  upduino/xosera_upd.sv:129.7-129.18
-Info: 0.9 ns logic, 7.6 ns routing
+Info: 1.2 ns logic, 7.2 ns routing
 
 Info: Critical path report for cross-domain path '<async>' -> 'posedge pclk':
 Info: curr total
-Info:  0.0  0.0  Source gpio_23$sb_io.D_IN_0
-Info:  4.1  4.1    Net gpio_23$SB_IO_IN budget 28.382000 ns (19,31) -> (10,30)
-Info:                Sink xosera_main.reg_interface.bus.reg_num_ff0_SB_DFFSR_Q_3_DFFLC.I0
+Info:  0.0  0.0  Source led_green$sb_io.D_IN_0
+Info:  4.1  4.1    Net led_green$SB_IO_IN budget 28.382000 ns (4,31) -> (12,29)
+Info:                Sink xosera_main.reg_interface.bus.rd_nwr_ff0_SB_DFFSR_Q_DFFLC.I0
 Info:                Defined in:
 Info:                  upduino/xosera_upd.sv:284.13-304.14
-Info:                  ./reg_interface.sv:18.33-18.46
+Info:                  ./reg_interface.sv:17.33-17.45
 Info:                  ./xosera_main.sv:180.15-220.2
-Info:  1.2  5.4  Setup xosera_main.reg_interface.bus.reg_num_ff0_SB_DFFSR_Q_3_DFFLC.I0
+Info:  1.2  5.4  Setup xosera_main.reg_interface.bus.rd_nwr_ff0_SB_DFFSR_Q_DFFLC.I0
 Info: 1.2 ns logic, 4.1 ns routing
 
 Info: Critical path report for cross-domain path 'posedge pclk' -> '<async>':
 Info: curr total
-Info:  1.4  1.4  Source boot_select_r_SB_DFF_Q_1_DFFLC.O
-Info:  7.3  8.7    Net boot_select_r[0] budget 81.943001 ns (12,25) -> (25,0)
-Info:                Sink boot.S0
+Info:  1.4  1.4  Source bus_data_out_SB_LUT4_O_6_LC.O
+Info:  7.9  9.3    Net bus_data_out_r[1] budget 81.943001 ns (15,17) -> (13,31)
+Info:                Sink bus_tristate[1].D_OUT_0
 Info:                Defined in:
-Info:                  upduino/xosera_upd.sv:112.13-112.26
-Info: 1.4 ns logic, 7.3 ns routing
+Info:                  upduino/xosera_upd.sv:131.13-131.27
+Info: 1.4 ns logic, 7.9 ns routing
 
-Info: Max frequency for clock 'pclk': 39.61 MHz (PASS at 33.77 MHz)
+Info: Max frequency for clock 'pclk': 40.33 MHz (PASS at 33.77 MHz)
 
-Info: Max delay <async>      -> <async>     : 8.51 ns
+Info: Max delay <async>      -> <async>     : 8.39 ns
 Info: Max delay <async>      -> posedge pclk: 5.38 ns
-Info: Max delay posedge pclk -> <async>     : 8.65 ns
+Info: Max delay posedge pclk -> <async>     : 9.30 ns
 
 Info: Slack histogram:
-Info:  legend: * represents 48 endpoint(s)
-Info:          + represents [1,48) endpoint(s)
-Info: [  4373,   8104) |***********+
-Info: [  8104,  11835) |*******************+
-Info: [ 11835,  15566) |**********************+
-Info: [ 15566,  19297) |***********************************************+
-Info: [ 19297,  23028) |************************************************************ 
-Info: [ 23028,  26759) |*************************+
-Info: [ 26759,  30490) | 
-Info: [ 30490,  34221) | 
-Info: [ 34221,  37952) | 
-Info: [ 37952,  41683) | 
-Info: [ 41683,  45414) | 
-Info: [ 45414,  49145) | 
-Info: [ 49145,  52876) | 
-Info: [ 52876,  56607) | 
-Info: [ 56607,  60338) | 
-Info: [ 60338,  64069) | 
-Info: [ 64069,  67800) | 
-Info: [ 67800,  71531) | 
-Info: [ 71531,  75262) |+
-Info: [ 75262,  78993) |+
+Info:  legend: * represents 49 endpoint(s)
+Info:          + represents [1,49) endpoint(s)
+Info: [  4818,   8587) |*****************+
+Info: [  8587,  12356) |*************+
+Info: [ 12356,  16125) |**************************+
+Info: [ 16125,  19894) |******************************************+
+Info: [ 19894,  23663) |************************************************************ 
+Info: [ 23663,  27432) |********************+
+Info: [ 27432,  31201) | 
+Info: [ 31201,  34970) | 
+Info: [ 34970,  38739) | 
+Info: [ 38739,  42508) | 
+Info: [ 42508,  46277) | 
+Info: [ 46277,  50046) | 
+Info: [ 50046,  53815) | 
+Info: [ 53815,  57584) | 
+Info: [ 57584,  61353) | 
+Info: [ 61353,  65122) | 
+Info: [ 65122,  68891) | 
+Info: [ 68891,  72660) | 
+Info: [ 72660,  76429) |+
+Info: [ 76429,  80198) |+
 
 Info: Program finished normally.

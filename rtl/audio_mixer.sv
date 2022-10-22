@@ -45,7 +45,8 @@ localparam  DAC_W       = 8;
 
 typedef enum {
     AUD_FETCH_DMA,
-    AUD_FETCH_READ
+    AUD_FETCH_READ,
+    AUD_FETCH_NEXT
 } audio_fetch_ph;
 
 logic [CHAN_W-1:0]                  fetch_chan;
@@ -57,6 +58,8 @@ logic                               mix_clr;            // clear mix accumulator
 sbyte_t                             mix_val_temp;
 sbyte_t                             vol_l_temp;
 sbyte_t                             vol_r_temp;
+sword_t                             acc_l;
+sword_t                             acc_r;
 logic signed [9:0]                  mix_l_acc;          // extra bits for saturation testing
 logic signed [9:0]                  mix_r_acc;          // extra bits for saturation testing
 
@@ -196,31 +199,32 @@ always_ff @(posedge clk) begin : chan_process
         case (fetch_phase)
             // setup DMA fetch for channel
             AUD_FETCH_DMA: begin
-                    audio_req_o         <= 1'b0;
-                    if (audio_enable_i && !chan_buff_ok[fetch_chan]) begin
-                        audio_req_o     <= 1'b1;
-                    end
-                    audio_tile_o    <= chan_tile[fetch_chan];
-                    audio_addr_o    <= chan_addr[fetch_chan*xv::VRAM_W+:xv::VRAM_W];
+                audio_tile_o    <= chan_tile[fetch_chan];
+                audio_addr_o    <= chan_addr[fetch_chan*xv::VRAM_W+:xv::VRAM_W];
+
+                if (audio_enable_i && !chan_buff_ok[fetch_chan]) begin
+                    audio_req_o     <= 1'b1;
 
                     fetch_phase     <= AUD_FETCH_READ;
-            end
-            // if req, wait for ack, latch new word if ack, get ready to mix channel
-            AUD_FETCH_READ: begin
-                if (audio_req_o) begin
-                    if (audio_ack_i) begin
-                        audio_req_o                     <= 1'b0;
-                        chan_buff[16*fetch_chan+:16]    <= audio_word_i;
-                        chan_buff_ok[fetch_chan]        <= 1'b1;
-                        fetch_chan                      <= fetch_chan + 1'b1;
-
-                        fetch_phase         <= AUD_FETCH_DMA;
-                    end
                 end else begin
-                    fetch_chan          <= fetch_chan + 1'b1;
+                    audio_req_o     <= 1'b0;
 
-                    fetch_phase         <= AUD_FETCH_DMA;
+                    fetch_phase     <= AUD_FETCH_NEXT;
                 end
+            end
+            AUD_FETCH_READ: begin
+                if (audio_ack_i) begin
+                    audio_req_o                     <= 1'b0;
+                    chan_buff[16*fetch_chan+:16]    <= audio_word_i;
+                    chan_buff_ok[fetch_chan]        <= 1'b1;
+
+                    fetch_phase                     <= AUD_FETCH_NEXT;
+                end
+            end
+            AUD_FETCH_NEXT: begin
+                fetch_chan          <= fetch_chan + 1'b1;
+
+                fetch_phase         <= AUD_FETCH_DMA;
             end
         endcase
     end
@@ -244,7 +248,7 @@ always_ff @(posedge clk) begin : mix_fsm
         output_r        <= '0;
 `endif
     end else begin
-        if (mix_chan[CHAN_W]) begin
+        if (mix_chan == AUDIO_NCHAN) begin
             mix_chan        <= '0;
             mix_clr         <= 1'b1;
 
@@ -265,11 +269,12 @@ always_ff @(posedge clk) begin : mix_fsm
             end
 
         end else begin
+            mix_chan        <= mix_chan + 1'b1;
+            mix_clr         <= 1'b0;
+
             vol_l_temp      <= { 1'b0, audio_vol_l_nchan_i[7*mix_chan+:7] };
             vol_r_temp      <= { 1'b0, audio_vol_r_nchan_i[7*mix_chan+:7] };
             mix_val_temp    <= chan_val[mix_chan*8+:8];
-            mix_chan        <= mix_chan + 1'b1;
-            mix_clr         <= 1'b0 | ~audio_enable_i;
         end
     end
 end
@@ -278,28 +283,39 @@ end
 `define USE_FMAC        // use two SB_MAC16 units for multiply and accumulate
 `endif
 
-`ifndef USE_FMAC        // generic inferred multiply and fabric accumulate
-sword_t                 acc_l;
-sword_t                 acc_r;
+assign mix_l_acc        = acc_l[15:6];
+assign mix_r_acc        = acc_r[15:6];
 
-assign mix_l_acc = acc_l[15:6];
-assign mix_r_acc = acc_r[15:6];
+logic                   unused_bits = &{ 1'b0, acc_l[5:0], acc_r[5:0] };
+
+`ifndef USE_FMAC        // generic inferred multiply and fabric accumulate
+sword_t             res_l;
+sword_t             res_r;
+
+assign res_l        = mix_val_temp * vol_l_temp;
+assign res_r        = mix_val_temp * vol_r_temp;
 
 always_ff @(posedge clk) begin
-    if (mix_clr) begin
-        acc_l       <= '0;
-        acc_r       <= '0;
+    if (reset_i) begin
+        acc_l   <= '0;
+        acc_r   <= '0;
     end else begin
-        acc_l       <= (mix_val_temp * vol_l_temp) + acc_l;
-        acc_r       <= (mix_val_temp * vol_r_temp) + acc_r;
+        if (mix_clr) begin
+            acc_l   <= '0;
+            acc_r   <= '0;
+        end else begin
+            acc_l   <= acc_l + res_l;
+            acc_r   <= acc_r + res_r;
+        end
     end
 end
 
 `else    // iCE40UltraPlus5K specific
 
-logic [21:0] unused_l;
-logic [21:0] unused_r;
+logic [15:0]            unused_acc_l;
+logic [15:0]            unused_acc_r;
 
+// NOTE: Using dual 8x8 MAC16 mode, but ignoring lower unit since doesn't support signed multiply (AFAICT)
 /* verilator lint_off PINCONNECTEMPTY */
 SB_MAC16 #(
     .NEG_TRIGGER(1'b0),                 // 0=rising/1=falling clk edge
@@ -346,7 +362,7 @@ SB_MAC16 #(
     .CI(1'b0),                          // cascaded add/sub carry in from previous DSP block
     .ACCUMCI(1'b0),                     // cascaded accumulator carry in from previous DSP block
     .SIGNEXTIN(1'b0),                   // cascaded sign extension in from previous DSP block
-    .O({ mix_l_acc, unused_l }),        // 32-bit result output
+    .O({ acc_l, unused_acc_l }),        // 32-bit result output (dual 8x8=16-bit mode with top used)
     .CO(),                              // cascaded add/sub carry output to next DSP block
     .ACCUMCO(),                         // cascaded accumulator carry output to next DSP block
     .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block
@@ -399,7 +415,7 @@ SB_MAC16 #(
     .CI(1'b0),                          // cascaded add/sub carry in from previous DSP block
     .ACCUMCI(1'b0),                     // cascaded accumulator carry in from previous DSP block
     .SIGNEXTIN(1'b0),                   // cascaded sign extension in from previous DSP block
-    .O({ mix_r_acc, unused_r }),        // 32-bit result output
+    .O({ acc_r, unused_acc_r }),        // 32-bit result output (dual 8x8=16-bit mode with top used)
     .CO(),                              // cascaded add/sub carry output to next DSP block
     .ACCUMCO(),                         // cascaded accumulator carry output to next DSP block
     .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block

@@ -2489,7 +2489,7 @@ static int init_audio()
     dprintf("Xosera audio channels = %d\n", num_audio_channels);
 
     // set all channels to "full volume" silence at very slow period
-    for (int v = 0; v < 4; v++)
+    for (int v = 0; v < num_audio_channels; v++)
     {
         uint16_t vo = 1 << v;
         xreg_setw(AUD0_VOL + vo, 0x8080);
@@ -2532,6 +2532,14 @@ static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
             {
                 ic = xm_getw(INT_CTRL);
                 dprintf("Starting channel %d... INT_CTRL = 0x%04x\n", v, ic);
+                if (v & 1)
+                {
+                    xreg_setw(AUD0_VOL + (v * 4), 0x4020);
+                }
+                else
+                {
+                    xreg_setw(AUD0_VOL + (v * 4), 0x2040);
+                }
                 xreg_setw(AUD0_START + (v * 4), vaddr);
                 xreg_setw(AUD0_LENGTH + (v * 4), (len / 2) - 1);
                 xreg_setw(AUD0_PERIOD + (v * 4), period | 0x8000);        // force instant sample start

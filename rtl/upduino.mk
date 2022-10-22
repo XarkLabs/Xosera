@@ -66,22 +66,19 @@ else
 VMODENAME := vga
 endif
 
+ifneq ($(strip $(PF_B)),)
+VERILOG_DEFS += -DEN_PF_B
+endif
+
 ifeq ($(strip $(AUDIO)),)
 AUDIO := 0
 endif
 
 ifeq ($(strip $(AUDIO)),0)
-VERILOG_DEFS += -DEN_PF_B
 OUTSUFFIX := $(VMODENAME)_$(subst MODE_,,$(VIDEO_MODE))
 else
-ifeq ($(strip $(AUDIO)),2)
-VERILOG_DEFS += -DEN_PF_B -DEN_AUDIO=2
-OUTSUFFIX := aud$(AUDIO)_$(VMODENAME)_$(subst MODE_,,$(VIDEO_MODE))
-else
-# NOTE: no PF_B with 4 channels currently
 VERILOG_DEFS += -DEN_AUDIO=$(AUDIO)
 OUTSUFFIX := aud$(AUDIO)_$(VMODENAME)_$(subst MODE_,,$(VIDEO_MODE))
-endif
 endif
 
 FONTFILES := $(wildcard tilesets/*.mem)
@@ -127,7 +124,7 @@ FLOW3 :=
 #YOSYS_SYNTH_ARGS := -device u -abc2 -relut -retime -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -abc9 -relut -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc2 -top $(TOP)
-YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc9 -top $(TOP)
+YOSYS_SYNTH_ARGS := -device u -dsp -no-rw-check -abc9 -top $(TOP)
 #FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules

@@ -65,25 +65,24 @@ VERILOG_DEFS := -D$(VIDEO_MODE)
 #VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw -u ../testdata/raw/ramptable.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw
-VRUN_TESTDATA ?=   -u ../testdata/raw/sintable.raw -u ../testdata/raw/ramptable.raw
+#VRUN_TESTDATA ?=   -u ../testdata/raw/sintable.raw -u ../testdata/raw/ramptable.raw
+VRUN_TESTDATA ?=   -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
 
 # Xosera main target top (for Verilator)
 VTOP := xosera_main
+
+ifneq ($(strip $(PF_B)),)
+VERILOG_DEFS += -DEN_PF_B
+endif
+
 ifeq ($(strip $(AUDIO)),)
 AUDIO := 0
 endif
 
-ifeq ($(strip $(AUDIO)),0)
-VERILOG_DEFS += -DEN_PF_B
-else
-ifeq ($(strip $(AUDIO)),2)
-VERILOG_DEFS += -DEN_PF_B -DEN_AUDIO=2
-else
-# NOTE: no PF_B with 4 channels currently
+ifneq ($(strip $(AUDIO)),0)
 VERILOG_DEFS += -DEN_AUDIO=$(AUDIO)
-endif
 endif
 
 # RTL source and include directory

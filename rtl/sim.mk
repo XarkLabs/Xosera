@@ -129,7 +129,7 @@ SDL_CFLAGS := $(shell sdl2-config --cflags)
 endif
 # Note: Using -Os seems to provide the fastest compile+run simulation iteration time
 # Linux gcc needs -Wno-maybe-uninitialized
-CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-int-in-bool-context -D$(VIDEO_MODE) -DSDL_RENDER=$(SDL_RENDER) -DBUS_INTERFACE=$(BUS_INTERFACE) $(SDL_CFLAGS)"
+CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-deprecated-declarations -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-int-in-bool-context -D$(VIDEO_MODE) -DSDL_RENDER=$(SDL_RENDER) -DBUS_INTERFACE=$(BUS_INTERFACE) $(SDL_CFLAGS)"
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator

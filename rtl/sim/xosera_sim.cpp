@@ -19,9 +19,9 @@
 
 #include "Vxosera_main_colormem.h"
 #include "Vxosera_main_vram.h"
-//#include "Vxosera_main_vram_arb.h"
+// #include "Vxosera_main_vram_arb.h"
 #include "Vxosera_main_xosera_main.h"
-//#include "Vxosera_main_xrmem_arb.h"
+// #include "Vxosera_main_xrmem_arb.h"
 
 #define USE_FST 1
 #if USE_FST
@@ -324,7 +324,12 @@ public:
                         if (data_upload && data_upload_index < 16)
                         {
                             logonly_printf("[@t=%8lu] ", main_time);
-                            sprintf(tempstr, "r[0x%x] %s.%3s", reg_num, reg_name[reg_num], bytesel ? "lsb*" : "msb");
+                            snprintf(tempstr,
+                                     sizeof(tempstr),
+                                     "r[0x%x] %s.%3s",
+                                     reg_num,
+                                     reg_name[reg_num],
+                                     bytesel ? "lsb*" : "msb");
                             logonly_printf("  %-25.25s <= %s%02x%s\n",
                                            tempstr,
                                            bytesel ? "__" : "",
@@ -1447,8 +1452,12 @@ int main(int argc, char ** argv)
                             SDL_CreateRGBSurface(0, w, h, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
                         SDL_RenderReadPixels(
                             renderer, NULL, SDL_PIXELFORMAT_ARGB8888, screen_shot->pixels, screen_shot->pitch);
-                        sprintf(
-                            save_name, LOGDIR "xosera_vsim_%dx%d_f%02d.png", VISIBLE_WIDTH, VISIBLE_HEIGHT, frame_num);
+                        snprintf(save_name,
+                                 sizeof(save_name),
+                                 LOGDIR "xosera_vsim_%dx%d_f%02d.png",
+                                 VISIBLE_WIDTH,
+                                 VISIBLE_HEIGHT,
+                                 frame_num);
                         IMG_SavePNG(screen_shot, save_name);
                         SDL_FreeSurface(screen_shot);
                         float fnum = ((1.0 / PIXEL_CLOCK_MHZ) * ((main_time - first_frame_start) / 2)) / 1000.0;

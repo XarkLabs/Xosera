@@ -31,14 +31,18 @@ module vram(
 
 word_t memory[0: 65535] /* verilator public*/;
 
+localparam [16*8:1] hex_str = "FEDCBA9876543210";
+
 // clear RAM to avoid simulation errors
 initial begin
 `ifndef NO_TESTPATTERN
     for (integer i = 0; i < 65536; i = i + 1) begin : TESTPATTERN
         if (i[3:0] == 4'h1) begin
-            memory[i] =  { 8'h02, i[15:8] };
+            memory[i] =  { 8'h02, hex_str[((i[15:12])*8)+1+:8] };
         end else if (i[3:0] == 4'h2) begin
-            memory[i] =  { 8'h02, i[7:4], 4'h0 };
+            memory[i] =  { 8'h02, hex_str[((i[11:8])*8)+1+:8] };
+        end else if (i[3:0] == 4'h3) begin
+            memory[i] =  { 8'h02, hex_str[((i[7:4])*8)+1+:8] };
         end else begin
             memory[i] = {(i[7:4] ^ 4'hF), i[7:4], i[7:0]};
         end

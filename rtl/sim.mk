@@ -133,7 +133,7 @@ CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-d
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
-VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -v $(TECH_LIB) $(VLT_CONFIG) -Mdir sim/obj_dir -Wall --trace-fst -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY -Wno-fatal
+VERILATOR_ARGS := --sv --language 1800-2012 --timing -I$(SRCDIR) -v $(TECH_LIB) $(VLT_CONFIG) -Mdir sim/obj_dir -Wall --trace-fst -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-STMTDLY -Wno-fatal
 
 # Verillator C++ source driver
 CSRC := sim/xosera_sim.cpp

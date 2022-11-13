@@ -1221,6 +1221,7 @@ int main(int argc, char ** argv)
     int  current_y          = 0;
     bool vga_hsync_previous = false;
     bool vga_vsync_previous = false;
+    bool vga_dv_previous    = false;
     int  frame_num          = -1;
     int  x_max              = 0;
     int  y_max              = 0;
@@ -1265,16 +1266,6 @@ int main(int argc, char ** argv)
         if (frame_num <= MAX_TRACE_FRAMES)
             tfp->dump(main_time);
 #endif
-        main_time++;
-
-        top->clk = 0;        // clock falling
-        top->eval();
-
-#if VM_TRACE
-        if (frame_num <= MAX_TRACE_FRAMES)
-            tfp->dump(main_time);
-#endif
-        main_time++;
 
         if (top->reconfig_o)
         {
@@ -1439,6 +1430,7 @@ int main(int argc, char ** argv)
                     y_max + 1,
                     hsync_max,
                     vsync_count);
+
 #if SDL_RENDER
 
                 if (sim_render)
@@ -1500,13 +1492,24 @@ int main(int argc, char ** argv)
 
         vga_vsync_previous = vsync;
 
+        main_time++;
+
+        top->clk = 0;        // clock falling
+        top->eval();
+
+#if VM_TRACE
+        if (frame_num <= MAX_TRACE_FRAMES)
+            tfp->dump(main_time);
+#endif
+        main_time++;
+
 #if SDL_RENDER
         if (sim_render)
         {
             SDL_Event e;
             SDL_PollEvent(&e);
 
-            if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE))
+            if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN))
             {
                 log_printf("Window closed\n");
                 break;

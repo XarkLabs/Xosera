@@ -888,6 +888,7 @@ int test_xmem(bool LFSR, int mode)
     // set funky mode to show XMEM
     wait_vblank_start();
     xreg_setw(PA_GFX_CTRL, 0x0080);
+    xreg_setw(VID_RIGHT, xreg_getw(VID_HSIZE));        // restore border
     xmem_set_addr(XR_TILEMAP);
     for (int i = 0; i < (XR_COLS * XR_ROWS); i++)
     {
@@ -970,6 +971,10 @@ int test_xmem(bool LFSR, int mode)
         }
     }
 
+    xreg_setw(VID_RIGHT, xreg_getw(VID_HSIZE) - 2);        // steal a few pixels for border
+    xreg_setw(VID_CTRL, 0x0000);
+    xmem_setw(XR_COLOR_A_ADDR, vram_test_fail_count ? 0x0C00 : 0x00C0);
+    xmem_setw(XR_COLOR_B_ADDR, vram_test_fail_count ? 0x0C00 : 0x00C0);
 
     if (xmem_errs == 0)
     {
@@ -978,6 +983,7 @@ int test_xmem(bool LFSR, int mode)
 
     return xmem_errs;
 }
+
 struct xosera_initdata
 {
     char     name_version[28];
@@ -994,23 +1000,10 @@ void xosera_vramtest()
 
     dprintf("\033c\nXosera_vramtest_m68k\n");
 
-    uint8_t cur_xosera_config = ~0;
-
-    xreg_setw(PB_GFX_CTRL, 0x0080);
-    has_PF_B = xreg_getw(PB_GFX_CTRL) & 0x0080;
-    dprintf("PF_B is %s testing COLOR_B XMEM.\n", has_PF_B ? "present," : "disabled, not");
-    colormem_size = has_PF_B ? (XR_COLOR_A_SIZE + XR_COLOR_B_SIZE) : XR_COLOR_A_SIZE;
-    xm_setw(TIMER, 0xffff);        // set to wrapping 16-bit counter
-
     xr_savefont();
 
-#if 0
-    dprintf("Installing interrupt handler...");
-    install_intr();
-    dprintf("okay.\n");
-#endif
-
-    uint8_t new_config = 0;
+    uint8_t cur_xosera_config = ~0;
+    uint8_t new_config        = 0;
 
     while (true)
     {
@@ -1025,10 +1018,20 @@ void xosera_vramtest()
             update_elapsed();
             cur_xosera_config = new_config;
             dprintf("\n [Switching to Xosera config #%d...", cur_xosera_config);
-            bool success   = xosera_init(cur_xosera_config);
+            bool success = xosera_init(cur_xosera_config);
+            xm_setw(TIMER, 0xffff);        // set to wrapping 16-bit counter
             last_timer_val = xm_getw(TIMER);
             dprintf("%s (%dx%d). ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
             xosera_get_info(&initinfo);
+            xreg_setw(VID_RIGHT, xreg_getw(VID_HSIZE) - 2);        // steal a few pixels for border
+            xreg_setw(VID_CTRL, 0x0000);
+            xmem_setw(XR_COLOR_A_ADDR, vram_test_fail_count ? 0x0C00 : 0x00C0);
+            xmem_setw(XR_COLOR_B_ADDR, vram_test_fail_count ? 0x0C00 : 0x00C0);
+
+            xreg_setw(PB_GFX_CTRL, 0x0080);
+            has_PF_B = xreg_getw(PB_GFX_CTRL) & 0x0080;
+            dprintf("  PF_B is %s testing COLOR_B XMEM\n", has_PF_B ? "present," : "disabled, not");
+            colormem_size = has_PF_B ? (XR_COLOR_A_SIZE + XR_COLOR_B_SIZE) : XR_COLOR_A_SIZE;
         }
 
 #if 0        // FIXME: fixme tag test
@@ -1055,7 +1058,15 @@ void xosera_vramtest()
         uint16_t monwidth  = xreg_getw(VID_HSIZE);
         uint16_t monheight = xreg_getw(VID_VSIZE);
 
-        dprintf("    ID: %.48s\n", initinfo.description_str);
+        if (initinfo.description_str[0])
+        {
+            dprintf("    ID: %.48s\n", initinfo.description_str);
+        }
+        else
+        {
+            dprintf("    ID: (no COPPER mem)\n");
+        }
+
         dprintf("    Config #%d [%04x]   Res:%ux%u   Git:0x%08x\n",
                 cur_xosera_config,
                 (unsigned int)features,

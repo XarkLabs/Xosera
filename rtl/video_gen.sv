@@ -128,10 +128,16 @@ localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;               // memory pr
 localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fetch can end a bit early
 
 // debug signals
-`ifndef __ICARUS__  // NOTE: this makes icarus assert...
+`ifndef SYNTHESIS
 /* verilator lint_off UNUSED */
 xv::xr_register_t   xr_reg_enum;
-assign xr_reg_enum = vgen_reg_wr_en_i ? $bits(xr_reg_enum)'(vgen_reg_num_i) : xv::XR_none;
+always_comb begin
+    if (vgen_reg_wr_en_i) begin
+        xr_reg_enum = xr_reg_to_enum({ 1'b0, vgen_reg_num_i });
+    end else begin
+        xr_reg_enum = xv::XR_none;
+    end
+end
 /* verilator lint_off UNUSED */
 `endif
 

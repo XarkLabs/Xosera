@@ -517,6 +517,81 @@ typedef logic [$clog2(VISIBLE_HEIGHT)-1:0]  vres_vis_t;     // vertical visible 
 
 endpackage
 
+// since $cast() is not supporeted, apparently need this to convert to enum
+function automatic xv::xr_register_t xr_reg_to_enum(
+        input logic [6:0] r
+    );
+    begin
+        case (r)
+            7'h00:      xr_reg_to_enum = xv::XR_VID_CTRL;
+            7'h01:      xr_reg_to_enum = xv::XR_COPP_CTRL;
+            7'h02:      xr_reg_to_enum = xv::XR_AUD_CTRL;
+            7'h03:      xr_reg_to_enum = xv::XR_VID_INTR;
+            7'h04:      xr_reg_to_enum = xv::XR_VID_LEFT;
+            7'h05:      xr_reg_to_enum = xv::XR_VID_RIGHT;
+            7'h06:      xr_reg_to_enum = xv::XR_UNUSED_06;
+            7'h07:      xr_reg_to_enum = xv::XR_UNUSED_07;
+            7'h08:      xr_reg_to_enum = xv::XR_SCANLINE;
+            7'h09:      xr_reg_to_enum = xv::XR_FEATURES;
+            7'h0A:      xr_reg_to_enum = xv::XR_VID_HSIZE;
+            7'h0B:      xr_reg_to_enum = xv::XR_VID_VSIZE;
+            7'h0C:      xr_reg_to_enum = xv::XR_UNUSED_0C;
+            7'h0D:      xr_reg_to_enum = xv::XR_UNUSED_0D;
+            7'h0E:      xr_reg_to_enum = xv::XR_UNUSED_0E;
+            7'h0F:      xr_reg_to_enum = xv::XR_UNUSED_0F;
+            7'h10:      xr_reg_to_enum = xv::XR_PA_GFX_CTRL;
+            7'h11:      xr_reg_to_enum = xv::XR_PA_TILE_CTRL;
+            7'h12:      xr_reg_to_enum = xv::XR_PA_DISP_ADDR;
+            7'h13:      xr_reg_to_enum = xv::XR_PA_LINE_LEN;
+            7'h14:      xr_reg_to_enum = xv::XR_PA_HV_FSCALE;
+            7'h15:      xr_reg_to_enum = xv::XR_PA_HV_SCROLL;
+            7'h16:      xr_reg_to_enum = xv::XR_PA_LINE_ADDR;
+            7'h17:      xr_reg_to_enum = xv::XR_PA_UNUSED_17;
+            7'h18:      xr_reg_to_enum = xv::XR_PB_GFX_CTRL;
+            7'h19:      xr_reg_to_enum = xv::XR_PB_TILE_CTRL;
+            7'h1A:      xr_reg_to_enum = xv::XR_PB_DISP_ADDR;
+            7'h1B:      xr_reg_to_enum = xv::XR_PB_LINE_LEN;
+            7'h1C:      xr_reg_to_enum = xv::XR_PB_HV_FSCALE;
+            7'h1D:      xr_reg_to_enum = xv::XR_PB_HV_SCROLL;
+            7'h1E:      xr_reg_to_enum = xv::XR_PB_LINE_ADDR;
+            7'h1F:      xr_reg_to_enum = xv::XR_PB_UNUSED_1F;
+            7'h20:      xr_reg_to_enum = xv::XR_AUD0_VOL;
+            7'h21:      xr_reg_to_enum = xv::XR_AUD0_PERIOD;
+            7'h22:      xr_reg_to_enum = xv::XR_AUD0_LENGTH;
+            7'h23:      xr_reg_to_enum = xv::XR_AUD0_START;
+            7'h24:      xr_reg_to_enum = xv::XR_AUD1_VOL;
+            7'h25:      xr_reg_to_enum = xv::XR_AUD1_PERIOD;
+            7'h26:      xr_reg_to_enum = xv::XR_AUD1_LENGTH;
+            7'h27:      xr_reg_to_enum = xv::XR_AUD1_START;
+            7'h28:      xr_reg_to_enum = xv::XR_AUD2_VOL;
+            7'h29:      xr_reg_to_enum = xv::XR_AUD2_PERIOD;
+            7'h2A:      xr_reg_to_enum = xv::XR_AUD2_LENGTH;
+            7'h2B:      xr_reg_to_enum = xv::XR_AUD2_START;
+            7'h2C:      xr_reg_to_enum = xv::XR_AUD3_VOL;
+            7'h2D:      xr_reg_to_enum = xv::XR_AUD3_PERIOD;
+            7'h2E:      xr_reg_to_enum = xv::XR_AUD3_LENGTH;
+            7'h2F:      xr_reg_to_enum = xv::XR_AUD3_START;
+            7'h40:      xr_reg_to_enum = xv::XR_BLIT_CTRL;
+            7'h41:      xr_reg_to_enum = xv::XR_BLIT_MOD_A;
+            7'h42:      xr_reg_to_enum = xv::XR_BLIT_SRC_A;
+            7'h43:      xr_reg_to_enum = xv::XR_BLIT_MOD_B;
+            7'h44:      xr_reg_to_enum = xv::XR_BLIT_SRC_B;
+            7'h45:      xr_reg_to_enum = xv::XR_BLIT_MOD_C;
+            7'h46:      xr_reg_to_enum = xv::XR_BLIT_VAL_C;
+            7'h47:      xr_reg_to_enum = xv::XR_BLIT_MOD_D;
+            7'h48:      xr_reg_to_enum = xv::XR_BLIT_DST_D;
+            7'h49:      xr_reg_to_enum = xv::XR_BLIT_SHIFT;
+            7'h4A:      xr_reg_to_enum = xv::XR_BLIT_LINES;
+            7'h4B:      xr_reg_to_enum = xv::XR_BLIT_WORDS;
+            7'h4C:      xr_reg_to_enum = xv::XR_UNUSED_4C;
+            7'h4D:      xr_reg_to_enum = xv::XR_UNUSED_4D;
+            7'h4E:      xr_reg_to_enum = xv::XR_UNUSED_4E;
+            7'h4F:      xr_reg_to_enum = xv::XR_UNUSED_4F;
+            default:    xr_reg_to_enum = xv::XR_none;
+        endcase
+    end
+endfunction
+
 // Xosera types (NOTE: in global space, due to iVerilog)
 typedef logic  [7:0]                            byte_t;         // byte size (8-bit)
 typedef logic signed [7:0]                      sbyte_t;        // byte size (8-bit)

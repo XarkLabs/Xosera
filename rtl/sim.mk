@@ -146,17 +146,17 @@ vsim: $(VLT_CONFIG) sim/obj_dir/V$(VTOP) sim.mk
 	@echo === Verilator simulation configured for: $(VIDEO_MODE) ===
 	@echo Completed building Verilator simulation, use \"make vrun\" to run.
 
-isim: sim/$(TBTOP) sim.mk
+isim: $(VLT_CONFIG) sim/$(TBTOP) sim.mk
 	@echo === Icarus Verilog simulation configured for: $(VIDEO_MODE) ===
 	@echo Completed building Icarus Verilog simulation, use \"make irun\" to run.
 
 # run Verilator to build and run native simulation executable
-vrun: sim/obj_dir/V$(VTOP) sim.mk
+vrun: $(VLT_CONFIG) sim/obj_dir/V$(VTOP) sim.mk
 	@mkdir -p $(LOGS)
 	sim/obj_dir/V$(VTOP) $(VRUN_TESTDATA)
 
 # run Verilator to build and run native simulation executable
-irun: sim/$(TBTOP) sim.mk
+irun: $(VLT_CONFIG) sim/$(TBTOP) sim.mk
 	@mkdir -p $(LOGS)
 	$(VVP) sim/$(TBTOP) -fst
 

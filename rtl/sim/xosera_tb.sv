@@ -131,18 +131,18 @@ task write_reg(
     input  logic [7:0]   data
     );
 
-    bus_cs_n = 1'b1;
-    bus_rd_nwr = 1'b0;
-    bus_bytesel = b_sel;
-    bus_reg_num = r_num;
-    bus_data_in = data;
+    bus_cs_n    <= 1'b1;
+    bus_rd_nwr  <= 1'b0;
+    bus_bytesel <= b_sel;
+    bus_reg_num <= r_num;
+    bus_data_in <= data;
 
-    # 10ns bus_cs_n = 1'b0;    // CS strobe
-    #(M68K_PERIOD * 2) bus_cs_n = 1'b1;
-    bus_rd_nwr = 1'bX;
-    bus_bytesel = 1'bX;
-    bus_reg_num = 4'bX;
-    bus_data_in = 8'bX;
+    # 10ns bus_cs_n             <= 1'b0;    // CS strobe
+    #(M68K_PERIOD * 2) bus_cs_n <= 1'b1;
+    bus_rd_nwr                  <= 1'bX;
+    bus_bytesel                 <= 1'bX;
+    bus_reg_num                 <= 4'bX;
+    bus_data_in                 <= 8'bX;
 endtask
 
 task read_reg(
@@ -244,11 +244,11 @@ end
 `ifdef BUSTEST
 /* verilator lint_off LATCH */
 always begin
-    bus_cs_n = 1'b1;
-    bus_rd_nwr = 1'b0;
-    bus_bytesel = 1'b0;
-    bus_reg_num = 4'b0;
-    bus_data_in = 8'b0;
+    bus_cs_n <= 1'b1;
+    bus_rd_nwr <= 1'b0;
+    bus_bytesel <= 1'b0;
+    bus_reg_num <= 4'b0;
+    bus_data_in <= 8'b0;
 
     # 8ms;
 
@@ -431,7 +431,7 @@ end
 
 // toggle clock source at pixel clock frequency+
 always begin
-    #(CLK_PERIOD/2) clk = ~clk;
+    #(CLK_PERIOD/2) clk <= ~clk;
 end
 
 always @(posedge clk) begin

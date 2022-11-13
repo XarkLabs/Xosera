@@ -105,9 +105,9 @@ assign dv_de_o          = dv_de;
 always_comb    end_of_line_next        = (h_state == H_STATE_VISIBLE) && (h_state_next == H_STATE_PRE_SYNC);
 always_comb    end_of_frame_next       = (v_state == V_STATE_POST_SYNC) && (v_state_next == V_STATE_VISIBLE);
 always_comb    end_of_visible_next     = (v_state == V_STATE_VISIBLE) && (v_state_next == V_STATE_PRE_SYNC);
-always_comb    hsync_next              = (h_state == H_STATE_SYNC) ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
-always_comb    vsync_next              = (v_state == V_STATE_SYNC) ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
-always_comb    dv_de_next              = (v_state == V_STATE_VISIBLE) && (h_state_next == H_STATE_VISIBLE);
+always_comb    hsync_next              = (h_state_next == H_STATE_SYNC) ? xv::H_SYNC_POLARITY : ~xv::H_SYNC_POLARITY;
+always_comb    vsync_next              = (v_state_next == V_STATE_SYNC) ? xv::V_SYNC_POLARITY : ~xv::V_SYNC_POLARITY;
+always_comb    dv_de_next              = (h_state_next == H_STATE_VISIBLE);
 
 // combinational block for video counters
 always_comb begin

@@ -195,6 +195,7 @@
 #define XR_AUD3_LENGTH 0x2E        // (WO/-) // TODO: WIP
 #define XR_AUD3_START  0x2F        // (WO/-) // TODO: WIP
 
+#if 0
 // Blitter Registers
 #define XR_BLIT_CTRL  0x40        // (R /W) blit control (transparency control, logic op and op input flags)
 #define XR_BLIT_MOD_A 0x41        // (R /W) blit line modulo added to SRC_A (XOR if A const)
@@ -212,6 +213,24 @@
 #define XR_UNUSED_2D  0x4D        // (- /-) TODO: unused XR 2D
 #define XR_UNUSED_2E  0x4E        // (- /-) TODO: unused XR 2E
 #define XR_UNUSED_2F  0x4F        // (- /-) TODO: unused XR 2F
+#else
+#define XR_BLIT_CTRL  0x40        // (WO) blit control (transparency control, logic op and op input flags)
+#define XR_BLIT_VAL_C 0x41        // (WO) blit C XOR constant value
+#define XR_BLIT_MOD_S 0x42        // (WO) blit line modulo added to SRC_S
+#define XR_BLIT_SRC_S 0x43        // (WO) blit A source VRAM read address / constant value
+#define XR_BLIT_MOD_D 0x44        // (WO) blit modulo added to D destination after each line
+#define XR_BLIT_DST_D 0x45        // (WO) blit D VRAM destination write address
+#define XR_BLIT_SHIFT 0x46        // (WO) blit first and last word nibble masks and nibble right shift (0-3)
+#define XR_BLIT_LINES 0x47        // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
+#define XR_BLIT_WORDS 0x48        // (WO+) blit word count minus 1 per line (write starts blit operation)
+#define XR_UNUSED_49  0x49        // TODO: unused XR reg
+#define XR_UNUSED_4A  0x4A        // TODO: unused XR reg
+#define XR_UNUSED_4B  0x4B        // TODO: unused XR reg
+#define XR_UNUSED_4C  0x4C        // TODO: unused XR reg
+#define XR_UNUSED_4D  0x4D        // TODO: unused XR reg
+#define XR_UNUSED_4E  0x4E        // TODO: unused XR reg
+#define XR_UNUSED_4F  0x4F        // TODO: unused XR reg
+#endif
 
 // constants
 #define XR_GFX_BPP_1 0        // Px_GFX_CTRL.bpp (1-bpp + fore/back attribute color)

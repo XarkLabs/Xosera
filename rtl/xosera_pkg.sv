@@ -37,6 +37,7 @@
 `define EN_TIMER_INTR                   // enable timer interrupt
 `define EN_COPP                         // enable copper
 `define EN_BLIT                         // enable blit unit
+`define EN_SLIM_BLIT                    // enable slim blit unit
 //`define EN_BLIT_DECR                    // TODO: enable blit pointer decrementing
 //`define EN_BLIT_DECR_LSHIFT             // TODO: enable blit left shift when decrementing?
 //`define EN_BLIT_XOR_CONST_AB            // TODO: enable blit XOR modulo with constants?
@@ -174,6 +175,7 @@ typedef enum logic [6:0] {
     XR_AUD3_PERIOD  = 7'h2D,            // (WO) sample period in pixel clocks, high bit RESTART flag
     XR_AUD3_LENGTH  = 7'h2E,            // (WO) sample word length-1, high bit TILE mem flag
     XR_AUD3_START   = 7'h2F,            // (WO) sample start address (VRAM or TILE mem as set in LENGTH)
+`ifndef EN_SLIM_BLIT
     // Blitter Registers
     XR_BLIT_CTRL    = 7'h40,            // (WO) blit control (transparency control, logic op and op input flags)
     XR_BLIT_MOD_A   = 7'h41,            // (WO) blit line modulo added to SRC_A (XOR if A const)
@@ -187,10 +189,29 @@ typedef enum logic [6:0] {
     XR_BLIT_SHIFT   = 7'h49,            // (WO) blit first and last word nibble masks and nibble right shift (0-3)
     XR_BLIT_LINES   = 7'h4A,            // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
     XR_BLIT_WORDS   = 7'h4B,            // (WO+) blit word count minus 1 per line (write starts blit operation)
-    XR_UNUSED_4C    = 7'h4C,            // TODO: unused XR 2C
-    XR_UNUSED_4D    = 7'h4D,            // TODO: unused XR 2D
-    XR_UNUSED_4E    = 7'h4E,            // TODO: unused XR 2E
-    XR_UNUSED_4F    = 7'h4F,            // TODO: unused XR 2F
+    XR_UNUSED_4C    = 7'h4C,            // TODO: unused XR 4C
+    XR_UNUSED_4D    = 7'h4D,            // TODO: unused XR 4D
+    XR_UNUSED_4E    = 7'h4E,            // TODO: unused XR 4E
+    XR_UNUSED_4F    = 7'h4F,            // TODO: unused XR 4F
+`else
+    // Blitter Registers
+    XR_BLIT_CTRL    = 7'h40,            // (WO) blit control (transparency control, logic op and op input flags)
+    XR_BLIT_VAL_C   = 7'h41,            // (WO) blit C XOR constant value
+    XR_BLIT_MOD_S   = 7'h42,            // (WO) blit line modulo added to SRC_S
+    XR_BLIT_SRC_S   = 7'h43,            // (WO) blit A source VRAM read address / constant value
+    XR_BLIT_MOD_D   = 7'h44,            // (WO) blit modulo added to D destination after each line
+    XR_BLIT_DST_D   = 7'h45,            // (WO) blit D VRAM destination write address
+    XR_BLIT_SHIFT   = 7'h46,            // (WO) blit first and last word nibble masks and nibble right shift (0-3)
+    XR_BLIT_LINES   = 7'h47,            // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
+    XR_BLIT_WORDS   = 7'h48,            // (WO+) blit word count minus 1 per line (write starts blit operation)
+    XR_UNUSED_49    = 7'h49,            // TODO: unused XR reg
+    XR_UNUSED_4A    = 7'h4A,            // TODO: unused XR reg
+    XR_UNUSED_4B    = 7'h4B,            // TODO: unused XR reg
+    XR_UNUSED_4C    = 7'h4C,            // TODO: unused XR reg
+    XR_UNUSED_4D    = 7'h4D,            // TODO: unused XR reg
+    XR_UNUSED_4E    = 7'h4E,            // TODO: unused XR reg
+    XR_UNUSED_4F    = 7'h4F,            // TODO: unused XR reg
+`endif
     XR_none         = 7'h7F             // dummy reg for simulation
 } xr_register_t;
 
@@ -571,6 +592,7 @@ function automatic xv::xr_register_t xr_reg_to_enum(
             7'h2D:      xr_reg_to_enum = xv::XR_AUD3_PERIOD;
             7'h2E:      xr_reg_to_enum = xv::XR_AUD3_LENGTH;
             7'h2F:      xr_reg_to_enum = xv::XR_AUD3_START;
+`ifndef EN_SLIM_BLIT
             7'h40:      xr_reg_to_enum = xv::XR_BLIT_CTRL;
             7'h41:      xr_reg_to_enum = xv::XR_BLIT_MOD_A;
             7'h42:      xr_reg_to_enum = xv::XR_BLIT_SRC_A;
@@ -587,6 +609,24 @@ function automatic xv::xr_register_t xr_reg_to_enum(
             7'h4D:      xr_reg_to_enum = xv::XR_UNUSED_4D;
             7'h4E:      xr_reg_to_enum = xv::XR_UNUSED_4E;
             7'h4F:      xr_reg_to_enum = xv::XR_UNUSED_4F;
+`else
+            7'h40:      xr_reg_to_enum = xv::XR_BLIT_CTRL;
+            7'h41:      xr_reg_to_enum = xv::XR_BLIT_VAL_C;
+            7'h42:      xr_reg_to_enum = xv::XR_BLIT_MOD_S;
+            7'h43:      xr_reg_to_enum = xv::XR_BLIT_SRC_S;
+            7'h44:      xr_reg_to_enum = xv::XR_BLIT_MOD_D;
+            7'h45:      xr_reg_to_enum = xv::XR_BLIT_DST_D;
+            7'h46:      xr_reg_to_enum = xv::XR_BLIT_SHIFT;
+            7'h47:      xr_reg_to_enum = xv::XR_BLIT_LINES;
+            7'h48:      xr_reg_to_enum = xv::XR_BLIT_WORDS;
+            7'h49:      xr_reg_to_enum = xv::XR_UNUSED_49;
+            7'h4A:      xr_reg_to_enum = xv::XR_UNUSED_4A;
+            7'h4B:      xr_reg_to_enum = xv::XR_UNUSED_4B;
+            7'h4C:      xr_reg_to_enum = xv::XR_UNUSED_4C;
+            7'h4D:      xr_reg_to_enum = xv::XR_UNUSED_4D;
+            7'h4E:      xr_reg_to_enum = xv::XR_UNUSED_4E;
+            7'h4F:      xr_reg_to_enum = xv::XR_UNUSED_4F;
+`endif
             default:    xr_reg_to_enum = xv::XR_none;
         endcase
     end

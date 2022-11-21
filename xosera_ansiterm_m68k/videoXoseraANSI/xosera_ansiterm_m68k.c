@@ -340,12 +340,10 @@ static __attribute__((noinline)) void xansi_clear(uint16_t start, uint16_t end)
     xv_prep();
 
     xwait_blit_ready();
-    xreg_setw(BLIT_CTRL, 0x0003);                         // constA+constB
-    xreg_setw(BLIT_MOD_A, 0x0000);                        // no modulo A
-    xreg_setw(BLIT_SRC_A, (td->color << 8) | ' ');        // A = const data
-    xreg_setw(BLIT_MOD_B, 0x0000);                        // no modulo B
-    xreg_setw(BLIT_SRC_B, 0xFFFF);                        // AND with B (and disable transparency)
+    xreg_setw(BLIT_CTRL, 0x0001);                         // no transp, constS
     xreg_setw(BLIT_VAL_C, 0x0000);                        // XOR with C
+    xreg_setw(BLIT_MOD_S, 0x0000);                        // no modulo S
+    xreg_setw(BLIT_SRC_S, (td->color << 8) | ' ');        // S = const data
     xreg_setw(BLIT_MOD_D, 0x0000);                        // no modulo D
     xreg_setw(BLIT_DST_D, start);                         // VRAM display dest address
     xreg_setw(BLIT_SHIFT, 0xFF00);                        // no edge masking or shifting
@@ -649,12 +647,10 @@ static void xansi_scroll_up()
     uint16_t count = td->vram_size - td->cols;
 
     xwait_blit_ready();
-    xreg_setw(BLIT_CTRL, 0x0002);            // constB
-    xreg_setw(BLIT_MOD_A, 0x0000);           // no modulo A
-    xreg_setw(BLIT_SRC_A, saddr);            // A = source
-    xreg_setw(BLIT_MOD_B, 0x0000);           // no modulo B
-    xreg_setw(BLIT_SRC_B, 0xFFFF);           // AND with B (and disable transparency)
+    xreg_setw(BLIT_CTRL, 0x0000);            // no transp
     xreg_setw(BLIT_VAL_C, 0x0000);           // XOR with C
+    xreg_setw(BLIT_MOD_S, 0x0000);           // no modulo S
+    xreg_setw(BLIT_SRC_S, saddr);            // S = source
     xreg_setw(BLIT_MOD_D, 0x0000);           // no modulo D
     xreg_setw(BLIT_DST_D, daddr);            // VRAM display dest address
     xreg_setw(BLIT_SHIFT, 0xFF00);           // no edge masking or shifting
@@ -677,8 +673,8 @@ static void xansi_scroll_up()
         count = td->cols;
 
         xwait_blit_ready();
-        xreg_setw(BLIT_CTRL, 0x0003);                         // constB+constA
-        xreg_setw(BLIT_SRC_A, (td->color << 8) | ' ');        // A = const data
+        xreg_setw(BLIT_CTRL, 0x0001);                         // no transp, constS
+        xreg_setw(BLIT_SRC_S, (td->color << 8) | ' ');        // S = const data
         xreg_setw(BLIT_DST_D, daddr);                         // VRAM display dest address
         xreg_setw(BLIT_WORDS, count - 1);                     // words to write -1
         xwait_blit_done();
@@ -695,12 +691,10 @@ static void xansi_scroll_down(xansiterm_data * td)
     uint16_t count = td->vram_size - td->cols;
 
     xwait_blit_ready();
-    xreg_setw(BLIT_CTRL, 0x0002);                  // constB
-    xreg_setw(BLIT_MOD_A, -(td->cols * 2));        // no modulo A
-    xreg_setw(BLIT_SRC_A, saddr);                  // A = source
-    xreg_setw(BLIT_MOD_B, 0x0000);                 // modulo B
-    xreg_setw(BLIT_SRC_B, 0xFFFF);                 // AND with B (and disable transparency)
+    xreg_setw(BLIT_CTRL, 0x0000);                  // no transp
     xreg_setw(BLIT_VAL_C, 0x0000);                 // XOR with C
+    xreg_setw(BLIT_MOD_S, -(td->cols * 2));        // S modulo
+    xreg_setw(BLIT_SRC_S, saddr);                  // S source
     xreg_setw(BLIT_MOD_D, -(td->cols * 2));        // modulo D
     xreg_setw(BLIT_DST_D, daddr);                  // VRAM display dest address
     xreg_setw(BLIT_SHIFT, 0xFF00);                 // no edge masking or shifting
@@ -722,8 +716,8 @@ static void xansi_scroll_down(xansiterm_data * td)
         count = td->cols;
 
         xwait_blit_ready();
-        xreg_setw(BLIT_CTRL, 0x0003);                         // constB+constA
-        xreg_setw(BLIT_SRC_A, (td->color << 8) | ' ');        // A = const data
+        xreg_setw(BLIT_CTRL, 0x0001);                         // no transp, constS
+        xreg_setw(BLIT_SRC_S, (td->color << 8) | ' ');        // S = const data
         xreg_setw(BLIT_DST_D, daddr);                         // VRAM display dest address
         xreg_setw(BLIT_WORDS, count - 1);                     // words to write -1
         xwait_blit_done();

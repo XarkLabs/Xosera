@@ -284,7 +284,11 @@ copper copper(
 
 // blitter - blit block transfer unit
 `ifdef EN_BLIT
+`ifndef EN_SLIM_BLIT
     blitter blitter(
+`else
+    blitter_slim blitter(
+`endif
         .xreg_wr_en_i(blit_reg_wr_en),
         .xreg_num_i(xr_regs_addr[3:0]),
         .xreg_data_i(xr_regs_data_in),

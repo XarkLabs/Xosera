@@ -522,15 +522,6 @@ always_ff @(posedge clk) begin
             end
         end
 
-        if (pf_gfx_ctrl_set_i) begin
-            pf_v_count      <= pf_v_repeat_i;     // reset v repeat count when gfx_ctrl altered
-        end
-
-        // use new line start if it has been set
-        if (pf_line_start_set_i) begin
-            pf_line_start   <= pf_line_start_addr_i;   // set new line start address
-        end
-
         // start of line display fetch
         if (mem_fetch_start_i) begin       // on line fetch start signal
             pf_initial_buf          <= 1'b1;
@@ -561,14 +552,26 @@ always_ff @(posedge clk) begin
             pf_pixels_buf_full  <= 1'b0;
         end
 
+        // when scanline stops outputting
         if (scanout_end) begin
             scanout             <= 1'b0;
             pf_pixels[63:56]    <= border_color_i;
         end
 
+        // use new line start immediately when line_start altered
+        if (pf_line_start_set_i) begin
+            pf_line_start   <= pf_line_start_addr_i;   // set new line start address
+        end
+
+        // use new v_repeat count immediately when gfx_ctrl altered
+        if (pf_gfx_ctrl_set_i) begin
+            pf_v_count      <= pf_v_repeat_i;     // set new v repeat count
+        end
+
         // end of line
         if (end_of_line_i) begin
             scanout         <= 1'b0;                                        // force scanout off
+            pf_fetch        <= FETCH_IDLE;                                  // reset fetch state
             pf_addr         <= pf_line_start;                               // addr back to line start (for tile lines, or v repeat)
             pf_h_frac_count <= '0;                                          // reset horizontal fractional pixel repeat counter
             pf_v_frac_count <= pf_v_frac_count - 1'b1;                      // update vertical fractional line repeat counter
@@ -578,7 +581,7 @@ always_ff @(posedge clk) begin
                 pf_v_count      <= pf_v_count - 1'b1;                       // keep decrementing
             end else begin
                 pf_v_count      <= pf_v_repeat_i;                           // reset v repeat
-                if (pf_bitmap_i || (pf_tile_y == pf_tile_height_i)) begin   // is bitmap mode or last line of tile cell?
+                if (pf_bitmap_i || (pf_tile_y >= pf_tile_height_i)) begin   // is bitmap mode or >= last line of tile cell?
                     pf_tile_y       <= 4'h0;                                // reset tile cell line
                     pf_line_start   <= pf_line_start + pf_line_len_i;       // calculate next line start address
                 end else begin

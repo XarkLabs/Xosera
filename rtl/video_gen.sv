@@ -564,6 +564,8 @@ end
 
 // video registers read
 always_comb begin
+    rd_vid_regs = 16'h0000;
+
     case (vgen_reg_num_i[3:0])
         4'(xv::XR_VID_CTRL):        rd_vid_regs = { 7'h00, vid_colorswap, border_color};
 `ifdef EN_COPP
@@ -581,7 +583,7 @@ always_comb begin
         4'(xv::XR_FEATURES):        rd_vid_regs = 16'h0000; // TODO: feature codes
         4'(xv::XR_VID_HSIZE):       rd_vid_regs = 16'(xv::VISIBLE_WIDTH);
         4'(xv::XR_VID_VSIZE):       rd_vid_regs = 16'(xv::VISIBLE_HEIGHT);
-        default:                    rd_vid_regs = 16'h0000;
+        default:                    ;
     endcase
 end
 

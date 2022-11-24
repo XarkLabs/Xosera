@@ -1550,6 +1550,38 @@ void test_true_color()
     //    delay_check(DELAY_TIME * 2);
 }
 
+// this tests a problem switching modes
+void test_mode_glitch()
+{
+    int width = xreg_getw(VID_HSIZE);
+    xm_setw(WR_ADDR, 0);
+    xm_setw(WR_INCR, 1);
+    xm_setbl(SYS_CTRL, 0xF);
+    for (int i = 0; i < (width / 2) * 240; ++i)
+    {
+        xm_setw(DATA, 0x0101);
+    }
+
+    for (int i = 0; i < 10; i++)
+    {
+
+        // set to tiled 1-bpp
+        xreg_setw(PA_LINE_LEN, width / 8);
+        xreg_setw(PA_GFX_CTRL, 0x0000);
+
+        delay(1000000);
+        wait_vblank_start();
+
+        // set to bitmap 8-bpp, Hx2, Vx2
+        xreg_setw(PA_LINE_LEN, (width / 2) / 2);
+        xreg_setw(PA_GFX_CTRL, 0x0065);
+
+        delay(1000000);
+
+        delay_check(DELAY_TIME);
+    }
+}
+
 void test_dual_8bpp()
 {
     const uint16_t width  = DRAW_WIDTH;
@@ -2919,6 +2951,10 @@ void     xosera_test()
                 }
             }
         }
+
+        // code to test mode switching problem
+        // delay_check(DELAY_TIME);
+        // test_mode_glitch();
 
 #if BLURB_AUDIO
         if (num_audio_channels)

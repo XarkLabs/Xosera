@@ -475,7 +475,7 @@ always_ff @(posedge clk) begin
                 end
                 // playfield A
                 6'(xv::XR_PA_GFX_CTRL): begin
-                    pa_gfx_ctrl_set <= 1'b1;                // changed flag
+                    pa_gfx_ctrl_set <= 1'b1;                // PA _GFX_CTRLchanged strobe
                     pa_colorbase    <= vgen_reg_data_i[15:8];
                     pa_blank        <= vgen_reg_data_i[7];
                     pa_bitmap       <= vgen_reg_data_i[6];
@@ -504,13 +504,15 @@ always_ff @(posedge clk) begin
                     pa_v_frac_repeat <= vgen_reg_data_i[2:0];
                 end
                 6'(xv::XR_PA_LINE_ADDR): begin
-                    pa_line_start_set <= 1'b1;               // changed flag
+                    pa_line_start_set <= 1'b1;               // PA_LINE_ADDR changed strobe
                     line_set_addr   <= vgen_reg_data_i;
                 end
                 6'(xv::XR_PA_UNUSED_17): begin
                 end
 `ifdef EN_PF_B
+                // playfield B
                 6'(xv::XR_PB_GFX_CTRL): begin
+                    pb_gfx_ctrl_set <= 1'b1;                // PB_GFX_CTRL changed strobe
                     pb_colorbase    <= vgen_reg_data_i[15:8];
                     pb_blank        <= vgen_reg_data_i[7];
                     pb_bitmap       <= vgen_reg_data_i[6];
@@ -539,7 +541,7 @@ always_ff @(posedge clk) begin
                     pb_v_frac_repeat <= vgen_reg_data_i[2:0];
                 end
                 6'(xv::XR_PB_LINE_ADDR): begin
-                    pb_line_start_set <= 1'b1;
+                    pb_line_start_set <= 1'b1;               // PB_LINE_ADDR changed strobe
                     line_set_addr   <= vgen_reg_data_i;
                 end
                 6'(xv::XR_PB_UNUSED_1F): begin
@@ -562,6 +564,8 @@ end
 
 // video registers read
 always_comb begin
+    rd_vid_regs = 16'h0000;
+
     case (vgen_reg_num_i[3:0])
         4'(xv::XR_VID_CTRL):        rd_vid_regs = { 7'h00, vid_colorswap, border_color};
 `ifdef EN_COPP
@@ -579,7 +583,7 @@ always_comb begin
         4'(xv::XR_FEATURES):        rd_vid_regs = 16'h0000; // TODO: feature codes
         4'(xv::XR_VID_HSIZE):       rd_vid_regs = 16'(xv::VISIBLE_WIDTH);
         4'(xv::XR_VID_VSIZE):       rd_vid_regs = 16'(xv::VISIBLE_HEIGHT);
-        default:                    rd_vid_regs = 16'h0000;
+        default:                    ;
     endcase
 end
 

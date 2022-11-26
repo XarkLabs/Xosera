@@ -117,6 +117,9 @@ logic                   copp_reg_wr;
 word_t                  copp_reg_data;
 hres_t                  video_h_count;
 vres_t                  video_v_count;
+`ifdef EN_COPP_SLIM
+logic                   end_of_visible;
+`endif
 `endif
 
 // XR register bus access
@@ -225,9 +228,9 @@ video_gen video_gen(
     .vgen_reg_num_i(xr_regs_addr[5:0]),
     .vgen_reg_data_i(xr_regs_data_in),
     .vgen_reg_data_o(xr_regs_data_out),
-    .video_intr_o(intr_trigger[xv::VIDEO_INTR]),          // signaled by write to XR_VID_INTR
+    .video_intr_o(intr_trigger[xv::VIDEO_INTR]),                        // signaled by write to XR_VID_INTR
 `ifdef EN_AUDIO
-    .audio_intr_o(intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]),          // signaled by audio channel ready
+    .audio_intr_o(intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]),           // signaled by audio channel ready
 `endif
     .vram_sel_o(vgen_vram_sel),
     .vram_addr_o(vgen_vram_addr),
@@ -249,6 +252,9 @@ video_gen video_gen(
     .copp_reg_data_o(copp_reg_data),
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
+`ifdef EN_COPP_SLIM
+    .end_of_visible_o(end_of_visible),
+`endif
 `endif
 `ifdef BUS_DEBUG_SIGNALS
     .audio_pdm_l_o(unused_l),
@@ -265,6 +271,24 @@ video_gen video_gen(
 
 `ifdef EN_COPP
 // copper - video synchronized co-processor
+`ifdef EN_COPP_SLIM
+slim_copper copper(
+    .xr_wr_en_o(copp_xr_wr_en),
+    .xr_wr_ack_i(copp_xr_ack),
+    .xr_wr_addr_o(copp_xr_addr),
+    .xr_wr_data_o(copp_xr_data_out),
+    .copmem_rd_addr_o(copper_pc),
+    .copmem_rd_en_o(copp_prog_rd_en),
+    .copmem_rd_data_i(copp_prog_data_out[15:0]),    // TODO: 16-bit
+    .copp_reg_wr_i(copp_reg_wr),
+    .copp_reg_data_i(copp_reg_data),
+    .h_count_i(video_h_count),
+    .v_count_i(video_v_count),
+    .restart_i(end_of_visible),
+    .reset_i(reset_i),
+    .clk(clk)
+);
+`else
 copper copper(
     .xr_wr_en_o(copp_xr_wr_en),
     .xr_wr_ack_i(copp_xr_ack),
@@ -281,10 +305,11 @@ copper copper(
     .clk(clk)
 );
 `endif
+`endif
 
 // blitter - blit block transfer unit
 `ifdef EN_BLIT
-`ifndef EN_SLIM_BLIT
+`ifndef EN_BLIT_SLIM
     blitter blitter(
 `else
     blitter_slim blitter(

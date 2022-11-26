@@ -13,7 +13,7 @@
 `include "xosera_pkg.sv"
 
 `ifdef EN_BLIT
-`ifndef EN_SLIM_BLIT
+`ifndef EN_BLIT_SLIM
 
 module blitter(
     // video registers and control

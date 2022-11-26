@@ -36,8 +36,9 @@
 `define EN_PF_B_BLEND                   // enable pf B blending (else overlay only)
 `define EN_TIMER_INTR                   // enable timer interrupt
 `define EN_COPP                         // enable copper
+`define EN_COPP_SLIM                    // enable copper
 `define EN_BLIT                         // enable blit unit
-`define EN_SLIM_BLIT                    // enable slim blit unit
+`define EN_BLIT_SLIM                    // enable slim blit unit
 //`define EN_BLIT_DECR                    // TODO: enable blit pointer decrementing
 //`define EN_BLIT_DECR_LSHIFT             // TODO: enable blit left shift when decrementing?
 //`define EN_BLIT_XOR_CONST_AB            // TODO: enable blit XOR modulo with constants?
@@ -175,7 +176,7 @@ typedef enum logic [6:0] {
     XR_AUD3_PERIOD  = 7'h2D,            // (WO) sample period in pixel clocks, high bit RESTART flag
     XR_AUD3_LENGTH  = 7'h2E,            // (WO) sample word length-1, high bit TILE mem flag
     XR_AUD3_START   = 7'h2F,            // (WO) sample start address (VRAM or TILE mem as set in LENGTH)
-`ifndef EN_SLIM_BLIT
+`ifndef EN_BLIT_SLIM
     // Blitter Registers
     XR_BLIT_CTRL    = 7'h40,            // (WO) blit control (transparency control, logic op and op input flags)
     XR_BLIT_MOD_A   = 7'h41,            // (WO) blit line modulo added to SRC_A (XOR if A const)
@@ -592,7 +593,7 @@ function automatic xv::xr_register_t xr_reg_to_enum(
             7'h2D:      xr_reg_to_enum = xv::XR_AUD3_PERIOD;
             7'h2E:      xr_reg_to_enum = xv::XR_AUD3_LENGTH;
             7'h2F:      xr_reg_to_enum = xv::XR_AUD3_START;
-`ifndef EN_SLIM_BLIT
+`ifndef EN_BLIT_SLIM
             7'h40:      xr_reg_to_enum = xv::XR_BLIT_CTRL;
             7'h41:      xr_reg_to_enum = xv::XR_BLIT_MOD_A;
             7'h42:      xr_reg_to_enum = xv::XR_BLIT_SRC_A;

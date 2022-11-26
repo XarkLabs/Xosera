@@ -151,6 +151,7 @@
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
 `ifdef EN_COPP
+`ifndef EN_COPP_SLIM
 
 `include "xosera_pkg.sv"
 
@@ -207,7 +208,7 @@ logic          copper_en;
 logic [4:0]   reg_reserved;
 /* verilator lint_on UNUSED */
 
-logic         ram_rd_strobe = 1'b0;
+logic         ram_rd_strobe;
 
 assign coppermem_rd_en_o    = ram_rd_strobe;
 assign coppermem_rd_addr_o  = copper_pc;
@@ -496,5 +497,6 @@ end
 
 endmodule
 
+`endif
 `endif
 `default_nettype wire               // restore default

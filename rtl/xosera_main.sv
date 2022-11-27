@@ -108,7 +108,11 @@ logic                   blit_full;
 /* verilator lint_off UNUSED */
 logic                   copp_prog_rd_en;
 logic [xv::COPP_W-1:0]  copper_pc;
+`ifdef EN_COPP_SLIM
+word_t                  copp_prog_data_out;
+`else
 logic [31:0]            copp_prog_data_out;
+`endif
 logic                   copp_xr_wr_en;
 logic                   copp_xr_ack;
 addr_t                  copp_xr_addr;
@@ -280,8 +284,8 @@ slim_copper copper(
     .copmem_rd_addr_o(copper_pc),
     .copmem_rd_en_o(copp_prog_rd_en),
     .copmem_rd_data_i(copp_prog_data_out[15:0]),    // TODO: 16-bit
-    .copp_reg_wr_i(copp_reg_wr),
-    .copp_reg_data_i(copp_reg_data),
+    .cop_xreg_wr_i(copp_reg_wr),
+    .cop_xreg_data_i(copp_reg_data),
     .h_count_i(video_h_count),
     .v_count_i(video_v_count),
     .restart_i(end_of_visible),
@@ -297,8 +301,8 @@ copper copper(
     .coppermem_rd_addr_o(copper_pc),
     .coppermem_rd_en_o(copp_prog_rd_en),
     .coppermem_rd_data_i(copp_prog_data_out),    // 32-bit
-    .copp_reg_wr_i(copp_reg_wr),
-    .copp_reg_data_i(copp_reg_data),
+    .cop_xreg_wr_i(copp_reg_wr),
+    .cop_xreg_data_i(copp_reg_data),
     .h_count_i(video_h_count),
     .v_count_i(video_v_count),
     .reset_i(reset_i),

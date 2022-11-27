@@ -38,7 +38,12 @@ word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 initial begin
     // Fill with numbers
     for (integer i = 0; i < (2**AWIDTH); i = i + 1) begin
-        bram[i] = !ODDWORD ? 16'hf000 : (16'h1000 | 16'(i[11:0]));   // COP_END
+        bram[i] = 16'h1901;
+        // if (1'(i & 1)) begin
+        //     bram[i] = 16'hF000;
+        // end else begin
+        //     bram[i] = 16'hEFFF;
+        // end
     end
 // Xosera init info stored in last 64 bytes of default copper memory (see xosera_pkg.sv)
 

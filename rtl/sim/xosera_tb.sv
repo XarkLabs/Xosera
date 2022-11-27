@@ -13,7 +13,7 @@
 
 `define MEMDUMP                     // dump VRAM contents to file
 `define BUSTEST
-`define MAX_FRAMES      2
+`define MAX_FRAMES      1
 `define LOAD_MONOBM
 
 module xosera_tb();
@@ -433,15 +433,14 @@ end
 integer cop_cyc = 0;
 always @(negedge clk) begin
     if (xosera.copper.cop_en) begin
-        $fdisplay(logfile, "%0t %04d: M=%04x IR=%04x ST=%x PC=%03x RA=%04x RS=%03x RD=%04x Z=%x B=%x",
-            $realtime, cop_cyc, xosera.copper.copmem_rd_data_i, xosera.copper.cop_IR, xosera.copper.cop_ex_state,
-            xosera.copper.cop_PC, xosera.copper.cop_RA, xosera.copper.cop_RS, xosera.copper.cop_RD,
-            xosera.copper.cop_Z_flag, xosera.copper.cop_B_flag);
+        $fdisplay(logfile, "%0t %04d: ST=%x %2b IR=%04x M=%04x PC=%03x RS=%03x RD=%04x B=%x",
+            $realtime, cop_cyc, xosera.copper.cop_ex_state, xosera.copper.rd_pipeline, xosera.copper.cop_IR, xosera.copper.copmem_rd_data_i,
+            xosera.copper.cop_PC, xosera.copper.cop_RS, xosera.copper.cop_RD, xosera.copper.cop_B_flag);
         $fdisplay(logfile, "%0t     : mem_rd=%x mem_addr=%03x  xr_wr=%x xr_addr=%x xr_data=%x",
             $realtime, xosera.copper.ram_rd_en, xosera.copper.ram_rd_addr,
-            xosera.copper.xr_wr_en, xosera.copper.xr_wr_addr_out, xosera.copper.xr_wr_data_out);
-        $fdisplay(logfile, "%0t     : reg_wr=%x reg_num=%x  reg_data=%x",
-            $realtime, xosera.copper.cop_reg_wr_en, xosera.copper.cop_reg_wr_num, xosera.copper.cop_reg_data_in);
+            xosera.copper.xr_wr_en, xosera.copper.xr_wr_addr, xosera.copper.xr_wr_data);
+        $fdisplay(logfile, "%0t     : reg_wr=%x",
+            $realtime, xosera.copper.cop_reg_wr_en);
         cop_cyc <= cop_cyc + 1'b1;
     end
 end

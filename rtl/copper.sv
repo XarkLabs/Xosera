@@ -163,8 +163,8 @@ module copper(
     output       logic [C_PC:0] coppermem_rd_addr_o,
     output       logic          coppermem_rd_en_o,
     input   wire logic [31:0]   coppermem_rd_data_i,    // NOTE: 16-bit even/odd combined
-    input   wire logic          copp_reg_wr_i,          // strobe to write internal config register
-    input   wire word_t         copp_reg_data_i,        // data for internal config register
+    input   wire logic          cop_xreg_wr_i,          // strobe to write internal config register
+    input   wire word_t         cop_xreg_data_i,        // data for internal config register
     input   wire hres_t         h_count_i,
     input   wire vres_t         v_count_i,
     input   wire logic          reset_i,
@@ -272,10 +272,10 @@ always_ff @(posedge clk) begin
         ram_rd_strobe       <= 1'b0;
 
         // video register write
-        if (copp_reg_wr_i) begin
-            copper_en           <= copp_reg_data_i[15];
-            reg_reserved        <= copp_reg_data_i[14:10];
-            copper_init_pc      <= copp_reg_data_i[C_PC:0];
+        if (cop_xreg_wr_i) begin
+            copper_en           <= cop_xreg_data_i[15];
+            reg_reserved        <= cop_xreg_data_i[14:10];
+            copper_init_pc      <= cop_xreg_data_i[C_PC:0];
         end
 
         // only clear XR write enable when ack'd

@@ -350,7 +350,7 @@ always_comb begin
         end
         RD_S: begin
             val_S_next          = shifter(blit_shift_amount, blit_data_i, last_S);
-            last_S_next         = blit_data_i[11:0];
+            last_S_next         = 12'(blit_data_i); // TODO: TEST [11:0];
 
             blit_src_S_next     = blit_addr + 1'b1;             // update A addr
 

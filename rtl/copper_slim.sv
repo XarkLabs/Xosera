@@ -163,10 +163,10 @@ typedef enum logic [1:0] {
 
 // copper registers
 typedef enum logic [2:0] {
-    REG_RA          = 3'b001,       // general accumulator reg
-    REG_RS          = 3'b010,       // source ptr reg (NOTE: only wide enough for copper addr)
-    REG_RD          = 3'b011,       // destination ptr reg
-    REG_PC          = 3'b000,       // program counter (NOTE: only wide enough for copper addr)
+    REG_RA          = 3'b000,       // general accumulator reg
+    REG_RS          = 3'b001,       // source ptr reg (NOTE: only wide enough for copper addr)
+    REG_RD          = 3'b010,       // destination ptr reg
+    REG_PC          = 3'b011,       // program counter (NOTE: only wide enough for copper addr)
     REG_HPOS        = 3'b100,       // write with STX, wait until HPOS >= value written
     REG_VPOS        = 3'b101,       // write with STX, wait until VPOS == value written (NOTE: equals, possibly in next frame)
     REG_UNUSED_6    = 3'b110,
@@ -217,7 +217,7 @@ logic           cop_v_wait;     // waiting for == VPOS
 logic           cop_B_flag;     // last SUBI/SUB did a borrow (for BGE/BLT)
 logic           cop_Z_flag;     // RA == 0
 
-assign          cop_Z_flag = (cop_RA == 0); // update Z flag
+assign          cop_Z_flag = ~|cop_RA; // update Z flag
 
 // special internal xregs
 hres_t          cop_wait_val;   // value to wait for HPOS/VPOS
@@ -243,10 +243,12 @@ always_ff @(posedge clk) begin
         cop_PC          <= '0;
         cop_wait_val    <= '0;
         flush_pipe      <= 1'b0;
+        stalled         <= 1'b0;
+
         cop_h_wait      <= 1'b0;
         cop_v_wait      <= 1'b0;
     end else begin
-        flush_pipe      <= stalled;
+        flush_pipe      <= 1'b0;
         if (inc_RS) begin
             cop_RS          <= cop_RS + 1'b1;
         end
@@ -374,7 +376,6 @@ always_ff @(posedge clk) begin
 
         // Main logic
         if (!cop_en || restart_i) begin
-            cop_reg_wr_en   <= 1'b1;                    // internal copper reg write
             cop_reg_wr_num  <= REG_PC;                  // PC
             cop_reg_data_in <= 16'(cop_init_PC);        // set initial PC
 
@@ -384,17 +385,12 @@ always_ff @(posedge clk) begin
                 // decode instruction "hot" from memory output
                 // if there is no instruction just read, keep pipelining PC reads until one ready
                 ST_DECODE: begin
-                    IR_pipeline[0]  <= 1'b1;                // pipeline next PC read
+                    IR_pipeline[0]  <= 1'b1;            // pipeline next PC read
+                    ram_rd_en       <= 1'b1;            // read copper memory
+                    ram_rd_addr     <= cop_PC_plus1;    // read next PC
+                    inc_PC          <= 1'b1;            // increment PC
                     // if instruction ready?
-                    if (!IR_pipeline[1]) begin
-                        ram_rd_en       <= 1'b1;            // read copper memory
-                        ram_rd_addr     <= cop_PC;          // read next PC
-                        inc_PC          <= 1'b0;            // increment PC
-                    end else begin
-                        ram_rd_en       <= 1'b1;            // read copper memory
-                        ram_rd_addr     <= cop_PC_plus1;    // read next PC
-                        inc_PC          <= 1'b1;            // increment PC
-
+                    if (IR_pipeline[1]) begin
                         // hot decode
                         cop_IR          <= copmem_rd_data_i;
                         cop_reg_wr_num  <= 3'(copmem_rd_data_i[OPBITS_REGNUM+:2]);  // save reg for write
@@ -407,6 +403,8 @@ always_ff @(posedge clk) begin
                                 cop_ex_state    <= ST_WRITE_IMM;
                             end
                             OP_LDI, OP_SUBI, OP_NORI: begin
+                                ram_rd_addr     <= cop_PC;                  // re-read next PC
+                                inc_PC          <= 1'b0;                    // don'tincrement PC
                                 cop_ex_state    <= ST_EXEC_ALU;
                             end
                             OP_STX: begin
@@ -420,8 +418,8 @@ always_ff @(posedge clk) begin
                                 cop_ex_state    <= ST_DECODE;
                             end
                             OP_LD, OP_SUB, OP_NOR: begin
-                                IR_pipeline[0]  <= 1'b0;                    // not reading instruction
-                                inc_PC          <= 1'b0;                    // don't increment PC
+                                ram_rd_addr     <= cop_PC;                  // re-read next PC
+                                inc_PC          <= 1'b0;                    // don'tincrement PC
                                 ram_rd_en       <= 1'b1;                    // read copper memory
                                 ram_rd_addr     <= copmem_rd_data_i[9:0];   // read cad10 address
 
@@ -435,8 +433,8 @@ always_ff @(posedge clk) begin
                                 cop_ex_state    <= ST_DECODE;
                             end
                             OP_LRSa: begin
-                                IR_pipeline[0]  <= 1'b0;                    // not reading instruction
-                                inc_PC          <= 1'b0;                    // don't increment PC
+                                ram_rd_addr     <= cop_PC;                  // re-read next PC
+                                inc_PC          <= 1'b0;                    // don'tincrement PC
                                 ram_rd_en       <= 1'b1;                    // read copper memory
                                 ram_rd_addr     <= cop_RS;                  // read address RS
                                 inc_RS          <= copmem_rd_data_i[OPBITS_FLAG];   // optionally increment RS
@@ -452,7 +450,7 @@ always_ff @(posedge clk) begin
                                 cop_ex_state    <= ST_DECODE;
                             end
                             OP_Bcc: begin
-                                cop_reg_wr_num  <= 3'b000;
+                                cop_reg_wr_num  <= REG_PC;
                                 cop_reg_data_in <= 16'(copmem_rd_data_i[9:0]);   // read cad10 address
                                 if (copmem_rd_data_i[11]) begin             // Z flag for BNE/BEQ
                                     cop_reg_wr_en   <= (copmem_rd_data_i[10] == cop_Z_flag);

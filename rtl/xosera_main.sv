@@ -121,9 +121,6 @@ logic                   copp_reg_wr;
 word_t                  copp_reg_data;
 hres_t                  video_h_count;
 vres_t                  video_v_count;
-`ifdef EN_COPP_SLIM
-logic                   end_of_visible;
-`endif
 `endif
 
 // XR register bus access
@@ -256,9 +253,6 @@ video_gen video_gen(
     .copp_reg_data_o(copp_reg_data),
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
-`ifdef EN_COPP_SLIM
-    .end_of_visible_o(end_of_visible),
-`endif
 `endif
 `ifdef BUS_DEBUG_SIGNALS
     .audio_pdm_l_o(unused_l),
@@ -288,7 +282,6 @@ slim_copper copper(
     .cop_xreg_data_i(copp_reg_data),
     .h_count_i(video_h_count),
     .v_count_i(video_v_count),
-    .restart_i(end_of_visible),
     .reset_i(reset_i),
     .clk(clk)
 );

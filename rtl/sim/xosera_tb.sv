@@ -432,15 +432,13 @@ end
 `ifdef EN_COPP_SLIM
 integer cop_cyc = 0;
 always @(negedge clk) begin
-    if (xosera.copper.cop_en) begin
-        $fdisplay(logfile, "%0t %04d: ST=%x %2b IR=%04x M=%04x PC=%03x RS=%03x RD=%04x B=%x",
+    if (xosera.copper.cop_en && cop_cyc < 9999) begin
+        $fdisplay(logfile, "%0t %04d: ST=%x %2b IR=%04x M=%04x PC=%03x RS=%03x",
             $realtime, cop_cyc, xosera.copper.cop_ex_state, xosera.copper.rd_pipeline, xosera.copper.cop_IR, xosera.copper.copmem_rd_data_i,
-            xosera.copper.cop_PC, xosera.copper.cop_RS, xosera.copper.cop_RD, xosera.copper.cop_B_flag);
-        $fdisplay(logfile, "%0t     : mem_rd=%x mem_addr=%03x  xr_wr=%x xr_addr=%x xr_data=%x",
+            xosera.copper.cop_PC, xosera.copper.cop_RA);
+        $fdisplay(logfile, "%0t     : mem_rd=%x mem_addr=%03x xr_wr=%x reg_wr=%x xr_addr=%x xr_data=%x",
             $realtime, xosera.copper.ram_rd_en, xosera.copper.ram_rd_addr,
-            xosera.copper.xr_wr_en, xosera.copper.xr_wr_addr, xosera.copper.xr_wr_data);
-        $fdisplay(logfile, "%0t     : reg_wr=%x",
-            $realtime, xosera.copper.cop_reg_wr_en);
+            xosera.copper.xr_wr_en, xosera.copper.reg_wr_en, xosera.copper.write_addr, xosera.copper.write_data);
         cop_cyc <= cop_cyc + 1'b1;
     end
 end

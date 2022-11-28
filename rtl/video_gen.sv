@@ -32,9 +32,6 @@ module video_gen (
     output      word_t          copp_reg_data_o,        // copper reg data
     output      hres_t          h_count_o,              // Horizontal video counter
     output      vres_t          v_count_o,              // Vertical video counter
-`ifdef EN_COPP_SLIM
-    output      logic           end_of_visible_o,       // last pixel scanned out
-`endif
 `endif
     // video memories
     output      logic           vram_sel_o,             // vram read select
@@ -164,9 +161,6 @@ assign          v_blank_o       = ~v_visible;
 `ifdef EN_COPP
 assign          h_count_o       = h_count;
 assign          v_count_o       = v_count;
-`ifdef EN_COPP_SLIM
-assign          end_of_visible_o    = end_of_visible;
-`endif
 `endif
 
 video_timing video_timing

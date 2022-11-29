@@ -57,9 +57,8 @@ module slim_copper(
 // | Pseudo Xreg Name | XR addr | Operation             | Description                               |
 // |------------------|---------|-----------------------|-------------------------------------------|
 // | COP_RA           | 0x0100  | RA <= val16           | set RA to val16                           |
-// | COP_RA_NOR       | 0x0101  | RA <= ~(RA | val16)   | set RA to RA NOR val16                    |
-// | COP_RA_CMP       | 0x0102  | B <= RA - val16       | compute RA - val16, B set if RA < val16   |
-// | COP_RA_SUB       | 0x0103  | B, RA <= RA - val16   | set RA to RA - val16, B set if RA < val16 |
+// | COP_RA_CMP       | 0x0101  | B <= RA - val16       | compute RA - val16, B set if RA < val16   |
+// | COP_RA_SUB       | 0x0181  | B, RA <= RA - val16   | set RA to RA - val16, B set if RA < val16 |
 // |------------------|---------|-----------------------|-------------------------------------------|
 //
 // Notable pseudo instructions:
@@ -74,20 +73,6 @@ module slim_copper(
 //
 //  CMPI #val16                     RA < val16;         (2 words, B = RA < val16 [unsigned])
 //  > SET     COP_RA_CMP,#val16
-//
-//  NORI #val16                     RA = ~(RA | val16); (2 words)
-//  > SET     COP_RA_NOR,#val16
-//
-//  NOT                             RA = ~RA;           (2 word, increment is ignored)
-//  > SET     COP_RA_NOR,#0
-//
-//  ANDI #val16                     RA = (RA & val16);  (4 words)
-//  > SET     COP_RA_NOR,#~val16
-//  > SET     COP_RA_NOR,#~val16
-//
-//  ORI  #val16                     RA = (RA & val16);  (4 words)
-//  > SET     COP_RA_NOR,#val16
-//  > SET     COP_RA_NOR,#0
 //
 //  STPI (RA),#val16               [RA] = val16; RA++; (3 words, self-mod)
 //  > STR     *+1,RA
@@ -164,15 +149,11 @@ typedef enum logic [3:0] {
     B_ARG10         = 4'd9          // im10/cadr10
 } copp_bits_t;
 
-// copper registers
-typedef enum logic [1:0] {
-    COP_RA          = 2'b00,        // load value into RA
-    COP_RA_NOR      = 2'b01,        // NOR value into RA
-    COP_RA_CMP      = 2'b10,        // subtract value from RA, set B flag
-    COP_RA_SUB      = 2'b11         // subtract value from RA, store in RA and set B flag
-} copp_reg_num_t;
+// XR bits for psuedo registers
 
-localparam COP_XREG = 8;            // bit 8 indicates special copper XR register
+localparam  COP_XREG        = 8;    // indicates special copper XR register
+localparam  COP_XREG_CMPSUB = 0;    // indicates RA CMP/SUB operation (vs load)
+localparam  COP_XREG_SUB    = 7;    // indicates RA SUB opertion (vs CMP)
 
 // execution state
 typedef enum logic [2:0] {
@@ -233,9 +214,10 @@ logic unused_bits = &{1'b0, cop_xreg_data_i[14:0]};
 always_ff @(posedge clk) begin
     if (reset_i) begin
         cop_en          <= 1'b0;
-        cop_reset       <= 1'b1;
+        cop_reset       <= 1'b0;
     end else begin
         cop_reset       <= 1'b0;
+        // keep reset if not enabled and reset before SOF
         if (!cop_en || (h_count_i == xv::TOTAL_WIDTH - 4) && (v_count_i == xv::TOTAL_HEIGHT - 1)) begin
             cop_reset       <= 1'b1;
         end
@@ -258,21 +240,15 @@ always_ff @(posedge clk) begin
         end
 
         if (reg_wr_en) begin
-            case (write_addr[1:0])
-                COP_RA: begin
-                    cop_RA      <= write_data;
+            // check for CMP/SUB vs load operations
+            if (!write_addr[COP_XREG_CMPSUB]) begin
+                cop_RA      <= write_data;  // load RA
+            end else begin
+                cop_B_flag  <= sub_B;       // set B flag
+                if (write_addr[COP_XREG_SUB]) begin
+                    cop_RA      <= sub_res; // load RA with subtract result
                 end
-                COP_RA_NOR: begin
-                    cop_RA      <= ~(cop_RA | write_data);
-                end
-                COP_RA_CMP: begin
-                    cop_B_flag  <= sub_B;   // update B flag
-                end
-                COP_RA_SUB: begin
-                    cop_B_flag  <= sub_B;   // update B flag
-                    cop_RA      <= sub_res; // update RA
-                end
-            endcase
+            end
         end
     end
 end
@@ -355,7 +331,7 @@ always_ff @(posedge clk) begin
                 case (cop_IR[B_OPCODE+:2])
                     OP_SET: begin
                         // write to copper regs instead of XR registers if COP_XREG bit set
-                        if (cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[COP_XREG]) begin
+                        if ((cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[COP_XREG])) begin
                             reg_wr_en   <= 1'b1;                        // write cop reg
                         end else begin
                             xr_wr_en    <= 1'b1;                        // write XR bus
@@ -372,7 +348,7 @@ always_ff @(posedge clk) begin
                     end
                     OP_STR: begin
                         // write to copper regs instead of XR registers if COP_XREG bit set
-                        if (cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[COP_XREG]) begin
+                        if ((cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[COP_XREG])) begin
                             reg_wr_en   <= 1'b1;                        // write cop reg
                         end else begin
                             xr_wr_en    <= 1'b1;                        // write XR bus
@@ -421,7 +397,7 @@ always_ff @(posedge clk) begin
             // store word read from memory to XR bus
             ST_SETR_WR: begin
                 // write to copper regs instead of XR registers if COP_XREG bit set
-                if (write_addr[15:14] == 2'b00 && write_addr[8]) begin
+                if (write_addr[15:14] == xv::XR_CONFIG_REGS[15:14] && write_addr[COP_XREG]) begin
                     reg_wr_en       <= 1'b1;                            // write cop reg
                 end else begin
                     xr_wr_en        <= 1'b1;                            // write XR bus

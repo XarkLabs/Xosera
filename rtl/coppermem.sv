@@ -38,7 +38,7 @@ word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 initial begin
     // Fill with numbers
     bram[0] = 16'h0800;     // RA -= RA
-    bram[1] = -16'h0042;
+    bram[1] = -16'h007F;
     bram[2] = 16'h1800;     // COP_RA -= 7
     bram[3] = 16'h0800;     //
     bram[4] = 16'h0800;     // COP_RA -= 1

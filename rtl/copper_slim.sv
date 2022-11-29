@@ -41,10 +41,10 @@ module slim_copper(
 //
 // | XR Op Immediate     | Assembly              | Cyc | Description                      |
 // |---------------------|-----------------------|-----|----------------------------------|
-// | rr00 oooo oooo oooo | SET   xadr14,#im16    |  2+ | [xadr14] <= im16                 |
-// | iiii iiii iiii iiii |                       |  2+ |   (2 word op)                    |
-// | --01 r-cc cccc cccc | SETM  xadr14,xcadr10  |  2+ | [xadr14] <= xcadr;               |
-// | rroo oooo oooo oooo |                       |  2+ |   (2 word op)                    |
+// | rr00 oooo oooo oooo | SET   xadr14,#im16    |  4+ | [xadr14] <= im16                 |
+// | iiii iiii iiii iiii |                       |     |   (2 word op)                    |
+// | --01 r-cc cccc cccc | SETM  xadr14,xcadr10  |  4+ | [xadr14] <= xcadr;               |
+// | rroo oooo oooo oooo |                       |     |   (2 word op)                    |
 // | --10 0-ii iiii iiii | HPOS  #im10           |  2+ | wait until video HPOS >= im10    |
 // | --10 1-ii iiii iiii | VPOS  #im10           |  2+ | wait until video VPOS >= im10    |
 // | --11 0-cc cccc cccc | BGE   cadr10          | 2/4 | if (B==0) PC <= cadr10           |
@@ -61,7 +61,6 @@ module slim_copper(
 //
 // | Pseudo Xreg Name | XR addr | Operation             | Description                               |
 // |------------------|---------|-----------------------|-------------------------------------------|
-// | COP_RA           | 0x0800  | RA <= val16           | set RA to val16                           |
 // | COP_RA_SUB       | 0x0801  | B, RA <= RA - val16   | set RA to RA - val16, B set if RA < val16 |
 // |------------------|---------|-----------------------|-------------------------------------------|
 //
@@ -278,6 +277,7 @@ always_ff @(posedge clk) begin
         // reset strobes
         ram_rd_en       <= 1'b0;
         reg_wr_en       <= 1'b0;
+        ram_rd_addr     <= cop_PC;                      // read PC
 
         // remember if read was done last cycle
         rd_pipeline     <= ram_rd_en;
@@ -304,7 +304,7 @@ always_ff @(posedge clk) begin
                 // if no instruction ready, or new instruction is 2 words, pre-read
                 if (!wait_hv_flag && rd_pipeline == 1'b0 && ram_rd_en == 1'b0) begin
                     ram_rd_en       <= 1'b1;                            // read copper memory
-                    ram_rd_addr     <= cop_PC;                          // read PC
+//                    ram_rd_addr     <= cop_PC;                          // read PC
                     cop_PC          <= cop_next_PC;                     // increment PC
                 end
                 // if instruction ready, save in cop_IR it and proceed to DECODE
@@ -314,7 +314,7 @@ always_ff @(posedge clk) begin
                     // if 2 word opcode, start 2nd read
                     if (ram_read_data[B_OPCODE+1] == 1'b0) begin
                         ram_rd_en       <= 1'b1;                            // read copper memory
-                        ram_rd_addr     <= cop_PC;                          // read PC
+//                        ram_rd_addr     <= cop_PC;                          // read PC
                         cop_PC          <= cop_next_PC;                     // increment PC
                     end
 
@@ -337,19 +337,19 @@ always_ff @(posedge clk) begin
 
 `ifdef SET_NO_STALL
                             ram_rd_en       <= 1'b1;                        // read copper memory
-                            ram_rd_addr     <= cop_PC;                      // read PC
+//                            ram_rd_addr     <= cop_PC;                      // read PC
                             cop_PC          <= cop_next_PC;                 // increment PC
 `endif
                             cop_ex_state    <= ST_FETCH;                    // fetch next instruction
                         end
                     end
                     OP_SETM: begin
-                        ram_rd_addr     <= xv::COPP_W'(cop_IR);             // use opcode as source address
                         ram_rd_en       <= 1'b1;                            // read copper memory (may be ignored)
+                        ram_rd_addr     <= xv::COPP_W'(cop_IR);             // use opcode as source address
 
-                        ram_rd_en       <= 1'b1;                            // read copper memory
-                        ram_rd_addr     <= cop_PC;                          // read PC
-                        cop_PC          <= cop_next_PC;                     // increment PC
+                        // ram_rd_en       <= 1'b1;                            // read copper memory
+                        // ram_rd_addr     <= cop_PC;                          // read PC
+                        // cop_PC          <= cop_next_PC;                     // increment PC
 
                         cop_ex_state    <= ST_SETR_RD;                      // wait for read data
                     end
@@ -392,7 +392,7 @@ always_ff @(posedge clk) begin
 
 `ifdef SET_NO_STALL
                 ram_rd_en       <= 1'b1;                                    // read copper memory
-                ram_rd_addr     <= cop_PC;                                  // read PC
+//                ram_rd_addr     <= cop_PC;                                  // read PC
                 cop_PC          <= cop_next_PC;                             // increment PC
 `endif
                 cop_ex_state    <= ST_FETCH;

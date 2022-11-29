@@ -15,6 +15,10 @@
 `ifdef EN_COPP
 `ifdef EN_COPP_SLIM
 
+`define SUB_ONLY        // only SUB, no load
+//`define BLT_ONLY        // only BLT, no BGE
+`define SET_NO_STALL    // eliminate bubble in pipeline after SET/SETM
+
 `include "xosera_pkg.sv"
 
 module slim_copper(
@@ -35,16 +39,17 @@ module slim_copper(
 
 //  Slim Copper opcodes:
 //
-// | XR Op Immediate      | Assembly              | Cyc | Description                      |
-// |----------------------|-----------------------|-----|----------------------------------|
-// | rr 00 oooo oooo oooo | SET     xadr14,#im16  |  2+ | [xadr14] <= im16 (2 word op)     |
-// | rr 01 oooo oooo oooo | STR     xadr14,RA     |  2+ | [xadr14] <= RA;                  |
-// | rr 10 oooo oooo oooo | STRP    xadr14,(RA)+  |  4+ | [xadr14] <= [RA]; RA++           |
-// | -- 11 00ii iiii iiii | HPOS    #im10         |  2+ | wait until video HPOS >= im10    |
-// | -- 11 01ii iiii iiii | VPOS    #im10         |  2+ | wait until video VPOS >= im10    |
-// | -- 11 10cc cccc cccc | BGE     cadr10        | 2/4 | if (B==0) PC <= cadr10           |
-// | -- 11 11cc cccc cccc | BLT     cadr10        | 2/4 | if (B==1) PC <= cadr10           |
-// |----------------------|-----------------------|-----|----------------------------------|
+// | XR Op Immediate     | Assembly              | Cyc | Description                      |
+// |---------------------|-----------------------|-----|----------------------------------|
+// | rr00 oooo oooo oooo | SET   xadr14,#im16    |  2+ | [xadr14] <= im16                 |
+// | iiii iiii iiii iiii |                       |  2+ |   (2 word op)                    |
+// | --01 r-cc cccc cccc | SETM  xadr14,xcadr10  |  2+ | [xadr14] <= xcadr;               |
+// | rroo oooo oooo oooo |                       |  2+ |   (2 word op)                    |
+// | --10 0-ii iiii iiii | HPOS  #im10           |  2+ | wait until video HPOS >= im10    |
+// | --10 1-ii iiii iiii | VPOS  #im10           |  2+ | wait until video VPOS >= im10    |
+// | --11 0-cc cccc cccc | BGE   cadr10          | 2/4 | if (B==0) PC <= cadr10           |
+// | --11 1-cc cccc cccc | BLT   cadr10          | 2/4 | if (B==1) PC <= cadr10           |
+// |---------------------|-----------------------|-----|----------------------------------|
 //
 // im16     =   16-bit immediate word (2nd word in SET xxx,#im16 instructions)
 // xadr14   =   XR region + 12-bit offset:          xx00 oooo oooo oooo (XADDR with 12-bit offset)
@@ -56,9 +61,8 @@ module slim_copper(
 //
 // | Pseudo Xreg Name | XR addr | Operation             | Description                               |
 // |------------------|---------|-----------------------|-------------------------------------------|
-// | COP_RA           | 0x0100  | RA <= val16           | set RA to val16                           |
-// | COP_RA_CMP       | 0x0101  | B <= RA - val16       | compute RA - val16, B set if RA < val16   |
-// | COP_RA_SUB       | 0x0181  | B, RA <= RA - val16   | set RA to RA - val16, B set if RA < val16 |
+// | COP_RA           | 0x0800  | RA <= val16           | set RA to val16                           |
+// | COP_RA_SUB       | 0x0801  | B, RA <= RA - val16   | set RA to RA - val16, B set if RA < val16 |
 // |------------------|---------|-----------------------|-------------------------------------------|
 //
 // Notable pseudo instructions:
@@ -136,30 +140,30 @@ module slim_copper(
 // opcode type {slightly scrambled [13:12],[15:14]}
 typedef enum logic [1:0] {
     OP_SET          = 2'b00,        // SET  xaddr,#im16
-    OP_STR          = 2'b01,        // STR  xaddr,RA
-    OP_STRP         = 2'b10,        // STRP xaddr,(RA)+
-    OP_POS_Bcc      = 2'b11         // HPOS/VPOS/BGE/BLT
+    OP_SETM         = 2'b01,        // SETM xaddr,xcadr10
+    OP_HVPOS        = 2'b10,        // HPOS/VPOS
+    OP_Bcc          = 2'b11         // BGE/BLT
 } copp_opcode_t;
 
 // opcode decode bits
 typedef enum logic [3:0] {
     B_OPCODE        = 4'd12,        // 2-bits
     B_ARG           = 4'd11,        // 12-bit operand/HVPOS or Bcc bit
-    B_OPSEL         = 4'd10,        // H/V or LT/GE
     B_ARG10         = 4'd9          // im10/cadr10
 } copp_bits_t;
 
 // XR bits for psuedo registers
-localparam  COP_XREG        = 8;    // indicates special copper XR register
-localparam  COP_XREG_CMPSUB = 0;    // indicates RA CMP/SUB operation (vs load)
-localparam  COP_XREG_SUB    = 7;    // indicates RA SUB opertion (vs CMP)
+localparam  COP_XREG        = 11;    // pseudo XR register flag (in xreg #)
+`ifndef SUB_ONLY
+localparam  COP_XREG_SUB    = 0;    // pseudo XR register LOAD/SUB select
+`endif
 
 // execution state
 typedef enum logic [1:0] {
     ST_FETCH        = 2'b00,        // stalled (waiting for HPOS/VPOS or XR bus write)
     ST_DECODE       = 2'b01,        // decode opcode in cop_IR
-    ST_SETR_RD      = 2'b10,        // wait for RS memory read
-    ST_SETR_WR      = 2'b11         // write RS read word to XR bus
+    ST_SETR_RD      = 2'b10,        // wait for memory read
+    ST_SETR_WR      = 2'b11         // write to XR bus
 } copp_ex_state_t;
 
 // copper registers
@@ -169,7 +173,7 @@ word_t          cop_IR;             // instruction register (holds executing opc
 hres_t          cop_wait_val;       // value to wait for HPOS/VPOS
 
 // execution flags
-logic           cop_B_flag;         // last CMPS/SUBS did a borrow (for BGE/BLT)
+//logic           cop_B_flag;         // last CMPS/SUBS did a borrow (for BGE/BLT)
 logic           wait_hv_flag;       // waiting for HPOS/VPOS
 logic           wait_for_v;         // false if waiting for >= HPOS else waiting for == VPOS
 
@@ -186,9 +190,8 @@ word_t          write_data;         // XR bus data out/pseudo XR register data o
 // control signals
 logic           cop_en;             // copper enable/reset (set via COPP_CTRL)
 logic           cop_reset;          // copper reset
-logic [1:0]     rd_pipeline;        // read flags for memory pipeline history (higher bit is older)
+logic           rd_pipeline;        // read flags for memory pipeline history (higher bit is older)
 logic [1:0]     cop_ex_state;       // current execution state
-logic           inc_RA;             // increment RA
 logic           sub_B;
 word_t          sub_res;
                 // compute subtract borrow and result
@@ -231,22 +234,21 @@ end
 always_ff @(posedge clk) begin
     if (cop_reset) begin
         cop_RA          <= '0;
-        cop_B_flag      <= 1'b0;
+//        cop_B_flag      <= 1'b0;
     end else begin
-        if (inc_RA) begin
-            cop_RA          <= cop_RA + 1'b1;
-        end
-
         if (reg_wr_en) begin
+`ifdef SUB_ONLY
+//            cop_B_flag  <= sub_B;           // set B flag
+            cop_RA      <= sub_res;         // load RA with subtract result
+`else
             // check for CMP/SUB vs load operations
-            if (!write_addr[COP_XREG_CMPSUB]) begin
+           if (!write_addr[COP_XREG_SUB]) begin
                 cop_RA      <= write_data;  // load RA
-            end else begin
-                cop_B_flag  <= sub_B;       // set B flag
-                if (write_addr[COP_XREG_SUB]) begin
-                    cop_RA      <= sub_res; // load RA with subtract result
-                end
-            end
+           end else begin
+//                cop_B_flag  <= sub_B;       // set B flag
+                cop_RA      <= sub_res;     // load RA with subtract result
+           end
+`endif
         end
     end
 end
@@ -265,27 +267,26 @@ always_ff @(posedge clk) begin
 
         cop_PC          <= '0;
         cop_IR          <= '0;
-        inc_RA          <= 1'b0;
 
         wait_hv_flag    <= 1'b0;
         wait_for_v      <= 1'b0;
         cop_wait_val    <= '0;
 
-        rd_pipeline     <= '0;
+        rd_pipeline     <= 1'b0;
         cop_ex_state    <= ST_FETCH;
     end else begin
         // reset strobes
         ram_rd_en       <= 1'b0;
         reg_wr_en       <= 1'b0;
-        inc_RA          <= 1'b0;
+
+        // remember if read was done last cycle
+        rd_pipeline     <= ram_rd_en;
 
         // only clear XR write enable when ack'd
         if (xr_wr_ack_i) begin
             xr_wr_en        <= 1'b0;
         end
 
-        // shift cop_IR fetch pipeline
-        rd_pipeline     <= rd_pipeline << 1;
 
         if (wait_for_v) begin
             if (v_count_i >= $bits(v_count_i)'(cop_wait_val)) begin
@@ -301,18 +302,17 @@ always_ff @(posedge clk) begin
             // fetch opcode, store to cop_IR when available
             ST_FETCH: begin
                 // if no instruction ready, or new instruction is 2 words, pre-read
-                if (!wait_hv_flag && rd_pipeline == 2'b00) begin
-                    rd_pipeline[0]  <= 1'b1;                            // pipeline next PC read
+                if (!wait_hv_flag && rd_pipeline == 1'b0 && ram_rd_en == 1'b0) begin
                     ram_rd_en       <= 1'b1;                            // read copper memory
                     ram_rd_addr     <= cop_PC;                          // read PC
                     cop_PC          <= cop_next_PC;                     // increment PC
                 end
                 // if instruction ready, save in cop_IR it and proceed to DECODE
-                if (rd_pipeline[1]) begin
+                if (rd_pipeline) begin
                     cop_IR          <= ram_read_data;                   // store instruction in cop_IR
 
-                    if (ram_read_data[B_OPCODE+:2] == OP_SET) begin
-                        rd_pipeline[0]  <= 1'b1;                            // pipeline next PC read
+                    // if 2 word opcode, start 2nd read
+                    if (ram_read_data[B_OPCODE+1] == 1'b0) begin
                         ram_rd_en       <= 1'b1;                            // read copper memory
                         ram_rd_addr     <= cop_PC;                          // read PC
                         cop_PC          <= cop_next_PC;                     // increment PC
@@ -325,9 +325,9 @@ always_ff @(posedge clk) begin
             ST_DECODE: begin
                 case (cop_IR[B_OPCODE+:2])
                     OP_SET: begin
-                        write_addr      <= cop_IR;                      // use opcode as XR address
-                        write_data      <= ram_read_data;               // instruction word as data
-                        if (rd_pipeline[1]) begin
+                        write_addr      <= cop_IR;                          // use opcode as XR address
+                        write_data      <= ram_read_data;                   // instruction word as data
+                        if (rd_pipeline) begin
                             // write to copper regs instead of XR registers if COP_XREG bit set
                             if ((cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[COP_XREG])) begin
                                 reg_wr_en   <= 1'b1;                        // write cop reg
@@ -335,66 +335,66 @@ always_ff @(posedge clk) begin
                                 xr_wr_en    <= 1'b1;                        // write XR bus
                             end
 
-                            rd_pipeline[0]  <= 1'b1;                            // pipeline next PC read
-                            ram_rd_en       <= 1'b1;                            // read copper memory
-                            ram_rd_addr     <= cop_PC;                          // read PC
-                            cop_PC          <= cop_next_PC;                     // increment PC
-
+`ifdef SET_NO_STALL
+                            ram_rd_en       <= 1'b1;                        // read copper memory
+                            ram_rd_addr     <= cop_PC;                      // read PC
+                            cop_PC          <= cop_next_PC;                 // increment PC
+`endif
                             cop_ex_state    <= ST_FETCH;                    // fetch next instruction
                         end
                     end
-                    OP_STR: begin
-                        // write to copper regs instead of XR registers if COP_XREG bit set
-                        if ((cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[COP_XREG])) begin
-                            reg_wr_en   <= 1'b1;                        // write cop reg
-                        end else begin
-                            xr_wr_en    <= 1'b1;                        // write XR bus
-                        end
-                        write_addr      <= cop_IR;                      // use opcode as XR address
-                        write_data      <= cop_RA;                      // RA
+                    OP_SETM: begin
+                        ram_rd_addr     <= xv::COPP_W'(cop_IR);             // use opcode as source address
+                        ram_rd_en       <= 1'b1;                            // read copper memory (may be ignored)
 
-                        cop_ex_state    <= ST_FETCH;                    // fetch next instruction
+                        ram_rd_en       <= 1'b1;                            // read copper memory
+                        ram_rd_addr     <= cop_PC;                          // read PC
+                        cop_PC          <= cop_next_PC;                     // increment PC
+
+                        cop_ex_state    <= ST_SETR_RD;                      // wait for read data
                     end
-                    OP_STRP: begin
-                        // save dest address for after source read
-                        write_addr      <= cop_IR;                      // use opcode as XR address
+                    OP_HVPOS: begin
+                        wait_hv_flag    <= 1'b1;
+                        wait_for_v      <= cop_IR[B_ARG];
+                        cop_wait_val    <= $bits(cop_wait_val)'(cop_IR[B_ARG10:0]);
 
-                        ram_rd_en       <= 1'b1;                        // read copper memory
-                        ram_rd_addr     <= xv::COPP_W'(cop_RA);         // read RA
-                        inc_RA          <= 1'b1;                        // increment RA
-
-                        cop_ex_state    <= ST_SETR_RD;                  // wait for read data
+                        cop_ex_state    <= ST_FETCH;                        // fetch next instruction
                     end
-                    OP_POS_Bcc: begin
-                        if (cop_IR[B_ARG]) begin
-                            // branch taken if B clear/set for BGE/BLT
-                            if (cop_B_flag == cop_IR[B_OPSEL]) begin
-                                cop_PC          <= xv::COPP_W'(cop_IR[B_ARG10:0]); // set new PC
-                            end
-                        end else begin
-                            wait_hv_flag    <= 1'b1;
-                            wait_for_v      <= cop_IR[B_OPSEL];
-                            cop_wait_val    <= $bits(cop_wait_val)'(cop_IR[B_ARG10:0]);
+                    OP_Bcc: begin
+                        // branch taken if B clear/set for BGE/BLT
+`ifdef BLT_ONLY
+                        if (sub_B /*cop_B_flag */ == cop_IR[B_ARG]) begin
+`else
+                        if (sub_B /* cop_B_flag */) begin
+`endif
+                            cop_PC          <= xv::COPP_W'(cop_IR[B_ARG10:0]); // set new PC
                         end
 
-                        cop_ex_state    <= ST_FETCH;                    // fetch next instruction
+                        cop_ex_state    <= ST_FETCH;                        // fetch next instruction
                     end
                 endcase
             end
             // wait a cycle waiting for data memory read
             ST_SETR_RD: begin
+                write_addr          <= ram_read_data;                       // read dest XR address
+
                 cop_ex_state        <= ST_SETR_WR;
             end
             // store word read from memory to XR bus
             ST_SETR_WR: begin
                 // write to copper regs instead of XR registers if COP_XREG bit set
                 if (write_addr[15:14] == xv::XR_CONFIG_REGS[15:14] && write_addr[COP_XREG]) begin
-                    reg_wr_en       <= 1'b1;                            // write cop reg
+                    reg_wr_en       <= 1'b1;                                // write cop reg
                 end else begin
-                    xr_wr_en        <= 1'b1;                            // write XR bus
+                    xr_wr_en        <= 1'b1;                                // write XR bus
                 end
-                write_data      <= ram_read_data;                       // memory word as data
+                write_data      <= cop_IR[COP_XREG] ? cop_RA : ram_read_data; // RA or mem
 
+`ifdef SET_NO_STALL
+                ram_rd_en       <= 1'b1;                                    // read copper memory
+                ram_rd_addr     <= cop_PC;                                  // read PC
+                cop_PC          <= cop_next_PC;                             // increment PC
+`endif
                 cop_ex_state    <= ST_FETCH;
             end
             default: ; // Should never happen

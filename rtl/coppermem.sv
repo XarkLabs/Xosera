@@ -37,11 +37,11 @@ word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 
 initial begin
     // Fill with numbers
-    bram[0] = 16'h0800;     // RA -= RA
+    bram[0] = 16'h0400;     // RA -= RA
     bram[1] = -16'h007F;
-    bram[2] = 16'h1800;     // COP_RA -= 7
-    bram[3] = 16'h0800;     //
-    bram[4] = 16'h0800;     // COP_RA -= 1
+    bram[2] = 16'h1400;     // COP_RA -= 7
+    bram[3] = 16'h0400;     //
+    bram[4] = 16'h0400;     // COP_RA -= 1
     bram[5] = 16'h0001;     //
     bram[6] = 16'h3002;     // BGE 2
     bram[7] = 16'h2040;     // store reg 2

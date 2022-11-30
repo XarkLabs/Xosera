@@ -4,22 +4,21 @@
 //
 // Copyright (c) 2021 Ross Bamford - https://github.com/roscopeco
 //
-// See top-level LICENSE file for license information. (Hint: MIT)
+// See top-level LICENSE file for license information. (Hint: MIT) foo
 //
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
-`define EN_COPP         // TEMP: remove
-`define EN_COPP_SLIM    // TEMP: remove
+//`define EN_COPP         // TEMP: remove
+//`define EN_COPP_SLIM    // TEMP: remove
 
 `ifdef EN_COPP
 `ifdef EN_COPP_SLIM
 
-`define SUB_ONLY        // only SUB, no load
-//`define BLT_ONLY        // only BLT, no BGE
-`define SET_NO_STALL    // eliminate bubble in pipeline after SET/SETM
-
 `include "xosera_pkg.sv"
+
+//`define NO_SET_HAZARD
+//`define NO_SETA_HAZARD
 
 module slim_copper(
     output       logic          xr_wr_en_o,             // for all XR writes
@@ -41,88 +40,98 @@ module slim_copper(
 //
 // | XR Op Immediate     | Assembly              | Cyc | Description                      |
 // |---------------------|-----------------------|-----|----------------------------------|
-// | rr00 oooo oooo oooo | SET   xadr14,#im16    |  4+ | [xadr14] <= im16                 |
-// | iiii iiii iiii iiii |                       |     |   (2 word op)                    |
-// | --01 r-cc cccc cccc | SETM  xadr14,xcadr10  |  4+ | [xadr14] <= xcadr;               |
-// | rroo oooo oooo oooo |                       |     |   (2 word op)                    |
-// | --10 0-ii iiii iiii | HPOS  #im10           |  2+ | wait until video HPOS >= im10    |
-// | --10 1-ii iiii iiii | VPOS  #im10           |  2+ | wait until video VPOS >= im10    |
-// | --11 0-cc cccc cccc | BGE   cadr10          | 2/4 | if (B==0) PC <= cadr10           |
-// | --11 1-cc cccc cccc | BLT   cadr10          | 2/4 | if (B==1) PC <= cadr10           |
+// | rr00 oooo oooo oooo | SET   xadr14,#im16    |  4+ | dest [xadr14] <= source im16     |
+// | iiii iiii iiii iiii |    <im16 value>       |     |   (2 word op)                    |
+// | --01 -rcc cccc cccc | SETA  xadr16,cadr10   |  4+ | dest [xadr16] <= source cadr10   |
+// | rroo oooo oooo oooo |    <xadr16 address>   |     |   (2 word op)                    |
+// | --10 0-ii iiii iiii | HPOS  #im10           |  5+ | wait until video HPOS >= im10    |
+// | --10 1-ii iiii iiii | VPOS  #im10           |  5+ | wait until video VPOS >= im10    |
+// | --11 0rcc cccc cccc | BGE   cadr10          | 2/4 | if (B==0) PC <= cadr10           |
+// | --11 1rcc cccc cccc | BLT   cadr10          | 2/4 | if (B==1) PC <= cadr10           |
 // |---------------------|-----------------------|-----|----------------------------------|
 //
-// im16     =   16-bit immediate word (2nd word in SET xxx,#im16 instructions)
-// xadr14   =   XR region + 12-bit offset:          xx00 oooo oooo oooo (XADDR with 12-bit offset)
+// im16     =   16-bit immediate word               iiii iiii iiii iiii (2nd word in SET)
+// xadr14   =   XR region + 12-bit offset:          xx00 oooo oooo oooo (1st word in SET)
+// xadr16   =   XR region + 14-bit offset:          xxoo oooo oooo oooo (2nd word in SETA)
 // im10     =   10-bit immediate value:             0000 00ii iiii iiii
-// cadr10   =   10-bit copper address:              0000 00nn nnnn nnnn
-// B        =   borrow (less-than) flag from SUB/CMP (set if RA < value [unsigned])
+// cadr10   =   10-bit copper address/register:     1100 0rnn nnnn nnnn (r=1 for RA read)
+// B        =   borrow flag set when RA < val16 written [unsigned subtract])
 //
-// Special internal pseudo XR registers (XR reg with bit 8 set), only available to copper:
+// Internal pseudo register (accessed as XR reg or copper address when COP_XREG bit set)
 //
-// | Pseudo Xreg Name | XR addr | Operation             | Description                               |
-// |------------------|---------|-----------------------|-------------------------------------------|
-// | COP_RA_SUB       | 0x0801  | B, RA <= RA - val16   | set RA to RA - val16, B set if RA < val16 |
-// |------------------|---------|-----------------------|-------------------------------------------|
+// | Pseudo reg     | Addr   | Operation               | Description                               |
+// |----------------|--------|-------------------------|-------------------------------------------|
+// | RA     (read)  | 0x0800 | RA                      | return current value in RA register       |
+// | RA     (write) | 0x0800 | RA = val16, B = 0       | set RA to val16, clear B flag             |
+// | RA_SUB (write) | 0x0801 | RA = RA - val16, B flag | set RA to RA - val16, update B flag       |
+// | RA_CMP (write) | 0x07FF | B flag update           | update B flag only (updated on any write) |
+// |----------------|--------|-------------------------|-------------------------------------------|
+// NOTE: The B flag is updated after any write, RA_CMP is just a convenient xreg with no effect
 //
 // Notable pseudo instructions:
-//  LD   #val16                     RA = val16;         (2 words)
-//  > SET     COP_RA,#val16
+//  --> ADDI #val16             ; add val16 to RA, RA = RA + val16 (2 words, B = inverted carry)
+//  +     SET  RA_SUB,#-val16       ; RA -= -(val16)
 //
-//  ADDI #val16                     RA = RA + val16;    (2 words, B = inverted carry)
-//  > SET     COP_RA_SUB,#-val16
+//  --> SUBI #val16             ; subtract val16 from RA, RA = RA - val16 (2 words, B = RA < val16 [unsigned])
+//  +     SET  RA_SUB,#val16        ; RA -= value
 //
-//  SUBI #val16                     RA = RA - val16;    (2 words, B = RA < val16 [unsigned])
-//  > SET     COP_RA_SUB,#val16
+//  --> SETP (caddr),#val16     ; store val16 to ptr addr in cadr10, *caddr = val16; (4 words, self-mod)
+//  >     SETA *+2,caddr            ; self-modify SET dest
+//  >     SET  dummy,#val16         ; store to [RA]
 //
-//  CMPI #val16                     RA < val16;         (2 words, B = RA < val16 [unsigned])
-//  > SET     COP_RA_CMP,#val16
+//  --> SETPA (dcaddr),scaddr   ; store memory to ptr addr in dcadr10, *dcadr10 = scadr10; (4 words, self-mod)
+//  >     SETA *+2,dcadr10          ; self-modify SET dest
+//  >     SETA dummy,scadr10        ; store scadr10 to (dcadr10)
 //
-//  STPI (RA),#val16               [RA] = val16; RA++; (3 words, self-mod)
-//  > STR     *+1,RA
-//  > SET     dummy,#val16
+//  --> BRA  (caddr)            ; branch to ptr, PC = [cadr10] (3 words)
+//  +     SETA RA,caddr             ; RA = -[cadr10]
+//  +     BGE  RA                   ; branch to [cadr0]
 //
-// Example copper code: (TODO)
+// Example copper code: (not using any pseudo instructions)
 //
-//  REPEAT: =       10-1
-//  endframe:
-//          SET     COP_VPOS,#0                 ; wait until vertical line 0 (starts at line > 479)
-//          SET     XR_PA_GFX_CTRL,#0x0065      ; set initial PA_GFX_MODE
-//          SET     COP_VPOS,#100               ; wait until vertical line 100
-//          SET     XR_PA_GFX_CTRL,#0x0055      ; change PA_GFX_MODE
-//          LDI     RA,#120                     ; load RA with starting scan line
-//          ST      RA,vline                    ; store RA to copper mem variable
-//          LDI     RA,#REPEAT                  ; load color line repeat count
-//          ST      RA,rep_count                ; store RA to copper mem counter variable
-//          LDI     RS,#color_tbl               ; load source reg RS (address of table in COPPER mem)
-//          SET     COP_RD,#XR_COLOR_ADDR       ; set dest reg RD (colormap addr - can't use LDI)
-//  vloop:
-//          LD      RA,vline                    ; store RA to copper mem variable
-//          STX     RA,COP_VPOS                 ; wait for line RA
-//          ADDI    RA,#1                       ; increment scan line (SUBI alias)
-//          ST      RA,vline                    ; store RA to copper mem variable
-//          LRSA    RA                          ; load RA with a color (and inc RS)
-//          SRD     RA                          ; store color in RA (no inc RD)
-//          LRSA    RA                          ; load RA with a color (and inc RS)
-//          SET     COP_HPOS,#80                ; wait for 1/4 way across screen
-//          SRD     RA                          ; store color in RA (no inc RD)
-//          LRSA    RA                          ; load RA with next color (and inc RS)
-//          SET     COP_HPOS,#80*2              ; wait for 1/2 way across screen
-//          SRD     RA                          ; store color in RA (no inc RD)
-//          LRSA    RA                          ; load RA with next color (and inc RS)
-//          SET     COP_HPOS,#80*3              ; wait for 3/4 way across screen
-//          SRD     RA                          ; store color in RA (no inc RD)
-//          LD      RA,rep_count                ; load repeat counter variable
-//          SUBI    RA,#1                       ; decrement count
-//          ST      RA,rep_count                ; store repeat counter variable
-//          BLT     nextcolor                   ; if count went negative, don't reload RS to repeat colors
-//          SUBI    RS,#4                       ; subtract 4 from RS
+// REPEAT   =       10
+// start    SET     XR_PA_GFX_CTRL,#0x0055      ; set PA_GFX_MODE
+//          SET     rep_count,#REPEAT-1         ; set line repeat counter
+//          SET     color_ptr,#SETA+color_tbl   ; set source ptr with SETA opcode + color table
+//          SET     vpos_lp,#VPOS+120           ; modify vpos_wait with VPOS opcode + starting line
+//
+// vpos_lp  VPOS    #0                          ; wait for next scan line (self-modified)
+//          HPOS    #LEFT+0                     ; wait for left edge of screen
+//          SETA    *+2,color_ptr               ; modify next SETA source with color_ptr
+//          SETA    XR_COLOR_ADDR,0             ; set color from color_ptr (self-modified)
+//          SETA    RA,color_ptr                ; load color_ptr
+//          SETA    RA_SUB,#-1                  ; increment
+//          SETA    color_ptr,RA                ; store color_ptr
+//
+//          HPOS    #LEFT+(640/2)               ; wait for 1/2 way across screen
+//          SETA    *+2,color_ptr               ; modify next SETA source with color_ptr
+//          SETA    XR_COLOR_ADDR,0             ; set color from color_ptr (self-modified)
+//          SETA    RA,color_ptr                ; load color_ptr
+//          SETA    RA_SUB,#-1                  ; increment
+//          SETA    color_ptr,RA                ; store color_ptr
+//
+//          SETA    RA,vpos_lp                  ; load vpos
+//          SET     RA_SUB,#-1                  ; increment scan line
+//          SETA    vpos_lp,RA                  ; load vpos
+
+//          SETA    RA,rep_count                ; load repeat counter variable
+//          SET     RA_SUB,#1                   ; decrement count
+//          BLT     nx_color                    ; if count went negative, next color
+//          SETA    rep_count,RA                ; store repeat counter variable
+
+//          SETA    RA,vpos_w                   ; load vpos
+//          SET     RA_SUB,#-1                  ; increment scan line
+//          SETA    vpos_w,RA                   ; load vpos
+//          BGE     vpos_lp                     ; always taken (since SETx xxx,RA sets B with RA-RA)
+
 //          LDI     RA,#REPEAT                  ; load repeat value
 //          ST      RA,rep_count                ; reset repeat counter
-// nextcolor:
+// nx_color
 //          STX     RS,COP_RA                   ; move RS to RA
 //          SUB     RA,#color_end               ; subtract color_end from RS to check for end of table
-//          BLT     vloop                       ; loop if RS < color_end
+//          BLT     vpos_lp                     ; loop if RS < color_end
 //          SET     COP_VPOS,#-1                ; halt until vsync
+//
 //          .data                               ; pushes data to end of copper RAM (for LDI 9-bit copper address)
 // color_tbl:
 //          .word   0x0400, 0x0040, 0x0004, 0x0444,
@@ -130,16 +139,17 @@ module slim_copper(
 //          .word   0x0800, 0x0080, 0x0008, 0x0888,
 //          .word   0x0C00, 0x00C0, 0x000C, 0x0CCC
 // color_end:
-// vline:
-//          .word   0
+//
 // rep_count:
+//          .word   0
+// color_ptr:
 //          .word   0
 //
 
 // opcode type {slightly scrambled [13:12],[15:14]}
 typedef enum logic [1:0] {
     OP_SET          = 2'b00,        // SET  xaddr,#im16
-    OP_SETM         = 2'b01,        // SETM xaddr,xcadr10
+    OP_MOVE         = 2'b01,        // SETA xaddr,xcadr10
     OP_HVPOS        = 2'b10,        // HPOS/VPOS
     OP_Bcc          = 2'b11         // BGE/BLT
 } copp_opcode_t;
@@ -151,11 +161,9 @@ typedef enum logic [3:0] {
     B_ARG10         = 4'd9          // im10/cadr10
 } copp_bits_t;
 
-// XR bits for psuedo registers
-localparam  COP_XREG        = 11;    // pseudo XR register flag (in xreg #)
-`ifndef SUB_ONLY
-localparam  COP_XREG_SUB    = 0;    // pseudo XR register LOAD/SUB select
-`endif
+// XR bits for pseudo registers
+localparam  COP_XREG        = 10;   // cop register read/write (cadr/xreg)
+localparam  COP_XREG_SUB    = 0;    // cop register LOAD/SUB select
 
 // execution state
 typedef enum logic [1:0] {
@@ -172,16 +180,16 @@ word_t          cop_IR;             // instruction register (holds executing opc
 hres_t          cop_wait_val;       // value to wait for HPOS/VPOS
 
 // execution flags
-//logic           cop_B_flag;         // last CMPS/SUBS did a borrow (for BGE/BLT)
 logic           wait_hv_flag;       // waiting for HPOS/VPOS
 logic           wait_for_v;         // false if waiting for >= HPOS else waiting for == VPOS
 
-// bus signals
+// copper memory bus signals
 logic           ram_rd_en;          // copper memory read enable
 copp_addr_t     ram_rd_addr;        // copper memory address
 word_t          ram_read_data;      // copper memory data in
 
-logic           reg_wr_en;          // pseudo XR register write enable
+// XR memory/register bus signals
+logic           reg_wr_en;          // XR pseudo register write enable
 logic           xr_wr_en;           // XR bus write enable
 addr_t          write_addr;         // XR bus address/pseudo XR register number
 word_t          write_data;         // XR bus data out/pseudo XR register data out
@@ -189,12 +197,13 @@ word_t          write_data;         // XR bus data out/pseudo XR register data o
 // control signals
 logic           cop_en;             // copper enable/reset (set via COPP_CTRL)
 logic           cop_reset;          // copper reset
-logic           rd_pipeline;        // read flags for memory pipeline history (higher bit is older)
 logic [1:0]     cop_ex_state;       // current execution state
-logic           sub_B;
-word_t          sub_res;
-                // compute subtract borrow and result
-assign          { sub_B, sub_res }  = { 1'b0, 16'(cop_RA) } - { 1'b0, write_data };
+logic           rd_pipeline;        // flag if memory read on last cycle
+
+// ALU :)
+logic           B_flag;             // B flag (borrow flag)
+word_t          RA_sub;             // current RA - written data subtract result
+assign          { B_flag, RA_sub }  = 17'(cop_RA) - 17'(write_data);
 
 copp_addr_t     cop_next_PC;        // incremented PC value
 assign          cop_next_PC = cop_PC + 1'b1;
@@ -210,19 +219,20 @@ assign          ram_read_data       = copmem_rd_data_i;
 // ignore intentionally unused bits (to avoid warnings)
 logic unused_bits = &{1'b0, cop_xreg_data_i[14:0]};
 
-// copper xreg (enable/disable)
+// copper control xreg (enable/disable), also does start of frame reset
 always_ff @(posedge clk) begin
     if (reset_i) begin
         cop_en          <= 1'b0;
         cop_reset       <= 1'b0;
     end else begin
         cop_reset       <= 1'b0;
-        // keep reset if not enabled and reset before SOF
+
+        // keep in reset if not enabled and reset just before SOF
         if (!cop_en || (h_count_i == xv::TOTAL_WIDTH - 4) && (v_count_i == xv::TOTAL_HEIGHT - 1)) begin
             cop_reset       <= 1'b1;
         end
 
-        // COPP_CTRL xreg register write
+        // COPP_CTRL xreg register write to set cop_en
         if (cop_xreg_wr_i) begin
             cop_en           <= cop_xreg_data_i[15];
         end
@@ -233,21 +243,14 @@ end
 always_ff @(posedge clk) begin
     if (cop_reset) begin
         cop_RA          <= '0;
-//        cop_B_flag      <= 1'b0;
     end else begin
         if (reg_wr_en) begin
-`ifdef SUB_ONLY
-//            cop_B_flag  <= sub_B;           // set B flag
-            cop_RA      <= sub_res;         // load RA with subtract result
-`else
-            // check for CMP/SUB vs load operations
+            // check for load vs subtract operation
            if (!write_addr[COP_XREG_SUB]) begin
                 cop_RA      <= write_data;  // load RA
            end else begin
-//                cop_B_flag  <= sub_B;       // set B flag
-                cop_RA      <= sub_res;     // load RA with subtract result
+                cop_RA      <= RA_sub;      // load RA with subtract result
            end
-`endif
         end
     end
 end
@@ -277,7 +280,7 @@ always_ff @(posedge clk) begin
         // reset strobes
         ram_rd_en       <= 1'b0;
         reg_wr_en       <= 1'b0;
-        ram_rd_addr     <= cop_PC;                      // read PC
+        ram_rd_addr     <= cop_PC;  // assume reading PC
 
         // remember if read was done last cycle
         rd_pipeline     <= ram_rd_en;
@@ -286,7 +289,6 @@ always_ff @(posedge clk) begin
         if (xr_wr_ack_i) begin
             xr_wr_en        <= 1'b0;
         end
-
 
         if (wait_for_v) begin
             if (v_count_i >= $bits(v_count_i)'(cop_wait_val)) begin
@@ -301,24 +303,23 @@ always_ff @(posedge clk) begin
         case (cop_ex_state)
             // fetch opcode, store to cop_IR when available
             ST_FETCH: begin
-                // if no instruction ready, or new instruction is 2 words, pre-read
-                if (!wait_hv_flag && rd_pipeline == 1'b0 && ram_rd_en == 1'b0) begin
-                    ram_rd_en       <= 1'b1;                            // read copper memory
-//                    ram_rd_addr     <= cop_PC;                          // read PC
-                    cop_PC          <= cop_next_PC;                     // increment PC
-                end
-                // if instruction ready, save in cop_IR it and proceed to DECODE
-                if (rd_pipeline) begin
-                    cop_IR          <= ram_read_data;                   // store instruction in cop_IR
+                 // if read data not ready
+                if (!rd_pipeline) begin
+                    // if not waiting and read not already started then read PC
+                    if (!wait_hv_flag && !ram_rd_en) begin
+                        ram_rd_en       <= 1'b1;                            // read copper memory
+                        cop_PC          <= cop_next_PC;                     // increment PC
+                    end
+                end else begin
+                    cop_IR          <= ram_read_data;                       // store instruction in cop_IR
 
-                    // if 2 word opcode, start 2nd read
+                    // if this is a 2 word opcode, start 2nd word read
                     if (ram_read_data[B_OPCODE+1] == 1'b0) begin
                         ram_rd_en       <= 1'b1;                            // read copper memory
-//                        ram_rd_addr     <= cop_PC;                          // read PC
                         cop_PC          <= cop_next_PC;                     // increment PC
                     end
 
-                    cop_ex_state    <= ST_DECODE;                       // decode instruction
+                    cop_ex_state    <= ST_DECODE;                           // decode instruction
                 end
             end
             // decode instruction in cop_IR
@@ -328,28 +329,26 @@ always_ff @(posedge clk) begin
                         write_addr      <= cop_IR;                          // use opcode as XR address
                         write_data      <= ram_read_data;                   // instruction word as data
                         if (rd_pipeline) begin
-                            // write to copper regs instead of XR registers if COP_XREG bit set
+                            // write to internal register instead of xreg if COP_XREG bit set in dest
                             if ((cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[COP_XREG])) begin
                                 reg_wr_en   <= 1'b1;                        // write cop reg
                             end else begin
                                 xr_wr_en    <= 1'b1;                        // write XR bus
                             end
-
-`ifdef SET_NO_STALL
-                            ram_rd_en       <= 1'b1;                        // read copper memory
-//                            ram_rd_addr     <= cop_PC;                      // read PC
-                            cop_PC          <= cop_next_PC;                 // increment PC
+`ifdef NO_SET_HAZARD
+                            if (cop_IR[15:14] != xv::XR_COPPER_ADDR[15:14])
 `endif
+                            begin
+                                ram_rd_en       <= 1'b1;                        // read copper memory
+                                cop_PC          <= cop_next_PC;                 // increment PC
+                            end
+
                             cop_ex_state    <= ST_FETCH;                    // fetch next instruction
                         end
                     end
-                    OP_SETM: begin
-                        ram_rd_en       <= 1'b1;                            // read copper memory (may be ignored)
+                    OP_MOVE: begin
+                        ram_rd_en       <= 1'b1;                            // read copper memory (may be unused)
                         ram_rd_addr     <= xv::COPP_W'(cop_IR);             // use opcode as source address
-
-                        // ram_rd_en       <= 1'b1;                            // read copper memory
-                        // ram_rd_addr     <= cop_PC;                          // read PC
-                        // cop_PC          <= cop_next_PC;                     // increment PC
 
                         cop_ex_state    <= ST_SETR_RD;                      // wait for read data
                     end
@@ -362,11 +361,7 @@ always_ff @(posedge clk) begin
                     end
                     OP_Bcc: begin
                         // branch taken if B clear/set for BGE/BLT
-`ifdef BLT_ONLY
-                        if (sub_B /*cop_B_flag */ == cop_IR[B_ARG]) begin
-`else
-                        if (sub_B /* cop_B_flag */) begin
-`endif
+                        if (B_flag == cop_IR[B_ARG]) begin
                             cop_PC          <= xv::COPP_W'(cop_IR[B_ARG10:0]); // set new PC
                         end
 
@@ -376,28 +371,32 @@ always_ff @(posedge clk) begin
             end
             // wait a cycle waiting for data memory read
             ST_SETR_RD: begin
-                write_addr          <= ram_read_data;                       // read dest XR address
+                write_addr          <= ram_read_data;                       // read dest address word
 
-                cop_ex_state        <= ST_SETR_WR;
+                cop_ex_state        <= ST_SETR_WR;                          // write out word
             end
             // store word read from memory to XR bus
             ST_SETR_WR: begin
-                // write to copper regs instead of XR registers if COP_XREG bit set
+                // write to copper reg instead of xreg if COP_XREG bit set in dest
                 if (write_addr[15:14] == xv::XR_CONFIG_REGS[15:14] && write_addr[COP_XREG]) begin
                     reg_wr_en       <= 1'b1;                                // write cop reg
                 end else begin
                     xr_wr_en        <= 1'b1;                                // write XR bus
                 end
-                write_data      <= cop_IR[COP_XREG] ? cop_RA : ram_read_data; // RA or mem
 
-`ifdef SET_NO_STALL
-                ram_rd_en       <= 1'b1;                                    // read copper memory
-//                ram_rd_addr     <= cop_PC;                                  // read PC
-                cop_PC          <= cop_next_PC;                             // increment PC
+                // write data from copper reg instead of memory read if COP_XREG bit set in source
+                write_data      <= cop_IR[COP_XREG] ? cop_RA : ram_read_data;
+
+`ifdef NO_SETA_HAZARD
+                if (cop_IR[15:14] != xv::XR_COPPER_ADDR[15:14])
 `endif
+                begin
+                    ram_rd_en       <= 1'b1;                                    // read copper memory
+                    cop_PC          <= cop_next_PC;                             // increment PC
+                end
+
                 cop_ex_state    <= ST_FETCH;
             end
-            default: ; // Should never happen
         endcase // Execution state
     end
 end

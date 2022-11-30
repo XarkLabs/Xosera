@@ -2,23 +2,21 @@
 //
 // vim: set et ts=4 sw=4
 //
-// Copyright (c) 2021 Ross Bamford - https://github.com/roscopeco
+// Copyright (c) 2021 Ross Bamford  - https://github.com/roscopeco
+// Copyright (c) 2022 Xark          - https://github.com/XarkLabs
 //
 // See top-level LICENSE file for license information. (Hint: MIT) foo
 //
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
-//`define EN_COPP         // TEMP: remove
-//`define EN_COPP_SLIM    // TEMP: remove
+`define EN_COPP         // TEMP: for editing, remove
+`define EN_COPP_SLIM    // TEMP: for editing, remove
 
 `ifdef EN_COPP
 `ifdef EN_COPP_SLIM
 
 `include "xosera_pkg.sv"
-
-//`define NO_SET_HAZARD
-//`define NO_SETA_HAZARD
 
 module slim_copper(
     output       logic          xr_wr_en_o,             // for all XR writes
@@ -34,28 +32,32 @@ module slim_copper(
     input   wire vres_t         v_count_i,
     input   wire logic          reset_i,
     input   wire logic          clk
-    );
+);
 
 //  Slim Copper opcodes:
 //
-// | XR Op Immediate     | Assembly              | Cyc | Description                      |
-// |---------------------|-----------------------|-----|----------------------------------|
-// | rr00 oooo oooo oooo | SET   xadr14,#im16    |  4+ | dest [xadr14] <= source im16     |
-// | iiii iiii iiii iiii |    <im16 value>       |     |   (2 word op)                    |
-// | --01 -rcc cccc cccc | SETA  xadr16,cadr10   |  4+ | dest [xadr16] <= source cadr10   |
-// | rroo oooo oooo oooo |    <xadr16 address>   |     |   (2 word op)                    |
-// | --10 0-ii iiii iiii | HPOS  #im10           |  5+ | wait until video HPOS >= im10    |
-// | --10 1-ii iiii iiii | VPOS  #im10           |  5+ | wait until video VPOS >= im10    |
-// | --11 0rcc cccc cccc | BGE   cadr10          | 2/4 | if (B==0) PC <= cadr10           |
-// | --11 1rcc cccc cccc | BLT   cadr10          | 2/4 | if (B==1) PC <= cadr10           |
-// |---------------------|-----------------------|-----|----------------------------------|
+// | XR Op Immediate     | Assembly             |Flag | Cyc | Description                      |
+// |---------------------|----------------------|-----|-----|----------------------------------|
+// | rr00 oooo oooo oooo | SETI   xadr14,#val16 |  B  |  4+ | dest [xadr14] <= source #val16   |
+// | iiii iiii iiii iiii |    <im16 value>      |     |     |   (2 word op)                    |
+// | --01 -rcc cccc cccc | SETM  xadr16,cadr10  |  B  |  5+ | dest [xadr16] <= source [cadr10] |
+// | rroo oooo oooo oooo |    <xadr16 address>  |     |     |   (2 word op)                    |
+// | --10 0-ii iiii iiii | HPOS   #im10         |     |  5+ | wait until video HPOS >= im10    |
+// | --10 1-ii iiii iiii | VPOS   #im10         |     |  5+ | wait until video VPOS >= im10    |
+// | --11 0rcc cccc cccc | BRGE   cadr10        |     |  4  | if (B==0) PC <= cadr10           |
+// | --11 1rcc cccc cccc | BRLT   cadr10        |     |  4  | if (B==1) PC <= cadr10           |
+// |---------------------|----------------------|-----|-----|----------------------------------|
 //
-// im16     =   16-bit immediate word               iiii iiii iiii iiii (2nd word in SET)
-// xadr14   =   XR region + 12-bit offset:          xx00 oooo oooo oooo (1st word in SET)
-// xadr16   =   XR region + 14-bit offset:          xxoo oooo oooo oooo (2nd word in SETA)
-// im10     =   10-bit immediate value:             0000 00ii iiii iiii
-// cadr10   =   10-bit copper address/register:     1100 0rnn nnnn nnnn (r=1 for RA read)
+// xadr14   =   XR region + 12-bit offset:      xx00 oooo oooo oooo (1st word in SETI)
+// im16     =   16-bit immediate word           iiii iiii iiii iiii (2nd word in SETI)
+// cadr10   =   10-bit copper address/register: ---- -rnn nnnn nnnn (r=1 for RA read)
+// im10     =   10-bit immediate value:         ---- --ii iiii iiii (HPOS, VPOS)
+// xadr16   =   XR region + 14-bit offset:      rroo oooo oooo oooo (2nd word in SETM)
 // B        =   borrow flag set when RA < val16 written [unsigned subtract])
+//
+// NOTE: cadr10 bits[15:11] are ignored reading copper memory, however by setting
+//       bits[15:14] to 110a a cadr10 address can be used as either the source or dest
+//       for SETM (when opcode bit a=1) or as destination XADDR with SETI (with opcode bit=0).
 //
 // Internal pseudo register (accessed as XR reg or copper address when COP_XREG bit set)
 //
@@ -63,95 +65,127 @@ module slim_copper(
 // |----------------|--------|-------------------------|-------------------------------------------|
 // | RA     (read)  | 0x0800 | RA                      | return current value in RA register       |
 // | RA     (write) | 0x0800 | RA = val16, B = 0       | set RA to val16, clear B flag             |
-// | RA_SUB (write) | 0x0801 | RA = RA - val16, B flag | set RA to RA - val16, update B flag       |
+// | RA_SUB (write) | 0x0801 | RA = RA - val16, B=LT   | set RA to RA - val16, update B flag       |
 // | RA_CMP (write) | 0x07FF | B flag update           | update B flag only (updated on any write) |
 // |----------------|--------|-------------------------|-------------------------------------------|
 // NOTE: The B flag is updated after any write, RA_CMP is just a convenient xreg with no effect
 //
 // Notable pseudo instructions:
-//  --> ADDI #val16             ; add val16 to RA, RA = RA + val16 (2 words, B = inverted carry)
-//  +     SET  RA_SUB,#-val16       ; RA -= -(val16)
+//  ->  LDI  #val16             ; load RA with immediate val16 (2 words, B = 0)
+//  +     SETI  RA,#val16           ; RA = val16
 //
-//  --> SUBI #val16             ; subtract val16 from RA, RA = RA - val16 (2 words, B = RA < val16 [unsigned])
-//  +     SET  RA_SUB,#val16        ; RA -= value
+//  ->  LD   caddr              ; load RA with copper mem contents at address caddr (2 words, B = 0)
+//  +     SETM  RA,caddr            ; RA -= value
 //
-//  --> SETP (caddr),#val16     ; store val16 to ptr addr in cadr10, *caddr = val16; (4 words, self-mod)
-//  >     SETA *+2,caddr            ; self-modify SET dest
-//  >     SET  dummy,#val16         ; store to [RA]
+//  ->  ADDI #val16             ; add val16 to RA, RA = RA + val16 (2 words, B = inverted carry)
+//  +     SETI  RA_SUB,#-val16      ; RA -= -val16
 //
-//  --> SETPA (dcaddr),scaddr   ; store memory to ptr addr in dcadr10, *dcadr10 = scadr10; (4 words, self-mod)
-//  >     SETA *+2,dcadr10          ; self-modify SET dest
-//  >     SETA dummy,scadr10        ; store scadr10 to (dcadr10)
+//  ->  SUBI #val16             ; subtract val16 from RA, RA = RA - val16 (2 words, B = RA < val16 [unsigned])
+//  +     SETI  RA_SUB,#val16       ; RA -= value
 //
-//  --> BRA  (caddr)            ; branch to ptr, PC = [cadr10] (3 words)
-//  +     SETA RA,caddr             ; RA = -[cadr10]
-//  +     BGE  RA                   ; branch to [cadr0]
+//  ->  SETP (caddr),#val16     ; store val16 to ptr addr in cadr10, *caddr = val16; (4 words, self-mod)
+//  +     SETM *+2,caddr            ; self-modify SETI dest
+//  +     SETI  dummy,#val16        ; store to [RA]
+//
+//  ->  SETPA (dcaddr),scaddr   ; store memory to ptr addr in dcadr10, *dcadr10 = scadr10; (4 words, self-mod)
+//  +     SETM *+2,dcadr10          ; self-modify SETI dest
+//  +     SETM dummy,scadr10        ; store scadr10 to (dcadr10)
+//
+//  ->  BRA  (caddr)            ; branch to ptr, PC = [cadr10] (3 words)
+//  +     SETM RA,caddr             ; RA = [cadr10]
+//  +     BRGE  RA                  ; branch to [cadr0]
 //
 // Example copper code: (not using any pseudo instructions)
 //
 // REPEAT   =       10
-// start    SET     XR_PA_GFX_CTRL,#0x0055      ; set PA_GFX_MODE
-//          SET     rep_count,#REPEAT-1         ; set line repeat counter
-//          SET     color_ptr,#SETA+color_tbl   ; set source ptr with SETA opcode + color table
-//          SET     vpos_lp,#VPOS+120           ; modify vpos_wait with VPOS opcode + starting line
+// start    SETI     XR_PA_GFX_CTRL,#0x0055     ; set PA_GFX_MODE
+//          SETI     rep_count,#REPEAT-1        ; set line repeat counter
+//          SETI     color_ptr,#SETM+color_tbl  ; set source ptr with SETM opcode + color table
+//          SETI     vpos_lp,#VPOS+120          ; modify vpos_wait with VPOS opcode + starting line
 //
 // vpos_lp  VPOS    #0                          ; wait for next scan line (self-modified)
 //          HPOS    #LEFT+0                     ; wait for left edge of screen
-//          SETA    *+2,color_ptr               ; modify next SETA source with color_ptr
-//          SETA    XR_COLOR_ADDR,0             ; set color from color_ptr (self-modified)
-//          SETA    RA,color_ptr                ; load color_ptr
-//          SETA    RA_SUB,#-1                  ; increment
-//          SETA    color_ptr,RA                ; store color_ptr
+//          SETM    *+2,color_ptr               ; modify next SETM source with color_ptr
+//          SETM    XR_COLOR_ADDR,0             ; set color from color_ptr (self-modified)
+//          SETM    RA,color_ptr                ; load color_ptr
+//          SETM    RA_SUB,#-1                  ; increment
+//          SETM    color_ptr,RA                ; store color_ptr
 //
 //          HPOS    #LEFT+(640/2)               ; wait for 1/2 way across screen
-//          SETA    *+2,color_ptr               ; modify next SETA source with color_ptr
-//          SETA    XR_COLOR_ADDR,0             ; set color from color_ptr (self-modified)
-//          SETA    RA,color_ptr                ; load color_ptr
-//          SETA    RA_SUB,#-1                  ; increment
-//          SETA    color_ptr,RA                ; store color_ptr
+//          SETM    *+2,color_ptr               ; modify next SETM source with color_ptr
+//          SETM    XR_COLOR_ADDR,0             ; set color from color_ptr (self-modified)
+//          SETM    RA,color_ptr                ; load color_ptr
+//          SETM    RA_SUB,#-1                  ; increment
+//          SETM    color_ptr,RA                ; store color_ptr
 //
-//          SETA    RA,vpos_lp                  ; load vpos
-//          SET     RA_SUB,#-1                  ; increment scan line
-//          SETA    vpos_lp,RA                  ; load vpos
-
-//          SETA    RA,rep_count                ; load repeat counter variable
-//          SET     RA_SUB,#1                   ; decrement count
-//          BLT     nx_color                    ; if count went negative, next color
-//          SETA    rep_count,RA                ; store repeat counter variable
-
-//          SETA    RA,vpos_w                   ; load vpos
-//          SET     RA_SUB,#-1                  ; increment scan line
-//          SETA    vpos_w,RA                   ; load vpos
-//          BGE     vpos_lp                     ; always taken (since SETx xxx,RA sets B with RA-RA)
-
-//          LDI     RA,#REPEAT                  ; load repeat value
-//          ST      RA,rep_count                ; reset repeat counter
-// nx_color
-//          STX     RS,COP_RA                   ; move RS to RA
-//          SUB     RA,#color_end               ; subtract color_end from RS to check for end of table
-//          BLT     vpos_lp                     ; loop if RS < color_end
-//          SET     COP_VPOS,#-1                ; halt until vsync
+//          SETM    RA,vpos_lp                  ; load vpos
+//          SETI     RA_SUB,#-1                 ; increment scan line
+//          SETM    vpos_lp,RA                  ; load vpos
 //
-//          .data                               ; pushes data to end of copper RAM (for LDI 9-bit copper address)
-// color_tbl:
-//          .word   0x0400, 0x0040, 0x0004, 0x0444,
-//          .word   0x0600, 0x0060, 0x0006, 0x0666,
-//          .word   0x0800, 0x0080, 0x0008, 0x0888,
-//          .word   0x0C00, 0x00C0, 0x000C, 0x0CCC
-// color_end:
+//          SETI     RA,rep_count               ; load repeat counter variable
+//          SETI     RA_SUB,#1                  ; decrement count
+//          SETM    rep_count,RA                ; store repeat counter variable
+//          SETM    RA,rep_count                ; load repeat counter variable
+//          SETI     RA_SUB,#1                  ; decrement count
+//          SETM    rep_count,RA                ; store repeat counter variable
+//          BRLT     nx_color                   ; if count went negative, next color
 //
-// rep_count:
+//          SETM    RA,color_ptr                ; load color_ptr
+//          SETM    RA_SUB,#-2                  ; rewind to repeat colors again
+//          SETM    color_ptr,RA                ; store color_ptr
+//
+//          SETM    RA,vpos_w                   ; load vpos
+//          SETI     RA_SUB,#-1                 ; increment scan line
+//          SETM    vpos_w,RA                   ; load vpos
+//          BRGE    vpos_lp                     ; always taken (since SETx xxx,RA sets B with RA-RA)
+//
+//          SETI     rep_count,#REPEAT-1        ; reset line repeat counter
+//
+// nx_color SETM    RA,color_ptr                ; load color_ptr
+//          SETI     RA_CMP,#SETM+color_end     ; compare color_ptr to SETM opcode + color_end
+//          BRLT    vpos_lp                     ; loop if color_ptr < color_end
+//          VPOS    #-1                         ; halt until next frame
+//
+// colortbl .word   0x0400, 0x0444,
+//          .word   0x0600, 0x0666,
+//          .word   0x0800, 0x0888,
+//          .word   0x0C00, 0x0CCC
+// color_end
+//
+// rep_count
 //          .word   0
-// color_ptr:
+// color_ptr
 //          .word   0
 //
+// ; copy table of values to contiguous registers
+// ; (using only simple 1:1 pseudo ops)
+// set_tbl
+//          SETI     set_reg+0,#SETM+val_tbl    ; set start set_reg source (plus SETM bit)
+//          SETI     set_reg+1,#XR_COLOR_ADDR   ; set start set_reg dest
+// set_reg  SETM    -1,-1                       ; set color reg (self-modified)
+//          LD      set_reg+1                   ; load RA with set_reg dest
+//          ADDI    #1                          ; increment RA
+//          ST      set_reg+1                   ; store RA to set_reg dest
+//          LD      set_reg                     ; set RA with set_reg source
+//          ADDI    #1                          ; increment RA
+//          CMPI    #SETM+end_tbl               ; compare RA with table end (plus SETM bit)
+//          BRGE     set_done                   ; branch if done
+//          ST      set_reg+0                   ; store RA to set_reg source
+//          BRGE     set_reg                    ; branch always (ST clears B)
+// set_done VPOS    #-1                         ; halt until SOF
+//
+// val_tbl  .word   0x000, 0x111, 0x222, 0x333
+//          .word   0x444, 0x555, 0x666, 0x777
+//          .word   0x888, 0x999, 0xaaa, 0xbbb
+//          .word   0xccc, 0xddd, 0xeee, 0xfff
+// end_tbl
 
 // opcode type {slightly scrambled [13:12],[15:14]}
 typedef enum logic [1:0] {
-    OP_SET          = 2'b00,        // SET  xaddr,#im16
-    OP_MOVE         = 2'b01,        // SETA xaddr,xcadr10
+    OP_SETI         = 2'b00,        // SETI xaddr,#im16
+    OP_MOVE         = 2'b01,        // SETM xaddr,xcadr10
     OP_HVPOS        = 2'b10,        // HPOS/VPOS
-    OP_Bcc          = 2'b11         // BGE/BLT
+    OP_BRcc         = 2'b11         // BRGE/BRLT
 } copp_opcode_t;
 
 // opcode decode bits
@@ -163,7 +197,7 @@ typedef enum logic [3:0] {
 
 // XR bits for pseudo registers
 localparam  COP_XREG        = 10;   // cop register read/write (cadr/xreg)
-localparam  COP_XREG_SUB    = 0;    // cop register LOAD/SUB select
+localparam  COP_XREG_SUB    = 0;    // cop_RA LOAD/SUB select
 
 // execution state
 typedef enum logic [1:0] {
@@ -247,7 +281,7 @@ always_ff @(posedge clk) begin
         if (reg_wr_en) begin
             // check for load vs subtract operation
            if (!write_addr[COP_XREG_SUB]) begin
-                cop_RA      <= write_data;  // load RA
+                cop_RA      <= write_data;  // load RA with data
            end else begin
                 cop_RA      <= RA_sub;      // load RA with subtract result
            end
@@ -325,7 +359,7 @@ always_ff @(posedge clk) begin
             // decode instruction in cop_IR
             ST_DECODE: begin
                 case (cop_IR[B_OPCODE+:2])
-                    OP_SET: begin
+                    OP_SETI: begin
                         write_addr      <= cop_IR;                          // use opcode as XR address
                         write_data      <= ram_read_data;                   // instruction word as data
                         if (rd_pipeline) begin
@@ -339,8 +373,8 @@ always_ff @(posedge clk) begin
                             if (cop_IR[15:14] != xv::XR_COPPER_ADDR[15:14])
 `endif
                             begin
-                                ram_rd_en       <= 1'b1;                        // read copper memory
-                                cop_PC          <= cop_next_PC;                 // increment PC
+                                ram_rd_en       <= 1'b1;                    // read copper memory
+                                cop_PC          <= cop_next_PC;             // increment PC
                             end
 
                             cop_ex_state    <= ST_FETCH;                    // fetch next instruction
@@ -359,8 +393,8 @@ always_ff @(posedge clk) begin
 
                         cop_ex_state    <= ST_FETCH;                        // fetch next instruction
                     end
-                    OP_Bcc: begin
-                        // branch taken if B clear/set for BGE/BLT
+                    OP_BRcc: begin
+                        // branch taken if B clear/set for BRGE/BRLT
                         if (B_flag == cop_IR[B_ARG]) begin
                             cop_PC          <= xv::COPP_W'(cop_IR[B_ARG10:0]); // set new PC
                         end
@@ -387,12 +421,10 @@ always_ff @(posedge clk) begin
                 // write data from copper reg instead of memory read if COP_XREG bit set in source
                 write_data      <= cop_IR[COP_XREG] ? cop_RA : ram_read_data;
 
-`ifdef NO_SETA_HAZARD
-                if (cop_IR[15:14] != xv::XR_COPPER_ADDR[15:14])
-`endif
-                begin
-                    ram_rd_en       <= 1'b1;                                    // read copper memory
-                    cop_PC          <= cop_next_PC;                             // increment PC
+                // pre-read unless write copper address (self-mod hazard)
+                if (cop_IR[15:14] != xv::XR_COPPER_ADDR[15:14]) begin
+                    ram_rd_en       <= 1'b1;                                // read copper memory
+                    cop_PC          <= cop_next_PC;                         // increment PC
                 end
 
                 cop_ex_state    <= ST_FETCH;

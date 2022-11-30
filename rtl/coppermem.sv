@@ -37,18 +37,20 @@ word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 
 initial begin
     // Fill with numbers
-    bram[0] = 16'h0400;     // RA -= RA
-    bram[1] = -16'h007F;
-    bram[2] = 16'h1400;     // COP_RA -= 7
-    bram[3] = 16'h0400;     //
-    bram[4] = 16'h0400;     // COP_RA -= 1
-    bram[5] = 16'h0001;     //
-    bram[6] = 16'h3002;     // BGE 2
-    bram[7] = 16'h2040;     // store reg 2
-    bram[8] = 16'h2FFF;
-    bram[9] = 16'h2FFF;
-    for (integer i = 10; i < (2**AWIDTH); i = i + 1) begin
-        bram[i] = 16'h2FFF; // VPOS #1023
+    bram[0] = xv::XR_COLOR_ADDR;
+    bram[1] = 16'h1111;
+    bram[2] = xv::XR_COLOR_ADDR+1;
+    bram[3] = 16'h2222;
+    bram[4] = 16'h1000+16'h0033;
+    bram[5] = xv::XR_COLOR_ADDR+2;
+    bram[6] = 16'h1000+16'h0044;
+    bram[7] = 16'h1000+xv::XR_COLOR_ADDR+3;
+    bram[8] = 16'h2000;
+    bram[9] = 16'h2300;
+    bram[10]= 16'h3000;
+    bram[11]= 16'h3800;
+    for (integer i = 12; i < (2**AWIDTH); i = i + 1) begin
+        bram[i] = 16'h2F00 | 16'(8'(i)); // VPOS #1023
     end
 // Xosera init info stored in last 64 bytes of default copper memory (see xosera_pkg.sv)
 

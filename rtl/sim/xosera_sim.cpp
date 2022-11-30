@@ -1259,6 +1259,7 @@ int main(int argc, char ** argv)
         bus.process(top);
 #endif
 
+        top->eval();         // see https://lawrie.github.io/blackicemxbook/Simulation/Simulation.html
         top->clk = 1;        // clock rising
         top->eval();
 

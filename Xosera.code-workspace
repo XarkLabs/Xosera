@@ -354,6 +354,9 @@
 			"TEMP"
 		],
 		"explorer.sortOrder": "type",
-		"search.quickOpen.history.filterSortOrder": "recency"
+		"search.quickOpen.history.filterSortOrder": "recency",
+		"C_Cpp.default.includePath": [
+			"${workspaceFolder}/rtl/sim/obj_dir"
+		]
 	}
 }

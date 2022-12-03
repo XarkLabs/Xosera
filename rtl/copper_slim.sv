@@ -19,20 +19,23 @@
 `include "xosera_pkg.sv"
 
 module slim_copper(
-    output       logic          xr_wr_en_o,             // for all XR writes
-    input   wire logic          xr_wr_ack_i,            // for all XR writes
-    output       addr_t         xr_wr_addr_o,           // for all XR writes
-    output       word_t         xr_wr_data_o,           // for all XR writes
-    output       copp_addr_t    copmem_rd_addr_o,
-    output       logic          copmem_rd_en_o,
-    input   wire logic [15:0]   copmem_rd_data_i,
-    input   wire logic          cop_xreg_wr_i,          // strobe to write internal config register
-    input   wire word_t         cop_xreg_data_i,        // data for internal config register
-    input   wire hres_t         h_count_i,
-    input   wire vres_t         v_count_i,
+    output       logic          xr_wr_en_o,             // XR bus write enable
+    input   wire logic          xr_wr_ack_i,            // XR bus ack
+    output       addr_t         xr_wr_addr_o,           // XR bus address
+    output       word_t         xr_wr_data_o,           // XR bus write data
+    output       copp_addr_t    copmem_rd_addr_o,       // copper program memory
+    output       logic          copmem_rd_en_o,         // copper program memory read enable
+    input   wire logic [15:0]   copmem_rd_data_i,       // copper program memory data
+    input   wire logic          cop_xreg_wr_i,          // COPP_CTRL register write strobe
+    input   wire word_t         cop_xreg_data_i,        // COPP_CTRL register write data
+    input   wire hres_t         h_count_i,              // horizontal video position
+    input   wire vres_t         v_count_i,              // vertical video position
+    input   wire logic          end_of_line_i,          // end of line signal
     input   wire logic          reset_i,
     input   wire logic          clk
 );
+
+// `define AVOID_RD_RW_HAZARD          // delay read to next cycle if also writing (iCE40UP5K does not need this)
 
 //  Slim Copper opcodes:
 //
@@ -262,7 +265,7 @@ always_ff @(posedge clk) begin
         cop_reset       <= 1'b0;
 
         // keep in reset if not enabled and reset just before SOF
-        if (!cop_en || (h_count_i == xv::TOTAL_WIDTH - 4) && (v_count_i == xv::TOTAL_HEIGHT - 1)) begin
+        if (!cop_en || (end_of_line_i && (v_count_i == xv::TOTAL_HEIGHT - 1))) begin
             cop_reset       <= 1'b1;
         end
 
@@ -283,7 +286,7 @@ always_ff @(posedge clk) begin
            if (!write_addr[COP_XREG_SUB]) begin
                 cop_RA      <= write_data;  // load RA with data
            end else begin
-                cop_RA      <= RA_sub;      // load RA with subtract result
+                cop_RA      <= RA_sub;      // load RA with RA - data result
            end
         end
     end
@@ -369,7 +372,9 @@ always_ff @(posedge clk) begin
                             end else begin
                                 xr_wr_en    <= 1'b1;                        // write XR bus
                             end
-`ifdef NO_SET_HAZARD
+
+`ifdef AVOID_RD_RW_HAZARD
+                            // start read unless a copper write address (read+write hazard)
                             if (cop_IR[15:14] != xv::XR_COPPER_ADDR[15:14])
 `endif
                             begin
@@ -421,8 +426,11 @@ always_ff @(posedge clk) begin
                 // write data from copper reg instead of memory read if COP_XREG bit set in source
                 write_data      <= cop_IR[COP_XREG] ? cop_RA : ram_read_data;
 
-                // pre-read unless write copper address (self-mod hazard)
-                if (cop_IR[15:14] != xv::XR_COPPER_ADDR[15:14]) begin
+`ifdef AVOID_RD_RW_HAZARD
+                // start read unless a copper write address (read+write hazard)
+               if (cop_IR[15:14] != xv::XR_COPPER_ADDR[15:14])
+`endif
+               begin
                     ram_rd_en       <= 1'b1;                                // read copper memory
                     cop_PC          <= cop_next_PC;                         // increment PC
                 end

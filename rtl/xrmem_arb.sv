@@ -279,7 +279,11 @@ always_comb begin
         copp_addr           = copp_prog_addr_i;
     end else if (xr_sel_i & ~xr_ack_o) begin
         copp_rd_ack_next    = xr_copp_sel & ~xr_wr_i;;
+`ifdef EN_COPP_SLIM
+        copp_addr           = xr_addr_i[xv::COPP_W-1:0];
+`else
         copp_addr           = xr_addr_i[xv::COPP_W:1];
+`endif
     end
 end
 `endif

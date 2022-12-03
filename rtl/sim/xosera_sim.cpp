@@ -34,8 +34,8 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 30        // video frames to dump to VCD file (and then screen-shot and exit)
-#define MAX_UPLOADS      8         // maximum number of "payload" uploads
+#define MAX_TRACE_FRAMES 3        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_UPLOADS      8        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
 vluint64_t main_time         = 0;
@@ -474,6 +474,39 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(INT_CTRL, 0x7FFF),
     REG_RW(INT_CTRL),
 
+#if 1                                      // slim copper test
+    XREG_SETW(PA_GFX_CTRL, 0x0080),        // blank screen
+    XREG_SETW(VID_CTRL, 0x0000),           // border color #0
+    REG_W(WR_XADDR, XR_COPPER_ADDR),
+    REG_W(XDATA, 0x2100),        // 0: HPOS #256
+    REG_W(XDATA, 0x8000),        // 1: SETI XR_COLOR_A_ADDR
+    REG_W(XDATA, 0x0000),        // 2: =#black
+    REG_W(XDATA, 0xC005),        // 3: SETI C005
+    REG_W(XDATA, 0x3809),        // 4: =#3809
+    REG_W(XDATA, 0x3806),        // 5: BLT 0x0006
+    REG_W(XDATA, 0x8000),        // 6: SETI XR_COLOR_A_ADDR
+    REG_W(XDATA, 0x0F00),        // 7: =#red
+    REG_W(XDATA, 0x380B),        // 8: BLT 0x000B
+    REG_W(XDATA, 0x8000),        // 9: SETI XR_COLOR_A_ADDR
+    REG_W(XDATA, 0x00F0),        // A: =#green
+    REG_W(XDATA, 0xC005),        // B: SETI C005
+    REG_W(XDATA, 0x3806),        // C: =#0x3806
+    REG_W(XDATA, 0x2310),        // D: HPOS #784
+    REG_W(XDATA, 0x230F),        // D: HPOS #783
+    REG_W(XDATA, 0x230E),        // D: HPOS #782
+    REG_W(XDATA, 0x231F),        // D: HPOS #799
+    REG_W(XDATA, 0x3800),        // E: BLT 0
+    REG_W(XDATA, 0x3000),        // F: BGE 0
+
+    XREG_SETW(COPP_CTRL, 0x8000),        // enable copper
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+#endif
+
 #if 0
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
@@ -862,7 +895,7 @@ uint16_t     BusInterface::test_data[32768] = {
 
 #endif
 
-#if 1        // lame audio test
+#if 0        // lame audio test
     REG_RW(INT_CTRL),
 
     REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000

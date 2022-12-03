@@ -253,6 +253,9 @@ video_gen video_gen(
     .copp_reg_data_o(copp_reg_data),
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
+`ifdef EN_COPP_SLIM
+    .end_of_line_o(end_of_line),
+`endif
 `endif
 `ifdef BUS_DEBUG_SIGNALS
     .audio_pdm_l_o(unused_l),
@@ -268,6 +271,7 @@ video_gen video_gen(
 );
 
 `ifdef EN_COPP
+logic end_of_line;
 // copper - video synchronized co-processor
 `ifdef EN_COPP_SLIM
 slim_copper copper(
@@ -282,6 +286,7 @@ slim_copper copper(
     .cop_xreg_data_i(copp_reg_data),
     .h_count_i(video_h_count),
     .v_count_i(video_v_count),
+    .end_of_line_i(end_of_line),
     .reset_i(reset_i),
     .clk(clk)
 );

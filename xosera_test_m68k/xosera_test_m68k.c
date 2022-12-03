@@ -98,6 +98,7 @@ uint8_t moto_m[] = {
 
 #if COPPER_TEST
 // Copper list
+#if 0
 const uint32_t copper_list[] = {COP_WAIT_V(30 * 0),  COP_MOVEP(0x000, 0),
                                 COP_WAIT_V(30 * 1),  COP_MOVEP(0x111, 0),
                                 COP_WAIT_V(30 * 2),  COP_MOVEP(0x222, 0),
@@ -117,6 +118,27 @@ const uint32_t copper_list[] = {COP_WAIT_V(30 * 0),  COP_MOVEP(0x000, 0),
                                 COP_WAIT_V(30 * 16), COP_END()};
 
 const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
+#else
+const uint16_t copper_list[] = {0x2100,
+                                0x8000,
+                                0x0000,
+                                0xC005,
+                                0x3809,
+                                0x3806,
+                                0x8000,
+                                0x0F00,
+                                0x380B,
+                                0x8000,
+                                0x00F0,
+                                0xC005,
+                                0x3806,
+                                0x231F,
+                                0x3800,
+                                0x3000};
+
+const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
+
+#endif
 
 static_assert(NUM_ELEMENTS(copper_list) < 1024, "copper list too long");
 
@@ -564,12 +586,35 @@ static void install_copper()
         xmem_setw_next(i << 2);
     }
 #else
+#if 0
     for (uint16_t i = 0; i < copper_list_len; i++)
     {
         uint32_t op = copper_list[i];
         xmem_setw_next(op >> 16);
         xmem_setw_next(op & 0xffff);
     }
+#else
+
+#if 1
+    for (uint16_t i = 0; i < copper_list_len; i++)
+    {
+        uint16_t op = copper_list[i];
+        xmem_setw_next(op);
+    }
+#else
+    for (uint16_t i = 50; i < 100; i++)
+    {
+        xmem_setw_next(0x8000);
+        xmem_setw_next(0x0fff);
+        xmem_setw_next(0x2000 | i);
+        xmem_setw_next(0x8000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x2800);
+    }
+    xmem_setw_next(0x3000);
+#endif
+
+#endif
 #endif
 }
 
@@ -1469,7 +1514,7 @@ void test_blit()
         xr_printfxy(0, 0, "Blit 320x240 16 color\nBOB test (single buffered)\n");        // set write address
         int nb = NUM_BOBS;
         dprintf("Num bobs = %d\n", nb);
-        for (int i = 0; i < 4096; i++)
+        for (int i = 0; i < 256; i++)
         {
             for (int b = 0; b < nb; b++)
             {
@@ -2793,7 +2838,7 @@ void     xosera_test()
     xr_msg_color(0x0f);
     xr_printfxy(5, 0, "xosera_test_m68k\n");
 
-    if (use_sd)
+    if (false && use_sd)
     {
         xr_printf("\nLoading test assets:\n");
         xr_printf(" \xAF 320x240 pac-mock ");
@@ -2895,16 +2940,16 @@ void     xosera_test()
         dprintf("\n");
 
 #if COPPER_TEST
-        if (test_count & 2)
+        //        if (test_count & 2)
         {
             dprintf("Copper test enabled for this interation.\n");
             xreg_setw(COPP_CTRL, 0x8000);
         }
-        else
-        {
-            dprintf("Copper test disabled for this iteration.\n");
-            xreg_setw(COPP_CTRL, 0x0000);
-        }
+        // else
+        // {
+        //     dprintf("Copper test disabled for this iteration.\n");
+        //     xreg_setw(COPP_CTRL, 0x0000);
+        // }
 #endif
         if (test_count & 1)
         {
@@ -2964,7 +3009,9 @@ void     xosera_test()
         }
 #endif
 
-        delay_check(DELAY_TIME);
+        xreg_setw(PA_GFX_CTRL, 0x0080);
+        xreg_setw(VID_CTRL, 0x0000);
+        delay_check(DELAY_TIME * 100);
 
         restore_colors();
         test_colormap();

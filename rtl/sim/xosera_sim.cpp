@@ -481,8 +481,8 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(XDATA, 0x2100),        // 0: HPOS #256
     REG_W(XDATA, 0x8000),        // 1: SETI XR_COLOR_A_ADDR
     REG_W(XDATA, 0x0000),        // 2: =#black
-    REG_W(XDATA, 0xC005),        // 3: SETI C005
-    REG_W(XDATA, 0x3809),        // 4: =#3809
+    REG_W(XDATA, 0xD012),        // 3: SET C00F
+    REG_W(XDATA, 0xC005),        // 4: C005
     REG_W(XDATA, 0x3806),        // 5: BLT 0x0006
     REG_W(XDATA, 0x8000),        // 6: SETI XR_COLOR_A_ADDR
     REG_W(XDATA, 0x0F00),        // 7: =#red
@@ -492,11 +492,11 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(XDATA, 0xC005),        // B: SETI C005
     REG_W(XDATA, 0x3806),        // C: =#0x3806
     REG_W(XDATA, 0x2310),        // D: HPOS #784
-    REG_W(XDATA, 0x230F),        // D: HPOS #783
-    REG_W(XDATA, 0x230E),        // D: HPOS #782
-    REG_W(XDATA, 0x231F),        // D: HPOS #799
-    REG_W(XDATA, 0x3800),        // E: BLT 0
-    REG_W(XDATA, 0x3000),        // F: BGE 0
+    REG_W(XDATA, 0x230F),        // E: HPOS #783
+    REG_W(XDATA, 0x230E),        // F: HPOS #782
+    REG_W(XDATA, 0x231F),        // 10: HPOS #799
+    REG_W(XDATA, 0x3800),        // 11: BLT 0
+    REG_W(XDATA, 0x3809),        // 12: BGE 0
 
     XREG_SETW(COPP_CTRL, 0x8000),        // enable copper
     REG_WAITVTOP(),

@@ -45,8 +45,8 @@ module slim_copper(
 // | iiii iiii iiii iiii |    <im16 value>      |     |     |   (2 word op)                    |
 // | --01 -rcc cccc cccc | SETM  xadr16,cadr10  |  B  |  5+ | dest [xadr16] <= source [cadr10] |
 // | rroo oooo oooo oooo |    <xadr16 address>  |     |     |   (2 word op)                    |
-// | --10 0-ii iiii iiii | HPOS   #im10         |     |  5+ | wait until video HPOS >= im10    |
-// | --10 1-ii iiii iiii | VPOS   #im10         |     |  5+ | wait until video VPOS >= im10    |
+// | --10 -0ii iiii iiii | HPOS   #im10         |     |  5+ | wait until video HPOS >= im10    |
+// | --10 -1ii iiii iiii | VPOS   #im10         |     |  5+ | wait until video VPOS >= im10    |
 // | --11 0rcc cccc cccc | BRGE   cadr10        |     |  4  | if (B==0) PC <= cadr10           |
 // | --11 1rcc cccc cccc | BRLT   cadr10        |     |  4  | if (B==1) PC <= cadr10           |
 // |---------------------|----------------------|-----|-----|----------------------------------|
@@ -66,10 +66,10 @@ module slim_copper(
 //
 // | Pseudo reg     | Addr   | Operation               | Description                               |
 // |----------------|--------|-------------------------|-------------------------------------------|
-// | RA     (read)  | 0x0800 | RA                      | return current value in RA register       |
-// | RA     (write) | 0x0800 | RA = val16, B = 0       | set RA to val16, clear B flag             |
-// | RA_SUB (write) | 0x0801 | RA = RA - val16, B=LT   | set RA to RA - val16, update B flag       |
-// | RA_CMP (write) | 0x07FF | B flag update           | update B flag only (updated on any write) |
+// | RA     (read)  | 0x0400 | RA                      | return current value in RA register       |
+// | RA     (write) | 0x0400 | RA = val16, B = 0       | set RA to val16, clear B flag             |
+// | RA_SUB (write) | 0x0401 | RA = RA - val16, B=LT   | set RA to RA - val16, update B flag       |
+// | RA_CMP (write) | 0x03FF | B flag update           | update B flag only (updated on any write) |
 // |----------------|--------|-------------------------|-------------------------------------------|
 // NOTE: The B flag is updated after any write, RA_CMP is just a convenient xreg with no effect
 //
@@ -186,7 +186,7 @@ module slim_copper(
 // opcode type {slightly scrambled [13:12],[15:14]}
 typedef enum logic [1:0] {
     OP_SETI         = 2'b00,        // SETI xaddr,#im16
-    OP_MOVE         = 2'b01,        // SETM xaddr,xcadr10
+    OP_SETM         = 2'b01,        // SETM xaddr,xcadr10
     OP_HVPOS        = 2'b10,        // HPOS/VPOS
     OP_BRcc         = 2'b11         // BRGE/BRLT
 } copp_opcode_t;
@@ -385,15 +385,16 @@ always_ff @(posedge clk) begin
                             cop_ex_state    <= ST_FETCH;                    // fetch next instruction
                         end
                     end
-                    OP_MOVE: begin
+                    OP_SETM: begin
                         ram_rd_en       <= 1'b1;                            // read copper memory (may be unused)
                         ram_rd_addr     <= xv::COPP_W'(cop_IR);             // use opcode as source address
+                        wait_for_v      <= cop_IR[COP_XREG];
 
                         cop_ex_state    <= ST_SETR_RD;                      // wait for read data
                     end
                     OP_HVPOS: begin
                         wait_hv_flag    <= 1'b1;
-                        wait_for_v      <= cop_IR[B_ARG];
+                        wait_for_v      <= cop_IR[COP_XREG];
                         cop_wait_val    <= $bits(cop_wait_val)'(cop_IR[B_ARG10:0]);
 
                         cop_ex_state    <= ST_FETCH;                        // fetch next instruction
@@ -410,23 +411,25 @@ always_ff @(posedge clk) begin
             end
             // wait a cycle waiting for data memory read
             ST_SETR_RD: begin
-                write_addr          <= ram_read_data;                       // read dest address word
+                cop_IR              <= ram_read_data;                       // save dest address word
 
                 cop_ex_state        <= ST_SETR_WR;                          // write out word
             end
             // store word read from memory to XR bus
             ST_SETR_WR: begin
                 // write to copper reg instead of xreg if COP_XREG bit set in dest
-                if (write_addr[15:14] == xv::XR_CONFIG_REGS[15:14] && write_addr[COP_XREG]) begin
+                if (cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[COP_XREG]) begin
                     reg_wr_en       <= 1'b1;                                // write cop reg
                 end else begin
                     xr_wr_en        <= 1'b1;                                // write XR bus
                 end
 
                 // write data from copper reg instead of memory read if COP_XREG bit set in source
-                write_data      <= cop_IR[COP_XREG] ? cop_RA : ram_read_data;
+                write_addr      <= cop_IR;
+                write_data      <= wait_for_v ? cop_RA : ram_read_data;
 
 `ifdef AVOID_RD_RW_HAZARD
+                assert(0);  // cop_IR trashed
                 // start read unless a copper write address (read+write hazard)
                if (cop_IR[15:14] != xv::XR_COPPER_ADDR[15:14])
 `endif

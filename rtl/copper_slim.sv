@@ -41,21 +41,22 @@ module slim_copper(
 //
 // | XR Op Immediate     | Assembly             |Flag | Cyc | Description                      |
 // |---------------------|----------------------|-----|-----|----------------------------------|
-// | rr00 oooo oooo oooo | SETI   xadr14,#val16 |  B  |  4+ | dest [xadr14] <= source #val16   |
+// | rr00 oooo oooo oooo | SETI   xadr14,#val16 |  B  |  4  | dest [xadr14] <= source #val16   |
 // | iiii iiii iiii iiii |    <im16 value>      |     |     |   (2 word op)                    |
-// | --01 -rcc cccc cccc | SETM  xadr16,cadr10  |  B  |  5+ | dest [xadr16] <= source [cadr10] |
+// | --01 r-cc cccc cccc | SETM  xadr16,cadr11  |  B  |  5  | dest [xadr16] <= source [cadr11] |
 // | rroo oooo oooo oooo |    <xadr16 address>  |     |     |   (2 word op)                    |
-// | --10 -0ii iiii iiii | HPOS   #im10         |     |  5+ | wait until video HPOS >= im10    |
-// | --10 -1ii iiii iiii | VPOS   #im10         |     |  5+ | wait until video VPOS >= im10    |
-// | --11 0rcc cccc cccc | BRGE   cadr10        |     |  4  | if (B==0) PC <= cadr10           |
-// | --11 1rcc cccc cccc | BRLT   cadr10        |     |  4  | if (B==1) PC <= cadr10           |
+// | --10 0iii iiii iiii | HPOS   #im11         |     |  5+ | wait until video HPOS >= im11    |
+// | --10 1iii iiii iiii | VPOS   #im11         |     |  5+ | wait until video VPOS >= im11    |
+// | --11 0ccc cccc cccc | BRGE   cadr10        |     |  4  | if (B==0) PC <= cadr10           |
+// | --11 1ccc cccc cccc | BRLT   cadr10        |     |  4  | if (B==1) PC <= cadr10           |
 // |---------------------|----------------------|-----|-----|----------------------------------|
 //
-// xadr14   =   XR region + 12-bit offset:      xx00 oooo oooo oooo (1st word in SETI)
-// im16     =   16-bit immediate word           iiii iiii iiii iiii (2nd word in SETI)
-// cadr10   =   10-bit copper address/register: ---- -rnn nnnn nnnn (r=1 for RA read)
-// im10     =   10-bit immediate value:         ---- --ii iiii iiii (HPOS, VPOS)
-// xadr16   =   XR region + 14-bit offset:      rroo oooo oooo oooo (2nd word in SETM)
+// xadr14   =   XR region + 12-bit offset           xx00 oooo oooo oooo (1st word in SETI)
+// im16     =   16-bit immediate word               iiii iiii iiii iiii (2nd word in SETI)
+// cadr11   =   10-bit copper address + register    ---- r-nn nnnn nnnn (1st word in SETM)
+// xadr16   =   XR region + 14-bit offset           rroo oooo oooo oooo (2nd word in SETM)
+// im11     =   11-bit immediate value              ---- -iii iiii iiii (HPOS, VPOS)
+// cadr10   =   10-bit copper address/register      ---- --nn nnnn nnnn (BRGE, BRLT)
 // B        =   borrow flag set when RA < val16 written [unsigned subtract])
 //
 // NOTE: cadr10 bits[15:11] are ignored reading copper memory, however by setting
@@ -66,10 +67,10 @@ module slim_copper(
 //
 // | Pseudo reg     | Addr   | Operation               | Description                               |
 // |----------------|--------|-------------------------|-------------------------------------------|
-// | RA     (read)  | 0x0400 | RA                      | return current value in RA register       |
-// | RA     (write) | 0x0400 | RA = val16, B = 0       | set RA to val16, clear B flag             |
-// | RA_SUB (write) | 0x0401 | RA = RA - val16, B=LT   | set RA to RA - val16, update B flag       |
-// | RA_CMP (write) | 0x03FF | B flag update           | update B flag only (updated on any write) |
+// | RA     (read)  | 0x0800 | RA                      | return current value in RA register       |
+// | RA     (write) | 0x0800 | RA = val16, B = 0       | set RA to val16, clear B flag             |
+// | RA_SUB (write) | 0x0801 | RA = RA - val16, B=LT   | set RA to RA - val16, update B flag       |
+// | RA_CMP (write) | 0x07FF | B flag update           | update B flag only (updated on any write) |
 // |----------------|--------|-------------------------|-------------------------------------------|
 // NOTE: The B flag is updated after any write, RA_CMP is just a convenient xreg with no effect
 //
@@ -192,15 +193,13 @@ typedef enum logic [1:0] {
 } copp_opcode_t;
 
 // opcode decode bits
-typedef enum logic [3:0] {
-    B_OPCODE        = 4'd12,        // 2-bits
-    B_ARG           = 4'd11,        // 12-bit operand/HVPOS or Bcc bit
-    B_ARG10         = 4'd9          // im10/cadr10
-} copp_bits_t;
-
-// XR bits for pseudo registers
-localparam  COP_XREG        = 10;   // cop register read/write (cadr/xreg)
-localparam  COP_XREG_SUB    = 0;    // cop_RA LOAD/SUB select
+localparam  B_OPCODE        = 12;   // 2-bits
+localparam  B_HV_SEL        = 11;   // 12-bit operand/HVPOS or Bcc bit
+localparam  B_HV_POS        = 10;   // 12-bit operand/HVPOS or Bcc bit
+localparam  B_BR_SEL        = 11;   // 12-bit operand/HVPOS or Bcc bit
+localparam  B_BR_ADR        = 10;   // 12-bit operand/HVPOS or Bcc bit
+localparam  B_COP_REG       = 11;   // cop RA register bit
+localparam  B_COP_SUB       = 0;    // cop_RA LOAD/SUB select
 
 // execution state
 typedef enum logic [1:0] {
@@ -256,6 +255,24 @@ assign          ram_read_data       = copmem_rd_data_i;
 // ignore intentionally unused bits (to avoid warnings)
 logic unused_bits = &{1'b0, cop_xreg_data_i[14:0]};
 
+`ifndef SYNTHESIS
+/* verilator lint_off UNUSEDSIGNAL */
+logic [8*5-1:0] op_name;
+always_comb begin
+    case (cop_IR[13:11])
+    3'b000: op_name = "SETI ";
+    3'b001: op_name = "SETI ";
+    3'b010: op_name = "SETM ";
+    3'b011: op_name = "LDM  ";
+    3'b100: op_name = "HPOS ";
+    3'b101: op_name = "VPOS ";
+    3'b110: op_name = "BRGE ";
+    3'b111: op_name = "BRLT ";
+    endcase
+end
+/* verilator lint_on  UNUSEDSIGNAL */
+`endif
+
 // copper control xreg (enable/disable), also does start of frame reset
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -283,7 +300,7 @@ always_ff @(posedge clk) begin
     end else begin
         if (reg_wr_en) begin
             // check for load vs subtract operation
-           if (!write_addr[COP_XREG_SUB]) begin
+           if (!write_addr[B_COP_SUB]) begin
                 cop_RA      <= write_data;  // load RA with data
            end else begin
                 cop_RA      <= RA_sub;      // load RA with RA - data result
@@ -367,7 +384,7 @@ always_ff @(posedge clk) begin
                         write_data      <= ram_read_data;                   // instruction word as data
                         if (rd_pipeline) begin
                             // write to internal register instead of xreg if COP_XREG bit set in dest
-                            if ((cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[COP_XREG])) begin
+                            if ((cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[B_COP_REG])) begin
                                 reg_wr_en   <= 1'b1;                        // write cop reg
                             end else begin
                                 xr_wr_en    <= 1'b1;                        // write XR bus
@@ -388,21 +405,21 @@ always_ff @(posedge clk) begin
                     OP_SETM: begin
                         ram_rd_en       <= 1'b1;                            // read copper memory (may be unused)
                         ram_rd_addr     <= xv::COPP_W'(cop_IR);             // use opcode as source address
-                        wait_for_v      <= cop_IR[COP_XREG];
+                        wait_for_v      <= cop_IR[B_COP_REG];               // remember if register
 
                         cop_ex_state    <= ST_SETR_RD;                      // wait for read data
                     end
                     OP_HVPOS: begin
                         wait_hv_flag    <= 1'b1;
-                        wait_for_v      <= cop_IR[COP_XREG];
-                        cop_wait_val    <= $bits(cop_wait_val)'(cop_IR[B_ARG10:0]);
+                        wait_for_v      <= cop_IR[B_HV_SEL];
+                        cop_wait_val    <= $bits(cop_wait_val)'(cop_IR[B_HV_POS:0]);
 
                         cop_ex_state    <= ST_FETCH;                        // fetch next instruction
                     end
                     OP_BRcc: begin
                         // branch taken if B clear/set for BRGE/BRLT
-                        if (B_flag == cop_IR[B_ARG]) begin
-                            cop_PC          <= xv::COPP_W'(cop_IR[B_ARG10:0]); // set new PC
+                        if (B_flag == cop_IR[B_BR_SEL]) begin
+                            cop_PC          <= xv::COPP_W'(cop_IR[B_BR_ADR:0]); // set new PC
                         end
 
                         cop_ex_state    <= ST_FETCH;                        // fetch next instruction
@@ -418,7 +435,7 @@ always_ff @(posedge clk) begin
             // store word read from memory to XR bus
             ST_SETR_WR: begin
                 // write to copper reg instead of xreg if COP_XREG bit set in dest
-                if (cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[COP_XREG]) begin
+                if (cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[B_COP_REG]) begin
                     reg_wr_en       <= 1'b1;                                // write cop reg
                 end else begin
                     xr_wr_en        <= 1'b1;                                // write XR bus

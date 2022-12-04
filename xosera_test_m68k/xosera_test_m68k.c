@@ -119,23 +119,7 @@ const uint32_t copper_list[] = {COP_WAIT_V(30 * 0),  COP_MOVEP(0x000, 0),
 
 const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
 #else
-const uint16_t copper_list[] = {0x2100,
-                                0x8000,
-                                0x0000,
-                                0xC005,
-                                0x3809,
-                                0x3806,
-                                0x8000,
-                                0x0F00,
-                                0x380B,
-                                0x8000,
-                                0x00F0,
-                                0xC005,
-                                0x3806,
-                                0x231F,
-                                0x3800,
-                                0x3000};
-
+const uint16_t copper_list[]   = {0x0011, 0x000F, 0x21E0, 0x0011, 0x080F, 0x231F, 0x3000, 0x3800};
 const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
 
 #endif
@@ -3009,7 +2993,7 @@ void     xosera_test()
         }
 #endif
 
-        xreg_setw(PA_GFX_CTRL, 0x0080);
+        //        xreg_setw(PA_GFX_CTRL, 0x0080);
         xreg_setw(VID_CTRL, 0x0000);
         delay_check(DELAY_TIME * 100);
 

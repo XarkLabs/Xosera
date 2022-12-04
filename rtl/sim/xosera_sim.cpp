@@ -34,7 +34,7 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 3        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 4        // video frames to dump to VCD file (and then screen-shot and exit)
 #define MAX_UPLOADS      8        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
@@ -463,6 +463,7 @@ uint16_t     BusInterface::test_data[32768] = {
         // test data
 
     REG_WAITHSYNC(),
+    XREG_SETW(PA_GFX_CTRL, 0x0000),        // blank screen
 
     REG_W(INT_CTRL, 0x7FFF),
     REG_W(TIMER, 10 - 1),        // timer interupt interval -1
@@ -474,29 +475,22 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(INT_CTRL, 0x7FFF),
     REG_RW(INT_CTRL),
 
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
 #if 1                                      // slim copper test
     XREG_SETW(PA_GFX_CTRL, 0x0080),        // blank screen
     XREG_SETW(VID_CTRL, 0x0000),           // border color #0
     REG_W(WR_XADDR, XR_COPPER_ADDR),
-    REG_W(XDATA, 0x2100),        // 0: HPOS #256
-    REG_W(XDATA, 0x8000),        // 1: SETI XR_COLOR_A_ADDR
-    REG_W(XDATA, 0x0000),        // 2: =#black
-    REG_W(XDATA, 0xD012),        // 3: SET C00F
-    REG_W(XDATA, 0xC005),        // 4: C005
-    REG_W(XDATA, 0x3806),        // 5: BLT 0x0006
-    REG_W(XDATA, 0x8000),        // 6: SETI XR_COLOR_A_ADDR
-    REG_W(XDATA, 0x0F00),        // 7: =#red
-    REG_W(XDATA, 0x380B),        // 8: BLT 0x000B
-    REG_W(XDATA, 0x8000),        // 9: SETI XR_COLOR_A_ADDR
-    REG_W(XDATA, 0x00F0),        // A: =#green
-    REG_W(XDATA, 0xC005),        // B: SETI C005
-    REG_W(XDATA, 0x3806),        // C: =#0x3806
-    REG_W(XDATA, 0x2310),        // D: HPOS #784
-    REG_W(XDATA, 0x230F),        // E: HPOS #783
-    REG_W(XDATA, 0x230E),        // F: HPOS #782
-    REG_W(XDATA, 0x231F),        // 10: HPOS #799
-    REG_W(XDATA, 0x3800),        // 11: BLT 0
-    REG_W(XDATA, 0x3809),        // 12: BGE 0
+    REG_W(XDATA, 0x8000),        // SETI XR_COLOR_A_ADDR
+    REG_W(XDATA, 0x0000),        // =#black
+    REG_W(XDATA, 0x21E0),        // HPOS #480
+    REG_W(XDATA, 0x8000),        // SETI XR_COLOR_A_ADDR
+    REG_W(XDATA, 0x00F0),        // =#black
+    REG_W(XDATA, 0x231F),        // HPOS #799
+    REG_W(XDATA, 0x3000),        // BLT 0
+    REG_W(XDATA, 0x3800),        // BGE 0
 
     XREG_SETW(COPP_CTRL, 0x8000),        // enable copper
     REG_WAITVTOP(),

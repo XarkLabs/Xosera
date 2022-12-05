@@ -10,20 +10,19 @@
 H_START         =       160                             ; starting HPOS (visible left edge)
 
 entry
-                SETI    hor_pos,#HPOS+H_START           ; reset hpos
-                SETI    color_load,#SETM+color_tbl      ; reset color table start
-
-line_loop       SETI    XR_COLOR_A_ADDR+0,#$0000        ; color[0] = black
+                MOVE    #HPOS+H_START,hor_pos           ; reset hpos
+                MOVE    #MOVE+color_tbl,color_load      ; reset color table start
+line_loop       MOVE    #$0000,XR_COLOR_A_ADDR+0        ; color[0] = black
 hor_pos         HPOS    #160                            ; wait for HPOS (self-modified)
-color_load      SETM    XR_COLOR_A_ADDR+0,color_tbl     ; set color[0] from table (self-modified)
+color_load      MOVE    color_tbl,XR_COLOR_A_ADDR+0     ; set color[0] from table (self-modified)
                 LDM     hor_pos                         ; load HPOS opcode+pos
                 ADDI    #1                              ; increment
                 STM     hor_pos                         ; save HPOS opcode+pos
                 LDM     color_load                      ; load SETM opcode+source addr
                 ADDI    #1                              ; increment
-                CMPI    #SETM+color_end                 ; test vs table end (with SETM opcode)
+                CMPI    #MOVE+color_end                 ; test vs table end (with SETM opcode)
                 BRLT    not_end                         ; branch if not past end
-                LDI     #SETM+color_tbl                 ; load reset SETM opcode+table start
+                LDI     #MOVE+color_tbl                 ; load reset SETM opcode+table start
 not_end         STM     color_load                      ; store modified SETM opcode+source
                 HPOS    #799                            ; wait for last pixel of line
                 BRGE    line_loop                       ; branch always (since last write was A)
@@ -40,6 +39,4 @@ color_tbl
                 word    0x0002,0x0004,0x0006,0x0008
                 word    0x000A,0x000C,0x000E,0x000F
 color_end
-
-                word    'A', 'B', 'C'
                 .end

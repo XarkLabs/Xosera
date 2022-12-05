@@ -34,19 +34,22 @@ module slim_copper(
 
 // `define AVOID_RD_RW_HAZARD          // delay read to next cycle if also writing (iCE40UP5K does not need this)
 
+`define SETM_4CYCLE                    // SETM also 4 cycles at slight LC cost (~27 LCs)
+
 //  Slim Copper opcodes:
 //
 // | XR Op Immediate     | Assembly             |Flag | Cyc | Description                      |
 // |---------------------|----------------------|-----|-----|----------------------------------|
 // | rr00 oooo oooo oooo | SETI   xadr14,#val16 |  B  |  4  | dest [xadr14] <= source #val16   |
 // | iiii iiii iiii iiii |    <im16 value>      |     |     |   (2 word op)                    |
-// | --01 r-cc cccc cccc | SETM  xadr16,cadr11  |  B  |  5  | dest [xadr16] <= source [cadr11] |
+// | --01 rccc cccc cccc | SETM  xadr16,cadr11  |  B  |  4* | dest [xadr16] <= source [cadr11] |
 // | rroo oooo oooo oooo |    <xadr16 address>  |     |     |   (2 word op)                    |
 // | --10 0iii iiii iiii | HPOS   #im11         |     |  5+ | wait until video HPOS >= im11    |
 // | --10 1iii iiii iiii | VPOS   #im11         |     |  5+ | wait until video VPOS >= im11    |
 // | --11 0ccc cccc cccc | BRGE   cadr10        |     |  4  | if (B==0) PC <= cadr10           |
 // | --11 1ccc cccc cccc | BRLT   cadr10        |     |  4  | if (B==1) PC <= cadr10           |
 // |---------------------|----------------------|-----|-----|----------------------------------|
+// NOTE: SETM can be 4 or 5 cycles, 4 cycles costs a few LCs (but enabled)
 //
 // xadr14   =   XR region + 12-bit offset           xx00 oooo oooo oooo (1st word SETI, dest)
 // im16     =   16-bit immediate word               iiii iiii iiii iiii (2nd word SETI, source)
@@ -371,6 +374,9 @@ always_ff @(posedge clk) begin
 `ifndef SYNTHESIS
                 op_dest             <= ram_read_data & 16'hCFFF;
 `endif
+`ifdef  SETM_4CYCLE
+                ram_rd_en       <= 1'b1;                                    // read copper memory
+`endif
 
                 cop_ex_state        <= ST_SETR_WR;                          // write out word
             end
@@ -387,8 +393,9 @@ always_ff @(posedge clk) begin
                 write_addr      <= cop_IR;
                 write_data      <= rd_reg_save ? cop_RA : ram_read_data;
 
-                // NOTE: expecting iCE40UP5K read & write at same address and cycle returns new write data
+`ifndef  SETM_4CYCLE
                 ram_rd_en       <= 1'b1;                                    // read copper memory
+`endif
                 cop_PC          <= cop_next_PC;                             // increment PC
 
                 cop_ex_state    <= ST_FETCH;

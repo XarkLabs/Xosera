@@ -119,12 +119,12 @@ const uint32_t copper_list[] = {COP_WAIT_V(30 * 0),  COP_MOVEP(0x000, 0),
 
 const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
 #else
-const uint16_t copper_list[]   = {0x0011, 0x000F, 0x21E0, 0x0011, 0x080F, 0x231F, 0x3000, 0x3800};
-const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
+
+#include "cop_diagonal.h"
 
 #endif
 
-static_assert(NUM_ELEMENTS(copper_list) < 1024, "copper list too long");
+static_assert(NUM_ELEMENTS(cop_diagonal_bin) < 1024, "copper list too long");
 
 // 320x200 copper
 // Copper list
@@ -580,9 +580,9 @@ static void install_copper()
 #else
 
 #if 1
-    for (uint16_t i = 0; i < copper_list_len; i++)
+    for (uint16_t i = 0; i < cop_diagonal_size; i++)
     {
-        uint16_t op = copper_list[i];
+        uint16_t op = cop_diagonal_bin[i];
         xmem_setw_next(op);
     }
 #else

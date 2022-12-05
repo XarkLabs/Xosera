@@ -51,10 +51,10 @@ module slim_copper(
 // | --11 1ccc cccc cccc | BRLT   cadr10        |     |  4  | if (B==1) PC <= cadr10           |
 // |---------------------|----------------------|-----|-----|----------------------------------|
 //
-// xadr14   =   XR region + 12-bit offset           xx00 oooo oooo oooo (1st word in SETI)
-// im16     =   16-bit immediate word               iiii iiii iiii iiii (2nd word in SETI)
-// cadr11   =   10-bit copper address + register    ---- r-nn nnnn nnnn (1st word in SETM)
-// xadr16   =   XR region + 14-bit offset           rroo oooo oooo oooo (2nd word in SETM)
+// xadr14   =   XR region + 12-bit offset           xx00 oooo oooo oooo (1st word dest SETI)
+// im16     =   16-bit immediate word               iiii iiii iiii iiii (2nd word src SETI)
+// cadr11   =   10-bit copper address + register    ---- r-nn nnnn nnnn (1st word src SETM)
+// xadr16   =   XR region + 14-bit offset           rroo oooo oooo oooo (2nd word dest SETM)
 // im11     =   11-bit immediate value              ---- -iii iiii iiii (HPOS, VPOS)
 // cadr10   =   10-bit copper address/register      ---- --nn nnnn nnnn (BRGE, BRLT)
 // B        =   borrow flag set when RA < val16 written [unsigned subtract])
@@ -221,6 +221,7 @@ logic           wait_for_v;         // false if waiting for >= HPOS else waiting
 
 // copper memory bus signals
 logic           ram_rd_en;          // copper memory read enable
+logic           rd_reg_save;        // read RA contents vs memory on SETM
 copp_addr_t     ram_rd_addr;        // copper memory address
 word_t          ram_read_data;      // copper memory data in
 
@@ -257,18 +258,28 @@ logic unused_bits = &{1'b0, cop_xreg_data_i[14:0]};
 
 `ifndef SYNTHESIS
 /* verilator lint_off UNUSEDSIGNAL */
-logic [8*5-1:0] op_name;
+logic           op_valid;
+word_t          opcode;
+word_t          op_imm;
+word_t          op_src;
+word_t          op_dest;
+
+logic [8*4-1:0] op_name;
 always_comb begin
-    case (cop_IR[13:11])
-    3'b000: op_name = "SETI ";
-    3'b001: op_name = "SETI ";
-    3'b010: op_name = "SETM ";
-    3'b011: op_name = "LDM  ";
-    3'b100: op_name = "HPOS ";
-    3'b101: op_name = "VPOS ";
-    3'b110: op_name = "BRGE ";
-    3'b111: op_name = "BRLT ";
-    endcase
+    if (op_valid) begin
+        case (opcode[13:11])
+        3'b000: op_name = "SETI";
+        3'b001: op_name = "SETI";
+        3'b010: op_name = "SETM";
+        3'b011: op_name = "LDM ";
+        3'b100: op_name = "HPOS";
+        3'b101: op_name = "VPOS";
+        3'b110: op_name = "BRGE";
+        3'b111: op_name = "BRLT";
+        endcase
+    end else begin
+        op_name = "----";
+    end
 end
 /* verilator lint_on  UNUSEDSIGNAL */
 `endif
@@ -281,8 +292,8 @@ always_ff @(posedge clk) begin
     end else begin
         cop_reset       <= 1'b0;
 
-        // keep in reset if not enabled and reset just before SOF
-        if (!cop_en || (end_of_line_i && (v_count_i == xv::TOTAL_HEIGHT - 1))) begin
+        // keep in reset if not enabled and reset at SOF
+        if (!cop_en || end_of_line_i && (v_count_i == 0)) begin
             cop_reset       <= 1'b1;
         end
 
@@ -324,6 +335,7 @@ always_ff @(posedge clk) begin
         cop_PC          <= '0;
         cop_IR          <= '0;
 
+        rd_reg_save     <= 1'b0;
         wait_hv_flag    <= 1'b0;
         wait_for_v      <= 1'b0;
         cop_wait_val    <= '0;
@@ -359,6 +371,9 @@ always_ff @(posedge clk) begin
             ST_FETCH: begin
                  // if read data not ready
                 if (!rd_pipeline) begin
+`ifndef SYNTHESIS
+                    op_valid        <= 1'b0;
+`endif
                     // if not waiting and read not already started then read PC
                     if (!wait_hv_flag && !ram_rd_en) begin
                         ram_rd_en       <= 1'b1;                            // read copper memory
@@ -366,6 +381,13 @@ always_ff @(posedge clk) begin
                     end
                 end else begin
                     cop_IR          <= ram_read_data;                       // store instruction in cop_IR
+`ifndef SYNTHESIS
+                    op_valid        <= 1'b1;
+                    opcode          <= ram_read_data;
+                    op_imm          <= 'X;
+                    op_src          <= 'X;
+                    op_dest         <= 'X;
+`endif
 
                     // if this is a 2 word opcode, start 2nd word read
                     if (ram_read_data[B_OPCODE+1] == 1'b0) begin
@@ -382,6 +404,10 @@ always_ff @(posedge clk) begin
                     OP_SETI: begin
                         write_addr      <= cop_IR;                          // use opcode as XR address
                         write_data      <= ram_read_data;                   // instruction word as data
+`ifndef SYNTHESIS
+                        op_imm          <= ram_read_data;
+                        op_dest         <= cop_IR & 16'hCFFF;
+`endif
                         if (rd_pipeline) begin
                             // write to internal register instead of xreg if COP_XREG bit set in dest
                             if ((cop_IR[15:14] == xv::XR_CONFIG_REGS[15:14] && cop_IR[B_COP_REG])) begin
@@ -390,14 +416,9 @@ always_ff @(posedge clk) begin
                                 xr_wr_en    <= 1'b1;                        // write XR bus
                             end
 
-`ifdef AVOID_RD_RW_HAZARD
-                            // start read unless a copper write address (read+write hazard)
-                            if (cop_IR[15:14] != xv::XR_COPPER_ADDR[15:14])
-`endif
-                            begin
-                                ram_rd_en       <= 1'b1;                    // read copper memory
-                                cop_PC          <= cop_next_PC;             // increment PC
-                            end
+                            // NOTE: expecting iCE40UP5K read & write at same address and cycle returns new write data
+                            ram_rd_en       <= 1'b1;                        // read copper memory
+                            cop_PC          <= cop_next_PC;                 // increment PC
 
                             cop_ex_state    <= ST_FETCH;                    // fetch next instruction
                         end
@@ -405,7 +426,10 @@ always_ff @(posedge clk) begin
                     OP_SETM: begin
                         ram_rd_en       <= 1'b1;                            // read copper memory (may be unused)
                         ram_rd_addr     <= xv::COPP_W'(cop_IR);             // use opcode as source address
-                        wait_for_v      <= cop_IR[B_COP_REG];               // remember if register
+                        rd_reg_save     <= cop_IR[B_COP_REG];
+`ifndef SYNTHESIS
+                        op_src          <= cop_IR & 16'hCFFF;
+`endif
 
                         cop_ex_state    <= ST_SETR_RD;                      // wait for read data
                     end
@@ -413,6 +437,9 @@ always_ff @(posedge clk) begin
                         wait_hv_flag    <= 1'b1;
                         wait_for_v      <= cop_IR[B_HV_SEL];
                         cop_wait_val    <= $bits(cop_wait_val)'(cop_IR[B_HV_POS:0]);
+`ifndef SYNTHESIS
+                        op_imm          <= 16'(cop_IR[B_HV_POS:0]);
+`endif
 
                         cop_ex_state    <= ST_FETCH;                        // fetch next instruction
                     end
@@ -429,6 +456,9 @@ always_ff @(posedge clk) begin
             // wait a cycle waiting for data memory read
             ST_SETR_RD: begin
                 cop_IR              <= ram_read_data;                       // save dest address word
+`ifndef SYNTHESIS
+                op_dest             <= ram_read_data & 16'hCFFF;
+`endif
 
                 cop_ex_state        <= ST_SETR_WR;                          // write out word
             end
@@ -443,17 +473,11 @@ always_ff @(posedge clk) begin
 
                 // write data from copper reg instead of memory read if COP_XREG bit set in source
                 write_addr      <= cop_IR;
-                write_data      <= wait_for_v ? cop_RA : ram_read_data;
+                write_data      <= rd_reg_save ? cop_RA : ram_read_data;
 
-`ifdef AVOID_RD_RW_HAZARD
-                assert(0);  // cop_IR trashed
-                // start read unless a copper write address (read+write hazard)
-               if (cop_IR[15:14] != xv::XR_COPPER_ADDR[15:14])
-`endif
-               begin
-                    ram_rd_en       <= 1'b1;                                // read copper memory
-                    cop_PC          <= cop_next_PC;                         // increment PC
-                end
+                // NOTE: expecting iCE40UP5K read & write at same address and cycle returns new write data
+                ram_rd_en       <= 1'b1;                                    // read copper memory
+                cop_PC          <= cop_next_PC;                             // increment PC
 
                 cop_ex_state    <= ST_FETCH;
             end

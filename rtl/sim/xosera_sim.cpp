@@ -479,10 +479,12 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
-#if 1                                      // slim copper test
+#if 1
+    // slim copper test
     XREG_SETW(PA_GFX_CTRL, 0x0080),        // blank screen
     XREG_SETW(VID_CTRL, 0x0000),           // border color #0
     REG_W(WR_XADDR, XR_COPPER_ADDR),
+#if 0
     REG_W(XDATA, 0x8000),        // SETI XR_COLOR_A_ADDR
     REG_W(XDATA, 0x0000),        // =#black
     REG_W(XDATA, 0x21E0),        // HPOS #480
@@ -491,6 +493,63 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(XDATA, 0x231F),        // HPOS #799
     REG_W(XDATA, 0x3000),        // BLT 0
     REG_W(XDATA, 0x3800),        // BGE 0
+
+
+#else
+    REG_W(XDATA, 0xc006),
+    REG_W(XDATA, 0x20a0),
+    REG_W(XDATA, 0xc007),
+    REG_W(XDATA, 0xd01d),
+    REG_W(XDATA, 0x8000),
+    REG_W(XDATA, 0x0000),
+    REG_W(XDATA, 0x20a0),
+    REG_W(XDATA, 0xd01d),
+    REG_W(XDATA, 0x8000),
+    REG_W(XDATA, 0xd006),
+    REG_W(XDATA, 0x0800),
+    REG_W(XDATA, 0x0801),
+    REG_W(XDATA, 0xffff),
+    REG_W(XDATA, 0x1800),
+    REG_W(XDATA, 0xc006),
+    REG_W(XDATA, 0xd007),
+    REG_W(XDATA, 0x0800),
+    REG_W(XDATA, 0x0801),
+    REG_W(XDATA, 0xffff),
+    REG_W(XDATA, 0x07ff),
+    REG_W(XDATA, 0xd035),
+    REG_W(XDATA, 0xf818),
+    REG_W(XDATA, 0x0800),
+    REG_W(XDATA, 0xd01d),
+    REG_W(XDATA, 0x1800),
+    REG_W(XDATA, 0xc007),
+    REG_W(XDATA, 0x231f),
+    REG_W(XDATA, 0xf004),
+    REG_W(XDATA, 0x2fff),
+    REG_W(XDATA, 0x0200),
+    REG_W(XDATA, 0x0400),
+    REG_W(XDATA, 0x0600),
+    REG_W(XDATA, 0x0800),
+    REG_W(XDATA, 0x0a00),
+    REG_W(XDATA, 0x0c00),
+    REG_W(XDATA, 0x0e00),
+    REG_W(XDATA, 0x0f00),
+    REG_W(XDATA, 0x0020),
+    REG_W(XDATA, 0x0040),
+    REG_W(XDATA, 0x0060),
+    REG_W(XDATA, 0x0080),
+    REG_W(XDATA, 0x00a0),
+    REG_W(XDATA, 0x00c0),
+    REG_W(XDATA, 0x00e0),
+    REG_W(XDATA, 0x00f0),
+    REG_W(XDATA, 0x0002),
+    REG_W(XDATA, 0x0004),
+    REG_W(XDATA, 0x0006),
+    REG_W(XDATA, 0x0008),
+    REG_W(XDATA, 0x000a),
+    REG_W(XDATA, 0x000c),
+    REG_W(XDATA, 0x000e),
+    REG_W(XDATA, 0x000f),
+#endif
 
     XREG_SETW(COPP_CTRL, 0x8000),        // enable copper
     REG_WAITVTOP(),

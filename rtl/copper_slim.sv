@@ -10,9 +10,6 @@
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
-`define EN_COPP         // TEMP: for editing, remove
-`define EN_COPP_SLIM    // TEMP: for editing, remove
-
 `ifdef EN_COPP
 `ifdef EN_COPP_SLIM
 
@@ -51,10 +48,10 @@ module slim_copper(
 // | --11 1ccc cccc cccc | BRLT   cadr10        |     |  4  | if (B==1) PC <= cadr10           |
 // |---------------------|----------------------|-----|-----|----------------------------------|
 //
-// xadr14   =   XR region + 12-bit offset           xx00 oooo oooo oooo (1st word dest SETI)
-// im16     =   16-bit immediate word               iiii iiii iiii iiii (2nd word src SETI)
-// cadr11   =   10-bit copper address + register    ---- r-nn nnnn nnnn (1st word src SETM)
-// xadr16   =   XR region + 14-bit offset           rroo oooo oooo oooo (2nd word dest SETM)
+// xadr14   =   XR region + 12-bit offset           xx00 oooo oooo oooo (1st word SETI, dest)
+// im16     =   16-bit immediate word               iiii iiii iiii iiii (2nd word SETI, source)
+// cadr11   =   10-bit copper address + register    ---- r-nn nnnn nnnn (1st word SETM, source)
+// xadr16   =   XR region + 14-bit offset           rroo oooo oooo oooo (2nd word SETM, dest)
 // im11     =   11-bit immediate value              ---- -iii iiii iiii (HPOS, VPOS)
 // cadr10   =   10-bit copper address/register      ---- --nn nnnn nnnn (BRGE, BRLT)
 // B        =   borrow flag set when RA < val16 written [unsigned subtract])
@@ -74,114 +71,29 @@ module slim_copper(
 // |----------------|--------|-------------------------|-------------------------------------------|
 // NOTE: The B flag is updated after any write, RA_CMP is just a convenient xreg with no effect
 //
-// Notable pseudo instructions:
-//  ->  LDI  #val16             ; load RA with immediate val16 (2 words, B = 0)
-//  +     SETI  RA,#val16           ; RA = val16
-//
-//  ->  LD   caddr              ; load RA with copper mem contents at address caddr (2 words, B = 0)
-//  +     SETM  RA,caddr            ; RA -= value
-//
-//  ->  ADDI #val16             ; add val16 to RA, RA = RA + val16 (2 words, B = inverted carry)
-//  +     SETI  RA_SUB,#-val16      ; RA -= -val16
-//
-//  ->  SUBI #val16             ; subtract val16 from RA, RA = RA - val16 (2 words, B = RA < val16 [unsigned])
-//  +     SETI  RA_SUB,#val16       ; RA -= value
-//
-//  ->  SETP (caddr),#val16     ; store val16 to ptr addr in cadr10, *caddr = val16; (4 words, self-mod)
-//  +     SETM *+2,caddr            ; self-modify SETI dest
-//  +     SETI  dummy,#val16        ; store to [RA]
-//
-//  ->  SETPA (dcaddr),scaddr   ; store memory to ptr addr in dcadr10, *dcadr10 = scadr10; (4 words, self-mod)
-//  +     SETM *+2,dcadr10          ; self-modify SETI dest
-//  +     SETM dummy,scadr10        ; store scadr10 to (dcadr10)
-//
-//  ->  BRA  (caddr)            ; branch to ptr, PC = [cadr10] (3 words)
-//  +     SETM RA,caddr             ; RA = [cadr10]
-//  +     BRGE  RA                  ; branch to [cadr0]
-//
 // Example copper code: (not using any pseudo instructions)
-//
-// REPEAT   =       10
-// start    SETI     XR_PA_GFX_CTRL,#0x0055     ; set PA_GFX_MODE
-//          SETI     rep_count,#REPEAT-1        ; set line repeat counter
-//          SETI     color_ptr,#SETM+color_tbl  ; set source ptr with SETM opcode + color table
-//          SETI     vpos_lp,#VPOS+120          ; modify vpos_wait with VPOS opcode + starting line
-//
-// vpos_lp  VPOS    #0                          ; wait for next scan line (self-modified)
-//          HPOS    #LEFT+0                     ; wait for left edge of screen
-//          SETM    *+2,color_ptr               ; modify next SETM source with color_ptr
-//          SETM    XR_COLOR_ADDR,0             ; set color from color_ptr (self-modified)
-//          SETM    RA,color_ptr                ; load color_ptr
-//          SETM    RA_SUB,#-1                  ; increment
-//          SETM    color_ptr,RA                ; store color_ptr
-//
-//          HPOS    #LEFT+(640/2)               ; wait for 1/2 way across screen
-//          SETM    *+2,color_ptr               ; modify next SETM source with color_ptr
-//          SETM    XR_COLOR_ADDR,0             ; set color from color_ptr (self-modified)
-//          SETM    RA,color_ptr                ; load color_ptr
-//          SETM    RA_SUB,#-1                  ; increment
-//          SETM    color_ptr,RA                ; store color_ptr
-//
-//          SETM    RA,vpos_lp                  ; load vpos
-//          SETI     RA_SUB,#-1                 ; increment scan line
-//          SETM    vpos_lp,RA                  ; load vpos
-//
-//          SETI     RA,rep_count               ; load repeat counter variable
-//          SETI     RA_SUB,#1                  ; decrement count
-//          SETM    rep_count,RA                ; store repeat counter variable
-//          SETM    RA,rep_count                ; load repeat counter variable
-//          SETI     RA_SUB,#1                  ; decrement count
-//          SETM    rep_count,RA                ; store repeat counter variable
-//          BRLT     nx_color                   ; if count went negative, next color
-//
-//          SETM    RA,color_ptr                ; load color_ptr
-//          SETM    RA_SUB,#-2                  ; rewind to repeat colors again
-//          SETM    color_ptr,RA                ; store color_ptr
-//
-//          SETM    RA,vpos_w                   ; load vpos
-//          SETI     RA_SUB,#-1                 ; increment scan line
-//          SETM    vpos_w,RA                   ; load vpos
-//          BRGE    vpos_lp                     ; always taken (since SETx xxx,RA sets B with RA-RA)
-//
-//          SETI     rep_count,#REPEAT-1        ; reset line repeat counter
-//
-// nx_color SETM    RA,color_ptr                ; load color_ptr
-//          SETI     RA_CMP,#SETM+color_end     ; compare color_ptr to SETM opcode + color_end
-//          BRLT    vpos_lp                     ; loop if color_ptr < color_end
-//          VPOS    #-1                         ; halt until next frame
-//
-// colortbl .word   0x0400, 0x0444,
-//          .word   0x0600, 0x0666,
-//          .word   0x0800, 0x0888,
-//          .word   0x0C00, 0x0CCC
-// color_end
-//
-// rep_count
-//          .word   0
-// color_ptr
-//          .word   0
 //
 // ; copy table of values to contiguous registers
 // ; (using only simple 1:1 pseudo ops)
 // set_tbl
-//          SETI     set_reg+0,#SETM+val_tbl    ; set start set_reg source (plus SETM bit)
-//          SETI     set_reg+1,#XR_COLOR_ADDR   ; set start set_reg dest
-// set_reg  SETM    -1,-1                       ; set color reg (self-modified)
-//          LD      set_reg+1                   ; load RA with set_reg dest
-//          ADDI    #1                          ; increment RA
-//          ST      set_reg+1                   ; store RA to set_reg dest
-//          LD      set_reg                     ; set RA with set_reg source
-//          ADDI    #1                          ; increment RA
-//          CMPI    #SETM+end_tbl               ; compare RA with table end (plus SETM bit)
-//          BRGE     set_done                   ; branch if done
-//          ST      set_reg+0                   ; store RA to set_reg source
-//          BRGE     set_reg                    ; branch always (ST clears B)
-// set_done VPOS    #-1                         ; halt until SOF
+//                 SETI    set_reg+0,#SETM+val_tbl     ; set start set_reg source (plus SETM bit)
+//                 SETI    set_reg+1,#XR_COLOR_ADDR    ; set start set_reg dest
+// set_reg         SETM    $FFFF,$C7FF                 ; set color reg (self-modified)
+//                 LDM     set_reg+1                   ; load RA with set_reg dest
+//                 ADDI    #1                          ; increment RA
+//                 STM     set_reg+1                   ; store RA to set_reg dest
+//                 LDM     set_reg                     ; set RA with set_reg source
+//                 ADDI    #1                          ; increment RA
+//                 CMPI    #SETM+end_tbl               ; compare RA with table end (plus SETM bit)
+//                 BRGE    set_done                    ; branch if done
+//                 STM     set_reg+0                   ; store RA to set_reg source
+//                 BRGE    set_reg                     ; branch always (ST clears B)
+// set_done        VPOS    #-1                         ; halt until SOF
 //
-// val_tbl  .word   0x000, 0x111, 0x222, 0x333
-//          .word   0x444, 0x555, 0x666, 0x777
-//          .word   0x888, 0x999, 0xaaa, 0xbbb
-//          .word   0xccc, 0xddd, 0xeee, 0xfff
+// val_tbl         .word   0x000, 0x111, 0x222, 0x333
+//                 .word   0x444, 0x555, 0x666, 0x777
+//                 .word   0x888, 0x999, 0xaaa, 0xbbb
+//                 .word   0xccc, 0xddd, 0xeee, 0xfff
 // end_tbl
 
 // opcode type {slightly scrambled [13:12],[15:14]}

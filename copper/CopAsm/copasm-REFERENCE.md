@@ -1,6 +1,6 @@
 # XarkLabs copasm "Slim" Copper Assembler Reference
 
-This assembler was a WIP multi-architecture assembler that has been "bit-rotting" on my drive for some time now. I have now repurposed it into an Xosera "Slim Copper" co-processor assembler. It seems to be working well, but it has not been very well tested, so be cautious trusting it.
+This assembler was a work-in-progress multi-architecture assembler that has been "bit-rotting" on my drive for some time now. I have now repurposed it into an Xosera "Slim Copper" co-processor assembler. It seems to be working well, but it has not been very well tested, so be cautious trusting it.
 
 This version of the assembler is configured to produce output suitable for the Xosera "Slim Copper" (the 2nd revision of the Xosera copper using a very minimal 16-bit ISA).  This consists of big-endian 16-bit words and supports the XR address space of Xosera, making the default origin address $C000 (start of copper region).
 
@@ -33,7 +33,7 @@ copasm -l color_screen.casm -o out/color_screen.h
 | --------------------------------- | ---------------------------------------------------------------------------- |
 | `INCLUDE` *"filename"*            | Include *"filename"* as input file, resume after included file               |
 | `INCBIN` *"filename"*             | Include the binary contents of *"filename"* in the output                    |
-| `ORG` *expression*                | Change output start address if at start, or logical origin if not            |
+| `ORG` *expression*                | Change initial output address, or logical origin (output will be contiguous) |
 | `UNDEFINE` *symbol*               | Undefine *symbol*                                                            |
 | *symbol* `EQU` *expression*       | Assign *expression* to *symbol* (also `=` and `ASSIGN` aliases)              |
 | `ALIGN` *expression*              | Align output to power of two boundary (e.g. 2, 4, 8, 16 etc.)                |
@@ -42,7 +42,7 @@ copasm -l color_screen.casm -o out/color_screen.h
 | `HEX` *packed-hex-words*          | Hex 4-digit packed constants, e.g., `DEADBEEFCOFFEE1`                        |
 | *name* `MACRO`\[*arg1*, ...\]     | Define macro *name*, args with `\` will be substituted on use (e.g. `\arg1`) |
 | `ENDM`                            | End macro definition                                                         |
-| `WORD` *expr*\[,*exp* ...\]       | Define literal words (also `INT` and `SHORT` aliases)                        |
+| `WORD` *expr*\[,*exp* ...\]       | Define literal words (also `DW` and `SHORT` aliases)                         |
 | `IF` *condexpr*                   | If *condexpr* zero, assembly suppressed until `ELSE`, `ELSEIF` or `ENDIF`    |
 | `ELSE`                            | Else case for preceding `IF`                                                 |
 | `ELSEIF` *condexpr*               | End preceding `IF` and start else case until `ELSE`, `ELSEIF` or `ENDIF`     |
@@ -76,13 +76,13 @@ Words at the start of a line are assumed to be label definitions (otherwise appe
 | Instruction            | Description                                                   |
 | ---------------------- | ------------------------------------------------------------- |
 | `MOVE` *source*,*dest* | M68K style MOVE, use # on source for immediate value          |
-| `LDI` *imm16*          | Load RA register with value *imm16*, set B=0                  |
+| `LDI` #*imm16*         | Load RA register with value *imm16*, set B=0                  |
 | `LDM` *caddr*          | Load RA register with contents of memory *caddr*, set B=0     |
 | `STM` *caddr*          | Store RA register contents into memory *caddr*, set B=0       |
-| `SUBI` *imm16*         | RA = RA - *imm16*, B flag updated                             |
-| `ADDI` *imm16*         | RA = RA + *imm16*, B flag updated (for subtract of -*imm16*)  |
+| `SUBI` #*imm16*        | RA = RA - *imm16*, B flag updated                             |
+| `ADDI` #*imm16*        | RA = RA + *imm16*, B flag updated (for subtract of -*imm16*)  |
 | `SUBM` *caddr*         | RA = RA - contents of *caddr*, B flag updated                 |
-| `CMPI` *imm16*         | compute RA - *imm16*, B flag updated (RA not altered)         |
+| `CMPI` #*imm16*        | compute RA - *imm16*, B flag updated (RA not altered)         |
 | `CMPM` *caddr*         | compute RA - contents of *caddr*, B flag updated (RA not set) |
 
 ## Copper Predefined Symbols

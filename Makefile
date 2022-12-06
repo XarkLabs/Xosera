@@ -131,6 +131,7 @@ utils:
 
 # Build image/font mem utility
 m68k:
+	cd copper/CopAsm/ && $(MAKE)
 	cd xosera_m68k_api/ && $(MAKE)
 	cd xosera_ansiterm_m68k/ && $(MAKE)
 	cd xosera_boing_m68k/ && $(MAKE)

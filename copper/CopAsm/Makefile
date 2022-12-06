@@ -11,7 +11,7 @@ OBJDIR = obj
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(addprefix $(OBJDIR)/,$(SOURCES:.cpp=.o))
 
-all: $(BINDIR)/$(EXEC) test
+all: $(BINDIR)/$(EXEC)
 
 test: $(BINDIR)/$(EXEC)
 	$(BINDIR)/$(EXEC) -l Tests/cop_diagonal.casm -o $(OBJDIR)/cop_diagonal.h
@@ -21,6 +21,7 @@ test: $(BINDIR)/$(EXEC)
 $(BINDIR)/$(EXEC): $(OBJECTS) $(MAKEFILE_LIST)
 	@mkdir -p $(BINDIR)
 	$(CC) $(CC_FLAGS) $(OBJECTS) -o $(BINDIR)/$(EXEC)
+	@echo === copasm assembler built: $(BINDIR)/$(EXEC)
 
 # To obtain object files
 $(OBJDIR)/%.o: %.cpp $(MAKEFILE_LIST)

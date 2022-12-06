@@ -60,6 +60,8 @@ KERMIT=kermit
 SERIAL?=/dev/modem
 BAUD?=9600
 
+COPASM=../copper/CopAsm/bin/copasm
+
 # Output config (assume name of directory)
 PROGRAM_BASENAME=$(shell basename $(CURDIR))
 
@@ -75,6 +77,11 @@ CSOURCES=$(wildcard *.c)
 CXXSOURCES=$(wildcard *.cpp)
 SSOURCES=$(wildcard *.S)
 ASMSOURCES=$(wildcard *.asm)
+CASMSOURCES=$(wildcard *.casm)
+
+CASMOUTPUT=$(CASMSOURCES:.casm=.h)
+HEADERS=$(CASMOUTPUT) $(wildcard *.h)
+
 SOURCES=$(CSOURCES) $(CXXSOURCES) $(SSOURCES) $(ASMSOURCES)
 
 # Assume each source files makes an object file
@@ -94,7 +101,10 @@ $(BINARY) : $(ELF)
 $(DISASM) : $(ELF)
 	$(OBJDUMP) --disassemble -S $(ELF) >$(DISASM)
 
-$(OBJECTS): Makefile
+$(OBJECTS): $(HEADERS) $(MAKEFILE_LIST)
+
+%.h : %.casm
+	$(COPASM) -l -o $@ $<
 
 %.o : %.c
 	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) -o $@ $<

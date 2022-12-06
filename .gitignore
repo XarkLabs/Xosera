@@ -19,6 +19,10 @@ rtl/**/*.json
 # dot directories
 **/dot/*
 
+# C artifacts
+**/*.d
+**/*.o
+
 # keep xosera_gateware files
 !xosera_gateware/**
 
@@ -53,6 +57,11 @@ xvid_spi/xvid_spi
 **/**_m68k*/**/*.dis
 **/**_m68k*/**/*.map
 **/**_m68k*/**/*.lst
+
+# copasm
+copper/CopAsm/bin/*
+copper/CopAsm/obj/*
+**/*.lst
 
 # macOS thing
 .DS_Store

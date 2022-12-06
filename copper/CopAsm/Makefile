@@ -1,6 +1,6 @@
 # Declaration of variables
 CC = clang++
-CC_FLAGS = -g -std=c++20 -O2 -Wall -Wextra -Weverything -Wno-poison-system-directories -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++98-c++11-compat-binary-literal -Wno-padded -Wno-exit-time-destructors -Wno-global-constructors -Wno-gnu-zero-variadic-macro-arguments -Wno-covered-switch-default -Wno-unreachable-code-break -Wno-switch-enum
+CC_FLAGS = -g -std=c++11 -O2 -Wall -Wextra -Weverything -Wno-poison-system-directories -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++98-c++11-compat-binary-literal -Wno-padded -Wno-exit-time-destructors -Wno-global-constructors -Wno-gnu-zero-variadic-macro-arguments -Wno-covered-switch-default -Wno-unreachable-code-break -Wno-switch-enum
 #CC_FLAGS += -DNDEBUG
 
 # File names
@@ -21,7 +21,7 @@ test: $(BINDIR)/$(EXEC)
 $(BINDIR)/$(EXEC): $(OBJECTS) $(MAKEFILE_LIST)
 	@mkdir -p $(BINDIR)
 	$(CC) $(CC_FLAGS) $(OBJECTS) -o $(BINDIR)/$(EXEC)
-	@echo === copasm assembler built: $(BINDIR)/$(EXEC)
+	@echo === Successfully built copasm assembler: $(BINDIR)/$(EXEC)
 
 # To obtain object files
 $(OBJDIR)/%.o: %.cpp $(MAKEFILE_LIST)

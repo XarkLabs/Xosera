@@ -1,7 +1,6 @@
-# Declaration of variables
-CC = clang++
-CC_FLAGS = -g -std=c++14 -O2 -Wall -Wextra -Weverything -Wno-poison-system-directories -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++98-c++11-compat-binary-literal -Wno-padded -Wno-exit-time-destructors -Wno-global-constructors -Wno-gnu-zero-variadic-macro-arguments -Wno-covered-switch-default -Wno-unreachable-code-break -Wno-switch-enum
-#CC_FLAGS += -DNDEBUG
+# C++ compile flags (these seem okay with g++ or clang++)
+CXX_FLAGS = -std=c++14 -O2 -Wall -Wextra -Wno-poison-system-directories -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++98-c++11-compat-binary-literal -Wno-padded -Wno-exit-time-destructors -Wno-global-constructors -Wno-gnu-zero-variadic-macro-arguments -Wno-covered-switch-default -Wno-unreachable-code-break -Wno-switch-enum
+# CXX_FLAGS += -DNDEBUG
 
 # File names
 EXEC = copasm
@@ -20,13 +19,13 @@ test: $(BINDIR)/$(EXEC)
 # Main target
 $(BINDIR)/$(EXEC): $(OBJECTS) $(MAKEFILE_LIST)
 	@mkdir -p $(BINDIR)
-	$(CC) $(CC_FLAGS) $(OBJECTS) -o $(BINDIR)/$(EXEC)
+	$(CXX) $(CXX_FLAGS) $(OBJECTS) -o $(BINDIR)/$(EXEC)
 	@echo === Successfully built copper assembler: copper/CopAsm/$(BINDIR)/$(EXEC)
 
 # To obtain object files
 $(OBJDIR)/%.o: %.cpp $(MAKEFILE_LIST)
 	@mkdir -p $(OBJDIR)
-	$(CC) -c $(CC_FLAGS) -MMD $< -o $@
+	$(CXX) -c $(CXX_FLAGS) -MMD $< -o $@
 
 # To remove generated files
 clean:

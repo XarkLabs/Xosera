@@ -193,6 +193,7 @@ struct xlasm
         }
     };
     typedef std::unordered_map<std::string, symbol_t> symbol_map_t;
+    typedef std::vector<std::string>                  export_list_t;
 
     struct condition_t
     {
@@ -298,6 +299,7 @@ struct xlasm
         DIR_LISTMAC,
         DIR_MACNAME,
         DIR_LISTCOND,
+        DIR_EXPORT,
         NUM_DIRECTIVES
     };
 
@@ -311,33 +313,39 @@ struct xlasm
     typedef std::unordered_map<std::string, uint32_t> directive_map_t;
     typedef std::unordered_map<uint32_t, uint32_t>    hint_map_t;
 
-    static constexpr directive_t directives_list[] = {
-        {"INCLUDE", DIR_INCLUDE},  {"INCBIN", DIR_INCBIN},   {"ORG", DIR_ORG},
-        {"EQU", DIR_EQU},          {"=", DIR_ASSIGN},        {"ASSIGN", DIR_ASSIGN},
-        {"UNDEF", DIR_UNDEFINE},   {"UNSET", DIR_UNDEFINE},  {"ALIGN", DIR_ALIGN},
-        {"SPACE", DIR_SPACE_16},   {"FILL", DIR_FILL_16},    {"HEX", DIR_DEF_HEX},
-        {"HALF", DIR_DEF_16},      {"SHORT", DIR_DEF_16},    {"INT", DIR_DEF_16},
-        {"DD16", DIR_DEF_16},      {"MACRO", DIR_MACRO},     {"ENDMACRO", DIR_ENDMACRO},
-        {"ENDM", DIR_ENDMACRO},    {"VOID", DIR_VOID},       {"IF", DIR_IF},
-        {"IFSTR", DIR_IFSTR},      {"IFSTRI", DIR_IFSTRI},   {"ELSEIF", DIR_ELSEIF},
-        {"ELSE", DIR_ELSE},        {"ENDIF", DIR_ENDIF},     {"END", DIR_END},
-        {"MSG", DIR_MSG},          {"PRINT", DIR_MSG},       {"ASSERT", DIR_ASSERT},
-        {"WARN", DIR_WARN},        {"ERROR", DIR_ERROR},     {"EXIT", DIR_EXIT},
-        {"LIST", DIR_LIST},        {"LISTMAC", DIR_LISTMAC}, {"MACNAME", DIR_MACNAME},
-        {"LISTCOND", DIR_LISTCOND}};
+    static constexpr directive_t directives_list[] = {{"INCLUDE", DIR_INCLUDE},   {"INCBIN", DIR_INCBIN},
+                                                      {"ORG", DIR_ORG},           {"EQU", DIR_EQU},
+                                                      {"=", DIR_ASSIGN},          {"ASSIGN", DIR_ASSIGN},
+                                                      {"UNDEF", DIR_UNDEFINE},    {"UNSET", DIR_UNDEFINE},
+                                                      {"EXPORT", DIR_EXPORT},     {"ALIGN", DIR_ALIGN},
+                                                      {"SPACE", DIR_SPACE_16},    {"FILL", DIR_FILL_16},
+                                                      {"HEX", DIR_DEF_HEX},       {"HALF", DIR_DEF_16},
+                                                      {"SHORT", DIR_DEF_16},      {"INT", DIR_DEF_16},
+                                                      {"DD16", DIR_DEF_16},       {"MACRO", DIR_MACRO},
+                                                      {"ENDMACRO", DIR_ENDMACRO}, {"ENDM", DIR_ENDMACRO},
+                                                      {"VOID", DIR_VOID},         {"IF", DIR_IF},
+                                                      {"IFSTR", DIR_IFSTR},       {"IFSTRI", DIR_IFSTRI},
+                                                      {"ELSEIF", DIR_ELSEIF},     {"ELSE", DIR_ELSE},
+                                                      {"ENDIF", DIR_ENDIF},       {"END", DIR_END},
+                                                      {"MSG", DIR_MSG},           {"PRINT", DIR_MSG},
+                                                      {"ASSERT", DIR_ASSERT},     {"WARN", DIR_WARN},
+                                                      {"ERROR", DIR_ERROR},       {"EXIT", DIR_EXIT},
+                                                      {"LIST", DIR_LIST},         {"LISTMAC", DIR_LISTMAC},
+                                                      {"MACNAME", DIR_MACNAME},   {"LISTCOND", DIR_LISTCOND}};
 
 
     std::string initial_variant;        // initial architecture name to assemble for
     Ixlarch *   arch;                   // current architecture to assemble for (can be changed with ARCH directive)
 
-    opts_t                 opt;                     // assembly options
-    context_t              ctxt;                    // current assembly context
-    context_stack_t        context_stack;           // context stack for include files and macros
-    section_map_t          sections;                // output sections
-    source_map_t           source_files;            // map of source files (tokenized at read time)
-    macro_map_t            macros;                  // defined macros
-    source_map_t           expanded_macros;         // source fragments from expanded macros
-    symbol_map_t           symbols;                 // labels and other symbols
+    opts_t                 opt;                    // assembly options
+    context_t              ctxt;                   // current assembly context
+    context_stack_t        context_stack;          // context stack for include files and macros
+    section_map_t          sections;               // output sections
+    source_map_t           source_files;           // map of source files (tokenized at read time)
+    macro_map_t            macros;                 // defined macros
+    source_map_t           expanded_macros;        // source fragments from expanded macros
+    symbol_map_t           symbols;                // labels and other symbols
+    export_list_t          exports;
     condition_stack_t      condition_stack;         // stack for conditional assembly
     directive_map_t        directives;              // fast lookup of directives
     hint_map_t             line_hint;               // "hint" for this virtual-line (for squeeze pass)

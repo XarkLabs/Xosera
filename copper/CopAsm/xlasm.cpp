@@ -2006,6 +2006,53 @@ int32_t xlasm::process_directive(uint32_t                         idx,
             return 0;
         }
 
+        // EXPORT ===============================
+        case DIR_EXPORT: {
+            if (label.size())
+            {
+                error("Label definition not permitted on %s", directive.c_str());
+                return 0;
+            }
+
+            if (tokens.size() - cur_token != 1)
+            {
+                error("One label expected after %s", directive.c_str());
+                return 0;
+            }
+
+            std::string export_label = tokens[cur_token];
+
+            dprintf("export %s\n", export_label.c_str());
+            symbol_t & sym = symbols[export_label];
+
+            if (sym.type == symbol_t::UNDEFINED)
+            {
+                sym.type         = symbol_t::VARIABLE;
+                sym.name         = label;
+                sym.line_defined = ctxt.line;
+                sym.file_defined = ctxt.file;
+                sym.section      = ctxt.section;
+                sym.value        = 0;
+            }
+            else
+            {
+                if (sym.type != symbol_t::VARIABLE && sym.type != symbol_t::LABEL)
+                {
+                    error("Can only export label or variable symbol: \"%s\" defined at %s(%d)",
+                          export_label.c_str(),
+                          sym.file_defined->name.c_str(),
+                          sym.line_defined);
+
+                    return 0;
+                }
+            }
+
+            notice(3, "Exported variable \"%s\" = 0x" PR_X64 "/" PR_D64 "", export_label.c_str(), sym.value, sym.value);
+            exports.push_back(export_label);
+
+            return 0;
+        }
+
         // ASSERT ===============================
         case DIR_ASSERT: {
             if (ctxt.pass != context_t::PASS_2)

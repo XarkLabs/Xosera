@@ -247,6 +247,7 @@
 #define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 8, 8) | XB_(intmask, 0, 4))
 
 // Copper instruction helper macros
+#if 0        // older copper
 #define COP_WAIT_HV(h_pos, v_pos)   (0x00000000 | XB_((uint32_t)(v_pos), 16, 12) | XB_((uint32_t)(h_pos), 4, 12))
 #define COP_WAIT_H(h_pos)           (0x00000001 | XB_((uint32_t)(h_pos), 4, 12))
 #define COP_WAIT_V(v_pos)           (0x00000002 | XB_((uint32_t)(v_pos), 16, 12))
@@ -261,6 +262,23 @@
 #define COP_MOVEF(val16, tile_addr) (0x80000000 | XB_((uint32_t)(tile_addr), 16, 13) | ((uint16_t)(val16)))
 #define COP_MOVEP(rgb16, color_num) (0xA0000000 | XB_((uint32_t)(color_num), 16, 13) | ((uint16_t)(rgb16)))
 #define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 16, 13) | ((uint16_t)(val16)))
+#else        // newer "slim copper" versions (but still 32-bit "emulating" previous copper)
+#define COP_WAIT_HV(h_pos, v_pos)   (0x28002000 | XB_((uint32_t)(v_pos), 16, 11) | XB_((uint32_t)(h_pos), 0, 11))
+#define COP_WAIT_H(h_pos)           (0x20002000 | XB_((uint32_t)(h_pos), 0, 11))
+#define COP_WAIT_V(v_pos)           (0x20002800 | XB_((uint32_t)(v_pos), 0, 10))
+#define COP_WAIT_F()                (0x20002FFF)
+#define COP_END()                   (0x20002FFF)
+// #define COP_SKIP_HV(h_pos, v_pos)   (0x20000000 | XB_((uint32_t)(v_pos), 16, 12) | XB_((uint32_t)(h_pos), 4, 12))
+// #define COP_SKIP_H(h_pos)           (0x20000001 | XB_((uint32_t)(h_pos), 4, 12))
+// #define COP_SKIP_V(v_pos)           (0x20000002 | XB_((uint32_t)(v_pos), 16, 12))
+// #define COP_SKIP_F()                (0x20000003)
+#define COP_JUMP(cop_addr)          (0x30003800 | XB_((uint32_t)(cop_addr), 16, 11) | XB_((uint32_t)(cop_addr), 0, 11))
+#define COP_MOVER(val16, xreg)      (0x00000000 | XB_((uint32_t)(XR_##xreg), 16, 12) | ((uint16_t)(val16)))
+#define COP_MOVEF(val16, tile_addr) (0x40000000 | XB_((uint32_t)(tile_addr), 16, 12) | ((uint16_t)(val16)))
+#define COP_MOVEP(rgb16, color_num) (0x80000000 | XB_((uint32_t)(color_num), 16, 12) | ((uint16_t)(rgb16)))
+#define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 16, 12) | ((uint16_t)(val16)))
+#define COP_MOVE(val16, xaddr)      (0x00000000 | XB_(((uint32_t)(xaddr)&0xCFFF), 16, 12) | ((uint16_t)(val16)))
+#endif
 
 // TODO: repace more magic constants with defines for bit positions
 

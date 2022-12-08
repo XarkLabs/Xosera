@@ -318,16 +318,22 @@ void     xosera_splitscreen_test()
         xmem_set_addr(XR_COPPER_ADDR + 4);
         if (up)
         {
-            xmem_setw_next(++current);
-            if (current == 300)
+            current += 1;
+            uint32_t op = COP_WAIT_V(current);
+            xmem_setw_next(op >> 16);
+            xmem_setw_next(op & 0xffff);
+            if (current >= 300)
             {
                 up = false;
             }
         }
         else
         {
-            xmem_setw_next(--current);
-            if (current == 200)
+            current -= 1;
+            uint32_t op = COP_WAIT_V(current);
+            xmem_setw_next(op >> 16);
+            xmem_setw_next(op & 0xffff);
+            if (current <= 200)
             {
                 up = true;
             }

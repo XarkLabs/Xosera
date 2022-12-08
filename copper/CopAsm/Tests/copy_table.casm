@@ -4,6 +4,9 @@
                 .listcond false
                 .list    true
 
+                ; export variable values to output C/H file
+                export  set_tbl, val_tbl,end_tbl
+
 ; copy table of values to contiguous registers
 ; (using only simple 1:1 pseudo ops)
 set_tbl
@@ -26,6 +29,4 @@ val_tbl         .word   0x000, 0x111, 0x222, 0x333
                 .word   0x888, 0x999, 0xaaa, 0xbbb
                 .word   0xccc, 0xddd, 0xeee, 0xfff
 end_tbl
-
-                export  val_tbl
 

@@ -689,7 +689,7 @@ int32_t xlasm::process_output()
         out_fmt = output_format::NONE;
         dprintf("Dry run - no output file: " PR_D64 " 16-bit words were generated.\n", total_size >> 1);
     }
-    else if (extension == ".c" || extension == ".h")
+    else if (extension == ".c" || extension == ".cpp" || extension == ".h")
     {
         header_file = extension == ".h";
         out_fmt     = output_format::C_FILE;
@@ -837,6 +837,39 @@ int32_t xlasm::process_output()
                     break;
                 case output_format::C_FILE: {
                     fprintf(out, "};\n");
+                    if (exports.size())
+                    {
+                        for (auto expsym : exports)
+                        {
+                            symbol_t sym = symbols[expsym];
+                            if (sym.type != symbol_t::UNDEFINED)
+                                fprintf(out,
+                                        "static const uint16_t %s__%s  __attribute__ ((unused)) = %6" PRId64
+                                        "; // 0x%04" PRIx64 "\n",
+                                        basename.c_str(),
+                                        sym.name.c_str(),
+                                        sym.value - load_addr,
+                                        sym.value);
+                        }
+
+                        fprintf(out,
+                                "static const uint16_t %s_export_size  __attribute__ ((unused)) = " PR_DSIZET ";\n",
+                                basename.c_str(),
+                                exports.size());
+                        fprintf(out,
+                                "static const uint16_t %s_export[" PR_DSIZET "]  __attribute__ ((unused)) = {\n",
+                                basename.c_str(),
+                                exports.size());
+
+                        size_t last_count = exports.size();
+                        for (auto expsym : exports)
+                        {
+                            --last_count;
+                            fprintf(
+                                out, "    %s__%s%s\n", basename.c_str(), expsym.c_str(), last_count == 0 ? "" : ",");
+                        }
+                        fprintf(out, "};\n");
+                    }
                     fprintf(out, "#endif // INC_%s_%c\n", baseupper.c_str(), header_file ? 'H' : 'C');
                     break;
                 }
@@ -2014,41 +2047,43 @@ int32_t xlasm::process_directive(uint32_t                         idx,
                 return 0;
             }
 
-            if (tokens.size() - cur_token != 1)
+            if (ctxt.pass == context_t::PASS_2)
             {
-                error("One label expected after %s", directive.c_str());
-                return 0;
-            }
-
-            std::string export_label = tokens[cur_token];
-
-            dprintf("export %s\n", export_label.c_str());
-            symbol_t & sym = symbols[export_label];
-
-            if (sym.type == symbol_t::UNDEFINED)
-            {
-                sym.type         = symbol_t::VARIABLE;
-                sym.name         = label;
-                sym.line_defined = ctxt.line;
-                sym.file_defined = ctxt.file;
-                sym.section      = ctxt.section;
-                sym.value        = 0;
-            }
-            else
-            {
-                if (sym.type != symbol_t::VARIABLE && sym.type != symbol_t::LABEL)
+                do
                 {
-                    error("Can only export label or variable symbol: \"%s\" defined at %s(%d)",
-                          export_label.c_str(),
-                          sym.file_defined->name.c_str(),
-                          sym.line_defined);
+                    std::string export_label = tokens[cur_token];
 
-                    return 0;
-                }
+                    if (std::find(exports.begin(), exports.end(), export_label) == exports.end())
+                    {
+                        symbol_t & sym = symbols[export_label];
+
+                        if (sym.type != symbol_t::VARIABLE && sym.type != symbol_t::LABEL)
+                        {
+                            error("Cannot export symbol not a label or variable: \"%s\"", export_label.c_str());
+
+                            return 0;
+                        }
+
+                        notice(3,
+                               "Exported variable \"%s\" = 0x" PR_X64 "/" PR_D64 "",
+                               export_label.c_str(),
+                               sym.value,
+                               sym.value);
+                        exports.push_back(export_label);
+                    }
+
+                    cur_token++;
+
+                    if (cur_token < tokens.size())
+                    {
+                        assert(tokens[cur_token] == ",");
+
+                        if (cur_token + 1 >= tokens.size())
+                            error("%s missing argument after \",\"", directive.c_str());
+                    }
+                } while (++cur_token < tokens.size());
             }
 
-            notice(3, "Exported variable \"%s\" = 0x" PR_X64 "/" PR_D64 "", export_label.c_str(), sym.value, sym.value);
-            exports.push_back(export_label);
 
             return 0;
         }

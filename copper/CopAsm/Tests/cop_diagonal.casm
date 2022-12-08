@@ -7,6 +7,8 @@
                 .listcond false
                 .list    true
 
+                export  color_tbl,color_end             ; export address offsets for C
+
 H_START         =       160                             ; starting HPOS (visible left edge)
 
 entry

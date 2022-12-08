@@ -196,16 +196,16 @@ typedef enum logic [6:0] {
     XR_UNUSED_4F    = 7'h4F,            // TODO: unused XR 4F
 `else
     // Blitter Registers
-    XR_BLIT_CTRL    = 7'h40,            // (WO) blit control (transparency control, logic op and op input flags)
-    XR_BLIT_VAL_C   = 7'h41,            // (WO) blit C XOR constant value
-    XR_BLIT_MOD_S   = 7'h42,            // (WO) blit line modulo added to SRC_S
-    XR_BLIT_SRC_S   = 7'h43,            // (WO) blit A source VRAM read address / constant value
-    XR_BLIT_MOD_D   = 7'h44,            // (WO) blit modulo added to D destination after each line
-    XR_BLIT_DST_D   = 7'h45,            // (WO) blit D VRAM destination write address
-    XR_BLIT_SHIFT   = 7'h46,            // (WO) blit first and last word nibble masks and nibble right shift (0-3)
-    XR_BLIT_LINES   = 7'h47,            // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
-    XR_BLIT_WORDS   = 7'h48,            // (WO+) blit word count minus 1 per line (write starts blit operation)
-    XR_UNUSED_49    = 7'h49,            // TODO: unused XR reg
+    XR_BLIT_CTRL    = 7'h40,            // (WO) blit control ([15:8]=transp value, [5]=8 bpp, [4]=transp on, [0]=S constant)
+    XR_BLIT_ANDC    = 7'h41,            // (WO) blit AND-COMPLEMENT constant value
+    XR_BLIT_XOR     = 7'h42,            // (WO) blit XOR constant value
+    XR_BLIT_MOD_S   = 7'h43,            // (WO) blit line modulo added to SRC_S
+    XR_BLIT_SRC_S   = 7'h44,            // (WO) blit A source VRAM read address / constant value
+    XR_BLIT_MOD_D   = 7'h45,            // (WO) blit modulo added to D destination after each line
+    XR_BLIT_DST_D   = 7'h46,            // (WO) blit D VRAM destination write address
+    XR_BLIT_SHIFT   = 7'h47,            // (WO) blit first and last word nibble masks and nibble right shift (0-3)
+    XR_BLIT_LINES   = 7'h48,            // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
+    XR_BLIT_WORDS   = 7'h49,            // (WO+) blit word count minus 1 per line (write starts blit operation)
     XR_UNUSED_4A    = 7'h4A,            // TODO: unused XR reg
     XR_UNUSED_4B    = 7'h4B,            // TODO: unused XR reg
     XR_UNUSED_4C    = 7'h4C,            // TODO: unused XR reg
@@ -612,15 +612,15 @@ function automatic xv::xr_register_t xr_reg_to_enum(
             7'h4F:      xr_reg_to_enum = xv::XR_UNUSED_4F;
 `else
             7'h40:      xr_reg_to_enum = xv::XR_BLIT_CTRL;
-            7'h41:      xr_reg_to_enum = xv::XR_BLIT_VAL_C;
-            7'h42:      xr_reg_to_enum = xv::XR_BLIT_MOD_S;
-            7'h43:      xr_reg_to_enum = xv::XR_BLIT_SRC_S;
-            7'h44:      xr_reg_to_enum = xv::XR_BLIT_MOD_D;
-            7'h45:      xr_reg_to_enum = xv::XR_BLIT_DST_D;
-            7'h46:      xr_reg_to_enum = xv::XR_BLIT_SHIFT;
-            7'h47:      xr_reg_to_enum = xv::XR_BLIT_LINES;
-            7'h48:      xr_reg_to_enum = xv::XR_BLIT_WORDS;
-            7'h49:      xr_reg_to_enum = xv::XR_UNUSED_49;
+            7'h41:      xr_reg_to_enum = xv::XR_BLIT_ANDC;
+            7'h42:      xr_reg_to_enum = xv::XR_BLIT_XOR;
+            7'h43:      xr_reg_to_enum = xv::XR_BLIT_MOD_S;
+            7'h44:      xr_reg_to_enum = xv::XR_BLIT_SRC_S;
+            7'h45:      xr_reg_to_enum = xv::XR_BLIT_MOD_D;
+            7'h46:      xr_reg_to_enum = xv::XR_BLIT_DST_D;
+            7'h47:      xr_reg_to_enum = xv::XR_BLIT_SHIFT;
+            7'h48:      xr_reg_to_enum = xv::XR_BLIT_LINES;
+            7'h49:      xr_reg_to_enum = xv::XR_BLIT_WORDS;
             7'h4A:      xr_reg_to_enum = xv::XR_UNUSED_4A;
             7'h4B:      xr_reg_to_enum = xv::XR_UNUSED_4B;
             7'h4C:      xr_reg_to_enum = xv::XR_UNUSED_4C;

@@ -214,16 +214,16 @@
 #define XR_UNUSED_2E  0x4E        // (- /-) TODO: unused XR 2E
 #define XR_UNUSED_2F  0x4F        // (- /-) TODO: unused XR 2F
 #else
-#define XR_BLIT_CTRL  0x40        // (WO) blit control (transparency control, logic op and op input flags)
-#define XR_BLIT_VAL_C 0x41        // (WO) blit C XOR constant value
-#define XR_BLIT_MOD_S 0x42        // (WO) blit line modulo added to SRC_S
-#define XR_BLIT_SRC_S 0x43        // (WO) blit A source VRAM read address / constant value
-#define XR_BLIT_MOD_D 0x44        // (WO) blit modulo added to D destination after each line
-#define XR_BLIT_DST_D 0x45        // (WO) blit D VRAM destination write address
-#define XR_BLIT_SHIFT 0x46        // (WO) blit first and last word nibble masks and nibble right shift (0-3)
-#define XR_BLIT_LINES 0x47        // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
-#define XR_BLIT_WORDS 0x48        // (WO+) blit word count minus 1 per line (write starts blit operation)
-#define XR_UNUSED_49  0x49        // TODO: unused XR reg
+#define XR_BLIT_CTRL  0x40        // (WO) blit control ([15:8]=transp value, [5]=8 bpp, [4]=transp on, [0]=S constant)
+#define XR_BLIT_ANDC  0x41        // (WO) blit AND-COMPLEMENT constant value
+#define XR_BLIT_XOR   0x42        // (WO) blit XOR constant value
+#define XR_BLIT_MOD_S 0x43        // (WO) blit S source VRAM read address / constant value
+#define XR_BLIT_SRC_S 0x44        // (WO) blit modulo added to D destination after each line
+#define XR_BLIT_MOD_D 0x45        // (WO) blit D VRAM destination write address
+#define XR_BLIT_DST_D 0x46        // (WO) blit first and last word nibble masks and nibble right shift (0-3)
+#define XR_BLIT_SHIFT 0x47        // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
+#define XR_BLIT_LINES 0x48        // (WO+) blit word count minus 1 per line (write starts blit operation)
+#define XR_BLIT_WORDS 0x49        // TODO: unused XR reg
 #define XR_UNUSED_4A  0x4A        // TODO: unused XR reg
 #define XR_UNUSED_4B  0x4B        // TODO: unused XR reg
 #define XR_UNUSED_4C  0x4C        // TODO: unused XR reg
@@ -247,6 +247,7 @@
 #define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 8, 8) | XB_(intmask, 0, 4))
 
 // Copper instruction helper macros
+#if 0        // older copper
 #define COP_WAIT_HV(h_pos, v_pos)   (0x00000000 | XB_((uint32_t)(v_pos), 16, 12) | XB_((uint32_t)(h_pos), 4, 12))
 #define COP_WAIT_H(h_pos)           (0x00000001 | XB_((uint32_t)(h_pos), 4, 12))
 #define COP_WAIT_V(v_pos)           (0x00000002 | XB_((uint32_t)(v_pos), 16, 12))
@@ -261,6 +262,23 @@
 #define COP_MOVEF(val16, tile_addr) (0x80000000 | XB_((uint32_t)(tile_addr), 16, 13) | ((uint16_t)(val16)))
 #define COP_MOVEP(rgb16, color_num) (0xA0000000 | XB_((uint32_t)(color_num), 16, 13) | ((uint16_t)(rgb16)))
 #define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 16, 13) | ((uint16_t)(val16)))
+#else        // newer "slim copper" versions (but still 32-bit "emulating" previous copper)
+#define COP_WAIT_HV(h_pos, v_pos)   (0x28002000 | XB_((uint32_t)(v_pos), 16, 11) | XB_((uint32_t)(h_pos), 0, 11))
+#define COP_WAIT_H(h_pos)           (0x20002000 | XB_((uint32_t)(h_pos), 0, 11))
+#define COP_WAIT_V(v_pos)           (0x20002800 | XB_((uint32_t)(v_pos), 0, 10))
+#define COP_WAIT_F()                (0x20002FFF)
+#define COP_END()                   (0x20002FFF)
+// #define COP_SKIP_HV(h_pos, v_pos)   (0x20000000 | XB_((uint32_t)(v_pos), 16, 12) | XB_((uint32_t)(h_pos), 4, 12))
+// #define COP_SKIP_H(h_pos)           (0x20000001 | XB_((uint32_t)(h_pos), 4, 12))
+// #define COP_SKIP_V(v_pos)           (0x20000002 | XB_((uint32_t)(v_pos), 16, 12))
+// #define COP_SKIP_F()                (0x20000003)
+#define COP_JUMP(cop_addr)          (0x30003800 | XB_((uint32_t)(cop_addr), 16, 11) | XB_((uint32_t)(cop_addr), 0, 11))
+#define COP_MOVER(val16, xreg)      (0x00000000 | XB_((uint32_t)(XR_##xreg), 16, 12) | ((uint16_t)(val16)))
+#define COP_MOVEF(val16, tile_addr) (0x40000000 | XB_((uint32_t)(tile_addr), 16, 12) | ((uint16_t)(val16)))
+#define COP_MOVEP(rgb16, color_num) (0x80000000 | XB_((uint32_t)(color_num), 16, 12) | ((uint16_t)(rgb16)))
+#define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 16, 12) | ((uint16_t)(val16)))
+#define COP_MOVE(val16, xaddr)      (0x00000000 | XB_(((uint32_t)(xaddr)&0xCFFF), 16, 12) | ((uint16_t)(val16)))
+#endif
 
 // TODO: repace more magic constants with defines for bit positions
 

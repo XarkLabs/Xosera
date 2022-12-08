@@ -340,15 +340,16 @@ static __attribute__((noinline)) void xansi_clear(uint16_t start, uint16_t end)
     xv_prep();
 
     xwait_blit_ready();
-    xreg_setw(BLIT_CTRL, 0x0001);                         // no transp, constS
-    xreg_setw(BLIT_VAL_C, 0x0000);                        // XOR with C
-    xreg_setw(BLIT_MOD_S, 0x0000);                        // no modulo S
-    xreg_setw(BLIT_SRC_S, (td->color << 8) | ' ');        // S = const data
-    xreg_setw(BLIT_MOD_D, 0x0000);                        // no modulo D
-    xreg_setw(BLIT_DST_D, start);                         // VRAM display dest address
-    xreg_setw(BLIT_SHIFT, 0xFF00);                        // no edge masking or shifting
-    xreg_setw(BLIT_LINES, 0x0000);                        // lines (0 for 1-D blit)
-    xreg_setw(BLIT_WORDS, count);                         // words to write -1
+    xreg_setw(BLIT_CTRL, 0x0001);                  // no transp, constS
+    xreg_setw_next(0x0000);                        // ANDC constant
+    xreg_setw_next(0x0000);                        // XOR constant
+    xreg_setw_next(0x0000);                        // MOD_S no modulo S
+    xreg_setw_next((td->color << 8) | ' ');        // SRC_S S = const data
+    xreg_setw_next(0x0000);                        // MOD_D no modulo D
+    xreg_setw_next(start);                         // DST_D VRAM display dest address
+    xreg_setw_next(0xFF00);                        // SHIFT no edge masking or shifting
+    xreg_setw_next(0x0000);                        // LINES lines (0 for 1-D blit)
+    xreg_setw_next(count);                         // WORDS words to write -1
 
     if (!xm_get_sys_ctrlb(BLIT_BUSY))
     {
@@ -647,15 +648,16 @@ static void xansi_scroll_up()
     uint16_t count = td->vram_size - td->cols;
 
     xwait_blit_ready();
-    xreg_setw(BLIT_CTRL, 0x0000);            // no transp
-    xreg_setw(BLIT_VAL_C, 0x0000);           // XOR with C
-    xreg_setw(BLIT_MOD_S, 0x0000);           // no modulo S
-    xreg_setw(BLIT_SRC_S, saddr);            // S = source
-    xreg_setw(BLIT_MOD_D, 0x0000);           // no modulo D
-    xreg_setw(BLIT_DST_D, daddr);            // VRAM display dest address
-    xreg_setw(BLIT_SHIFT, 0xFF00);           // no edge masking or shifting
-    xreg_setw(BLIT_LINES, 0x0000);           // lines (0 for 1-D blit)
-    xreg_setw(BLIT_WORDS, count - 1);        // words to write -1
+    xreg_setw(BLIT_CTRL, 0x0000);        // no transp
+    xreg_setw_next(0x0000);              // ANDC constant
+    xreg_setw_next(0x0000);              // XOR constant
+    xreg_setw_next(0x0000);              // MOD_S no modulo S
+    xreg_setw_next(saddr);               // SRC_S S = source
+    xreg_setw_next(0x0000);              // MOD_D no modulo D
+    xreg_setw_next(daddr);               // DST_D VRAM display dest address
+    xreg_setw_next(0xFF00);              // SHIFT no edge masking or shifting
+    xreg_setw_next(0x0000);              // LINES lines (0 for 1-D blit)
+    xreg_setw_next(count - 1);           // WORDS words to write -1
 
     if (!xm_get_sys_ctrlb(BLIT_BUSY))
     {
@@ -691,15 +693,16 @@ static void xansi_scroll_down(xansiterm_data * td)
     uint16_t count = td->vram_size - td->cols;
 
     xwait_blit_ready();
-    xreg_setw(BLIT_CTRL, 0x0000);                  // no transp
-    xreg_setw(BLIT_VAL_C, 0x0000);                 // XOR with C
-    xreg_setw(BLIT_MOD_S, -(td->cols * 2));        // S modulo
-    xreg_setw(BLIT_SRC_S, saddr);                  // S source
-    xreg_setw(BLIT_MOD_D, -(td->cols * 2));        // modulo D
-    xreg_setw(BLIT_DST_D, daddr);                  // VRAM display dest address
-    xreg_setw(BLIT_SHIFT, 0xFF00);                 // no edge masking or shifting
-    xreg_setw(BLIT_LINES, td->rows - 1);           // lines
-    xreg_setw(BLIT_WORDS, td->cols - 1);           // words per line -1
+    xreg_setw(BLIT_CTRL, 0x0000);           // no transp
+    xreg_setw_next(0x0000);                 // ANDC constant
+    xreg_setw_next(0x0000);                 // XOR constant
+    xreg_setw_next(-(td->cols * 2));        // MOD_S S modulo
+    xreg_setw_next(saddr);                  // SRC_S S source
+    xreg_setw_next(-(td->cols * 2));        // MOD_D modulo D
+    xreg_setw_next(daddr);                  // DST_D VRAM display dest address
+    xreg_setw_next(0xFF00);                 // SHIFT no edge masking or shifting
+    xreg_setw_next(td->rows - 1);           // LINES lines
+    xreg_setw_next(td->cols - 1);           // WORDS words per line -1
 
     if (!xm_get_sys_ctrlb(BLIT_BUSY))
     {

@@ -214,16 +214,16 @@
 #define XR_UNUSED_2E  0x4E        // (- /-) TODO: unused XR 2E
 #define XR_UNUSED_2F  0x4F        // (- /-) TODO: unused XR 2F
 #else
-#define XR_BLIT_CTRL  0x40        // (WO) blit control (transparency control, logic op and op input flags)
-#define XR_BLIT_VAL_C 0x41        // (WO) blit C XOR constant value
-#define XR_BLIT_MOD_S 0x42        // (WO) blit line modulo added to SRC_S
-#define XR_BLIT_SRC_S 0x43        // (WO) blit A source VRAM read address / constant value
-#define XR_BLIT_MOD_D 0x44        // (WO) blit modulo added to D destination after each line
-#define XR_BLIT_DST_D 0x45        // (WO) blit D VRAM destination write address
-#define XR_BLIT_SHIFT 0x46        // (WO) blit first and last word nibble masks and nibble right shift (0-3)
-#define XR_BLIT_LINES 0x47        // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
-#define XR_BLIT_WORDS 0x48        // (WO+) blit word count minus 1 per line (write starts blit operation)
-#define XR_UNUSED_49  0x49        // TODO: unused XR reg
+#define XR_BLIT_CTRL  0x40        // (WO) blit control ([15:8]=transp value, [5]=8 bpp, [4]=transp on, [0]=S constant)
+#define XR_BLIT_ANDC  0x41        // (WO) blit AND-COMPLEMENT constant value
+#define XR_BLIT_XOR   0x42        // (WO) blit XOR constant value
+#define XR_BLIT_MOD_S 0x43        // (WO) blit S source VRAM read address / constant value
+#define XR_BLIT_SRC_S 0x44        // (WO) blit modulo added to D destination after each line
+#define XR_BLIT_MOD_D 0x45        // (WO) blit D VRAM destination write address
+#define XR_BLIT_DST_D 0x46        // (WO) blit first and last word nibble masks and nibble right shift (0-3)
+#define XR_BLIT_SHIFT 0x47        // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
+#define XR_BLIT_LINES 0x48        // (WO+) blit word count minus 1 per line (write starts blit operation)
+#define XR_BLIT_WORDS 0x49        // TODO: unused XR reg
 #define XR_UNUSED_4A  0x4A        // TODO: unused XR reg
 #define XR_UNUSED_4B  0x4B        // TODO: unused XR reg
 #define XR_UNUSED_4C  0x4C        // TODO: unused XR reg

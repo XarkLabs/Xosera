@@ -39,7 +39,6 @@ module blitter_slim(
 
 // blitter xreg register data (holds "queued" blit)
 logic           xreg_ctrl_S_const;
-logic           xreg_ctrl_C_and;
 logic           xreg_ctrl_transp;                   // transparency enable
 logic           xreg_ctrl_transp_8b;                // 4-bit/8-bit transparency zero check
 logic [7:0]     xreg_ctrl_transp_T;                 // 8-bit transparency value
@@ -49,7 +48,8 @@ logic  [3:0]    xreg_shift_f_mask;
 logic  [3:0]    xreg_shift_l_mask;
 word_t          xreg_mod_S;
 word_t          xreg_src_S;
-word_t          xreg_val_C;
+word_t          xreg_val_CA;
+word_t          xreg_val_CX;
 word_t          xreg_mod_D;
 word_t          xreg_dst_D;
 word_t          xreg_lines;                         // "limitation" of 32768 lines
@@ -66,7 +66,6 @@ assign blit_full_o  = xreg_blit_queued;             // blit register queue full
 always_ff @(posedge clk) begin
     if (reset_i) begin
         xreg_ctrl_S_const   <= '0;
-        xreg_ctrl_C_and     <= '0;
         xreg_ctrl_transp    <= '0;
         xreg_ctrl_transp_8b <= '0;
         xreg_ctrl_transp_T  <= '0;
@@ -76,7 +75,8 @@ always_ff @(posedge clk) begin
         xreg_mod_S          <= '0;
         xreg_mod_D          <= '0;
         xreg_src_S          <= '0;
-        xreg_val_C          <= '0;
+        xreg_val_CA         <= '0;
+        xreg_val_CX         <= '0;
         xreg_dst_D          <= '0;
         xreg_lines          <= '0;
         xreg_words          <= '0;
@@ -94,11 +94,13 @@ always_ff @(posedge clk) begin
                     xreg_ctrl_transp_T  <= xreg_data_i[15:8];
                     xreg_ctrl_transp_8b <= xreg_data_i[5];
                     xreg_ctrl_transp    <= xreg_data_i[4];
-                    xreg_ctrl_C_and     <= xreg_data_i[1];
                     xreg_ctrl_S_const   <= xreg_data_i[0];
                 end
-                xv::XR_BLIT_VAL_C: begin
-                    xreg_val_C          <= xreg_data_i;
+                xv::XR_BLIT_ANDC: begin
+                    xreg_val_CA         <= xreg_data_i;
+                end
+                xv::XR_BLIT_XOR: begin
+                    xreg_val_CX         <= xreg_data_i;
                 end
                 xv::XR_BLIT_MOD_S: begin
                     xreg_mod_S          <= xreg_data_i;
@@ -133,7 +135,6 @@ end
 
 // blitter operational registers (for blit in progress)
 logic           blit_ctrl_S_const;
-logic           blit_ctrl_C_and;
 logic           blit_ctrl_transp;
 logic           blit_ctrl_transp_8b;
 logic  [7:0]    blit_ctrl_transp_T;
@@ -142,7 +143,8 @@ logic  [3:0]    blit_shift_f_mask;
 logic  [3:0]    blit_shift_l_mask;
 word_t          blit_mod_S;
 word_t          blit_mod_D;
-word_t          blit_val_C;
+word_t          blit_val_CA;
+word_t          blit_val_CX;
 word_t          blit_src_S;
 word_t          blit_dst_D;
 
@@ -218,16 +220,15 @@ assign blit_done_intr_o = blit_done_intr;
 // logic op calculation
 
 // No flags:
-//   D = S XOR C
+//   D = S AND (NOT CA) XOR CX
 //
-assign  blit_data_o = blit_ctrl_C_and ? (val_S & blit_val_C) : (val_S ^ blit_val_C);
+assign  blit_data_o = val_S & (~blit_val_CA) ^ blit_val_CX;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
         blit_state          <= IDLE;
 
         blit_ctrl_S_const   <= '0;
-        blit_ctrl_C_and     <= '0;
         blit_ctrl_transp    <= '0;
         blit_ctrl_transp_8b <= '0;
         blit_ctrl_transp_T  <= '0;
@@ -237,7 +238,8 @@ always_ff @(posedge clk) begin
         blit_mod_S          <= '0;
         blit_mod_D          <= '0;
         blit_src_S          <= '0;
-        blit_val_C          <= '0;
+        blit_val_CA         <= '0;
+        blit_val_CX         <= '0;
         blit_dst_D          <= '0;
         blit_lines          <= '0;
         blit_words          <= '0;
@@ -270,7 +272,6 @@ always_ff @(posedge clk) begin
 
         if (blit_setup) begin
             blit_ctrl_S_const   <= xreg_ctrl_S_const;
-            blit_ctrl_C_and     <= xreg_ctrl_C_and;
             blit_ctrl_transp    <= xreg_ctrl_transp;
             blit_ctrl_transp_8b <= xreg_ctrl_transp_8b;
             blit_ctrl_transp_T  <= xreg_ctrl_transp_T;
@@ -280,7 +281,8 @@ always_ff @(posedge clk) begin
             blit_mod_S          <= xreg_mod_S;
             blit_mod_D          <= xreg_mod_D;
             blit_src_S          <= xreg_src_S;
-            blit_val_C          <= xreg_val_C;
+            blit_val_CA         <= xreg_val_CA;
+            blit_val_CX         <= xreg_val_CX;
             blit_dst_D          <= xreg_dst_D;
             blit_lines          <= xreg_lines;
             blit_words          <= xreg_words;

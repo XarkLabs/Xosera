@@ -8,7 +8,7 @@
 		"[markdown]": {
 			"editor.wordWrap": "wordWrapColumn",
 			"editor.wordWrapColumn": 131,
-			"files.trimTrailingWhitespace": false
+			"files.trimTrailingWhitespace": false,
 		},
 		"editor.acceptSuggestionOnCommitCharacter": false,
 		"editor.quickSuggestions": {
@@ -29,6 +29,7 @@
 			"ADDI",
 			"addq",
 			"AFAICT",
+			"ANDC",
 			"ANDI",
 			"ARGB",
 			"AWIDTH",

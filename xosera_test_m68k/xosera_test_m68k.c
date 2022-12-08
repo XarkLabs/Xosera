@@ -27,9 +27,9 @@
 #include <machine.h>
 #include <sdfat.h>
 
-//#define DELAY_TIME 15000        // slow human speed
-//#define DELAY_TIME 5000        // human speed
-//#define DELAY_TIME 1000        // impatient human speed
+// #define DELAY_TIME 15000        // slow human speed
+// #define DELAY_TIME 5000        // human speed
+// #define DELAY_TIME 1000        // impatient human speed
 #define DELAY_TIME 500        // machine speed
 
 #define COPPER_TEST            1
@@ -1398,9 +1398,10 @@ void test_blit()
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xf0f0);        // set write address
 
             xreg_setw(BLIT_CTRL, 0x0001);              // no transp, constS
+            xreg_setw(BLIT_ANDC, 0x0000);              // ANDC constant
+            xreg_setw(BLIT_XOR, 0x0000);               // XOR constant
             xreg_setw(BLIT_MOD_S, 0x0000);             // no modulo S
             xreg_setw(BLIT_SRC_S, i << 8 | i);         // A = fill pattern
-            xreg_setw(BLIT_VAL_C, 0x0000);             // XOR with C
             xreg_setw(BLIT_MOD_D, 0x0000);             // no modulo D
             xreg_setw(BLIT_DST_D, 0x0000);             // VRAM display end address
             xreg_setw(BLIT_SHIFT, 0xFF00);             // no edge masking or shifting
@@ -1424,9 +1425,10 @@ void test_blit()
         // 2D screen screen copy 0x0000 -> 0x4B00 320x240 4-bpp
         xwait_blit_ready();
         xreg_setw(BLIT_CTRL, 0x0000);             // no transp
+        xreg_setw(BLIT_ANDC, 0x0000);             // ANDC constant
+        xreg_setw(BLIT_XOR, 0x0000);              // XOR constant
         xreg_setw(BLIT_MOD_S, 0x0000);            // no modulo A
         xreg_setw(BLIT_SRC_S, paddr);             // A = source
-        xreg_setw(BLIT_VAL_C, 0x0000);            // XOR with C
         xreg_setw(BLIT_MOD_D, 0x0000);            // no modulo D
         xreg_setw(BLIT_DST_D, daddr);             // VRAM display end address
         xreg_setw(BLIT_SHIFT, 0xFF00);            // no edge masking or shifting
@@ -1441,9 +1443,10 @@ void test_blit()
         {
             xwait_blit_ready();                             // make sure blit ready (previous blit started)
             xreg_setw(BLIT_CTRL, 0x0000);                   // no transp
+            xreg_setw(BLIT_ANDC, 0x0000);                   // ANDC constant
+            xreg_setw(BLIT_XOR, 0x0000);                    // XOR constant
             xreg_setw(BLIT_MOD_S, -1);                      // A modulo
             xreg_setw(BLIT_SRC_S, paddr);                   // A source VRAM addr (pacman)
-            xreg_setw(BLIT_VAL_C, 0x0000);                  // C const (XOR'd with value stored)
             xreg_setw(BLIT_MOD_D, -1);                      // D modulo
             xreg_setw(BLIT_DST_D, daddr + (i >> 2));        // D destination VRAM addr
             xreg_setw(BLIT_SHIFT,
@@ -1505,7 +1508,8 @@ void test_blit()
                 struct bob * bp = &bobs[b];
                 xwait_blit_ready();                          // make sure blit ready (previous blit started)
                 xreg_setw(BLIT_CTRL, 0xEE10);                // E=4bpp transp
-                xmem_setw_next(0x0000);                      // C const
+                xmem_setw_next(0x0000);                      // ANCC const
+                xmem_setw_next(0x0000);                      // XOR const
                 xmem_setw_next(W_4BPP - W_LOGO - 1);         // S modulo
                 xmem_setw_next(paddr + bp->w_offset);        // S addr
                 xmem_setw_next(W_4BPP - W_LOGO - 1);         // D modulo
@@ -1535,7 +1539,8 @@ void test_blit()
 
                 xwait_blit_ready();                         // make sure blit ready (previous blit started)
                 xreg_setw(BLIT_CTRL, 0x0000);               // no transp
-                xmem_setw_next(0x0000);                     // C const
+                xmem_setw_next(0x0000);                     // ANDC const
+                xmem_setw_next(0x0000);                     // XOR const
                 xmem_setw_next(-1);                         // S modulo
                 xmem_setw_next(maddr);                      // S address
                 xmem_setw_next(W_4BPP - W_LOGO - 1);        // D modulo
@@ -2822,7 +2827,7 @@ void     xosera_test()
     xr_msg_color(0x0f);
     xr_printfxy(5, 0, "xosera_test_m68k\n");
 
-    if (false && use_sd)
+    if (use_sd)
     {
         xr_printf("\nLoading test assets:\n");
         xr_printf(" \xAF 320x240 pac-mock ");
@@ -2995,7 +3000,7 @@ void     xosera_test()
 
         //        xreg_setw(PA_GFX_CTRL, 0x0080);
         xreg_setw(VID_CTRL, 0x0000);
-        delay_check(DELAY_TIME * 100);
+        delay_check(DELAY_TIME * 3);
 
         restore_colors();
         test_colormap();

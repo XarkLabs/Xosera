@@ -216,18 +216,16 @@ static inline void wait_vblank_start()
 static void clear_vram()
 {
     // use blitter to clear VRAM
-    xreg_setw(BLIT_CTRL, 0x0003);
-    xreg_setw_next(0x0000);             // BLIT_MOD_A
-    xreg_setw_next(0x0000);             // BLIT_SRC_A constA (fill value)
-    xreg_setw_next(0x0000);             // BLIT_MOD_B
-    xreg_setw_next(0xFFFF);             // BLIT_SRC_B constB AND (also no transparency)
-    xreg_setw_next(0x0000);             // BLIT_MOD_C
-    xreg_setw_next(0x0000);             // BLIT_VAL_C constC
-    xreg_setw_next(0x0000);             // BLIT_MOD_D
-    xreg_setw_next(0x0000);             // BLIT_DST_D VRAM address (dest)
-    xreg_setw_next(0xFF00);             // BLIT_SHIFT (no edge masking, no shifting)
-    xreg_setw_next(0x0000);             // BLIT_LINES (1-D blit)
-    xreg_setw_next(0x10000 - 1);        // BLIT_WORDS = all 64KW VRAM
+    xreg_setw(BLIT_CTRL, 0x0001);        // BLIT_CTRL constS
+    xreg_setw_next(0x0000);              // BLIT_ANDC
+    xreg_setw_next(0x0000);              // BLIT_XOR
+    xreg_setw_next(0x0000);              // BLIT_MOD_S
+    xreg_setw_next(0x0000);              // BLIT_SRC_S constS (fill value)
+    xreg_setw_next(0x0000);              // BLIT_MOD_D
+    xreg_setw_next(0x0000);              // BLIT_DST_D VRAM address (dest)
+    xreg_setw_next(0xFF00);              // BLIT_SHIFT (no edge masking, no shifting)
+    xreg_setw_next(0x0000);              // BLIT_LINES (1-D blit)
+    xreg_setw_next(0x10000 - 1);         // BLIT_WORDS = all 64KW VRAM
     xwait_blit_done();
 }
 
@@ -541,14 +539,10 @@ uint32_t copper_list[] = {
     COP_JUMP(0x00C0 << 1),
 
     // Load fixed blitter settings
-    [0x00C0] = COP_MOVER(XB_(0x00, 8, 8) | XB_(0, 5, 1) | XB_(0, 4, 1) | XB_(0, 3, 1) | XB_(0, 2, 1) | XB_(1, 1, 1) |
-                             XB_(0, 0, 1),
-                         BLIT_CTRL),
-    COP_MOVER(0x0000, BLIT_MOD_A),
-    COP_MOVER(0x0000, BLIT_MOD_B),
-    COP_MOVER(0xFFFF, BLIT_SRC_B),
-    COP_MOVER(0x0000, BLIT_MOD_C),
-    COP_MOVER(0x0000, BLIT_VAL_C),
+    [0x00C0] = COP_MOVER(XB_(0x00, 8, 8) | XB_(0, 5, 1) | XB_(0, 4, 1) | XB_(0, 0, 1), BLIT_CTRL),
+    COP_MOVER(0x0000, BLIT_ANDC),
+    COP_MOVER(0x0000, BLIT_XOR),
+    COP_MOVER(0x0000, BLIT_MOD_S),
     COP_MOVER(WIDTH_WORDS_B - BALL_TILES_WIDTH, BLIT_MOD_D),
     COP_MOVER(XB_(0xF, 12, 4) | XB_(0xF, 8, 4) | XB_(0, 0, 2), BLIT_SHIFT),
     COP_MOVER(BALL_TILES_HEIGHT - 1, BLIT_LINES),
@@ -557,12 +551,12 @@ uint32_t copper_list[] = {
     COP_JUMP(0x0100 << 1),
 
     // Blank existing ball
-    [0x0100] = COP_MOVER(vram_base_blank, BLIT_SRC_A),
+    [0x0100] = COP_MOVER(vram_base_blank, BLIT_SRC_S),
     [0x0101] = COP_MOVER(vram_base_b, BLIT_DST_D),        // Fill in prev_dst
     [0x0102] = COP_MOVER(BALL_TILES_WIDTH - 1, BLIT_WORDS),
 
     // Draw ball
-    [0x0103] = COP_MOVER(vram_base_ball, BLIT_SRC_A),
+    [0x0103] = COP_MOVER(vram_base_ball, BLIT_SRC_S),
     [0x0104] = COP_MOVER(0, BLIT_DST_D),        // Fill in dst
     [0x0105] = COP_MOVER(BALL_TILES_WIDTH - 1, BLIT_WORDS),
 

@@ -580,6 +580,10 @@ static void install_copper()
 #else
 
 #if 1
+    // modify HPOS wait SOL to be left edge horizontal position in 640x480 or 848x480 modes (including overscan)
+    cop_diagonal_bin[cop_diagonal__hpos_sol] = 0x2000 | (xreg_getw(VID_HSIZE) > 640 ? 1088 - 848 - 8 : 800 - 640 - 8);
+    // modify HPOS wait EOL to be right edge horizontal position in 640x480 or 848x480 modes (including overscan)
+    cop_diagonal_bin[cop_diagonal__hpos_eol] = 0x2000 | (xreg_getw(VID_HSIZE) > 640 ? 1088 - 1 : 800 - 1);
     for (uint16_t i = 0; i < cop_diagonal_size; i++)
     {
         uint16_t op = cop_diagonal_bin[i];

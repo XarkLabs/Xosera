@@ -7,12 +7,13 @@
                 .listcond false
                 .list    true
 
-                export  color_tbl,color_end             ; export address offsets for C
+H_START         =       160                             ; starting HPOS (visible left edge in 640)
 
-H_START         =       160                             ; starting HPOS (visible left edge)
+hpos_sol        =       hpos_sol_move+1
+                export  hpos_sol,hpos_eol               ; export HPOS SOL/EOL offsets for 640/848 modes
 
 entry
-                MOVE    #HPOS+H_START,hor_pos           ; reset hpos
+hpos_sol_move   MOVE    #HPOS+H_START,hor_pos           ; reset hpos
                 MOVE    #MOVE+color_tbl,color_load      ; reset color table start
 line_loop       MOVE    #$0000,XR_COLOR_A_ADDR+0        ; color[0] = black
 hor_pos         HPOS    #160                            ; wait for HPOS (self-modified)
@@ -26,7 +27,7 @@ color_load      MOVE    color_tbl,XR_COLOR_A_ADDR+0     ; set color[0] from tabl
                 BRLT    not_end                         ; branch if not past end
                 LDI     #MOVE+color_tbl                 ; load reset SETM opcode+table start
 not_end         STM     color_load                      ; store modified SETM opcode+source
-                HPOS    #799                            ; wait for last pixel of line
+hpos_eol        HPOS    #799                            ; wait for last pixel of line
                 BRGE    line_loop                       ; branch always (since last write was A)
 
                 VPOS    #$7FF                           ; wait for SOF (just in case)

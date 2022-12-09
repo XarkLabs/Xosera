@@ -6,7 +6,7 @@
             "type": 3,
             "attr": [
                 "[6] = blit unit ready",
-                "[5] = timer compare",
+                "[5] = countdown timer",
                 "[4] = vblank/copper",
                 "[3] = audio 3 ready",
                 "[2] = audio 2 ready",
@@ -25,7 +25,7 @@
             "type": 4,
             "attr": [
                 "[14] = blit unit ready",
-                "[13] = timer compare",
+                "[13] = countdown timer",
                 "[12] = vblank/copper",
                 "[11] = audio 3 ready",
                 "[10] = audio 2 ready",

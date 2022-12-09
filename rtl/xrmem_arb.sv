@@ -53,11 +53,7 @@ module xrmem_arb(
     // copper program coppermem 16-bit bus (read-only)
     input  wire logic                   copp_prog_sel_i,
     input  wire logic [xv::COPP_W-1:0]  copp_prog_addr_i,
-`ifdef EN_COPP_SLIM
     output      word_t                  copp_prog_data_o,
-`else
-    output      logic [31:0]            copp_prog_data_o,
-`endif
 `endif
 
     input  wire logic                   clk
@@ -83,11 +79,7 @@ word_t                          tile2_data_out;
 // internal COPPERMEM signals
 logic                           copp_wr_en;
 logic [xv::COPP_W-1:0]          copp_addr;
-`ifdef EN_COPP_SLIM
 word_t                          copp_data_out;
-`else
-logic [31:0]                    copp_data_out;
-`endif
 `endif
 
 // internal XR write signals
@@ -203,15 +195,9 @@ always_comb begin
         xr_data_o   = !xr_addr_i[xv::TILE_W-1] ? tile_data_out : tile2_data_out;
     end
 `ifdef EN_COPP
-`ifdef EN_COPP_SLIM
     if (xr_copp_sel) begin
         xr_data_o   = copp_data_out;
     end
-`else
-    if (xr_copp_sel) begin
-        xr_data_o   = !xr_addr_i[0] ? copp_data_out[31:16] : copp_data_out[15:0];
-    end
-`endif
 `endif
 end
 
@@ -279,11 +265,7 @@ always_comb begin
         copp_addr           = copp_prog_addr_i;
     end else if (xr_sel_i & ~xr_ack_o) begin
         copp_rd_ack_next    = xr_copp_sel & ~xr_wr_i;;
-`ifdef EN_COPP_SLIM
         copp_addr           = xr_addr_i[xv::COPP_W-1:0];
-`else
-        copp_addr           = xr_addr_i[xv::COPP_W:1];
-`endif
     end
 end
 `endif
@@ -359,11 +341,9 @@ tilemem #(
 );
 
 `ifdef EN_COPP
-`ifdef EN_COPP_SLIM
 // copper RAM
 coppermem #(
     .AWIDTH(xv::COPP_W),
-    .ODDWORD(0)
 ) coppermem(
     .clk(clk),
     .rd_address_i(copp_addr),
@@ -373,35 +353,6 @@ coppermem #(
     .wr_address_i(xr_addr[xv::COPP_W-1:0]),
     .wr_data_i(xr_write_data)
 );
-`else
-// copper RAM (even word, big-endian high word)
-coppermem #(
-    .AWIDTH(xv::COPP_W),
-    .ODDWORD(0)
-) coppermem_e(
-    .clk(clk),
-    .rd_address_i(copp_addr),
-    .rd_data_o(copp_data_out[31:16]),
-    .wr_clk(clk),
-    .wr_en_i(copp_wr_en & ~xr_addr[0]),
-    .wr_address_i(xr_addr[xv::COPP_W:1]),
-    .wr_data_i(xr_write_data)
-);
-
-// copper RAM (odd word, big-endian low word)
-coppermem #(
-    .AWIDTH(xv::COPP_W),
-    .ODDWORD(1)
-    ) coppermem_o(
-    .clk(clk),
-    .rd_address_i(copp_addr),
-    .rd_data_o(copp_data_out[15:0]),
-    .wr_clk(clk),
-    .wr_en_i(copp_wr_en & xr_addr[0]),
-    .wr_address_i(xr_addr[xv::COPP_W:1]),
-    .wr_data_i(xr_write_data)
-);
-`endif
 `endif
 
 endmodule

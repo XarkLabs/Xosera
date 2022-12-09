@@ -13,7 +13,6 @@
 `include "xosera_pkg.sv"
 
 `ifdef EN_BLIT
-`ifdef EN_BLIT_SLIM
 
 module blitter_slim(
     // video registers and control
@@ -411,6 +410,5 @@ end
 
 endmodule
 
-`endif
 `endif
 `default_nettype wire               // restore default

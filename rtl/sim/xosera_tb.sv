@@ -429,7 +429,6 @@ always @(negedge clk) begin
     end
 end
 
-`ifdef EN_COPP_SLIM
 integer cop_cyc = 0;
 always @(negedge clk) begin
     if (xosera.copper.cop_en && cop_cyc < 9999) begin
@@ -442,8 +441,6 @@ always @(negedge clk) begin
         cop_cyc <= cop_cyc + 1'b1;
     end
 end
-`endif
-
 
 // toggle clock source at pixel clock frequency+
 always begin

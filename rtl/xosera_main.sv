@@ -108,19 +108,16 @@ logic                   blit_full;
 /* verilator lint_off UNUSED */
 logic                   copp_prog_rd_en;
 logic [xv::COPP_W-1:0]  copper_pc;
-`ifdef EN_COPP_SLIM
 word_t                  copp_prog_data_out;
-`else
-logic [31:0]            copp_prog_data_out;
-`endif
 logic                   copp_xr_wr_en;
 logic                   copp_xr_ack;
 addr_t                  copp_xr_addr;
 word_t                  copp_xr_data_out;
 logic                   copp_reg_wr;
-word_t                  copp_reg_data;
+logic                   copp_reg_enable;
 hres_t                  video_h_count;
 vres_t                  video_v_count;
+logic                   end_of_line;
 `endif
 
 // XR register bus access
@@ -156,9 +153,6 @@ assign                  intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]    = 4'b0000;
 `endif
 `ifndef EN_BLIT
 assign                  intr_trigger[xv::BLIT_INTR]     = 1'b0;
-`endif
-`ifndef EN_TIMER_INTR
-assign                  intr_trigger[xv::TIMER_INTR]    = 1'b0;
 `endif
 
 `ifdef BUS_DEBUG_SIGNALS
@@ -250,12 +244,10 @@ video_gen video_gen(
     .dv_de_o(dv_de),
 `ifdef EN_COPP
     .copp_reg_wr_o(copp_reg_wr),
-    .copp_reg_data_o(copp_reg_data),
+    .copp_reg_enable_o(copp_reg_enable),
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
-`ifdef EN_COPP_SLIM
     .end_of_line_o(end_of_line),
-`endif
 `endif
 `ifdef BUS_DEBUG_SIGNALS
     .audio_pdm_l_o(unused_l),
@@ -271,9 +263,7 @@ video_gen video_gen(
 );
 
 `ifdef EN_COPP
-logic end_of_line;
 // copper - video synchronized co-processor
-`ifdef EN_COPP_SLIM
 slim_copper copper(
     .xr_wr_en_o(copp_xr_wr_en),
     .xr_wr_ack_i(copp_xr_ack),
@@ -283,39 +273,18 @@ slim_copper copper(
     .copmem_rd_en_o(copp_prog_rd_en),
     .copmem_rd_data_i(copp_prog_data_out[15:0]),    // TODO: 16-bit
     .cop_xreg_wr_i(copp_reg_wr),
-    .cop_xreg_data_i(copp_reg_data),
+    .cop_xreg_enable_i(copp_reg_enable),
     .h_count_i(video_h_count),
     .v_count_i(video_v_count),
     .end_of_line_i(end_of_line),
     .reset_i(reset_i),
     .clk(clk)
 );
-`else
-copper copper(
-    .xr_wr_en_o(copp_xr_wr_en),
-    .xr_wr_ack_i(copp_xr_ack),
-    .xr_wr_addr_o(copp_xr_addr),
-    .xr_wr_data_o(copp_xr_data_out),
-    .coppermem_rd_addr_o(copper_pc),
-    .coppermem_rd_en_o(copp_prog_rd_en),
-    .coppermem_rd_data_i(copp_prog_data_out),    // 32-bit
-    .cop_xreg_wr_i(copp_reg_wr),
-    .cop_xreg_data_i(copp_reg_data),
-    .h_count_i(video_h_count),
-    .v_count_i(video_v_count),
-    .reset_i(reset_i),
-    .clk(clk)
-);
-`endif
 `endif
 
 // blitter - blit block transfer unit
 `ifdef EN_BLIT
-`ifndef EN_BLIT_SLIM
-    blitter blitter(
-`else
     blitter_slim blitter(
-`endif
         .xreg_wr_en_i(blit_reg_wr_en),
         .xreg_num_i(xr_regs_addr[3:0]),
         .xreg_data_i(xr_regs_data_in),

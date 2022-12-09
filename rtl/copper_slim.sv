@@ -11,7 +11,6 @@
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
 `ifdef EN_COPP
-`ifdef EN_COPP_SLIM
 
 `include "xosera_pkg.sv"
 
@@ -24,7 +23,7 @@ module slim_copper(
     output       logic          copmem_rd_en_o,         // copper program memory read enable
     input   wire logic [15:0]   copmem_rd_data_i,       // copper program memory data
     input   wire logic          cop_xreg_wr_i,          // COPP_CTRL register write strobe
-    input   wire word_t         cop_xreg_data_i,        // COPP_CTRL register write data
+    input   wire logic          cop_xreg_enable_i,      // COPP_CTRL register enable write data
     input   wire hres_t         h_count_i,              // horizontal video position
     input   wire vres_t         v_count_i,              // vertical video position
     input   wire logic          end_of_line_i,          // end of line signal
@@ -148,7 +147,8 @@ word_t          write_data;         // XR bus data out/pseudo XR register data o
 
 // control signals
 logic           cop_en;             // copper enable/reset (set via COPP_CTRL)
-logic           cop_reset;          // copper reset
+logic           cop_reset;          // copper reset (set if not enabled, or line 0, pixel 0)
+logic           cop_run;            // copper running
 logic [1:0]     cop_ex_state;       // current execution state
 logic           rd_pipeline;        // flag if memory read on last cycle
 
@@ -167,9 +167,6 @@ assign          xr_wr_data_o        = write_data;
 assign          copmem_rd_en_o      = ram_rd_en;
 assign          copmem_rd_addr_o    = ram_rd_addr;
 assign          ram_read_data       = copmem_rd_data_i;
-
-// ignore intentionally unused bits (to avoid warnings)
-logic unused_bits = &{1'b0, cop_xreg_data_i[14:0]};
 
 `ifndef SYNTHESIS
 /* verilator lint_off UNUSEDSIGNAL */
@@ -204,17 +201,22 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
         cop_en          <= 1'b0;
         cop_reset       <= 1'b0;
+        cop_run         <= 1'b0;
     end else begin
-        cop_reset       <= 1'b0;
-
         // keep in reset if not enabled and reset at SOF
-        if (!cop_en || end_of_line_i && (v_count_i == 0)) begin
+        if (end_of_line_i && (v_count_i == 0)) begin
             cop_reset       <= 1'b1;
+            cop_run         <= cop_en;
+        end else begin
+            cop_reset       <= !cop_run;
         end
 
         // COPP_CTRL xreg register write to set cop_en
         if (cop_xreg_wr_i) begin
-            cop_en           <= cop_xreg_data_i[15];
+            cop_en          <= cop_xreg_enable_i;
+            if (!cop_xreg_enable_i) begin
+                cop_run         <= 1'b0;
+            end
         end
     end
 end
@@ -406,6 +408,5 @@ end
 
 endmodule
 
-`endif
 `endif
 `default_nettype wire               // restore default

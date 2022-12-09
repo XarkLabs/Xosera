@@ -29,12 +29,10 @@ module video_gen (
 `ifdef EN_COPP
     // outputs for copper
     output      logic           copp_reg_wr_o,          // COPP_CTRL write strobe
-    output      word_t          copp_reg_data_o,        // copper reg data
+    output      logic           copp_reg_enable_o,      // copper reg enable/disable
     output      hres_t          h_count_o,              // Horizontal video counter
     output      vres_t          v_count_o,              // Vertical video counter
-`ifdef EN_COPP_SLIM
     output      logic           end_of_line_o,
-`endif
 `endif
     // video memories
     output      logic           vram_sel_o,             // vram read select
@@ -164,9 +162,7 @@ assign          v_blank_o       = ~v_visible;
 `ifdef EN_COPP
 assign          h_count_o       = h_count;
 assign          v_count_o       = v_count;
-`ifdef EN_COPP_SLIM
 assign          end_of_line_o   = end_of_line;
-`endif
 `endif
 
 video_timing video_timing
@@ -407,7 +403,7 @@ always_ff @(posedge clk) begin
 
 `ifdef EN_COPP
         copp_reg_wr_o       <= 1'b0;
-        copp_reg_data_o     <= 16'h0000;
+        copp_reg_enable_o   <= 1'b0;
 `endif
 
 `ifdef EN_AUDIO
@@ -436,22 +432,21 @@ always_ff @(posedge clk) begin
         if (vgen_reg_wr_en_i) begin
             case (vgen_reg_num_i)
                 6'(xv::XR_VID_CTRL): begin
-                    { vid_colorswap, border_color}  <= vgen_reg_data_i[8:0];
+                    vid_colorswap                   <= vgen_reg_data_i[15];
+                    border_color                    <= vgen_reg_data_i[7:0];
                 end
-                6'(xv::XR_COPP_CTRL): begin
 `ifdef EN_COPP
+                6'(xv::XR_COPP_CTRL): begin
                     copp_reg_wr_o                   <= 1'b1;
-                    copp_reg_data_o[15]             <= vgen_reg_data_i[15];
-                    copp_reg_data_o[xv::COPP_W-1:0] <= vgen_reg_data_i[xv::COPP_W-1:0];
-`endif
+                    copp_reg_enable_o               <= vgen_reg_data_i[15];
                 end
-                6'(xv::XR_AUD_CTRL): begin
+`endif
 `ifdef EN_AUDIO
-                audio_enable        <= vgen_reg_data_i[0];
-`endif
+                6'(xv::XR_AUD_CTRL): begin
+                    audio_enable        <= vgen_reg_data_i[0];
                 end
-                6'(xv::XR_VID_INTR): begin
-                    video_intr_o    <= 1'b1;
+`endif
+                6'(xv::XR_SCANLINE): begin
                 end
                 6'(xv::XR_VID_LEFT): begin
                     vid_left        <= $bits(vid_left)'(vgen_reg_data_i);
@@ -463,13 +458,13 @@ always_ff @(posedge clk) begin
                 end
                 6'(xv::XR_UNUSED_07): begin
                 end
-                6'(xv::XR_SCANLINE): begin
+                6'(xv::XR_UNUSED_08): begin
                 end
-                6'(xv::XR_FEATURES): begin
+                6'(xv::XR_UNUSED_09): begin
                 end
-                6'(xv::XR_VID_HSIZE): begin
+                6'(xv::XR_UNUSED_0A): begin
                 end
-                6'(xv::XR_VID_VSIZE): begin
+                6'(xv::XR_UNUSED_0B): begin
                 end
                 6'(xv::XR_UNUSED_0C): begin
                 end
@@ -572,23 +567,17 @@ end
 always_comb begin
     rd_vid_regs = 16'h0000;
 
-    case (vgen_reg_num_i[3:0])
-        4'(xv::XR_VID_CTRL):        rd_vid_regs = { 7'h00, vid_colorswap, border_color};
+    case (vgen_reg_num_i[2:0])
+        3'(xv::XR_VID_CTRL):        rd_vid_regs = { vid_colorswap, 3'b0, 4'(xv::VIDEO_MODE_NUM), border_color};
 `ifdef EN_COPP
-        4'(xv::XR_COPP_CTRL):       rd_vid_regs = { copp_reg_data_o[15], 15'(copp_reg_data_o[xv::COPP_W-1:0]) };
+        3'(xv::XR_COPP_CTRL):       rd_vid_regs = { copp_reg_enable_o, 15'b0 };
 `endif
-        4'(xv::XR_AUD_CTRL): begin
-            rd_vid_regs     = '0;
 `ifdef EN_AUDIO
-            rd_vid_regs[0]  = audio_enable;
+        3'(xv::XR_AUD_CTRL):        rd_vid_regs = 16'(audio_enable);
 `endif
-        end
-        4'(xv::XR_VID_LEFT):        rd_vid_regs = 16'(vid_left);
-        4'(xv::XR_VID_RIGHT):       rd_vid_regs = 16'(vid_right);
-        4'(xv::XR_SCANLINE):        rd_vid_regs = 16'(v_count);
-        4'(xv::XR_FEATURES):        rd_vid_regs = 16'h0000; // TODO: feature codes
-        4'(xv::XR_VID_HSIZE):       rd_vid_regs = 16'(xv::VISIBLE_WIDTH);
-        4'(xv::XR_VID_VSIZE):       rd_vid_regs = 16'(xv::VISIBLE_HEIGHT);
+        3'(xv::XR_SCANLINE):        rd_vid_regs = 16'(v_count);
+        3'(xv::XR_VID_LEFT):        rd_vid_regs = 16'(vid_left);
+        3'(xv::XR_VID_RIGHT):       rd_vid_regs = 16'(vid_right);
         default:                    ;
     endcase
 end

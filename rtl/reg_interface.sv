@@ -143,9 +143,6 @@ logic [FRAC_BITS-1:0]       reg_timer_frac;
 logic           tick;
 assign          tick        = !reg_timer_frac[FRAC_BITS-1];
 
-`ifdef EN_TIMER_INTR
-`endif
-
 always_ff @(posedge clk) begin
     if (reset_i) begin
         reg_timer           <= '0;

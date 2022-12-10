@@ -2,9 +2,11 @@
     "reg": [
         {
             "bits": 16,
-            "name": "source term A VRAM address or constant value (if <tt>constA</tt> set)",
+            "name": "source term ANDC constant value",
             "type": 4,
-            "attr": []
+            "attr": [
+                "AND-complement term"
+            ]
         }
     ],
     "config": {

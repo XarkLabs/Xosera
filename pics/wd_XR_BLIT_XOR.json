@@ -2,7 +2,7 @@
     "reg": [
         {
             "bits": 16,
-            "name": "source term B VRAM address or constant value (if <tt>constB</tt> set)",
+            "name": "source term XOR constant value",
             "type": 4,
             "attr": []
         }

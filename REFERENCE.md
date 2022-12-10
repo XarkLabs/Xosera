@@ -575,108 +575,85 @@ from both interrupts and mainline code.
 
 #### 2D Blitter Engine XR Registers Details
 
-**0x20 `XR_BLIT_CTRL` (WO) - control bits (logic ops, A addr/const, B addr/const, transparent/opaque)**  
+**0x20 `XR_BLIT_CTRL` (WO) - control bits (transparency control, S const)**  
 <img src="./pics/wd_XR_BLIT_CTRL.svg">
 
 **blitter operation control**  
 The basic logic operation applied to all operations: `D = A & B ^ C`
 The operation has four options that can be independently specified in `XR_BLIT_CTRL`:
 
-- `A_CONST` specifies `A` term is a constant (`XR_BLIT_SRC_A` used as constant instead of VRAM address to read)
-  - When `A` is a constant the value of `XR_BLIT_MOD_A` will be XORed with `XR_BLIT_SRC_A` instead of added and then end
-    of each line.
-- `B_CONST` specifies `B` term is a constant (`XR_BLIT_SRC_B` used as constant instead of VRAM address to read)
-- `NOT_B` specifies that `B` term takes on an inverted value in the 2nd term (this does not affect transparency using `B`)
-  - When `B` is a constant the value of `XR_BLIT_MOD_B` will be XORed with `XR_BLIT_SRC_B` instead of added and then end
-    of each line.
-- `C_USE_B` specifies that `C` term takes on same value as `B` term (unaffected by `NOT_B` flag)
-- `DECR` specifies the blit operation will be carried out with all address decrementing. Source and destination
-  addresses would be set to start at the last word (highest address) of image buffers and will decrement during each
-  word of the operation (instead of incrementing). This also reverses the left/right edge for first/last word mask and
-  will shift pixels to the left. Note that `DECR` does *not* subtract `XR_BLIT_MOD_A`, `XR_BLIT_MOD_B` and
-  `XR_BLIT_MOD_D` values when set (so they typically need to be negated).
+- `S_CONST` specifies `S` term is a constant (`XR_BLIT_SRC_S` used as constant instead of VRAM address to read)
+  - NOTE: When `S` is a constant the value of `XR_BLIT_MOD_S` will still be added to it at the end of each line.
 
-Additionally, a transparency test is applied to all operations: `4-bit mask M = (B != T)` (testing either per nibble or byte)
+Additionally, a transparency testing can be to the source data: `4-bit mask M = (S != T)` (testing either per nibble or byte, for 4-bit or 8-bit modes).  When a nibble/byte is masked, the existing pixel in VRAM will not be modified.
 
-- `TRANSP8` can be set so 8-bit pixels are tested for transparency and masked only when the both nibbles in a byte match the transparency value
+- `TRANSP` will enable transparency testing when set (when zero, no pixel values will be masked, but start and end of line masking will still apply)
+- `TRANSP8` can be set so 8-bit transparency test (vs 4-bit).  Pixels are tested for transparency and masked only when the both nibbles in a byte match the transparency value
 - `T` value is set in with the upper 8 bits of `XR_BLIT_CTRL` register and is the transparent value for even and odd 4-bit pixels or a single 8-bit pixel value (when `TRANSP8` set).
 
-**0x21 `XR_BLIT_MOD_A` (WO) - modulo added to `BLIT_SRC_A` address at end of line (or XOR'd if `A_CONST` set)**  
-<img src="./pics/wd_XR_BLIT_MOD_A.svg">
+**0x21 `XR_BLIT_ANDC` (WO) - source term ANDC value constant**  
+<img src="./pics/wd_XR_BLIT_ANDC.svg">
 
-**modulo added to `BLIT_SRC_A` address at end of a line (or XOR'd with A constant value if `A_CONST` set)**  
-Arbitrary twos complement value added to `A` address at the end of each line (or XOR'd with A constant value when `A_CONST` set). Typically zero when `BLIT_SRC_A` image data is contiguous, or -1 when shift amount is non-zero  (or 1 if `DECR` set when shifting).
+**source constant term `ANDC` (AND-complement) value**  
+Arbitrary value for used for `ANDC` AND-complement with source term `S`, in equation: `D = S & (~ANDC) ^ XOR`
 
-**0x22 `XR_BLIT_SRC_A` (WO) - source `A` term (read from VRAM address or constant value)**  
-<img src="./pics/wd_XR_BLIT_SRC_A.svg">
+**0x22 `XR_BLIT_XOR` (WO) - source term XOR value constant**  
+<img src="./pics/wd_XR_BLIT_XOR.svg">
 
-**source term `A` VRAM address (with term read from VRAM) or a constant value if `A_CONST` set**  
-Address of source VRAM image data or arbitrary constant if `A_CONST` set in `XR_BLIT_CTRL`. This value will be shifted by `XR_BLIT_SHIFT` nibble shift amount (when not a constant with `A_CONST` set)
+**source constant term `XOR` (exclusive OR) value**  
+Arbitrary value for used for `XOR` exclusive-OR with source term `S`, in equation: `D = S & (~ANDC) ^ XOR`
 
-**0x23 `XR_BLIT_MOD_B` (WO) - modulo added to `BLIT_SRC_B` address at end of line (or XOR'd if `B_CONST` set)**  
-<img src="./pics/wd_XR_BLIT_MOD_B.svg">
+**0x23 `XR_BLIT_MOD_S` (WO) - modulo added to `BLIT_SRC_S` address at end of line**  
+<img src="./pics/wd_XR_BLIT_MOD_S.svg">
 
-**modulo added to `BLIT_SRC_B` address at end of a line (or XOR'd with B constant value if `B_CONST` set)**  
-Arbitrary twos complement value added to `B` address at the end of each line (or XOR'd with B constant value when `B_CONST` set). Typically zero when `BLIT_SRC_B` image data is contiguous, or -1 when shift amount is non-zero (or 1 if `DECR` set when shifting).
+**modulo added to `BLIT_SRC_S` address at end of a line**  
+Arbitrary twos complement value added to `S` address/constant at the end of each line. Typically zero when `BLIT_SRC_S` image data is contiguous, or -1 when shift amount is non-zero.
 
-**0x24 `XR_BLIT_SRC_B` (WO) - source term `B` (read from VRAM address or constant value)**  
-<img src="./pics/wd_XR_BLIT_SRC_B.svg">
+**0x24 `XR_BLIT_SRC_S` (WO) - source `S` term (read from VRAM address or constant value)**  
+<img src="./pics/wd_XR_BLIT_SRC_S.svg">
 
-**source term `B` VRAM address (with term read from VRAM) or a constant value if `B_CONST` set**  
-Address of source VRAM image data or arbitrary constant if `B_CONST` set in `XR_BLIT_CTRL`. This value will be shifted by `XR_BLIT_SHIFT` nibble shift amount (when not a constant with `B_CONST` set)
+**source term `S` VRAM address (with term read from VRAM) or a constant value if `S_CONST` set**  
+Address of source VRAM image data or arbitrary constant if `S_CONST` set in `XR_BLIT_CTRL`. This value will be shifted by `XR_BLIT_SHIFT` nibble shift amount (when not a constant with `S_CONST` set)
 
-**0x25 `XR_BLIT_MOD_C` (WO) - XOR'd with source constant term `C` at end of line**  
-<img src="./pics/wd_XR_BLIT_MOD_C.svg">
-
-**XOR'd with source constant term `C` at end of a line**  
-Arbitrary 16-bit word value XOR'd with source constant term `C` at the end of each line. This can be useful to produce a "dither" or other pattern that alternates each line.
-
-**0x26 `XR_BLIT_VAL_C` (WO) - source term C (constant XOR value)**  
-<img src="./pics/wd_XR_BLIT_VAL_C.svg">
-
-**source constant term `C` value**  
-Arbitrary value for source constant term `C`. If `C_USE_B` set in `XR_BLIT_CTRL` then term `C` will assume the value of `B` (ignoring `NOT_B` flag) and this value will not be used.
-
-**0x27 `XR_BLIT_MOD_D` (WO) - modulo added to `BLIT_DST_D` address at end of line**  
+**0x25 `XR_BLIT_MOD_D` (WO) - modulo added to `BLIT_DST_D` address at end of line**  
 <img src="./pics/wd_XR_BLIT_MOD_D.svg">
 
 **modulo added to `BLIT_DST_D` destination address at end of a line**  
 Arbitrary twos complement value added to `D` destination address at the end of each line. Typically the *destination_width*-*source_width* (in words) to adjust the destination pointer to the start of the next rectangular image line.
 
-**0x28 `XR_BLIT_DST_D` (WO) - destination D VRAM write address**  
+**0x26 `XR_BLIT_DST_D` (WO) - destination D VRAM write address**  
 <img src="./pics/wd_XR_BLIT_DST_D.svg">
 
 **destination D VRAM write address**  
 Destination VRAM address.  Set to the first word of the destination address for the blit operation (or the last word of the destination, if in `DECR` mode).
 
-**0x29 `XR_BLIT_SHIFT` (WO - first and last word nibble masks and nibble shift**  
+**0x27 `XR_BLIT_SHIFT` (WO - first and last word nibble masks and nibble shift**  
 <img src="./pics/wd_XR_BLIT_SHIFT.svg">
 
 **first and last word nibble masks and nibble shift**  
 The first word nibble mask will unconditionally mask out (make transparent) any zero nibbles on the first word of each
-line (left edge incrementing, right decrementing). Similarly, the last word nibble mask will unconditionally mask out
-(make transparent) any zero nibbles on the last word of each line (the right edge incrementing, left decrementing). The
-nibble shift specifies a 0 to 3 nibble shift on all words drawn (a right shift normally, but a left shift when in `DECR`
-mode). Nibbles shifted out the right of a word will be shifted into the the next word (to provide a seamless pixel shift
-with word aligned writes). In "normal" use (and not using `DECR` decrement mode), when the nibble shift is non-zero, the
+line (left edge). Similarly, the last word nibble mask will unconditionally mask out
+(make transparent) any zero nibbles on the last word of each line (the right edge). The
+nibble shift specifies a 0 to 3 nibble right shift on all words drawn. Nibbles shifted out the right of a word will be shifted into the the next word (to provide a seamless pixel shift
+with word aligned writes). In "normal" use, when the nibble shift is non-zero, the
 left and right nibble mask would typically contain the value `0xF0` nibble shifted (e.g., `0xF0 >> nibble_shift`). The
-right edge mask hides "garbage" pixlels wrapping from left edge, and right edge mask hides excess pixels when images is
+right edge mask hides "garbage" pixels wrapping from left edge, and right edge mask hides excess pixels when image is
 not a exact word width. When shifting, typically also you need to add an extra word to `BLIT_WORDS` and subtract one
-from `BLIT_MOD_A` (to avoid skewing the image). When not shifting (nibble shift of zero) and your source image width is
+from `BLIT_MOD_S` (to avoid skewing the image). When not shifting (nibble shift of zero) and your source image width is
 word aligned, you typically want the complete last word so both left and right mask `0xFF` (no edge masking). If your
 source image is not an exact multiple word width, you would typically want to trim the excess pixels from the right edge
 (e.g., for a 7 nibble wide image, `0xFE`). For images 1 word wide, both left and right edge masks will be AND'd
 together. Also this masking is AND'd with the normal transparency control (so if a pixel is masked by either the left
-mask, right mask or is considered transparent it will not be drawn).
+mask, right mask or is considered transparent it will not be modified).
 
-**0x2A `XR_BLIT_LINES` (WO) - 15-bit number of lines heigh - 1 (1 to 32768)**  
+**0x28 `XR_BLIT_LINES` (WO) - 15-bit number of lines heigh - 1 (1 to 32768)**  
 <img src="./pics/wd_XR_BLIT_LINES.svg">
 
 **15-bit number of lines high - 1 (1 to 32768)**  
 Number of times to repeat blit operation minus one. Typically source image height with modulo values advancing addresses
 for the next line to be drawn).
 
-**0x2B `XR_BLIT_WORDS` (WO) - write starts operation, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times)**  
+**0x29 `XR_BLIT_WORDS` (WO) - write starts operation, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times)**  
 <img src="./pics/wd_XR_BLIT_WORDS.svg">
 
 **write starts blit, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times))**  

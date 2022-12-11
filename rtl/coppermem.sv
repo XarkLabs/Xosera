@@ -43,24 +43,18 @@ module coppermem
 // } xosera_info_t;
 
 word_t bram[0:2**AWIDTH-1] /* verilator public*/;
-integer x;
+
 initial begin
     // Fill with numbers
-    for (integer i = 0; i < (2**AWIDTH)-32; i = i + 1) begin
-        bram[i] = 16'h2FFF; // VPOS #1023 (wait forever)
+    bram[0] = 16'h2FFF; // VPOS #1023 (wait forever)
+    for (integer i = 1; i < (2**AWIDTH); i = i + 1) begin
+        bram[i] = 16'h0000;
     end
     // Xosera init info stored in last 64 bytes of default copper memory (see xosera_pkg.sv)
-
-    x = 0;
-    for (integer i = (2**AWIDTH)-32; i < (2**AWIDTH)-8; i = i + 1) begin
-        bram[i]    = { xv::info_str[(x*8)+:8], xv::info_str[(x*8)+8+:8] };
-        x = x + 2;
+    for (integer i = 0; i < $bits(xv::info_str)/16; i = i + 1) begin
+        bram[ ((2**AWIDTH)-128) + i]    = { xv::info_str[(i*16)+:8], xv::info_str[(i*16)+8+:8] };
     end
 
-    bram[(2**AWIDTH)-8]  = 16'h0000;
-    bram[(2**AWIDTH)-7]  = 16'h0000;
-    bram[(2**AWIDTH)-6]  = 16'h0000;
-    bram[(2**AWIDTH)-5]  = 16'h0000;
     bram[(2**AWIDTH)-4]  = 16'(xv::version);
     bram[(2**AWIDTH)-3]  = { `GITCLEAN ? 8'b0 : 8'b1, 8'b0 };
     bram[(2**AWIDTH)-2]  = xv::githash[31:16];

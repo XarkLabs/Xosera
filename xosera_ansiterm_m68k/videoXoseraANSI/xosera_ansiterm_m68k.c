@@ -417,8 +417,8 @@ static inline void xansi_draw_cursor(xansiterm_data * td)
         bool gfx_change =
             (((uint16_t)(td->gfx_ctrl ^ xreg_getw(PA_GFX_CTRL)) & 0x007f) != 0) ||        // gfx_ctrl mode bits changed
             (td->vram_base != xreg_getw(PA_DISP_ADDR)) ||                                 // display address changed
-            (td->h_size != xreg_getw(VID_HSIZE)) ||                                       // screen video mode H changed
-            (td->v_size != xreg_getw(VID_VSIZE)) ||                                       // screen video mode V changed
+            (td->h_size != xosera_vid_width()) ||                                         // screen video mode H changed
+            (td->v_size != xosera_vid_height()) ||                                        // screen video mode V changed
             (xreg_getw(PA_LINE_LEN) != (td->line_len ? td->line_len : td->cols));         // line length changed
 
         if (gfx_change)
@@ -519,8 +519,8 @@ static void xansi_reset(bool reset_colormap)
     uint16_t tile_ctrl_val = td->tile_ctrl[td->cur_font];
     uint16_t tile_w        = ((!bitmap || bpp < 2) ? 8 : (bpp == 2) ? 4 : 1) * h_rpt;
     uint16_t tile_h        = ((bitmap) ? 1 : ((tile_ctrl_val & 0xf) + 1)) * v_rpt;
-    uint16_t h_size        = xreg_getw(VID_HSIZE);
-    uint16_t v_size        = xreg_getw(VID_VSIZE);
+    uint16_t h_size        = xosera_vid_width();
+    uint16_t v_size        = xosera_vid_height();
     uint16_t hv_frac       = xreg_getw(PA_HV_FSCALE);
     uint16_t h_frac        = (hv_frac & 0x0700) >> 8;
     uint16_t v_frac        = hv_frac & 0x7;
@@ -735,8 +735,7 @@ static void xansi_processctrl(xansiterm_data * td, char cdata)
     {
         xv_prep();
 
-        if (td->h_size != xreg_getw(VID_HSIZE) || td->v_size != xreg_getw(VID_VSIZE) ||
-            td->cols != xreg_getw(PA_LINE_LEN))
+        if (td->h_size != xosera_vid_width() || td->v_size != xosera_vid_height() || td->cols != xreg_getw(PA_LINE_LEN))
         {
             xansi_reset(false);
         }
@@ -1090,7 +1089,7 @@ static inline void xansi_process_csi(xansiterm_data * td, char cdata)
                     // VT:  <CSI>?3h    DECCOLM 132 (106) column    EXTENSION: video mode 16:9 (848x480)
                     // VT:  <CSI>?3l    DECCOLM 80 column           EXTENSION: video mode 4:3 (640x480)
                     uint16_t res = (cdata == 'h') ? 848 : 640;
-                    if (xreg_getw(VID_HSIZE) != res)
+                    if (xosera_vid_width() != res)
                     {
                         uint16_t config = (res == 640) ? 0 : 1;
                         LOGF("<reconfig #%d>\n", config);

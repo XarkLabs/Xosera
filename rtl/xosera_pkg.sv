@@ -43,7 +43,7 @@
 `define OPT_BUS_SB_IO                   // experiment using SB_IO for tristate
 //=================================
 
-`define VERSION 0_34                    // Xosera BCD version code (x.xx)
+`define VERSION 0_35                    // Xosera BCD version code (x.xx)
 
 `ifndef GITCLEAN
 `define GITCLEAN 0                      // unknown Git state (assumed dirty)
@@ -57,6 +57,7 @@
 
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
+`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
 `ifdef FPGA_CONFIG_NUM                 // FPGA boot config number (0-3)
 localparam FPGA_CONFIG_NUM = `FPGA_CONFIG_NUM;
@@ -95,7 +96,7 @@ typedef enum logic [3:0] {
     XM_UNUSED_0C    = 4'hC,             // (- /- ) // TODO: useful?
     XM_UNUSED_0D    = 4'hD,             // (- /- ) // TODO: useful?
     XM_UNUSED_0E    = 4'hE,             // (- /- ) // TODO: useful?
-    XM_UNUSED_0F    = 4'hF              // (- /- ) // TODO: useful?
+    XM_FEATURES     = 4'hF              // (RO   ) Xosera features, monitor mode
 } xm_register_t;
 
 typedef enum {
@@ -126,7 +127,7 @@ typedef enum logic [15:0] {
 // XR read/write registers/memory regions
 typedef enum logic [6:0] {
     // Video Config / Copper XR Registers
-    XR_VID_CTRL     = 7'h00,            // (R /W) border color index/monitor mode
+    XR_VID_CTRL     = 7'h00,            // (R /W) border color index/color swap
     XR_COPP_CTRL    = 7'h01,            // (R /W) display synchronized coprocessor control
     XR_AUD_CTRL     = 7'h02,            // (R /W) audio channel control
     XR_SCANLINE     = 7'h03,            // (R /W) read scanline (incl. offscreen), write signal video interrupt

@@ -152,18 +152,18 @@ task read_reg(
     output logic [7:0]   data
     );
 
-    bus_cs_n = 1'b1;
-    bus_rd_nwr = 1'b1;
-    bus_bytesel = b_sel;
-    bus_reg_num = r_num;
+    bus_cs_n <= 1'b1;
+    bus_rd_nwr <= 1'b1;
+    bus_bytesel <= b_sel;
+    bus_reg_num <= r_num;
 
-    # 10ns bus_cs_n = 1'b0;    // strobe
-    #(M68K_PERIOD) data = xosera.bus_data_o;
-    #(M68K_PERIOD) bus_cs_n = 1'b1;
-    bus_rd_nwr = 1'bX;
-    bus_bytesel = 1'bX;
-    bus_reg_num = 4'bX;
-    bus_data_in = 8'bX;
+    # 10ns bus_cs_n <= 1'b0;    // strobe
+    #(M68K_PERIOD) data <= xosera.bus_data_o;
+    #(M68K_PERIOD) bus_cs_n <= 1'b1;
+    bus_rd_nwr <= 1'bX;
+    bus_bytesel <= 1'bX;
+    bus_reg_num <= 4'bX;
+    bus_data_in <= 8'bX;
 endtask
 
 task xvid_setw(
@@ -223,7 +223,7 @@ function automatic logic [63:0] regname(
             4'hC: regname = "UNUSED_C";
             4'hD: regname = "UNUSED_D";
             4'hE: regname = "UNUSED_E";
-            4'hF: regname = "UNUSED_F";
+            4'hF: regname = "FEATURES";
             default: regname = "????????";
         endcase
     end
@@ -262,6 +262,10 @@ always begin
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_BLIT_WORDS));
     #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0007);
     // TODO end
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_FEATURES, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_FEATURES, readword[7:0]);
+    $fdisplay(logfile, "%0t REG READ %s[%x] => %04x", $realtime, regname(xosera.reg_interface.bus_reg_num), xosera.reg_interface.bus_reg_num, readword);
 
 // audio test
 

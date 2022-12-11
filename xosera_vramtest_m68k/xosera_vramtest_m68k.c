@@ -888,7 +888,7 @@ int test_xmem(bool LFSR, int mode)
     // set funky mode to show XMEM
     wait_vblank_start();
     xreg_setw(PA_GFX_CTRL, 0x0080);
-    xreg_setw(VID_RIGHT, xreg_getw(VID_HSIZE));        // restore border
+    xreg_setw(VID_RIGHT, xosera_vid_width());        // restore border
     xmem_set_addr(XR_TILEMAP);
     for (int i = 0; i < (XR_COLS * XR_ROWS); i++)
     {
@@ -971,7 +971,7 @@ int test_xmem(bool LFSR, int mode)
         }
     }
 
-    xreg_setw(VID_RIGHT, xreg_getw(VID_HSIZE) - 2);        // steal a few pixels for border
+    xreg_setw(VID_RIGHT, xosera_vid_width() - 2);        // steal a few pixels for border
     xreg_setw(VID_CTRL, 0x0000);
     xmem_setw(XR_COLOR_A_ADDR, vram_test_fail_count ? 0x0C00 : 0x00C0);
     xmem_setw(XR_COLOR_B_ADDR, vram_test_fail_count ? 0x0C00 : 0x00C0);
@@ -1021,9 +1021,9 @@ void xosera_vramtest()
             bool success = xosera_init(cur_xosera_config);
             xm_setw(TIMER, 0xffff);        // set to wrapping 16-bit counter
             last_timer_val = xm_getw(TIMER);
-            dprintf("%s (%dx%d). ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+            dprintf("%s (%dx%d). ]\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
             xosera_get_info(&initinfo);
-            xreg_setw(VID_RIGHT, xreg_getw(VID_HSIZE) - 2);        // steal a few pixels for border
+            xreg_setw(VID_RIGHT, xosera_vid_width() - 2);        // steal a few pixels for border
             xreg_setw(VID_CTRL, 0x0000);
             xmem_setw(XR_COLOR_A_ADDR, vram_test_fail_count ? 0x0C00 : 0x00C0);
             xmem_setw(XR_COLOR_B_ADDR, vram_test_fail_count ? 0x0C00 : 0x00C0);
@@ -1054,9 +1054,9 @@ void xosera_vramtest()
                 s,
                 vram_test_fail_count);
 
-        uint16_t features  = xreg_getw(FEATURES);        // TODO: this is feature codes
-        uint16_t monwidth  = xreg_getw(VID_HSIZE);
-        uint16_t monheight = xreg_getw(VID_VSIZE);
+        uint16_t features  = xm_getw(FEATURES);        // TODO: this is feature codes
+        uint16_t monwidth  = xosera_vid_width();
+        uint16_t monheight = xosera_vid_height();
 
         if (initinfo.description_str[0])
         {

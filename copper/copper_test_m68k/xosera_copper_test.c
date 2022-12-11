@@ -132,9 +132,9 @@ void xosera_copper_test()
     xreg_setw(VID_CTRL, 0x0000);        // border uses color 0
     xreg_setw(COPP_CTRL, 0x8000);
 
-    uint16_t features  = xreg_getw(FEATURES);
-    uint16_t monwidth  = xreg_getw(VID_HSIZE);
-    uint16_t monheight = xreg_getw(VID_VSIZE);
+    uint16_t features  = xm_getw(FEATURES);
+    uint16_t monwidth  = xosera_vid_width();
+    uint16_t monheight = xosera_vid_height();
 
     uint16_t gfxctrl  = xreg_getw(PA_GFX_CTRL);
     uint16_t tilectrl = xreg_getw(PA_TILE_CTRL);

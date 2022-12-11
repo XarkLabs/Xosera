@@ -87,7 +87,7 @@ const uint16_t tile_base_b      = 0xC000;
 #define PAINT_BALL true
 #define USE_COPPER true
 
-uint16_t vid_hsize;        // this is cached xreg_getw(VID_HSIZE)
+uint16_t vid_hsize;        // this is cached xosera_vid_width()
 uint32_t clk_hz;           // pixel clock Hz (25125000 at 640x480 or 33750000 at 848x480)
 
 uint8_t  bg_bitmap[HEIGHT_A][WIDTH_A]                                                                     = {0};
@@ -828,11 +828,11 @@ void copper_load_list(uint16_t length, uint32_t list[length], uint16_t base)
 void xosera_boing()
 {
     // re-initialize Xosera to current config
-    xosera_init(xreg_getw(VID_HSIZE) > 640 ? 1 : 0);
+    xosera_init(xosera_vid_width() > 640 ? 1 : 0);
     delay(100000);        // let monitor sync
     clear_vram();
 
-    vid_hsize = xreg_getw(VID_HSIZE);
+    vid_hsize = xosera_vid_width();
     clk_hz    = (vid_hsize > 640) ? 33750000 : 25125000;
     // print ANSI codes to reset screen and disable cursor
     printf("\033c\033[?25l");

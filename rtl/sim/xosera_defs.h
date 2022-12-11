@@ -52,12 +52,12 @@
 
 // Xosera version info put in COPPER memory after FPGA reconfigure
 #define XV_INFO_ADDR        (XR_COPPER_ADDR + XR_COPPER_SIZE - (XV_INFO_SIZE >> 1))
-#define XV_INFO_SIZE        64        // 64 bytes total for "struct _xosera_info"
-#define XV_INFO_DESCRIPTION 0         // 48 character description string
-#define XV_INFO_VER_MAJOR   56        // BCD major version number
-#define XV_INFO_VER_MINOR   57        // BCD minor version number
-#define XV_INFO_GITMODIFIED 59        // non-zero if design modified from git version
-#define XV_INFO_GITHASH     60        // byte offset in xosera_info for githash uint32_t
+#define XV_INFO_SIZE        256        // 64 bytes total for "struct _xosera_info"
+#define XV_INFO_DESCRIPTION 0          // 48 character description string
+#define XV_INFO_VER_MAJOR   56         // BCD major version number
+#define XV_INFO_VER_MINOR   57         // BCD minor version number
+#define XV_INFO_GITMODIFIED 59         // non-zero if design modified from git version
+#define XV_INFO_GITHASH     60         // byte offset in xosera_info for githash uint32_t
 
 // Macros to make bit-fields easier (works similar to Verilog "+:" operator, e.g., word[RIGHTMOST_BIT +: BIT_WIDTH])
 // encode value into bit-field for register
@@ -81,7 +81,7 @@
 #define XM_UNUSED_0C 0x0C        //
 #define XM_UNUSED_0D 0x0D        //
 #define XM_UNUSED_0E 0x0E        //
-#define XM_UNUSED_0F 0x0F        //
+#define XM_FEATURES  0x0F        // (RO   ) Xosera features, monitor mode
 
 // NOTE: These are bits in high byte of SYS_CTRL word (fastest to access)
 #define SYS_CTRL_MEM_BUSY_B  7        // (RO   )  memory read/write operation pending (with contended memory)
@@ -96,22 +96,22 @@
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 
 //  Video Config and Copper XR Registers
-#define XR_VID_CTRL  0x00        // (R /W) display control and border color index
-#define XR_COPP_CTRL 0x01        // (R /W) display synchronized coprocessor control
-#define XR_AUD_CTRL  0x02        // (- /-) TODO: audio channel control
-#define XR_VID_INTR  0x03        // (WO)   video interrupt trigger
-#define XR_VID_LEFT  0x04        // (R /W) left edge of active display window (typically 0)
-#define XR_VID_RIGHT 0x05        // (R /W) right edge of active display window +1 (typically 640 or 848)
-#define XR_UNUSED_06 0x06        // (- /-) TODO: unused XR 06
-#define XR_UNUSED_07 0x07        // (- /-) TODO: unused XR 07
-#define XR_SCANLINE  0x08        // (RO  ) scanline (including offscreen >= 480)
-#define XR_FEATURES  0x09        // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
-#define XR_VID_HSIZE 0x0A        // (RO  ) native pixel width of monitor mode (e.g. 640/848)
-#define XR_VID_VSIZE 0x0B        // (RO  ) native pixel height of monitor mode (e.g. 480)
-#define XR_UNUSED_0C 0x0C        // (- /-) TODO: unused XR 0C
-#define XR_UNUSED_0D 0x0D        // (- /-) TODO: unused XR 0D
-#define XR_UNUSED_0E 0x0E        // (- /-) TODO: unused XR 0E
-#define XR_UNUSED_0F 0x0F        // (- /-) TODO: unused XR 0F
+#define XR_VID_CTRL  0x00        // (R / W) border color index / monitor mode
+#define XR_COPP_CTRL 0x01        // (R / W) display synchronized coprocessor control
+#define XR_AUD_CTRL  0x02        // (R / W) audio channel control
+#define XR_SCANLINE  0x03        // (R / W) read scanline(incl.offscreen), write signal video interrupt
+#define XR_VID_LEFT  0x04        // (R / W) left edge of active display window(typically 0)
+#define XR_VID_RIGHT 0x05        // (R / W) right edge of active display window + 1(typically 640 or 848)
+#define XR_UNUSED_06 0x06        // (- / -) unused XR 06
+#define XR_UNUSED_07 0x07        // (- / -) unused XR 07
+#define XR_UNUSED_08 0x08        // (- / -) unused XR 08
+#define XR_UNUSED_09 0x09        // (- / -) unused XR 09
+#define XR_UNUSED_0A 0x0A        // (- / -) unused XR 0A
+#define XR_UNUSED_0B 0x0B        // (- / -) unused XR 0B
+#define XR_UNUSED_0C 0x0C        // (- / -) unused XR 0C
+#define XR_UNUSED_0D 0x0D        // (- / -) unused XR 0D
+#define XR_UNUSED_0E 0x0E        // (- / -) unused XR 0E
+#define XR_UNUSED_0F 0x0F        // (- / -) unused XR 0F
 
 // Playfield A Control XR Registers
 #define XR_PA_GFX_CTRL  0x10        // (R /W) playfield A graphics control
@@ -183,24 +183,24 @@
 
 #define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 8, 8) | XB_(intmask, 0, 4))
 
-// Copper instruction helper macros
-#define COP_WAIT_HV(h_pos, v_pos)   (0x00000000 | XB_((uint32_t)(v_pos), 16, 12) | XB_((uint32_t)(h_pos), 4, 12))
-#define COP_WAIT_H(h_pos)           (0x00000001 | XB_((uint32_t)(h_pos), 4, 12))
-#define COP_WAIT_V(v_pos)           (0x00000002 | XB_((uint32_t)(v_pos), 16, 12))
-#define COP_WAIT_F()                (0x00000003)
-#define COP_END()                   (0x00000003)
-#define COP_SKIP_HV(h_pos, v_pos)   (0x20000000 | XB_((uint32_t)(v_pos), 16, 12) | XB_((uint32_t)(h_pos), 4, 12))
-#define COP_SKIP_H(h_pos)           (0x20000001 | XB_((uint32_t)(h_pos), 4, 12))
-#define COP_SKIP_V(v_pos)           (0x20000002 | XB_((uint32_t)(v_pos), 16, 12))
-#define COP_SKIP_F()                (0x20000003)
-#define COP_JUMP(cop_addr)          (0x40000000 | XB_((uint32_t)(cop_addr), 16, 13))
-#define COP_MOVER(val16, xreg)      (0x60000000 | XB_((uint32_t)(XR_##xreg), 16, 13) | ((uint16_t)(val16)))
-#define COP_MOVEF(val16, tile_addr) (0x80000000 | XB_((uint32_t)(tile_addr), 16, 13) | ((uint16_t)(val16)))
-#define COP_MOVEP(rgb16, color_num) (0xA0000000 | XB_((uint32_t)(color_num), 16, 13) | ((uint16_t)(rgb16)))
-#define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 16, 13) | ((uint16_t)(val16)))
+// Copper instruction helper macros // TODO: 16-bit
+#define COP_WAIT_HV(h_pos, v_pos) (0x28002000 | XB_((uint32_t)(v_pos), 16, 11) | XB_((uint32_t)(h_pos), 0, 11))
+#define COP_WAIT_H(h_pos)         (0x20002000 | XB_((uint32_t)(h_pos), 0, 11))
+#define COP_WAIT_V(v_pos)         (0x20002800 | XB_((uint32_t)(v_pos), 0, 10))
+#define COP_WAIT_F()              (0x20002FFF)
+#define COP_END()                 (0x20002FFF)
+// #define COP_SKIP_HV(h_pos, v_pos)   (0x20000000 | XB_((uint32_t)(v_pos), 16, 12) | XB_((uint32_t)(h_pos), 4, 12))
+// #define COP_SKIP_H(h_pos)           (0x20000001 | XB_((uint32_t)(h_pos), 4, 12))
+// #define COP_SKIP_V(v_pos)           (0x20000002 | XB_((uint32_t)(v_pos), 16, 12))
+// #define COP_SKIP_F()                (0x20000003)
+#define COP_JUMP(cop_addr)          (0x30003800 | XB_((uint32_t)(cop_addr), 16, 11) | XB_((uint32_t)(cop_addr), 0, 11))
+#define COP_MOVER(val16, xreg)      (0x00000000 | XB_((uint32_t)(XR_##xreg), 16, 12) | ((uint16_t)(val16)))
+#define COP_MOVEF(val16, tile_addr) (0x40000000 | XB_((uint32_t)(tile_addr), 16, 12) | ((uint16_t)(val16)))
+#define COP_MOVEP(rgb16, color_num) (0x80000000 | XB_((uint32_t)(color_num), 16, 12) | ((uint16_t)(rgb16)))
+#define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 16, 12) | ((uint16_t)(val16)))
+#define COP_MOVE(val16, xaddr)      (0x00000000 | XB_(((uint32_t)(xaddr)&0xCFFF), 16, 12) | ((uint16_t)(val16)))
 
 // TODO: repace more magic constants with defines for bit positions
-
 
 #if defined(MODE_640x400)        //	640x400@70Hz 	(often treated as 720x400 VGA text mode)
 // VGA mode 640x400 @ 70Hz (pixel clock 25.175Mhz)

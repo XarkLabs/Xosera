@@ -428,12 +428,12 @@ const char * BusInterface::reg_name[] = {"XM_SYS_CTRL ",
                                          "XM_RD_ADDR  ",
                                          "XM_WR_INCR  ",
                                          "XM_WR_ADDR  ",
-                                         "XM_DATA         ",
+                                         "XM_DATA     ",
                                          "XM_DATA_2   ",
-                                         "XM_RW_INCR  ",
-                                         "XM_RW_ADDR  ",
-                                         "XM_RW_DATA  ",
-                                         "XM_RW_DATA_2"};
+                                         "XM_UNUSED_0C",
+                                         "XM_UNUSED_0D",
+                                         "XM_UNUSED_0E",
+                                         "XM_FEATURES "};
 
 #define REG_B(r, v)      (((XM_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_W(r, v)      ((XM_##r) << 8) | (((v) >> 8) & 0xff), (((XM_##r) | 0x10) << 8) | ((v)&0xff)
@@ -460,13 +460,15 @@ const char * BusInterface::reg_name[] = {"XM_SYS_CTRL ",
 BusInterface bus;
 int          BusInterface::test_data_len    = 32767;
 uint16_t     BusInterface::test_data[32768] = {
-        // test data
+    // test data
 
     REG_WAITHSYNC(),
     XREG_SETW(PA_GFX_CTRL, 0x0000),        // blank screen
 
     REG_W(INT_CTRL, 0x7FFF),
     REG_W(TIMER, 10 - 1),        // timer interupt interval -1
+
+    REG_RW(FEATURES),
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),

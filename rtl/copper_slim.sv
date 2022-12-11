@@ -127,7 +127,6 @@ typedef enum logic [1:0] {
 word_t          cop_RA;             // accumulator/GPR
 copp_addr_t     cop_PC;             // current program counter (r/o copper mem)
 word_t          cop_IR;             // instruction register (holds executing opcode)
-hres_t          cop_wait_val;       // value to wait for HPOS/VPOS
 
 // execution flags
 logic           wait_hv_flag;       // waiting for HPOS/VPOS
@@ -255,7 +254,6 @@ always_ff @(posedge clk) begin
         rd_reg_save     <= 1'b0;
         wait_hv_flag    <= 1'b0;
         wait_for_v      <= 1'b0;
-        cop_wait_val    <= '0;
 
         rd_pipeline     <= 1'b0;
         cop_ex_state    <= ST_FETCH;
@@ -274,11 +272,11 @@ always_ff @(posedge clk) begin
         end
 
         if (wait_for_v) begin
-            if (v_count_i >= $bits(v_count_i)'(cop_wait_val)) begin
+            if (v_count_i >= $bits(v_count_i)'(cop_IR)) begin
                 wait_hv_flag    <= 1'b0;
             end
         end else begin
-            if (h_count_i >= $bits(h_count_i)'(cop_wait_val)) begin
+            if (h_count_i >= $bits(h_count_i)'(cop_IR)) begin
                 wait_hv_flag    <= 1'b0;
             end
         end
@@ -353,7 +351,7 @@ always_ff @(posedge clk) begin
                     OP_HVPOS: begin
                         wait_hv_flag    <= 1'b1;
                         wait_for_v      <= cop_IR[B_HV_SEL];
-                        cop_wait_val    <= $bits(cop_wait_val)'(cop_IR[B_HV_POS:0]);
+
 `ifndef SYNTHESIS
                         op_imm          <= 16'(cop_IR[B_HV_POS:0]);
 `endif

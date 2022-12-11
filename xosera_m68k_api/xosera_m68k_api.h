@@ -149,12 +149,12 @@ typedef struct _xreg
 // stored at XV_INFO_ADDR after FPGA reconfigure
 typedef struct _xosera_info
 {
-    char          description_str[48];        // ASCII description
-    uint16_t      reserved_48[4];             // 8 reserved bytes (and force alignment)
-    uint16_t      version_bcd;                // BCD version number (xx.yy)
-    unsigned char git_modified;               // non-zero if design modified from githash version
-    unsigned char reserved_59;                // reserved byte
-    uint32_t      githash;                    // git "short hash" version from repository
+    char          description_str[240];        // ASCII description
+    uint16_t      reserved_48[4];              // 8 reserved bytes (and force alignment)
+    uint16_t      version_bcd;                 // BCD version number (xx.yy)
+    unsigned char git_modified;                // non-zero if design modified from githash version
+    unsigned char reserved_59;                 // reserved byte
+    uint32_t      githash;                     // git "short hash" version from repository
 } xosera_info_t;
 
 #ifndef __INTELLISENSE__        // vscode intellisense does not grok m68k (flags as error, but correct for m68k-gcc)

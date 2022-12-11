@@ -179,7 +179,6 @@ bool xosera_get_info(xosera_info_t * info)
 
     xmem_setw(XR_COPPER_ADDR, copvalue);        // restore copper mem
 
-    xreg_setw(COPP_CTRL, copsave);        // restore
 
     uint16_t * wp = (uint16_t *)info;
 
@@ -189,6 +188,8 @@ bool xosera_get_info(xosera_info_t * info)
     {
         *wp++ = xmem_getw_next_wait();
     }
+
+    xreg_setw(COPP_CTRL, copsave);        // restore
 
     return true;        // TODO: Add CRC or similar?
 }

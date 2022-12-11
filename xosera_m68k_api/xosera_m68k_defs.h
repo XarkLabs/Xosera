@@ -44,13 +44,8 @@
 #define XR_COPPER_SIZE  0x0400        //                     1024 x 16-bit copper program memory addresses
 
 // Xosera version info put in COPPER memory after FPGA reconfigure
-#define XV_INFO_ADDR        (XR_COPPER_ADDR + XR_COPPER_SIZE - (XV_INFO_SIZE >> 1))
-#define XV_INFO_SIZE        64        // 64 bytes total for "struct _xosera_info" (32 words in copper memory)
-#define XV_INFO_DESCRIPTION 0         // 48 character description string
-#define XV_INFO_VER_MAJOR   56        // BCD major version number
-#define XV_INFO_VER_MINOR   57        // BCD minor version number
-#define XV_INFO_GITMODIFIED 59        // non-zero if design modified from git version
-#define XV_INFO_GITHASH     60        // byte offset in xosera_info for githash uint32_t
+#define XV_INFO_ADDR (XR_COPPER_ADDR + XR_COPPER_SIZE - 128)
+#define XV_INFO_SIZE 256        // 64 bytes total for "struct _xosera_info" (last 128 words in copper memory)
 
 // Macros to make bit-fields easier (works similar to Verilog "+:" operator, e.g., word[RIGHTMOST_BIT +: BIT_WIDTH])
 // encode value into bit-field for register

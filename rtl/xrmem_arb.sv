@@ -146,7 +146,7 @@ assign  copp_xr_copp_sel    = (copp_xr_addr_i[15:14] == xv::XR_COPPER_ADDR[15:14
 assign xr_addr          = copp_xr_sel_i ? copp_xr_addr_i : xr_addr_i;
 assign xr_write_data    = copp_xr_sel_i ? copp_xr_data_i : xr_data_i;
 `else
-// select addr and write data from XR or copper XR write
+// select addr and write data from XR
 assign xr_addr          = xr_addr_i;
 assign xr_write_data    = xr_data_i;
 `endif
@@ -343,7 +343,7 @@ tilemem #(
 `ifdef EN_COPP
 // copper RAM
 coppermem #(
-    .AWIDTH(xv::COPP_W),
+    .AWIDTH(xv::COPP_W)
 ) coppermem(
     .clk(clk),
     .rd_address_i(copp_addr),

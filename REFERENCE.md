@@ -106,7 +106,7 @@ This table is ugly, but worth it for clickable links
 | 0xC   | **`UNUSED_0C`**                                                                                                               |        |                                                                                       |
 | 0xD   | **`UNUSED_0D`**                                                                                                               |        |                                                                                       |
 | 0xE   | **`UNUSED_0E`**                                                                                                               |        |                                                                                       |
-| 0xF   | **`UNUSED_0C`**                                                                                                               |        |                                                                                       |
+| 0xF   | **`XM_FEATURES`**                                                                                                             | RO     | Bits indicating features present in Xosera                                            |
 
 (`R+` or `W+` indicates that reading or writing this register can have additional "side effects", respectively)
 ___
@@ -318,7 +318,6 @@ ___
 <img src="./pics/wd_XR_VID_CTRL.svg">  
 
 Pixels outside video window (`VID_LEFT`, `VID_RIGHT`) or when blanked will use border color 8-bit index.  This index is used with playfield A colormap (playfield B always uses color index 0 for border or blanked pixels).
-Bits [11:8] designate the read-only monitor mode (commonly 0 = 640x480@60Hz or 1 = 848x480@60Hz).
 When bit [15] colormap `swap` is set then playfields will "swap" which colormaps they use (so the 8-bit color index from playfield A will be used with colormap B and vice versa).  This effectively changes the playfield layer order, so playfield A will be "on top" and playfield B will be "underneath" (for blending purposes).
 
 #### 0x01 **`XR_COPP_CTRL` (R/W) - copper enable**  
@@ -351,7 +350,7 @@ Defines left-most native pixel of video display window (normally 0 for full-scre
 
 <img src="./pics/wd_XR_VID_RIGHT.svg">
 
-Defines right-most native pixel of video display window (normally 639 or 847 for 4:3 or 16:9 full-screen, respectively).
+Defines right-most native pixel of video display window +1 (normally 640 or 848 for 4:3 or 16:9 full-screen, respectively).
 
 #### 0x06 **`XR_UNUSED_06` (--) - unused XR register 0x06**  
 

@@ -154,7 +154,8 @@ uint32_t global;        // this is used to prevent the compiler from optimizing 
 
 xosera_info_t initinfo;
 
-uint32_t mem_buffer[128 * 1024];
+uint32_t mem_buffer32[128 * 1024];
+uint16_t mem_buffer[128 * 1024];
 
 // timer helpers
 static uint32_t start_tick;
@@ -341,7 +342,7 @@ static void get_textmode_settings()
     uint16_t tile_height = (xreg_getw(PA_TILE_CTRL) & 0xf) + 1;
     screen_addr          = xreg_getw(PA_DISP_ADDR);
     text_columns         = (uint8_t)xreg_getw(PA_LINE_LEN);
-    text_rows            = (uint8_t)(((xreg_getw(VID_VSIZE) / vx) + (tile_height - 1)) / tile_height);
+    text_rows            = (uint8_t)(((xosera_vid_width() / vx) + (tile_height - 1)) / tile_height);
 }
 
 static void xcls()
@@ -383,8 +384,8 @@ static void reset_vid(void)
 
     xreg_setw(VID_CTRL, 0x0008);
     xreg_setw(COPP_CTRL, 0x0000);        // disable copper
-    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
     xreg_setw(PA_GFX_CTRL, 0x0000);
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PA_DISP_ADDR, 0x0000);
@@ -581,9 +582,9 @@ static void install_copper()
 
 #if 1
     // modify HPOS wait SOL to be left edge horizontal position in 640x480 or 848x480 modes (including overscan)
-    cop_diagonal_bin[cop_diagonal__hpos_sol] = 0x2000 | (xreg_getw(VID_HSIZE) > 640 ? 1088 - 848 - 8 : 800 - 640 - 8);
+    cop_diagonal_bin[cop_diagonal__hpos_sol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 848 - 8 : 800 - 640 - 8);
     // modify HPOS wait EOL to be right edge horizontal position in 640x480 or 848x480 modes (including overscan)
-    cop_diagonal_bin[cop_diagonal__hpos_eol] = 0x2000 | (xreg_getw(VID_HSIZE) > 640 ? 1088 - 1 : 800 - 1);
+    cop_diagonal_bin[cop_diagonal__hpos_eol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 1 : 800 - 1);
     for (uint16_t i = 0; i < cop_diagonal_size; i++)
     {
         uint16_t op = cop_diagonal_bin[i];
@@ -875,8 +876,8 @@ void show_test_pic(int pic_num, uint16_t addr)
     xreg_setw(PB_GFX_CTRL, 0x0080);
     xreg_setw(VID_CTRL, 0x0000);        // set border
     xmem_setw(XR_COLOR_A_ADDR, 0x0000);
-    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
 
     xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, addr);
@@ -1268,8 +1269,8 @@ void test_colormap()
     uint16_t h       = 14;
 
     xreg_setw(VID_CTRL, 0x0000);
-    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
     xreg_setw(PA_GFX_CTRL, 0x0065);
     xreg_setw(PA_TILE_CTRL, 0x0C07);
     xreg_setw(PA_DISP_ADDR, 0x0000);
@@ -1377,7 +1378,7 @@ void test_blit()
 
     // crop left and right 2 pixels
     xr_textmode_pb();
-    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640 - 4);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640 - 4);
     xreg_setw(VID_CTRL, 0x00FF);
 
     do
@@ -1420,7 +1421,7 @@ void test_blit()
 
         uint16_t paddr = 0x9b00;
         show_test_pic(0, paddr);
-        xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640 - 4);
+        xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640 - 4);
         xreg_setw(VID_CTRL, 0x00FF);
         xmem_setw(XR_COLOR_A_ADDR + 255, 0x0000);        // set write address
 
@@ -1570,8 +1571,8 @@ void test_blit()
     xreg_setw(PA_LINE_LEN, 320 / 4);
     xreg_setw(PA_DISP_ADDR, 0x0000);
 
-    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
 }
 
 void test_true_color()
@@ -1591,7 +1592,7 @@ void test_true_color()
 // this tests a problem switching modes
 void test_mode_glitch()
 {
-    int width = xreg_getw(VID_HSIZE);
+    int width = xosera_vid_width();
     xm_setw(WR_ADDR, 0);
     xm_setw(WR_INCR, 1);
     xm_setbl(SYS_CTRL, 0xF);
@@ -1872,7 +1873,7 @@ void test_vram_speed()
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
-        uint32_t * ptr   = mem_buffer;
+        uint32_t * ptr   = mem_buffer32;
         uint16_t   count = 0x8000;        // VRAM long count
         do
         {
@@ -1912,7 +1913,7 @@ void test_vram_speed()
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
-        uint32_t * ptr   = mem_buffer;
+        uint32_t * ptr   = mem_buffer32;
         uint16_t   count = 0x8000;        // VRAM long count
         do
         {
@@ -2545,7 +2546,7 @@ static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
         ic = xm_getw(INT_CTRL);
         dprintf("Cleared INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
 
-        uint32_t clk_hz = xreg_getw(VID_HSIZE) > 640 ? 33750000 : 25125000;
+        uint32_t clk_hz = xosera_vid_width() > 640 ? 33750000 : 25125000;
         uint16_t period = (clk_hz + rate - 1) / rate;
 
         for (int v = 0; v < 4; v++)
@@ -2736,12 +2737,20 @@ void     xosera_test()
 
     dprintf("\nCalling xosera_init(0)...");
     bool success = xosera_init(0);
-    dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+    dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
     cpu_delay(1000);
     xosera_get_info(&initinfo);
     dprintf("xosera_get_info details:\n");
-    hexdump(&initinfo, sizeof(initinfo));
+    //    hexdump(&initinfo, sizeof(initinfo));
+
+    xmem_get_addr(XR_COPPER_ADDR);
+    for (int i = 0; i < XR_COPPER_SIZE; i++)
+    {
+        mem_buffer[i] = xmem_getw_next();
+    }
+    hexdump(mem_buffer, 1024 * 2);
+
     dprintf("\n");
     dprintf("Description : \"%s\"\n", initinfo.description_str);
     dprintf("Version BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
@@ -2885,7 +2894,7 @@ void     xosera_test()
             config_num++;
             dprintf("\n [ xosera_init(%u)...", config_num % 3);
             bool success = xosera_init(config_num % 3);
-            dprintf("%s (%dx%d) ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+            dprintf("%s (%dx%d) ]\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
             init_audio();
 #if COPPER_TEST
             install_copper();
@@ -2895,12 +2904,12 @@ void     xosera_test()
 
         dprintf("\n*** xosera_test_m68k iteration: %u, running %u:%02u:%02u\n", test_count++, h, m, s);
 
-        xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
-        xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
+        xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+        xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
 
-        uint16_t features  = xreg_getw(FEATURES);
-        uint16_t monwidth  = xreg_getw(VID_HSIZE);
-        uint16_t monheight = xreg_getw(VID_VSIZE);
+        uint16_t features  = xm_getw(FEATURES);
+        uint16_t monwidth  = xosera_vid_width();
+        uint16_t monheight = xosera_vid_height();
 
         uint16_t sysctrl  = xm_getw(SYS_CTRL);
         uint16_t intctrl  = xm_getw(INT_CTRL);
@@ -2966,7 +2975,7 @@ void     xosera_test()
 
         xreg_setw(PA_GFX_CTRL, 0x0000);
         xreg_setw(PA_TILE_CTRL, 0x000F);
-        xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) >> 3);
+        xreg_setw(PA_LINE_LEN, xosera_vid_width() >> 3);
         xreg_setw(PA_DISP_ADDR, 0x0000);
         xreg_setw(PA_HV_SCROLL, 0x0000);
         xreg_setw(PA_HV_FSCALE, 0x0000);

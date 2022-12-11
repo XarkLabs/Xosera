@@ -271,7 +271,7 @@ slim_copper copper(
     .xr_wr_data_o(copp_xr_data_out),
     .copmem_rd_addr_o(copper_pc),
     .copmem_rd_en_o(copp_prog_rd_en),
-    .copmem_rd_data_i(copp_prog_data_out[15:0]),    // TODO: 16-bit
+    .copmem_rd_data_i(copp_prog_data_out),
     .cop_xreg_wr_i(copp_reg_wr),
     .cop_xreg_enable_i(copp_reg_enable),
     .h_count_i(video_h_count),

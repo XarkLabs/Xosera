@@ -55,12 +55,20 @@
 `define BUILDDATE 00000000              // unknown build date
 `endif
 
-`ifdef EN_AUDIO
-localparam AUDIO_NCHAN  = `EN_AUDIO;    // set parameter for # audio channels
-`endif
-
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
+
+`ifdef FPGA_CONFIG_NUM                 // FPGA boot config number (0-3)
+localparam FPGA_CONFIG_NUM = `FPGA_CONFIG_NUM;
+`else
+localparam FPGA_CONFIG_NUM = 0;
+`endif
+
+`ifdef EN_AUDIO
+localparam AUDIO_NCHAN  = `EN_AUDIO;    // set parameter for # audio channels
+`else
+localparam AUDIO_NCHAN  = 0;
+`endif
 
 // Xosera memory address bit widths
 localparam VRAM_W   = 16;               // 64K words VRAM
@@ -228,30 +236,31 @@ typedef enum {
 //     unsigned char githash[4];
 // } xosera_info_t;
 
-localparam          offset  = (2**COPP_W) - (64/4);
 localparam [11:0]   version = 12'H`VERSION;
 localparam [31:0]   builddate = 32'H`BUILDDATE;         // YYYYMMDD
 localparam [8:1]    clean   = `GITCLEAN ? "=" : ">";    // '+' appended to version if non-clean
 localparam [31:0]   githash = 32'H`GITHASH;             // git short hash
 
-localparam [16*8:1] hex_str = "FEDCBA9876543210";
-localparam [48*8:1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]),
+localparam [16*8-1:0] hex_str = "FEDCBA9876543210";
+/* verilator lint_off LITENDIAN */  // NOTE: This keeps the letters in forward order for humans
+localparam [0:48*8-1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]),
                                 " ",
-                                hex_str[((builddate[31:28])*8)+1+:8], hex_str[((builddate[27:24])*8)+1+:8],
-                                hex_str[((builddate[23:20])*8)+1+:8], hex_str[((builddate[19:16])*8)+1+:8],
-                                hex_str[((builddate[15:12])*8)+1+:8], hex_str[((builddate[11: 8])*8)+1+:8],
-                                hex_str[((builddate[ 7: 4])*8)+1+:8], hex_str[((builddate[ 3: 0])*8)+1+:8],
+                                hex_str[((builddate[31:28])*8)+:8], hex_str[((builddate[27:24])*8)+:8],
+                                hex_str[((builddate[23:20])*8)+:8], hex_str[((builddate[19:16])*8)+:8],
+                                hex_str[((builddate[15:12])*8)+:8], hex_str[((builddate[11: 8])*8)+:8],
+                                hex_str[((builddate[ 7: 4])*8)+:8], hex_str[((builddate[ 3: 0])*8)+:8],
                                 " ", clean, "#",
-                                hex_str[((githash[31:28])*8)+1+:8], hex_str[((githash[27:24])*8)+1+:8],
-                                hex_str[((githash[23:20])*8)+1+:8], hex_str[((githash[19:16])*8)+1+:8],
-                                hex_str[((githash[15:12])*8)+1+:8], hex_str[((githash[11: 8])*8)+1+:8],
-                                hex_str[((githash[ 7: 4])*8)+1+:8], hex_str[((githash[ 3: 0])*8)+1+:8],
+                                hex_str[((githash[31:28])*8)+:8], hex_str[((githash[27:24])*8)+:8],
+                                hex_str[((githash[23:20])*8)+:8], hex_str[((githash[19:16])*8)+:8],
+                                hex_str[((githash[15:12])*8)+:8], hex_str[((githash[11: 8])*8)+:8],
+                                hex_str[((githash[ 7: 4])*8)+:8], hex_str[((githash[ 3: 0])*8)+:8],
 `ifdef ICE40UP5K
                                 " iCE40UP5K 128KB"
 `else
                                 " Unknown FPGA   "
 `endif
                                 };
+/* verilator lint_on LITENDIAN */
 
 `ifdef MODE_640x400                     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x400_75                  // 31.500 MHz (requested), 31.500 MHz (achieved)

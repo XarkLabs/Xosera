@@ -166,6 +166,7 @@ golden:
 	@echo === Done
 # Clean all project targets
 clean: m68kclean
+	cd copper/CopAsm/ && $(MAKE) clean
 	cd rtl && $(MAKE) clean
 	cd utils && $(MAKE) clean
 	cd host_spi && $(MAKE) clean

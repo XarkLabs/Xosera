@@ -76,7 +76,7 @@
 #define XM_UNUSED_0C 0x30        // (- /- )
 #define XM_UNUSED_0D 0x34        // (- /- )
 #define XM_UNUSED_0E 0x38        // (- /- )
-#define XM_UNUSED_0F 0x3C        // (- /- )
+#define XM_FEATURES  0x3C        // (RO)
 
 // SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
 // indirect with no offset)

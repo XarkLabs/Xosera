@@ -12,6 +12,7 @@
 `include "xosera_pkg.sv"
 
 `define MEMDUMP                     // dump VRAM contents to file
+`define COPMEMDUMP                     // dump VRAM contents to file
 `define BUSTEST
 `define MAX_FRAMES      1
 `define LOAD_MONOBM
@@ -455,7 +456,7 @@ always @(posedge clk) begin
 
         if (frame > `MAX_FRAMES || $realtime > (`MAX_FRAMES * 18_000_000)) begin
 `ifdef MEMDUMP
-            f = $fopen("logs/xosera_tb_isim_vram.txt", "w");
+            f = $fopen("sim/logs/xosera_tb_isim_vram.txt", "w");
             for (i = 0; i < 65536; i += 16) begin
                 $fwrite(f, "%04x: ", i[15:0]);
                 for (j = 0; j < 16; j++) begin
@@ -465,6 +466,32 @@ always @(posedge clk) begin
                 for (j = 0; j < 16; j++) begin
                     if (xosera.vram_arb.vram.memory[i+j][7:0] >= 32 && xosera.vram_arb.vram.memory[i+j][7:0] < 127) begin
                         $fwrite(f, "%c", xosera.vram_arb.vram.memory[i+j][7:0]);
+                    end else
+                    begin
+                        $fwrite(f, ".");
+                    end
+                end
+                $fwrite(f, "\n");
+            end
+            $fclose(f);
+`endif
+`ifdef COPMEMDUMP
+            f = $fopen("sim/logs/xosera_tb_isim_copp.txt", "w");
+            for (i = 0; i < 2**xv::COPP_W; i += 16) begin
+                $fwrite(f, "%04x: ", i[15:0]);
+                for (j = 0; j < 16; j++) begin
+                    $fwrite(f, "%04x ", xosera.xrmem_arb.coppermem.bram[i+j][15:0]);
+                end
+                $fwrite(f, "  ");
+                for (j = 0; j < 16; j++) begin
+                    if (xosera.xrmem_arb.coppermem.bram[i+j][15:8] >= 32 && xosera.xrmem_arb.coppermem.bram[i+j][15:8] < 127) begin
+                        $fwrite(f, "%c", xosera.xrmem_arb.coppermem.bram[i+j][15:8]);
+                    end else
+                    begin
+                        $fwrite(f, ".");
+                    end
+                    if (xosera.xrmem_arb.coppermem.bram[i+j][7:0] >= 32 && xosera.xrmem_arb.coppermem.bram[i+j][7:0] < 127) begin
+                        $fwrite(f, "%c", xosera.xrmem_arb.coppermem.bram[i+j][7:0]);
                     end else
                     begin
                         $fwrite(f, ".");

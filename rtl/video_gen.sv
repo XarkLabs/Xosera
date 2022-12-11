@@ -568,7 +568,7 @@ always_comb begin
     rd_vid_regs = 16'h0000;
 
     case (vgen_reg_num_i[2:0])
-        3'(xv::XR_VID_CTRL):        rd_vid_regs = { vid_colorswap, 3'b0, 4'(xv::VIDEO_MODE_NUM), border_color};
+        3'(xv::XR_VID_CTRL):        rd_vid_regs = { vid_colorswap, 7'b0, border_color};
 `ifdef EN_COPP
         3'(xv::XR_COPP_CTRL):       rd_vid_regs = { copp_reg_enable_o, 15'b0 };
 `endif

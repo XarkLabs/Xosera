@@ -5,21 +5,12 @@
             "name": "border color A index",
             "type": 2,
             "attr": [
-                "color index of border or bla nked pixels",
-                "from playfield A colormap"
+                "color index of border or blanked pixels",
+                "(from playfield A colormap)"
             ]
         },
         {
-            "bits": 4,
-            "name": "monitor mode",
-            "type": 4,
-            "attr": [
-                "0 = 640x480 @ ~60Hz",
-                "1 = 848x480 @ ~60Hz"
-            ]
-        },
-        {
-            "bits": 3,
+            "bits": 7,
             "name": "0",
             "type": 1
         },

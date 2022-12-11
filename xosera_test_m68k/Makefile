@@ -156,7 +156,7 @@ macterm:
 	echo "/usr/bin/screen $(SERIAL) $(BAUD)" >> $(TMPDIR)/rosco_screen.sh
 	chmod +x $(TMPDIR)/rosco_screen.sh
 	sleep 1
-	open -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
+	open -n -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
 
 # Makefile magic (for "phony" targets that are not real files)
 .PHONY: all clean dump disasm load test mactest macterm

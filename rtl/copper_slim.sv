@@ -271,16 +271,6 @@ always_ff @(posedge clk) begin
             xr_wr_en        <= 1'b0;
         end
 
-        if (wait_for_v) begin
-            if (v_count_i >= $bits(v_count_i)'(cop_IR)) begin
-                wait_hv_flag    <= 1'b0;
-            end
-        end else begin
-            if (h_count_i >= $bits(h_count_i)'(cop_IR)) begin
-                wait_hv_flag    <= 1'b0;
-            end
-        end
-
         case (cop_ex_state)
             // fetch opcode, store to cop_IR when available
             ST_FETCH: begin
@@ -401,6 +391,17 @@ always_ff @(posedge clk) begin
                 cop_ex_state    <= ST_FETCH;
             end
         endcase // Execution state
+
+        if (wait_for_v) begin
+            if (v_count_i >= $bits(v_count_i)'(cop_IR)) begin
+                wait_hv_flag    <= 1'b0;
+            end
+        end else begin
+            if (h_count_i >= $bits(h_count_i)'(cop_IR)) begin
+                wait_hv_flag    <= 1'b0;
+            end
+        end
+
     end
 end
 

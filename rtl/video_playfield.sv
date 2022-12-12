@@ -133,7 +133,7 @@ logic [63:0]    pf_pixels_buf;                      // 8 pixel buffer waiting fo
 logic [63:0]    pf_pixels;                          // 8 pixels currently shifting to scan out
 
 always_comb     scanout_start = (h_count_i == scanout_start_hcount) ? mem_fetch_i : 1'b0;
-always_comb     scanout_end = (h_count_i == scanout_end_hcount) ? 1'b1 : 1'b0;
+always_comb     scanout_end = (h_count_i <= scanout_end_hcount) ? 1'b1 : 1'b0;
 
 // generate tile address from index, tile y, bpp and tile size (8x8 or 8x16)
 function automatic addr_t calc_tile_addr(

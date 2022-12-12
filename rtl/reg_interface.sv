@@ -209,7 +209,7 @@ always_comb begin
         xv::XM_UNUSED_0D,
         xv::XM_UNUSED_0E,
         xv::XM_FEATURES:
-            rd_temp_word  = { 4'(xv::FPGA_CONFIG_NUM), 4'(xv::AUDIO_NCHAN), 1'b0,
+            rd_temp_word  = { 2'(xv::FPGA_CONFIG_NUM), 2'b0, 4'(xv::AUDIO_NCHAN), 1'b0,
 `ifdef EN_PF_B
                 1'b1,
 `else

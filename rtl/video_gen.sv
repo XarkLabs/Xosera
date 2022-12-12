@@ -185,14 +185,14 @@ video_timing video_timing
 `ifdef EN_AUDIO
 // audio
 logic                               audio_enable;           // all channel enable
-logic [7*AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
-logic [7*AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
-logic [15*AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
-logic [AUDIO_NCHAN-1:0]             audio_tile_nchan;       // channel sample memory (0=VRAM, 1=TILE)
-logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  audio_start_nchan;      // channel sample start address (in VRAM or TILE)
-logic [15*AUDIO_NCHAN-1:0]          audio_len_nchan;        // channel sample length in words
-logic [AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel sample memory (0=VRAM, 1=TILE)
-logic [AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample ready
+logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
+logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
+logic [15*xv::AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
+logic [xv::AUDIO_NCHAN-1:0]             audio_tile_nchan;       // channel sample memory (0=VRAM, 1=TILE)
+logic [xv::VRAM_W*xv::AUDIO_NCHAN-1:0]  audio_start_nchan;      // channel sample start address (in VRAM or TILE)
+logic [15*xv::AUDIO_NCHAN-1:0]          audio_len_nchan;        // channel sample length in words
+logic [xv::AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel sample memory (0=VRAM, 1=TILE)
+logic [xv::AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample ready
 logic           audio_req;                    // audio DMA request signal
 logic           audio_ack;                      // audio DMA ack signal
 logic           audio_tilemem;                  // audio DMA memory type (0=VRAM, 1=TILE)
@@ -496,13 +496,13 @@ always_ff @(posedge clk) begin
                 6'(xv::XR_PA_LINE_LEN): begin
                     pa_line_len     <= vgen_reg_data_i;
                 end
-                6'(xv::XR_PA_HV_SCROLL): begin
-                    pa_fine_hscroll <= vgen_reg_data_i[12:8];
-                    pa_fine_vscroll <= vgen_reg_data_i[5:0];
-                end
                 6'(xv::XR_PA_HV_FSCALE): begin
                     pa_h_frac_repeat <= vgen_reg_data_i[6:4];
                     pa_v_frac_repeat <= vgen_reg_data_i[2:0];
+                end
+                6'(xv::XR_PA_HV_SCROLL): begin
+                    pa_fine_hscroll <= vgen_reg_data_i[12:8];
+                    pa_fine_vscroll <= vgen_reg_data_i[5:0];
                 end
                 6'(xv::XR_PA_LINE_ADDR): begin
                     pa_line_start_set <= 1'b1;               // PA_LINE_ADDR changed strobe
@@ -533,13 +533,13 @@ always_ff @(posedge clk) begin
                 6'(xv::XR_PB_LINE_LEN): begin
                     pb_line_len     <= vgen_reg_data_i;
                 end
-                6'(xv::XR_PB_HV_SCROLL): begin
-                    pb_fine_hscroll <= vgen_reg_data_i[12:8];
-                    pb_fine_vscroll <= vgen_reg_data_i[5:0];
-                end
                 6'(xv::XR_PB_HV_FSCALE): begin
                     pb_h_frac_repeat <= vgen_reg_data_i[6:4];
                     pb_v_frac_repeat <= vgen_reg_data_i[2:0];
+                end
+                6'(xv::XR_PB_HV_SCROLL): begin
+                    pb_fine_hscroll <= vgen_reg_data_i[12:8];
+                    pb_fine_vscroll <= vgen_reg_data_i[5:0];
                 end
                 6'(xv::XR_PB_LINE_ADDR): begin
                     pb_line_start_set <= 1'b1;               // PB_LINE_ADDR changed strobe
@@ -591,15 +591,17 @@ always_comb begin
         4'(xv::XR_PA_TILE_CTRL):    rd_pf_regs = { pa_tile_bank, pa_disp_in_tile, pa_tile_in_vram, 4'b0, pa_tile_height };
         4'(xv::XR_PA_DISP_ADDR):    rd_pf_regs = pa_start_addr;
         4'(xv::XR_PA_LINE_LEN):     rd_pf_regs = pa_line_len;
-        4'(xv::XR_PA_HV_SCROLL):    rd_pf_regs = { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
         4'(xv::XR_PA_HV_FSCALE):    rd_pf_regs = { 8'h00, 4'(pa_h_frac_repeat), 4'(pa_v_frac_repeat) };
+        4'(xv::XR_PA_HV_SCROLL):    rd_pf_regs = { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
+        4'(xv::XR_PA_LINE_ADDR):    rd_pf_regs = 16'h0000;
 `ifdef EN_PF_B
         4'(xv::XR_PB_GFX_CTRL):     rd_pf_regs = { pb_colorbase, pb_blank, pb_bitmap, pb_bpp, pb_h_repeat, pb_v_repeat };
         4'(xv::XR_PB_TILE_CTRL):    rd_pf_regs = { pb_tile_bank, pb_disp_in_tile, pb_tile_in_vram, 4'b0, pb_tile_height };
         4'(xv::XR_PB_DISP_ADDR):    rd_pf_regs = pb_start_addr;
         4'(xv::XR_PB_LINE_LEN):     rd_pf_regs = pb_line_len;
-        4'(xv::XR_PB_HV_SCROLL):    rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
         4'(xv::XR_PB_HV_FSCALE):    rd_pf_regs = { 8'h00, 4'(pb_h_frac_repeat), 4'(pb_v_frac_repeat) };
+        4'(xv::XR_PB_HV_SCROLL):    rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
+        4'(xv::XR_PB_LINE_ADDR):    rd_pf_regs = 16'h0000;
 `endif
         default:                    ;
     endcase
@@ -675,7 +677,7 @@ always_ff @(posedge clk) begin
         audio_restart_nchan     <= '0;
         audio_intr_o            <= '0;
     end else begin
-        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
             audio_restart_nchan[i]    <= 1'b0;
             if (audio_reload_nchan[i]) begin
                 audio_intr_o[i]  <= 1'b1;                                                                          // ready set

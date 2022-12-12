@@ -23,7 +23,9 @@
 		},
 		"markdownlint.config": {
 			"MD001": false, // Heading levels should only increment by one level at a time
-			"MD033": false // no inline HTML
+			"MD028": false, // no blank line between block quotes
+			"MD033": false, // no inline HTML
+			"MD036": false // use heading not bold
 		},
 		"cSpell.words": [
 			"ADDI",

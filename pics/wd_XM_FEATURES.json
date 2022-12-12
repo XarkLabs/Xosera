@@ -1,0 +1,74 @@
+{
+    "reg": [
+        {
+            "bits": 4,
+            "name": "monitor resolution",
+            "type": 4,
+            "attr": [
+                "0x0 = 640x480",
+                "0x1 = 848x480",
+                "(others reserved)"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "COPP",
+            "type": 3,
+            "attr": [
+                "copper"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "BLIT",
+            "type": 6,
+            "attr": [
+                "blitter"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "PF_B",
+            "type": 2,
+            "attr": [
+                "2nd",
+                "playfield",
+                "B"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "0",
+            "type": 1
+        },
+        {
+            "name": "audio channels",
+            "bits": 4,
+            "type": 4,
+            "attr": [
+                "number of",
+                "audio channels",
+                "0-4"
+            ]
+        },
+        {
+            "name": "config",
+            "bits": 2,
+            "type": 3,
+            "attr": [
+                "FPGA",
+                "config",
+                "number",
+                "0-3"
+            ]
+        },
+        {
+            "name": "0",
+            "bits": 2,
+            "type": 1
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

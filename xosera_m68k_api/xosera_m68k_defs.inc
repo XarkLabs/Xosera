@@ -28,7 +28,7 @@ XR_CONFIG_REGS          equ     $0000       ; 0x0000-0x000F 16 config/ctrl regis
 XR_PA_REGS              equ     $0010       ; 0x0010-0x0017 8 playfield A video registers
 XR_PB_REGS              equ     $0018       ; 0x0018-0x001F 8 playfield B video registers
 XR_AUDIO_REGS           equ     $0020       ; 0x0020-0x002F 16 audio playback registers      // TODO: audio
-XR_BLIT_REGS            equ     $0040       ; 0x0040-0x004B 12 blitter registers
+XR_BLIT_REGS            equ     $0040       ; 0x0040-0x004B 10 blitter registers
 XR_TILE_ADDR            equ     $4000       ; (R/W) 0x4000-0x53FF tile glyph/tile map memory
 XR_TILE_SIZE            equ     $1400       ;                     5120 x 16-bit tile glyph/tile map memory
 XR_COLOR_ADDR           equ     $8000       ; (R/W) 0x8000-0x81FF 2 x A & B color lookup memory
@@ -142,6 +142,24 @@ XR_UNUSED_0C            equ     $0C         ; (- /-) unused XR 0C
 XR_UNUSED_0D            equ     $0D         ; (- /-) unused XR 0D
 XR_UNUSED_0E            equ     $0E         ; (- /-) unused XR 0E
 XR_UNUSED_0F            equ     $0F         ; (- /-) unused XR 0F
+; XR_VID_CTRL bit numbers within word)
+XR_VID_CTRL_SWAP_AB_B   equ     15          ; bit number to colormap used (pf A uses colormap B and vice versa)
+XR_VID_CTRL_BORDCOL_B   equ     0           ; rightmost bit number of pf A color index
+XR_VID_CTRL_BORDCOL_W   equ     8           ; bit width for pf A color index
+; XR_VID_CTRL flag/mask
+XR_VID_CTRL_SWAP_AB_F   equ     $8000       ; flag to swap colormap used (pf A uses colormap B and vice versa)
+XR_VID_CTRL_BORDCOL_F   equ     $00FF       ; mask for pf A color index
+
+; XR_COPP_CTRL bit numbers within word)
+XR_COPP_CTRL_COPP_EN_B      equ     15      ; bit number to enable/disable copper
+; XR_COPP_CTRL bit flag/mask
+XR_COPP_CTRL_COPP_EN_F      equ     $8000    ; flag to enable/disable copper
+
+; XR_AUD_CTRL bit numbers within word)
+XR_AUD_CTRL_AUD_EN_B        equ     0           ; bit number to enable/disable audio
+; XR_AUD_CTRL bit flag/mask
+XR_AUD_CTRL_AUD_EN_F        equ     $0001       ; flag to enable/disable audio
+
 
 ; Playfield A Control XR Registers
 XR_PA_GFX_CTRL          equ     $10         ; (R /W) playfield A graphics control
@@ -151,7 +169,7 @@ XR_PA_LINE_LEN          equ     $13         ; (R /W) playfield A display line wi
 XR_PA_HV_FSCALE         equ     $14         ; (R /W) playfield A horizontal and vertical fractional scale
 XR_PA_HV_SCROLL         equ     $15         ; (R /W) playfield A horizontal and vertical fine scroll
 XR_PA_LINE_ADDR         equ     $16         ; (- /W) playfield A scanline start address (loaded at start of line)
-XR_PA_UNUSED_17         equ     $17         ; // TODO: colorbase?
+XR_PA_UNUSED_17         equ     $17         ; (- /-)
 
 ; Playfield B Control XR Registers
 XR_PB_GFX_CTRL          equ     $18         ; (R /W) playfield B graphics control
@@ -161,7 +179,45 @@ XR_PB_LINE_LEN          equ     $1B         ; (R /W) playfield B display line wi
 XR_PB_HV_FSCALE         equ     $1C         ; (R /W) playfield B horizontal and vertical fractional scale
 XR_PB_HV_SCROLL         equ     $1D         ; (R /W) playfield B horizontal and vertical fine scroll
 XR_PB_LINE_ADDR         equ     $1E         ; (- /W) playfield B scanline start address (loaded at start of line)
-XR_PB_UNUSED_1F         equ     $1F         ; // TODO: colorbase?
+XR_PB_UNUSED_1F         equ     $1F         ; (- /-)
+
+; Playfield GFX BPP constants
+XR_GFX_BPP_1            equ     0           ; Px_GFX_CTRL.bpp (1-bpp + fore/back attribute color)
+XR_GFX_BPP_4            equ     1           ; Px_GFX_CTRL.bpp (4-bpp, 16 color)
+XR_GFX_BPP_8            equ     2           ; Px_GFX_CTRL.bpp (8-bpp 256 color)
+XR_GFX_BPP_X            equ     3           ; Px_GFX_CTRL.bpp (reserved)
+
+; XR_AUD_CTRL bit numbers within word)
+XR_GFX_CTRL_V_REPEAT_B  equ     0
+XR_GFX_CTRL_V_REPEAT_W  equ     2
+XR_GFX_CTRL_H_REPEAT_B  equ     2
+XR_GFX_CTRL_H_REPEAT_W  equ     2
+XR_GFX_CTRL_BPP_B       equ     4
+XR_GFX_CTRL_BPP_W       equ     2
+XR_GFX_CTRL_BITMAP_B    equ     6
+XR_GFX_CTRL_BLANK_B     equ     7
+XR_GFX_CTRL_COLORBASE_B equ     8
+XR_GFX_CTRL_COLORBASE_W equ     8
+; XR_AUD_CTRL bit flag/mask
+XR_GFX_CTRL_V_REPEAT_F  equ     $0003
+XR_GFX_CTRL_H_REPEAT_F  equ     $000C
+XR_GFX_CTRL_BPP_F       equ     $0030
+XR_GFX_CTRL_BITMAP_F    equ     $0040
+XR_GFX_CTRL_BLANK_F     equ     $0080
+XR_GFX_CTRL_COLORBASE_F equ     $FF00
+
+; XR_Px_TILE_CTRL bit numbers within word)
+XR_TILE_CTRL_TILE_H_B       equ 0
+XR_TILE_CTRL_TILE_H_W       equ 4
+XR_TILE_CTRL_TILE_VRAM_B    equ 8
+XR_TILE_CTRL_DISP_TILEMEM_B equ 9
+XR_TILE_CTRL_TILEBASE_B     equ 10
+XR_TILE_CTRL_TILEBASE_W     equ 6
+; XR_Px_TILE_CTRL bit flag/mask
+XR_TILE_CTRL_TILE_H_F       equ $000F
+XR_TILE_CTRL_TILE_VRAM_F    equ $0100
+XR_TILE_CTRL_DISP_TILEMEM_F equ $0200
+XR_TILE_CTRL_TILEBASE_F     equ $FC00
 
 ; Audio Registers
 XR_AUD0_VOL             equ     $20         ; (WO/-) // TODO: WIP
@@ -198,9 +254,3 @@ XR_UNUSED_4C            equ     $4C         ; unused XR reg
 XR_UNUSED_4D            equ     $4D         ; unused XR reg
 XR_UNUSED_4E            equ     $4E         ; unused XR reg
 XR_UNUSED_4F            equ     $4F         ; unused XR reg
-
-; constants
-XR_GFX_BPP_1            equ     0           ; Px_GFX_CTRL.bpp (1-bpp + fore/back attribute color)
-XR_GFX_BPP_4            equ     1           ; Px_GFX_CTRL.bpp (4-bpp, 16 color)
-XR_GFX_BPP_8            equ     2           ; Px_GFX_CTRL.bpp (8-bpp 256 color)
-XR_GFX_BPP_X            equ     3           ; Px_GFX_CTRL.bpp (reserved)

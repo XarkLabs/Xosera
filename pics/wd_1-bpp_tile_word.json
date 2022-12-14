@@ -1,0 +1,31 @@
+{
+    "reg": [
+        {
+            "bits": 8,
+            "name": "tile index",
+            "type": 4,
+            "attr": [
+                "0 - 255 glyph index"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "foreground color index",
+            "type": 5,
+            "attr": [
+                "used for one bits in glyph"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "background color index",
+            "type": 2,
+            "attr": [
+                "used for zero bits in glyph"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

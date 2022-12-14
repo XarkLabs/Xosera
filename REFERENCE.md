@@ -52,6 +52,8 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
       - [0x0F **`XR_UNUSED_0F`** (--) - unused XR register](#0x0f-xr_unused_0f------unused-xr-register)
     - [Playfield A \& B Control XR Registers Summary](#playfield-a--b-control-xr-registers-summary)
     - [Playfield A \& B Control XR Registers Details](#playfield-a--b-control-xr-registers-details)
+      - [Bitmap Display Formats](#bitmap-display-formats)
+      - [Tile Display Formats](#tile-display-formats)
     - [2D Blitter Engine Operation](#2d-blitter-engine-operation)
       - [Logic Operation Applied to Blitter Operations](#logic-operation-applied-to-blitter-operations)
       - [Transparency Testing and Masking Applied to Blitter Operations](#transparency-testing-and-masking-applied-to-blitter-operations)
@@ -388,13 +390,13 @@ A write to this register will trigger Xosera host CPU video interrupt (if unmask
 
 <img src="./pics/wd_XR_VID_LEFT.svg">
 
-Defines left-most native pixel of video display window (normally 0 for full-screen).
+Defines left-most native pixel of video display window, 0 to monitor native width-1 (normally 0 for full-screen).
 
 #### 0x05 **`XR_VID_RIGHT` (R/W) - video display window right edge**  
 
 <img src="./pics/wd_XR_VID_RIGHT.svg">
 
-Defines right-most native pixel of video display window +1 (normally 640 or 848 for 4:3 or 16:9 full-screen, respectively).
+Defines right-most native pixel of video display window +1, 1 to monitor native width (normally 640 or 848 for 4:3 or 16:9 full-screen, respectively).
 
 #### 0x06 **`XR_UNUSED_06`** (--) - unused XR register
 
@@ -442,79 +444,130 @@ ___
 
 ### Playfield A & B Control XR Registers Details
 
-**0x10 `XR_PA_GFX_CTRL` (R/W) - playfield A (base) graphics control**  
-**0x18 `XR_PB_GFX_CTRL` (R/W) - playfield B (overlay) graphics control**  
+**0x10 `XR_PA_GFX_CTRL` (R/W)** - playfield A (base) graphics control  
+**0x18 `XR_PB_GFX_CTRL` (R/W)** - playfield B (overlay) graphics control
 <img src="./pics/wd_XR_Px_GFX_CTRL.svg">
 
-**playfield A/B graphics control**  
-colorbase is used for any color index bits not in source pixel (e.g., the upper 4-bits of 4-bit pixel).  
-blank bit set will disable display memory fetch and "blank" the display to a solid color (`XR_VID_CTRL` bordercolor, XOR'd with colorbase).  
-bitmap 0 for tiled character graphics (see `XR_Px_TILE_CTRL`) using display word with attribute and tile index.  
-bitmap 1 for bitmapped mode (1-bpp mode uses a 4-bit fore/back color attributes in upper 8-bits of each word).  
-bpp selects bits-per-pixel or the number of color index bits per pixel (see "Graphics Modes" [#TODO]).  
-H repeat selects the number of native pixels wide an Xosera pixel will be (1-4).  
-V repeat selects the number of native pixels tall an Xosera pixel will be (1-4).  
+**playfield A/B graphics control**
+| Name        | Bits     | R/W | Description                                                                    |
+| ----------- | -------- | --- | ------------------------------------------------------------------------------ |
+| `V_REPEAT`  | `[1:0]`  | R/W | Vertical pixel repeat count (0=1x, 1=2x, 2=3x, 3=4x)                           |
+| `H_REPEAT`  | `[3:2]`  | R/W | Horizontal pixel repeat count (0=1x, 1=2x, 2=3x, 3=4x)                         |
+| `BPP`       | `[5:4]`  | R/W | Bits-Per-Pixel for color indexing (0=1 BPP, 1=4 BPP, 2=8 BPP, 3=reserved)      |
+| `BITMAP`    | `[6]`    | R/W | Bitmap or tiled (0=use `XR_Px_TILE_CTRL` for tiled options, 1=Bitmap)          |
+| `BLANK`     | `[7]`    | R/W | Output blanked (to BORDCOL on playfield A, or 0 or playfield B                 |
+| `COLORBASE` | `[15:8]` | R/W | Value XOR'd with color output index (for colors outside BPP and color effects) |
 
-**0x11 `XR_PA_TILE_CTRL` (R/W) - playfield A (base) tile control**  
-**0x19 `XR_PB_TILE_CTRL` (R/W) - playfield B (overlay) tile control**  
+**0x11 `XR_PA_TILE_CTRL` (R/W)** - playfield A (base) tile control  
+**0x19 `XR_PB_TILE_CTRL` (R/W)** - playfield B (overlay) tile control
 <img src="./pics/wd_XR_Px_TILE_CTRL.svg">
 
 **playfield A/B tile control**  
-tile base address selects the upper bits of tile storage memory on 1KW boundaries.  
-disp selects tilemap data (tile index and attributes) in VRAM or XR TILEMAP memory (5KW of tile XR memory, upper bits
-ignored).  
-tile selects tile definitions in XR TILEMAP memory or VRAM (5KW of tile XR memory, upper bits ignored).  
-tile height selects the tile height-1 from (0-15 for up to 8x16). Tiles are stored as either 8 or 16 lines high. Tile lines past
-height are truncated when displayed (e.g., tile height of 11 would display 8x12 of 8x16 tile).
+| Name           | Bits      | R/W | Description                                                                         |
+| -------------- | --------- | --- | ----------------------------------------------------------------------------------- |
+| `TILE_H`       | `[3:0]`   | R/W | Tile height-1 (0 to 15 for 1 to 16 high, stored as 8 or 16 high in tile definition) |
+| `TILE_VRAM`    | `[8]`     | R/W | Tile glyph defintions in TILEMEM or VRAM (0=TILEMEM, 1=VRAM)                        |
+| `DISP_TILEMEM` | `[9]`     | R/W | Tile display indices in VRAM or TILEMEM (0=VRAM, 1=TILEMEM)                         |
+| `TILEBASE`     | `[15:10]` | R/W | Base address for start of tiles in TILEMEM or VRAM (aligned per tile size/BPP)      |
 
-**0x12 `XR_PA_DISP_ADDR` (R/W) - playfield A (base) display VRAM start address**  
-**0x1A `XR_PB_DISP_ADDR` (R/W) - playfield B (overlay) display VRAM start address**  
+> :mag: **`TILEBASE` alignment**: If using all glyphs (256 or 1024), tile definitions should to start on an alignment boundary as
+> shown:
+> | BPP   | Size | Word Boundary   |
+> | ----- | ---- | --------------- |
+> | 1-BPP | 8x8  | 0x0400 boundary |
+> | 1-BPP | 8x16 | 0x0800 boundary |
+> | 4-BPP | 8x8  | 0x4000 boundary |
+> | 8-BPP | 8x8  | 0x8000 boundary |
+>
+> However, if using less tiles, you can relax alignment restrictions (e.g., 0x2000 boundary when using only 256 8-BPP tiles).
+
+**0x12 `XR_PA_DISP_ADDR` (R/W)** - playfield A (base) display VRAM start address  
+**0x1A `XR_PB_DISP_ADDR` (R/W)** - playfield B (overlay) display VRAM start address
 <img src="./pics/wd_XR_Px_DISP_ADDR.svg">
 
 **playfield A/B display start address**  
-Address in VRAM for start of playfield display (tiled or bitmap).
+Address in VRAM for start of playfield display (either bitmap or tile indices/attributes map).
 
-**0x13 `XR_PA_LINE_LEN` (R/W) - playfield A (base) display line word length**  
-**0x1B `XR_PB_LINE_LEN` (R/W) - playfield B (overlay) display line word length**  
+**0x13 `XR_PA_LINE_LEN` (R/W)** - playfield A (base) display line word length  
+**0x1B `XR_PB_LINE_LEN` (R/W)** - playfield B (overlay) display line word length
 <img src="./pics/wd_XR_Px_LINE_LEN.svg">
 
 **playfield A/B display line word length**  
-Length in words for each display line (i.e., the amount added to line start address for the start of the next line - not the width
-of the display).  
-Twos complement, so negative values are okay (for reverse scan line order in memory).
+Word length added to line start address for each new line.  The first line will use `XR_Px_DISP_ADDR` and this value will be added at the end of each subsequent line.  It is not the length of of the displayed line (however it is typically at least as long or data will be shown multiple times).  Twos complement, so negative values are okay (for reverse scan line order in memory).
 
-**0x14 `XR_PA_HV_SCROLL` (R/W) - playfield A (base) horizontal and vertical fine scroll**  
-**0x1C `XR_PB_HV_SCROLL` (R/W) - playfield B (overlay) horizontal and vertical fine scroll**  
+**0x14 `XR_PA_HV_SCROLL` (R/W)** - playfield A (base) horizontal and vertical fine scroll  
+**0x1C `XR_PB_HV_SCROLL` (R/W)** - playfield B (overlay) horizontal and vertical fine scroll
 <img src="./pics/wd_XR_Px_HV_SCROLL.svg">
 
 **playfield A/B  horizontal and vertical fine scroll**  
-Horizontal fine scroll should be constrained to the scaled width of 8 pixels or 1 tile (e.g., `H_REPEAT` 1x = 0-7, 2x = 0-15, 3x =
-0-23 and 4x = 0-31).  
-vertical fine scroll should be constrained to the scaled height of a tile or (one less than the tile-height times `V_REPEAT`).
-(But hey, we will see what happens, it might be fine...)
+| Name       | Bits     | R/W | Description                                |
+| ---------- | -------- | --- | ------------------------------------------ |
+| `H_SCROLL` | `[12:8]` | R/W | Horizontal fine pixel scroll (0-31 pixels) |
+| `V_SCROLL` | `[5:0]`  | R/W | Vertical fine pixel scroll (0-63 pixels)   |
 
-**0x15 `XR_PA_LINE_ADDR` (WO) - playfield A (base) display VRAM line address**  
-**0x1D `XR_PB_LINE_ADDR` (WO) - playfield B (overlay) display VRAM line address**  
+Horizontal fine scroll is typically constrained to the scaled width of 8 pixels (1 tile):
+| `H_REPEAT` | scroll range |
+| ---------- | ------------ |
+| 0 (1x)     | 0-7 pixels   |
+| 1 (2x)     | 0-15 pixels  |
+| 2 (3x)     | 0-23 pixels  |
+| 3 (4x)     | 0-31 pixels  |
+
+Vertical fine scroll is typically constrained to the scaled height of a pixel or tile (or one less than the line/tile height times `V_REPEAT`).  Similar to `H_REPEAT` table above, but pixels scroll can be doubled with 8x16 tile size set.
+
+**0x15 `XR_PA_LINE_ADDR` (WO)** - playfield A (base) display VRAM next line address  
+**0x1D `XR_PB_LINE_ADDR` (WO)** - playfield B (overlay) display VRAM next line address
 <img src="./pics/wd_XR_Px_LINE_ADDR.svg">
 
 **playfield A/B display line address**  
-Address in VRAM for start of next scanline (tiled or bitmap). This is generally used to allow the copper to change the display
-address per scanline. Write-only.
+Address in VRAM for start of the next scanline (bitmap or tile indices map). Normally this is updated internally, starting with `XR_Px_DISP_ADDR` and with `XR_Px_LINE_LEN` added at the end of each mode line (which can be every display line, or less depending on tile mode, `V_REPEAT` and `XR_Px_HV_FSCALE` vertical scaling).  This register can be used to change the internal address used for subsequent display lines (usually done via the COPPER). This register is write-only.
 
-**0x16 `XR_PA_HV_FSCALE` (R/W) - playfield A (base) horizontal and vertical fractional scale 0x16**  
-**0x1E `XR_PB_HV_FSCALE` (R/W) - playfield B (overlay) horizontal and vertical fractional scale 0x1E**  
+> :mag: **`XR_Px_LINE_ADDR`** will still have `XR_Px_LINE_LEN` added at the end of each display mode line (when not repeating the line), so you may need to subtract `XR_Px_LINE_LEN` words from the value written to `XR_Px_LINE_ADDR` to account for this.
+
+**0x16 `XR_PA_HV_FSCALE` (R/W)** - playfield A (base) horizontal and vertical fractional scale  
+**0x1E `XR_PB_HV_FSCALE` (R/W)** - playfield B (overlay) horizontal and vertical fractional scale
 <img src="./pics/wd_XR_Px_HV_FSCALE.svg">  
-Fractional scale factor to _repeat_ a native pixel column and/or scanline to reduce pixel resolution (the "fractional" part accumulates until an entire row/column is repeated).  
-Will repeat the color of a native column or scan-line every N+1<sup>th</sup> column or line (see native resolution scaling table above, values rounded to integer values).  
-This repeat scaling is applied in addition to the integer pixel repeat (so a repeat value of 3x and fractional scale of 1 [repeat every line], would make 6x effective scale).  
-NOTE: Handy to reduce VRAM consumption a bit and to get the correct aspect ratio on "classic" 320x200 or 640x400 artwork.
+Will repeat the color of a pixel or scan-line every N+1<sup>th</sup> column or line.  This repeat scaling is applied in addition to the integer pixel repeat (so a repeat value of 3x and fractional scale of 1 [repeat every line], would make 6x effective scale).  
 
-vertical fine scroll should be constrained to the scaled height of a tile or (one less than the tile-height times VSCALE).
-(But hey, we will see what happens, it might be fine...)
+| Repeat     | Horiz. 640 Scaled | Horiz. 848 Scaled | Vert. 480 Scaled |
+| ---------- | ----------------- | ----------------- | ---------------- |
+| 0          | 640 pixels        | 848 pixels        | 480 lines        |
+| 1 (1 of 2) | 320 pixels        | 424 pixels        | 240 lines        |
+| 2 (1 of 3) | 426.66 pixels     | 565.33 pixels     | 320 lines        |
+| 3 (1 of 4) | 480 pixels        | 636 pixels        | 360 lines        |
+| 4 (1 of 5) | 512 pixels        | 678.40 pixels     | 384 lines        |
+| 5 (1 of 6) | 533.33 pixels     | 706.66 pixels     | 400 lines        |
+| 6 (1 of 7) | 548.57 pixels     | 726.85 pixels     | 411.42 lines     |
+| 7 (1 of 8) | 560 pixels        | 742 pixels        | 420 lines        |
 
 **0x17 `XR_PA_UNUSED_17` (-/-) - unused XR PA register 0x17**  
 **0x1F `XR_PB_UNUSED_1F` (-/-) - unused XR PB register 0x1F**  
 Unused XR playfield registers 0x17, 0x1F
+
+#### Bitmap Display Formats
+
+In 1-BPP bitmap mode, there are 8 pixels each one of 2 colors per word (and 4-bit foreground/background color in word).
+<img src="./pics/wd_1-bpp_bitmap_word.svg">
+
+In 4 BPP bitmap mode, there are 4 pixels each one of 16 colors.
+<img src="./pics/wd_4-bpp_bitmap_word.svg">
+
+In 8 BPP bitmap mode, there are 2 pixels each one of 256 colors.
+<img src="./pics/wd_8-bpp_bitmap_word.svg">
+
+#### Tile Display Formats
+
+In 1-BPP tile mode for the tile display indices, there are 256 glyphs (and 4-bit foreground/background color in word).
+<img src="./pics/wd_1-bpp_tile_word.svg">
+
+In 1-BPP tile mode, two tile lines are stored in each word in the tile definition.  1-BPP can index 8x8 or 8x16 tiles, for 4 or 8 words per tile (a total of 2KiB or 4KiB with 256 glyphs).  
+<img src="./pics/wd_1-bpp_tile_def.svg">
+
+In 2 or 4 BPP tile mode for the tile display indices, there are 1024 glyphs, 4-bit color offset and horizontal and vertical tile mirroring.  
+<img src="./pics/wd_n-bpp_tile_word.svg">
+
+In 2 or 4 BPP the tile definition is the same as the corresponding bitmap mode, using 64 contiguous pixels for each 8x8 tile.  Each 4-BPP tile is 16 words and 8-bpp tile is 32 words (a total of 32KiB or 64KiB respectively, with 1024 glyphs).
+
 ___
 
 ### 2D Blitter Engine Operation

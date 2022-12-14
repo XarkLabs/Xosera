@@ -1,0 +1,66 @@
+{
+    "reg": [
+        {
+            "bits": 1,
+            "name": "<tt>7</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>6</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>5</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>4</tt>",
+            "type": 4,
+            "attr": [
+                "one bit per pixel, MSB on left"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "<tt>3</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>2</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>1</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>0</tt>",
+            "type": 4
+        },
+        {
+            "bits": 4,
+            "name": "foreground color index",
+            "type": 5,
+            "attr": [
+                "used for one bits in word"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "background color index",
+            "type": 2,
+            "attr": [
+                "used for zero bits in word"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

@@ -37,9 +37,9 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
       - [0x00 **`XR_VID_CTRL`** (R/W) - Border Color / Playfield Color-Swap](#0x00-xr_vid_ctrl-rw---border-color--playfield-color-swap)
       - [0x01 **`XR_COPP_CTRL`** (R/W) - Copper Enable](#0x01-xr_copp_ctrl-rw---copper-enable)
       - [0x02 **`XR_AUD_CTRL`** (R/W) - Audio Control](#0x02-xr_aud_ctrl-rw---audio-control)
-      - [0x03 **`XR_SCANLINE` (R/W) - current video scan line/trigger Xosera host CPU video interrupt**](#0x03-xr_scanline-rw---current-video-scan-linetrigger-xosera-host-cpu-video-interrupt)
-      - [0x04 **`XR_VID_LEFT` (R/W) - video display window left edge**](#0x04-xr_vid_left-rw---video-display-window-left-edge)
-      - [0x05 **`XR_VID_RIGHT` (R/W) - video display window right edge**](#0x05-xr_vid_right-rw---video-display-window-right-edge)
+      - [0x03 **`XR_SCANLINE`** (R/W) - current video scan line/trigger Xosera host CPU video interrupt](#0x03-xr_scanline-rw---current-video-scan-linetrigger-xosera-host-cpu-video-interrupt)
+      - [0x04 **`XR_VID_LEFT`** (R/W) - video display window left edge](#0x04-xr_vid_left-rw---video-display-window-left-edge)
+      - [0x05 **`XR_VID_RIGHT`** (R/W) - video display window right edge](#0x05-xr_vid_right-rw---video-display-window-right-edge)
       - [0x06 **`XR_UNUSED_06`** (--) - unused XR register](#0x06-xr_unused_06------unused-xr-register)
       - [0x07 **`XR_UNUSED_07`** (--) - unused XR register](#0x07-xr_unused_07------unused-xr-register)
       - [0x08 **`XR_UNUSED_08`** (--) - unused XR register](#0x08-xr_unused_08------unused-xr-register)
@@ -378,7 +378,7 @@ ___
 | -------- | ----- | --- | ---------------------------------------- |
 | `AUD_EN` | `[0]` | R/W | Enable audio DMA and channel procerssing |
 
-#### 0x03 **`XR_SCANLINE` (R/W) - current video scan line/trigger Xosera host CPU video interrupt**  
+#### 0x03 **`XR_SCANLINE`** (R/W) - current video scan line/trigger Xosera host CPU video interrupt
 
 <img src="./pics/wd_XR_SCANLINE.svg">
 
@@ -386,13 +386,13 @@ Continuously updated with the scanline, lines 0-479 are visible (others are in v
 
 A write to this register will trigger Xosera host CPU video interrupt (if unmasked and one is not already pending in `XM_INT_CTRL`).  This is mainly useful to allow COPPER to generate an arbitrary screen position synchronized CPU interrupt (in addition to the normal end of visible display v-blank interrupt).
 
-#### 0x04 **`XR_VID_LEFT` (R/W) - video display window left edge**  
+#### 0x04 **`XR_VID_LEFT`** (R/W) - video display window left edge
 
 <img src="./pics/wd_XR_VID_LEFT.svg">
 
 Defines left-most native pixel of video display window, 0 to monitor native width-1 (normally 0 for full-screen).
 
-#### 0x05 **`XR_VID_RIGHT` (R/W) - video display window right edge**  
+#### 0x05 **`XR_VID_RIGHT`** (R/W) - video display window right edge  
 
 <img src="./pics/wd_XR_VID_RIGHT.svg">
 
@@ -470,17 +470,6 @@ ___
 | `DISP_TILEMEM` | `[9]`     | R/W | Tile display indices in VRAM or TILEMEM (0=VRAM, 1=TILEMEM)                         |
 | `TILEBASE`     | `[15:10]` | R/W | Base address for start of tiles in TILEMEM or VRAM (aligned per tile size/BPP)      |
 
-> :mag: **`TILEBASE` alignment**: If using all glyphs (256 or 1024), tile definitions should to start on an alignment boundary as
-> shown:
-> | BPP   | Size | Word Boundary   |
-> | ----- | ---- | --------------- |
-> | 1-BPP | 8x8  | 0x0400 boundary |
-> | 1-BPP | 8x16 | 0x0800 boundary |
-> | 4-BPP | 8x8  | 0x4000 boundary |
-> | 8-BPP | 8x8  | 0x8000 boundary |
->
-> However, if using less tiles, you can relax alignment restrictions (e.g., 0x2000 boundary when using only 256 8-BPP tiles).
-
 **0x12 `XR_PA_DISP_ADDR` (R/W)** - playfield A (base) display VRAM start address  
 **0x1A `XR_PB_DISP_ADDR` (R/W)** - playfield B (overlay) display VRAM start address
 <img src="./pics/wd_XR_Px_DISP_ADDR.svg">
@@ -546,16 +535,29 @@ Unused XR playfield registers 0x17, 0x1F
 
 #### Bitmap Display Formats
 
-In 1-BPP bitmap mode, there are 8 pixels each one of 2 colors per word (and 4-bit foreground/background color in word).
+Bitmap display data starts at `XR_Px_DISP_ADDR` in VRAM.
+
+In 1-BPP bitmap mode with 8 pixels per word, each one of 2 colors selected with 4-bit foreground and background color index.
 <img src="./pics/wd_1-bpp_bitmap_word.svg">
 
-In 4 BPP bitmap mode, there are 4 pixels each one of 16 colors.
+In 4 BPP bitmap mode, there are 4 pixels per word, each one of 16 colors.
 <img src="./pics/wd_4-bpp_bitmap_word.svg">
 
-In 8 BPP bitmap mode, there are 2 pixels each one of 256 colors.
+In 8 BPP bitmap mode, there are 2 pixels per word, each one of 256 colors.
 <img src="./pics/wd_8-bpp_bitmap_word.svg">
 
 #### Tile Display Formats
+
+Tile indices and attribute map display data starts at `XR_Px_DISP_ADDR` in VRAM or TILEMEM (TILEMEM selected with `DISP_TILEMEM` bit in `XR_Px_TILE_CTRL`). The tile bitmap definitions start at the aligned address specified in `TILEBASE` bits set in `XR_Px_TILE_CTRL` in TILEMEM or VRAM (VRAM selected with `TILE_VRAM` in `XR_Px_TILE_CTRL`).  The tileset address should be aligned based on the power of two greater than the size of the maximum glyph index used. When using all possible glyphs in a tileset, alignment would be as follows:
+
+| BPP   | Size | Words     | Number | Alignment       |
+| ----- | ---- | --------- | -------| --------------- |
+| 1-BPP | 8x8  | 4 words   | 256    | 0x0400 boundary |
+| 1-BPP | 8x16 | 8 words   | 256    | 0x0800 boundary |
+| 4-BPP | 8x8  | 16 words  | 1024   | 0x4000 boundary |
+| 8-BPP | 8x8  | 32 words  | 1024   | 0x8000 boundary |
+
+However, if using less tiles, you can relax alignment restrictions based on the maximum glyph index.  For example if you are using 512 or less 8x8 4-BPP tiles, then you need to be aligned on a 0x2000 word boundary (16 words per tile, times 512 tiles).
 
 In 1-BPP tile mode for the tile display indices, there are 256 glyphs (and 4-bit foreground/background color in word).
 <img src="./pics/wd_1-bpp_tile_word.svg">

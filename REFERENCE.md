@@ -29,7 +29,7 @@ matches the actual Verilog implementation). Please mention it if you spot a disc
       - [0xC **`UNUSED_C`** (-/-)](#0xc-unused_c---)
       - [0xD **`UNUSED_D`** (-/-)](#0xd-unused_d---)
       - [0xE **`UNUSED_E`** (-/-)](#0xe-unused_e---)
-      - [0xF **`XM_FEATURES`** (R/-)](#0xf-xm_features-r-)
+      - [0xF **`XM_FEATURES`** (R/-) - Xosera Configured Features](#0xf-xm_features-r----xosera-configured-features)
   - [Xosera Extended Register / Extended Memory Region Summary](#xosera-extended-register--extended-memory-region-summary)
     - [Xosera Extended Registers Details (XR Registers)](#xosera-extended-registers-details-xr-registers)
     - [Video Config and Copper XR Registers Summary](#video-config-and-copper-xr-registers-summary)
@@ -88,27 +88,24 @@ ___
 
 ### Xosera Main Registers (XM Registers) Summary
 
-<!--
-This table is ugly, but worth it for clickable links
--->
-| Reg # | Reg Name                                                                                                                      | Access | Description                                                                           |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------- |
-| 0x0   | [**`XM_SYS_CTRL`**](#0x8-xm_sys_ctrl-rw---draw-busy-status-read-wait-reconfigure-interrupt-control-and-write-masking-control) | R /W   | Status flags, VRAM write masking                                                      |
-| 0x1   | [**`XM_INT_CTRL`**](#0x8-xm_sys_ctrl-rw---draw-busy-status-read-wait-reconfigure-interrupt-control-and-write-masking-control) | R /W+  | FPGA reconfigure, interrupt masking, interrupt status                                 |
-| 0x2   | [**`XM_TIMER`**](#0x9-xm_timer-rw---tenth-millisecond-timer-0---65535-ms--interrupt-clear)                                    | R /W   | Tenth millisecond timer (1/10,000 second) / 8-bit countdown timer                     |
-| 0x3   | [**`XM_RD_XADDR`**](#0x0-xm_xr_addr-rw---xr-register--memory-address)                                                         | R /W+  | XR register/address used for `XM_XDATA` read access                                   |
-| 0x4   | [**`XM_WR_XADDR`**](#0x0-xm_xr_addr-rw---xr-register--memory-address)                                                         | R /W   | XR register/address used for `XM_XDATA` write access                                  |
-| 0x5   | [**`XM_XDATA`**](#0x1-xm_xr_data-rw---extended-register--extended-region-data)                                                | R+/W+  | Read from `XM_RD_XADDR` or write to `XM_WR_XADDR` (and increment address)             |
-| 0x6   | [**`XM_RD_INCR`**](#0x2-xm_rd_incr-rw---increment-value-for-xm_rd_addr-when-xm_dataxm_data_2-is-read-from)                    | R /W   | increment value for `XM_RD_ADDR` read from `XM_DATA`/`XM_DATA_2`                      |
-| 0x7   | [**`XM_RD_ADDR`**](#0x3-xm_rd_addr-rw---vram-read-address-for-xm_dataxm_data_2)                                               | R /W+  | VRAM address for reading from VRAM when `XM_DATA`/`XM_DATA_2` is read                 |
-| 0x8   | [**`XM_WR_INCR`**](#0x4-xm_wr_incr-rw---increment-value-for-xm_wr_addr-when-xm_dataxm_data_2-is-written)                      | R /W   | increment value for `XM_WR_ADDR` on write to `XM_DATA`/`XM_DATA_2`                    |
-| 0x9   | [**`XM_WR_ADDR`**](#0x5-xm_wr_addr-rw---vram-write-address-for-xm_dataxm_data_2)                                              | R /W   | VRAM address for writing to VRAM when `XM_DATA`/`XM_DATA_2` is written                |
-| 0xA   | [**`XM_DATA`**](#0x6-xm_data-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)                        | R+/W+  | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
-| 0xB   | [**`XM_DATA_2`**](#0x7-xm_data_2-rw---vram-memory-value-to-readwrite-at-vram-address-xm_rd_addrxm_wr_addr)                    | R+/W+  | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
-| 0xC   | **`UNUSED_0C`**                                                                                                               |        |                                                                                       |
-| 0xD   | **`UNUSED_0D`**                                                                                                               |        |                                                                                       |
-| 0xE   | **`UNUSED_0E`**                                                                                                               |        |                                                                                       |
-| 0xF   | **`XM_FEATURES`**                                                                                                             | R /-   | Bits indicating features present in Xosera                                            |
+| Reg # | Reg Name          | Access | Description                                                                           |
+|-------|-------------------|--------|---------------------------------------------------------------------------------------|
+| 0x0   | **`XM_SYS_CTRL`** | R /W   | Status flags, VRAM write masking                                                      |
+| 0x1   | **`XM_INT_CTRL`** | R /W+  | FPGA reconfigure, interrupt masking, interrupt status                                 |
+| 0x2   | **`XM_TIMER`**    | R /W   | Tenth millisecond timer (1/10,000 second) / 8-bit countdown timer                     |
+| 0x3   | **`XM_RD_XADDR`** | R /W+  | XR register/address used for `XM_XDATA` read access                                   |
+| 0x4   | **`XM_WR_XADDR`** | R /W   | XR register/address used for `XM_XDATA` write access                                  |
+| 0x5   | **`XM_XDATA`**    | R+/W+  | Read from `XM_RD_XADDR` or write to `XM_WR_XADDR` (and increment address)             |
+| 0x6   | **`XM_RD_INCR`**  | R /W   | increment value for `XM_RD_ADDR` read from `XM_DATA`/`XM_DATA_2`                      |
+| 0x7   | **`XM_RD_ADDR`**  | R /W+  | VRAM address for reading from VRAM when `XM_DATA`/`XM_DATA_2` is read                 |
+| 0x8   | **`XM_WR_INCR`**  | R /W   | increment value for `XM_WR_ADDR` on write to `XM_DATA`/`XM_DATA_2`                    |
+| 0x9   | **`XM_WR_ADDR`**  | R /W   | VRAM address for writing to VRAM when `XM_DATA`/`XM_DATA_2` is written                |
+| 0xA   | **`XM_DATA`**     | R+/W+  | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
+| 0xB   | **`XM_DATA_2`**   | R+/W+  | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
+| 0xC   | **`UNUSED_0C`**   |        |                                                                                       |
+| 0xD   | **`UNUSED_0D`**   |        |                                                                                       |
+| 0xE   | **`UNUSED_0E`**   |        |                                                                                       |
+| 0xF   | **`XM_FEATURES`** | R /-   | Features and configuration information                                                |
 
 (`R+` or `W+` indicates that reading or writing this register can have additional "side effects", respectively)
 ___
@@ -122,7 +119,7 @@ ___
 **Status bits for memory, blitter, hblank, vblank and VRAM nibble write masking control.**
 
 | Name        | Bits    | R/W | Description                                                                     |
-| ----------- | ------- | --- | ------------------------------------------------------------------------------- |
+|-------------|---------|-----|---------------------------------------------------------------------------------|
 | `MEM_BUSY`  | `[15]`  | R/- | memory read/write operation still in progress (for contended memory)            |
 | `BLIT_FULL` | `[14]`  | R/- | blit queue full (can't safely write to blit registers when set)                 |
 | `BLIT_BUSY` | `[13]`  | R/- | blit busy (blit operations not fully completed, but queue may be empty)         |
@@ -142,7 +139,7 @@ ___
 **FPGA reconfigure, interrupt masking and interrupt status.**
 
 | Name         | Bits   | R/W  | Description                                                         |
-| ------------ | ------ | ---- | ------------------------------------------------------------------- |
+|--------------|--------|------|---------------------------------------------------------------------|
 | `RECONFIG`   | `[15]` | -/W+ | Reconfigure FPGA with `XM_INT_CTRL` bits [9:8] as new configuration |
 | `BLIT_EN`    | `[14]` | R/W  | enable interrupt for blitter queue empty                            |
 | `TIMER_EN`   | `[13]` | R/W  | enable interrupt for countdown timer                                |
@@ -172,7 +169,8 @@ ___
 **Tenth millisecond timer / 8-bit countdown timer.**  
 
 **Read 16-bit timer, increments every 1/10<sup>th</sup> of a millisecond (10,000 Hz)**  
-Can be used for fairly accurate timing. Internal fractional value is maintined (so as accurate as FPGA clock).  Can be used for elapsed time up to ~6.5 seconds (or unlimited, if the cumulative elapsed time is updated at least as often as timer wrap value).
+Can be used for fairly accurate timing. Internal fractional value is maintined (so as accurate as FPGA clock).  Can be used for
+elapsed time up to ~6.5 seconds (or unlimited, if the cumulative elapsed time is updated at least as often as timer wrap value).
 > :mag: **`TIMER` atomic read:** To assure an atomic 16-bit value, when the high byte of `TIMER` is read, the low byte is saved
 > into an internal register and returned when `TIMER` low byte is read. Because of this, reading the full 16-bit `TIMER` register
 > is recommended (or first even byte, then odd byte, or odd byte value may not be updated).
@@ -189,7 +187,9 @@ When written, the lower 8 bits sets 8-bit countdown timer interval.  Timer is de
  **XR Register / Memory Read Address**
 
 **Extended register or memory address for data _read_ via `XM_XDATA`**  
-Specifies the XR register or XR region address to be read or written via `XM_XDATA`.  As soon as this register is written, a 16-bit read operation will take place on the register or memory region specified (and the data wil be made available from `XM_XDATA`).
+Specifies the XR register or XR region address to be read or written via `XM_XDATA`.  As soon as this register is written,
+a 16-bit read operation will take place on the register or memory region specified (and the data wil be made available from
+`XM_XDATA`).
 
 #### 0x4 **`XM_WR_XADDR`** (R/W) - XR Write Address
 
@@ -212,7 +212,8 @@ MOVEP.L D0,XR_WR_XADDR(A1)
 **XR Register / Memory Read Data or Write Data**  
 Read XR register/memory value from `XM_RD_XADDR` or write value to `XM_WR_XADDR` and increment `XM_RD_XADDR`/`XM_WR_XADDR`,
 respectively.  
-When `XM_XDATA` is read, data pre-read from XR address `XM_RD_XADDR` is returned and then `XM_RD_XADDR` is incremented by one and re-reading the next word begins.  
+When `XM_XDATA` is read, data pre-read from XR address `XM_RD_XADDR` is returned and then `XM_RD_XADDR` is incremented by
+one and re-reading the next word begins.  
 When `XM_XDATA` is written, value is written to XR address `XM_WR_XADDR` and then `XM_WR_XADDR` is incremented by one.
 
 #### 0x6 **`XM_RD_INCR`** (R/W) - Increment for VRAM Read Address
@@ -273,13 +274,13 @@ When `XM_DATA_2` is written, the value is written to VRAM at `XM_WR_ADDR` and `X
 
 #### 0xE **`UNUSED_E`** (-/-)  
 
-#### 0xF **`XM_FEATURES`** (R/-)
+#### 0xF **`XM_FEATURES`** (R/-) - Xosera Configured Features
 
 <img src="./pics/wd_XM_FEATURES.svg">
 
 **Xosera configured features (read-only)**
 | Name      | Bits      | R/W | Description                                                                |
-| --------- | --------- | --- | -------------------------------------------------------------------------- |
+|-----------|-----------|-----|----------------------------------------------------------------------------|
 | `CONFIG`  | `[13:12]` | R/- | Current configuration number for Xosera FPGA (0-3 on iCE40UP5K)            |
 | `AUDCHAN` | `[11:8]`  | R/- | Number of audio output channels (typically 2 or 4 _[ideally always 4...]_) |
 | `PF_B`    | `[6]`     | R/- | Playfield B enabled (optional 2nd playfield to blend over playfield A)     |
@@ -292,54 +293,59 @@ ___
 ## Xosera Extended Register / Extended Memory Region Summary
 
 | XR Region Name   | XR Region Range | R/W | Description                                |
-| ---------------- | --------------- | --- | ------------------------------------------ |
+|------------------|-----------------|-----|--------------------------------------------|
 | XR video config  | 0x0000-0x000F   | R/W | config XR registers                        |
 | XR playfield A   | 0x0010-0x0017   | R/W | playfield A XR registers                   |
 | XR playfield B   | 0x0018-0x001F   | R/W | playfield B XR registers                   |
-| XR audio control | 0x0020-0x002F   | WO  | audio channel XR registers                 |
-| XR blit engine   | 0x0040-0x004B   | WO  | 2D-blit XR registers                       |
+| XR audio control | 0x0020-0x002F   | -/W | audio channel XR registers                 |
+| XR blit engine   | 0x0040-0x004B   | -/W | 2D-blit engine XR registers                |
 | `XR_TILE_ADDR`   | 0x4000-0x53FF   | R/W | 5KW 16-bit tilemap/tile storage memory     |
 | `XR_COLOR_ADDR`  | 0x8000-0x81FF   | R/W | 2 x 256W 16-bit color lookup memory (XRGB) |
 | `XR_COPPER_ADDR` | 0xC000-0xC3FF   | R/W | 1KW 16-bit copper program memory           |
 
-To access an XR register or XR memory address, write the XR register number or address to `XM_RD_XADDR` or `XM_WR_XADDR` then read or write (respectively) to `XM_XDATA`. Each word _written_ to `XM_XDATA` will also automatically increment `XM_WR_XADDR` to allow faster consecutive updates (like for color or tile memory update). The address in `XM_WR_XADDR` will similarly be incremented when reading from `XM_XDATA`.
+To access an XR register or XR memory address, write the XR register number or address to `XM_RD_XADDR` or `XM_WR_XADDR` then read
+or write (respectively) to `XM_XDATA`. Each word _written_ to `XM_XDATA` will also automatically increment `XM_WR_XADDR` to allow
+faster consecutive updates (like for color or tile memory update). The address in `XM_WR_XADDR` will similarly be incremented when
+reading from `XM_XDATA`.
 While all XR registers and memory regions can be read, when there is high memory contention (e.g., it is being used for
 video generation or other use), there is a `mem_wait` bit in `XM_SYS_CTRL` that will indicate when the last memory
 operation is still pending.  
 Also note that unlike the 16 main `XM` registers, the XR region should only be accessed as full 16-bit words (either
-reading or writing both bytes). The full 16-bits of the `XM_XDATA` value are pre-read when `XM_RD_XADDR` is written or incremented and a full 16-bit word is written when the odd (low-byte) of `XM_XDATA` is written (the even/upper byte is latched).
+reading or writing both bytes). The full 16-bits of the `XM_XDATA` value are pre-read when `XM_RD_XADDR` is written or
+incremented and a full 16-bit word is written when the odd (low-byte) of `XM_XDATA` is written (the even/upper byte is latched).
 ___
 
 ### Xosera Extended Registers Details (XR Registers)
 
 This XR registers are used to control of most Xosera operation other than CPU VRAM access and a few miscellaneous
 control functions (which accessed directly via the main registers).  
-To write to these XR registers, write an XR address to `XM_WR_XADDR` then write data to `XM_XDATA`. Each write to `XM_XDATA` will increment `XM_WR_XADDR` address by one (so you can repeatedly write to `XR_XDATA` for contiguous registers or XR memory).
-Reading is similar, write the address to `XM_RD_XADDR` then read `XM_XDATA`. Each read of `XM_XDATA` will increment `XM_RD_XADDR` address by one (so you can repeatedly read `XR_XDATA` for contiguous registers or XR memory).
+To write to these XR registers, write an XR address to `XM_WR_XADDR` then write data to `XM_XDATA`. Each write to `XM_XDATA`
+will increment `XM_WR_XADDR` address by one (so you can repeatedly write to `XR_XDATA` for contiguous registers or XR memory).
+Reading is similar, write the address to `XM_RD_XADDR` then read `XM_XDATA`. Each read of `XM_XDATA` will increment
+`XM_RD_XADDR` address by one (so you can repeatedly read `XR_XDATA` for contiguous registers or XR memory).
 
 ### Video Config and Copper XR Registers Summary
 
-| Reg # | Reg Name                                                                                        | R /W  | Description                                                       |
-| ----- | ----------------------------------------------------------------------------------------------- | ----- | ----------------------------------------------------------------- |
-| 0x00  | [**`XR_VID_CTRL`**](#0x00-xr_vid_ctrl-rw---interrupt-statussignal-and-border-color)             | R /W  | Border color index and playfield color swap                       |
-| 0x01  | [**`XR_COPP_CTRL`**](#0x01-xr_copp_ctrl-rw---copper-start-address-and-enable)                   | R /W  | Display synchronized coprocessor control                          |
-| 0x02  | [**`XR_AUD_CTRL`**](#0x02-xr_unused_02------unused-xr-register-0x02)                            | R /W  | Audio channel and DMA processing control                          |
-| 0x03  | [**`XR_SCANLINE`**](#0x08-xr_scanline-ro---current-video-display-scan-line-and-blanking-status) | R /W+ | Current display scanline / Trigger video interrupt                |
-| 0x04  | [**`XR_VID_LEFT`**](#0x06-xr_vid_left-rw---video-display-window-left-edge)                      | R /W  | Left edge start of active display window (normally 0)             |
-| 0x05  | [**`XR_VID_RIGHT`**](#0x07-xr_vid_right-rw---video-display-window-right-edge)                   | R /W  | Right edge + 1 end of active display window (normally 640 or 848) |
-| 0x06  | **`XR_UNUSED_06`**                                                                              | - /-  |                                                                   |
-| 0x07  | **`XR_UNUSED_07`**                                                                              | - /-  |                                                                   |
-| 0x08  | **`XR_UNUSED_08`**                                                                              | - /-  |                                                                   |
-| 0x09  | **`XR_UNUSED_09`**                                                                              | - /-  |                                                                   |
-| 0x0A  | **`XR_UNUSED_0A`**                                                                              | - /-  |                                                                   |
-| 0x0B  | **`XR_UNUSED_0B`**                                                                              | - /-  |                                                                   |
-| 0x0C  | **`XR_UNUSED_0C`**                                                                              | - /-  |                                                                   |
-| 0x0D  | **`XR_UNUSED_0D`**                                                                              | - /-  |                                                                   |
-| 0x0E  | **`XR_UNUSED_0E`**                                                                              | - /-  |                                                                   |
-| 0x0F  | **`XR_UNUSED_0F`**                                                                              | - /-  |                                                                   |
+| Reg # | Reg Name           | R /W  | Description                                                       |
+|-------|--------------------|-------|-------------------------------------------------------------------|
+| 0x00  | **`XR_VID_CTRL`**  | R /W  | Border color index and playfield color swap                       |
+| 0x01  | **`XR_COPP_CTRL`** | R /W  | Display synchronized coprocessor control                          |
+| 0x02  | **`XR_AUD_CTRL`**  | R /W  | Audio channel and DMA processing control                          |
+| 0x03  | **`XR_SCANLINE`**  | R /W+ | Current display scanline / Trigger video interrupt                |
+| 0x04  | **`XR_VID_LEFT`**  | R /W  | Left edge start of active display window (normally 0)             |
+| 0x05  | **`XR_VID_RIGHT`** | R /W  | Right edge + 1 end of active display window (normally 640 or 848) |
+| 0x06  | **`XR_UNUSED_06`** | - /-  |                                                                   |
+| 0x07  | **`XR_UNUSED_07`** | - /-  |                                                                   |
+| 0x08  | **`XR_UNUSED_08`** | - /-  |                                                                   |
+| 0x09  | **`XR_UNUSED_09`** | - /-  |                                                                   |
+| 0x0A  | **`XR_UNUSED_0A`** | - /-  |                                                                   |
+| 0x0B  | **`XR_UNUSED_0B`** | - /-  |                                                                   |
+| 0x0C  | **`XR_UNUSED_0C`** | - /-  |                                                                   |
+| 0x0D  | **`XR_UNUSED_0D`** | - /-  |                                                                   |
+| 0x0E  | **`XR_UNUSED_0E`** | - /-  |                                                                   |
+| 0x0F  | **`XR_UNUSED_0F`** | - /-  |                                                                   |
 
 (`R+` or `W+` indicates that reading or writing this register has additional "side effects", respectively)
-
 ___
 
 ### Video Config and Copper XR Registers Details
@@ -350,13 +356,14 @@ ___
 
 **Border or blanked display color index and playfield A/B colormap swap**  
 | Name      | Bits    | R/W | Description                                                           |
-| --------- | ------- | --- | --------------------------------------------------------------------- |
+|-----------|---------|-----|-----------------------------------------------------------------------|
 | `SWAP_AB` | `[15]`  | R/W | Swap playfield colormaps (PF A uses colormap B, PF B uses colormap A) |
 | `BORDCOL` | `[7:0]` | R/W | Color index for border or blanked pixels (for playfield A)            |
 
 > :mag: **`SWAP_AB`** effectively changes the layer order, so playfield A will be blended over playfield B.  
 
-> :mag: Playfield B always uses index 0 for its border or blanked pixels (typically set to transparent in colormap B).
+> :mag: Playfield B always uses index 0 for its border or blanked pixels (typically set to transparent in
+> colormap B).
 
 #### 0x01 **`XR_COPP_CTRL`** (R/W) - Copper Enable
 
@@ -364,10 +371,11 @@ ___
 
 **Enable or disable copper program execution**
 | Name      | Bits   | R/W | Description                                                            |
-| --------- | ------ | --- | ---------------------------------------------------------------------- |
+|-----------|--------|-----|------------------------------------------------------------------------|
 | `COPP_EN` | `[15]` | R/W | Reset and enable copper at start of next frame (and subsequent frames) |
 
-> :mag: **Copper:** At start of frame, copper register `RA` will be `0x0000`, the `B` flag set and copper PC set to `0xC000` (first word of copper memory). See below for details about copper program operation.
+> :mag: **Copper:** At start of frame, copper register `RA` will be `0x0000`, the `B` flag set and copper PC set to
+> `0xC000` (first word of copper memory). See below for details about copper program operation.
 
 #### 0x02 **`XR_AUD_CTRL`** (R/W) - Audio Control
 
@@ -375,16 +383,19 @@ ___
 
 **Enable or disable audio channel processing**
 | Name     | Bits  | R/W | Description                              |
-| -------- | ----- | --- | ---------------------------------------- |
+|----------|-------|-----|------------------------------------------|
 | `AUD_EN` | `[0]` | R/W | Enable audio DMA and channel procerssing |
 
 #### 0x03 **`XR_SCANLINE`** (R/W) - current video scan line/trigger Xosera host CPU video interrupt
 
 <img src="./pics/wd_XR_SCANLINE.svg">
 
-Continuously updated with the scanline, lines 0-479 are visible (others are in vertical blank).  Each line starts with some non-visible pixels off the left edge of the display (160 pixels in 640x480 or 240 in 848x480).
+Continuously updated with the scanline, lines 0-479 are visible (others are in vertical blank).  Each line starts with
+some non-visible pixels off the left edge of the display (160 pixels in 640x480 or 240 in 848x480).
 
-A write to this register will trigger Xosera host CPU video interrupt (if unmasked and one is not already pending in `XM_INT_CTRL`).  This is mainly useful to allow COPPER to generate an arbitrary screen position synchronized CPU interrupt (in addition to the normal end of visible display v-blank interrupt).
+A write to this register will trigger Xosera host CPU video interrupt (if unmasked and one is not already pending in
+`XM_INT_CTRL`).  This is mainly useful to allow COPPER to generate an arbitrary screen position synchronized CPU
+interrupt (in addition to the normal end of visible display v-blank interrupt).
 
 #### 0x04 **`XR_VID_LEFT`** (R/W) - video display window left edge
 
@@ -396,7 +407,8 @@ Defines left-most native pixel of video display window, 0 to monitor native widt
 
 <img src="./pics/wd_XR_VID_RIGHT.svg">
 
-Defines right-most native pixel of video display window +1, 1 to monitor native width (normally 640 or 848 for 4:3 or 16:9 full-screen, respectively).
+Defines right-most native pixel of video display window +1, 1 to monitor native width (normally 640 or 848 for 4:3 or 16:9
+full-screen, respectively).
 
 #### 0x06 **`XR_UNUSED_06`** (--) - unused XR register
 
@@ -423,14 +435,14 @@ ___
 ### Playfield A & B Control XR Registers Summary
 
 | Reg # | Name              | R/W | Description                                             |
-| ----- | ----------------- | --- | ------------------------------------------------------- |
+|-------|-------------------|-----|---------------------------------------------------------|
 | 0x10  | `XR_PA_GFX_CTRL`  | R/W | playfield A graphics control                            |
 | 0x11  | `XR_PA_TILE_CTRL` | R/W | playfield A tile control                                |
 | 0x12  | `XR_PA_DISP_ADDR` | R/W | playfield A display VRAM start address (start of frame) |
 | 0x13  | `XR_PA_LINE_LEN`  | R/W | playfield A display line width in words                 |
 | 0x14  | `XR_PA_HV_FSCALE` | R/W | playfield A horizontal and vertical fractional scaling  |
 | 0x15  | `XR_PA_HV_SCROLL` | R/W | playfield A horizontal and vertical fine scroll         |
-| 0x16  | `XR_PA_LINE_ADDR` | WO  | playfield A scanline start address (start of next line) |
+| 0x16  | `XR_PA_LINE_ADDR` | -/W | playfield A scanline start address (start of next line) |
 | 0x17  | `XR_PA_UNUSED_17` | -/- |                                                         |
 | 0x18  | `XR_PB_GFX_CTRL`  | R/W | playfield B graphics control                            |
 | 0x19  | `XR_PB_TILE_CTRL` | R/W | playfield B tile control                                |
@@ -438,7 +450,7 @@ ___
 | 0x1B  | `XR_PB_LINE_LEN`  | R/W | playfield B display line width in words                 |
 | 0x1C  | `XR_PB_HV_FSCALE` | R/W | playfield B horizontal and vertical fractional scaling  |
 | 0x1D  | `XR_PB_HV_SCROLL` | R/W | playfield B horizontal and vertical fine scroll         |
-| 0x1E  | `XR_PB_LINE_ADDR` | WO  | playfield B scanline start address (start of next line) |
+| 0x1E  | `XR_PB_LINE_ADDR` | -/W | playfield B scanline start address (start of next line) |
 | 0x1F  | `XR_PB_UNUSED_1F` | -/- |                                                         |
 ___
 
@@ -450,7 +462,7 @@ ___
 
 **playfield A/B graphics control**
 | Name        | Bits     | R/W | Description                                                                    |
-| ----------- | -------- | --- | ------------------------------------------------------------------------------ |
+|-------------|----------|-----|--------------------------------------------------------------------------------|
 | `V_REPEAT`  | `[1:0]`  | R/W | Vertical pixel repeat count (0=1x, 1=2x, 2=3x, 3=4x)                           |
 | `H_REPEAT`  | `[3:2]`  | R/W | Horizontal pixel repeat count (0=1x, 1=2x, 2=3x, 3=4x)                         |
 | `BPP`       | `[5:4]`  | R/W | Bits-Per-Pixel for color indexing (0=1 BPP, 1=4 BPP, 2=8 BPP, 3=reserved)      |
@@ -464,7 +476,7 @@ ___
 
 **playfield A/B tile control**  
 | Name           | Bits      | R/W | Description                                                                         |
-| -------------- | --------- | --- | ----------------------------------------------------------------------------------- |
+|----------------|-----------|-----|-------------------------------------------------------------------------------------|
 | `TILE_H`       | `[3:0]`   | R/W | Tile height-1 (0 to 15 for 1 to 16 high, stored as 8 or 16 high in tile definition) |
 | `TILE_VRAM`    | `[8]`     | R/W | Tile glyph defintions in TILEMEM or VRAM (0=TILEMEM, 1=VRAM)                        |
 | `DISP_TILEMEM` | `[9]`     | R/W | Tile display indices in VRAM or TILEMEM (0=VRAM, 1=TILEMEM)                         |
@@ -482,7 +494,9 @@ Address in VRAM for start of playfield display (either bitmap or tile indices/at
 <img src="./pics/wd_XR_Px_LINE_LEN.svg">
 
 **playfield A/B display line word length**  
-Word length added to line start address for each new line.  The first line will use `XR_Px_DISP_ADDR` and this value will be added at the end of each subsequent line.  It is not the length of of the displayed line (however it is typically at least as long or data will be shown multiple times).  Twos complement, so negative values are okay (for reverse scan line order in memory).
+Word length added to line start address for each new line.  The first line will use `XR_Px_DISP_ADDR` and this value will be added
+at the end of each subsequent line.  It is not the length of of the displayed line (however it is typically at least as long or
+data will be shown multiple times).  Twos complement, so negative values are okay (for reverse scan line order in memory).
 
 **0x14 `XR_PA_HV_SCROLL` (R/W)** - playfield A (base) horizontal and vertical fine scroll  
 **0x1C `XR_PB_HV_SCROLL` (R/W)** - playfield B (overlay) horizontal and vertical fine scroll
@@ -490,36 +504,43 @@ Word length added to line start address for each new line.  The first line will 
 
 **playfield A/B  horizontal and vertical fine scroll**  
 | Name       | Bits     | R/W | Description                                |
-| ---------- | -------- | --- | ------------------------------------------ |
+|------------|----------|-----|--------------------------------------------|
 | `H_SCROLL` | `[12:8]` | R/W | Horizontal fine pixel scroll (0-31 pixels) |
 | `V_SCROLL` | `[5:0]`  | R/W | Vertical fine pixel scroll (0-63 pixels)   |
 
 Horizontal fine scroll is typically constrained to the scaled width of 8 pixels (1 tile):
 | `H_REPEAT` | scroll range |
-| ---------- | ------------ |
+|------------|--------------|
 | 0 (1x)     | 0-7 pixels   |
 | 1 (2x)     | 0-15 pixels  |
 | 2 (3x)     | 0-23 pixels  |
 | 3 (4x)     | 0-31 pixels  |
 
-Vertical fine scroll is typically constrained to the scaled height of a pixel or tile (or one less than the line/tile height times `V_REPEAT`).  Similar to `H_REPEAT` table above, but pixels scroll can be doubled with 8x16 tile size set.
+Vertical fine scroll is typically constrained to the scaled height of a pixel or tile (or one less than the line/tile height times
+`V_REPEAT`).  Similar to `H_REPEAT` table above, but pixels scroll can be doubled with 8x16 tile size set.
 
 **0x15 `XR_PA_LINE_ADDR` (WO)** - playfield A (base) display VRAM next line address  
 **0x1D `XR_PB_LINE_ADDR` (WO)** - playfield B (overlay) display VRAM next line address
 <img src="./pics/wd_XR_Px_LINE_ADDR.svg">
 
 **playfield A/B display line address**  
-Address in VRAM for start of the next scanline (bitmap or tile indices map). Normally this is updated internally, starting with `XR_Px_DISP_ADDR` and with `XR_Px_LINE_LEN` added at the end of each mode line (which can be every display line, or less depending on tile mode, `V_REPEAT` and `XR_Px_HV_FSCALE` vertical scaling).  This register can be used to change the internal address used for subsequent display lines (usually done via the COPPER). This register is write-only.
+Address in VRAM for start of the next scanline (bitmap or tile indices map). Normally this is updated internally, starting with
+`XR_Px_DISP_ADDR` and with `XR_Px_LINE_LEN` added at the end of each mode line (which can be every display line, or less depending
+on tile mode, `V_REPEAT` and `XR_Px_HV_FSCALE` vertical scaling).  This register can be used to change the internal address used
+for subsequent display lines (usually done via the COPPER). This register is write-only.
 
-> :mag: **`XR_Px_LINE_ADDR`** will still have `XR_Px_LINE_LEN` added at the end of each display mode line (when not repeating the line), so you may need to subtract `XR_Px_LINE_LEN` words from the value written to `XR_Px_LINE_ADDR` to account for this.
+> :mag: **`XR_Px_LINE_ADDR`** will still have `XR_Px_LINE_LEN` added at the end of each display mode line (when not repeating the
+> line), so you may need to subtract `XR_Px_LINE_LEN` words from the value written to `XR_Px_LINE_ADDR` to account for this.
 
 **0x16 `XR_PA_HV_FSCALE` (R/W)** - playfield A (base) horizontal and vertical fractional scale  
 **0x1E `XR_PB_HV_FSCALE` (R/W)** - playfield B (overlay) horizontal and vertical fractional scale
 <img src="./pics/wd_XR_Px_HV_FSCALE.svg">  
-Will repeat the color of a pixel or scan-line every N+1<sup>th</sup> column or line.  This repeat scaling is applied in addition to the integer pixel repeat (so a repeat value of 3x and fractional scale of 1 [repeat every line], would make 6x effective scale).  
+Will repeat the color of a pixel or scan-line every N+1<sup>th</sup> column or line.  This repeat scaling is applied in addition
+to the integer pixel repeat (so a repeat value of 3x and fractional scale of 1 [repeat every line], would make 6x effective
+scale).  
 
 | Repeat     | Horiz. 640 Scaled | Horiz. 848 Scaled | Vert. 480 Scaled |
-| ---------- | ----------------- | ----------------- | ---------------- |
+|------------|-------------------|-------------------|------------------|
 | 0          | 640 pixels        | 848 pixels        | 480 lines        |
 | 1 (1 of 2) | 320 pixels        | 424 pixels        | 240 lines        |
 | 2 (1 of 3) | 426.66 pixels     | 565.33 pixels     | 320 lines        |
@@ -535,7 +556,7 @@ Unused XR playfield registers 0x17, 0x1F
 
 #### Bitmap Display Formats
 
-Bitmap display data starts at `XR_Px_DISP_ADDR` in VRAM.
+Bitmap display data starts at the VRAM address`XR_Px_DISP_ADDR`, and has no alignment restrictions.
 
 In 1-BPP bitmap mode with 8 pixels per word, each one of 2 colors selected with 4-bit foreground and background color index.
 <img src="./pics/wd_1-bpp_bitmap_word.svg">
@@ -548,33 +569,55 @@ In 8 BPP bitmap mode, there are 2 pixels per word, each one of 256 colors.
 
 #### Tile Display Formats
 
-Tile indices and attribute map display data starts at `XR_Px_DISP_ADDR` in VRAM or TILEMEM (TILEMEM selected with `DISP_TILEMEM` bit in `XR_Px_TILE_CTRL`). The tile bitmap definitions start at the aligned address specified in `TILEBASE` bits set in `XR_Px_TILE_CTRL` in TILEMEM or VRAM (VRAM selected with `TILE_VRAM` in `XR_Px_TILE_CTRL`).  The tileset address should be aligned based on the power of two greater than the size of the maximum glyph index used. When using all possible glyphs in a tileset, alignment would be as follows:
+Tile indices and attribute map display data starts at `XR_Px_DISP_ADDR` in either VRAM or TILEMEM (TILEMEM selected with
+`DISP_TILEMEM` bit in `XR_Px_TILE_CTRL`).  There are no alignement requirements for a tile
 
-| BPP   | Size | Words     | Number | Alignment       |
-| ----- | ---- | --------- | -------| --------------- |
-| 1-BPP | 8x8  | 4 words   | 256    | 0x0400 boundary |
-| 1-BPP | 8x16 | 8 words   | 256    | 0x0800 boundary |
-| 4-BPP | 8x8  | 16 words  | 1024   | 0x4000 boundary |
-| 8-BPP | 8x8  | 32 words  | 1024   | 0x8000 boundary |
+The tile bitmap definitions start at the aligned address specified in `TILEBASE` bits set in `XR_Px_TILE_CTRL` in TILEMEM or VRAM
+(VRAM selected with `TILE_VRAM` in `XR_Px_TILE_CTRL`).  The tileset address should be aligned based on the power of two greater
+than the size of the maximum glyph index used. When using all possible glyphs in a tileset, alignment would be as follows:
 
-However, if using less tiles, you can relax alignment restrictions based on the maximum glyph index.  For example if you are using 512 or less 8x8 4-BPP tiles, then you need to be aligned on a 0x2000 word boundary (16 words per tile, times 512 tiles).
+| BPP   | Size | Words    | Number | Alignment       |
+|-------|------|----------|--------|-----------------|
+| 1-BPP | 8x8  | 4 words  | 256    | 0x0400 boundary |
+| 1-BPP | 8x16 | 8 words  | 256    | 0x0800 boundary |
+| 4-BPP | 8x8  | 16 words | 1024   | 0x4000 boundary |
+| 8-BPP | 8x8  | 32 words | 1024   | 0x8000 boundary |
+
+However, if using less tiles, you can relax alignment restrictions based on the maximum glyph index used.  For example if you are
+using 512 or less 8x8 4-BPP tiles, then you only need to be aligned on a 0x2000 word boundary (16 words per tile, times 512
+tiles).
 
 In 1-BPP tile mode for the tile display indices, there are 256 glyphs (and 4-bit foreground/background color in word).
 <img src="./pics/wd_1-bpp_tile_word.svg">
 
-In 1-BPP tile mode, two tile lines are stored in each word in the tile definition.  1-BPP can index 8x8 or 8x16 tiles, for 4 or 8 words per tile (a total of 2KiB or 4KiB with 256 glyphs).  
+In 1-BPP tile mode, two tile lines are stored in each word in the tile definition.  1-BPP can index 8x8 or 8x16 tiles, for 4 or 8
+words per tile (a total of 2KiB or 4KiB with 256 glyphs).  
 <img src="./pics/wd_1-bpp_tile_def.svg">
 
-In 2 or 4 BPP tile mode for the tile display indices, there are 1024 glyphs, 4-bit color offset and horizontal and vertical tile mirroring.  
+In 2 or 4 BPP tile mode for the tile display indices, there are 1024 glyphs, 4-bit color offset and horizontal and vertical tile
+mirroring.  
 <img src="./pics/wd_n-bpp_tile_word.svg">
 
-In 2 or 4 BPP the tile definition is the same as the corresponding bitmap mode, using 64 contiguous pixels for each 8x8 tile.  Each 4-BPP tile is 16 words and 8-bpp tile is 32 words (a total of 32KiB or 64KiB respectively, with 1024 glyphs).
+In 2 or 4 BPP the tile definition is the same as the corresponding bitmap mode, using 64 contiguous pixels for each 8x8 tile.  
+Each 4-BPP tile is 16 words and 8-bpp tile is 32 words (a total of 32KiB or 64KiB respectively, with 1024 glyphs).
 
 ___
 
 ### 2D Blitter Engine Operation
 
-The Xosera blitter is a VRAM data read/write "engine" that operates on 16-bit words in VRAM to copy, fill and do logic operations on arbitrary two-dimensional rectangular areas of Xosera VRAM (i.e., to draw, copy and manipulate "chunky" 4/8 bit pixel bitmap images). It supports a VRAM source and destination. The source can also be set to a constant. It repeats a basic word length operation for each "line" of a rectanglar area, and at the end of each line adds "modulo" values to source and destination addresses (to position source and destination for next line). It also has a "nibble shifter" that can shift a line of word data 0 to 3 nibbles to allow for pixel level positioning and drawing. There are also first and last word edge transparency masks, to remove unwanted pixels from the words at the start end end line allowing for arbitrary pixel sized rectangular operations. There is a fixed logic equation with ANDC and XOR terms (a combination of which can set, clear, invert or pass through any source color bits). This also works in conjunction with "transparency" testing that can mask-out specified 4-bit or 8-bit pixel values when writing. This transparency masking allows specified nibbles in a word to remain unaltered when the word is overwritten (without read-modify-write VRAM access, and no speed penalty). The combination of these features allow for many useful graphical "pixel" operations to be performed in a single pass (copying, masking, shifting and logical operations).
+The Xosera blitter is a VRAM data read/write "engine" that operates on 16-bit words in VRAM to copy, fill and do logic
+operations on arbitrary two-dimensional rectangular areas of Xosera VRAM (i.e., to draw, copy and manipulate "chunky"
+4/8 bit pixel bitmap images). It supports a VRAM source and destination. The source can also be set to a constant. It
+repeats a basic word length operation for each "line" of a rectanglar area, and at the end of each line adds "modulo"
+values to source and destination addresses (to position source and destination for next line). It also has a "nibble
+shifter" that can shift a line of word data 0 to 3 nibbles to allow for pixel level positioning and drawing. There
+are also first and last word edge transparency masks, to remove unwanted pixels from the words at the start end end
+line allowing for arbitrary pixel sized rectangular operations. There is a fixed logic equation with ANDC and XOR
+terms (a combination of which can set, clear, invert or pass through any source color bits). This also works in
+conjunction with "transparency" testing that can mask-out specified 4-bit or 8-bit pixel values when writing. This
+transparency masking allows specified nibbles in a word to remain unaltered when the word is overwritten (without
+read-modify-write VRAM access, and no speed penalty). The combination of these features allow for many useful
+graphical "pixel" operations to be performed in a single pass (copying, masking, shifting and logical operations).
 
 ___
 
@@ -592,18 +635,22 @@ ___
 - `XOR` constant XOR source word
   - source word is XOR'd with the this word
 
-Address values (`XR_BLIT_SRC_S`, `XR_BLIT_DST_D`) will be incremented each word and the `XR_BLIT_MOD_S` and `XR_BLIT_MOD_D` will be added at the end of each line (in a 2-D blit operation).
+Address values (`XR_BLIT_SRC_S`, `XR_BLIT_DST_D`) will be incremented each word and the `XR_BLIT_MOD_S` and `XR_BLIT_MOD_D`
+will be added at the end of each line (in a 2-D blit operation).
 
 #### Transparency Testing and Masking Applied to Blitter Operations
 
-&nbsp;&nbsp;&nbsp;4-bit mask `M = (S != {T})` where `T` is even/odd transparency nibbles or an 8-bit transparent value (for 8-bit pixel mode)
+&nbsp;&nbsp;&nbsp;4-bit mask `M = (S != {T})` where `T` is even/odd transparency nibbles or an 8-bit transparent value
+(for 8-bit pixel mode)
 
 - `M` transparency result is 0 for transparent nibbles (ones that will not be altered in the destination word).
 - `S` source word used in logical operation above
   - Either read from VRAM or a constant (when `S_CONST` set in `XR_BLIT_CTRL`)
 - `T` transparency constant nibble pair/byte set in upper byte of `XR_BLIT_CTRL`
 
-Transparency testing is enabled with `TRANSP` in `XR_BLIT_CTRL`.  When enabled a 4-bit nibble transparency mask will be set in two-bit pairs for 8-bit pixels when `TRANSP_8B` set in `XR_BLIT_CTRL` (both bits zero only when both nibbles of the transparency test are zero, otherwise both one). This allows any 4-bit or 8-bit pixel value in `S` to be considered transparent.  
+Transparency testing is enabled with `TRANSP` in `XR_BLIT_CTRL`.  When enabled a 4-bit nibble transparency mask will be set in
+two-bit pairs for 8-bit pixels when `TRANSP_8B` set in `XR_BLIT_CTRL` (both bits zero only when both nibbles of the transparency
+test are zero, otherwise both one). This allows any 4-bit or 8-bit pixel value in `S` to be considered transparent.  
 
 #### Nibble Shifting and First/Last Word Edge Masking
 
@@ -629,7 +676,7 @@ The biltter will also generate an Xosera interrupt with interrupt source #1 each
 ### 2D Blitter Engine XR Registers Summary
 
 | Reg # | Name            | R/W  | Description                                                          |
-| ----- | --------------- | ---- | -------------------------------------------------------------------- |
+|-------|-----------------|------|----------------------------------------------------------------------|
 | 0x20  | `XR_BLIT_CTRL`  | -/W  | blitter control (transp value, transp_8b, transp, S_const)           |
 | 0x21  | `XR_BLIT_ANDC`  | -/W  | `ANDC` AND-COMPLEMENT constant value                                 |
 | 0x22  | `XR_BLIT_XOR`   | -/W  | `XOR` XOR constant value                                             |
@@ -664,11 +711,15 @@ The operation has four options that can be independently specified in `XR_BLIT_C
 - `S_CONST` specifies `S` term is a constant (`XR_BLIT_SRC_S` used as constant instead of VRAM address to read)
   - NOTE: When `S` is a constant the value of `XR_BLIT_MOD_S` will still be added to it at the end of each line.
 
-Additionally, a transparency testing can be to the source data: `4-bit mask M = (S != T)` (testing either per nibble or byte, for 4-bit or 8-bit modes).  When a nibble/byte is masked, the existing pixel in VRAM will not be modified.
+Additionally, a transparency testing can be to the source data: `4-bit mask M = (S != T)` (testing either per nibble
+or byte, for 4-bit or 8-bit modes).  When a nibble/byte is masked, the existing pixel in VRAM will not be modified.
 
-- `TRANSP` will enable transparency testing when set (when zero, no pixel values will be masked, but start and end of line masking will still apply)
-- `TRANSP8` can be set so 8-bit transparency test (vs 4-bit).  Pixels are tested for transparency and masked only when the both nibbles in a byte match the transparency value
-- `T` value is set in with the upper 8 bits of `XR_BLIT_CTRL` register and is the transparent value for even and odd 4-bit pixels or a single 8-bit pixel value (when `TRANSP8` set).
+- `TRANSP` will enable transparency testing when set (when zero, no pixel values will be masked, but start and end of
+   line masking will still apply)
+- `TRANSP8` can be set so 8-bit transparency test (vs 4-bit).  Pixels are tested for transparency and masked only when
+   the both nibbles in a byte match the transparency value
+- `T` value is set in with the upper 8 bits of `XR_BLIT_CTRL` register and is the transparent value for even and odd
+   4-bit pixels or a single 8-bit pixel value (when `TRANSP8` set).
 
 **0x21 `XR_BLIT_ANDC` (WO) - source term ANDC value constant**  
 <img src="./pics/wd_XR_BLIT_ANDC.svg">
@@ -686,44 +737,50 @@ Arbitrary value for used for `XOR` exclusive-OR with source term `S`, in equatio
 <img src="./pics/wd_XR_BLIT_MOD_S.svg">
 
 **modulo added to `BLIT_SRC_S` address at end of a line**  
-Arbitrary twos complement value added to `S` address/constant at the end of each line. Typically zero when `BLIT_SRC_S` image data is contiguous, or -1 when shift amount is non-zero.
+Arbitrary twos complement value added to `S` address/constant at the end of each line. Typically zero when `BLIT_SRC_S`
+image data is contiguous, or -1 when shift amount is non-zero.
 
 **0x24 `XR_BLIT_SRC_S` (WO) - source `S` term (read from VRAM address or constant value)**  
 <img src="./pics/wd_XR_BLIT_SRC_S.svg">
 
 **source term `S` VRAM address (with term read from VRAM) or a constant value if `S_CONST` set**  
-Address of source VRAM image data or arbitrary constant if `S_CONST` set in `XR_BLIT_CTRL`. This value will be shifted by `XR_BLIT_SHIFT` nibble shift amount (when not a constant with `S_CONST` set)
+Address of source VRAM image data or arbitrary constant if `S_CONST` set in `XR_BLIT_CTRL`. This value will be
+shifted by `XR_BLIT_SHIFT` nibble shift amount (when not a constant with `S_CONST` set).
 
 **0x25 `XR_BLIT_MOD_D` (WO) - modulo added to `BLIT_DST_D` address at end of line**  
 <img src="./pics/wd_XR_BLIT_MOD_D.svg">
 
 **modulo added to `BLIT_DST_D` destination address at end of a line**  
-Arbitrary twos complement value added to `D` destination address at the end of each line. Typically the _destination_width_-_source_width_ (in words) to adjust the destination pointer to the start of the next rectangular image line.
+Arbitrary twos complement value added to `D` destination address at the end of each line. Typically the
+_destination_width_-_source_width_ (in words) to adjust the destination pointer to the start of the next
+rectangular image line.
 
 **0x26 `XR_BLIT_DST_D` (WO) - destination D VRAM write address**  
 <img src="./pics/wd_XR_BLIT_DST_D.svg">
 
 **destination D VRAM write address**  
-Destination VRAM address.  Set to the first word of the destination address for the blit operation (or the last word of the destination, if in `DECR` mode).
+Destination VRAM address.  Set to the first word of the destination address for the blit operation (or the last
+word of the destination, if in `DECR` mode).
 
 **0x27 `XR_BLIT_SHIFT` (WO - first and last word nibble masks and nibble shift**  
 <img src="./pics/wd_XR_BLIT_SHIFT.svg">
 
 **first and last word nibble masks and nibble shift**  
-The first word nibble mask will unconditionally mask out (make transparent) any zero nibbles on the first word of each
-line (left edge). Similarly, the last word nibble mask will unconditionally mask out
-(make transparent) any zero nibbles on the last word of each line (the right edge). The
-nibble shift specifies a 0 to 3 nibble right shift on all words drawn. Nibbles shifted out the right of a word will be shifted into the the next word (to provide a seamless pixel shift
-with word aligned writes). In "normal" use, when the nibble shift is non-zero, the
-left and right nibble mask would typically contain the value `0xF0` nibble shifted (e.g., `0xF0 >> nibble_shift`). The
-right edge mask hides "garbage" pixels wrapping from left edge, and right edge mask hides excess pixels when image is
-not a exact word width. When shifting, typically also you need to add an extra word to `BLIT_WORDS` and subtract one
-from `BLIT_MOD_S` (to avoid skewing the image). When not shifting (nibble shift of zero) and your source image width is
-word aligned, you typically want the complete last word so both left and right mask `0xFF` (no edge masking). If your
-source image is not an exact multiple word width, you would typically want to trim the excess pixels from the right edge
-(e.g., for a 7 nibble wide image, `0xFE`). For images 1 word wide, both left and right edge masks will be AND'd
-together. Also this masking is AND'd with the normal transparency control (so if a pixel is masked by either the left
-mask, right mask or is considered transparent it will not be modified).
+The first word nibble mask will unconditionally mask out (make transparent) any zero nibbles on the first
+word of each line (left edge). Similarly, the last word nibble mask will unconditionally mask out (make
+transparent) any zero nibbles on the last word of each line (the right edge). The nibble shift specifies
+a 0 to 3 nibble right shift on all words drawn. Nibbles shifted out the right of a word will be shifted
+into the the next word (to provide a seamless pixel shift with word aligned writes). In "normal" use,
+when the nibble shift is non-zero, the left and right nibble mask would typically contain the value `0xF0`
+nibble shifted (e.g., `0xF0 >> nibble_shift`). The right edge mask hides "garbage" pixels wrapping from
+left edge, and right edge mask hides excess pixels when image is not a exact word width. When shifting,
+typically also you need to add an extra word to `BLIT_WORDS` and subtract one from `BLIT_MOD_S` (to avoid
+skewing the image). When not shifting (nibble shift of zero) and your source image width is word aligned,
+you typically want the complete last word so both left and right mask `0xFF` (no edge masking). If your
+source image is not an exact multiple word width, you would typically want to trim the excess pixels from
+the right edge (e.g., for a 7 nibble wide image, `0xFE`). For images 1 word wide, both left and right edge
+masks will be AND'd together. Also this masking is AND'd with the normal transparency control (so if a
+pixel is masked by either the left mask, right mask or is considered transparent it will not be modified).
 
 **0x28 `XR_BLIT_LINES` (WO) - 15-bit number of lines heigh - 1 (1 to 32768)**  
 <img src="./pics/wd_XR_BLIT_LINES.svg">
@@ -739,7 +796,8 @@ for the next line to be drawn).
 Write starts blit operation, you should check `BLIT_FULL` bit in `XM_SYS_CTRL` to make sure the blitter is ready to
 accept a new operation (it supports one operation in progress and one operation queued to start - after that it reports
 `BLIT_FULL` true and you should wait before altering any BLIT registers).  
-To check if all blit operation has completely finished (and no operations queued), you can check the `BLIT_BUSY` bit in `XM_SYS_CTRL` which will read true until the blit operation has come to a complete stop.
+To check if all blit operation has completely finished (and no operations queued), you can check the `BLIT_BUSY`
+bit in `XM_SYS_CTRL` which will read true until the blit operation has come to a complete stop.
 
 ___
 
@@ -796,7 +854,7 @@ There are four basic copper instructions: `WAIT`, `SKIP`, `MOVE` and `JUMP`. Bri
 is:
 
 | Instruction | Description                                                                  |
-| ----------- | ---------------------------------------------------------------------------- |
+|-------------|------------------------------------------------------------------------------|
 | `WAIT`      | Wait until the video beam reaches (or exceeds) a specified position          |
 | `SKIP`      | Skip the next instruction if the video beam has reached a specified position |
 | `MOVE`      | Move immediate data to a target destination                                  |
@@ -925,7 +983,7 @@ When Xosera is reconfigured (or on power up), the VRAM contents are undefined (g
 memory, COLOR memory and COPPER memory will be restored to default contents as follows:
 
 | TILE address  | Description                                             |
-| ------------- | ------------------------------------------------------- |
+|---------------|---------------------------------------------------------|
 | 0x4000-0x47FF | 8x16 ST font (derived from Atari ST 8x16 font)          |
 | 0x4800-0x4BFF | 8x8 ST font (derived from Atari ST 8x8 font             |
 | 0x4C00-0x4FFF | 8x8 PC font (derived from IBM CGA 8x8)                  |

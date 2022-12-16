@@ -458,6 +458,7 @@ ___
 
 **0x10 `XR_PA_GFX_CTRL` (R/W)** - playfield A (base) graphics control  
 **0x18 `XR_PB_GFX_CTRL` (R/W)** - playfield B (overlay) graphics control
+
 <img src="./pics/wd_XR_Px_GFX_CTRL.svg">
 
 **playfield A/B graphics control**
@@ -472,6 +473,7 @@ ___
 
 **0x11 `XR_PA_TILE_CTRL` (R/W)** - playfield A (base) tile control  
 **0x19 `XR_PB_TILE_CTRL` (R/W)** - playfield B (overlay) tile control
+
 <img src="./pics/wd_XR_Px_TILE_CTRL.svg">
 
 **playfield A/B tile control**  
@@ -484,6 +486,7 @@ ___
 
 **0x12 `XR_PA_DISP_ADDR` (R/W)** - playfield A (base) display VRAM start address  
 **0x1A `XR_PB_DISP_ADDR` (R/W)** - playfield B (overlay) display VRAM start address
+
 <img src="./pics/wd_XR_Px_DISP_ADDR.svg">
 
 **playfield A/B display start address**  
@@ -491,6 +494,7 @@ Address in VRAM for start of playfield display (either bitmap or tile indices/at
 
 **0x13 `XR_PA_LINE_LEN` (R/W)** - playfield A (base) display line word length  
 **0x1B `XR_PB_LINE_LEN` (R/W)** - playfield B (overlay) display line word length
+
 <img src="./pics/wd_XR_Px_LINE_LEN.svg">
 
 **playfield A/B display line word length**  
@@ -500,6 +504,7 @@ data will be shown multiple times).  Twos complement, so negative values are oka
 
 **0x14 `XR_PA_HV_SCROLL` (R/W)** - playfield A (base) horizontal and vertical fine scroll  
 **0x1C `XR_PB_HV_SCROLL` (R/W)** - playfield B (overlay) horizontal and vertical fine scroll
+
 <img src="./pics/wd_XR_Px_HV_SCROLL.svg">
 
 **playfield A/B  horizontal and vertical fine scroll**  
@@ -521,6 +526,7 @@ Vertical fine scroll is typically constrained to the scaled height of a pixel or
 
 **0x15 `XR_PA_LINE_ADDR` (WO)** - playfield A (base) display VRAM next line address  
 **0x1D `XR_PB_LINE_ADDR` (WO)** - playfield B (overlay) display VRAM next line address
+
 <img src="./pics/wd_XR_Px_LINE_ADDR.svg">
 
 **playfield A/B display line address**  
@@ -534,7 +540,9 @@ for subsequent display lines (usually done via the COPPER). This register is wri
 
 **0x16 `XR_PA_HV_FSCALE` (R/W)** - playfield A (base) horizontal and vertical fractional scale  
 **0x1E `XR_PB_HV_FSCALE` (R/W)** - playfield B (overlay) horizontal and vertical fractional scale
-<img src="./pics/wd_XR_Px_HV_FSCALE.svg">  
+
+<img src="./pics/wd_XR_Px_HV_FSCALE.svg">
+
 Will repeat the color of a pixel or scan-line every N+1<sup>th</sup> column or line.  This repeat scaling is applied in addition
 to the integer pixel repeat (so a repeat value of 3x and fractional scale of 1 [repeat every line], would make 6x effective
 scale).  
@@ -559,12 +567,15 @@ Unused XR playfield registers 0x17, 0x1F
 Bitmap display data starts at the VRAM address`XR_Px_DISP_ADDR`, and has no alignment restrictions.
 
 In 1-BPP bitmap mode with 8 pixels per word, each one of 2 colors selected with 4-bit foreground and background color index.
+
 <img src="./pics/wd_1-bpp_bitmap_word.svg">
 
 In 4 BPP bitmap mode, there are 4 pixels per word, each one of 16 colors.
+
 <img src="./pics/wd_4-bpp_bitmap_word.svg">
 
 In 8 BPP bitmap mode, there are 2 pixels per word, each one of 256 colors.
+
 <img src="./pics/wd_8-bpp_bitmap_word.svg">
 
 #### Tile Display Formats
@@ -588,14 +599,17 @@ using 512 or less 8x8 4-BPP tiles, then you only need to be aligned on a 0x2000 
 tiles).
 
 In 1-BPP tile mode for the tile display indices, there are 256 glyphs (and 4-bit foreground/background color in word).
+
 <img src="./pics/wd_1-bpp_tile_word.svg">
 
 In 1-BPP tile mode, two tile lines are stored in each word in the tile definition.  1-BPP can index 8x8 or 8x16 tiles, for 4 or 8
 words per tile (a total of 2KiB or 4KiB with 256 glyphs).  
+
 <img src="./pics/wd_1-bpp_tile_def.svg">
 
 In 2 or 4 BPP tile mode for the tile display indices, there are 1024 glyphs, 4-bit color offset and horizontal and vertical tile
 mirroring.  
+
 <img src="./pics/wd_n-bpp_tile_word.svg">
 
 In 2 or 4 BPP the tile definition is the same as the corresponding bitmap mode, using 64 contiguous pixels for each 8x8 tile.  
@@ -701,7 +715,8 @@ from both interrupts and mainline code.
 
 #### 2D Blitter Engine XR Registers Details
 
-**0x20 `XR_BLIT_CTRL` (WO) - control bits (transparency control, S const)**  
+**0x20 `XR_BLIT_CTRL`** (-/W) - control bits (transparency control, S const)  
+
 <img src="./pics/wd_XR_BLIT_CTRL.svg">
 
 **blitter operation control**  
@@ -721,33 +736,38 @@ or byte, for 4-bit or 8-bit modes).  When a nibble/byte is masked, the existing 
 - `T` value is set in with the upper 8 bits of `XR_BLIT_CTRL` register and is the transparent value for even and odd
    4-bit pixels or a single 8-bit pixel value (when `TRANSP8` set).
 
-**0x21 `XR_BLIT_ANDC` (WO) - source term ANDC value constant**  
+**0x21 `XR_BLIT_ANDC`** (-/W) - source term ANDC value constant
+
 <img src="./pics/wd_XR_BLIT_ANDC.svg">
 
 **source constant term `ANDC` (AND-complement) value**  
 Arbitrary value for used for `ANDC` AND-complement with source term `S`, in equation: `D = S & (~ANDC) ^ XOR`
 
-**0x22 `XR_BLIT_XOR` (WO) - source term XOR value constant**  
+**0x22 `XR_BLIT_XOR`** (-/W) - source term XOR value constant
+
 <img src="./pics/wd_XR_BLIT_XOR.svg">
 
 **source constant term `XOR` (exclusive OR) value**  
 Arbitrary value for used for `XOR` exclusive-OR with source term `S`, in equation: `D = S & (~ANDC) ^ XOR`
 
-**0x23 `XR_BLIT_MOD_S` (WO) - modulo added to `BLIT_SRC_S` address at end of line**  
+**0x23 `XR_BLIT_MOD_S`** (-/W) - modulo added to `BLIT_SRC_S` address at end of line
+
 <img src="./pics/wd_XR_BLIT_MOD_S.svg">
 
 **modulo added to `BLIT_SRC_S` address at end of a line**  
 Arbitrary twos complement value added to `S` address/constant at the end of each line. Typically zero when `BLIT_SRC_S`
 image data is contiguous, or -1 when shift amount is non-zero.
 
-**0x24 `XR_BLIT_SRC_S` (WO) - source `S` term (read from VRAM address or constant value)**  
+**0x24 `XR_BLIT_SRC_S`** (-/W) - source `S` term (read from VRAM address or constant value)
+
 <img src="./pics/wd_XR_BLIT_SRC_S.svg">
 
 **source term `S` VRAM address (with term read from VRAM) or a constant value if `S_CONST` set**  
 Address of source VRAM image data or arbitrary constant if `S_CONST` set in `XR_BLIT_CTRL`. This value will be
 shifted by `XR_BLIT_SHIFT` nibble shift amount (when not a constant with `S_CONST` set).
 
-**0x25 `XR_BLIT_MOD_D` (WO) - modulo added to `BLIT_DST_D` address at end of line**  
+**0x25 `XR_BLIT_MOD_D`** (-/W) - modulo added to `BLIT_DST_D` address at end of line
+
 <img src="./pics/wd_XR_BLIT_MOD_D.svg">
 
 **modulo added to `BLIT_DST_D` destination address at end of a line**  
@@ -755,14 +775,16 @@ Arbitrary twos complement value added to `D` destination address at the end of e
 _destination_width_-_source_width_ (in words) to adjust the destination pointer to the start of the next
 rectangular image line.
 
-**0x26 `XR_BLIT_DST_D` (WO) - destination D VRAM write address**  
+**0x26 `XR_BLIT_DST_D` (-/W) - destination D VRAM write address
+
 <img src="./pics/wd_XR_BLIT_DST_D.svg">
 
 **destination D VRAM write address**  
 Destination VRAM address.  Set to the first word of the destination address for the blit operation (or the last
 word of the destination, if in `DECR` mode).
 
-**0x27 `XR_BLIT_SHIFT` (WO - first and last word nibble masks and nibble shift**  
+**0x27 `XR_BLIT_SHIFT`** (-/W) - first and last word nibble masks and nibble shift
+
 <img src="./pics/wd_XR_BLIT_SHIFT.svg">
 
 **first and last word nibble masks and nibble shift**  
@@ -782,14 +804,16 @@ the right edge (e.g., for a 7 nibble wide image, `0xFE`). For images 1 word wide
 masks will be AND'd together. Also this masking is AND'd with the normal transparency control (so if a
 pixel is masked by either the left mask, right mask or is considered transparent it will not be modified).
 
-**0x28 `XR_BLIT_LINES` (WO) - 15-bit number of lines heigh - 1 (1 to 32768)**  
+**0x28 `XR_BLIT_LINES`** (-/W) - 15-bit number of lines heigh - 1 (1 to 32768)
+
 <img src="./pics/wd_XR_BLIT_LINES.svg">
 
 **15-bit number of lines high - 1 (1 to 32768)**  
 Number of times to repeat blit operation minus one. Typically source image height with modulo values advancing addresses
 for the next line to be drawn).
 
-**0x29 `XR_BLIT_WORDS` (WO) - write starts operation, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times)**  
+**0x29 `XR_BLIT_WORDS`** (-/W) - write starts operation, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times)
+
 <img src="./pics/wd_XR_BLIT_WORDS.svg">
 
 **write starts blit, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times))**  

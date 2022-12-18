@@ -434,7 +434,7 @@ int32_t xlasm::pass_reset()
 
     //	dprintf("Erasing " PR_D64 " macros\n", macros.size());
     macros.clear();
-    expanded_macros.clear();
+    // BUG: should not clear this between passes:    expanded_macros.clear();
 
     line_last_file           = nullptr;
     line_sec_start           = nullptr;
@@ -2668,10 +2668,23 @@ int32_t xlasm::process_labeldef(std::string label)
         warning("Symbol definition: \"%s\" is also a register for %s", label.c_str(), arch->get_variant().c_str());
     }
 
+    if (ctxt.macrodef_ptr != nullptr)
+    {
+        notice(3, "Deferring label def in macro def\"%s\"", label.c_str());
+        return 0;
+    }
+
     symbol_t & sym = symbols[label];
 
     if (sym.type == symbol_t::UNDEFINED)
     {
+        notice(3,
+               "Creating UNDEFINED label \"%s\" at %s(%d)%s%s",
+               label.c_str(),
+               ctxt.file->name.c_str(),
+               ctxt.line,
+               ctxt.macroexp_ptr ? " macro-exp" : "",
+               ctxt.macrodef_ptr ? " macro-def" : "");
         sym.type         = symbol_t::LABEL;
         sym.name         = label;
         sym.line_defined = ctxt.line;
@@ -2682,10 +2695,15 @@ int32_t xlasm::process_labeldef(std::string label)
     {
         if (sym.line_defined != ctxt.line || sym.file_defined != ctxt.file)
         {
-            error("Duplicate label definition: \"%s\" first at %s(%d)",
+            error("Duplicate label definition: \"%s\" first at %s(%d) vs now %s(%d)%s%s%s",
                   label.c_str(),
                   sym.file_defined->name.c_str(),
-                  sym.line_defined);
+                  sym.line_defined,
+                  ctxt.file->name.c_str(),
+                  ctxt.line,
+                  ctxt.macroexp_ptr ? " macro-exp" : "",
+                  ctxt.macrodef_ptr ? " macro-def" : "",
+                  sym.type_name());
         }
     }
 
@@ -3178,6 +3196,13 @@ xlasm::source_t & xlasm::expand_macro(std::string & name, size_t cur_token, cons
                         continue;
                     }
 
+                    if ((*tit)[search_start + 1] == '@')        // '\@' unique-ifier?
+                    {
+                        tit->erase(search_start, 2);
+                        tit->insert(search_start, unique_str);
+                        continue;
+                    }
+
                     // is this a numeric parameter after backslash?
                     if (isdigit((*tit)[search_start + 1]))
                     {
@@ -3249,14 +3274,15 @@ xlasm::source_t & xlasm::expand_macro(std::string & name, size_t cur_token, cons
                 if (!opt.suppress_macro_name)
                     fake_line = "<" + name + ">\t";
 
+                // TODO: Not happy with this macro fake listing
                 size_t idx = 0;
                 for (auto tit = lit->begin(); tit != lit->end(); ++tit, idx++)
                 {
                     if (idx == 0 && tit->back() != ':')
-                        fake_line += "\t\t";
+                        fake_line += " ";
                     fake_line += *tit;
-                    if (tit + 1 != lit->end() && idx == 0)
-                        fake_line += "\t\t";
+                    if (tit + 1 != lit->end() && idx < 2)
+                        fake_line += " ";
                 }
                 s.orig_line.push_back(fake_line);
                 //				dprintf("AFTER : " PR_DSIZET ": %s\n", lit - s.src_line.begin(), fake_line.c_str());
@@ -3734,7 +3760,7 @@ int32_t xlasm::source_t::read_file(xlasm * xa, const std::string & n)
                     }
 
                     // break up operator characters into separate tokens
-                    if (strchr(",()[]{}@#+-/^~%$", c) != nullptr)
+                    if (strchr(",()[]{}#+-/^~%$", c) != nullptr)        // NOTE: removed @ for unique-ifier
                     {
                         char s[2] = {c, '\0'};
                         if (token.size())

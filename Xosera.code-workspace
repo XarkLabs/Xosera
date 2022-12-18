@@ -122,6 +122,7 @@
 			"ICESTORM",
 			"ifdef",
 			"ifeq",
+			"ifier",
 			"ifndef",
 			"inout",
 			"insn",
@@ -338,7 +339,18 @@
 			"random": "c",
 			"machine.h": "c",
 			"bit": "c",
-			"filesystem": "c"
+			"filesystem": "c",
+			"__locale": "cpp",
+			"__string": "cpp",
+			"concepts": "cpp",
+			"cstdlib": "cpp",
+			"memory_resource": "cpp",
+			"locale": "cpp",
+			"ostream": "cpp",
+			"system_error": "cpp",
+			"type_traits": "cpp",
+			"typeinfo": "cpp",
+			"version": "cpp"
 		},
 		"workbench.colorCustomizations": {
 			"terminal.foreground": "#18E818",

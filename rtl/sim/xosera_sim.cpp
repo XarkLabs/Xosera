@@ -34,7 +34,7 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 4        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_TRACE_FRAMES 8        // video frames to dump to VCD file (and then screen-shot and exit)
 #define MAX_UPLOADS      8        // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
@@ -481,9 +481,43 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+
+#if 1
+    // true color hack test
+
+    XREG_SETW(PA_GFX_CTRL, 0x0065),         // PA bitmap, 8-bpp, Hx2, Vx2
+    XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address (start of 8-bpp line data)
+    XREG_SETW(PA_LINE_LEN,
+              (320 / 2) +
+                  (320 / 4)),        // display line word length (combined 8-bit and 4-bit for interleaved lines)
+
+    XREG_SETW(PB_GFX_CTRL, 0x0055),                     // PB bitmap, 4-bpp, Hx2, Vx2
+    XREG_SETW(PB_TILE_CTRL, 0x000F),                    // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    XREG_SETW(PB_DISP_ADDR, 0x0000 + (320 / 2)),        // display start address (start of 4-bpp line data)
+    XREG_SETW(PB_LINE_LEN,
+              (320 / 2) +
+                  (320 / 4)),        // display line word length (combined 8-bit and 4-bit for interleaved lines)
+
+    REG_W(WR_XADDR, XR_COLOR_ADDR),        // upload color palette
+    REG_UPLOAD_AUX(),
+
+    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),        // RG 8-bpp + 4-bpp B
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+#endif
+
+
 #if 1
     // slim copper test
     XREG_SETW(PA_GFX_CTRL, 0x0080),        // blank screen
+    XREG_SETW(PB_GFX_CTRL, 0x0080),        // blank screen
     XREG_SETW(VID_CTRL, 0x0000),           // border color #0
     REG_W(WR_XADDR, XR_COPPER_ADDR),
 #if 0
@@ -897,31 +931,6 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVSYNC(),
 
 
-#if 1
-    // true color hack test
-
-    XREG_SETW(PA_GFX_CTRL, 0x0065),         // PA bitmap, 8-bpp, Hx2, Vx2
-    XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
-    XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address (start of 8-bpp line data)
-    XREG_SETW(PA_LINE_LEN,
-              (320 / 2) +
-                  (320 / 4)),        // display line word length (combined 8-bit and 4-bit for interleaved lines)
-
-    XREG_SETW(PB_GFX_CTRL, 0x0055),                     // PB bitmap, 4-bpp, Hx2, Vx2
-    XREG_SETW(PB_TILE_CTRL, 0x000F),                    // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
-    XREG_SETW(PB_DISP_ADDR, 0x0000 + (320 / 2)),        // display start address (start of 4-bpp line data)
-    XREG_SETW(PB_LINE_LEN,
-              (320 / 2) +
-                  (320 / 4)),        // display line word length (combined 8-bit and 4-bit for interleaved lines)
-
-    REG_W(WR_XADDR, XR_COLOR_ADDR),        // upload color palette
-    REG_UPLOAD_AUX(),
-
-    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
-    REG_W(WR_ADDR, 0x0000),
-    REG_UPLOAD(),        // RG 8-bpp + 4-bpp B
-
-#endif
     // 16-color 320x200 color tut
     REG_WAITVTOP(),
     REG_WAITVSYNC(),

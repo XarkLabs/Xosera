@@ -386,7 +386,7 @@ xrmem_arb xrmem_arb(
 
 // video blending - alpha and other color belding between playfield A and B
 `ifdef EN_PF_B
-video_blend video_blend(
+video_blend2 video_blend(
     .vsync_i(vsync),
     .hsync_i(hsync),
     .dv_de_i(dv_de),

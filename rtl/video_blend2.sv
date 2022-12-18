@@ -10,11 +10,11 @@
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
 
-`ifdef MODULE_SLATED_FOR_DEMOLITION
-
 `include "xosera_pkg.sv"
 
-module video_blend2(
+`ifdef EN_PF_B
+
+module video_blend2 (
     // video RGB inputs
     input wire  logic           vsync_i,
     input wire  logic           hsync_i,
@@ -31,51 +31,46 @@ module video_blend2(
 logic           dv_de_1;            // display enable delayed
 logic           hsync_1;            // hsync delayed
 logic           vsync_1;            // vsync delayed
-//rgb_t           blend_result;
+logic           dv_de_2;            // display enable delayed
+logic           hsync_2;            // hsync delayed
+logic           vsync_2;            // vsync delayed
+logic           clamp;              // clamp result
 
-logic [7:0] alphaA;
-logic [7:0] inv_alphaA;
+byte_t          colorA_r;
+byte_t          colorA_g;
+byte_t          colorA_b;
 
-logic [15:0] rA;
-logic [15:0] gA;
-logic [15:0] bA;
+byte_t          colorB_r;
+byte_t          colorB_g;
+byte_t          colorB_b;
 
-logic [15:0] rB;
-logic [15:0] gB;
-logic [15:0] bB;
+byte_t          alphaA;
+byte_t          alphaB;
 
-// void blend4(uint8_t * result, uint8_t fg, uint8_t fa, uint8_t bg)
-// {
-//     unsigned int alpha     = fa + 1;
-//     unsigned int inv_alpha = 16 - fa;
-//     *result                = (uint8_t)((alpha * fg + inv_alpha * bg) >> 4);
-// }
+word_t          outA_r;
+word_t          outA_g;
+word_t          outA_b;
 
-always_comb alphaA      = 8'h00;    //8'(colorB_xrgb_i[15:12]) + 8'h01;
-always_comb inv_alphaA  = 8'h10;    //8'h10 - 8'(colorB_xrgb_i[15:12]);
+word_t          outB_r;
+word_t          outB_g;
+word_t          outB_b;
 
-always_comb rA      = 8'(colorA_xrgb_i[11:8]) * alphaA;
-always_comb gA      = 8'(colorA_xrgb_i[ 7:4]) * alphaA;
-always_comb bA      = 8'(colorA_xrgb_i[ 3:0]) * alphaA;
+byte_t          result_r;
+byte_t          result_g;
+byte_t          result_b;
+assign          result_r    = outA_r[15:8] + outB_r[15:8];
+assign          result_g    = outA_g[15:8] + outB_g[15:8];
+assign          result_b    = outA_b[15:8] + outB_b[15:8];
 
-always_comb rB      = 8'(colorB_xrgb_i[11:8]) * inv_alphaA;
-always_comb gB      = 8'(colorB_xrgb_i[ 7:4]) * inv_alphaA;
-always_comb bB      = 8'(colorB_xrgb_i[ 3:0]) * inv_alphaA;
+byte_t          resultc_r;
+byte_t          resultc_g;
+byte_t          resultc_b;
+assign          resultc_r    = (outA_r[15] & outB_r[15]) ? 8'hFF : outA_r[15:8] + outB_r[15:8];
+assign          resultc_g    = (outA_g[15] & outB_g[15]) ? 8'hFF : outA_g[15:8] + outB_g[15:8];
+assign          resultc_b    = (outA_b[15] & outB_b[15]) ? 8'hFF : outA_b[15:8] + outB_b[15:8];
 
-logic unused_bits;
-always_comb unused_bits = &{ 1'b0, colorA_xrgb_i, colorB_xrgb_i, rA, gA, bA, rB, gB, bB, EN_PF_B_BLEND ? 1'b0 : 1'b0 };
-
-// if (EN_PF_B_BLEND) begin
-    // always_comb begin
-    //     // Conceptually, for alpha purposes A is the bottom "destination" surface,
-    //     // and B is "source" playfield blended on top, over it.
-    //     blend_result  = {   rA[3:0] + rB[3:0],
-    //                         gA[3:0] + gB[3:0],
-    //                         bA[3:0] + bB[3:0] };
-    // end
-// end else begin
-//     assign blend_result = (~colorA_xrgb_i[15] & colorB_xrgb_i[15]) ? colorB_xrgb_i[11:0] : colorA_xrgb_i[11:0];
-// end
+logic unused_signals    = &{1'b0, colorA_xrgb_i[13:12], outA_r[7:0], outA_g[7:0], outA_b[7:0], outB_r[7:0], outB_g[7:0], outB_b[7:0],
+                        result_r[3:0], result_g[3:0], result_b[3:0], resultc_r[3:0], resultc_g[3:0], resultc_b[3:0] };
 
 // color RAM lookup (delays video 1 cycle for BRAM)
 always_ff @(posedge clk) begin
@@ -85,21 +80,211 @@ always_ff @(posedge clk) begin
     hsync_1     <= hsync_i;
     dv_de_1     <= dv_de_i;
 
-    // output signals with blend_rgb_o
-    dv_de_o     <= dv_de_1;
-    vsync_o     <= vsync_1;
-    hsync_o     <= hsync_1;
+    // setup pipeline for next pixel
+    colorA_r    <= { colorA_xrgb_i[11:8], colorA_xrgb_i[11:8] };
+    colorA_g    <= { colorA_xrgb_i[ 7:4], colorA_xrgb_i[ 7:4] };
+    colorA_b    <= { colorA_xrgb_i[ 3:0], colorA_xrgb_i[ 3:0] };
 
-    // color lookup happened on dv_de cycle
-    if (dv_de_1) begin
-        blend_rgb_o <= {    rA[3:0] + rB[3:0],
-                            gA[3:0] + gB[3:0],
-                            bA[3:0] + bB[3:0] };
+    colorB_r    <= { colorB_xrgb_i[11:8], colorB_xrgb_i[11:8] };
+    colorB_g    <= { colorB_xrgb_i[ 7:4], colorB_xrgb_i[ 7:4] };
+    colorB_b    <= { colorB_xrgb_i[ 3:0], colorB_xrgb_i[ 3:0] };
+
+    case (colorA_xrgb_i[15:14])
+        2'b00: begin
+            alphaA  <= { ~colorB_xrgb_i[15:12], ~colorB_xrgb_i[15:12] };
+            alphaB  <= { colorB_xrgb_i[15:12], colorB_xrgb_i[15:12] };
+        end
+        2'b01: begin
+            alphaA  <= 8'hFF;
+            alphaB  <= { colorB_xrgb_i[15:12], colorB_xrgb_i[15:12] };
+        end
+        2'b10: begin
+            alphaA  <= 8'hFF;
+            alphaB  <= { colorB_xrgb_i[15:12], colorB_xrgb_i[15:12] };
+        end
+        2'b11: begin
+            alphaA  <= 8'hFF;;
+            alphaB  <= 8'h00;
+        end
+    endcase
+
+    clamp   <= colorA_xrgb_i[15];       // remember if clamping or not for next cycle
+    dv_de_2     <= dv_de_1;
+    vsync_2     <= vsync_1;
+    hsync_2     <= hsync_1;
+
+    // output signals with blend_rgb_o
+    dv_de_o     <= dv_de_2;
+    vsync_o     <= vsync_2;
+    hsync_o     <= hsync_2;
+
+    // force black if display enable was off
+    if (dv_de_2) begin
+        if (clamp) begin
+            blend_rgb_o <=  { resultc_r[7:4],  resultc_g[7:4],  resultc_b[7:4] };
+        end else begin
+            blend_rgb_o <=  { result_r[7:4],  result_g[7:4],  result_b[7:4] };
+        end
     end else begin
         blend_rgb_o <= '0;
     end
-
 end
+
+// NOTE: Using dual 8x8 MAC16 mode
+/* verilator lint_off PINCONNECTEMPTY */
+SB_MAC16 #(
+    .NEG_TRIGGER(1'b0),                 // 0=rising/1=falling clk edge
+    .C_REG(1'b0),                       // 1=register input C
+    .A_REG(1'b0),                       // 1=register input A
+    .B_REG(1'b0),                       // 1=register input B
+    .D_REG(1'b0),                       // 1=register input D
+    .TOP_8x8_MULT_REG(1'b0),            // 1=register top 8x8 output
+    .BOT_8x8_MULT_REG(1'b0),            // 1=register bot 8x8 output
+    .PIPELINE_16x16_MULT_REG1(1'b0),    // 1=register reg1 16x16 output
+    .PIPELINE_16x16_MULT_REG2(1'b0),    // 1=register reg2 16x16 output
+    .TOPOUTPUT_SELECT(2'b10),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPADDSUB_LOWERINPUT(2'b10),       // 00=input A, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPADDSUB_UPPERINPUT(1'b0),        // 0=add/sub accumulate, 1=input C
+    .TOPADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower add/sub ACCUMOUT, 11=lower add/sub CO
+    .BOTOUTPUT_SELECT(2'b10),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTADDSUB_LOWERINPUT(2'b10),       // 00=input A, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTADDSUB_UPPERINPUT(1'b1),        // 0=add/sub accumulate, 1=input D
+    .BOTADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower DSP ACCUMOUT, 11=lower DSP CO
+    .MODE_8x8(1'b0),                    // 0=16x16 mode, 1=8x8 mode (low power)
+    .A_SIGNED(1'b0),                    // 0=unsigned/1=signed input A
+    .B_SIGNED(1'b0)                     // 0=unsigned/1=signed input B
+) SB_MAC16_r (
+    .CLK(clk),                          // clock
+    .CE(1'b1),                          // clock enable
+    .A({colorA_r, colorB_r }),                        // 16-bit input A (dual 8-bit mode)
+    .B({alphaA, alphaB }),                        // 16-bit input B (dual 8-bit mode)
+    .C('0),                             // 16-bit input C
+    .D({outA_r[15:12], 12'b0 }),        // 16-bit input D
+    .AHOLD(1'b0),                       // 0=load, 1=hold input A
+    .BHOLD(1'b0),                       // 0=load, 1=hold input B
+    .CHOLD(1'b0),                       // 0=load, 1=hold input C
+    .DHOLD(1'b0),                       // 0=load, 1=hold input D
+    .IRSTTOP(1'b0),                     // 1=reset input A, C and 8x8 mult upper
+    .IRSTBOT(1'b0),                     // 1=reset input A, C and 8x8 mult lower
+    .ORSTTOP(1'b0),                     // 1=reset output accumulator upper
+    .ORSTBOT(1'b0),                     // 1=reset output accumulator lower
+    .OLOADTOP(1'b0),                    // 0=no load/1=load top accumulator from input C
+    .OLOADBOT(1'b1),                    // 0=no load/1=load bottom accumulator from input D
+    .ADDSUBTOP(1'b0),                   // 0=add/1=sub for top accumulator
+    .ADDSUBBOT(1'b0),                   // 0=add/1=sub for bottom accumulator
+    .OHOLDTOP(1'b0),                    // 0=load/1=hold into top accumulator
+    .OHOLDBOT(1'b0),                    // 0=load/1=hold into bottom accumulator
+    .CI(1'b0),                          // cascaded add/sub carry in from previous DSP block
+    .ACCUMCI(1'b0),                     // cascaded accumulator carry in from previous DSP block
+    .SIGNEXTIN(1'b0),                   // cascaded sign extension in from previous DSP block
+    .O({ outA_r, outB_r }),             // 32-bit result output (dual 8x8=16-bit mode with top used)
+    .CO(),                              // cascaded add/sub carry output to next DSP block
+    .ACCUMCO(),                         // cascaded accumulator carry output to next DSP block
+    .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block
+);
+
+SB_MAC16 #(
+    .NEG_TRIGGER(1'b0),                 // 0=rising/1=falling clk edge
+    .C_REG(1'b0),                       // 1=register input C
+    .A_REG(1'b0),                       // 1=register input A
+    .B_REG(1'b0),                       // 1=register input B
+    .D_REG(1'b0),                       // 1=register input D
+    .TOP_8x8_MULT_REG(1'b0),            // 1=register top 8x8 output
+    .BOT_8x8_MULT_REG(1'b0),            // 1=register bot 8x8 output
+    .PIPELINE_16x16_MULT_REG1(1'b0),    // 1=register reg1 16x16 output
+    .PIPELINE_16x16_MULT_REG2(1'b0),    // 1=register reg2 16x16 output
+    .TOPOUTPUT_SELECT(2'b10),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPADDSUB_LOWERINPUT(2'b10),       // 00=input A, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPADDSUB_UPPERINPUT(1'b0),        // 0=add/sub accumulate, 1=input C
+    .TOPADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower add/sub ACCUMOUT, 11=lower add/sub CO
+    .BOTOUTPUT_SELECT(2'b10),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTADDSUB_LOWERINPUT(2'b10),       // 00=input A, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTADDSUB_UPPERINPUT(1'b0),        // 0=add/sub accumulate, 1=input D
+    .BOTADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower DSP ACCUMOUT, 11=lower DSP CO
+    .MODE_8x8(1'b0),                    // 0=16x16 mode, 1=8x8 mode (low power)
+    .A_SIGNED(1'b0),                    // 0=unsigned/1=signed input A
+    .B_SIGNED(1'b0)                     // 0=unsigned/1=signed input B
+) SB_MAC16_g (
+    .CLK(clk),                          // clock
+    .CE(1'b1),                          // clock enable
+    .A({colorA_g, colorB_g }),                        // 16-bit input A (dual 8-bit mode)
+    .B({alphaA, alphaB }),                        // 16-bit input B (dual 8-bit mode)
+    .C('0),                             // 16-bit input C
+    .D('0),                             // 16-bit input D
+    .AHOLD(1'b0),                       // 0=load, 1=hold input A
+    .BHOLD(1'b0),                       // 0=load, 1=hold input B
+    .CHOLD(1'b0),                       // 0=load, 1=hold input C
+    .DHOLD(1'b0),                       // 0=load, 1=hold input D
+    .IRSTTOP(1'b0),                     // 1=reset input A, C and 8x8 mult upper
+    .IRSTBOT(1'b0),                     // 1=reset input A, C and 8x8 mult lower
+    .ORSTTOP(1'b0),                     // 1=reset output accumulator upper
+    .ORSTBOT(1'b0),                     // 1=reset output accumulator lower
+    .OLOADTOP(1'b0),                    // 0=no load/1=load top accumulator from input C
+    .OLOADBOT(1'b0),                    // 0=no load/1=load bottom accumulator from input D
+    .ADDSUBTOP(1'b0),                   // 0=add/1=sub for top accumulator
+    .ADDSUBBOT(1'b0),                   // 0=add/1=sub for bottom accumulator
+    .OHOLDTOP(1'b0),                    // 0=load/1=hold into top accumulator
+    .OHOLDBOT(1'b0),                    // 0=load/1=hold into bottom accumulator
+    .CI(1'b0),                          // cascaded add/sub carry in from previous DSP block
+    .ACCUMCI(1'b0),                     // cascaded accumulator carry in from previous DSP block
+    .SIGNEXTIN(1'b0),                   // cascaded sign extension in from previous DSP block
+    .O({ outA_g, outB_g }),             // 32-bit result output (dual 8x8=16-bit mode with top used)
+    .CO(),                              // cascaded add/sub carry output to next DSP block
+    .ACCUMCO(),                         // cascaded accumulator carry output to next DSP block
+    .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block
+);
+
+SB_MAC16 #(
+    .NEG_TRIGGER(1'b0),                 // 0=rising/1=falling clk edge
+    .C_REG(1'b0),                       // 1=register input C
+    .A_REG(1'b0),                       // 1=register input A
+    .B_REG(1'b0),                       // 1=register input B
+    .D_REG(1'b0),                       // 1=register input D
+    .TOP_8x8_MULT_REG(1'b0),            // 1=register top 8x8 output
+    .BOT_8x8_MULT_REG(1'b0),            // 1=register bot 8x8 output
+    .PIPELINE_16x16_MULT_REG1(1'b0),    // 1=register reg1 16x16 output
+    .PIPELINE_16x16_MULT_REG2(1'b0),    // 1=register reg2 16x16 output
+    .TOPOUTPUT_SELECT(2'b10),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPADDSUB_LOWERINPUT(2'b10),       // 00=input A, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPADDSUB_UPPERINPUT(1'b0),        // 0=add/sub accumulate, 1=input C
+    .TOPADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower add/sub ACCUMOUT, 11=lower add/sub CO
+    .BOTOUTPUT_SELECT(2'b10),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTADDSUB_LOWERINPUT(2'b10),       // 00=input A, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTADDSUB_UPPERINPUT(1'b0),        // 0=add/sub accumulate, 1=input D
+    .BOTADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower DSP ACCUMOUT, 11=lower DSP CO
+    .MODE_8x8(1'b0),                    // 0=16x16 mode, 1=8x8 mode (low power)
+    .A_SIGNED(1'b0),                    // 0=unsigned/1=signed input A
+    .B_SIGNED(1'b0)                     // 0=unsigned/1=signed input B
+) SB_MAC16_b (
+    .CLK(clk),                          // clock
+    .CE(1'b1),                          // clock enable
+    .A({colorA_b, colorB_b }),                        // 16-bit input A (dual 8-bit mode)
+    .B({alphaA, alphaB }),                        // 16-bit input B (dual 8-bit mode)
+    .C('0),                             // 16-bit input C
+    .D('0),                             // 16-bit input D
+    .AHOLD(1'b0),                       // 0=load, 1=hold input A
+    .BHOLD(1'b0),                       // 0=load, 1=hold input B
+    .CHOLD(1'b0),                       // 0=load, 1=hold input C
+    .DHOLD(1'b0),                       // 0=load, 1=hold input D
+    .IRSTTOP(1'b0),                     // 1=reset input A, C and 8x8 mult upper
+    .IRSTBOT(1'b0),                     // 1=reset input A, C and 8x8 mult lower
+    .ORSTTOP(1'b0),                     // 1=reset output accumulator upper
+    .ORSTBOT(1'b0),                     // 1=reset output accumulator lower
+    .OLOADTOP(1'b0),                    // 0=no load/1=load top accumulator from input C
+    .OLOADBOT(1'b0),                    // 0=no load/1=load bottom accumulator from input D
+    .ADDSUBTOP(1'b0),                   // 0=add/1=sub for top accumulator
+    .ADDSUBBOT(1'b0),                   // 0=add/1=sub for bottom accumulator
+    .OHOLDTOP(1'b0),                    // 0=load/1=hold into top accumulator
+    .OHOLDBOT(1'b0),                    // 0=load/1=hold into bottom accumulator
+    .CI(1'b0),                          // cascaded add/sub carry in from previous DSP block
+    .ACCUMCI(1'b0),                     // cascaded accumulator carry in from previous DSP block
+    .SIGNEXTIN(1'b0),                   // cascaded sign extension in from previous DSP block
+    .O({ outA_b, outB_b }),             // 32-bit result output (dual 8x8=16-bit mode with top used)
+    .CO(),                              // cascaded add/sub carry output to next DSP block
+    .ACCUMCO(),                         // cascaded accumulator carry output to next DSP block
+    .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block
+);
+/* verilator lint_on PINCONNECTEMPTY */
 
 endmodule
 

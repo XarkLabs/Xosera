@@ -122,6 +122,8 @@ const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
 
 #include "cop_diagonal.h"
 
+#include "cop_blend_test.h"
+
 #endif
 
 static_assert(NUM_ELEMENTS(cop_diagonal_bin) < 1024, "copper list too long");
@@ -1354,6 +1356,33 @@ void test_colormap()
     }
 
     delay_check(DELAY_TIME * 3);
+}
+
+void test_blend()
+{
+    xreg_setw(COPP_CTRL, 0x0000);
+
+    xreg_setw(PA_GFX_CTRL, 0x0080);        // bitmap + 8-bpp + Hx1 + Vx1
+    xreg_setw(PB_GFX_CTRL, 0x0080);        // bitmap + 8-bpp + Hx1 + Vx1
+    xreg_setw(VID_CTRL, 0x0000);           // border color #0
+
+    // modify HPOS wait SOL to be left edge horizontal position in 640x480 or 848x480 modes (including overscan)
+    cop_blend_test_bin[cop_blend_test__hpos_sol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 848 - 8 : 800 - 640 - 8);
+    // modify HPOS wait EOL to be right edge horizontal position in 640x480 or 848x480 modes (including overscan)
+    cop_blend_test_bin[cop_blend_test__hpos_eol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 1 : 800 - 1);
+    xmem_set_addr(XR_COPPER_ADDR);
+    for (uint16_t i = 0; i < cop_blend_test_size; i++)
+    {
+        uint16_t op = cop_blend_test_bin[i];
+        xmem_setw_next(op);
+    }
+    xreg_setw(COPP_CTRL, 0x8000);
+
+    delay_check(DELAY_TIME * 50);
+
+    xreg_setw(COPP_CTRL, 0x0000);
+    install_copper();
+    xreg_setw(COPP_CTRL, 0x8000);
 }
 
 void test_blit()
@@ -2749,7 +2778,7 @@ void     xosera_test()
     {
         mem_buffer[i] = xmem_getw_next();
     }
-    hexdump(mem_buffer, 1024 * 2);
+    hexdump(mem_buffer + 0x380, 256);
 
     dprintf("\n");
     dprintf("Description : \"%s\"\n", initinfo.description_str);
@@ -3017,6 +3046,8 @@ void     xosera_test()
 
         restore_colors();
         test_colormap();
+
+        test_blend();
 
         if (use_sd)
         {

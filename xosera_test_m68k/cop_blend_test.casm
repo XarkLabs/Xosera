@@ -1,0 +1,289 @@
+//
+// copper - blend dual playfield test
+//
+                .list    false
+                .include "../xosera_m68k_api/xosera_m68k_defs.inc"
+                .macname false
+                .listcond false
+                .list    true
+
+                export  hpos_sol,hpos_eol               ; export HPOS SOL/EOL offsets for 640/848 modes
+
+.macro          hdelay
+                HPOS    #0
+                HPOS    #0
+                HPOS    #0
+                HPOS    #0
+.endm
+
+blend_start
+hpos_sol_move   MOVE    #MOVE+vcolor_tbl,color_load     ; reset color table start
+
+line_loop       MOVE    #$0000,XR_COLOR_A_ADDR+0        ; colorA[0] = black
+                MOVE    #$0000,XR_COLOR_B_ADDR+0        ; colorB[0] = black
+color_load      MOVE    vcolor_tbl,XR_COLOR_B_ADDR+0    ; set colorB[0] from table (self-modified)
+
+                LDM     color_load                      ; load SETM opcode+source addr
+                ADDI    #1                              ; increment
+                CMPI    #MOVE+vcolor_end                ; test vs table end (with SETM opcode)
+                BRLT    not_end                         ; branch if not past end
+                LDI     #MOVE+vcolor_tbl                ; load reset SETM opcode+table start
+not_end         STM     color_load                      ; store modified SETM opcode+source
+
+hpos_sol        HPOS    #160
+
+                MOVE    #$0000,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$0F00,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$00F0,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$000F,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$040C,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$0CC0,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$0FFF,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$0F0F,XR_COLOR_A_ADDR+0
+                hdelay
+
+                MOVE    #$F000,XR_COLOR_A_ADDR+0
+
+                MOVE    #$4000,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$4F00,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$40F0,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$400F,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$440C,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$4CC0,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$4FFF,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$4F0F,XR_COLOR_A_ADDR+0
+                hdelay
+
+                MOVE    #$F000,XR_COLOR_A_ADDR+0
+
+                MOVE    #$8000,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$8F00,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$80F0,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$800F,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$840C,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$8CC0,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$8FFF,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$8F0F,XR_COLOR_A_ADDR+0
+                hdelay
+
+                MOVE    #$F000,XR_COLOR_A_ADDR+0
+
+                MOVE    #$C000,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$CF00,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$C0F0,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$C00F,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$C40C,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$CCC0,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$CFFF,XR_COLOR_A_ADDR+0
+                hdelay
+                MOVE    #$0000,XR_COLOR_A_ADDR+0
+
+hpos_eol        HPOS    #799                            ; wait for last pixel of line
+                BRGE    line_loop                       ; branch always (since last write was A)
+
+                VPOS    #$7FF                           ; wait for SOF (just in case)
+
+vcolor_tbl
+                word    $0000,$0100,$0200,$0300
+                word    $0400,$0500,$0600,$0700
+                word    $0800,$0900,$0A00,$0B00
+                word    $0C00,$0D00,$0E00,$0F00
+
+                word    $0000,$0010,$0020,$0030
+                word    $0040,$0050,$0060,$0070
+                word    $0080,$0090,$00A0,$00B0
+                word    $00C0,$00D0,$00E0,$00F0
+
+                word    $0000,$0001,$0002,$0003
+                word    $0004,$0005,$0006,$0007
+                word    $0008,$0009,$000A,$000B
+                word    $000C,$000D,$000E,$000F
+
+                word    $0000,$0111,$0222,$0333
+                word    $0444,$0555,$0666,$0777
+                word    $0888,$0999,$0AAA,$0BBB
+                word    $0CCC,$0DDD,$0EEE,$0FFF
+
+                word    $4000,$4100,$4200,$4300
+                word    $4400,$4500,$4600,$4700
+                word    $4800,$4900,$4A00,$4B00
+                word    $4C00,$4D00,$4E00,$4F00
+
+                word    $4000,$4010,$4020,$4030
+                word    $4040,$4050,$4060,$4070
+                word    $4080,$4090,$40A0,$40B0
+                word    $40C0,$40D0,$40E0,$40F0
+
+                word    $4000,$4001,$4002,$4003
+                word    $4004,$4005,$4006,$4007
+                word    $4008,$4009,$400A,$400B
+                word    $400C,$400D,$400E,$400F
+
+                word    $4000,$4111,$4222,$4333
+                word    $4444,$4555,$4666,$4777
+                word    $4888,$4999,$4AAA,$4BBB
+                word    $4CCC,$4DDD,$4EEE,$4FFF
+
+                word    $8000,$8100,$8200,$8300
+                word    $8400,$8500,$8600,$8700
+                word    $8800,$8900,$8A00,$8B00
+                word    $8C00,$8D00,$8E00,$8F00
+
+                word    $8000,$8010,$8020,$8030
+                word    $8040,$8050,$8060,$8070
+                word    $8080,$8090,$80A0,$80B0
+                word    $80C0,$80D0,$80E0,$80F0
+
+                word    $8000,$8001,$8002,$8003
+                word    $8004,$8005,$8006,$8007
+                word    $8008,$8009,$800A,$800B
+                word    $800C,$800D,$800E,$800F
+
+                word    $8000,$8111,$8222,$8333
+                word    $8444,$8555,$8666,$8777
+                word    $8888,$8999,$8AAA,$8BBB
+                word    $8CCC,$8DDD,$8EEE,$8FFF
+
+                word    $C000,$C100,$C200,$C300
+                word    $C400,$C500,$C600,$C700
+                word    $C800,$C900,$CA00,$CB00
+                word    $CC00,$CD00,$CE00,$CF00
+
+                word    $C000,$C010,$C020,$C030
+                word    $C040,$C050,$C060,$C070
+                word    $C080,$C090,$C0A0,$C0B0
+                word    $C0C0,$C0D0,$C0E0,$C0F0
+
+                word    $C000,$C001,$C002,$C003
+                word    $C004,$C005,$C006,$C007
+                word    $C008,$C009,$C00A,$C00B
+                word    $C00C,$C00D,$C00E,$C00F
+
+                word    $C000,$C111,$C222,$C333
+                word    $C444,$C555,$C666,$C777
+                word    $C888,$C999,$CAAA,$CBBB
+                word    $CCCC,$CDDD,$CEEE,$CFFF
+
+                word    $F000,$F100,$F200,$F300
+                word    $F400,$F500,$F600,$F700
+                word    $F800,$F900,$FA00,$FB00
+                word    $FC00,$FD00,$FE00,$FF00
+
+                word    $F000,$F010,$F020,$F030
+                word    $F040,$F050,$F060,$F070
+                word    $F080,$F090,$F0A0,$F0B0
+                word    $F0C0,$F0D0,$F0E0,$F0F0
+
+                word    $F000,$F001,$F002,$F003
+                word    $F004,$F005,$F006,$F007
+                word    $F008,$F009,$F00A,$F00B
+                word    $F00C,$F00D,$F00E,$F00F
+
+                word    $F000,$F111,$F222,$F333
+                word    $F444,$F555,$F666,$F777
+                word    $F888,$F999,$FAAA,$FBBB
+                word    $FCCC,$FDDD,$FEEE,$FFFF
+
+                word    $1000,$1101,$1202,$1303
+                word    $1404,$1505,$1606,$1707
+                word    $1808,$1909,$1A0A,$1B0B
+                word    $1C0C,$1D0D,$1E0E,$1F0F
+
+                word    $2000,$2101,$2202,$2303
+                word    $2404,$2505,$2606,$2707
+                word    $2808,$2909,$2A0A,$2B0B
+                word    $2C0C,$2D0D,$2E0E,$2F0F
+
+                word    $3000,$3101,$3202,$3303
+                word    $3404,$3505,$3606,$3707
+                word    $3808,$3909,$3A0A,$3B0B
+                word    $3C0C,$3D0D,$3E0E,$3F0F
+
+                word    $4000,$4101,$4202,$4303
+                word    $4404,$4505,$4606,$4707
+                word    $4808,$4909,$4A0A,$4B0B
+                word    $4C0C,$4D0D,$4E0E,$4F0F
+
+                word    $5000,$5101,$5202,$5303
+                word    $5404,$5505,$5606,$5707
+                word    $5808,$5909,$5A0A,$5B0B
+                word    $5C0C,$5D0D,$5E0E,$5F0F
+
+                word    $6000,$6101,$6202,$6303
+                word    $6404,$6505,$6606,$6707
+                word    $6808,$6909,$6A0A,$6B0B
+                word    $6C0C,$6D0D,$6E0E,$6F0F
+
+                word    $7000,$7101,$7202,$7303
+                word    $7404,$7505,$7606,$7707
+                word    $7808,$7909,$7A0A,$7B0B
+                word    $7C0C,$7D0D,$7E0E,$7F0F
+
+                word    $8000,$8101,$8202,$8303
+                word    $8404,$8505,$8606,$8707
+                word    $8808,$8909,$8A0A,$8B0B
+                word    $8C0C,$8D0D,$8E0E,$8F0F
+
+                word    $9000,$9101,$9202,$9303
+                word    $9404,$9505,$9606,$9707
+                word    $9808,$9909,$9A0A,$9B0B
+                word    $9C0C,$9D0D,$9E0E,$9F0F
+
+                word    $A000,$A101,$A202,$A303
+                word    $A404,$A505,$A606,$A707
+                word    $A808,$A909,$AA0A,$AB0B
+                word    $AC0C,$AD0D,$AE0E,$AF0F
+
+                word    $B000,$B101,$B202,$B303
+                word    $B404,$B505,$B606,$B707
+                word    $B808,$B909,$BA0A,$BB0B
+                word    $BC0C,$BD0D,$BE0E,$BF0F
+
+                word    $C000,$C101,$C202,$C303
+                word    $C404,$C505,$C606,$C707
+                word    $C808,$C909,$CA0A,$CB0B
+                word    $CC0C,$CD0D,$CE0E,$CF0F
+
+                word    $D000,$D101,$D202,$D303
+                word    $D404,$D505,$D606,$D707
+                word    $D808,$D909,$DA0A,$DB0B
+                word    $DC0C,$DD0D,$DE0E,$DF0F
+
+                word    $E000,$E101,$E202,$E303
+                word    $E404,$E505,$E606,$E707
+                word    $E808,$E909,$EA0A,$EB0B
+                word    $EC0C,$ED0D,$EE0E,$EF0F
+
+                word    $F000,$F101,$F202,$F303
+                word    $F404,$F505,$F606,$F707
+                word    $F808,$F909,$FA0A,$FB0B
+                word    $FC0C,$FD0D,$FE0E,$FF0F
+vcolor_end
+                .end

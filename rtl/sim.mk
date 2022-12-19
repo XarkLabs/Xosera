@@ -32,6 +32,9 @@ XOSERA_CLEAN := 0
 $(info === Xosera simulation [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
+# copper assembler
+COPASM=../copper/CopAsm/bin/copasm
+
 # Maximum number of CPU cores to use before waiting with FMAX_TEST
 MAX_CPUS := 8
 
@@ -138,6 +141,9 @@ VERILATOR_ARGS := --sv --language 1800-2012 --timing -I$(SRCDIR) -v $(TECH_LIB) 
 # Verillator C++ source driver
 CSRC := sim/xosera_sim.cpp
 
+# copper asm source
+COPSRC := sim/cop_blend_test.vsim.h
+
 # default build native simulation executable
 all: make_defs vsim isim
 
@@ -168,8 +174,12 @@ $(VLT_CONFIG):
 	@echo >>$(VLT_CONFIG) lint_off -rule UNUSED  -file \"$(TECH_LIB)\"
 	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN  -file \"$(TECH_LIB)\"
 
+# assembler copper file
+%.vsim.h : %.casm
+	$(COPASM) -l -o $@ $<
+
 # use Verilator to build native simulation executable
-sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) sim.mk
+sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) $(COPSRC) sim.mk
 	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(SRC) $(current_dir)/$(CSRC)
 	cd sim/obj_dir && make -f V$(VTOP).mk
 
@@ -180,7 +190,7 @@ sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) sim.mk
 
 # delete all targets that will be re-generated
 clean:
-	rm -rf sim/obj_dir $(VLT_CONFIG) sim/$(TBTOP)
+	rm -rf sim/obj_dir $(VLT_CONFIG) sim/$(TBTOP) sim/*.vsim.h sim/*.lst
 
 # prevent make from deleting any intermediate files
 .SECONDARY:

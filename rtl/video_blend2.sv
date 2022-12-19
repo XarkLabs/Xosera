@@ -36,41 +36,50 @@ logic           hsync_2;            // hsync delayed
 logic           vsync_2;            // vsync delayed
 logic           clamp;              // clamp result
 
-byte_t          colorA_r;
-byte_t          colorA_g;
-byte_t          colorA_b;
+byte_t          colorA_r;           // color A red
+byte_t          colorA_g;           // color A green
+byte_t          colorA_b;           // color A blue
 
-byte_t          colorB_r;
-byte_t          colorB_g;
-byte_t          colorB_b;
 
-byte_t          alphaA;
-byte_t          alphaB;
+byte_t          colorB_r;           // color B red
+byte_t          colorB_g;           // color B green
+byte_t          colorB_b;           // color B blue
 
-word_t          outA_r;
-word_t          outA_g;
-word_t          outA_b;
+byte_t          alphaA;             // alpha for A blend
+byte_t          alphaB;             // alpha for B blend
 
-word_t          outB_r;
-word_t          outB_g;
-word_t          outB_b;
+word_t          outA_r;             // colorA_r * alphaA result
+word_t          outA_g;             // colorA_g * alphaA result
+word_t          outA_b;             // colorA_g * alphaA result
 
-byte_t          result_r;
-byte_t          result_g;
-byte_t          result_b;
-assign          result_r    = outA_r[15:8] + outB_r[15:8];
-assign          result_g    = outA_g[15:8] + outB_g[15:8];
-assign          result_b    = outA_b[15:8] + outB_b[15:8];
+word_t          outB_r;             // colorB_r * alphaB result
+word_t          outB_g;             // colorB_g * alphaB result
+word_t          outB_b;             // colorB_g * alphaB result
 
-byte_t          resultc_r;
-byte_t          resultc_g;
-byte_t          resultc_b;
-assign          resultc_r    = (outA_r[15] & outB_r[15]) ? 8'hFF : outA_r[15:8] + outB_r[15:8];
-assign          resultc_g    = (outA_g[15] & outB_g[15]) ? 8'hFF : outA_g[15:8] + outB_g[15:8];
-assign          resultc_b    = (outA_b[15] & outB_b[15]) ? 8'hFF : outA_b[15:8] + outB_b[15:8];
+byte_t          result_r;           // result of A red + B red (with overlow)
+byte_t          result_g;           // result of A green + B green (with overlow)
+byte_t          result_b;           // result of A blue + B blue (with overlow)
 
-logic unused_signals    = &{1'b0, colorA_xrgb_i[13:12], outA_r[7:0], outA_g[7:0], outA_b[7:0], outB_r[7:0], outB_g[7:0], outB_b[7:0],
-                        result_r[3:0], result_g[3:0], result_b[3:0], resultc_r[3:0], resultc_g[3:0], resultc_b[3:0] };
+logic [6:0]     resultc_r;          // result of A red + B red (clamped if overlow set)
+logic [6:0]     resultc_g;          // result of A green + B green (clamped if overlow set)
+logic [6:0]     resultc_b;          // result of A blue + B blue (clamped if overlow set)
+
+logic unused_signals    = &{    1'b0, colorA_xrgb_i[13:12],
+                                outA_r[8:0], outA_g[8:0], outA_b[8:0],
+                                outB_r[8:0], outB_g[8:0], outB_b[8:0],
+                                resultc_r[2:0], resultc_g[2:0], resultc_b[2:0] };
+
+always_comb begin
+    // add A and B alpha blend result (wrap allowed)
+    result_r    = 8'(outA_r[15:9]) + 8'(outB_r[15:9]);
+    result_g    = 8'(outA_g[15:9]) + 8'(outB_g[15:9]);
+    result_b    = 8'(outA_b[15:9]) + 8'(outB_b[15:9]);
+
+    // add A and B alpha blend result (clamped)
+    resultc_r    = result_r[7] ? 7'h7F : result_r[6:0];
+    resultc_g    = result_g[7] ? 7'h7F : result_g[6:0];
+    resultc_b    = result_b[7] ? 7'h7F : result_b[6:0];
+end
 
 // color RAM lookup (delays video 1 cycle for BRAM)
 always_ff @(posedge clk) begin
@@ -121,9 +130,9 @@ always_ff @(posedge clk) begin
     // force black if display enable was off
     if (dv_de_2) begin
         if (clamp) begin
-            blend_rgb_o <=  { resultc_r[7:4],  resultc_g[7:4],  resultc_b[7:4] };
+            blend_rgb_o <=  { resultc_r[6:3],  resultc_g[6:3],  resultc_b[6:3] };
         end else begin
-            blend_rgb_o <=  { result_r[7:4],  result_g[7:4],  result_b[7:4] };
+            blend_rgb_o <=  { result_r[6:3],  result_g[6:3],  result_b[6:3] };
         end
     end else begin
         blend_rgb_o <= '0;

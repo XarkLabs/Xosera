@@ -78,3 +78,4 @@ utils/true_color_hack
 
 xosera_test_m68k/cop_diagonal.h
 xosera_test_m68k/cop_blend_test.h
+rtl/sim/cop_blend_test.vsim.h

@@ -572,6 +572,20 @@ static void C_dump(FILE * out, const uint8_t * mem, size_t num)
     fprintf(out, "\n");
 }
 
+static void vsim_dump(FILE * out, const uint8_t * mem, size_t num)
+{
+    for (size_t i = 0; i < num; i += 2)
+    {
+        fprintf(out, "    REG_W(XDATA, 0x%02x%02x),", mem[i], mem[i + 1]);
+
+        if ((i & 0xf) == 0)
+        {
+            fprintf(out, "        // @ 0x%04zx", i >> 1);
+        }
+        fprintf(out, "\n");
+    }
+}
+
 static void mem_dump(FILE * out, const uint8_t * mem, size_t num)
 {
     for (size_t i = 0; i < num; i += 2)
@@ -655,9 +669,10 @@ int32_t xlasm::process_output()
     enum class output_format
     {
         NONE,
-        BIN_FILE,
+        C_FILE,
+        VSIM_FILE,
         MEM_FILE,
-        C_FILE
+        BIN_FILE
     } out_fmt = output_format::NONE;
 
     std::string basename  = object_filename;
@@ -713,13 +728,20 @@ int32_t xlasm::process_output()
                 basename.c_str(),
                 total_size >> 1);
     }
+    else if (extension == ".vsim.h")
+    {
+        out_fmt = output_format::VSIM_FILE;
+        dprintf("Writing vsim C fragment \"%s\" (with " PR_D64 " 16-bit words).\n",
+                object_filename.c_str(),
+                total_size >> 1);
+    }
     else if (extension == ".memh" || extension == ".mem")
     {
         out_fmt = output_format::MEM_FILE;
         dprintf(
             "Writing Verilog file \"%s\" (with " PR_D64 " 16-bit words).\n", object_filename.c_str(), total_size >> 1);
     }
-    else
+    else        // otherwise, assume binary output
     {
         out_fmt = output_format::BIN_FILE;
         dprintf("Writing binary file \"%s\": " PR_D64 " 16-bit words.\n", object_filename.c_str(), total_size >> 1);
@@ -759,6 +781,15 @@ int32_t xlasm::process_output()
                     basename.c_str(),
                     total_size >> 1);
             fprintf(out, "{\n");
+        }
+        break;
+        case output_format::VSIM_FILE: {
+            out = fopen(object_filename.c_str(), "w");
+            if (!out)
+                fatal_error("opening output file \"%s\", error: %s", object_filename.c_str(), strerror(errno));
+            fprintf(out, "// Xosera copper binary \"%s\"\n", basename.c_str());
+            fprintf(out, "// vsim C fragment with " PR_D64 " 16-bit words\n", total_size >> 1);
+            fprintf(out, "    REG_W(WR_XADDR, 0x" PR_X64_04 "),\n", load_addr);
         }
         break;
         case output_format::MEM_FILE: {
@@ -840,15 +871,19 @@ int32_t xlasm::process_output()
                         C_dump(out, it->data.data(), it->data.size());
                     }
                     break;
+                    case output_format::VSIM_FILE: {
+                        vsim_dump(out, it->data.data(), it->data.size());
+                    }
+                    break;
+                    case output_format::MEM_FILE: {
+                        mem_dump(out, it->data.data(), it->data.size());
+                    }
+                    break;
                     case output_format::BIN_FILE: {
                         if (fwrite(it->data.data(), it->data.size(), 1, out) != 1)
                             fatal_error("writing binary output file \"%s\", error: %s",
                                         object_filename.c_str(),
                                         strerror(errno));
-                    }
-                    break;
-                    case output_format::MEM_FILE: {
-                        mem_dump(out, it->data.data(), it->data.size());
                     }
                     break;
                     default:
@@ -908,6 +943,8 @@ int32_t xlasm::process_output()
                     fprintf(out, "#endif // INC_%s_%c\n", baseupper.c_str(), header_file ? 'H' : 'C');
                 }
                 break;
+                case output_format::VSIM_FILE:        // nothing more to do here
+                    break;
                 case output_format::MEM_FILE:        // nothing more to do here
                     break;
                 case output_format::BIN_FILE:        // nothing more to do here

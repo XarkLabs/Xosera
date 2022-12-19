@@ -519,19 +519,13 @@ uint16_t     BusInterface::test_data[32768] = {
     XREG_SETW(PA_GFX_CTRL, 0x0080),        // blank screen
     XREG_SETW(PB_GFX_CTRL, 0x0080),        // blank screen
     XREG_SETW(VID_CTRL, 0x0000),           // border color #0
-    REG_W(WR_XADDR, XR_COPPER_ADDR),
-#if 0
-    REG_W(XDATA, 0x8000),        // SETI XR_COLOR_A_ADDR
-    REG_W(XDATA, 0x0000),        // =#black
-    REG_W(XDATA, 0x21E0),        // HPOS #480
-    REG_W(XDATA, 0x8000),        // SETI XR_COLOR_A_ADDR
-    REG_W(XDATA, 0x00F0),        // =#black
-    REG_W(XDATA, 0x231F),        // HPOS #799
-    REG_W(XDATA, 0x3000),        // BLT 0
-    REG_W(XDATA, 0x3800),        // BGE 0
+#if 1
 
+#include "cop_blend_test.vsim.h"
 
 #else
+    REG_W(WR_XADDR, XR_COPPER_ADDR),
+
     REG_W(XDATA, 0xc006),
     REG_W(XDATA, 0x20a0),
     REG_W(XDATA, 0xc007),

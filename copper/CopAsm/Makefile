@@ -14,7 +14,9 @@ all: $(BINDIR)/$(EXEC)
 
 test: $(BINDIR)/$(EXEC)
 	$(BINDIR)/$(EXEC) -l Tests/cop_diagonal.casm -o $(OBJDIR)/cop_diagonal.h
+	$(BINDIR)/$(EXEC) -l Tests/cop_diagonal.casm -o $(OBJDIR)/cop_diagonal.vsim.h
 	$(BINDIR)/$(EXEC) -l Tests/cop_diagonal.casm -o $(OBJDIR)/cop_diagonal.mem
+	$(BINDIR)/$(EXEC) -l Tests/cop_diagonal.casm -o $(OBJDIR)/cop_diagonal.bin
 	$(BINDIR)/$(EXEC) -l Tests/copy_table.casm -o $(OBJDIR)/copy_table.h
 	$(BINDIR)/$(EXEC) -l Tests/test_macro_label.asm -o $(OBJDIR)/test_macro_label.h
 	$(BINDIR)/$(EXEC) -l Tests/test_macro_label.asm -o $(OBJDIR)/test_macro_label.mem

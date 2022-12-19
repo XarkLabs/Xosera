@@ -1080,7 +1080,7 @@ int32_t xlasm::process_line()
 
             if (context_stack.size() > MAXMACRO_STACK)
             {
-                fatal_error("%s(%d): Exceeded MACRO nesting depth of %d levels",
+                fatal_error("%s:%d: Exceeded MACRO nesting depth of %d levels",
                             ctxt.file->name.c_str(),
                             ctxt.line + ctxt.file->line_start,
                             MAXMACRO_STACK);
@@ -1870,7 +1870,7 @@ int32_t xlasm::process_directive(uint32_t                         idx,
 
             if (context_stack.size() > MAXINCLUDE_STACK)
             {
-                fatal_error("%s(%d): Exceeded %s file nesting depth of %d files",
+                fatal_error("%s:%d: Exceeded %s file nesting depth of %d files",
                             ctxt.file->name.c_str(),
                             ctxt.line + ctxt.file->line_start,
                             directive.c_str(),
@@ -1881,7 +1881,7 @@ int32_t xlasm::process_directive(uint32_t                         idx,
             source_t &  f    = source_files[name];
             int         e    = f.read_file(this, name);
             if (e)
-                fatal_error("%s(%d): Error reading %s file \"%s\": %s",
+                fatal_error("%s:%d: Error reading %s file \"%s\": %s",
                             ctxt.file->name.c_str(),
                             ctxt.line + ctxt.file->line_start,
                             directive.c_str(),
@@ -2563,7 +2563,7 @@ int32_t xlasm::process_directive(uint32_t                         idx,
 
             if (ferror(fp))
             {
-                error("%s(%d): %s reading file \"%s\" error: %s",
+                error("%s:%d: %s reading file \"%s\" error: %s",
                       ctxt.file->name.c_str(),
                       ctxt.line + ctxt.file->line_start,
                       directive.c_str(),
@@ -2576,7 +2576,7 @@ int32_t xlasm::process_directive(uint32_t                         idx,
             ctxt.section->data.insert(ctxt.section->data.end(), sz, uint8_t{0});
             if (fread(&ctxt.section->data[off], sz, 1, fp) != 1)
             {
-                error("%s(%d): %s reading file \"%s\" error: %s",
+                error("%s:%d: %s reading file \"%s\" error: %s",
                       ctxt.file->name.c_str(),
                       ctxt.line + ctxt.file->line_start,
                       directive.c_str(),
@@ -3869,7 +3869,7 @@ void xlasm::diag_showline()
 {
     if (!last_diag_file)
         return;
-    printf("%s(%d): %s\n",
+    printf("%s:%d: %s\n",
            last_diag_file->name.c_str(),
            last_diag_line + last_diag_file->line_start,
            last_diag_file->orig_line[last_diag_line].c_str());
@@ -3897,7 +3897,7 @@ void xlasm::error(const char * msg, ...)
 
     diag_flush();
 
-    printf("%s(%d): ", ctxt.file->name.c_str(), ctxt.line + ctxt.file->line_start);
+    printf("%s:%d: ", ctxt.file->name.c_str(), ctxt.line + ctxt.file->line_start);
     printf("ERROR: ");
     if (ctxt.macroexp_ptr)
         printf("[in MACRO \"%s\"] ", ctxt.macroexp_ptr->name.c_str());
@@ -3936,7 +3936,7 @@ void xlasm::warning(const char * msg, ...)
     diag_flush();
 
     if (ctxt.file)
-        printf("%s(%d): ", ctxt.file->name.c_str(), ctxt.line + ctxt.file->line_start);
+        printf("%s:%d: ", ctxt.file->name.c_str(), ctxt.line + ctxt.file->line_start);
     printf("WARNING: ");
     if (ctxt.macroexp_ptr)
         printf("[in MACRO \"%s\"] ", ctxt.macroexp_ptr->name.c_str());
@@ -3978,7 +3978,7 @@ void xlasm::notice(int32_t level, const char * msg, ...)
     diag_flush();
 
     if (ctxt.file)
-        printf("%s(%d): ", ctxt.file->name.c_str(), ctxt.line + ctxt.file->line_start);
+        printf("%s:%d: ", ctxt.file->name.c_str(), ctxt.line + ctxt.file->line_start);
     printf("NOTE: ");
     if (ctxt.macroexp_ptr)
         printf("[in MACRO \"%s\"] ", ctxt.macroexp_ptr->name.c_str());

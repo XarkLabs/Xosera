@@ -14,12 +14,15 @@ all: $(BINDIR)/$(EXEC)
 
 test: $(BINDIR)/$(EXEC)
 	$(BINDIR)/$(EXEC) -l Tests/cop_diagonal.casm -o $(OBJDIR)/cop_diagonal.h
+	$(BINDIR)/$(EXEC) -l Tests/cop_diagonal.casm -o $(OBJDIR)/cop_diagonal.mem
 	$(BINDIR)/$(EXEC) -l Tests/copy_table.casm -o $(OBJDIR)/copy_table.h
 	$(BINDIR)/$(EXEC) -l Tests/test_macro_label.asm -o $(OBJDIR)/test_macro_label.h
+	$(BINDIR)/$(EXEC) -l Tests/test_macro_label.asm -o $(OBJDIR)/test_macro_label.mem
 
 dbug:$(BINDIR)/$(EXEC)
 	$(BINDIR)/$(EXEC) -v -v -v -k -l Tests/test_macro_label.asm -o $(OBJDIR)/test_macro_label_v.h
 	$(BINDIR)/$(EXEC) -l Tests/test_macro_label.asm -o $(OBJDIR)/test_macro_label.h
+	$(BINDIR)/$(EXEC) -l Tests/test_macro_label.asm -o $(OBJDIR)/test_macro_label.bin
 
 # Main target
 $(BINDIR)/$(EXEC): $(OBJECTS) $(MAKEFILE_LIST)

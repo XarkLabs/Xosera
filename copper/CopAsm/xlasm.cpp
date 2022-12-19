@@ -572,6 +572,20 @@ static void C_dump(FILE * out, const uint8_t * mem, size_t num)
     fprintf(out, "\n");
 }
 
+static void mem_dump(FILE * out, const uint8_t * mem, size_t num)
+{
+    for (size_t i = 0; i < num; i += 2)
+    {
+        fprintf(out, "%02x%02x", mem[i], mem[i + 1]);
+
+        if ((i & 0xf) == 0)
+        {
+            fprintf(out, "        // @ 0x%04zx", i >> 1);
+        }
+        fprintf(out, "\n");
+    }
+}
+
 int32_t xlasm::process_output()
 {
     std::vector<section_t *> secs;
@@ -642,6 +656,7 @@ int32_t xlasm::process_output()
     {
         NONE,
         BIN_FILE,
+        MEM_FILE,
         C_FILE
     } out_fmt = output_format::NONE;
 
@@ -698,6 +713,12 @@ int32_t xlasm::process_output()
                 basename.c_str(),
                 total_size >> 1);
     }
+    else if (extension == ".memh" || extension == ".mem")
+    {
+        out_fmt = output_format::MEM_FILE;
+        dprintf(
+            "Writing Verilog file \"%s\" (with " PR_D64 " 16-bit words).\n", object_filename.c_str(), total_size >> 1);
+    }
     else
     {
         out_fmt = output_format::BIN_FILE;
@@ -708,6 +729,7 @@ int32_t xlasm::process_output()
     std::string baseupper = basename;
     std::transform(baseupper.begin(), baseupper.end(), baseupper.begin(), uppercase);
 
+    // prepare output start
     switch (out_fmt)
     {
         case output_format::NONE:
@@ -737,15 +759,22 @@ int32_t xlasm::process_output()
                     basename.c_str(),
                     total_size >> 1);
             fprintf(out, "{\n");
-            break;
         }
+        break;
+        case output_format::MEM_FILE: {
+            out = fopen(object_filename.c_str(), "w");
+            if (!out)
+                fatal_error("opening output file \"%s\", error: %s", object_filename.c_str(), strerror(errno));
+            fprintf(out, "// Xosera copper binary \"%s\"\n", basename.c_str());
+            fprintf(out, "// " PR_D64 " 16-bit words\n", total_size >> 1);
+        }
+        break;
         case output_format::BIN_FILE: {
             out = fopen(object_filename.c_str(), "wb");
             if (!out)
                 fatal_error("opening output file \"%s\", error: %s", object_filename.c_str(), strerror(errno));
-
-            break;
         }
+        break;
         default:
             assert(false);
     }
@@ -800,6 +829,7 @@ int32_t xlasm::process_output()
                     it->data.size() >> 1,
                     it->flags & section_t::NOLOAD_FLAG ? " NOLOAD" : "");
 
+            // write output body
             if (out)
             {
                 switch (out_fmt)
@@ -808,18 +838,22 @@ int32_t xlasm::process_output()
                         break;
                     case output_format::C_FILE: {
                         C_dump(out, it->data.data(), it->data.size());
-                        break;
                     }
+                    break;
                     case output_format::BIN_FILE: {
                         if (fwrite(it->data.data(), it->data.size(), 1, out) != 1)
                             fatal_error("writing binary output file \"%s\", error: %s",
                                         object_filename.c_str(),
                                         strerror(errno));
-
-                        break;
                     }
+                    break;
+                    case output_format::MEM_FILE: {
+                        mem_dump(out, it->data.data(), it->data.size());
+                    }
+                    break;
                     default:
                         assert(false);
+                        break;
                 }
             }
 
@@ -829,6 +863,7 @@ int32_t xlasm::process_output()
             cur_load_addr = it->load_addr + static_cast<int64_t>(it->data.size());
         }
 
+        // close output file
         if (out)
         {
             switch (out_fmt)
@@ -871,27 +906,21 @@ int32_t xlasm::process_output()
                         fprintf(out, "};\n");
                     }
                     fprintf(out, "#endif // INC_%s_%c\n", baseupper.c_str(), header_file ? 'H' : 'C');
-                    break;
                 }
-                case output_format::BIN_FILE: {
-                    if (fwrite(it->data.data(), it->data.size(), 1, out) != 1)
-                        fatal_error(
-                            "writing binary output file \"%s\", error: %s", object_filename.c_str(), strerror(errno));
-
+                break;
+                case output_format::MEM_FILE:        // nothing more to do here
                     break;
-                }
+                case output_format::BIN_FILE:        // nothing more to do here
+                    break;
                 default:
                     assert(false);
             }
         }
-    }
-
-    if (out)
-    {
         fclose(out);
+        out = nullptr;
     }
 
-    dprintf("Total output size " PR_D64 " bytes, CRC=0x%08x, effective lines %d.\n",
+    dprintf("Total output size " PR_D64 " bytes, CRC-32: 0x%08x, effective lines %d.\n",
             total_size,
             crc_value,
             virtual_line_num);

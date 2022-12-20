@@ -221,8 +221,8 @@ int main(int argc, char ** argv)
                 {
                     char hex[8] = {0};
                     char lit[8] = {0};
-                    sprintf(hex, "\\x%02x", cn);
-                    sprintf(lit, "%c", cn);
+                    snprintf(hex, sizeof(hex), "\\x%02x", cn);
+                    snprintf(lit, sizeof(lit), "%c", cn);
                     fprintf(fp, "// 0x%02x '%s'\n", cn, isprint(cn) ? lit : hex);
                     for (int y = 0; y < font_height; y++)
                     {

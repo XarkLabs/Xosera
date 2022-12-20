@@ -11,12 +11,18 @@
 #       nextpnr-ice40
 #       Verilator               (optional)
 #       Icarus Verilog          (optional)
-#       Built using macOS BigSur 11.5.2 and GNU/Linux Ubuntu 20.04 distribution
+#       Built using macOS and GNU/Linux Ubuntu distribution
 
-# This is a hack to get make to exit if command fails (even if command after pipe succeeds, e.g., tee)
-SHELL := /bin/bash -o pipefail
+# Makefile "best practices" from https://tech.davis-hansson.com/p/make/ (but not forcing gmake)
+SHELL := bash
+.SHELLFLAGS := -eu -o pipefail -c
+.ONESHELL:
+.DELETE_ON_ERROR:
+MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --no-builtin-rules
 
 # Version bookkeeping
+BUILDDATE := $(shell date -u "+%Y%m%d")
 GITSHORTHASH := $(shell git rev-parse --short HEAD)
 DIRTYFILES := $(shell git status --porcelain --untracked-files=no | grep rtl/ | grep -v _stats.txt | cut -d " " -f 3-)
 ifeq ($(strip $(DIRTYFILES)),)
@@ -55,6 +61,29 @@ VIDEO_MODE ?= MODE_848x480
 #   PMOD_XESS_VGA_SINGLE         6-bit VGA, PMOD 1B     http://www.xess.com/shop/product/stickit-vga/ (half used)
 VIDEO_OUTPUT ?= PMOD_1B2_DVI12
 
+VERILOG_DEFS := -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT)
+
+ifeq ($(strip $(VIDEO_OUTPUT)), PMOD_1B2_DVI12)
+VMODENAME := dvi
+else
+VMODENAME := vga
+endif
+
+ifneq ($(strip $(PF_B)),)
+VERILOG_DEFS += -DEN_PF_B
+endif
+
+ifeq ($(strip $(AUDIO)),)
+AUDIO := 0
+endif
+
+ifeq ($(strip $(AUDIO)),0)
+OUTSUFFIX := $(VMODENAME)_$(subst MODE_,,$(VIDEO_MODE))
+else
+VERILOG_DEFS += -DEN_AUDIO=$(AUDIO)
+OUTSUFFIX := aud$(AUDIO)_$(VMODENAME)_$(subst MODE_,,$(VIDEO_MODE))
+endif
+
 FONTFILES := $(wildcard tilesets/*.mem)
 
 # RTL source and include directory
@@ -89,74 +118,84 @@ ICETIME := icetime
 ICEPROG := iceprog
 ICEMULTI := icemulti
 
+# Yosys generic arguments
+YOSYS_ARGS := -e "no driver" -w "tri-state" -w "list of registers"
+
 # Yosys synthesis arguments
-#FLOW3 :=
-#YOSYS_SYNTH_ARGS := -device u -dsp -abc2 -relut -retime -top $(TOP)
-#YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -relut -top $(TOP)
-YOSYS_SYNTH_ARGS := -device u -dsp -abc9 -top $(TOP)
-FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
+FLOW3 :=
+#YOSYS_SYNTH_ARGS := -device u -retime -top $(TOP)
+#YOSYS_SYNTH_ARGS := -device u -abc2 -relut -retime -top $(TOP)
+#YOSYS_SYNTH_ARGS := -device u -abc9 -relut -top $(TOP)
+#YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc2 -top $(TOP)
+YOSYS_SYNTH_ARGS := -device u -dsp -no-rw-check -dff -abc9 -top $(TOP)
+#FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT) -DICE40UP5K -DICEBREAKER -DSPI_INTERFACE
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) $(VERILOG_DEFS) -DICE40UP5K -DICEBREAKER -DSPI_INTERFACE
+
+TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
+VLT_CONFIG := icebreaker/ice40_config.vlt
 
 # Verilator tool (used for "lint")
 VERILATOR := verilator
-VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -Werror-UNUSED -Wall -Wno-DECLFILENAME
-TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
+VERILATOR_ARGS := --sv --language 1800-2012 -I$(SRCDIR) -v $(TECH_LIB) $(VLT_CONFIG) -Werror-UNUSED -Wall -Wno-DECLFILENAME
 
 # nextPNR tools
 NEXTPNR := nextpnr-ice40
 NEXTPNR_ARGS :=  --randomize-seed --promote-logic --opt-timing --placer heap
 
-ifeq ($(strip $(VIDEO_OUTPUT)), PMOD_1B2_DVI12)
-OUTSUFFIX := dvi_$(subst MODE_,,$(VIDEO_MODE))
-else
-OUTSUFFIX := vga_$(subst MODE_,,$(VIDEO_MODE))
-endif
-
 OUTNAME := $(TOP)_$(OUTSUFFIX)
 
 # defult target is make bitstream
-all: icebreaker/$(OUTNAME).bin icebreaker.mk
+all: icebreaker/$(OUTNAME).bin $(MAKEFILE_LIST)
 	@echo === Finished Building iCEBreaker Xosera: $(VIDEO_OUTPUT) $(SPI_INTERFACE) ===
+.PHONY: all
 
 # program iCEBreaker FPGA via USB (may need udev rules or sudo on Linux)
-prog: icebreaker/$(OUTNAME).bin icebreaker.mk
+prog: icebreaker/$(OUTNAME).bin $(MAKEFILE_LIST)
 	@echo === Programming iCEBreaker Xosera: $(VIDEO_OUTPUT) $(SPI_INTERFACE) ===
 	$(ICEPROG) -d i:0x0403:0x6010 $(TOP).bin
+.PHONY: prog
 
 # run icetime to generate a timing report
-timing: icebreaker/$(OUTNAME).rpt icebreaker.mk
+timing: icebreaker/$(OUTNAME).rpt $(MAKEFILE_LIST)
 	@echo iCETime timing report: $(TOP).rpt
+.PHONY: timing
 
 # run Yosys to generate a "dot" graphical representation of each design file
-show: $(DOT) icebreaker.mk
+show: $(DOT) $(MAKEFILE_LIST)
+.PHONY: show
 
 # run Yosys with "noflatten", which will produce a resource count per module
-count: $(SRC) $(INC) $(FONTFILES) icebreaker.mk
+count: $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	@mkdir -p $(LOGS)
-	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
+	@-cp $(LOGS)/$(OUTNAME)_yosys_count.log $(LOGS)/$(OUTNAME)_yosys_count_last.log
+	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
+.PHONY: count
 
 # run Verilator to check for Verilog issues
-lint: $(SRC) $(INC) $(FONTFILES) icebreaker.mk
-	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC)
+lint: $(VLT_CONFIG) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC)
+.PHONY: lint
 
-$(DOT): %.dot: %.sv icebreaker.mk
-	mkdir -p icebreaker/dot
-	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix icebreaker/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
+$(DOT): %.dot: %.sv $(MAKEFILE_LIST)
+	mkdir -p icebreaker/dot  $(@D)
+	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
-%.json: $(SRC) $(INC) $(FONTFILES) icebreaker.mk
+%.json: $(VLT_CONFIG) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	@echo === Building iCEBreaker Xosera ===
 	@rm -f $@
-	@mkdir -p $(LOGS)
-	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(TECH_LIB) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
-	$(YOSYS) -l $(LOGS)/$(OUTNAME)_yosys.log -w ".*" -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
+	@mkdir -p $(LOGS) $(@D)
+	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
+	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
+	@-grep "XOSERA" $(LOGS)/$(OUTNAME)_yosys.log
+	@-grep "\(Number of cells\|Number of wires\)" $(LOGS)/$(OUTNAME)_yosys.log
 
 # make ASCII bitstream from JSON description and device parameters
-icebreaker/%_$(OUTSUFFIX).asc: icebreaker/%_$(OUTSUFFIX).json $(PIN_DEF) icebreaker.mk
+icebreaker/%_$(OUTSUFFIX).asc: icebreaker/%_$(OUTSUFFIX).json $(PIN_DEF) $(MAKEFILE_LIST)
 	@rm -f $@
-	@mkdir -p $(LOGS)
+	@mkdir -p $(LOGS) $(@D)
 	@-cp $(OUTNAME)_stats.txt $(LOGS)/$(OUTNAME)_stats_last.txt
 ifdef FMAX_TEST	# run nextPNR FMAX_TEST times to determine "Max frequency" range
 	@echo === Synthesizing $(FMAX_TEST) bitstreams for best fMAX
@@ -208,6 +247,7 @@ else
 endif
 endif
 	@echo === iCEBreaker Xosera: $(VIDEO_OUTPUT) $(VIDEO_MODE) $(SPI_INTERFACE) | tee $(OUTNAME)_stats.txt
+	@-grep "XOSERA" $(LOGS)/$(OUTNAME)_yosys.log | tee -a $(OUTNAME)_stats.txt
 	@-tabbyadm version | grep "Package" | tee -a $(OUTNAME)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(OUTNAME)_stats.txt
 	@$(NEXTPNR) -V 2>&1 | tee -a $(OUTNAME)_stats.txt
@@ -219,22 +259,29 @@ endif
 	@-cat $(LOGS)/$(OUTNAME)_stats_delta.txt
 
 # make binary bitstream from ASCII bitstream
-icebreaker/%_$(OUTSUFFIX).bin: icebreaker/%_$(OUTSUFFIX).asc icebreaker.mk
+icebreaker/%_$(OUTSUFFIX).bin: icebreaker/%_$(OUTSUFFIX).asc $(MAKEFILE_LIST)
 	@rm -f $@
 	$(ICEPACK) $< $@
 	$(ICEMULTI) -v -v -p0 icebreaker/*.bin -o $(TOP).bin
 
 # make timing report from ASCII bitstream
-icebreaker/%_$(OUTSUFFIX).rpt: icebreaker/%_$(OUTSUFFIX).asc icebreaker.mk
+icebreaker/%_$(OUTSUFFIX).rpt: icebreaker/%_$(OUTSUFFIX).asc $(MAKEFILE_LIST)
 	@rm -f $@
 	$(ICETIME) -d $(DEVICE) -m -t -r $@ $<
 
+# disable warnings in cells_sim.v library for Verilator lint
+$(VLT_CONFIG):
+	@echo === Verilator cells_sim.v warning exceptions ===
+	@echo >$(VLT_CONFIG)
+	@echo >>$(VLT_CONFIG) \`verilator_config
+	@echo >>$(VLT_CONFIG) lint_off -rule UNUSED    -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN  -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule WIDTH     -file \"$(TECH_LIB)\"
+
 # delete all targets that will be re-generated
 clean:
-	rm -f xosera_iceb.bin $(wildcard icebreaker/*.json) $(wildcard icebreaker/*.asc) $(wildcard icebreaker/*.rpt) $(wildcard icebreaker/*.bin)
+	rm -f $(VLT_CONFIG) xosera_iceb.bin $(wildcard icebreaker/*.json) $(wildcard icebreaker/*.asc) $(wildcard icebreaker/*.rpt) $(wildcard icebreaker/*.bin)
+.PHONY: clean
 
 # prevent make from deleting any intermediate files
 .SECONDARY:
-
-# inform make about "phony" convenience targets
-.PHONY: all prog timing count lint show clean

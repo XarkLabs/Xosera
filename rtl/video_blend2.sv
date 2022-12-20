@@ -28,13 +28,12 @@ module video_blend2 (
     input wire  logic           clk
 );
 
-logic           dv_de_1;            // display enable delayed
-logic           hsync_1;            // hsync delayed
-logic           vsync_1;            // vsync delayed
-logic           dv_de_2;            // display enable delayed
-logic           hsync_2;            // hsync delayed
-logic           vsync_2;            // vsync delayed
-logic           clamp;              // clamp result
+logic           dv_de_1;            // display enable delay 1
+logic           hsync_1;            // hsync delay 1
+logic           vsync_1;            // vsync delay 1
+logic           dv_de_2;            // display enable delay 2
+logic           hsync_2;            // hsync delay 2
+logic           vsync_2;            // vsync delay 2
 
 byte_t          colorA_r;           // color A red
 byte_t          colorA_g;           // color A green
@@ -55,9 +54,9 @@ word_t          outB_r;             // colorB_r * alphaB result
 word_t          outB_g;             // colorB_g * alphaB result
 word_t          outB_b;             // colorB_g * alphaB result
 
-byte_t          result_r;           // result of A red + B red (with overlow)
-byte_t          result_g;           // result of A green + B green (with overlow)
-byte_t          result_b;           // result of A blue + B blue (with overlow)
+byte_t          result_r;           // result of A red + B red (with overlow bit)
+byte_t          result_g;           // result of A green + B green (with overlow bit)
+byte_t          result_b;           // result of A blue + B blue (with overlow bit)
 
 logic unused_signals    = &{    1'b0, colorA_xrgb_i[13:12],
                                 outA_r[8:0], outA_g[8:0], outA_b[8:0],
@@ -65,7 +64,7 @@ logic unused_signals    = &{    1'b0, colorA_xrgb_i[13:12],
                                 result_r[2:0], result_g[2:0], result_b[2:0] };
 
 always_comb begin
-    // add A and B alpha blend result (wrap allowed)
+    // add A and B alpha blend result (with bit for overflow)
     result_r    = 8'(outA_r[15:9]) + 8'(outB_r[15:9]);
     result_g    = 8'(outA_g[15:9]) + 8'(outB_g[15:9]);
     result_b    = 8'(outA_b[15:9]) + 8'(outB_b[15:9]);
@@ -82,27 +81,40 @@ always_ff @(posedge clk) begin
     colorB_g    <= { colorB_xrgb_i[ 7:4], colorB_xrgb_i[ 7:4] };
     colorB_b    <= { colorB_xrgb_i[ 3:0], colorB_xrgb_i[ 3:0] };
 
-    case (colorA_xrgb_i[15:14])
-        2'b00: begin
-            alphaA  <= { ~colorB_xrgb_i[15:12], ~colorB_xrgb_i[15:12] };
-            alphaB  <= { colorB_xrgb_i[15:12], colorB_xrgb_i[15:12] };
-        end
-        2'b01: begin
-            alphaA  <= 8'hFF;
-            alphaB  <= { colorB_xrgb_i[15:12], colorB_xrgb_i[15:12] };
-        end
-        2'b10: begin
-            alphaA  <= 8'hFF;
-            alphaB  <= { colorB_xrgb_i[15:12], colorB_xrgb_i[15:12] };
-        end
-        2'b11: begin
-            alphaA  <= 8'hFF;;
-            alphaB  <= 8'h00;
-        end
-    endcase
+    if (colorA_xrgb_i[15]) begin
+        alphaA  <= 8'hFF;
+    end else begin
+        alphaA  <= { ~colorB_xrgb_i[15:12], ~colorB_xrgb_i[15:12] };
+    end
 
-    // remember if clamping or not for next cycle
-    clamp       <= colorA_xrgb_i[15];
+    if (colorA_xrgb_i[14]) begin
+        alphaB  <= 8'h00;
+    end else begin
+        alphaB  <= { colorB_xrgb_i[15:12], colorB_xrgb_i[15:12] };
+    end
+
+    //     case (colorA_xrgb_i[15:14])
+    //     2'b00: begin
+    //         alphaA  <= { ~colorB_xrgb_i[15:12], ~colorB_xrgb_i[15:12] };
+    //         alphaB  <= { colorB_xrgb_i[15:12], colorB_xrgb_i[15:12] };
+    //     end
+    //     2'b01: begin
+    //         alphaA  <= 8'hFF;
+    //         alphaB  <= { colorB_xrgb_i[15:12], colorB_xrgb_i[15:12] };
+    //     end
+    //     2'b10: begin
+    //         alphaA  <= 8'hFF;
+    //         alphaB  <= { colorB_xrgb_i[15:12], colorB_xrgb_i[15:12] };
+    //     end
+    //     2'b11: begin
+    //         alphaA  <= 8'hFF;;
+    //         alphaB  <= 8'h00;
+    //     end
+    // endcase
+
+    // // remember if clamping or not for next cycle
+    // clamp       <= colorA_xrgb_i[15];
+
 
     // delay signals for color lookup
     vsync_1     <= vsync_i;
@@ -121,13 +133,9 @@ always_ff @(posedge clk) begin
 
     // force black if display enable was off
     if (dv_de_2) begin
-        if (clamp) begin
-            blend_rgb_o <=  {   result_r[7] ? 4'hF : result_r[6:3],
-                                result_g[7] ? 4'hF : result_g[6:3],
-                                result_b[7] ? 4'hF : result_b[6:3] };
-        end else begin
-            blend_rgb_o <=  { result_r[6:3],  result_g[6:3],  result_b[6:3] };
-        end
+        blend_rgb_o <=  {   result_r[7] ? 4'hF : result_r[6:3],
+                            result_g[7] ? 4'hF : result_g[6:3],
+                            result_b[7] ? 4'hF : result_b[6:3] };
     end else begin
         blend_rgb_o <= '0;
     end

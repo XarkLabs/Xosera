@@ -523,12 +523,6 @@ localparam PLL_DIVQ    =    3'b011;         // DIVQ =  3
 localparam PCLK_HZ     =    25_175_000;     // standard VGA
 `endif
 
-typedef logic [$clog2(TOTAL_WIDTH)-1:0]     hres_t;         // horizontal coordinate types
-typedef logic [$clog2(TOTAL_HEIGHT)-1:0]    vres_t;         // vertical coordinate types
-
-typedef logic [$clog2(VISIBLE_WIDTH)-1:0]   hres_vis_t;     // horizontal visible coordinate types
-typedef logic [$clog2(VISIBLE_HEIGHT)-1:0]  vres_vis_t;     // vertical visible coordinate types
-
 /* verilator lint_on UNUSED */
 
 endpackage

@@ -91,17 +91,17 @@ hpos_sol        HPOS    #160-8
 
                 MOVE    #$C000,XR_COLOR_A_ADDR+0
                 hdelay
-                MOVE    #$CF00,XR_COLOR_A_ADDR+0
+                MOVE    #$DF00,XR_COLOR_A_ADDR+0
                 hdelay
-                MOVE    #$C0F0,XR_COLOR_A_ADDR+0
+                MOVE    #$E0F0,XR_COLOR_A_ADDR+0
                 hdelay
-                MOVE    #$C00F,XR_COLOR_A_ADDR+0
+                MOVE    #$F00F,XR_COLOR_A_ADDR+0
                 hdelay
                 MOVE    #$C40C,XR_COLOR_A_ADDR+0
                 hdelay
-                MOVE    #$CFF0,XR_COLOR_A_ADDR+0
+                MOVE    #$DFF0,XR_COLOR_A_ADDR+0
                 hdelay
-                MOVE    #$CFFF,XR_COLOR_A_ADDR+0
+                MOVE    #$FFFF,XR_COLOR_A_ADDR+0
                 hdelay
                 MOVE    #$0000,XR_COLOR_A_ADDR+0
 

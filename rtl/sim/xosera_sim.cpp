@@ -34,8 +34,8 @@
 
 #define LOGDIR "sim/logs/"
 
-#define MAX_TRACE_FRAMES 8        // video frames to dump to VCD file (and then screen-shot and exit)
-#define MAX_UPLOADS      8        // maximum number of "payload" uploads
+#define MAX_TRACE_FRAMES 30        // video frames to dump to VCD file (and then screen-shot and exit)
+#define MAX_UPLOADS      8         // maximum number of "payload" uploads
 
 // Current simulation time (64-bit unsigned)
 vluint64_t main_time         = 0;
@@ -586,6 +586,52 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0100),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0200),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0300),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0400),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0500),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0600),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0700),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0800),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0900),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0A00),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0B00),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0C00),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0D00),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0E00),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0F00),        // border color #0
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(VID_CTRL, 0x0000),        // border color #0
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 #endif

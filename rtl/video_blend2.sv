@@ -40,7 +40,6 @@ byte_t          colorA_r;           // color A red
 byte_t          colorA_g;           // color A green
 byte_t          colorA_b;           // color A blue
 
-
 byte_t          colorB_r;           // color B red
 byte_t          colorB_g;           // color B green
 byte_t          colorB_b;           // color B blue
@@ -74,12 +73,6 @@ end
 
 // color RAM lookup (delays video 1 cycle for BRAM)
 always_ff @(posedge clk) begin
-
-    // delay signals for color lookup
-    vsync_1     <= vsync_i;
-    hsync_1     <= hsync_i;
-    dv_de_1     <= dv_de_i;
-
     // setup pipeline for next pixel
     colorA_r    <= { colorA_xrgb_i[11:8], colorA_xrgb_i[11:8] };
     colorA_g    <= { colorA_xrgb_i[ 7:4], colorA_xrgb_i[ 7:4] };
@@ -110,6 +103,11 @@ always_ff @(posedge clk) begin
 
     // remember if clamping or not for next cycle
     clamp       <= colorA_xrgb_i[15];
+
+    // delay signals for color lookup
+    vsync_1     <= vsync_i;
+    hsync_1     <= hsync_i;
+    dv_de_1     <= dv_de_i;
 
     // delay signals for multiply
     dv_de_2     <= dv_de_1;

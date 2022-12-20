@@ -74,11 +74,11 @@ hpos_sol        HPOS    #160-8
                 hdelay
                 MOVE    #$8F00,XR_COLOR_A_ADDR+0
                 hdelay
-                MOVE    #$80F0,XR_COLOR_A_ADDR+0
+                MOVE    #$400F,XR_COLOR_A_ADDR+0
                 hdelay
                 MOVE    #$800F,XR_COLOR_A_ADDR+0
                 hdelay
-                MOVE    #$840C,XR_COLOR_A_ADDR+0
+                MOVE    #$4FF0,XR_COLOR_A_ADDR+0
                 hdelay
                 MOVE    #$8FF0,XR_COLOR_A_ADDR+0
                 hdelay

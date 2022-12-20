@@ -60,25 +60,16 @@ byte_t          result_r;           // result of A red + B red (with overlow)
 byte_t          result_g;           // result of A green + B green (with overlow)
 byte_t          result_b;           // result of A blue + B blue (with overlow)
 
-logic [6:0]     resultc_r;          // result of A red + B red (clamped if overlow set)
-logic [6:0]     resultc_g;          // result of A green + B green (clamped if overlow set)
-logic [6:0]     resultc_b;          // result of A blue + B blue (clamped if overlow set)
-
 logic unused_signals    = &{    1'b0, colorA_xrgb_i[13:12],
                                 outA_r[8:0], outA_g[8:0], outA_b[8:0],
                                 outB_r[8:0], outB_g[8:0], outB_b[8:0],
-                                resultc_r[2:0], resultc_g[2:0], resultc_b[2:0] };
+                                result_r[2:0], result_g[2:0], result_b[2:0] };
 
 always_comb begin
     // add A and B alpha blend result (wrap allowed)
     result_r    = 8'(outA_r[15:9]) + 8'(outB_r[15:9]);
     result_g    = 8'(outA_g[15:9]) + 8'(outB_g[15:9]);
     result_b    = 8'(outA_b[15:9]) + 8'(outB_b[15:9]);
-
-    // add A and B alpha blend result (clamped)
-    resultc_r    = result_r[7] ? 7'h7F : result_r[6:0];
-    resultc_g    = result_g[7] ? 7'h7F : result_g[6:0];
-    resultc_b    = result_b[7] ? 7'h7F : result_b[6:0];
 end
 
 // color RAM lookup (delays video 1 cycle for BRAM)
@@ -117,7 +108,10 @@ always_ff @(posedge clk) begin
         end
     endcase
 
-    clamp   <= colorA_xrgb_i[15];       // remember if clamping or not for next cycle
+    // remember if clamping or not for next cycle
+    clamp       <= colorA_xrgb_i[15];
+
+    // delay signals for multiply
     dv_de_2     <= dv_de_1;
     vsync_2     <= vsync_1;
     hsync_2     <= hsync_1;
@@ -130,7 +124,9 @@ always_ff @(posedge clk) begin
     // force black if display enable was off
     if (dv_de_2) begin
         if (clamp) begin
-            blend_rgb_o <=  { resultc_r[6:3],  resultc_g[6:3],  resultc_b[6:3] };
+            blend_rgb_o <=  {   result_r[7] ? 4'hF : result_r[6:3],
+                                result_g[7] ? 4'hF : result_g[6:3],
+                                result_b[7] ? 4'hF : result_b[6:3] };
         end else begin
             blend_rgb_o <=  { result_r[6:3],  result_g[6:3],  result_b[6:3] };
         end

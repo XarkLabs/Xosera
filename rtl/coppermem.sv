@@ -44,21 +44,22 @@ module coppermem
 
 word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 
-initial begin
-    // Fill with numbers
-    bram[0] = 16'h2FFF; // VPOS #1023 (wait forever)
+integer x;
 
-    for (integer i = 1; i < (2**AWIDTH)-128; i = i + 1) begin
-        bram[i] = 16'h0000;
+initial begin
+    for (integer i = 0; i < (2**AWIDTH)-128; i = i + 1) begin
+        bram[i] = 16'h2FFF; // VPOS #1023 (wait forever)
     end
 
     // Xosera init info stored in last 256 bytes of default copper memory (see xosera_pkg.sv)
-    for (integer i = 0; i < $bits(xv::info_str)/16; i = i + 1) begin
-        bram[ ((2**AWIDTH)-128) + i]    = { xv::info_str[(i*16)+:8], xv::info_str[(i*16)+8+:8] };
-    end
-
-    for (integer i = $bits(xv::info_str)/16; i < (2**AWIDTH)-4; i = i + 1) begin
-        bram[ ((2**AWIDTH)-128) + i]    = 16'h0000;
+    x = 0;
+    for (integer i = (2**AWIDTH)-128; i < (2**AWIDTH)-4; i = i + 1) begin
+        if ((x*8)+8 < $bits(xv::info_str)) begin
+            bram[i]    = { xv::info_str[(x*8)+:8], xv::info_str[(x*8)+8+:8] };
+        end else begin
+            bram[i]    = 16'h0000;
+        end
+        x = x + 2;
     end
 
     bram[(2**AWIDTH)-4]  = 16'(xv::version);

@@ -29,11 +29,11 @@ module coppermem
            input  wire logic                clk
     );
 
-// Xosera init info stored in last 64 bytes of default copper memory
+// Xosera init info stored in last 256 bytes of default copper memory
 //
 // typedef struct _xosera_info
 // {
-//     char          description_str[48];        // ASCII description // TODO: too small
+//     char          description_str[240];        // ASCII description
 //     uint16_t      reserved_48[4];             // 8 reserved bytes (and force alignment)
 //     unsigned char ver_bcd_major;              // major BCD version
 //     unsigned char ver_bcd_minor;              // minor BCD version
@@ -47,12 +47,18 @@ word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 initial begin
     // Fill with numbers
     bram[0] = 16'h2FFF; // VPOS #1023 (wait forever)
-    for (integer i = 1; i < (2**AWIDTH); i = i + 1) begin
+
+    for (integer i = 1; i < (2**AWIDTH)-128; i = i + 1) begin
         bram[i] = 16'h0000;
     end
-    // Xosera init info stored in last 64 bytes of default copper memory (see xosera_pkg.sv)
+
+    // Xosera init info stored in last 256 bytes of default copper memory (see xosera_pkg.sv)
     for (integer i = 0; i < $bits(xv::info_str)/16; i = i + 1) begin
         bram[ ((2**AWIDTH)-128) + i]    = { xv::info_str[(i*16)+:8], xv::info_str[(i*16)+8+:8] };
+    end
+
+    for (integer i = $bits(xv::info_str)/16; i < (2**AWIDTH)-4; i = i + 1) begin
+        bram[ ((2**AWIDTH)-128) + i]    = 16'h0000;
     end
 
     bram[(2**AWIDTH)-4]  = 16'(xv::version);

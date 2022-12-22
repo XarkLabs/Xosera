@@ -228,7 +228,7 @@ typedef enum {
 //
 // typedef struct _xosera_info
 // {
-//     char          description_str[48];        // ASCII description // TODO: too small
+//     char          description_str[240];       // ASCII description
 //     uint16_t      reserved_48[4];             // 8 reserved bytes (and force alignment)
 //     unsigned char ver_bcd_major;              // major BCD version
 //     unsigned char ver_bcd_minor;              // minor BCD version

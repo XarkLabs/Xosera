@@ -43,8 +43,8 @@ module slim_copper(
 // | iiii iiii iiii iiii |    <im16 value>      |     |     |   (2 word op)                    |
 // | --01 rccc cccc cccc | SETM  xadr16,cadr11  |  B  |  4* | dest [xadr16] <= source [cadr11] |
 // | rroo oooo oooo oooo |    <xadr16 address>  |     |     |   (2 word op)                    |
-// | --10 0iii iiii iiii | HPOS   #im11         |     |  5+ | wait until video HPOS >= im11    |
-// | --10 1iii iiii iiii | VPOS   #im11         |     |  5+ | wait until video VPOS >= im11    |
+// | --10 0iii iiii iiii | HPOS   #im11         |     |  4+ | wait until video HPOS >= im11    |
+// | --10 1iii iiii iiii | VPOS   #im11         |     |  4+ | wait until video VPOS >= im11    |
 // | --11 0ccc cccc cccc | BRGE   cadr10        |     |  4  | if (B==0) PC <= cadr10           |
 // | --11 1ccc cccc cccc | BRLT   cadr10        |     |  4  | if (B==1) PC <= cadr10           |
 // |---------------------|----------------------|-----|-----|----------------------------------|

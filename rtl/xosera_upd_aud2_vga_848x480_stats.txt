@@ -1,11 +1,11 @@
 === UPduino Xosera: PMOD_DIGILENT_VGA MODE_848x480
-   XOSERA xosera_info:            "Xosera v0.35 20221220 >#0F6D3FCC iCE40UP5K 128KB"
+   XOSERA xosera_info:            "Xosera v0.35 20221223 =#0BC7E123 iCE40UP5K 128KB"
    XOSERA configuration:          MODE_848x480@60 PF_B BLND COPP BLIT AUD2
-Package: oss-cad-suite-darwin-arm64-20221215
-Yosys 0.24+7 (git sha1 5d893c4b0, aarch64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
-nextpnr-ice40 -- Next Generation Place and Route (Version nextpnr-0.4-63-g16ffd02a)
+Package: oss-cad-suite-darwin-arm64-20221221
+Yosys 0.24+10 (git sha1 3ebc50dee, aarch64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
+nextpnr-ice40 -- Next Generation Place and Route (Version nextpnr-0.4-67-g3ea3a931)
 Info: Device utilisation:
-Info: 	         ICESTORM_LC:  4533/ 5280    85%
+Info: 	         ICESTORM_LC:  4534/ 5280    85%
 Info: 	        ICESTORM_RAM:    26/   30    86%
 Info: 	               SB_IO:    36/   96    37%
 Info: 	               SB_GB:     8/    8   100%
@@ -14,4 +14,4 @@ Info: 	         SB_WARMBOOT:     1/    1   100%
 Info: 	        ICESTORM_DSP:     5/    8    62%
 Info: 	      ICESTORM_SPRAM:     4/    4   100%
 
-Info: Max frequency for clock 'pclk': 38.47 MHz (PASS at 33.77 MHz)
+Info: Max frequency for clock 'pclk': 34.48 MHz (PASS at 33.77 MHz)

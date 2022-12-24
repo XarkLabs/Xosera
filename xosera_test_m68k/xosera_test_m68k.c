@@ -1378,7 +1378,7 @@ void test_blend()
     }
     xreg_setw(COPP_CTRL, 0x8000);
 
-    delay_check(DELAY_TIME * 50);
+    delay_check(DELAY_TIME * 5);
 
     xreg_setw(COPP_CTRL, 0x0000);
     install_copper();

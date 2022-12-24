@@ -19,9 +19,9 @@
 
 #include "Vxosera_main_colormem.h"
 #include "Vxosera_main_vram.h"
-// #include "Vxosera_main_vram_arb.h"
+#include "Vxosera_main_vram_arb.h"
 #include "Vxosera_main_xosera_main.h"
-// #include "Vxosera_main_xrmem_arb.h"
+#include "Vxosera_main_xrmem_arb.h"
 
 #define USE_FST 1
 #if USE_FST
@@ -462,84 +462,18 @@ int          BusInterface::test_data_len    = 32767;
 uint16_t     BusInterface::test_data[32768] = {
     // test data
 
+
     REG_WAITHSYNC(),
-    XREG_SETW(PA_GFX_CTRL, 0x0000),        // blank screen
-
-    REG_W(INT_CTRL, 0x7FFF),
-    REG_W(TIMER, 10 - 1),        // timer interupt interval -1
-
+    XREG_SETW(PA_GFX_CTRL, 0x0000),        // unblank screen
     REG_RW(FEATURES),
-
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-
-    REG_RW(INT_CTRL),
-    REG_W(INT_CTRL, 0x7FFF),
-    REG_RW(INT_CTRL),
+    REG_W(SYS_CTRL, 0x000F),        // write mask
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
-
-#if 0
-    // true color hack test
-
-    XREG_SETW(PA_GFX_CTRL, 0x0065),         // PA bitmap, 8-bpp, Hx2, Vx2
-    XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
-    XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address (start of 8-bpp line data)
-    XREG_SETW(PA_LINE_LEN,
-              (320 / 2) +
-                  (320 / 4)),        // display line word length (combined 8-bit and 4-bit for interleaved lines)
-
-    XREG_SETW(PB_GFX_CTRL, 0x0055),                     // PB bitmap, 4-bpp, Hx2, Vx2
-    XREG_SETW(PB_TILE_CTRL, 0x000F),                    // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
-    XREG_SETW(PB_DISP_ADDR, 0x0000 + (320 / 2)),        // display start address (start of 4-bpp line data)
-    XREG_SETW(PB_LINE_LEN,
-              (320 / 2) +
-                  (320 / 4)),        // display line word length (combined 8-bit and 4-bit for interleaved lines)
-
-    REG_W(WR_XADDR, XR_COLOR_ADDR),        // upload color palette
-    REG_UPLOAD_AUX(),
-
-    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
-    REG_W(WR_ADDR, 0x0000),
-    REG_UPLOAD(),        // RG 8-bpp + 4-bpp B
-
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-
-#endif
-
-
-#if 1
-    // slim copper test
-    XREG_SETW(PA_GFX_CTRL, 0x0080),        // blank screen
-    XREG_SETW(PB_GFX_CTRL, 0x0080),        // blank screen
-    XREG_SETW(VID_CTRL, 0x0000),           // border color #0
-
-#include "cop_blend_test.vsim.h"
-
-
-    XREG_SETW(COPP_CTRL, 0x8000),        // enable copper
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-#endif
-
-#if 0
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-
-    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
-    REG_W(WR_ADDR, 0xF000),
-    REG_UPLOAD(),
-
-    REG_W(INT_CTRL, 0x0F0F),
-    REG_W(TIMER, 0xFFFF),
 
 #if 0
     REG_W(RW_INCR, 0x1),
@@ -561,76 +495,89 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_RW(XDATA),
 #endif
 
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
 
-
-    REG_WAITVTOP(),
-    REG_WAITVSYNC(),
-
+#if 0
     XREG_SETW(PA_GFX_CTRL, 0x005F),         // bitmap, 4-bpp, Hx4, Vx4
     XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
     XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address
     XREG_SETW(PA_LINE_LEN, 320 / 4),        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
 
-    // D = A & B ^ C;
-    // flags:
-    //   notB   - changes B in 2nd term to NOT B
-    //   CuseB  - changes C in 3rd term to B value (without notB applied)
+    REG_W(WR_XADDR, XR_COLOR_ADDR),        // upload color palette
+    REG_UPLOAD_AUX(),
+
+    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),        // RG 8-bpp + 4-bpp B
+
+    // upload moto logo to 0xF000
+    REG_W(WR_INCR, 0x0001),
+    REG_W(WR_ADDR, 0xF000),
+    REG_UPLOAD(),
+
     // fill screen with dither with 0 = transparency
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0003),                  // constA, constB, 4-bit trans=0
-    XREG_SETW(BLIT_MOD_A, 0x0000),                 // no A line XOR
-    XREG_SETW(BLIT_MOD_B, 0x8080 ^ 0x0808),        // no B line XOR
-    XREG_SETW(BLIT_MOD_C, 0x0000),                 // C line XOR (toggle dither pattern)
-    XREG_SETW(BLIT_MOD_D, 0x0000),                 // no B modulo (contiguous output)
-    XREG_SETW(BLIT_SRC_A, 0xFFFF),                 // nop A const
-    XREG_SETW(BLIT_SRC_B, 0x8080),                 // color B const (B also used for transparency test)
-    XREG_SETW(BLIT_VAL_C, 0x0000),                 // nop C const
-    XREG_SETW(BLIT_DST_D, 0x0000),                 // VRAM display start address line 0
-    XREG_SETW(BLIT_SHIFT, 0xFF00),                 // no edge masking or shifting
-    XREG_SETW(BLIT_LINES, H_4BPP - 1),             // screen height -1
-    XREG_SETW(BLIT_WORDS, W_4BPP - 1),             // screen width in words -1
+    XREG_SETW(BLIT_CTRL, 0x0001),             // constS, no transp
+    XREG_SETW(BLIT_ANDC, 0x0000),             // no ANDC
+    XREG_SETW(BLIT_XOR, 0x0000),              // no XOR
+    XREG_SETW(BLIT_MOD_S, 0x0000),            // no S modulo
+    XREG_SETW(BLIT_SRC_S, 0x8888),            // fill const
+    XREG_SETW(BLIT_MOD_D, 0x0000),            // no B modulo (contiguous output)
+    XREG_SETW(BLIT_DST_D, 0x0000),            // VRAM display start address line 0
+    XREG_SETW(BLIT_SHIFT, 0xFF00),            // no edge masking or shifting
+    XREG_SETW(BLIT_LINES, H_4BPP - 1),        // screen height -1
+    XREG_SETW(BLIT_WORDS, W_4BPP - 1),        // screen width in words -1
 
     REG_WAIT_BLIT_DONE(),
     REG_WAITVSYNC(),
+    REG_WAITVTOP(),
 
     // fill screen with dither with 0 = opaque
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0xEE03),                  // constA, constB, 4-bit trans=E
-    XREG_SETW(BLIT_MOD_A, 0x0000),                 // no A line XOR
-    XREG_SETW(BLIT_MOD_B, 0x0000),                 // no B line XOR
-    XREG_SETW(BLIT_MOD_C, 0x8080 ^ 0x0808),        // C line XOR (toggle dither pattern)
-    XREG_SETW(BLIT_MOD_D, 0x0000),                 // no B line modulo (contiguous output)
-    XREG_SETW(BLIT_SRC_A, 0xFFFF),                 // nop A const
-    XREG_SETW(BLIT_SRC_B, 0x0000),                 // color B const (B also used for transparency test)
-    XREG_SETW(BLIT_VAL_C, 0x8080),                 // C const initial dither
-    XREG_SETW(BLIT_DST_D, 0x0000),                 // VRAM display start address line 0
-    XREG_SETW(BLIT_SHIFT, 0xFF00),                 // no edge masking or shifting
-    XREG_SETW(BLIT_LINES, H_4BPP - 1),             // screen height -1
-    XREG_SETW(BLIT_WORDS, W_4BPP - 1),             // screen width in words -1
+    XREG_SETW(BLIT_CTRL, 0x0011),                   // constS, enable 4-bit transp=0x00
+    XREG_SETW(BLIT_ANDC, 0x0000),                   // no ANDC
+    XREG_SETW(BLIT_XOR, 0x0000),                    // no XOR
+    XREG_SETW(BLIT_MOD_S, 0x0000),                  // no S modulo
+    XREG_SETW(BLIT_SRC_S, 0x1010),                  // fill const
+    XREG_SETW(BLIT_MOD_D, W_4BPP),                  // modulo line width (to skip every other line)
+    XREG_SETW(BLIT_DST_D, 0x0000),                  // VRAM display start address line 0
+    XREG_SETW(BLIT_SHIFT, 0xFF00),                  // no edge masking or shifting
+    XREG_SETW(BLIT_LINES, (H_4BPP / 2) - 1),        // (screen height/2) -1
+    XREG_SETW(BLIT_WORDS, W_4BPP - 1),              // screen width in words -1
+
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_CTRL, 0x0011),                   // constS, enable 4-bit transp=0x00
+    XREG_SETW(BLIT_ANDC, 0x0000),                   // no ANDC
+    XREG_SETW(BLIT_XOR, 0x0000),                    // no XOR
+    XREG_SETW(BLIT_MOD_S, 0x0000),                  // C line XOR (toggle dither pattern)
+    XREG_SETW(BLIT_SRC_S, 0x0101),                  // fill const
+    XREG_SETW(BLIT_MOD_D, W_4BPP),                  // modulo line width (to skip every other line)
+    XREG_SETW(BLIT_DST_D, W_4BPP),                  // VRAM display start address line 1
+    XREG_SETW(BLIT_SHIFT, 0xFF00),                  // no edge masking or shifting
+    XREG_SETW(BLIT_LINES, (H_4BPP / 2) - 1),        // (screen height/2) -1
+    XREG_SETW(BLIT_WORDS, W_4BPP - 1),              // screen width in words -1
+
     REG_WAIT_BLIT_DONE(),
-
-    // REG_WAITVTOP(),
     REG_WAITVSYNC(),
-
-    //    REG_END(),
+    REG_WAITVTOP(),
 
     // 2D moto blit 0, 0
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0001),                             // const A, read B, 4-bit trans=0
-    XREG_SETW(BLIT_SHIFT, 0xFF00),                            // no masking or shifting
-    XREG_SETW(BLIT_MOD_A, 0x0000),                            // no A line modulo (contiguous source)
-    XREG_SETW(BLIT_MOD_B, 0x0000),                            // no B line XOR
-    XREG_SETW(BLIT_MOD_C, 0x0000),                            // no C line XOR
+    XREG_SETW(BLIT_CTRL, 0x0001),                             // enable 4-bit transp=0x00
+    XREG_SETW(BLIT_ANDC, 0x0000),                             // no ANDC
+    XREG_SETW(BLIT_XOR, 0x0000),                              // no XOR
+    XREG_SETW(BLIT_MOD_S, 0x0000),                            // no S modulo (contiguous source)
+    XREG_SETW(BLIT_SRC_S, 0xF0F0),                            // S = start of moto logo
     XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO),                   // D modulo = dest width - source width
-    XREG_SETW(BLIT_SRC_A, 0xFFFF),                            // nop A const
-    XREG_SETW(BLIT_SRC_B, 0xF000),                            // moto graphic src B
-    XREG_SETW(BLIT_VAL_C, 0x0000),                            // nop C const
     XREG_SETW(BLIT_DST_D, 0x0000 + (20 * W_4BPP) + 1),        // D = start dest address
+    XREG_SETW(BLIT_SHIFT, 0xFF00),                            // no masking or shifting
     XREG_SETW(BLIT_LINES, H_LOGO - 1),                        // moto graphic height
     XREG_SETW(BLIT_WORDS, W_LOGO - 1),                        // moto graphic width
 
+    REG_WAIT_BLIT_DONE(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+
+#if 0
     // 2D moto blit 1, 0
     REG_WAIT_BLIT_READY(),
     XREG_SETW(BLIT_CTRL, 0x0001),                             // const A, read B, 4-bit trans=0
@@ -861,9 +808,62 @@ uint16_t     BusInterface::test_data[32768] = {
     XREG_SETW(BLIT_LINES, H_LOGO - 1),                                                 // moto graphic height
     XREG_SETW(BLIT_WORDS, W_LOGO - 1 + 1),                                             // moto graphic width
 
+
+#endif
     REG_WAIT_BLIT_DONE(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+#endif
+
+#if 0
+    // true color hack test
+
+    XREG_SETW(PA_GFX_CTRL, 0x0065),         // PA bitmap, 8-bpp, Hx2, Vx2
+    XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address (start of 8-bpp line data)
+    XREG_SETW(PA_LINE_LEN,
+              (320 / 2) +
+                  (320 / 4)),        // display line word length (combined 8-bit and 4-bit for interleaved lines)
+
+    XREG_SETW(PB_GFX_CTRL, 0x0055),                     // PB bitmap, 4-bpp, Hx2, Vx2
+    XREG_SETW(PB_TILE_CTRL, 0x000F),                    // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    XREG_SETW(PB_DISP_ADDR, 0x0000 + (320 / 2)),        // display start address (start of 4-bpp line data)
+    XREG_SETW(PB_LINE_LEN,
+              (320 / 2) +
+                  (320 / 4)),        // display line word length (combined 8-bit and 4-bit for interleaved lines)
+
+    REG_W(WR_XADDR, XR_COLOR_ADDR),        // upload color palette
+    REG_UPLOAD_AUX(),
+
+    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),        // RG 8-bpp + 4-bpp B
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
+#endif
+
+#if 1
+    // slim copper test
+    XREG_SETW(PA_GFX_CTRL, 0x0080),        // blank screen
+    XREG_SETW(PB_GFX_CTRL, 0x0080),        // blank screen
+    XREG_SETW(VID_CTRL, 0x0000),           // border color #0
+
+#include "cop_blend_test.vsim.h"
+
+
+    XREG_SETW(COPP_CTRL, 0x8000),        // enable copper
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+#endif
+
+
+#if 0
 
     // 16-color 320x200 color tut
     REG_WAITVTOP(),
@@ -1312,7 +1312,6 @@ int main(int argc, char ** argv)
 
         if (frame_num > 1)
         {
-#if 0
             if (top->xosera_main->vram_arb->regs_ack_o)
             {
                 if (top->xosera_main->vram_arb->regs_wr_i)
@@ -1328,7 +1327,7 @@ int main(int argc, char ** argv)
                                    top->xosera_main->vram_arb->vram_data_o);
                 }
             }
-
+#if 0
             if (top->xosera_main->xrmem_arb->xr_ack_o)
             {
                 if (top->xosera_main->xrmem_arb->xr_wr_i)

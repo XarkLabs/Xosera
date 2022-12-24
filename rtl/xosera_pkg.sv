@@ -66,6 +66,7 @@ localparam FPGA_CONFIG_NUM = 0;
 `endif
 
 `ifdef EN_AUDIO
+`define EN_AUDIO_SLIM
 localparam AUDIO_NCHAN  = `EN_AUDIO;    // set parameter for # audio channels
 `else
 localparam AUDIO_NCHAN  = 0;

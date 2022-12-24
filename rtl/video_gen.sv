@@ -184,7 +184,16 @@ video_timing video_timing
 
 `ifdef EN_AUDIO
 // audio
-logic                               audio_enable;           // all channel enable
+`ifdef EN_AUDIO_SLIM
+logic                                   audio_enable;           // all channel enable
+logic                                   audio_reg_wr;           // audio reg write enable
+logic                                   audio_req;              // audio DMA request signal
+logic                                   audio_ack;              // audio DMA ack signal
+logic                                   audio_dma_tilemem;      // audio DMA memory type (0=VRAM, 1=TILE)
+addr_t                                  audio_dma_addr;         // audio DMA address
+word_t                                  audio_dma_word;         // audio DMA data out
+`else
+logic                                   audio_enable;           // all channel enable
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
 logic [15*xv::AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
@@ -193,11 +202,12 @@ logic [xv::VRAM_W*xv::AUDIO_NCHAN-1:0]  audio_start_nchan;      // channel sampl
 logic [15*xv::AUDIO_NCHAN-1:0]          audio_len_nchan;        // channel sample length in words
 logic [xv::AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel sample memory (0=VRAM, 1=TILE)
 logic [xv::AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample ready
-logic           audio_req;                    // audio DMA request signal
-logic           audio_ack;                      // audio DMA ack signal
-logic           audio_tilemem;                  // audio DMA memory type (0=VRAM, 1=TILE)
-addr_t          audio_addr;                     // audio DMA address
-word_t          audio_word;                     // audio DMA data out
+logic                                   audio_req;              // audio DMA request signal
+logic                                   audio_ack;              // audio DMA ack signal
+logic                                   audio_dma_tilemem;      // audio DMA memory type (0=VRAM, 1=TILE)
+addr_t                                  audio_dma_addr;         // audio DMA address
+word_t                                  audio_dma_word;         // audio DMA data out
+`endif
 `endif
 
 `ifdef EN_PF_B
@@ -253,9 +263,9 @@ video_playfield video_pf_a(
 `ifdef EN_AUDIO
     .dma_req_i(audio_req),
     .dma_ack_o(audio_ack),
-    .dma_tile_i(audio_tilemem),
-    .dma_addr_i(audio_addr),
-    .dma_word_o(audio_word),
+    .dma_tile_i(audio_dma_tilemem),
+    .dma_addr_i(audio_dma_addr),
+    .dma_word_o(audio_dma_word),
 `else
     .dma_req_i(1'b0),
     .dma_ack_o(),
@@ -642,8 +652,17 @@ end
 // audio generation
 `ifdef EN_AUDIO
 // audio channel mixer
+`ifdef EN_AUDIO_SLIM
+audio_mixer audio_mixer_slim(
+`else
 audio_mixer audio_mixer(
+`endif
     .audio_enable_i(audio_enable),
+`ifdef EN_AUDIO_SLIM
+    .audio_reg_wr_i(audio_reg_wr),
+    .audio_reg_addr_i(vgen_reg_num_i[3:0]),
+    .audio_reg_data_i(vgen_reg_data_i),
+`else
     .audio_vol_l_nchan_i(audio_vol_l_nchan),
     .audio_vol_r_nchan_i(audio_vol_r_nchan),
     .audio_period_nchan_i(audio_period_nchan),
@@ -652,11 +671,12 @@ audio_mixer audio_mixer(
     .audio_len_nchan_i(audio_len_nchan),
     .audio_restart_nchan_i(audio_restart_nchan),
     .audio_reload_nchan_o(audio_reload_nchan),
+`endif
     .audio_req_o(audio_req),
     .audio_ack_i(audio_ack),
-    .audio_tile_o(audio_tilemem),
-    .audio_addr_o(audio_addr),
-    .audio_word_i(audio_word),
+    .audio_tile_o(audio_dma_tilemem),
+    .audio_addr_o(audio_dma_addr),
+    .audio_word_i(audio_dma_word),
 
     .pdm_l_o(audio_pdm_l_o),
     .pdm_r_o(audio_pdm_r_o),
@@ -668,6 +688,9 @@ audio_mixer audio_mixer(
 // audio channel register writes
 always_ff @(posedge clk) begin
     if (reset_i) begin
+`ifdef EN_AUDIO_SLIM
+        audio_reg_wr            <= 1'b0;
+`else
         audio_vol_l_nchan       <= '0;
         audio_vol_r_nchan       <= '0;
         audio_period_nchan      <= '0;
@@ -676,7 +699,17 @@ always_ff @(posedge clk) begin
         audio_len_nchan         <= '0;
         audio_restart_nchan     <= '0;
         audio_intr_o            <= '0;
+`endif
     end else begin
+`ifdef EN_AUDIO_SLIM
+        audio_reg_wr        <= 1'b0;
+
+        if (vgen_reg_wr_en_i) begin
+            if (vgen_reg_num_i[5]) begin
+                audio_reg_wr        <= 1'b1;
+            end
+        end
+`else
         for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
             audio_restart_nchan[i]    <= 1'b0;
             if (audio_reload_nchan[i]) begin
@@ -696,6 +729,7 @@ always_ff @(posedge clk) begin
                 endcase
             end
         end
+`endif
     end
 end
 `endif

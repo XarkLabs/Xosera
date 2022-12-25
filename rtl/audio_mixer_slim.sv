@@ -66,16 +66,9 @@ logic [DAC_W-1:0]                   output_l;           // mixed left channel to
 logic [DAC_W-1:0]                   output_r;           // mixed right channel to output to DAC (unsigned)
 
 logic [xv::AUDIO_NCHAN-1:0]             chan_output;        // channel sample output strobe
-logic [xv::AUDIO_NCHAN-1:0]             chan_2nd;           // 2nd sample from sample word
-logic [xv::AUDIO_NCHAN-1:0]             chan_buff_ok;       // DMA buffer has data
-logic [xv::AUDIO_NCHAN-1:0]             chan_tile;          // current sample memtile flag
-logic [8*xv::AUDIO_NCHAN-1:0]           chan_val;           // current channel value sent to DAC
-logic [xv::VRAM_W*xv::AUDIO_NCHAN-1:0]  chan_addr;          // current sample address
+logic [xv::AUDIO_NCHAN-1:0]             chan_odd_out;       // true if odd (or low byte) output from sample word
 logic [16*xv::AUDIO_NCHAN-1:0]          chan_buff;          // channel DMA word buffer
-logic [16*xv::AUDIO_NCHAN-1:0]          chan_length;        // audio sample byte length counter (15=underflow flag)
-logic [16*xv::AUDIO_NCHAN-1:0]          chan_period;        // audio frequency period counter (15=underflow flag)
-
-word_t                              chan_length_n[xv::AUDIO_NCHAN];     // audio sample byte length -1 for next cycle (15=underflow flag)
+logic [8*xv::AUDIO_NCHAN-1:0]           chan_val;           // current channel value sent to DAC
 
 // debug aid signals
 `ifndef SYNTHESIS
@@ -91,42 +84,20 @@ logic                               chan_restart[xv::AUDIO_NCHAN];
 `endif
 
 // setup alias signals
-always_comb begin : alias_block
-    for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
-        chan_length_n[i]    = chan_length[16*i+:16] - 1'b1;         // length next cycle
-        chan_output[i]      = chan_period[16*i+15];
-
-        // debug aliases for easy viewing
-`ifndef SYNTHESIS
-        chan_vol_l[i]       = { 1'b0, audio_vol_l_nchan_i[7*i+:7]};
-        chan_vol_r[i]       = { 1'b0, audio_vol_r_nchan_i[7*i+:7]};
-        chan_raw[i]         = chan_val[i*8+:8];
-        chan_raw_u[i]       = chan_val[i*8+:8] ^ 8'h80;
-        chan_ptr[i]         = chan_addr[xv::VRAM_W*i+:xv::VRAM_W] - 1'b1;
-        chan_word[i]        = chan_buff[16*i+:16] - 1'b1;
-        chan_restart[i]     = audio_reload_nchan_o[i];
-`endif
-    end
-end
-
-// audio left DAC outout
-audio_dac #(
-    .WIDTH(DAC_W)
-) audio_l_dac (
-    .value_i(output_l),
-    .pulse_o(pdm_l_o),
-    .reset_i(reset_i),
-    .clk(clk)
-);
-// audio right DAC outout
-audio_dac #(
-    .WIDTH(DAC_W)
-) audio_r_dac (
-    .value_i(output_r),
-    .pulse_o(pdm_r_o),
-    .reset_i(reset_i),
-    .clk(clk)
-);
+// always_comb begin : alias_block
+//     for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
+//         // debug aliases for easy viewing
+// `ifndef SYNTHESIS
+//         chan_vol_l[i]       = { 1'b0, audio_vol_l_nchan_i[7*i+:7]};
+//         chan_vol_r[i]       = { 1'b0, audio_vol_r_nchan_i[7*i+:7]};
+//         chan_raw[i]         = chan_val[i*8+:8];
+//         chan_raw_u[i]       = chan_val[i*8+:8] ^ 8'h80;
+//         chan_ptr[i]         = chan_addr[xv::VRAM_W*i+:xv::VRAM_W] - 1'b1;
+//         chan_word[i]        = chan_buff[16*i+:16] - 1'b1;
+//         chan_restart[i]     = audio_reload_nchan_o[i];
+// `endif
+//     end
+// end
 
 always_ff @(posedge clk) begin : chan_process
     if (reset_i) begin
@@ -143,7 +114,7 @@ always_ff @(posedge clk) begin : chan_process
         chan_period         <= '0;
         chan_length         <= '0;          // remaining length for sample data (bytes)
         chan_buff_ok        <= '0;
-        chan_2nd            <= '0;
+        chan_odd_out            <= '0;
         chan_tile           <= '0;          // current mem type
 
     end else begin
@@ -157,11 +128,11 @@ always_ff @(posedge clk) begin : chan_process
 
             // if period underflowed, output next sample
             if (chan_output[i]) begin
-                chan_2nd[i]             <= !chan_2nd[i];
+                chan_odd_out[i]             <= !chan_odd_out[i];
                 chan_period[16*i+:16]   <= { 1'b0, audio_period_nchan_i[i*15+:15] };
-                chan_val[i*8+:8]        <= chan_2nd[i] ? chan_buff[16*i+:8] : chan_buff[16*i+8+:8];
+                chan_val[i*8+:8]        <= chan_odd_out[i] ? chan_buff[16*i+:8] : chan_buff[16*i+8+:8];
                 // if 2nd sample of sample word, prepare sample address
-                if (chan_2nd[i]) begin
+                if (chan_odd_out[i]) begin
 `ifndef SYNTHESIS
                     chan_buff[16*i+:16] <= chan_buff[16*i+:16] ^ 16'h8080;  // obvious "glitch" to verify not used again
 `endif
@@ -185,13 +156,13 @@ always_ff @(posedge clk) begin : chan_process
                 chan_length[16*i+15]    <= 1'b1;    // force sample addr, tile, len reload
                 chan_period[16*i+15]    <= 1'b1;    // force sample period expire
                 chan_buff_ok[i]         <= 1'b0;    // clear sample buffer status
-                chan_2nd[i]             <= 1'b1;    // set 2nd sample to switch next sendout
+                chan_odd_out[i]             <= 1'b1;    // set 2nd sample to switch next sendout
             end
 
             if (!audio_enable_i) begin
                 chan_length[16*i+15]    <= 1'b1;    // force sample addr, tile, len reload
                 chan_period[16*i+15]    <= 1'b1;    // force sample period expire
-                chan_2nd[i]             <= 1'b0;    // set 1nd sample for next sendout
+                chan_odd_out[i]             <= 1'b0;    // set 1nd sample for next sendout
             end
         end
 
@@ -286,6 +257,38 @@ assign mix_l_acc        = acc_l[15:6];
 assign mix_r_acc        = acc_r[15:6];
 
 logic                   unused_bits = &{ 1'b0, acc_l[5:0], acc_r[5:0] };
+
+// audio parameter memory
+audio_mem #(
+    .AWIDTH(xv::AUDIO_W)
+) audio_mem(
+    .clk(clk),
+    .rd_address_i(colorA_addr),
+    .rd_data_o(colorA_data_out),
+    .wr_clk(clk),
+    .wr_en_i(color_wr_en & ~xr_addr[xv::COLOR_W]),
+    .wr_address_i(xr_addr[xv::COLOR_W-1:0]),
+    .wr_data_i(xr_write_data)
+);
+
+// audio left DAC outout
+audio_dac #(
+    .WIDTH(DAC_W)
+) audio_l_dac (
+    .value_i(output_l),
+    .pulse_o(pdm_l_o),
+    .reset_i(reset_i),
+    .clk(clk)
+);
+// audio right DAC outout
+audio_dac #(
+    .WIDTH(DAC_W)
+) audio_r_dac (
+    .value_i(output_r),
+    .pulse_o(pdm_r_o),
+    .reset_i(reset_i),
+    .clk(clk)
+);
 
 `ifndef USE_FMAC        // generic inferred multiply and fabric accumulate
 sword_t             res_l;

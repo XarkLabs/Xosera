@@ -78,6 +78,7 @@ localparam TILE_W   = 13;               // 4K words tile mem (but 8K address bit
 localparam TILE2_W  = 10;               // 1K words extra tile/sprite mem
 localparam COPP_W   = 10;               // 1024 32-bit (even/odd) words copper program mem
 localparam COLOR_W  = 8;                // 256 words color table mem (per playfield)
+localparam AUDIO_W  = 8;                // 256 words audio parameter mem
 
 // Xosera directly addressable registers (16 x 16-bit words [high/low byte])
 typedef enum logic [3:0] {

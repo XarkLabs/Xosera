@@ -1,8 +1,8 @@
-// colormem.sv
+// audio_mem.sv
 //
 // vim: set et ts=4 sw=4
 //
-// Copyright (c) 2020 Xark - https://hackaday.io/Xark
+// Copyright (c) 2022 Xark - https://hackaday.io/Xark
 //
 // See top-level LICENSE file for license information. (Hint: MIT)
 //
@@ -12,9 +12,8 @@
 
 `include "xosera_pkg.sv"
 
-module colormem#(
-    parameter   AWIDTH      = 8,
-    parameter   PLAYFIELD   = "A"
+module audio_mem#(
+    parameter   AWIDTH      = 8
 )(
     input  wire logic  [AWIDTH-1:0]  rd_address_i,
     output      word_t               rd_data_o,
@@ -25,16 +24,8 @@ module colormem#(
     input  wire logic                clk
 );
 
-// infer 16x256 color BRAM
+// infer 16x256 audio BRAM
 word_t bram[0:2**AWIDTH-1] /* verilator public*/;
-
-initial begin
-    if (PLAYFIELD == "A") begin
-        $readmemh("default_colorsA.mem", bram, 0);
-    end else begin
-        $readmemh("default_colorsB.mem", bram, 0);
-    end
-end
 
 // infer BRAM block
 always_ff @(posedge wr_clk) begin

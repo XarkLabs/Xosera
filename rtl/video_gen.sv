@@ -653,7 +653,7 @@ end
 `ifdef EN_AUDIO
 // audio channel mixer
 `ifdef EN_AUDIO_SLIM
-audio_mixer audio_mixer_slim(
+audio_mixer_slim audio_mixer(
 `else
 audio_mixer audio_mixer(
 `endif
@@ -690,6 +690,7 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
 `ifdef EN_AUDIO_SLIM
         audio_reg_wr            <= 1'b0;
+        audio_intr_o            <= '0;
 `else
         audio_vol_l_nchan       <= '0;
         audio_vol_r_nchan       <= '0;
@@ -702,6 +703,7 @@ always_ff @(posedge clk) begin
 `endif
     end else begin
 `ifdef EN_AUDIO_SLIM
+        audio_intr_o        <= '0;      // TODO: temp
         audio_reg_wr        <= 1'b0;
 
         if (vgen_reg_wr_en_i) begin

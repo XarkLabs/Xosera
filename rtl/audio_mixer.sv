@@ -55,7 +55,7 @@ audio_fetch_ph                      fetch_phase;
 logic [CHAN_W:0]                    mix_chan;
 
 logic                               mix_clr;            // clear mix accumulator
-sbyte_t                             mix_val_temp;
+sbyte_t                             mix_mul_temp;
 sbyte_t                             vol_l_temp;
 sbyte_t                             vol_r_temp;
 sword_t                             acc_l;
@@ -236,7 +236,7 @@ always_ff @(posedge clk) begin : mix_fsm
 
         mix_chan        <= '0;
 
-        mix_val_temp    <= '0;
+        mix_mul_temp    <= '0;
         vol_l_temp      <= '0;
         vol_r_temp      <= '0;
 
@@ -274,7 +274,7 @@ always_ff @(posedge clk) begin : mix_fsm
 
             vol_l_temp      <= { 1'b0, audio_vol_l_nchan_i[7*mix_chan+:7] };
             vol_r_temp      <= { 1'b0, audio_vol_r_nchan_i[7*mix_chan+:7] };
-            mix_val_temp    <= chan_val[mix_chan*8+:8];
+            mix_mul_temp    <= chan_val[mix_chan*8+:8];
         end
     end
 end
@@ -292,8 +292,8 @@ logic                   unused_bits = &{ 1'b0, acc_l[5:0], acc_r[5:0] };
 sword_t             res_l;
 sword_t             res_r;
 
-assign res_l        = mix_val_temp * vol_l_temp;
-assign res_r        = mix_val_temp * vol_r_temp;
+assign res_l        = mix_mul_temp * vol_l_temp;
+assign res_r        = mix_mul_temp * vol_r_temp;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -341,7 +341,7 @@ SB_MAC16 #(
 ) SB_MAC16_l (
     .CLK(clk),                          // clock
     .CE(1'b1),                          // clock enable
-    .A({mix_val_temp, 8'h00 }),         // 16-bit input A
+    .A({mix_mul_temp, 8'h00 }),         // 16-bit input A
     .B({vol_l_temp, 8'h00 }),           // 16-bit input B
     .C('0),                             // 16-bit input C
     .D('0),                             // 16-bit input D
@@ -394,7 +394,7 @@ SB_MAC16 #(
 ) SB_MAC16_r (
     .CLK(clk),                          // clock
     .CE(1'b1),                          // clock enable
-    .A({ mix_val_temp, 8'h00 }),        // 16-bit input A
+    .A({ mix_mul_temp, 8'h00 }),        // 16-bit input A
     .B({ vol_r_temp, 8'h00 }),          // 16-bit input B
     .C('0),                             // 16-bit input C
     .D('0),                             // 16-bit input D

@@ -12,9 +12,6 @@
 
 `include "xosera_pkg.sv"
 
-`define EN_AUDIO
-`define EN_AUDIO_SLIM
-
 `ifdef EN_AUDIO
 `ifdef EN_AUDIO_SLIM
 
@@ -42,19 +39,23 @@ module audio_mixer_slim (
 localparam  CHAN_W      = $clog2(xv::AUDIO_NCHAN);
 localparam  DAC_W       = 8;
 
+// audio processing
 typedef enum {
     AUD_FETCH_DMA,
     AUD_FETCH_READ,
     AUD_FETCH_NEXT
 } audio_fetch_ph;
 
-logic [CHAN_W-1:0]                  fetch_chan;
-audio_fetch_ph                      fetch_phase;
+//logic [CHAN_W-1:0]                  fetch_chan;
+//audio_fetch_ph                      fetch_phase;
+logic                               audio_wr_en;
+byte_t                              audio_wr_addr;
+word_t                              audio_wr_data;
 
 logic [CHAN_W:0]                    mix_chan;
 
 logic                               mix_clr;            // clear mix accumulator
-sbyte_t                             mix_val_temp;
+sbyte_t                             mix_mul_temp;
 sbyte_t                             vol_l_temp;
 sbyte_t                             vol_r_temp;
 sword_t                             acc_l;
@@ -65,10 +66,22 @@ logic signed [9:0]                  mix_r_acc;          // extra bits for satura
 logic [DAC_W-1:0]                   output_l;           // mixed left channel to output to DAC (unsigned)
 logic [DAC_W-1:0]                   output_r;           // mixed right channel to output to DAC (unsigned)
 
-logic [xv::AUDIO_NCHAN-1:0]             chan_output;        // channel sample output strobe
-logic [xv::AUDIO_NCHAN-1:0]             chan_odd_out;       // true if odd (or low byte) output from sample word
-logic [16*xv::AUDIO_NCHAN-1:0]          chan_buff;          // channel DMA word buffer
-logic [8*xv::AUDIO_NCHAN-1:0]           chan_val;           // current channel value sent to DAC
+// audio memory signals
+logic                               audio_mem_wr_en;
+byte_t                              audio_mem_rd_addr;
+byte_t                              audio_mem_wr_addr;
+word_t                              audio_mem_data_out;
+word_t                              audio_mem_data_in;
+
+// reg write signals
+logic                               audio_reg_wr, audio_reg_wr_next;
+logic [3:0]                         audio_reg_addr;
+word_t                              audio_reg_data;
+
+logic [xv::AUDIO_NCHAN-1:0]         chan_output;        // channel sample output strobe
+logic [xv::AUDIO_NCHAN-1:0]         chan_odd_out;       // true if odd (or low byte) output from sample word
+logic [16*xv::AUDIO_NCHAN-1:0]      chan_buff;          // channel DMA word buffer
+logic [8*xv::AUDIO_NCHAN-1:0]       chan_val;           // current channel value sent to DAC
 
 // debug aid signals
 `ifndef SYNTHESIS
@@ -99,6 +112,7 @@ logic                               chan_restart[xv::AUDIO_NCHAN];
 //     end
 // end
 
+`ifdef NOTYET
 always_ff @(posedge clk) begin : chan_process
     if (reset_i) begin
         audio_req_o         <= '0;
@@ -109,12 +123,8 @@ always_ff @(posedge clk) begin : chan_process
         fetch_phase         <= AUD_FETCH_DMA;
 
         chan_val            <= '0;
-        chan_addr           <= '0;
-        chan_buff           <= '0;
-        chan_period         <= '0;
-        chan_length         <= '0;          // remaining length for sample data (bytes)
         chan_buff_ok        <= '0;
-        chan_odd_out            <= '0;
+        chan_odd_out        <= '0;
         chan_tile           <= '0;          // current mem type
 
     end else begin
@@ -199,6 +209,7 @@ always_ff @(posedge clk) begin : chan_process
         endcase
     end
 end
+`endif
 
 always_ff @(posedge clk) begin : mix_fsm
     if (reset_i) begin
@@ -206,7 +217,7 @@ always_ff @(posedge clk) begin : mix_fsm
 
         mix_chan        <= '0;
 
-        mix_val_temp    <= '0;
+        mix_mul_temp    <= '0;
         vol_l_temp      <= '0;
         vol_r_temp      <= '0;
 
@@ -242,9 +253,9 @@ always_ff @(posedge clk) begin : mix_fsm
             mix_chan        <= mix_chan + 1'b1;
             mix_clr         <= 1'b0;
 
-            vol_l_temp      <= { 1'b0, audio_vol_l_nchan_i[7*mix_chan+:7] };
-            vol_r_temp      <= { 1'b0, audio_vol_r_nchan_i[7*mix_chan+:7] };
-            mix_val_temp    <= chan_val[mix_chan*8+:8];
+            vol_l_temp      <= '0;  // TODO: { 1'b0, audio_vol_l_nchan_i[7*mix_chan+:7] };
+            vol_r_temp      <= '0;  // TODO: { 1'b0, audio_vol_r_nchan_i[7*mix_chan+:7] };
+            mix_mul_temp    <= chan_val[mix_chan*8+:8];
         end
     end
 end
@@ -258,17 +269,61 @@ assign mix_r_acc        = acc_r[15:6];
 
 logic                   unused_bits = &{ 1'b0, acc_l[5:0], acc_r[5:0] };
 
+logic                   unused_todo = &{1'b0, audio_enable_i, audio_ack_i, audio_word_i, chan_output,
+                                        chan_odd_out, chan_buff, chan_val, audio_mem_data_out};
+
+assign audio_req_o = '0;
+assign audio_tile_o = '0;
+assign audio_addr_o = '0;
+assign audio_wr_en = '0;
+assign audio_wr_addr = '0;
+assign audio_wr_data = '0;
+assign audio_mem_rd_addr = '0;
+assign chan_output = '0;
+assign chan_odd_out = '0;
+assign chan_buff = '0;
+assign chan_val = '0;
+
+// audio memory interface write select (audio processing / regs)
+always_ff @(posedge clk) begin
+    audio_reg_wr    <= audio_reg_wr_next;
+
+    if (audio_reg_wr_i) begin
+        audio_reg_wr    <= 1'b1;
+        audio_reg_addr  <= audio_reg_addr_i;
+        audio_reg_data  <= audio_reg_data_i;
+    end
+end
+
+always_comb begin
+    audio_mem_wr_en     = 1'b0;
+    audio_reg_wr_next   = audio_reg_wr;
+
+    // default to audio processing write
+    audio_mem_wr_addr   = audio_wr_addr;
+    audio_mem_data_in   = audio_wr_data;
+
+    if (audio_wr_en) begin                      // audio processsing write has priority
+        audio_mem_wr_en     = 1'b1;
+    end else if (audio_reg_wr) begin            // otherwise write register data
+        audio_reg_wr_next   = 1'b0;
+        audio_mem_wr_en     = 1'b1;
+        audio_mem_wr_addr   = 8'(audio_reg_addr);
+        audio_mem_data_in   = audio_reg_data;
+    end
+end
+
 // audio parameter memory
 audio_mem #(
     .AWIDTH(xv::AUDIO_W)
 ) audio_mem(
     .clk(clk),
-    .rd_address_i(colorA_addr),
-    .rd_data_o(colorA_data_out),
+    .rd_address_i(audio_mem_rd_addr),
+    .rd_data_o(audio_mem_data_out),
     .wr_clk(clk),
-    .wr_en_i(color_wr_en & ~xr_addr[xv::COLOR_W]),
-    .wr_address_i(xr_addr[xv::COLOR_W-1:0]),
-    .wr_data_i(xr_write_data)
+    .wr_en_i(audio_mem_wr_en),
+    .wr_address_i(audio_mem_wr_addr),
+    .wr_data_i(audio_mem_data_in)
 );
 
 // audio left DAC outout
@@ -294,8 +349,8 @@ audio_dac #(
 sword_t             res_l;
 sword_t             res_r;
 
-assign res_l        = mix_val_temp * vol_l_temp;
-assign res_r        = mix_val_temp * vol_r_temp;
+assign res_l        = mix_mul_temp * vol_l_temp;
+assign res_r        = mix_mul_temp * vol_r_temp;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -343,7 +398,7 @@ SB_MAC16 #(
 ) SB_MAC16_l (
     .CLK(clk),                          // clock
     .CE(1'b1),                          // clock enable
-    .A({mix_val_temp, 8'h00 }),         // 16-bit input A
+    .A({mix_mul_temp, 8'h00 }),         // 16-bit input A
     .B({vol_l_temp, 8'h00 }),           // 16-bit input B
     .C('0),                             // 16-bit input C
     .D('0),                             // 16-bit input D
@@ -396,7 +451,7 @@ SB_MAC16 #(
 ) SB_MAC16_r (
     .CLK(clk),                          // clock
     .CE(1'b1),                          // clock enable
-    .A({ mix_val_temp, 8'h00 }),        // 16-bit input A
+    .A({ mix_mul_temp, 8'h00 }),        // 16-bit input A
     .B({ vol_r_temp, 8'h00 }),          // 16-bit input B
     .C('0),                             // 16-bit input C
     .D('0),                             // 16-bit input D

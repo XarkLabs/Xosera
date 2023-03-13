@@ -23,7 +23,7 @@
 #include <basicio.h>
 #include <machine.h>
 
-extern void xosera_modetest();
+extern void xosera_modetest(void);
 
 void kmain()
 {

@@ -4,6 +4,14 @@
 # Copyright (c) 2023 Xark
 # MIT LICENSE
 
+# Makefile "best practices" from https://tech.davis-hansson.com/p/make/ (but not forcing gmake)
+SHELL := bash
+.SHELLFLAGS := -eu -o pipefail -c
+.ONESHELL:
+.DELETE_ON_ERROR:
+MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --no-builtin-rules
+
 # check for rosco_m68k toolchain
 ifeq (, $(shell m68k-elf-gcc --version))
 $(info No m68k-elf-* build tools found in path)

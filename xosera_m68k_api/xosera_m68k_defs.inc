@@ -41,7 +41,7 @@ XR_COPPER_ADDR          equ     $C000       ; (R/W) 0xC000-0xC3FF copper program
 XR_COPPER_SIZE          equ     $0400       ;                     1024 x 16-bit copper program memory addresses
 
 ; Xosera version info put in COPPER memory after FPGA reconfigure
-XV_INFO_ADDR            equ     (XR_COPPER_ADDR + XR_COPPER_SIZE - 128)
+XV_INFO_ADDR            equ     XR_COPPER_ADDR+XR_COPPER_SIZE-128
 XV_INFO_SIZE            equ     256        ; 256 bytes total for "struct _xosera_info" (last 128 words in copper memory)
 
 ; Xosera Main Registers (XM Registers, directly CPU accessable)

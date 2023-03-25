@@ -196,15 +196,15 @@ $(DOT): %.dot: %.sv $(MAKEFILE_LIST)
 
 # make ASCII bitstream from JSON description and device parameters
 upduino/%_$(OUTSUFFIX).asc: upduino/%_$(OUTSUFFIX).json $(PIN_DEF) $(MAKEFILE_LIST)
-	@rm -f $@
+	@-rm -f $@
 	@mkdir -p $(LOGS) $(@D)
 	@-cp $(OUTNAME)_stats.txt $(LOGS)/$(OUTNAME)_stats_last.txt
 ifdef FMAX_TEST	# run nextPNR FMAX_TEST times to determine "Max frequency" range
 	@echo === Synthesizing $(FMAX_TEST) bitstreams for best fMAX
 	@echo $(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 	@mkdir -p $(LOGS)/fmax
-	@rm -f $(LOGS)/fmax/*
-	@cp $< $(LOGS)/fmax
+	@-rm -f $(LOGS)/fmax/*
+	@-cp $< $(LOGS)/fmax
 	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
 	  ( \
 	    $(NEXTPNR) -l "$(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log" -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $(LOGS)/fmax/$(OUTNAME)_$${num}.asc ; \

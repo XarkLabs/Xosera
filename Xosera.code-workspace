@@ -354,7 +354,7 @@
 			"version": "cpp"
 		},
 		"workbench.colorCustomizations": {
-			"terminal.foreground": "#18E818",
+			"terminal.foreground": "#08D808",
 			"terminalCursor.foreground": "#E0E0E0",
 		},
 		"editor.wordWrapColumn": 200,

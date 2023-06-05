@@ -192,6 +192,11 @@ logic                                   audio_ack;              // audio DMA ack
 logic                                   audio_dma_tilemem;      // audio DMA memory type (0=VRAM, 1=TILE)
 addr_t                                  audio_dma_addr;         // audio DMA address
 word_t                                  audio_dma_word;         // audio DMA data out
+logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
+logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
+logic [15*xv::AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
+logic [xv::AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel sample memory (0=VRAM, 1=TILE)
+logic [xv::AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample ready
 `else
 logic                                   audio_enable;           // all channel enable
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
@@ -662,6 +667,11 @@ audio_mixer audio_mixer(
     .audio_reg_wr_i(audio_reg_wr),
     .audio_reg_addr_i(vgen_reg_num_i[3:0]),
     .audio_reg_data_i(vgen_reg_data_i),
+    .audio_vol_l_nchan_i(audio_vol_l_nchan),
+    .audio_vol_r_nchan_i(audio_vol_r_nchan),
+    .audio_period_nchan_i(audio_period_nchan),
+    .audio_restart_nchan_i(audio_restart_nchan),
+    .audio_reload_nchan_o(audio_reload_nchan),
 `else
     .audio_vol_l_nchan_i(audio_vol_l_nchan),
     .audio_vol_r_nchan_i(audio_vol_r_nchan),
@@ -703,12 +713,31 @@ always_ff @(posedge clk) begin
 `endif
     end else begin
 `ifdef EN_AUDIO_SLIM
-        audio_intr_o        <= '0;      // TODO: temp
         audio_reg_wr        <= 1'b0;
+
+        for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
+            audio_restart_nchan[i]    <= 1'b0;
+            if (audio_reload_nchan[i]) begin
+                audio_intr_o[i]  <= 1'b1;                                                                          // ready set
+            end
+        end
 
         if (vgen_reg_wr_en_i) begin
             if (vgen_reg_num_i[5]) begin
-                audio_reg_wr        <= 1'b1;
+                audio_reg_wr        <= 1'b1;                // indicate audio reg write
+            end
+            for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
+                case (7'(vgen_reg_num_i))
+                    7'(xv::XR_AUD0_VOL+7'(i*4)):
+                        { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] }; // 7-bit vol 0x80 = 1.0
+                    7'(xv::XR_AUD0_PERIOD+7'(i*4)):
+                        { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
+                    // 7'(xv::XR_AUD0_LENGTH+7'(i*4)):
+                    //     { audio_tile_nchan[i], audio_len_nchan[i*15+:15] }          <= vgen_reg_data_i;
+                    // 7'(xv::XR_AUD0_START+7'(i*4)):
+                    //     { audio_intr_o[i], audio_start_nchan[i*xv::VRAM_W+:16] }   <= { 1'b0, vgen_reg_data_i };   // ready cleared
+                    default: ;
+                endcase
             end
         end
 `else

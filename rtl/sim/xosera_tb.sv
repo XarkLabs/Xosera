@@ -16,7 +16,7 @@
 `define AUDIOMEMDUMP                // dump audio parameter memory contents to file
 `define BUSTEST
 `define MAX_FRAMES      1
-`define LOAD_MONOBM
+//`define LOAD_MONOBM
 
 module xosera_tb();
 
@@ -254,15 +254,15 @@ always begin
 
     # 8ms;
 
-    // TODO hacked in copper enable
-    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_COPP_CTRL));
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h8000);
-    // TODO end
+    // // TODO hacked in copper enable
+    // #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_COPP_CTRL));
+    // #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h8000);
+    // // TODO end
 
-    // TODO hacked in blit test
-    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_BLIT_WORDS));
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0007);
-    // TODO end
+    // // TODO hacked in blit test
+    // #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_BLIT_WORDS));
+    // #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0007);
+    // // TODO end
 
     #(M68K_PERIOD * 4)  read_reg(1'b0, XM_FEATURES, readword[15:8]);
     #(M68K_PERIOD * 4)  read_reg(1'b1, XM_FEATURES, readword[7:0]);
@@ -271,7 +271,7 @@ always begin
 // audio test
 
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_INCR, 16'h0001);
-    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0000);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0100);
 
     inject_file("../testdata/raw/ramptable.raw", XM_DATA);
 
@@ -281,11 +281,11 @@ always begin
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD0_PERIOD));
     #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h1000);
 
-    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD0_START));
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0000);
-
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD0_LENGTH));
     #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h00FF);
+
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD0_START));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0100);
 
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD_CTRL));
     #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0001);

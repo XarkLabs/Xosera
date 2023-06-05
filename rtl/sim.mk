@@ -55,6 +55,9 @@ MAX_CPUS := 8
 #       MODE_1024x768   1024x768@60Hz   clock 65.000 (65.250) MHz [fails timing]
 #       MODE_1280x720   1280x720@60Hz   clock 74.176 (73.500) MHz [fails timing]
 VIDEO_MODE ?= MODE_640x480
+AUDIO?=4
+PF_B?=true
+
 VERILOG_DEFS := -D$(VIDEO_MODE)
 
 # monochrome + color attribute byte
@@ -75,7 +78,8 @@ VERILOG_DEFS := -D$(VIDEO_MODE)
 #VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/sintable.raw -u ../testdata/raw/ramptable.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
-VRUN_TESTDATA ?=   -u ../testdata/raw/pacbox-320x240_pal.raw -u ../testdata/raw/pacbox-320x240.raw -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
+#VRUN_TESTDATA ?=   -u ../testdata/raw/pacbox-320x240_pal.raw -u ../testdata/raw/pacbox-320x240.raw -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
+VRUN_TESTDATA ?=   -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
 
@@ -138,7 +142,7 @@ SDL_CFLAGS := $(shell sdl2-config --cflags)
 endif
 # Note: Using -Os seems to provide the fastest compile+run simulation iteration time
 # Linux gcc needs -Wno-maybe-uninitialized
-CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-deprecated-declarations -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-bool-operation -Wno-int-in-bool-context -D$(VIDEO_MODE) -DSDL_RENDER=$(SDL_RENDER) -DBUS_INTERFACE=$(BUS_INTERFACE) $(SDL_CFLAGS)"
+CFLAGS		:= -CFLAGS "-Os -std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-bool-operation -Wno-int-in-bool-context -D$(VIDEO_MODE) -DSDL_RENDER=$(SDL_RENDER) -DBUS_INTERFACE=$(BUS_INTERFACE) $(SDL_CFLAGS)"
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
@@ -200,7 +204,7 @@ $(VLT_CONFIG):
 # use Verilator to build native simulation executable
 sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) $(COPSRC) sim.mk
 	@mkdir -p $(@D)
-	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(SRC) $(current_dir)/$(CSRC)
+	$(VERILATOR) $(VERILATOR_ARGS) -Os --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(SRC) $(current_dir)/$(CSRC)
 	cd sim/obj_dir && make -f V$(VTOP).mk
 
 # use Icarus Verilog to build vvp simulation executable

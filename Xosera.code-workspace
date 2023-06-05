@@ -94,6 +94,7 @@
 			"dumpvars",
 			"endcase",
 			"endmodule",
+			"FMAC",
 			"FMAX",
 			"FSCALE",
 			"FTDI",

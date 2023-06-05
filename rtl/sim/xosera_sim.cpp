@@ -846,7 +846,7 @@ uint16_t     BusInterface::test_data[32768] = {
 
 #endif
 
-#if 1
+#if 0
     // slim copper test
     XREG_SETW(PA_GFX_CTRL, 0x0080),        // blank screen
     XREG_SETW(PB_GFX_CTRL, 0x0080),        // blank screen
@@ -893,22 +893,27 @@ uint16_t     BusInterface::test_data[32768] = {
 
 #endif
 
-#if 0        // lame audio test
+#if 1        // lame audio test
     REG_RW(INT_CTRL),
 
-    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
+    REG_W(WR_INCR, 0x0001),        // sample at 0xFF00
     REG_W(WR_ADDR, 0xFF00),
-    REG_UPLOAD(),        // upload sine data
+    REG_UPLOAD(),        // upload sample data
 
-    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
+    REG_W(WR_INCR, 0x0001),        // sample at 0xFE00
     REG_W(WR_ADDR, 0xFE00),
-    REG_UPLOAD(),        // upload sine data
+    REG_UPLOAD(),        // upload sample data
 
 //    XREG_SETW(PA_GFX_CTRL, 0x0080),        // pf a blank
 //    XREG_SETW(PB_GFX_CTRL, 0x0080),        // pf b blank
 
 #define PERIOD_TEST 799
 #define WAVE_TEST   0xFF00
+
+    XREG_SETW(AUD0_VOL, 0x0000),
+    XREG_SETW(AUD1_VOL, 0x0000),
+    XREG_SETW(AUD2_VOL, 0x0000),
+    XREG_SETW(AUD3_VOL, 0x0000),
 
     XREG_SETW(AUD0_PERIOD, PERIOD_TEST),
     XREG_SETW(AUD0_LENGTH, 0x007F),

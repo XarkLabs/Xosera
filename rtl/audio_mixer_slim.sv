@@ -15,6 +15,10 @@
 `ifdef EN_AUDIO
 `ifdef EN_AUDIO_SLIM
 
+`ifdef ICE40UP5K
+`define USE_FMAC        // use two SB_MAC16 units for multiply and accumulate
+`endif
+
 module audio_mixer_slim (
     input wire  logic                           audio_enable_i,
     input wire  logic                           audio_reg_wr_i,
@@ -140,6 +144,13 @@ always_ff @(posedge clk) begin : chan_process
         audio_req_o         <= '0;
         audio_tile_o        <= '0;
         audio_addr_o        <= '0;
+        audio_reload_nchan_o <= '0;  // reset all channels reload
+
+        audio_wr_en         <= '0;
+        audio_wr_addr       <= '0;
+        audio_wr_data       <= '0;
+
+        audio_mem_rd_addr   <= '0;
 
         fetch_st            <= AUD_RD_LENCNT;
         fetch_chan          <= '0;
@@ -182,7 +193,7 @@ always_ff @(posedge clk) begin : chan_process
                 fetch_restart[i]        <= 1'b1;
                 chan_buff_ok[i]         <= 1'b0;
                 chan_buff_odd[i]        <= 1'b0;
-                chan_period[16*i+:16]   <= { 1'b0, audio_period_nchan_i[i*15+:15] };
+                chan_period[16*i+15]    <= 1'b1;
             end
         end
 
@@ -289,12 +300,18 @@ end
 
 // audio memory interface write select (audio processing / regs)
 always_ff @(posedge clk) begin
-    audio_reg_wr    <= audio_reg_wr_next;
+    if (reset_i) begin
+        audio_reg_wr    <= 1'b0;
+        audio_reg_addr  <= '0;
+        audio_reg_data  <= '0;
+    end else begin
+        audio_reg_wr    <= audio_reg_wr_next;
 
-    if (audio_reg_wr_i) begin
-        audio_reg_wr    <= 1'b1;
-        audio_reg_addr  <= audio_reg_addr_i;
-        audio_reg_data  <= audio_reg_data_i;
+        if (audio_reg_wr_i) begin
+            audio_reg_wr    <= 1'b1;
+            audio_reg_addr  <= audio_reg_addr_i;
+            audio_reg_data  <= audio_reg_data_i;
+        end
     end
 end
 
@@ -331,11 +348,10 @@ audio_mem #(
 //
 always_ff @(posedge clk) begin : mix_fsm
     if (reset_i) begin
+        mix_chan        <= '0;
         mix_clr         <= '0;
 
-        mix_chan        <= '0;
-
-        value_temp    <= '0;
+        value_temp      <= '0;
         vol_l_temp      <= '0;
         vol_r_temp      <= '0;
 
@@ -373,19 +389,15 @@ always_ff @(posedge clk) begin : mix_fsm
             // set input signals for FMAC blocks
             vol_l_temp      <= { 1'b0, audio_vol_l_nchan_i[7*mix_chan+:7] };
             vol_r_temp      <= { 1'b0, audio_vol_r_nchan_i[7*mix_chan+:7] };
-            value_temp    <= chan_val[mix_chan*8+:8];
+            value_temp      <= chan_val[mix_chan*8+:8];
         end
     end
 end
 
-`ifdef ICE40UP5K
-`define USE_FMAC        // use two SB_MAC16 units for multiply and accumulate
-`endif
-
 assign mix_l_acc        = acc_l[15:6];
 assign mix_r_acc        = acc_r[15:6];
 
-// low bits of accumulator results is not used
+// low bits of accumulator results are not used
 logic                   unused_bits = &{ 1'b0, acc_l[5:0], acc_r[5:0] };
 
 // audio left DAC outout

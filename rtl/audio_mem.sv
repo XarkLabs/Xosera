@@ -27,6 +27,12 @@ module audio_mem#(
 // infer 16x256 audio BRAM
 word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 
+initial begin
+    for (integer i = 0; i < 2**AWIDTH; i = i + 1) begin
+        bram[i] = 16'hFFFF;
+    end
+end
+
 // infer BRAM block
 always_ff @(posedge wr_clk) begin
     if (wr_en_i) begin

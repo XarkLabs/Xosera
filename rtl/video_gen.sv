@@ -700,6 +700,10 @@ always_ff @(posedge clk) begin
     if (reset_i) begin
 `ifdef EN_AUDIO_SLIM
         audio_reg_wr            <= 1'b0;
+        audio_vol_l_nchan       <= '0;
+        audio_vol_r_nchan       <= '0;
+        audio_period_nchan      <= '0;
+        audio_restart_nchan     <= '0;
         audio_intr_o            <= '0;
 `else
         audio_vol_l_nchan       <= '0;
@@ -707,8 +711,8 @@ always_ff @(posedge clk) begin
         audio_period_nchan      <= '0;
         audio_tile_nchan        <= '0;
         audio_start_nchan       <= '0;
-        audio_len_nchan         <= '0;
         audio_restart_nchan     <= '0;
+        audio_len_nchan         <= '0;
         audio_intr_o            <= '0;
 `endif
     end else begin

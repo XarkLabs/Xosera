@@ -13,6 +13,7 @@
 `include "xosera_pkg.sv"
 
 `ifdef EN_AUDIO
+`ifndef EN_AUDIO_SLIM
 
 // TODO: try packed struct
 
@@ -426,5 +427,6 @@ SB_MAC16 #(
 
 endmodule
 
+`endif
 `endif
 `default_nettype wire               // restore default

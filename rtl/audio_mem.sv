@@ -29,7 +29,7 @@ word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 
 initial begin
     for (integer i = 0; i < 2**AWIDTH; i = i + 1) begin
-        bram[i] = 16'hFFFF;
+        bram[i] = 16'h0000;
     end
 end
 
@@ -41,6 +41,14 @@ always_ff @(posedge wr_clk) begin
 end
 
 always_ff @(posedge clk) begin
+// NOTE: On iCE40UP5K hardware, a write and a read to the same location seems
+// to honor new write, whereas simulation honors previous value for read.
+// Add a "hack" to make simulation match observed behavior.
+`ifndef SYNTHESIS
+    if (wr_en_i && rd_address_i == wr_address_i)
+        rd_data_o <= wr_data_i;
+    else
+`endif
     rd_data_o <= bram[rd_address_i];
 end
 

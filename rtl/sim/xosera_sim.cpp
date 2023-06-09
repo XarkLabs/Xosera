@@ -895,6 +895,8 @@ uint16_t     BusInterface::test_data[32768] = {
 
 #if 1        // lame audio test
     REG_RW(INT_CTRL),
+    REG_W(INT_CTRL, 0x000F),
+    REG_RW(INT_CTRL),
 
     REG_W(WR_INCR, 0x0001),        // sample at 0xFF00
     REG_W(WR_ADDR, 0xFF00),

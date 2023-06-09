@@ -142,7 +142,7 @@ SDL_CFLAGS := $(shell sdl2-config --cflags)
 endif
 # Note: Using -Os seems to provide the fastest compile+run simulation iteration time
 # Linux gcc needs -Wno-maybe-uninitialized
-CFLAGS		:= -CFLAGS "-Os -std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-bool-operation -Wno-int-in-bool-context -D$(VIDEO_MODE) -DSDL_RENDER=$(SDL_RENDER) -DBUS_INTERFACE=$(BUS_INTERFACE) $(SDL_CFLAGS)"
+CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-bool-operation -Wno-int-in-bool-context -D$(VIDEO_MODE) -DSDL_RENDER=$(SDL_RENDER) -DBUS_INTERFACE=$(BUS_INTERFACE) $(SDL_CFLAGS)"
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
@@ -204,7 +204,7 @@ $(VLT_CONFIG):
 # use Verilator to build native simulation executable
 sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) $(COPSRC) sim.mk
 	@mkdir -p $(@D)
-	$(VERILATOR) $(VERILATOR_ARGS) -Os --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(SRC) $(current_dir)/$(CSRC)
+	$(VERILATOR) $(VERILATOR_ARGS) -O3 --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(SRC) $(current_dir)/$(CSRC)
 	cd sim/obj_dir && make -f V$(VTOP).mk
 
 # use Icarus Verilog to build vvp simulation executable

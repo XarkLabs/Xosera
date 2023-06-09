@@ -33,7 +33,7 @@
 #define DELAY_TIME 500        // machine speed
 
 #define COPPER_TEST            1
-#define INTERACTIVE_AUDIO_TEST 0
+#define INTERACTIVE_AUDIO_TEST 1
 #define BLURB_AUDIO            1
 
 #define BLIT_TEST_PIC      0
@@ -2339,6 +2339,7 @@ int    testsampsize;
 static void test_audio_sample(const char * name, int8_t * samp, int bytesize, int speed)
 {
     uint16_t test_vaddr = 0x8000;
+    uint16_t chan       = 0;
     xreg_setw(AUD0_VOL, 0x0000);           // set volume to 0%
     xreg_setw(AUD0_PERIOD, 0x0000);        // 1000 clocks per each sample byte
     xreg_setw(AUD0_LENGTH, 0x0000);        // 1000 clocks per each sample byte
@@ -2369,15 +2370,18 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
     dprintf("       'Q' and 'W' to change left volume (hold shift for faster)\n");
     dprintf("       'E' and 'R' to change right volume (hold shift for faster)\n");
     dprintf("       ',' and '.' to change sample period (hold shift for faster)\n");
+    dprintf("       '0' to  '3' to change channel\n");
     dprintf("       ESC to reboot rosco\n");
     dprintf("       SPACE to continue to next test\n\n");
 
-    dprintf("Volume (128=1.0): L:%3d/R:%3d    Period (1/pclk): %5d", lv, rv, p);
+    dprintf("%d: Volume (128=1.0): L:%3d/R:%3d    Period (1/pclk): %5d", chan, lv, rv, p);
 
-    xreg_setw(AUD0_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
-    xreg_setw(AUD0_PERIOD, p);                         // 1000 clocks per each sample byte
-    xreg_setw(AUD0_START, test_vaddr);                 // address in VRAM
-    xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+    uint16_t chanoff = chan << 2;
+
+    xreg_setw(AUD0_VOL + chanoff, lv << 8 | rv);                 // set left 100% volume, right 50% volume
+    xreg_setw(AUD0_PERIOD + chanoff, p);                         // 1000 clocks per each sample byte
+    xreg_setw(AUD0_START + chanoff, test_vaddr);                 // address in VRAM
+    xreg_setw(AUD0_LENGTH + chanoff, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
 
     bool done = false;
 
@@ -2439,6 +2443,34 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
             case '>':
                 p = p + 16;
                 break;
+            case '0':
+                chan = 0;
+                xreg_setw(AUD0_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
+                xreg_setw(AUD0_PERIOD, p);                         // 1000 clocks per each sample byte
+                xreg_setw(AUD0_START, test_vaddr);                 // address in VRAM
+                xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+                break;
+            case '1':
+                chan = 1;
+                xreg_setw(AUD1_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
+                xreg_setw(AUD1_PERIOD, p);                         // 1000 clocks per each sample byte
+                xreg_setw(AUD1_START, test_vaddr);                 // address in VRAM
+                xreg_setw(AUD1_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+                break;
+            case '2':
+                chan = 2;
+                xreg_setw(AUD2_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
+                xreg_setw(AUD2_PERIOD, p);                         // 1000 clocks per each sample byte
+                xreg_setw(AUD2_START, test_vaddr);                 // address in VRAM
+                xreg_setw(AUD2_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+                break;
+            case '3':
+                chan = 3;
+                xreg_setw(AUD3_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
+                xreg_setw(AUD3_PERIOD, p);                         // 1000 clocks per each sample byte
+                xreg_setw(AUD3_START, test_vaddr);                 // address in VRAM
+                xreg_setw(AUD3_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+                break;
             case ' ':
                 done = true;
                 break;
@@ -2452,16 +2484,19 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
         {
             break;
         }
-        dprintf("\rVolume (128 = 1.0): L:%3d R:%3d  Period (1/pclk): %5d", lv, rv, p);
+        dprintf("\r%d: Volume (128 = 1.0): L:%3d R:%3d  Period (1/pclk): %5d", chan, lv, rv, p);
         xreg_setw(AUD0_VOL, lv << 8 | rv);        // set left 100% volume, right 50% volume
         xreg_setw(AUD0_PERIOD, p);                // 1000 clocks per each sample byte
     }
 
-    xreg_setw(AUD_CTRL, 0x0000);           // disable audio DMA
-    xreg_setw(AUD0_VOL, 0x0000);           // set volume to 0%
-    xreg_setw(AUD0_PERIOD, 0x0000);        // 1000 clocks per each sample byte
-    xreg_setw(AUD0_LENGTH, 0x0000);        // 1000 clocks per each sample byte
-    xreg_setw(AUD0_START, 0x0000);         // 1000 clocks per each sample byte
+    xreg_setw(AUD_CTRL, 0x0000);        // disable audio DMA
+    for (uint16_t co = 0; co < (4 << 2); co += 4)
+    {
+        xreg_setw(AUD0_VOL + co, 0x0000);           // set volume to 0%
+        xreg_setw(AUD0_PERIOD + co, 0x0000);        // 1000 clocks per each sample byte
+        xreg_setw(AUD0_LENGTH + co, 0x0000);        // 1000 clocks per each sample byte
+        xreg_setw(AUD0_START + co, 0x0000);         // 1000 clocks per each sample byte
+    }
 
     dprintf("\rSample playback done.                                       \n");
     xr_printfxy(0, 0, "Xosera audio test\n\n");

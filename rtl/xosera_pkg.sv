@@ -74,9 +74,10 @@ localparam AUDIO_NCHAN  = 0;
 
 // Xosera memory address bit widths
 localparam VRAM_W   = 16;               // 64K words VRAM
-localparam TILE_W   = 13;               // 4K words tile mem (but 8K address bits, for extra 1KW)
-localparam TILE2_W  = 10;               // 1K words extra tile/sprite mem
-localparam COPP_W   = 10;               // 1024 32-bit (even/odd) words copper program mem
+localparam TILE_W   = 13;               // 4K words tile mem (and bit for extra 1K words)
+localparam TILE2_W  = 10;               // 1K words extra tile mem
+localparam COPP_W   = 11;               // 1K words copper mem (and bit for extra 512 words)
+localparam COPP2_W  = 9;                // 512 words extra copper mem
 localparam COLOR_W  = 8;                // 256 words color table mem (per playfield)
 localparam AUDIO_W  = 8;                // 256 words audio parameter mem
 
@@ -123,7 +124,7 @@ typedef enum logic [15:0] {
     // XR Memory Regions
     XR_TILE_ADDR        = 16'h4000,     // 0x4000-0x53FF 5K 16-bit words of tile memory
     XR_COLOR_ADDR       = 16'h8000,     // 0x8000-0x81FF 256 16-bit 0xXRGB color lookup playfield A & B
-    XR_COPPER_ADDR      = 16'hC000      // 0xC000-0xC7FF 2K 16-bit words copper program memory
+    XR_COPPER_ADDR      = 16'hC000      // 0xC000-0xC7FF 1.5K 16-bit words copper memory
 } xr_region_t;
 
 // XR read/write registers/memory regions

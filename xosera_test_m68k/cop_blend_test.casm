@@ -121,6 +121,8 @@ hpos_eol        HPOS    #799                            ; wait for last pixel of
 
                 VPOS    #$7FF                           ; wait for SOF (just in case)
 
+                space   512
+
 vcolor_tbl
                 word    $0000
                 word    $0111

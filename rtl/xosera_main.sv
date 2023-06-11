@@ -107,7 +107,7 @@ logic                   blit_full;
 // copper bus signals
 /* verilator lint_off UNUSED */
 logic                   copp_prog_rd_en;
-logic [xv::COPP_W-1:0]  copper_pc;
+copp_addr_t             copper_pc;
 word_t                  copp_prog_data_out;
 logic                   copp_xr_wr_en;
 logic                   copp_xr_ack;
@@ -375,7 +375,7 @@ xrmem_arb xrmem_arb(
     .vgen_tile_data_o(vgen_tile_data),
 
 `ifdef EN_COPP
-    // copper program coppermem 32-bit bus (read-only)
+    // copper program memory (read-only)
     .copp_prog_sel_i(copp_prog_rd_en),
     .copp_prog_addr_i(copper_pc),
     .copp_prog_data_o(copp_prog_data_out),

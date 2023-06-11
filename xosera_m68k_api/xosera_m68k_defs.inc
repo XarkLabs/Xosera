@@ -37,8 +37,8 @@ XR_COLOR_A_ADDR         equ     $8000       ; (R/W) 0x8000-0x80FF A 256 entry co
 XR_COLOR_A_SIZE         equ     $0100       ;                     256 x 16-bit words (0xARGB)
 XR_COLOR_B_ADDR         equ     $8100       ; (R/W) 0x8100-0x81FF B 256 entry color lookup memory
 XR_COLOR_B_SIZE         equ     $0100       ;                     256 x 16-bit words (0xARGB)
-XR_COPPER_ADDR          equ     $C000       ; (R/W) 0xC000-0xC3FF copper program memory (16-bit instructions)
-XR_COPPER_SIZE          equ     $0400       ;                     1024 x 16-bit copper program memory addresses
+XR_COPPER_ADDR          equ     $C000       ; (R/W) 0xC000-0xC5FF copper memory (16-bit instructions)
+XR_COPPER_SIZE          equ     $0600       ;                     1024+512 x 16-bit copper memory words
 
 ; Xosera version info put in COPPER memory after FPGA reconfigure
 XV_INFO_ADDR            equ     XR_COPPER_ADDR+XR_COPPER_SIZE-128

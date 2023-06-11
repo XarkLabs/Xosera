@@ -17,7 +17,8 @@
 
 module coppermem
     #(
-        parameter   AWIDTH  = 10
+        parameter   AWIDTH  = 10,
+        parameter   ADDINFO = "N"
     )
     (
            input  wire logic [AWIDTH-1:0]   rd_address_i,
@@ -47,25 +48,31 @@ word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 integer x;
 
 initial begin
-    for (integer i = 0; i < (2**AWIDTH)-128; i = i + 1) begin
-        bram[i] = 16'h2FFF; // VPOS #1023 (wait forever)
-    end
-
-    // Xosera init info stored in last 256 bytes of default copper memory (see xosera_pkg.sv)
-    x = 0;
-    for (integer i = (2**AWIDTH)-128; i < (2**AWIDTH)-4; i = i + 1) begin
-        if ((x*8)+8 < $bits(xv::info_str)) begin
-            bram[i]    = { xv::info_str[(x*8)+:8], xv::info_str[(x*8)+8+:8] };
-        end else begin
-            bram[i]    = 16'h0000;
+    if (ADDINFO == "Y") begin
+        for (integer i = 0; i < (2**AWIDTH)-128; i = i + 1) begin
+            bram[i] = 16'h2FFF; // VPOS #1023 (wait forever)
         end
-        x = x + 2;
-    end
 
-    bram[(2**AWIDTH)-4]  = 16'(xv::version);
-    bram[(2**AWIDTH)-3]  = { `GITCLEAN ? 8'b0 : 8'b1, 8'b0 };
-    bram[(2**AWIDTH)-2]  = xv::githash[31:16];
-    bram[(2**AWIDTH)-1]  = xv::githash[15:0];
+        // Xosera init info stored in last 256 bytes of default copper memory (see xosera_pkg.sv)
+        x = 0;
+        for (integer i = (2**AWIDTH)-128; i < (2**AWIDTH)-4; i = i + 1) begin
+            if ((x*8)+8 < $bits(xv::info_str)) begin
+                bram[i]    = { xv::info_str[(x*8)+:8], xv::info_str[(x*8)+8+:8] };
+            end else begin
+                bram[i]    = 16'h0000;
+            end
+            x = x + 2;
+        end
+
+        bram[(2**AWIDTH)-4]  = 16'(xv::version);
+        bram[(2**AWIDTH)-3]  = { `GITCLEAN ? 8'b0 : 8'b1, 8'b0 };
+        bram[(2**AWIDTH)-2]  = xv::githash[31:16];
+        bram[(2**AWIDTH)-1]  = xv::githash[15:0];
+    end else begin
+        for (integer i = 0; i < (2**AWIDTH); i = i + 1) begin
+            bram[i] = 16'h2FFF; // VPOS #1023 (wait forever)
+        end
+    end
 end
 
 // infer BRAM block

@@ -50,9 +50,9 @@ module xrmem_arb(
     output      word_t                  vgen_tile_data_o,
 
 `ifdef EN_COPP
-    // copper program coppermem 16-bit bus (read-only)
+    // copper program memory (read-only)
     input  wire logic                   copp_prog_sel_i,
-    input  wire logic [xv::COPP_W-1:0]  copp_prog_addr_i,
+    input  wire copp_addr_t             copp_prog_addr_i,
     output      word_t                  copp_prog_data_o,
 `endif
 
@@ -78,8 +78,10 @@ word_t                          tile2_data_out;
 `ifdef EN_COPP
 // internal COPPERMEM signals
 logic                           copp_wr_en;
-logic [xv::COPP_W-1:0]          copp_addr;
+copp_addr_t                     copp_addr;
+copp_addr_t                     copp_addr_next;
 word_t                          copp_data_out;
+word_t                          copp2_data_out;
 `endif
 
 // internal XR write signals
@@ -123,7 +125,7 @@ assign  vgen_colorB_data_o  = colorB_data_out;
 `endif
 assign  vgen_tile_data_o    = !tile_addr[xv::TILE_W-1] ? tile_data_out : tile2_data_out;
 `ifdef EN_COPP
-assign  copp_prog_data_o    = copp_data_out;
+assign  copp_prog_data_o    = !copp_addr[xv::COPP_W-1] ? copp_data_out : copp2_data_out; ;
 `endif
 
 // decode flags for XR interface
@@ -196,7 +198,7 @@ always_comb begin
     end
 `ifdef EN_COPP
     if (xr_copp_sel) begin
-        xr_data_o   = copp_data_out;
+        xr_data_o   = !xr_addr_i[xv::COPP_W-1] ? copp_data_out : copp2_data_out; ;
     end
 `endif
 end
@@ -246,8 +248,8 @@ end
 
 // tile mem read (vgen or reg XR memory)
 always_comb begin
-    tile_rd_ack_next    = 1'b0;
-    tile_addr_next           = vgen_tile_addr_i;
+    tile_rd_ack_next        = 1'b0;
+    tile_addr_next          = vgen_tile_addr_i;
     if (vgen_tile_sel_i) begin
         tile_addr_next      = vgen_tile_addr_i;
     end else if (xr_sel_i & ~xr_ack_o) begin
@@ -259,13 +261,13 @@ end
 `ifdef EN_COPP
 // copp mem read (copper or reg XR memory)
 always_comb begin
-    copp_rd_ack_next    = 1'b0;
-    copp_addr           = copp_prog_addr_i;
+    copp_rd_ack_next        = 1'b0;
+    copp_addr_next          = copp_prog_addr_i;
     if (copp_prog_sel_i) begin
-        copp_addr           = copp_prog_addr_i;
+        copp_addr_next      = copp_prog_addr_i;
     end else if (xr_sel_i & ~xr_ack_o) begin
         copp_rd_ack_next    = xr_copp_sel & ~xr_wr_i;;
-        copp_addr           = xr_addr_i[xv::COPP_W-1:0];
+        copp_addr_next      = $bits(copp_addr_next)'(xr_addr_i);
     end
 end
 `endif
@@ -275,6 +277,7 @@ always_ff @(posedge clk) begin
 
     tile_addr       <= tile_addr_next;  // need last cycle's read addr to determine tile or tile2 result output
 `ifdef EN_COPP
+    copp_addr       <= copp_addr_next;  // need last cycle's read addr to determine copp or copp2 result output
     copp_xr_ack_o   <= copp_wr_ack_next;
 `endif
     xr_ack_o        <= xr_wr_ack_next | xreg_rd_ack_next | color_rd_ack_next | tile_rd_ack_next
@@ -327,7 +330,7 @@ tilemem #(
     .wr_data_i(xr_write_data)
 );
 
-// tile+sprite additional 1KB RAM
+// tile RAM additional 1K words
 tilemem #(
     .AWIDTH(xv::TILE2_W)
 ) tilemem_2(
@@ -341,18 +344,34 @@ tilemem #(
 );
 
 `ifdef EN_COPP
-// copper RAM
+// copper RAM 1K words
 coppermem #(
-    .AWIDTH(xv::COPP_W)
+    .AWIDTH(xv::COPP_W-1),
+    .ADDINFO("N")
 ) coppermem(
     .clk(clk),
-    .rd_address_i(copp_addr),
+    .rd_address_i(copp_addr_next[xv::COPP_W-2:0]),
     .rd_data_o(copp_data_out),
     .wr_clk(clk),
-    .wr_en_i(copp_wr_en),
-    .wr_address_i(xr_addr[xv::COPP_W-1:0]),
+    .wr_en_i(copp_wr_en & ~xr_addr[xv::COPP_W-1]),
+    .wr_address_i(xr_addr[xv::COPP_W-2:0]),
     .wr_data_i(xr_write_data)
 );
+
+// copper RAM additional 512 words
+coppermem #(
+    .AWIDTH(xv::COPP2_W),
+    .ADDINFO("Y")
+) coppermem_2(
+    .clk(clk),
+    .rd_address_i(copp_addr_next[xv::COPP2_W-1:0]),
+    .rd_data_o(copp2_data_out),
+    .wr_clk(clk),
+    .wr_en_i(copp_wr_en & xr_addr[xv::COPP_W-1]),
+    .wr_address_i(xr_addr[xv::COPP2_W-1:0]),
+    .wr_data_i(xr_write_data)
+);
+
 `endif
 
 endmodule

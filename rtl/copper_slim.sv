@@ -19,9 +19,9 @@ module slim_copper(
     input   wire logic          xr_wr_ack_i,            // XR bus ack
     output       addr_t         xr_wr_addr_o,           // XR bus address
     output       word_t         xr_wr_data_o,           // XR bus write data
-    output       copp_addr_t    copmem_rd_addr_o,       // copper program memory
-    output       logic          copmem_rd_en_o,         // copper program memory read enable
-    input   wire logic [15:0]   copmem_rd_data_i,       // copper program memory data
+    output       copp_addr_t    copmem_rd_addr_o,       // copper memory
+    output       logic          copmem_rd_en_o,         // copper memory read enable
+    input   wire logic [15:0]   copmem_rd_data_i,       // copper memory data
     input   wire logic          cop_xreg_wr_i,          // COPP_CTRL register write strobe
     input   wire logic          cop_xreg_enable_i,      // COPP_CTRL register enable write data
     input   wire hres_t         h_count_i,              // horizontal video position
@@ -45,17 +45,17 @@ module slim_copper(
 // | rroo oooo oooo oooo |    <xadr16 address>  |     |     |   (2 word op)                    |
 // | --10 0iii iiii iiii | HPOS   #im11         |     |  4+ | wait until video HPOS >= im11    |
 // | --10 1iii iiii iiii | VPOS   #im11         |     |  4+ | wait until video VPOS >= im11    |
-// | --11 0ccc cccc cccc | BRGE   cadr10        |     |  4  | if (B==0) PC <= cadr10           |
-// | --11 1ccc cccc cccc | BRLT   cadr10        |     |  4  | if (B==1) PC <= cadr10           |
+// | --11 0ccc cccc cccc | BRGE   cadd11        |     |  4  | if (B==0) PC <= cadd11           |
+// | --11 1ccc cccc cccc | BRLT   cadd11        |     |  4  | if (B==1) PC <= cadd11           |
 // |---------------------|----------------------|-----|-----|----------------------------------|
 // NOTE: SETM can be 4 or 5 cycles, 4 cycles costs a few LCs (but enabled)
 //
 // xadr14   =   XR region + 12-bit offset           xx00 oooo oooo oooo (1st word SETI, dest)
 // im16     =   16-bit immediate word               iiii iiii iiii iiii (2nd word SETI, source)
-// cadr11   =   10-bit copper address + register    ---- r-nn nnnn nnnn (1st word SETM, source)
+// cadr11   =   11-bit copper address + register    ---- rnnn nnnn nnnn (1st word SETM, source)
 // xadr16   =   XR region + 14-bit offset           rroo oooo oooo oooo (2nd word SETM, dest)
 // im11     =   11-bit immediate value              ---- -iii iiii iiii (HPOS, VPOS)
-// cadr10   =   10-bit copper address/register      ---- --nn nnnn nnnn (BRGE, BRLT)
+// cadd11   =   11-bit copper address/register      ---- -nnn nnnn nnnn (BRGE, BRLT)
 // B        =   borrow flag set when RA < val16 written [unsigned subtract])
 //
 // NOTE: cadr10 bits[15:11] are ignored reading copper memory, however by setting
@@ -108,10 +108,10 @@ typedef enum logic [1:0] {
 
 // opcode decode bits
 localparam  B_OPCODE        = 12;   // 2-bits
-localparam  B_HV_SEL        = 11;   // 12-bit operand/HVPOS or Bcc bit
-localparam  B_HV_POS        = 10;   // 12-bit operand/HVPOS or Bcc bit
-localparam  B_BR_SEL        = 11;   // 12-bit operand/HVPOS or Bcc bit
-localparam  B_BR_ADR        = 10;   // 12-bit operand/HVPOS or Bcc bit
+localparam  B_HV_SEL        = 11;   // HPOS/VPOS select bit
+localparam  B_HV_POS        = 10;   // 11-bit operand/HVPOS or Bcc bit
+localparam  B_BR_SEL        = 11;   // BRGE/BRLT select bit
+localparam  B_BR_ADR        = 10;   // 11-bit copper address
 localparam  B_COP_REG       = 11;   // cop RA register bit
 localparam  B_COP_SUB       = 0;    // cop_RA LOAD/SUB select
 

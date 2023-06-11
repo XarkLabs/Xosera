@@ -2528,9 +2528,9 @@ void wait_scanline()
         ;
 }
 
-#define SILENCE_VADDR 0x53ff        // end of TILE
-#define SILENCE_TILE  0x8000        // tilemem flag
-#define SILENCE_LEN   1             // 1 word (two samples)
+#define SILENCE_TILE  0x8000                                   // tilemem flag
+#define SILENCE_VADDR (XR_TILE_ADDR + XR_TILE_SIZE - 1)        // end of TILE
+#define SILENCE_LEN   1                                        // 1 word (two samples)
 
 uint8_t num_audio_channels;
 uint8_t audio_channel_mask;

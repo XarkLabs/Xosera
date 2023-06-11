@@ -77,7 +77,6 @@ typedef enum {
 logic [CHAN_W-1:0]                  fetch_chan;         // fetch channel being processed
 audio_fetch_st                      fetch_st;           // state of fetch FSM
 logic [xv::AUDIO_NCHAN-1:0]         fetch_restart;      // channel restart flags
-logic [xv::AUDIO_NCHAN-1:0]         fetch_memtile;      // channel tilemem flags
 
 // audio param BRAM constants (OR'd with channel << 2)
 localparam  AUDn_PARAM_LENCNT   = (8'h80 | 8'(xv::XR_AUD0_LENGTH[1:0]));  // temp length storage (decremented)
@@ -136,7 +135,7 @@ always_comb begin : alias_block
 end
 
 word_t audio_rd_data_minus1;        // used to decrement LEN (and underflow check)
-assign audio_rd_data_minus1 = audio_mem_rd_data - 1'b1;
+assign audio_rd_data_minus1 = { 1'b0, audio_mem_rd_data[14:0] } - 1'b1;
 
 // audio output and fetch
 always_ff @(posedge clk) begin : chan_process
@@ -155,7 +154,6 @@ always_ff @(posedge clk) begin : chan_process
         fetch_st            <= AUD_CHECK;
         fetch_chan          <= '0;
         fetch_restart       <= '0;
-        fetch_memtile       <= '0;
 
         chan_val            <= '0;
         chan_buff           <= '0;
@@ -234,10 +232,11 @@ always_ff @(posedge clk) begin : chan_process
                 fetch_st            <= AUD_RD_POINTER;
             end
             AUD_RD_POINTER: begin    // read AUDn_PARAM_PTRCNT or AUDn_PARAM_START
-                // LENCNT data ready, write back to LENCNT
+                // LENCNT data ready, write back to LENCNT decremented (preserve TILEMEM bit)
                 audio_wr_addr       <= AUDn_PARAM_LENCNT | (8'(fetch_chan) << 2);
-                audio_wr_data       <= audio_rd_data_minus1;
+                audio_wr_data       <= { audio_mem_rd_data[15], audio_rd_data_minus1[14:0] };
                 audio_wr_en         <= 1'b1;
+                audio_tile_o        <= audio_mem_rd_data[15];   // set audio TILEMEM
                 // check for LENCNT-1 underflow or restart
                 if (audio_rd_data_minus1[15] || fetch_restart[fetch_chan]) begin
                     audio_mem_rd_addr   <= AUDn_PARAM_START | (8'(fetch_chan) << 2);
@@ -253,12 +252,11 @@ always_ff @(posedge clk) begin : chan_process
             end
             AUD_RESET_LEN: begin    // read AUDn_PARAM_START
                 audio_mem_rd_addr   <= AUDn_PARAM_START | (8'(fetch_chan) << 2);
-                // LENGTH data ready, set TILE mem flag
-                fetch_memtile[fetch_chan] <= audio_mem_rd_data[15];   // TILE mem flag
-                // write LENGTH to LENCNT
+                // write LENGTH to LENCNT (with TILEMEM flag)
                 audio_wr_addr       <= AUDn_PARAM_LENCNT | (8'(fetch_chan) << 2);
-                audio_wr_data       <= { 1'b0, audio_mem_rd_data[14:0] };
+                audio_wr_data       <= audio_mem_rd_data;
                 audio_wr_en         <= 1'b1;
+                audio_tile_o        <= audio_mem_rd_data[15];   // set audio TILEMEM
 `ifndef SYNTHESIS
                 chan_len[fetch_chan] <= { 1'b0, audio_mem_rd_data[14:0] };
 `endif
@@ -282,7 +280,6 @@ always_ff @(posedge clk) begin : chan_process
                 // START/PTRCNT data ready
                 audio_req_o         <= 1'b1;                            // request audio sample
                 audio_addr_o        <= audio_mem_rd_data;               // audio sample address
-                audio_tile_o        <= fetch_memtile[fetch_chan];
 `ifndef SYNTHESIS
                 chan_ptr[fetch_chan] <= audio_mem_rd_data;
 `endif

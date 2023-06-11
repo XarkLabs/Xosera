@@ -77,6 +77,7 @@ typedef enum {
 logic [CHAN_W-1:0]                  fetch_chan;         // fetch channel being processed
 audio_fetch_st                      fetch_st;           // state of fetch FSM
 logic [xv::AUDIO_NCHAN-1:0]         fetch_restart;      // channel restart flags
+logic [xv::AUDIO_NCHAN-1:0]         fetch_memtile;      // channel tilemem flags
 
 // audio param BRAM constants (OR'd with channel << 2)
 localparam  AUDn_PARAM_LENCNT   = (8'h80 | 8'(xv::XR_AUD0_LENGTH[1:0]));  // temp length storage (decremented)
@@ -154,6 +155,7 @@ always_ff @(posedge clk) begin : chan_process
         fetch_st            <= AUD_CHECK;
         fetch_chan          <= '0;
         fetch_restart       <= '0;
+        fetch_memtile       <= '0;
 
         chan_val            <= '0;
         chan_buff           <= '0;
@@ -252,7 +254,7 @@ always_ff @(posedge clk) begin : chan_process
             AUD_RESET_LEN: begin    // read AUDn_PARAM_START
                 audio_mem_rd_addr   <= AUDn_PARAM_START | (8'(fetch_chan) << 2);
                 // LENGTH data ready, set TILE mem flag
-                audio_tile_o        <= audio_mem_rd_data[15];   // TILE mem flag
+                fetch_memtile[fetch_chan] <= audio_mem_rd_data[15];   // TILE mem flag
                 // write LENGTH to LENCNT
                 audio_wr_addr       <= AUDn_PARAM_LENCNT | (8'(fetch_chan) << 2);
                 audio_wr_data       <= { 1'b0, audio_mem_rd_data[14:0] };
@@ -273,14 +275,14 @@ always_ff @(posedge clk) begin : chan_process
                 fetch_st            <= AUD_RQ_SAMP;
             end
             AUD_NEXT_SAMP: begin
-                // LENGTH data ready, use TILE mem flag
-                audio_tile_o        <= audio_mem_rd_data[15];           // set TILE mem flag
+                // LENGTH data ready, ignore it
                 fetch_st            <= AUD_RQ_SAMP;
             end
             AUD_RQ_SAMP: begin      // request audio DMA
                 // START/PTRCNT data ready
                 audio_req_o         <= 1'b1;                            // request audio sample
                 audio_addr_o        <= audio_mem_rd_data;               // audio sample address
+                audio_tile_o        <= fetch_memtile[fetch_chan];
 `ifndef SYNTHESIS
                 chan_ptr[fetch_chan] <= audio_mem_rd_data;
 `endif

@@ -71,8 +71,7 @@ typedef enum {
     AUD_RESET_PTR,
     AUD_NEXT_SAMP,
     AUD_RQ_SAMP,
-    AUD_WAIT_ACK,
-    AUD_NEXT_CHAN
+    AUD_WAIT_ACK
 } audio_fetch_st;                                       // sample fetch states
 
 logic [CHAN_W-1:0]                  fetch_chan;         // fetch channel being processed
@@ -103,7 +102,6 @@ logic [xv::AUDIO_NCHAN-1:0]         chan_buff_ok;       // chan_buff word valid 
 logic [xv::AUDIO_NCHAN-1:0]         chan_buff_odd;      // channel odd (or low/2nd byte) output flag
 logic [8*xv::AUDIO_NCHAN-1:0]       chan_val;           // channel signed sample value
 logic [16*xv::AUDIO_NCHAN-1:0]      chan_period;        // channel period count down (bit 15=underflow flag)
-logic [xv::AUDIO_NCHAN-1:0]         chan_output;        // channel sample output flag (alias of chan_period bit 15)
 
 // debug aid signals
 `ifndef SYNTHESIS
@@ -115,6 +113,7 @@ addr_t                              chan_ptr[xv::AUDIO_NCHAN];          // chann
 word_t                              chan_len[xv::AUDIO_NCHAN];          // channel remaining length (debug)
 logic [7:0]                         chan_vol_l[xv::AUDIO_NCHAN];        // channel left volume
 logic [7:0]                         chan_vol_r[xv::AUDIO_NCHAN];        // channel right volume
+word_t                              chan_pericnt[xv::AUDIO_NCHAN];      // channel period count
 logic [xv::AUDIO_NCHAN-1:0]         chan_restart;                       // channel restart flag
 /* verilator lint_on UNUSED */
 `endif
@@ -122,8 +121,6 @@ logic [xv::AUDIO_NCHAN-1:0]         chan_restart;                       // chann
 // setup signal aliases
 always_comb begin : alias_block
     for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
-        chan_output[i]      = chan_period[16*i+15];
-
 `ifndef SYNTHESIS
         // debug aliases for easy viewing
         chan_vol_l[i]       = { 1'b0, audio_vol_l_nchan_i[7*i+:7]};
@@ -132,6 +129,7 @@ always_comb begin : alias_block
         chan_raw_u[i]       = chan_val[i*8+:8] ^ 8'h80;
         chan_word[i]        = chan_buff[16*i+:16] - 1'b1;
         chan_restart[i]     = audio_reload_nchan_o[i];
+        chan_pericnt[i]     = chan_period[16*i+:16];
 `endif
     end
 end
@@ -177,22 +175,28 @@ always_ff @(posedge clk) begin : chan_process
             chan_period[16*i+:16]<= chan_period[16*i+:16] - 1'b1;
 
             // if period underflowed, output next sample
-            if (chan_output[i]) begin
+            if (chan_period[16*i+15] && chan_buff_ok[i]) begin
                 chan_buff_odd[i]         <= !chan_buff_odd[i];
                 chan_period[16*i+:16]   <= { 1'b0, audio_period_nchan_i[i*15+:15] };
                 chan_val[i*8+:8]        <= chan_buff_odd[i] ? chan_buff[16*i+:8] : chan_buff[16*i+8+:8];
                 // if 2nd sample of sample word, prepare sample address
                 if (chan_buff_odd[i]) begin
-`ifndef SYNTHESIS
-                    chan_buff[16*i+:16] <= chan_buff[16*i+:16] ^ 16'h8080;  // obvious "glitch" to verify not used again
-`endif
                     chan_buff_ok[i]     <= 1'b0;                            // indicate sample needs loading
                 end
             end
+`ifndef SYNTHESIS
+            else begin
+                // add obvious "glitch" to help verify sample value not re-output (underflow)
+                if (audio_enable_i && chan_period[16*i+15]) begin
+                    chan_val[i*8+:8] <= chan_val[i*8+:8] ^ 8'h80;
+                end
+            end
+`endif
 
             if (!audio_enable_i || audio_restart_nchan_i[i]) begin
                 fetch_restart[i]        <= 1'b1;    // force sample addr, tile, len reload
-                chan_period[16*i+15]    <= 1'b1;    // force sample period expire
+                chan_period[16*i+15]    <= 1'b1;    // force sample period expire (high bit)
+                chan_period[16*i]       <= 1'b1;    // force sample period expire (low bit to survive decrement)
                 chan_buff_ok[i]         <= 1'b0;    // clear sample buffer status
                 chan_buff_odd[i]        <= 1'b0;    // output 1st sample from word
             end
@@ -204,10 +208,18 @@ always_ff @(posedge clk) begin : chan_process
         audio_mem_rd_addr       <= '0;  // needed?
         case (fetch_st)
             AUD_CHECK: begin
-                if (!chan_buff_ok[fetch_chan]) begin
-                    fetch_st            <= AUD_RD_LENCNT;
-                end else begin
-                    fetch_st            <= AUD_NEXT_CHAN;
+                if (!chan_buff_ok[0]) begin
+                    fetch_chan  <= CHAN_W'(0);
+                    fetch_st    <= AUD_RD_LENCNT;
+                end else if (!chan_buff_ok[1]) begin
+                    fetch_chan  <= CHAN_W'(1);
+                    fetch_st    <= AUD_RD_LENCNT;
+                end else if (!chan_buff_ok[2]) begin
+                    fetch_chan  <= CHAN_W'(2);
+                    fetch_st    <= AUD_RD_LENCNT;
+                end else if (!chan_buff_ok[3]) begin
+                    fetch_chan  <= CHAN_W'(3);
+                    fetch_st    <= AUD_RD_LENCNT;
                 end
             end
             AUD_RD_LENCNT: begin    // read AUDn_PARAM_LENCNT
@@ -226,7 +238,6 @@ always_ff @(posedge clk) begin : chan_process
                 audio_wr_en         <= 1'b1;
                 // check for LENCNT-1 underflow or restart
                 if (audio_rd_data_minus1[15] || fetch_restart[fetch_chan]) begin
-                    fetch_restart[fetch_chan] <= 1'b1;                  // set restart flag
                     audio_mem_rd_addr   <= AUDn_PARAM_START | (8'(fetch_chan) << 2);
                     fetch_st            <= AUD_RESET_LEN;
                 end else begin
@@ -236,6 +247,7 @@ always_ff @(posedge clk) begin : chan_process
                     audio_mem_rd_addr   <= AUDn_PARAM_PTRCNT | (8'(fetch_chan) << 2);
                     fetch_st            <= AUD_NEXT_SAMP;
                 end
+                fetch_restart[fetch_chan] <= 1'b0;                      // clear restart flag
             end
             AUD_RESET_LEN: begin    // read AUDn_PARAM_START
                 audio_mem_rd_addr   <= AUDn_PARAM_START | (8'(fetch_chan) << 2);
@@ -257,7 +269,6 @@ always_ff @(posedge clk) begin : chan_process
                 audio_wr_data       <= audio_mem_rd_data;
                 audio_wr_en         <= 1'b1;
                 // set channel reload strobe
-                fetch_restart[fetch_chan] <= 1'b0;                      // clear restart flag
                 audio_reload_nchan_o[fetch_chan] <= 1'b1;               // indicate channel reloaded
                 fetch_st            <= AUD_RQ_SAMP;
             end
@@ -284,14 +295,8 @@ always_ff @(posedge clk) begin : chan_process
                     audio_req_o         <= 1'b0;                            // request audio sample
                     chan_buff[16*fetch_chan+:16] <= audio_word_i;
                     chan_buff_ok[fetch_chan] <= 1'b1;
-                    fetch_st            <= AUD_NEXT_CHAN;
-                end else begin
-                    fetch_st            <= AUD_WAIT_ACK;
+                    fetch_st            <= AUD_CHECK;
                 end
-            end
-            AUD_NEXT_CHAN: begin    // next channel
-                fetch_chan          <= fetch_chan + 1'b1;
-                fetch_st            <= AUD_CHECK;
             end
         endcase
 

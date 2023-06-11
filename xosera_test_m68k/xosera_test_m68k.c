@@ -2538,8 +2538,6 @@ uint8_t audio_channel_mask;
 
 static int init_audio()
 {
-    xreg_setw(AUD_CTRL, 0x0000);        // disable audio
-
     // upload word of silence
     if (SILENCE_TILE)
     {
@@ -2557,7 +2555,7 @@ static int init_audio()
     {
         uint16_t vo = v << 2;
         xreg_setw(AUD0_VOL + vo, 0);
-        xreg_setw(AUD0_PERIOD + vo, 0);
+        xreg_setw(AUD0_PERIOD + vo, 800);
         xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));
         xreg_setw(AUD0_START + vo, SILENCE_VADDR);
     }
@@ -2566,6 +2564,11 @@ static int init_audio()
     audio_channel_mask = 0;
 
     xreg_setw(AUD_CTRL, 0x0001);        // enable audio
+    for (int v = 0; v < 4; v++)
+    {
+        uint16_t vo = v << 2;
+        xreg_setw(AUD0_PERIOD + vo, 0x8000 | 0);
+    }
     // check if audio fully disbled
     uint8_t aud_ena = xreg_getw(AUD_CTRL) & 1;
     if (!aud_ena)
@@ -2574,7 +2577,9 @@ static int init_audio()
         return 0;
     }
 
-    // channels should instantly trigger ready interrupt
+    // at period 800 channels should trigger ready interrupt
+    delay_check(1);
+
     audio_channel_mask = xm_getbl(INT_CTRL) & INT_CTRL_AUD_ALL_F;
     while (audio_channel_mask & (1 << num_audio_channels))
     {
@@ -2617,6 +2622,17 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 {
     if (num_audio_channels != 0)
     {
+
+        // set all channels to "full volume" silence at very slow period
+        for (int v = 0; v < num_audio_channels; v++)
+        {
+            uint16_t vo = v << 2;
+            xreg_setw(AUD0_VOL + vo, 0x8080);
+            xreg_setw(AUD0_PERIOD + vo, 0x7FFF);
+            xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));
+            xreg_setw(AUD0_START + vo, SILENCE_VADDR);
+        }
+
         uint16_t ic = xm_getw(INT_CTRL);
         xm_setw(INT_CTRL, ic | INT_CTRL_CLEAR_ALL_F);
         uint16_t ic2 = xm_getw(INT_CTRL);
@@ -2626,55 +2642,51 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
         uint32_t clk_hz = xosera_vid_width() > 640 ? 33750000 : 25125000;
         uint16_t period = (clk_hz + rate - 1) / rate;
 
-        for (int v = 0; v < 4; v++)
+        for (int v = 0; v < num_audio_channels; v++)
         {
             uint16_t vo = v << 2;
-            if (audio_channel_mask & (1 << v))
+            ic          = xm_getw(INT_CTRL);
+            dprintf("Starting channel %d... INT_CTRL = 0x%04x\n", v, ic);
+            if (v & 1)
             {
-                ic = xm_getw(INT_CTRL);
-                dprintf("Starting channel %d... INT_CTRL = 0x%04x\n", v, ic);
-                if (v & 1)
-                {
-                    xreg_setw(AUD0_VOL + vo, 0x4020);
-                }
-                else
-                {
-                    xreg_setw(AUD0_VOL + vo, 0x2040);
-                }
-                xreg_setw(AUD0_LENGTH + vo, (len / 2) - 1);
-                xreg_setw(AUD0_PERIOD + vo, period);        // force instant sample start
-                xreg_setw(AUD0_START + vo, vaddr);
-                xreg_setw(AUD0_PERIOD + vo, period | 0x8000);        // force instant sample start
-                delay_check(1);
-                ic = xm_getw(INT_CTRL);
-
-                xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));        // length-1 and TILE flag
-                xreg_setw(AUD0_START + vo, SILENCE_VADDR);                            // queue silence
-
-                xm_setw(INT_CTRL, ic | (INT_CTRL_AUD0_INTR_F << v));        // clear voice interrupt status
-                ic2 = xm_getw(INT_CTRL);
-
-                dprintf("Started               INT_CTRL = 0x%04x -> 0x%04x\n", ic, ic2);
-
-                delay_check(250);
-                period += 350;
+                xreg_setw(AUD0_VOL + vo, 0x4020);
             }
+            else
+            {
+                xreg_setw(AUD0_VOL + vo, 0x2040);
+            }
+            xreg_setw(AUD0_LENGTH + vo, (len / 2) - 1);
+            xreg_setw(AUD0_PERIOD + vo, period);        // force instant sample start
+            xreg_setw(AUD0_START + vo, vaddr);
+            xreg_setw(AUD0_PERIOD + vo, period | 0x8000);        // force instant sample start
+            delay_check(1);
+            ic = xm_getw(INT_CTRL);
+
+            xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));        // length-1 and TILE flag
+            xreg_setw(AUD0_START + vo, SILENCE_VADDR);                            // queue silence
+
+            xm_setw(INT_CTRL, ic | (INT_CTRL_AUD0_INTR_F << v));        // clear voice interrupt status
+            ic2 = xm_getw(INT_CTRL);
+
+            dprintf("Started               INT_CTRL = 0x%04x -> 0x%04x\n", ic, ic2);
+
+            delay_check(250);
+            period += 350;
         }
 
         // wait for each channels to be ready (after they have started SILENCE)
-        for (int v = 0; v < 4; v++)
+        for (int v = 0; v < num_audio_channels; v++)
         {
-            if (audio_channel_mask & (1 << v))
+            uint16_t vo = v << 2;
+            ic          = xm_getw(INT_CTRL);
+            dprintf("Waiting channel  %d... INT_CTRL = 0x%04x\n", v, ic);
+            do
             {
+                delay_check(1);
                 ic = xm_getw(INT_CTRL);
-                dprintf("Waiting channel  %d... INT_CTRL = 0x%04x\n", v, ic);
-                do
-                {
-                    delay_check(1);
-                    ic = xm_getw(INT_CTRL);
-                } while ((ic & (1 << (INT_CTRL_AUD0_INTR_B + v))) == 0);
-                dprintf("Finished              INT_CTRL = 0x%04x\n", ic);
-            }
+            } while ((ic & (1 << (INT_CTRL_AUD0_INTR_B + v))) == 0);
+            dprintf("Finished              INT_CTRL = 0x%04x\n", ic);
+            xreg_setw(AUD0_VOL + vo, 0x0000);
         }
     }
     else

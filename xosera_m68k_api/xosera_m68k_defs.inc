@@ -15,7 +15,7 @@
 ; Copyright (c) 2021-2022 Xark
 ; MIT License
 ;
-; Xosera rosco_m68k C register definition header file
+; Xosera rosco_m68k asm register definition header file
 ; ------------------------------------------------------------
 ;
 

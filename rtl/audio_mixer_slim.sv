@@ -64,12 +64,10 @@ logic signed [9:0]                  mix_r_acc;          // right FMAC unclamped 
 // sample fetch signals
 typedef enum {
     AUD_CHECK,
-    AUD_RD_LENCNT,
-    AUD_RD_LENGTH,
-    AUD_RD_POINTER,
-    AUD_RESET_LEN,
-    AUD_RESET_PTR,
-    AUD_NEXT_SAMP,
+    AUD_RD_PTRCNT,
+    AUD_DEC_LENCNT,
+    AUD_RELOAD,
+    AUD_SET_LENCNT,
     AUD_RQ_SAMP,
     AUD_WAIT_ACK
 } audio_fetch_st;                                       // sample fetch states
@@ -109,12 +107,11 @@ logic [16*xv::AUDIO_NCHAN-1:0]      chan_period;        // channel period count 
 byte_t                              chan_raw[xv::AUDIO_NCHAN];          // channel value sent to DAC
 byte_t                              chan_raw_u[xv::AUDIO_NCHAN];        // channel value sent to DAC unsigned
 word_t                              chan_word[xv::AUDIO_NCHAN];         // channel DMA word buffer
-addr_t                              chan_ptr[xv::AUDIO_NCHAN];          // channel DMA address (debug)
-word_t                              chan_len[xv::AUDIO_NCHAN];          // channel remaining length (debug)
+addr_t                              chan_ptrcnt[xv::AUDIO_NCHAN];          // channel DMA address (debug)
+word_t                              chan_lencnt[xv::AUDIO_NCHAN];          // channel remaining length (debug)
 logic [7:0]                         chan_vol_l[xv::AUDIO_NCHAN];        // channel left volume
 logic [7:0]                         chan_vol_r[xv::AUDIO_NCHAN];        // channel right volume
 word_t                              chan_pericnt[xv::AUDIO_NCHAN];      // channel period count
-logic [xv::AUDIO_NCHAN-1:0]         chan_restart;                       // channel restart flag
 /* verilator lint_on UNUSED */
 `endif
 
@@ -128,7 +125,6 @@ always_comb begin : alias_block
         chan_raw[i]         = chan_val[i*8+:8];
         chan_raw_u[i]       = chan_val[i*8+:8] ^ 8'h80;
         chan_word[i]        = chan_buff[16*i+:16] - 1'b1;
-        chan_restart[i]     = audio_reload_nchan_o[i];
         chan_pericnt[i]     = chan_period[16*i+:16];
 `endif
     end
@@ -163,8 +159,8 @@ always_ff @(posedge clk) begin : chan_process
 
 `ifndef SYNTHESIS
         for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
-            chan_ptr[i] <= 16'hE3E3;
-            chan_len[i] <= 16'hE3E3;
+            chan_ptrcnt[i] <= 16'hE3E3;
+            chan_lencnt[i] <= 16'hE3E3;
         end
 `endif
 
@@ -205,85 +201,78 @@ always_ff @(posedge clk) begin : chan_process
         // process audio sample FSM
         audio_reload_nchan_o    <= '0;  // reset all channels reload
         audio_wr_en             <= '0;  // reset param mem write strobe
-        audio_mem_rd_addr       <= '0;  // needed?
         case (fetch_st)
-            AUD_CHECK: begin
+            AUD_CHECK: begin    // queue LENCNT read, if any buffer empty then set fetch_chan and state
+                audio_req_o         <= 1'b0;                            // clear audio sample request
                 if (!chan_buff_ok[0]) begin
-                    fetch_chan  <= CHAN_W'(0);
-                    fetch_st    <= AUD_RD_LENCNT;
+                    fetch_chan          <= CHAN_W'(0);
+                    audio_mem_rd_addr   <= AUDn_PARAM_LENCNT | (8'(0) << 2);
+                    fetch_st            <= AUD_RD_PTRCNT;
                 end else if (!chan_buff_ok[1]) begin
-                    fetch_chan  <= CHAN_W'(1);
-                    fetch_st    <= AUD_RD_LENCNT;
+                    fetch_chan          <= CHAN_W'(1);
+                    audio_mem_rd_addr   <= AUDn_PARAM_LENCNT | (8'(1) << 2);
+                    fetch_st            <= AUD_RD_PTRCNT;
                 end else if (!chan_buff_ok[2]) begin
-                    fetch_chan  <= CHAN_W'(2);
-                    fetch_st    <= AUD_RD_LENCNT;
+                    fetch_chan          <= CHAN_W'(2);
+                    audio_mem_rd_addr   <= AUDn_PARAM_LENCNT | (8'(2) << 2);
+                    fetch_st            <= AUD_RD_PTRCNT;
                 end else if (!chan_buff_ok[3]) begin
-                    fetch_chan  <= CHAN_W'(3);
-                    fetch_st    <= AUD_RD_LENCNT;
+                    fetch_chan          <= CHAN_W'(3);
+                    audio_mem_rd_addr   <= AUDn_PARAM_LENCNT | (8'(3) << 2);
+                    fetch_st            <= AUD_RD_PTRCNT;
                 end
             end
-            AUD_RD_LENCNT: begin    // read AUDn_PARAM_LENCNT
-                audio_mem_rd_addr   <= AUDn_PARAM_LENCNT | (8'(fetch_chan) << 2);
-                fetch_st            <= AUD_RD_LENGTH;
-            end
-            AUD_RD_LENGTH: begin    // read AUDn_PARAM_LENGTH
-                audio_mem_rd_addr   <= AUDn_PARAM_LENGTH | (8'(fetch_chan) << 2);
+            AUD_RD_PTRCNT: begin    // queue PTRCNT read
+                audio_mem_rd_addr   <= AUDn_PARAM_PTRCNT | (8'(fetch_chan) << 2);
                 // waiting for LENCNT
-                fetch_st            <= AUD_RD_POINTER;
+                fetch_st            <= AUD_DEC_LENCNT;
             end
-            AUD_RD_POINTER: begin    // read AUDn_PARAM_PTRCNT or AUDn_PARAM_START
-                // LENCNT data ready, write back to LENCNT decremented (preserve TILEMEM bit)
+            AUD_DEC_LENCNT: begin    // read LENCNT data decremented
+                // LENCNT data ready, waiting for PTRCNT
+                // write back to LENCNT decremented (but preserve TILEMEM bit)
+                audio_wr_en         <= 1'b1;
                 audio_wr_addr       <= AUDn_PARAM_LENCNT | (8'(fetch_chan) << 2);
                 audio_wr_data       <= { audio_mem_rd_data[15], audio_rd_data_minus1[14:0] };
-                audio_wr_en         <= 1'b1;
-                audio_tile_o        <= audio_mem_rd_data[15];   // set audio TILEMEM
-                // check for LENCNT-1 underflow or restart
-                if (audio_rd_data_minus1[15] || fetch_restart[fetch_chan]) begin
-                    audio_mem_rd_addr   <= AUDn_PARAM_START | (8'(fetch_chan) << 2);
-                    fetch_st            <= AUD_RESET_LEN;
-                end else begin
 `ifndef SYNTHESIS
-                    chan_len[fetch_chan] <= audio_rd_data_minus1;
+                chan_lencnt[fetch_chan] <= { audio_mem_rd_data[15], audio_rd_data_minus1[14:0] };
 `endif
-                    audio_mem_rd_addr   <= AUDn_PARAM_PTRCNT | (8'(fetch_chan) << 2);
-                    fetch_st            <= AUD_NEXT_SAMP;
+                // if underflow or restart then queue LENGTH read and reload else request sample
+                if (audio_rd_data_minus1[15] || fetch_restart[fetch_chan]) begin
+                    // queue LENGTH read
+                    audio_mem_rd_addr   <= AUDn_PARAM_LENGTH | (8'(fetch_chan) << 2);
+                    fetch_st            <= AUD_RELOAD;
+                end else begin
+                    audio_tile_o        <= audio_mem_rd_data[15];       // set audio TILEMEM
+                    fetch_st            <= AUD_RQ_SAMP;
                 end
                 fetch_restart[fetch_chan] <= 1'b0;                      // clear restart flag
             end
-            AUD_RESET_LEN: begin    // read AUDn_PARAM_START
+            AUD_RELOAD: begin       // queue START read
+                // ignore PTRCNT data, queue START read
                 audio_mem_rd_addr   <= AUDn_PARAM_START | (8'(fetch_chan) << 2);
-                // write LENGTH to LENCNT (with TILEMEM flag)
+                fetch_st            <= AUD_SET_LENCNT;
+            end
+            AUD_SET_LENCNT: begin    // set LENCTN from LENGTH
+                // LENGTH data ready, waiting for START
+                // write to LENCNT (with TILEMEM flag)
+                audio_wr_en         <= 1'b1;
                 audio_wr_addr       <= AUDn_PARAM_LENCNT | (8'(fetch_chan) << 2);
                 audio_wr_data       <= audio_mem_rd_data;
-                audio_wr_en         <= 1'b1;
-                audio_tile_o        <= audio_mem_rd_data[15];   // set audio TILEMEM
+                audio_tile_o        <= audio_mem_rd_data[15];           // set audio TILEMEM
 `ifndef SYNTHESIS
-                chan_len[fetch_chan] <= { 1'b0, audio_mem_rd_data[14:0] };
+                chan_lencnt[fetch_chan] <= audio_mem_rd_data;
 `endif
-                fetch_st            <= AUD_RESET_PTR;
-            end
-            AUD_RESET_PTR: begin
-                // START data ready
-                // write START to PTRCNT
-                audio_wr_addr       <= AUDn_PARAM_PTRCNT | (8'(fetch_chan) << 2);
-                audio_wr_data       <= audio_mem_rd_data;
-                audio_wr_en         <= 1'b1;
-                // set channel reload strobe
                 audio_reload_nchan_o[fetch_chan] <= 1'b1;               // indicate channel reloaded
                 fetch_st            <= AUD_RQ_SAMP;
             end
-            AUD_NEXT_SAMP: begin
-                // LENGTH data ready, ignore it
-                fetch_st            <= AUD_RQ_SAMP;
-            end
-            AUD_RQ_SAMP: begin      // request audio DMA
-                // START/PTRCNT data ready
+            AUD_RQ_SAMP: begin      // request audio DMA data
+                // PTRCNT or START data ready
                 audio_req_o         <= 1'b1;                            // request audio sample
                 audio_addr_o        <= audio_mem_rd_data;               // audio sample address
 `ifndef SYNTHESIS
-                chan_ptr[fetch_chan] <= audio_mem_rd_data;
+                chan_ptrcnt[fetch_chan] <= audio_mem_rd_data;
 `endif
-                // write START/PTRCNT+1, write to PTRCNT
+                // write START/PTRCNT+1 to PTRCNT
                 audio_wr_en         <= 1'b1;
                 audio_wr_addr       <= AUDn_PARAM_PTRCNT | (8'(fetch_chan) << 2);
                 audio_wr_data       <= audio_mem_rd_data + 1'b1;        // update PTRCNT
@@ -301,7 +290,6 @@ always_ff @(posedge clk) begin : chan_process
 
         // if audio disabled, reset fetch FSM
         if (!audio_enable_i) begin
-            fetch_chan          <= '0;
             fetch_st            <= AUD_CHECK;
         end
     end

@@ -2362,7 +2362,7 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
     {
         uint16_t co = v << 2;
         xreg_setw(AUD0_VOL + co, 0x0000);              // set volume to 0L, 0R
-        xreg_setw(AUD0_PERIOD + co, 0x0000);           // fast period
+        xreg_setw(AUD0_PERIOD + co, 0x7F00);           // slow period
         xreg_setw(AUD0_LENGTH + co, 0x0000);           // 1 word len
         xreg_setw(AUD0_START + co, test_vaddr);        // address in VRAM
     }
@@ -2386,10 +2386,11 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
 
     dprintf("%d: Volume (128=1.0): L:%3d/R:%3d    Period (1/pclk): %5d", chan, lv, rv, p);
 
-    xreg_setw(AUD0_VOL + chanoff, lv << 8 | rv);                 // set left 100% volume, right 50% volume
     xreg_setw(AUD0_PERIOD + chanoff, p);                         // 1000 clocks per each sample byte
-    xreg_setw(AUD0_START + chanoff, test_vaddr);                 // address in VRAM
     xreg_setw(AUD0_LENGTH + chanoff, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+    xreg_setw(AUD0_START + chanoff, test_vaddr);                 // address in VRAM
+    xreg_setw(AUD0_PERIOD + chanoff, 0x8000 | p);                // 1000 clocks per each sample byte
+    xreg_setw(AUD0_VOL + chanoff, lv << 8 | rv);                 // set left 100% volume, right 50% volume
 
     bool done = false;
 
@@ -2455,29 +2456,29 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
                 chan = 0;
                 xreg_setw(AUD0_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
                 xreg_setw(AUD0_PERIOD, p);                         // 1000 clocks per each sample byte
-                xreg_setw(AUD0_START, test_vaddr);                 // address in VRAM
                 xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+                xreg_setw(AUD0_START, test_vaddr);                 // address in VRAM
                 break;
             case '1':
                 chan = 1;
                 xreg_setw(AUD1_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
                 xreg_setw(AUD1_PERIOD, p);                         // 1000 clocks per each sample byte
-                xreg_setw(AUD1_START, test_vaddr);                 // address in VRAM
                 xreg_setw(AUD1_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+                xreg_setw(AUD1_START, test_vaddr);                 // address in VRAM
                 break;
             case '2':
                 chan = 2;
                 xreg_setw(AUD2_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
                 xreg_setw(AUD2_PERIOD, p);                         // 1000 clocks per each sample byte
-                xreg_setw(AUD2_START, test_vaddr);                 // address in VRAM
                 xreg_setw(AUD2_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+                xreg_setw(AUD2_START, test_vaddr);                 // address in VRAM
                 break;
             case '3':
                 chan = 3;
                 xreg_setw(AUD3_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
                 xreg_setw(AUD3_PERIOD, p);                         // 1000 clocks per each sample byte
-                xreg_setw(AUD3_START, test_vaddr);                 // address in VRAM
                 xreg_setw(AUD3_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+                xreg_setw(AUD3_START, test_vaddr);                 // address in VRAM
                 break;
             case ' ':
                 done = true;
@@ -2503,7 +2504,7 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
     {
         uint16_t co = v << 2;
         xreg_setw(AUD0_VOL + co, 0x0000);           // set volume to 0%
-        xreg_setw(AUD0_PERIOD + co, 0x0000);        // 1000 clocks per each sample byte
+        xreg_setw(AUD0_PERIOD + co, 0x7F00);        // 1000 clocks per each sample byte
         xreg_setw(AUD0_LENGTH + co, 0x0000);        // 1000 clocks per each sample byte
         xreg_setw(AUD0_START + co, 0x0000);         // 1000 clocks per each sample byte
     }
@@ -2555,7 +2556,7 @@ static int init_audio()
     {
         uint16_t vo = v << 2;
         xreg_setw(AUD0_VOL + vo, 0);
-        xreg_setw(AUD0_PERIOD + vo, 800);
+        xreg_setw(AUD0_PERIOD + vo, 0);
         xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));
         xreg_setw(AUD0_START + vo, SILENCE_VADDR);
     }
@@ -2576,9 +2577,6 @@ static int init_audio()
         dprintf("Xosera audio support disabled.\n");
         return 0;
     }
-
-    // at period 800 channels should trigger ready interrupt
-    delay_check(1);
 
     audio_channel_mask = xm_getbl(INT_CTRL) & INT_CTRL_AUD_ALL_F;
     while (audio_channel_mask & (1 << num_audio_channels))
@@ -2622,7 +2620,6 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 {
     if (num_audio_channels != 0)
     {
-
         // set all channels to "full volume" silence at very slow period
         for (int v = 0; v < num_audio_channels; v++)
         {
@@ -2656,10 +2653,9 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
                 xreg_setw(AUD0_VOL + vo, 0x2040);
             }
             xreg_setw(AUD0_LENGTH + vo, (len / 2) - 1);
-            xreg_setw(AUD0_PERIOD + vo, period);        // force instant sample start
             xreg_setw(AUD0_START + vo, vaddr);
             xreg_setw(AUD0_PERIOD + vo, period | 0x8000);        // force instant sample start
-            delay_check(1);
+
             ic = xm_getw(INT_CTRL);
 
             xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));        // length-1 and TILE flag
@@ -2682,11 +2678,11 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
             dprintf("Waiting channel  %d... INT_CTRL = 0x%04x\n", v, ic);
             do
             {
-                delay_check(1);
                 ic = xm_getw(INT_CTRL);
             } while ((ic & (1 << (INT_CTRL_AUD0_INTR_B + v))) == 0);
             dprintf("Finished              INT_CTRL = 0x%04x\n", ic);
             xreg_setw(AUD0_VOL + vo, 0x0000);
+            xreg_setw(AUD0_PERIOD + vo, 0x7F00);
         }
     }
     else

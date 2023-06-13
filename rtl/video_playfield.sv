@@ -52,12 +52,6 @@ module video_playfield (
     input  wire addr_t          pf_line_start_addr_i,       // address of next line display data start
     // video color index output
     output      color_t         pf_color_index_o,           // output color index
-    // DMA
-    input       logic           dma_req_i,                  // DMA request
-    output      logic           dma_ack_o,                  // DMA acknowledge
-    input  wire logic           dma_tile_i,                 // DMA memory (0=VRAM, 1=TILE)
-    input  wire addr_t          dma_addr_i,                 // DMA address
-    output      word_t          dma_word_o,                 // DMA data out
     // standard signals
     input  wire logic           reset_i,                    // system reset
     input  wire                 clk                         // pixel clock
@@ -68,8 +62,6 @@ localparam H_SCANOUT_BEGIN  = xv::OFFSCREEN_WIDTH-2;        // h count for start
 // display line fetch generation FSM
 typedef enum logic [4:0] {
     FETCH_IDLE          =   5'h00,                  // wait for dma or memfetch
-    FETCH_WAIT_DMA      =   5'h01,                  // output DMA address
-    FETCH_READ_DMA      =   5'h02,                  // read DMA data
     // bitmap
     FETCH_BITMAP        =   5'h03,                  // output bitmap VRAM address
     FETCH_ADDR_BITMAP   =   5'h04,                  // output bitmap VRAM address
@@ -111,9 +103,6 @@ logic [4:0]     pf_fetch, pf_fetch_next;            // playfield A generation FS
 
 addr_t          pf_addr, pf_addr_next;              // address to fetch display bitmap/tilemap
 addr_t          pf_tile_addr;                       // tile start address (VRAM or TILERAM)
-
-logic           dma_ack, dma_ack_next;              // DMA data acknowledge
-word_t          dma_word, dma_word_next;            // DMA data being fetched
 
 logic           vram_sel_next;                      // vram select output
 logic           tilemem_sel_next;                   // tilemem select output
@@ -181,9 +170,6 @@ always_comb begin
 
     pf_tile_addr        = calc_tile_addr(pf_attr_word_next[xv::TILE_INDEX+:10], pf_tile_y, pf_tile_bank_i, pf_bpp_i, pf_tile_height_i[3], pf_attr_word_next[xv::TILE_ATTR_VREV]);
 
-    dma_word_next       = dma_word;
-    dma_ack_next        = 1'b0;
-
     pf_words_ready_next = 1'b0;
     vram_sel_next       = 1'b0;
     tilemem_sel_next    = 1'b0;
@@ -196,20 +182,7 @@ always_comb begin
                 end else begin
                     pf_fetch_next   = FETCH_ADDR_TILEMAP;
                 end
-            end else if (dma_req_i && !dma_ack) begin
-                fetch_addr_next     = dma_addr_i;           // put DMA address on bus
-                vram_sel_next       = ~dma_tile_i;          // select VRAM/TILE for DMA
-                tilemem_sel_next    = dma_tile_i;
-                pf_fetch_next       = FETCH_WAIT_DMA;
             end
-        end
-        FETCH_WAIT_DMA: begin
-            pf_fetch_next   = FETCH_READ_DMA;
-        end
-        FETCH_READ_DMA: begin
-            dma_word_next = dma_tile_i ? tilemem_data_i : vram_data_i;  // read audio word
-            dma_ack_next  = 1'b1;                                       // signal audio data ready
-            pf_fetch_next   = FETCH_IDLE;
         end
         // bitmap mode
         FETCH_ADDR_BITMAP: begin
@@ -349,8 +322,6 @@ always_comb begin
 end
 
 assign  pf_color_index_o    = pf_pixels[63:56] ^ pf_colorbase_i;   // XOR colorbase bits here
-assign  dma_word_o          = dma_word;
-assign  dma_ack_o           = dma_ack;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -373,9 +344,6 @@ always_ff @(posedge clk) begin
         pf_data_word3       <= 16'h0000;
         pf_initial_buf      <= 1'b0;
         pf_words_ready      <= 1'b0;
-
-        dma_ack             <= 1'b0;
-        dma_word            <= 16'h0000;
 
         pf_initial_buf      <= 1'b0;
         pf_pixels_buf_full  <= 1'b0;            // flag when pf_pixels_buf is empty (continue fetching)
@@ -412,9 +380,6 @@ always_ff @(posedge clk) begin
             vram_addr_o     <= fetch_addr_next;
             tilemem_sel_o   <= tilemem_sel_next;
             tilemem_addr_o  <= $bits(tilemem_addr_o)'(fetch_addr_next);
-
-            dma_word      <= dma_word_next;
-            dma_ack       <= dma_ack_next;
         end
 
         // have display words been fetched?

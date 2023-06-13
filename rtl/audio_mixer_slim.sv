@@ -30,8 +30,8 @@ module audio_mixer_slim (
     input  wire logic [xv::AUDIO_NCHAN-1:0]     audio_restart_nchan_i,
     output      logic [xv::AUDIO_NCHAN-1:0]     audio_reload_nchan_o,
 
-    output      logic                           audio_req_o,
-    input wire  logic                           audio_ack_i,
+    output      logic                           audio_dma_req_o,
+    input wire  logic                           audio_dma_ack_i,
     output      logic                           audio_tile_o,
     output      addr_t                          audio_addr_o,
     input       word_t                          audio_word_i,
@@ -136,7 +136,7 @@ assign audio_rd_data_minus1 = { 1'b0, audio_mem_rd_data[14:0] } - 1'b1;
 // audio output and fetch
 always_ff @(posedge clk) begin : chan_process
     if (reset_i) begin
-        audio_req_o         <= '0;
+        audio_dma_req_o         <= '0;
         audio_tile_o        <= '0;
         audio_addr_o        <= '0;
         audio_reload_nchan_o <= '0;  // reset all channels reload
@@ -203,7 +203,7 @@ always_ff @(posedge clk) begin : chan_process
         audio_wr_en             <= '0;  // reset param mem write strobe
         case (fetch_st)
             AUD_CHECK: begin    // queue LENCNT read, if any buffer empty then set fetch_chan and state
-                audio_req_o         <= 1'b0;                            // clear audio sample request
+                audio_dma_req_o         <= 1'b0;                            // clear audio sample request
                 if (!chan_buff_ok[0]) begin
                     fetch_chan          <= CHAN_W'(0);
                     audio_mem_rd_addr   <= AUDn_PARAM_LENCNT | (8'(0) << 2);
@@ -267,7 +267,7 @@ always_ff @(posedge clk) begin : chan_process
             end
             AUD_RQ_SAMP: begin      // request audio DMA data
                 // PTRCNT or START data ready
-                audio_req_o         <= 1'b1;                            // request audio sample
+                audio_dma_req_o         <= 1'b1;                            // request audio sample
                 audio_addr_o        <= audio_mem_rd_data;               // audio sample address
 `ifndef SYNTHESIS
                 chan_ptrcnt[fetch_chan] <= audio_mem_rd_data;
@@ -279,8 +279,8 @@ always_ff @(posedge clk) begin : chan_process
                 fetch_st            <= AUD_WAIT_ACK;
             end
             AUD_WAIT_ACK: begin      // request audio DMA
-                if (audio_ack_i) begin
-                    audio_req_o         <= 1'b0;                            // request audio sample
+                if (audio_dma_ack_i) begin
+                    audio_dma_req_o         <= 1'b0;                            // request audio sample
                     chan_buff[16*fetch_chan+:16] <= audio_word_i;
                     chan_buff_ok[fetch_chan] <= 1'b1;
                     fetch_st            <= AUD_CHECK;

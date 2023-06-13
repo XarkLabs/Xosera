@@ -28,8 +28,8 @@ module audio_mixer (
     input  wire logic [xv::AUDIO_NCHAN-1:0]             audio_restart_nchan_i,
     output      logic [xv::AUDIO_NCHAN-1:0]             audio_reload_nchan_o,
 
-    output      logic           audio_req_o,
-    input wire  logic           audio_ack_i,
+    output      logic           audio_dma_req_o,
+    input wire  logic           audio_dma_ack_i,
     output      logic           audio_tile_o,
     output      addr_t          audio_addr_o,
     input       word_t          audio_word_i,
@@ -132,7 +132,7 @@ audio_dac #(
 
 always_ff @(posedge clk) begin : chan_process
     if (reset_i) begin
-        audio_req_o         <= '0;
+        audio_dma_req_o         <= '0;
         audio_tile_o        <= '0;
         audio_addr_o        <= '0;
 
@@ -204,18 +204,18 @@ always_ff @(posedge clk) begin : chan_process
                 audio_addr_o    <= chan_addr[fetch_chan*xv::VRAM_W+:xv::VRAM_W];
 
                 if (audio_enable_i && !chan_buff_ok[fetch_chan]) begin
-                    audio_req_o     <= 1'b1;
+                    audio_dma_req_o     <= 1'b1;
 
                     fetch_phase     <= AUD_FETCH_READ;
                 end else begin
-                    audio_req_o     <= 1'b0;
+                    audio_dma_req_o     <= 1'b0;
 
                     fetch_phase     <= AUD_FETCH_NEXT;
                 end
             end
             AUD_FETCH_READ: begin
-                if (audio_ack_i) begin
-                    audio_req_o                     <= 1'b0;
+                if (audio_dma_ack_i) begin
+                    audio_dma_req_o                     <= 1'b0;
                     chan_buff[16*fetch_chan+:16]    <= audio_word_i;
                     chan_buff_ok[fetch_chan]        <= 1'b1;
 

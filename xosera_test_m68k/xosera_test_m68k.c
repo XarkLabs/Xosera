@@ -3116,6 +3116,13 @@ void     xosera_test()
             xm_setbh(SYS_CTRL, 0x07);        // disable Xosera vsync interrupt
 
             show_test_pic(TRUECOLOR_TEST_PIC, 0x0000);
+#if BLURB_AUDIO
+            if (num_audio_channels)
+            {
+                upload_audio(xosera_audio, 0x2000, xosera_audio_len);
+                play_blurb_sample(0x2000, xosera_audio_len, 8000);
+            }
+#endif
             delay_check(DELAY_TIME);
             show_test_pic(SELF_PIC, 0x0000);
             delay_check(DELAY_TIME);

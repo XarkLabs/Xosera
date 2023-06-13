@@ -105,15 +105,15 @@ int main(int argc, char ** argv)
 
     if (!interleave_mode)
     {
-        sprintf(out_file8, "%s_RG8.raw", out_file);
-        sprintf(out_file4, "%s_B4.raw", out_file);
+        snprintf(out_file8, sizeof(out_file8), "%s_RG8.raw", out_file);
+        snprintf(out_file4, sizeof(out_file4), "%s_B4.raw", out_file);
 
         printf("Output 8-bpp R+G raw image: \"%s\"\n", out_file8);
         printf("Output 4-bpp B   raw image: \"%s\"\n", out_file4);
     }
     else
     {
-        sprintf(out_file8, "%s_RG8B4.raw", out_file);
+        snprintf(out_file8, sizeof(out_file8), "%s_RG8B4.raw", out_file);
         printf("Output interleaved RG 8-bpp & B 4-bpp scanlines: \"%s\"\n", out_file8);
     }
 
@@ -352,7 +352,7 @@ int main(int argc, char ** argv)
 
         if (create_pal)
         {
-            sprintf(out_file8, "%s_pal.raw", out_file);
+            snprintf(out_file8, sizeof(out_file8), "%s_pal.raw", out_file);
 
             FILE * fpc = fopen(out_file8, "w");
             if (fpc != nullptr)
@@ -362,14 +362,14 @@ int main(int argc, char ** argv)
 
                 for (int i = 0; i < 256; i++)
                 {
-                    // 0x8RG0
-                    fputc(0x80 | ((i >> 4) & 0xf), fpc);
+                    // 0x4RG0
+                    fputc(0x40 | ((i >> 4) & 0xf), fpc);
                     fputc(0x00 | ((i << 4) & 0xf0), fpc);
                 }
                 for (int i = 0; i < 16; i++)
                 {
-                    // 0x00B
-                    fputc(0x00, fpc);
+                    // 0xF00B
+                    fputc(0xF0, fpc);
                     fputc(i, fpc);
                 }
                 printf("success\n");

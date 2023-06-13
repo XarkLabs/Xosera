@@ -19,6 +19,10 @@ rtl/**/*.json
 # dot directories
 **/dot/*
 
+# C artifacts
+**/*.d
+**/*.o
+
 # keep xosera_gateware files
 !xosera_gateware/**
 
@@ -54,6 +58,11 @@ xvid_spi/xvid_spi
 **/**_m68k*/**/*.map
 **/**_m68k*/**/*.lst
 
+# copasm
+copper/CopAsm/bin/*
+copper/CopAsm/obj/*
+**/*.lst
+
 # macOS thing
 .DS_Store
 utils/raw256to16color
@@ -67,3 +76,6 @@ utils/image_pal
 
 utils/true_color_hack
 
+xosera_test_m68k/cop_diagonal.h
+xosera_test_m68k/cop_blend_test.h
+rtl/sim/cop_blend_test.vsim.h

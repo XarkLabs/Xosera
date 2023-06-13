@@ -107,16 +107,17 @@ logic                   blit_full;
 // copper bus signals
 /* verilator lint_off UNUSED */
 logic                   copp_prog_rd_en;
-logic [xv::COPP_W-1:0]  copper_pc;
-logic [31:0]            copp_prog_data_out;
+copp_addr_t             copper_pc;
+word_t                  copp_prog_data_out;
 logic                   copp_xr_wr_en;
 logic                   copp_xr_ack;
 addr_t                  copp_xr_addr;
 word_t                  copp_xr_data_out;
 logic                   copp_reg_wr;
-word_t                  copp_reg_data;
+logic                   copp_reg_enable;
 hres_t                  video_h_count;
 vres_t                  video_v_count;
+logic                   end_of_line;
 `endif
 
 // XR register bus access
@@ -152,9 +153,6 @@ assign                  intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]    = 4'b0000;
 `endif
 `ifndef EN_BLIT
 assign                  intr_trigger[xv::BLIT_INTR]     = 1'b0;
-`endif
-`ifndef EN_TIMER_INTR
-assign                  intr_trigger[xv::TIMER_INTR]    = 1'b0;
 `endif
 
 `ifdef BUS_DEBUG_SIGNALS
@@ -225,9 +223,9 @@ video_gen video_gen(
     .vgen_reg_num_i(xr_regs_addr[5:0]),
     .vgen_reg_data_i(xr_regs_data_in),
     .vgen_reg_data_o(xr_regs_data_out),
-    .video_intr_o(intr_trigger[xv::VIDEO_INTR]),          // signaled by write to XR_VID_INTR
+    .video_intr_o(intr_trigger[xv::VIDEO_INTR]),                        // signaled by write to XR_VID_INTR
 `ifdef EN_AUDIO
-    .audio_intr_o(intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]),          // signaled by audio channel ready
+    .audio_intr_o(intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]),           // signaled by audio channel ready
 `endif
     .vram_sel_o(vgen_vram_sel),
     .vram_addr_o(vgen_vram_addr),
@@ -246,9 +244,10 @@ video_gen video_gen(
     .dv_de_o(dv_de),
 `ifdef EN_COPP
     .copp_reg_wr_o(copp_reg_wr),
-    .copp_reg_data_o(copp_reg_data),
+    .copp_reg_enable_o(copp_reg_enable),
     .h_count_o(video_h_count),
     .v_count_o(video_v_count),
+    .end_of_line_o(end_of_line),
 `endif
 `ifdef BUS_DEBUG_SIGNALS
     .audio_pdm_l_o(unused_l),
@@ -265,18 +264,19 @@ video_gen video_gen(
 
 `ifdef EN_COPP
 // copper - video synchronized co-processor
-copper copper(
+slim_copper copper(
     .xr_wr_en_o(copp_xr_wr_en),
     .xr_wr_ack_i(copp_xr_ack),
     .xr_wr_addr_o(copp_xr_addr),
     .xr_wr_data_o(copp_xr_data_out),
-    .coppermem_rd_addr_o(copper_pc),
-    .coppermem_rd_en_o(copp_prog_rd_en),
-    .coppermem_rd_data_i(copp_prog_data_out),    // 32-bit
-    .copp_reg_wr_i(copp_reg_wr),
-    .copp_reg_data_i(copp_reg_data),
+    .copmem_rd_addr_o(copper_pc),
+    .copmem_rd_en_o(copp_prog_rd_en),
+    .copmem_rd_data_i(copp_prog_data_out),
+    .cop_xreg_wr_i(copp_reg_wr),
+    .cop_xreg_enable_i(copp_reg_enable),
     .h_count_i(video_h_count),
     .v_count_i(video_v_count),
+    .end_of_line_i(end_of_line),
     .reset_i(reset_i),
     .clk(clk)
 );
@@ -284,7 +284,7 @@ copper copper(
 
 // blitter - blit block transfer unit
 `ifdef EN_BLIT
-    blitter blitter(
+    blitter_slim blitter(
         .xreg_wr_en_i(blit_reg_wr_en),
         .xreg_num_i(xr_regs_addr[3:0]),
         .xreg_data_i(xr_regs_data_in),
@@ -375,7 +375,7 @@ xrmem_arb xrmem_arb(
     .vgen_tile_data_o(vgen_tile_data),
 
 `ifdef EN_COPP
-    // copper program coppermem 32-bit bus (read-only)
+    // copper program memory (read-only)
     .copp_prog_sel_i(copp_prog_rd_en),
     .copp_prog_addr_i(copper_pc),
     .copp_prog_data_o(copp_prog_data_out),
@@ -386,7 +386,7 @@ xrmem_arb xrmem_arb(
 
 // video blending - alpha and other color belding between playfield A and B
 `ifdef EN_PF_B
-video_blend video_blend(
+video_blend2 video_blend(
     .vsync_i(vsync),
     .hsync_i(hsync),
     .dv_de_i(dv_de),

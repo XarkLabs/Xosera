@@ -30,17 +30,12 @@
 
 // features that can be optionally disabled (comment out to disable)
 //
-// TODO: PF_A & B options
 // set by Makefile: `define EN_PF_B                         // enable PF B (2nd overlay playfield)
 // set by Makefile: `define EN_AUDIO                4       // TODO: enable audio (with number of channels 2-4)
 `define EN_PF_B_BLEND                   // enable pf B blending (else overlay only)
 `define EN_TIMER_INTR                   // enable timer interrupt
 `define EN_COPP                         // enable copper
 `define EN_BLIT                         // enable blit unit
-//`define EN_BLIT_DECR                    // TODO: enable blit pointer decrementing
-//`define EN_BLIT_DECR_LSHIFT             // TODO: enable blit left shift when decrementing?
-//`define EN_BLIT_XOR_CONST_AB            // TODO: enable blit XOR modulo with constants?
-//`define EN_BLIT_XOR_CONST_C             // TODO: enable blit XOR modulo with constants?
 
 // experimental options (uncomment)
 //
@@ -48,7 +43,7 @@
 `define OPT_BUS_SB_IO                   // experiment using SB_IO for tristate
 //=================================
 
-`define VERSION 0_34                    // Xosera BCD version code (x.xx)
+`define VERSION 0_35                    // Xosera BCD version code (x.xx)
 
 `ifndef GITCLEAN
 `define GITCLEAN 0                      // unknown Git state (assumed dirty)
@@ -60,19 +55,31 @@
 `define BUILDDATE 00000000              // unknown build date
 `endif
 
-`ifdef EN_AUDIO
-localparam AUDIO_NCHAN  = `EN_AUDIO;    // set parameter for # audio channels
-`endif
-
 // "brief" package name (as Yosys doesn't support wildcard imports so lots of "xv::")
 package xv;
+`timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
+
+`ifdef FPGA_CONFIG_NUM                 // FPGA boot config number (0-3)
+localparam FPGA_CONFIG_NUM = `FPGA_CONFIG_NUM;
+`else
+localparam FPGA_CONFIG_NUM = 0;
+`endif
+
+`ifdef EN_AUDIO
+`define EN_AUDIO_SLIM
+localparam AUDIO_NCHAN  = `EN_AUDIO;    // set parameter for # audio channels
+`else
+localparam AUDIO_NCHAN  = 0;
+`endif
 
 // Xosera memory address bit widths
 localparam VRAM_W   = 16;               // 64K words VRAM
-localparam TILE_W   = 13;               // 4K words tile mem (but 8K address bits, for extra 1KW)
-localparam TILE2_W  = 10;               // 1K words extra tile/sprite mem
-localparam COPP_W   = 10;               // 1024 32-bit (even/odd) words copper program mem
+localparam TILE_W   = 13;               // 4K words tile mem (and bit for extra 1K words)
+localparam TILE2_W  = 10;               // 1K words extra tile mem
+localparam COPP_W   = 11;               // 1K words copper mem (and bit for extra 512 words)
+localparam COPP2_W  = 9;                // 512 words extra copper mem
 localparam COLOR_W  = 8;                // 256 words color table mem (per playfield)
+localparam AUDIO_W  = 8;                // 256 words audio parameter mem
 
 // Xosera directly addressable registers (16 x 16-bit words [high/low byte])
 typedef enum logic [3:0] {
@@ -92,7 +99,7 @@ typedef enum logic [3:0] {
     XM_UNUSED_0C    = 4'hC,             // (- /- ) // TODO: useful?
     XM_UNUSED_0D    = 4'hD,             // (- /- ) // TODO: useful?
     XM_UNUSED_0E    = 4'hE,             // (- /- ) // TODO: useful?
-    XM_UNUSED_0F    = 4'hF              // (- /- ) // TODO: useful?
+    XM_FEATURES     = 4'hF              // (RO   ) Xosera features, monitor mode
 } xm_register_t;
 
 typedef enum {
@@ -117,28 +124,28 @@ typedef enum logic [15:0] {
     // XR Memory Regions
     XR_TILE_ADDR        = 16'h4000,     // 0x4000-0x53FF 5K 16-bit words of tile memory
     XR_COLOR_ADDR       = 16'h8000,     // 0x8000-0x81FF 256 16-bit 0xXRGB color lookup playfield A & B
-    XR_COPPER_ADDR      = 16'hC000      // 0xC000-0xC7FF 2K 16-bit words copper program memory
+    XR_COPPER_ADDR      = 16'hC000      // 0xC000-0xC7FF 1.5K 16-bit words copper memory
 } xr_region_t;
 
 // XR read/write registers/memory regions
 typedef enum logic [6:0] {
     // Video Config / Copper XR Registers
-    XR_VID_CTRL     = 7'h00,            // (R /W) border color index
+    XR_VID_CTRL     = 7'h00,            // (R /W) border color index/color swap
     XR_COPP_CTRL    = 7'h01,            // (R /W) display synchronized coprocessor control
     XR_AUD_CTRL     = 7'h02,            // (R /W) audio channel control
-    XR_VID_INTR     = 7'h03,            // (WO  ) video interrupt trigger
+    XR_SCANLINE     = 7'h03,            // (R /W) read scanline (incl. offscreen), write signal video interrupt
     XR_VID_LEFT     = 7'h04,            // (R /W) left edge of active display window (typically 0)
     XR_VID_RIGHT    = 7'h05,            // (R /W) right edge of active display window +1 (typically 640 or 848)
-    XR_UNUSED_06    = 7'h06,            // (- /-) TODO: unused XR 06
-    XR_UNUSED_07    = 7'h07,            // (- /-) TODO: unused XR 07
-    XR_SCANLINE     = 7'h08,            // (RO  ) scanline (including offscreen >= 480)
-    XR_FEATURES     = 7'h09,            // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
-    XR_VID_HSIZE    = 7'h0A,            // (RO  ) native pixel width of monitor mode (e.g. 640/848)
-    XR_VID_VSIZE    = 7'h0B,            // (RO  ) native pixel height of monitor mode (e.g. 480)
-    XR_UNUSED_0C    = 7'h0C,            // TODO: unused XR 0C
-    XR_UNUSED_0D    = 7'h0D,            // TODO: unused XR 0D
-    XR_UNUSED_0E    = 7'h0E,            // TODO: unused XR 0E
-    XR_UNUSED_0F    = 7'h0F,            // TODO: unused XR 0F
+    XR_UNUSED_06    = 7'h06,            // (- /-) unused XR 06
+    XR_UNUSED_07    = 7'h07,            // (- /-) unused XR 07
+    XR_UNUSED_08    = 7'h08,            // (- /-) unused XR 08
+    XR_UNUSED_09    = 7'h09,            // (- /-) unused XR 09
+    XR_UNUSED_0A    = 7'h0A,            // (- /-) unused XR 0A
+    XR_UNUSED_0B    = 7'h0B,            // (- /-) unused XR 0B
+    XR_UNUSED_0C    = 7'h0C,            // (- /-) unused XR 0C
+    XR_UNUSED_0D    = 7'h0D,            // (- /-) unused XR 0D
+    XR_UNUSED_0E    = 7'h0E,            // (- /-) unused XR 0E
+    XR_UNUSED_0F    = 7'h0F,            // (- /-) unused XR 0F
     // Playfield A Control XR Registers
     XR_PA_GFX_CTRL  = 7'h10,            // (R /W) playfield A graphics control
     XR_PA_TILE_CTRL = 7'h11,            // (R /W) playfield A tile control
@@ -175,22 +182,23 @@ typedef enum logic [6:0] {
     XR_AUD3_LENGTH  = 7'h2E,            // (WO) sample word length-1, high bit TILE mem flag
     XR_AUD3_START   = 7'h2F,            // (WO) sample start address (VRAM or TILE mem as set in LENGTH)
     // Blitter Registers
-    XR_BLIT_CTRL    = 7'h40,            // (WO) blit control (transparency control, logic op and op input flags)
-    XR_BLIT_MOD_A   = 7'h41,            // (WO) blit line modulo added to SRC_A (XOR if A const)
-    XR_BLIT_SRC_A   = 7'h42,            // (WO) blit A source VRAM read address / constant value
-    XR_BLIT_MOD_B   = 7'h43,            // (WO) blit line modulo added to SRC_B (XOR if B const)
-    XR_BLIT_SRC_B   = 7'h44,            // (WO) blit B AND source VRAM read address / constant value
-    XR_BLIT_MOD_C   = 7'h45,            // (WO) blit line XOR modifier for C_VAL const
-    XR_BLIT_VAL_C   = 7'h46,            // (WO) blit C XOR constant value
-    XR_BLIT_MOD_D   = 7'h47,            // (WO) blit modulo added to D destination after each line
-    XR_BLIT_DST_D   = 7'h48,            // (WO) blit D VRAM destination write address
-    XR_BLIT_SHIFT   = 7'h49,            // (WO) blit first and last word nibble masks and nibble right shift (0-3)
-    XR_BLIT_LINES   = 7'h4A,            // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
-    XR_BLIT_WORDS   = 7'h4B,            // (WO+) blit word count minus 1 per line (write starts blit operation)
-    XR_UNUSED_4C    = 7'h4C,            // TODO: unused XR 2C
-    XR_UNUSED_4D    = 7'h4D,            // TODO: unused XR 2D
-    XR_UNUSED_4E    = 7'h4E,            // TODO: unused XR 2E
-    XR_UNUSED_4F    = 7'h4F,            // TODO: unused XR 2F
+    XR_BLIT_CTRL    = 7'h40,            // (WO) blit control ([15:8]=transp value, [5]=8 bpp, [4]=transp on, [0]=S constant)
+    XR_BLIT_ANDC    = 7'h41,            // (WO) blit AND-COMPLEMENT constant value
+    XR_BLIT_XOR     = 7'h42,            // (WO) blit XOR constant value
+    XR_BLIT_MOD_S   = 7'h43,            // (WO) blit line modulo added to SRC_S
+    XR_BLIT_SRC_S   = 7'h44,            // (WO) blit A source VRAM read address / constant value
+    XR_BLIT_MOD_D   = 7'h45,            // (WO) blit modulo added to D destination after each line
+    XR_BLIT_DST_D   = 7'h46,            // (WO) blit D VRAM destination write address
+    XR_BLIT_SHIFT   = 7'h47,            // (WO) blit first and last word nibble masks and nibble right shift (0-3)
+    XR_BLIT_LINES   = 7'h48,            // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
+    XR_BLIT_WORDS   = 7'h49,            // (WO+) blit word count minus 1 per line (write starts blit operation)
+    XR_UNUSED_4A    = 7'h4A,            // TODO: unused XR reg
+    XR_UNUSED_4B    = 7'h4B,            // TODO: unused XR reg
+    XR_UNUSED_4C    = 7'h4C,            // TODO: unused XR reg
+    XR_UNUSED_4D    = 7'h4D,            // TODO: unused XR reg
+    XR_UNUSED_4E    = 7'h4E,            // TODO: unused XR reg
+    XR_UNUSED_4F    = 7'h4F,            // TODO: unused XR reg
+    // dummy
     XR_none         = 7'h7F             // dummy reg for simulation
 } xr_register_t;
 
@@ -223,7 +231,7 @@ typedef enum {
 //
 // typedef struct _xosera_info
 // {
-//     char          description_str[48];        // ASCII description // TODO: too small
+//     char          description_str[240];       // ASCII description
 //     uint16_t      reserved_48[4];             // 8 reserved bytes (and force alignment)
 //     unsigned char ver_bcd_major;              // major BCD version
 //     unsigned char ver_bcd_minor;              // minor BCD version
@@ -232,30 +240,31 @@ typedef enum {
 //     unsigned char githash[4];
 // } xosera_info_t;
 
-localparam          offset  = (2**COPP_W) - (64/4);
 localparam [11:0]   version = 12'H`VERSION;
 localparam [31:0]   builddate = 32'H`BUILDDATE;         // YYYYMMDD
 localparam [8:1]    clean   = `GITCLEAN ? "=" : ">";    // '+' appended to version if non-clean
 localparam [31:0]   githash = 32'H`GITHASH;             // git short hash
 
-localparam [16*8:1] hex_str = "FEDCBA9876543210";
-localparam [48*8:1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]),
+localparam [16*8-1:0] hex_str = "FEDCBA9876543210";
+/* verilator lint_off LITENDIAN */  // NOTE: This keeps the letters in forward order for humans
+localparam [0:48*8-1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]),
                                 " ",
-                                hex_str[((builddate[31:28])*8)+1+:8], hex_str[((builddate[27:24])*8)+1+:8],
-                                hex_str[((builddate[23:20])*8)+1+:8], hex_str[((builddate[19:16])*8)+1+:8],
-                                hex_str[((builddate[15:12])*8)+1+:8], hex_str[((builddate[11: 8])*8)+1+:8],
-                                hex_str[((builddate[ 7: 4])*8)+1+:8], hex_str[((builddate[ 3: 0])*8)+1+:8],
+                                hex_str[((builddate[31:28])*8)+:8], hex_str[((builddate[27:24])*8)+:8],
+                                hex_str[((builddate[23:20])*8)+:8], hex_str[((builddate[19:16])*8)+:8],
+                                hex_str[((builddate[15:12])*8)+:8], hex_str[((builddate[11: 8])*8)+:8],
+                                hex_str[((builddate[ 7: 4])*8)+:8], hex_str[((builddate[ 3: 0])*8)+:8],
                                 " ", clean, "#",
-                                hex_str[((githash[31:28])*8)+1+:8], hex_str[((githash[27:24])*8)+1+:8],
-                                hex_str[((githash[23:20])*8)+1+:8], hex_str[((githash[19:16])*8)+1+:8],
-                                hex_str[((githash[15:12])*8)+1+:8], hex_str[((githash[11: 8])*8)+1+:8],
-                                hex_str[((githash[ 7: 4])*8)+1+:8], hex_str[((githash[ 3: 0])*8)+1+:8],
+                                hex_str[((githash[31:28])*8)+:8], hex_str[((githash[27:24])*8)+:8],
+                                hex_str[((githash[23:20])*8)+:8], hex_str[((githash[19:16])*8)+:8],
+                                hex_str[((githash[15:12])*8)+:8], hex_str[((githash[11: 8])*8)+:8],
+                                hex_str[((githash[ 7: 4])*8)+:8], hex_str[((githash[ 3: 0])*8)+:8],
 `ifdef ICE40UP5K
                                 " iCE40UP5K 128KB"
 `else
                                 " Unknown FPGA   "
 `endif
                                 };
+/* verilator lint_on LITENDIAN */
 
 `ifdef MODE_640x400                     // 25.175 MHz (requested), 25.125 MHz (achieved)
 `elsif MODE_640x400_75                  // 31.500 MHz (requested), 31.500 MHz (achieved)
@@ -271,9 +280,44 @@ localparam [48*8:1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" +
 `define MODE_640x480                    // default
 `endif
 
-`ifdef    MODE_640x400
+`ifdef    MODE_640x480
+// VGA mode 640x480 @ 60Hz (pixel clock 25.175Mhz)
+`define VIDEO_MODE_NAME     "640x480@60"
+localparam VIDEO_MODE_NUM    = 0;           // 0 = 640x480@60
+localparam PIXEL_FREQ        = 25_175_000;  // pixel clock in Hz
+localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
+localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
+localparam VISIBLE_HEIGHT    = 480;         // vertical active lines
+localparam H_FRONT_PORCH     = 16;          // H pre-sync (front porch) pixels
+localparam H_SYNC_PULSE      = 96;          // H sync pulse pixels
+localparam H_BACK_PORCH      = 48;          // H post-sync (back porch) pixels
+localparam V_FRONT_PORCH     = 10;          // V pre-sync (front porch) lines
+localparam V_SYNC_PULSE      = 2;           // V sync pulse lines
+localparam V_BACK_PORCH      = 33;          // V post-sync (back porch) lines
+localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
+localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
+
+`elsif    MODE_848x480
+// VGA mode 848x480 @ 60Hz (pixel clock 33.750Mhz)
+`define VIDEO_MODE_NAME     "848x480@60"
+localparam VIDEO_MODE_NUM    = 1;           // 1 = 848x480@60
+localparam PIXEL_FREQ        = 33_750_000;  // pixel clock in Hz
+localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
+localparam VISIBLE_WIDTH     = 848;         // horizontal active pixels
+localparam VISIBLE_HEIGHT    = 480;         // vertical active lines
+localparam H_FRONT_PORCH     = 16;          // H pre-sync (front porch) pixels
+localparam H_SYNC_PULSE      = 112;         // H sync pulse pixels
+localparam H_BACK_PORCH      = 112;         // H post-sync (back porch) pixels
+localparam V_FRONT_PORCH     = 6;           // V pre-sync (front porch) lines
+localparam V_SYNC_PULSE      = 8;           // V sync pulse lines
+localparam V_BACK_PORCH      = 23;          // V post-sync (back porch) lines
+localparam H_SYNC_POLARITY   = 1'b1;        // H sync pulse active level
+localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
+
+`elsif    MODE_640x400
 // VGA mode 640x400 @ 70Hz (pixel clock 25.175Mhz)
 `define VIDEO_MODE_NAME     "640x400@70"
+localparam VIDEO_MODE_NUM    = 2;           // 2 = 640x400@70
 localparam PIXEL_FREQ        = 25_175_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h7000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
@@ -290,6 +334,7 @@ localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 `elsif    MODE_640x400_85
 // VGA mode 640x400 @ 85Hz (pixel clock 31.500Mhz)
 `define VIDEO_MODE_NAME     "640x400@85"
+localparam VIDEO_MODE_NUM    = 3;           // 3 = 640x400@85
 localparam PIXEL_FREQ        = 31_500_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h8500;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
@@ -303,25 +348,10 @@ localparam V_BACK_PORCH      = 41;          // V post-sync (back porch) lines
 localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
 localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
-`elsif    MODE_640x480
-// VGA mode 640x480 @ 60Hz (pixel clock 25.175Mhz)
-`define VIDEO_MODE_NAME     "640x480@60"
-localparam PIXEL_FREQ        = 25_175_000;  // pixel clock in Hz
-localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
-localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
-localparam VISIBLE_HEIGHT    = 480;         // vertical active lines
-localparam H_FRONT_PORCH     = 16;          // H pre-sync (front porch) pixels
-localparam H_SYNC_PULSE      = 96;          // H sync pulse pixels
-localparam H_BACK_PORCH      = 48;          // H post-sync (back porch) pixels
-localparam V_FRONT_PORCH     = 10;          // V pre-sync (front porch) lines
-localparam V_SYNC_PULSE      = 2;           // V sync pulse lines
-localparam V_BACK_PORCH      = 33;          // V post-sync (back porch) lines
-localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
-localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
-
 `elsif    MODE_640x480_75
 // VGA mode 640x480 @ 75Hz (pixel clock 31.500Mhz)
 `define VIDEO_MODE_NAME     "640x480@75"
+localparam VIDEO_MODE_NUM    = 4;           // 4 = 640x480@75
 localparam PIXEL_FREQ        = 31_500_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h7500;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
@@ -338,6 +368,7 @@ localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 `elsif    MODE_640x480_85
 // VGA mode 640x480 @ 85Hz (pixel clock 36.000Mhz)
 `define VIDEO_MODE_NAME     "640x480@85"
+localparam VIDEO_MODE_NUM    = 5;           // 5 = 640x480@85
 localparam PIXEL_FREQ        = 36_000_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h8500;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 640;         // horizontal active pixels
@@ -354,6 +385,7 @@ localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 `elsif    MODE_720x400
 // VGA mode 720x400 @ 70Hz (pixel clock 28.322Mhz)
 `define VIDEO_MODE_NAME     "720x400@70"
+localparam VIDEO_MODE_NUM    = 6;           // 6 = 720x400@70
 localparam PIXEL_FREQ        = 28_322_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h7000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 720;         // horizontal active pixels
@@ -367,25 +399,10 @@ localparam V_BACK_PORCH      = 35;          // V post-sync (back porch) lines
 localparam H_SYNC_POLARITY   = 1'b0;        // H sync pulse active level
 localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 
-`elsif    MODE_848x480
-// VGA mode 848x480 @ 60Hz (pixel clock 33.750Mhz)
-`define VIDEO_MODE_NAME     "848x480@60"
-localparam PIXEL_FREQ        = 33_750_000;  // pixel clock in Hz
-localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
-localparam VISIBLE_WIDTH     = 848;         // horizontal active pixels
-localparam VISIBLE_HEIGHT    = 480;         // vertical active lines
-localparam H_FRONT_PORCH     = 16;          // H pre-sync (front porch) pixels
-localparam H_SYNC_PULSE      = 112;         // H sync pulse pixels
-localparam H_BACK_PORCH      = 112;         // H post-sync (back porch) pixels
-localparam V_FRONT_PORCH     = 6;           // V pre-sync (front porch) lines
-localparam V_SYNC_PULSE      = 8;           // V sync pulse lines
-localparam V_BACK_PORCH      = 23;          // V post-sync (back porch) lines
-localparam H_SYNC_POLARITY   = 1'b1;        // H sync pulse active level
-localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
-
 `elsif    MODE_800x600
 // VGA mode 800x600 @ 60Hz (pixel clock 40.000Mhz)
 `define VIDEO_MODE_NAME     "800x600@60"
+localparam VIDEO_MODE_NUM    = 7;           // 7 = 800x600@60
 localparam PIXEL_FREQ        = 40_000_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 800;         // horizontal active pixels
@@ -402,6 +419,7 @@ localparam V_SYNC_POLARITY   = 1'b1;        // V sync pulse active level
 `elsif    MODE_1024x768
 // VGA mode 1024x768 @ 60Hz (pixel clock 65.000Mhz)
 `define VIDEO_MODE_NAME     "1024x768@60"
+localparam VIDEO_MODE_NUM    = 8;           // 8 = 1024x768@60
 localparam PIXEL_FREQ        = 65_000_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 1024;        // horizontal active pixels
@@ -418,6 +436,7 @@ localparam V_SYNC_POLARITY   = 1'b0;        // V sync pulse active level
 `elsif    MODE_1280x720
 // VGA mode 1280x720 @ 60Hz (pixel clock 74.250Mhz)
 `define VIDEO_MODE_NAME     "1280x720@60"
+localparam VIDEO_MODE_NUM    = 9;           // 9 = 1280x720@60
 localparam PIXEL_FREQ        = 74_250_000;  // pixel clock in Hz
 localparam REFRESH_FREQ      = 16'h6000;    // vertical refresh Hz BCD
 localparam VISIBLE_WIDTH     = 1280;        // horizontal active pixels
@@ -507,12 +526,6 @@ localparam PLL_DIVQ    =    3'b011;         // DIVQ =  3
 localparam PCLK_HZ     =    25_175_000;     // standard VGA
 `endif
 
-typedef logic [$clog2(TOTAL_WIDTH)-1:0]     hres_t;         // horizontal coordinate types
-typedef logic [$clog2(TOTAL_HEIGHT)-1:0]    vres_t;         // vertical coordinate types
-
-typedef logic [$clog2(VISIBLE_WIDTH)-1:0]   hres_vis_t;     // horizontal visible coordinate types
-typedef logic [$clog2(VISIBLE_HEIGHT)-1:0]  vres_vis_t;     // vertical visible coordinate types
-
 /* verilator lint_on UNUSED */
 
 endpackage
@@ -526,15 +539,15 @@ function automatic xv::xr_register_t xr_reg_to_enum(
             7'h00:      xr_reg_to_enum = xv::XR_VID_CTRL;
             7'h01:      xr_reg_to_enum = xv::XR_COPP_CTRL;
             7'h02:      xr_reg_to_enum = xv::XR_AUD_CTRL;
-            7'h03:      xr_reg_to_enum = xv::XR_VID_INTR;
+            7'h03:      xr_reg_to_enum = xv::XR_SCANLINE;
             7'h04:      xr_reg_to_enum = xv::XR_VID_LEFT;
             7'h05:      xr_reg_to_enum = xv::XR_VID_RIGHT;
             7'h06:      xr_reg_to_enum = xv::XR_UNUSED_06;
             7'h07:      xr_reg_to_enum = xv::XR_UNUSED_07;
-            7'h08:      xr_reg_to_enum = xv::XR_SCANLINE;
-            7'h09:      xr_reg_to_enum = xv::XR_FEATURES;
-            7'h0A:      xr_reg_to_enum = xv::XR_VID_HSIZE;
-            7'h0B:      xr_reg_to_enum = xv::XR_VID_VSIZE;
+            7'h08:      xr_reg_to_enum = xv::XR_UNUSED_08;
+            7'h09:      xr_reg_to_enum = xv::XR_UNUSED_09;
+            7'h0A:      xr_reg_to_enum = xv::XR_UNUSED_0A;
+            7'h0B:      xr_reg_to_enum = xv::XR_UNUSED_0B;
             7'h0C:      xr_reg_to_enum = xv::XR_UNUSED_0C;
             7'h0D:      xr_reg_to_enum = xv::XR_UNUSED_0D;
             7'h0E:      xr_reg_to_enum = xv::XR_UNUSED_0E;
@@ -572,17 +585,17 @@ function automatic xv::xr_register_t xr_reg_to_enum(
             7'h2E:      xr_reg_to_enum = xv::XR_AUD3_LENGTH;
             7'h2F:      xr_reg_to_enum = xv::XR_AUD3_START;
             7'h40:      xr_reg_to_enum = xv::XR_BLIT_CTRL;
-            7'h41:      xr_reg_to_enum = xv::XR_BLIT_MOD_A;
-            7'h42:      xr_reg_to_enum = xv::XR_BLIT_SRC_A;
-            7'h43:      xr_reg_to_enum = xv::XR_BLIT_MOD_B;
-            7'h44:      xr_reg_to_enum = xv::XR_BLIT_SRC_B;
-            7'h45:      xr_reg_to_enum = xv::XR_BLIT_MOD_C;
-            7'h46:      xr_reg_to_enum = xv::XR_BLIT_VAL_C;
-            7'h47:      xr_reg_to_enum = xv::XR_BLIT_MOD_D;
-            7'h48:      xr_reg_to_enum = xv::XR_BLIT_DST_D;
-            7'h49:      xr_reg_to_enum = xv::XR_BLIT_SHIFT;
-            7'h4A:      xr_reg_to_enum = xv::XR_BLIT_LINES;
-            7'h4B:      xr_reg_to_enum = xv::XR_BLIT_WORDS;
+            7'h41:      xr_reg_to_enum = xv::XR_BLIT_ANDC;
+            7'h42:      xr_reg_to_enum = xv::XR_BLIT_XOR;
+            7'h43:      xr_reg_to_enum = xv::XR_BLIT_MOD_S;
+            7'h44:      xr_reg_to_enum = xv::XR_BLIT_SRC_S;
+            7'h45:      xr_reg_to_enum = xv::XR_BLIT_MOD_D;
+            7'h46:      xr_reg_to_enum = xv::XR_BLIT_DST_D;
+            7'h47:      xr_reg_to_enum = xv::XR_BLIT_SHIFT;
+            7'h48:      xr_reg_to_enum = xv::XR_BLIT_LINES;
+            7'h49:      xr_reg_to_enum = xv::XR_BLIT_WORDS;
+            7'h4A:      xr_reg_to_enum = xv::XR_UNUSED_4A;
+            7'h4B:      xr_reg_to_enum = xv::XR_UNUSED_4B;
             7'h4C:      xr_reg_to_enum = xv::XR_UNUSED_4C;
             7'h4D:      xr_reg_to_enum = xv::XR_UNUSED_4D;
             7'h4E:      xr_reg_to_enum = xv::XR_UNUSED_4E;
@@ -597,7 +610,6 @@ typedef logic  [7:0]                            byte_t;         // byte size (8-
 typedef logic signed [7:0]                      sbyte_t;        // byte size (8-bit)
 typedef logic [15:0]                            word_t;         // word size (16-bit)
 typedef logic signed [15:0]                     sword_t;        // word size (16-bit)
-typedef logic [31:0]                            long_t;         // long size (32-bit)
 typedef logic [15:0]                            argb_t;         // ARGB color (16-bit)
 typedef logic [11:0]                            rgb_t;          // RGB color (12-bit)
 typedef logic [6:0]                             intr_t;         // interrupt bits

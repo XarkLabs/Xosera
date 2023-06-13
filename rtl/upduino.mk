@@ -16,8 +16,13 @@
 #       Icarus Verilog          (optional)
 #       Built using macOS BigSur and GNU/Linux Ubuntu distribution
 
-# This is a hack to get make to exit if command fails (even if command after pipe succeeds, e.g., tee)
-SHELL := /bin/bash -o pipefail
+# Makefile "best practices" from https://tech.davis-hansson.com/p/make/ (but not forcing gmake)
+SHELL := bash
+.SHELLFLAGS := -eu -o pipefail -c
+.ONESHELL:
+.DELETE_ON_ERROR:
+MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --no-builtin-rules
 
 # Version bookkeeping
 BUILDDATE := $(shell date -u "+%Y%m%d")
@@ -124,7 +129,7 @@ FLOW3 :=
 #YOSYS_SYNTH_ARGS := -device u -abc2 -relut -retime -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -abc9 -relut -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc2 -top $(TOP)
-YOSYS_SYNTH_ARGS := -device u -dsp -no-rw-check -abc9 -top $(TOP)
+YOSYS_SYNTH_ARGS := -device u -no-rw-check -dff -abc9 -top $(TOP)
 #FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
@@ -144,56 +149,62 @@ NEXTPNR_ARGS :=  --randomize-seed --promote-logic --opt-timing --placer heap
 OUTNAME := $(TOP)_$(OUTSUFFIX)
 
 # defult target is make bitstream
-all: upduino/$(OUTNAME).bin upduino.mk
+all: upduino/$(OUTNAME).bin $(MAKEFILE_LIST)
 	@echo === Finished Building UPduino Xosera: $(VIDEO_OUTPUT) ===
+.PHONY: all
 
 # program UPduino FPGA via USB (may need udev rules or sudo on Linux)
-prog: upduino/$(OUTNAME).bin upduino.mk
+prog: upduino/$(OUTNAME).bin $(MAKEFILE_LIST)
 	@echo === Programming UPduino Xosera: $(VIDEO_OUTPUT) ===
 	$(ICEPROG) -d i:0x0403:0x6014 $(TOP).bin
+.PHONY: prog
 
 # run icetime to generate a timing report
-timing: upduino/$(OUTNAME).rpt upduino.mk
+timing: upduino/$(OUTNAME).rpt $(MAKEFILE_LIST)
 	@echo iCETime timing report: $(TOP).rpt
+.PHONY: timing
 
 # run Yosys to generate a "dot" graphical representation of each design file
-show: $(DOT) upduino.mk
+show: $(DOT) $(MAKEFILE_LIST)
+.PHONY: show
 
 # run Yosys with "noflatten", which will produce a resource count per module
-count: $(SRC) $(INC) $(FONTFILES) upduino.mk
+count: $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	@mkdir -p $(LOGS)
 	@-cp $(LOGS)/$(OUTNAME)_yosys_count.log $(LOGS)/$(OUTNAME)_yosys_count_last.log
-	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
+	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
+.PHONY: count
 
 # run Verilator to check for Verilog issues
-lint: $(VLT_CONFIG) $(SRC) $(INC) $(FONTFILES) upduino.mk
+lint: $(VLT_CONFIG) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC)
+.PHONY: lint
 
-$(DOT): %.dot: %.sv upduino.mk
-	mkdir -p upduino/dot
+$(DOT): %.dot: %.sv $(MAKEFILE_LIST)
+	mkdir -p upduino/dot $(@D)
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
-%.json: $(VLT_CONFIG) $(SRC) $(INC) $(FONTFILES) upduino.mk
+%.json: $(VLT_CONFIG) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	@echo === Building UPduino Xosera ===
 	@rm -f $@
-	@mkdir -p $(LOGS)
+	@mkdir -p $(LOGS) $(@D)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
 	@-grep "XOSERA" $(LOGS)/$(OUTNAME)_yosys.log
 	@-grep "\(Number of cells\|Number of wires\)" $(LOGS)/$(OUTNAME)_yosys.log
 
 # make ASCII bitstream from JSON description and device parameters
-upduino/%_$(OUTSUFFIX).asc: upduino/%_$(OUTSUFFIX).json $(PIN_DEF) upduino.mk
-	@rm -f $@
-	@mkdir -p $(LOGS)
+upduino/%_$(OUTSUFFIX).asc: upduino/%_$(OUTSUFFIX).json $(PIN_DEF) $(MAKEFILE_LIST)
+	@-rm -f $@
+	@mkdir -p $(LOGS) $(@D)
 	@-cp $(OUTNAME)_stats.txt $(LOGS)/$(OUTNAME)_stats_last.txt
 ifdef FMAX_TEST	# run nextPNR FMAX_TEST times to determine "Max frequency" range
 	@echo === Synthesizing $(FMAX_TEST) bitstreams for best fMAX
 	@echo $(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 	@mkdir -p $(LOGS)/fmax
-	@rm -f $(LOGS)/fmax/*
-	@cp $< $(LOGS)/fmax
+	@-rm -f $(LOGS)/fmax/*
+	@-cp $< $(LOGS)/fmax
 	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
 	  ( \
 	    $(NEXTPNR) -l "$(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log" -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $(LOGS)/fmax/$(OUTNAME)_$${num}.asc ; \
@@ -250,13 +261,13 @@ endif
 	@-cat $(LOGS)/$(OUTNAME)_stats_delta.txt
 
 # make binary bitstream from ASCII bitstream
-upduino/%_$(OUTSUFFIX).bin: upduino/%_$(OUTSUFFIX).asc upduino.mk
+upduino/%_$(OUTSUFFIX).bin: upduino/%_$(OUTSUFFIX).asc $(MAKEFILE_LIST)
 	@rm -f $@
 	$(ICEPACK) $< $@
 	$(ICEMULTI) -v -v -p0 upduino/*.bin -o $(TOP).bin
 
 # make timing report from ASCII bitstream
-upduino/%_$(OUTSUFFIX).rpt: upduino/%_$(OUTSUFFIX).asc upduino.mk
+upduino/%_$(OUTSUFFIX).rpt: upduino/%_$(OUTSUFFIX).asc $(MAKEFILE_LIST)
 	@rm -f $@
 	$(ICETIME) -d $(DEVICE) -m -t -r $@ $<
 
@@ -272,9 +283,7 @@ $(VLT_CONFIG):
 # delete all targets that will be re-generated
 clean:
 	rm -f $(VLT_CONFIG) xosera_upd.bin $(wildcard upduino/*.json) $(wildcard upduino/*.asc) $(wildcard upduino/*.rpt) $(wildcard upduino/*.bin)
+.PHONY: clean
 
 # prevent make from deleting any intermediate files
 .SECONDARY:
-
-# inform make about "phony" convenience targets
-.PHONY: all prog timing count lint show clean

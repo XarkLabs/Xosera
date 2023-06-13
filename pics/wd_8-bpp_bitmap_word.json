@@ -1,0 +1,20 @@
+{
+    "reg": [
+        {
+            "bits": 8,
+            "name": "<tt>1</tt>",
+            "type": 4
+        },
+        {
+            "bits": 8,
+            "name": "<tt>0</tt>",
+            "type": 4,
+            "attr": [
+                "8 bits per pixel, MSB on left"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

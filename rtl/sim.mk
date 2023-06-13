@@ -13,8 +13,13 @@
 #       Icarus Verilog          (optional)
 #       Built using macOS BigSur and GNU/Linux Ubuntu distribution
 
-# This is a hack to get make to exit if command fails (even if command after pipe succeeds, e.g., tee)
-SHELL := /bin/bash -o pipefail
+# Makefile "best practices" from https://tech.davis-hansson.com/p/make/ (but not forcing gmake)
+SHELL := bash
+.SHELLFLAGS := -eu -o pipefail -c
+.ONESHELL:
+.DELETE_ON_ERROR:
+# TODO: a bit spammy MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --no-builtin-rules
 
 # Version bookkeeping
 BUILDDATE := $(shell date -u "+%Y%m%d")
@@ -32,6 +37,9 @@ XOSERA_CLEAN := 0
 $(info === Xosera simulation [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
+# copper assembler
+COPASM=../copper/CopAsm/bin/copasm
+
 # Maximum number of CPU cores to use before waiting with FMAX_TEST
 MAX_CPUS := 8
 
@@ -47,6 +55,9 @@ MAX_CPUS := 8
 #       MODE_1024x768   1024x768@60Hz   clock 65.000 (65.250) MHz [fails timing]
 #       MODE_1280x720   1280x720@60Hz   clock 74.176 (73.500) MHz [fails timing]
 VIDEO_MODE ?= MODE_640x480
+AUDIO?=4
+PF_B?=true
+
 VERILOG_DEFS := -D$(VIDEO_MODE)
 
 # monochrome + color attribute byte
@@ -66,6 +77,8 @@ VERILOG_DEFS := -D$(VIDEO_MODE)
 #VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw -u ../testdata/raw/ramptable.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/ST_KingTut_Dpaint_16_pal.raw -u ../testdata/raw/ST_KingTut_Dpaint_16.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/sintable.raw -u ../testdata/raw/ramptable.raw
+#VRUN_TESTDATA ?=   -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
+#VRUN_TESTDATA ?=   -u ../testdata/raw/pacbox-320x240_pal.raw -u ../testdata/raw/pacbox-320x240.raw -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
 VRUN_TESTDATA ?=   -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
@@ -129,7 +142,7 @@ SDL_CFLAGS := $(shell sdl2-config --cflags)
 endif
 # Note: Using -Os seems to provide the fastest compile+run simulation iteration time
 # Linux gcc needs -Wno-maybe-uninitialized
-CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-deprecated-declarations -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-int-in-bool-context -D$(VIDEO_MODE) -DSDL_RENDER=$(SDL_RENDER) -DBUS_INTERFACE=$(BUS_INTERFACE) $(SDL_CFLAGS)"
+CFLAGS		:= -CFLAGS "-std=c++14 -Wall -Wextra -Werror -fomit-frame-pointer -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-bool-operation -Wno-int-in-bool-context -D$(VIDEO_MODE) -DSDL_RENDER=$(SDL_RENDER) -DBUS_INTERFACE=$(BUS_INTERFACE) $(SDL_CFLAGS)"
 
 # Verilator tool (used for lint and simulation)
 VERILATOR := verilator
@@ -138,27 +151,42 @@ VERILATOR_ARGS := --sv --language 1800-2012 --timing -I$(SRCDIR) -v $(TECH_LIB) 
 # Verillator C++ source driver
 CSRC := sim/xosera_sim.cpp
 
+# copper asm source
+COPSRC := sim/cop_blend_test.vsim.h
+
 # default build native simulation executable
-all: make_defs vsim isim
+all: $(COPASM) vsim isim
+.PHONY: all
+
+$(COPSRC): $(COPASM)
+
+$(COPASM):
+	cd ../copper/CopAsm && make
 
 # build native simulation executable
-vsim: $(VLT_CONFIG) sim/obj_dir/V$(VTOP) sim.mk
+vsim: $(COPASM) $(VLT_CONFIG) sim/obj_dir/V$(VTOP) sim.mk
 	@echo === Verilator simulation configured for: $(VIDEO_MODE) ===
 	@echo Completed building Verilator simulation, use \"make vrun\" to run.
+.PHONY: vsim
 
-isim: $(VLT_CONFIG) sim/$(TBTOP) sim.mk
+
+isim: $(COPASM) $(VLT_CONFIG) sim/$(TBTOP) sim.mk
 	@echo === Icarus Verilog simulation configured for: $(VIDEO_MODE) ===
 	@echo Completed building Icarus Verilog simulation, use \"make irun\" to run.
+.PHONY: isim
 
 # run Verilator to build and run native simulation executable
 vrun: $(VLT_CONFIG) sim/obj_dir/V$(VTOP) sim.mk
 	@mkdir -p $(LOGS)
 	sim/obj_dir/V$(VTOP) $(VRUN_TESTDATA)
+.PHONY: vrun
+
 
 # run Verilator to build and run native simulation executable
 irun: $(VLT_CONFIG) sim/$(TBTOP) sim.mk
 	@mkdir -p $(LOGS)
 	$(VVP) sim/$(TBTOP) -fst
+.PHONY: irun
 
 # disable UNUSED and UNDRIVEN warnings in cells_sim.v library for Verilator lint
 $(VLT_CONFIG):
@@ -168,22 +196,27 @@ $(VLT_CONFIG):
 	@echo >>$(VLT_CONFIG) lint_off -rule UNUSED  -file \"$(TECH_LIB)\"
 	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN  -file \"$(TECH_LIB)\"
 
+# assembler copper file
+%.vsim.h : %.casm
+	@mkdir -p $(@D)
+	$(COPASM) -l -o $@ $<
+
 # use Verilator to build native simulation executable
-sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) sim.mk
-	$(VERILATOR) $(VERILATOR_ARGS) --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(SRC) $(current_dir)/$(CSRC)
+sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) $(COPSRC) sim.mk
+	@mkdir -p $(@D)
+	$(VERILATOR) $(VERILATOR_ARGS) -O3 --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(SRC) $(current_dir)/$(CSRC)
 	cd sim/obj_dir && make -f V$(VTOP).mk
 
 # use Icarus Verilog to build vvp simulation executable
 sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) sim.mk
+	@mkdir -p $(@D)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES)  -v $(TECH_LIB) --top-module $(TBTOP) sim/$(TBTOP).sv $(SRC)
 	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -D$(VIDEO_MODE) -o sim/$(TBTOP) $(current_dir)/sim/$(TBTOP).sv $(SRC)
 
 # delete all targets that will be re-generated
 clean:
-	rm -rf sim/obj_dir $(VLT_CONFIG) sim/$(TBTOP)
+	rm -rf sim/obj_dir $(VLT_CONFIG) sim/$(TBTOP) sim/*.vsim.h sim/*.lst
+.PHONY: clean
 
 # prevent make from deleting any intermediate files
 .SECONDARY:
-
-# inform make about "phony" convenience targets
-.PHONY: all vsim isim vrun irun clean

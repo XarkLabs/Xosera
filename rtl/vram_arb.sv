@@ -19,11 +19,11 @@ module vram_arb(
 
     // register interface access (read/write)
     input  wire logic           regs_sel_i,
-    output      logic           regs_ack_o,
-    input  wire logic           regs_wr_i,
+    output      logic           regs_ack_o  /*verilator public*/,
+    input  wire logic           regs_wr_i   /*verilator public*/,
     input  wire logic  [3:0]    regs_wr_mask_i,
-    input  wire addr_t          regs_addr_i,
-    input  wire word_t          regs_data_i,
+    input  wire addr_t          regs_addr_i /*verilator public*/,
+    input  wire word_t          regs_data_i /*verilator public*/,
 
 `ifdef EN_BLIT
     // blit access (read/write)
@@ -36,7 +36,7 @@ module vram_arb(
 `endif
 
     // common VRAM data output
-    output      word_t          vram_data_o,
+    output      word_t          vram_data_o /*verilator public*/,
 
     input  wire logic           clk
 );

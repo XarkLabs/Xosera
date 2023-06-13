@@ -5,13 +5,24 @@
             "name": "border color A index",
             "type": 2,
             "attr": [
-                "color A index of border or blanked pixels"
+                "color index of border or blanked pixels",
+                "(from playfield A colormap)"
             ]
         },
         {
-            "bits": 8,
+            "bits": 7,
             "name": "0",
             "type": 1
+        },
+        {
+            "bits": 1,
+            "name": "swap",
+            "type": 4,
+            "attr": [
+                "playfield",
+                "colormap",
+                "swap"
+            ]
         }
     ],
     "config": {

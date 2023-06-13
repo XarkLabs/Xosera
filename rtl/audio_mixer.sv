@@ -13,19 +13,20 @@
 `include "xosera_pkg.sv"
 
 `ifdef EN_AUDIO
+`ifndef EN_AUDIO_SLIM
 
 // TODO: try packed struct
 
 module audio_mixer (
     input  wire logic                               audio_enable_i,
-    input  wire logic [7*AUDIO_NCHAN-1:0]           audio_vol_l_nchan_i,    // TODO: VOL_W
-    input  wire logic [7*AUDIO_NCHAN-1:0]           audio_vol_r_nchan_i,
-    input  wire logic [15*AUDIO_NCHAN-1:0]          audio_period_nchan_i,   // TODO: PERIOD_W
-    input  wire logic [AUDIO_NCHAN-1:0]             audio_tile_nchan_i,
-    input  wire logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  audio_start_nchan_i,
-    input  wire logic [15*AUDIO_NCHAN-1:0]          audio_len_nchan_i,      // TODO: LENGTH_W
-    input  wire logic [AUDIO_NCHAN-1:0]             audio_restart_nchan_i,
-    output      logic [AUDIO_NCHAN-1:0]             audio_reload_nchan_o,
+    input  wire logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_l_nchan_i,    // TODO: VOL_W
+    input  wire logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_r_nchan_i,
+    input  wire logic [15*xv::AUDIO_NCHAN-1:0]          audio_period_nchan_i,   // TODO: PERIOD_W
+    input  wire logic [xv::AUDIO_NCHAN-1:0]             audio_tile_nchan_i,
+    input  wire logic [xv::VRAM_W*xv::AUDIO_NCHAN-1:0]  audio_start_nchan_i,
+    input  wire logic [15*xv::AUDIO_NCHAN-1:0]          audio_len_nchan_i,      // TODO: LENGTH_W
+    input  wire logic [xv::AUDIO_NCHAN-1:0]             audio_restart_nchan_i,
+    output      logic [xv::AUDIO_NCHAN-1:0]             audio_reload_nchan_o,
 
     output      logic           audio_req_o,
     input wire  logic           audio_ack_i,
@@ -40,7 +41,7 @@ module audio_mixer (
     input wire  logic           clk
 );
 
-localparam  CHAN_W      = $clog2(AUDIO_NCHAN);
+localparam  CHAN_W      = $clog2(xv::AUDIO_NCHAN);
 localparam  DAC_W       = 8;
 
 typedef enum {
@@ -55,7 +56,7 @@ audio_fetch_ph                      fetch_phase;
 logic [CHAN_W:0]                    mix_chan;
 
 logic                               mix_clr;            // clear mix accumulator
-sbyte_t                             mix_val_temp;
+sbyte_t                             mix_mul_temp;
 sbyte_t                             vol_l_temp;
 sbyte_t                             vol_r_temp;
 sword_t                             acc_l;
@@ -66,34 +67,34 @@ logic signed [9:0]                  mix_r_acc;          // extra bits for satura
 logic [DAC_W-1:0]                   output_l;           // mixed left channel to output to DAC (unsigned)
 logic [DAC_W-1:0]                   output_r;           // mixed right channel to output to DAC (unsigned)
 
-logic [AUDIO_NCHAN-1:0]             chan_output;        // channel sample output strobe
-logic [AUDIO_NCHAN-1:0]             chan_2nd;           // 2nd sample from sample word
-logic [AUDIO_NCHAN-1:0]             chan_buff_ok;       // DMA buffer has data
-logic [AUDIO_NCHAN-1:0]             chan_tile;          // current sample memtile flag
-logic [8*AUDIO_NCHAN-1:0]           chan_val;           // current channel value sent to DAC
-logic [xv::VRAM_W*AUDIO_NCHAN-1:0]  chan_addr;          // current sample address
-logic [16*AUDIO_NCHAN-1:0]          chan_buff;          // channel DMA word buffer
-logic [16*AUDIO_NCHAN-1:0]          chan_length;        // audio sample byte length counter (15=underflow flag)
-logic [16*AUDIO_NCHAN-1:0]          chan_period;        // audio frequency period counter (15=underflow flag)
+logic [xv::AUDIO_NCHAN-1:0]             chan_output;        // channel sample output strobe
+logic [xv::AUDIO_NCHAN-1:0]             chan_2nd;           // 2nd sample from sample word
+logic [xv::AUDIO_NCHAN-1:0]             chan_buff_ok;       // DMA buffer has data
+logic [xv::AUDIO_NCHAN-1:0]             chan_tile;          // current sample memtile flag
+logic [8*xv::AUDIO_NCHAN-1:0]           chan_val;           // current channel value sent to DAC
+logic [xv::VRAM_W*xv::AUDIO_NCHAN-1:0]  chan_addr;          // current sample address
+logic [16*xv::AUDIO_NCHAN-1:0]          chan_buff;          // channel DMA word buffer
+logic [16*xv::AUDIO_NCHAN-1:0]          chan_length;        // audio sample byte length counter (15=underflow flag)
+logic [16*xv::AUDIO_NCHAN-1:0]          chan_period;        // audio frequency period counter (15=underflow flag)
 
-word_t                              chan_length_n[AUDIO_NCHAN];     // audio sample byte length -1 for next cycle (15=underflow flag)
+word_t                              chan_length_n[xv::AUDIO_NCHAN];     // audio sample byte length -1 for next cycle (15=underflow flag)
 
 // debug aid signals
 `ifndef SYNTHESIS
 /* verilator lint_off UNUSED */
-byte_t                              chan_raw[AUDIO_NCHAN];          // channel value sent to DAC
-byte_t                              chan_raw_u[AUDIO_NCHAN];          // channel value sent to DAC
-word_t                              chan_word[AUDIO_NCHAN];         // channel DMA word buffer
-addr_t                              chan_ptr[AUDIO_NCHAN];          // channel DMA address
-logic [7:0]                         chan_vol_l[AUDIO_NCHAN];
-logic [7:0]                         chan_vol_r[AUDIO_NCHAN];
-logic                               chan_restart[AUDIO_NCHAN];
+byte_t                              chan_raw[xv::AUDIO_NCHAN];          // channel value sent to DAC
+byte_t                              chan_raw_u[xv::AUDIO_NCHAN];          // channel value sent to DAC
+word_t                              chan_word[xv::AUDIO_NCHAN];         // channel DMA word buffer
+addr_t                              chan_ptr[xv::AUDIO_NCHAN];          // channel DMA address
+logic [7:0]                         chan_vol_l[xv::AUDIO_NCHAN];
+logic [7:0]                         chan_vol_r[xv::AUDIO_NCHAN];
+logic                               chan_restart[xv::AUDIO_NCHAN];
 /* verilator lint_on UNUSED */
 `endif
 
 // setup alias signals
 always_comb begin : alias_block
-    for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+    for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
         chan_length_n[i]    = chan_length[16*i+:16] - 1'b1;         // length next cycle
         chan_output[i]      = chan_period[16*i+15];
 
@@ -150,7 +151,7 @@ always_ff @(posedge clk) begin : chan_process
     end else begin
 
         // loop over all audio channels
-        for (integer i = 0; i < AUDIO_NCHAN; i = i + 1) begin
+        for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
             audio_reload_nchan_o[i]   <= 1'b0;        // clear reload strobe
 
             // decrement period
@@ -236,7 +237,7 @@ always_ff @(posedge clk) begin : mix_fsm
 
         mix_chan        <= '0;
 
-        mix_val_temp    <= '0;
+        mix_mul_temp    <= '0;
         vol_l_temp      <= '0;
         vol_r_temp      <= '0;
 
@@ -248,7 +249,7 @@ always_ff @(posedge clk) begin : mix_fsm
         output_r        <= '0;
 `endif
     end else begin
-        if (mix_chan == AUDIO_NCHAN) begin
+        if (mix_chan == xv::AUDIO_NCHAN) begin
             mix_chan        <= '0;
             mix_clr         <= 1'b1;
 
@@ -274,7 +275,7 @@ always_ff @(posedge clk) begin : mix_fsm
 
             vol_l_temp      <= { 1'b0, audio_vol_l_nchan_i[7*mix_chan+:7] };
             vol_r_temp      <= { 1'b0, audio_vol_r_nchan_i[7*mix_chan+:7] };
-            mix_val_temp    <= chan_val[mix_chan*8+:8];
+            mix_mul_temp    <= chan_val[mix_chan*8+:8];
         end
     end
 end
@@ -292,8 +293,8 @@ logic                   unused_bits = &{ 1'b0, acc_l[5:0], acc_r[5:0] };
 sword_t             res_l;
 sword_t             res_r;
 
-assign res_l        = mix_val_temp * vol_l_temp;
-assign res_r        = mix_val_temp * vol_r_temp;
+assign res_l        = mix_mul_temp * vol_l_temp;
+assign res_r        = mix_mul_temp * vol_r_temp;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -341,7 +342,7 @@ SB_MAC16 #(
 ) SB_MAC16_l (
     .CLK(clk),                          // clock
     .CE(1'b1),                          // clock enable
-    .A({mix_val_temp, 8'h00 }),         // 16-bit input A
+    .A({mix_mul_temp, 8'h00 }),         // 16-bit input A
     .B({vol_l_temp, 8'h00 }),           // 16-bit input B
     .C('0),                             // 16-bit input C
     .D('0),                             // 16-bit input D
@@ -394,7 +395,7 @@ SB_MAC16 #(
 ) SB_MAC16_r (
     .CLK(clk),                          // clock
     .CE(1'b1),                          // clock enable
-    .A({ mix_val_temp, 8'h00 }),        // 16-bit input A
+    .A({ mix_mul_temp, 8'h00 }),        // 16-bit input A
     .B({ vol_r_temp, 8'h00 }),          // 16-bit input B
     .C('0),                             // 16-bit input C
     .D('0),                             // 16-bit input D
@@ -426,5 +427,6 @@ SB_MAC16 #(
 
 endmodule
 
+`endif
 `endif
 `default_nettype wire               // restore default

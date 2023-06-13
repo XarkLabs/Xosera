@@ -87,7 +87,7 @@ void xosera_crop_test()
 
     xosera_init(1);        // 848x480
 
-    uint16_t width = xreg_getw(VID_HSIZE);        // use read hsize (in case no 848 mode in FPGA)
+    uint16_t width = xosera_vid_width();        // use read hsize (in case no 848 mode in FPGA)
 
     xreg_setw(VID_CTRL, 0x0000);        // set border black
 

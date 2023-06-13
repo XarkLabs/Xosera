@@ -12,9 +12,11 @@
 `include "xosera_pkg.sv"
 
 `define MEMDUMP                     // dump VRAM contents to file
+`define COPMEMDUMP                  // dump copper program memory contents to file
+`define AUDIOMEMDUMP                // dump audio parameter memory contents to file
 `define BUSTEST
-`define MAX_FRAMES      4
-`define LOAD_MONOBM
+`define MAX_FRAMES      1
+//`define LOAD_MONOBM
 
 module xosera_tb();
 
@@ -151,18 +153,18 @@ task read_reg(
     output logic [7:0]   data
     );
 
-    bus_cs_n = 1'b1;
-    bus_rd_nwr = 1'b1;
-    bus_bytesel = b_sel;
-    bus_reg_num = r_num;
+    bus_cs_n <= 1'b1;
+    bus_rd_nwr <= 1'b1;
+    bus_bytesel <= b_sel;
+    bus_reg_num <= r_num;
 
-    # 10ns bus_cs_n = 1'b0;    // strobe
-    #(M68K_PERIOD) data = xosera.bus_data_o;
-    #(M68K_PERIOD) bus_cs_n = 1'b1;
-    bus_rd_nwr = 1'bX;
-    bus_bytesel = 1'bX;
-    bus_reg_num = 4'bX;
-    bus_data_in = 8'bX;
+    # 10ns bus_cs_n <= 1'b0;    // strobe
+    #(M68K_PERIOD) data <= xosera.bus_data_o;
+    #(M68K_PERIOD) bus_cs_n <= 1'b1;
+    bus_rd_nwr <= 1'bX;
+    bus_bytesel <= 1'bX;
+    bus_reg_num <= 4'bX;
+    bus_data_in <= 8'bX;
 endtask
 
 task xvid_setw(
@@ -222,7 +224,7 @@ function automatic logic [63:0] regname(
             4'hC: regname = "UNUSED_C";
             4'hD: regname = "UNUSED_D";
             4'hE: regname = "UNUSED_E";
-            4'hF: regname = "UNUSED_F";
+            4'hF: regname = "FEATURES";
             default: regname = "????????";
         endcase
     end
@@ -252,20 +254,24 @@ always begin
 
     # 8ms;
 
-    // TODO hacked in copper enable
-    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_COPP_CTRL));
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h8000);
-    // TODO end
+    // // TODO hacked in copper enable
+    // #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_COPP_CTRL));
+    // #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h8000);
+    // // TODO end
 
-    // TODO hacked in blit test
-    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_BLIT_WORDS));
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0007);
-    // TODO end
+    // // TODO hacked in blit test
+    // #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_BLIT_WORDS));
+    // #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0007);
+    // // TODO end
+
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_FEATURES, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_FEATURES, readword[7:0]);
+    $fdisplay(logfile, "%0t REG READ %s[%x] => %04x", $realtime, regname(xosera.reg_interface.bus_reg_num), xosera.reg_interface.bus_reg_num, readword);
 
 // audio test
 
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_INCR, 16'h0001);
-    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0000);
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0100);
 
     inject_file("../testdata/raw/ramptable.raw", XM_DATA);
 
@@ -275,11 +281,11 @@ always begin
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD0_PERIOD));
     #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h1000);
 
-    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD0_START));
-    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0000);
-
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD0_LENGTH));
     #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h00FF);
+
+    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD0_START));
+    #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0100);
 
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_AUD_CTRL));
     #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0001);
@@ -429,6 +435,19 @@ always @(negedge clk) begin
     end
 end
 
+integer cop_cyc = 0;
+always @(negedge clk) begin
+    if (xosera.copper.cop_en && cop_cyc < 9999) begin
+        $fdisplay(logfile, "%0t %04d: ST=%x %2b IR=%04x M=%04x PC=%03x RS=%03x",
+            $realtime, cop_cyc, xosera.copper.cop_ex_state, xosera.copper.rd_pipeline, xosera.copper.cop_IR, xosera.copper.copmem_rd_data_i,
+            xosera.copper.cop_PC, xosera.copper.cop_RA);
+        $fdisplay(logfile, "%0t     : mem_rd=%x mem_addr=%03x xr_wr=%x reg_wr=%x xr_addr=%x xr_data=%x",
+            $realtime, xosera.copper.ram_rd_en, xosera.copper.ram_rd_addr,
+            xosera.copper.xr_wr_en, xosera.copper.reg_wr_en, xosera.copper.write_addr, xosera.copper.write_data);
+        cop_cyc <= cop_cyc + 1'b1;
+    end
+end
+
 // toggle clock source at pixel clock frequency+
 always begin
     #(CLK_PERIOD/2) clk <= ~clk;
@@ -442,7 +461,7 @@ always @(posedge clk) begin
 
         if (frame > `MAX_FRAMES || $realtime > (`MAX_FRAMES * 18_000_000)) begin
 `ifdef MEMDUMP
-            f = $fopen("logs/xosera_tb_isim_vram.txt", "w");
+            f = $fopen("sim/logs/xosera_tb_isim_vram.txt", "w");
             for (i = 0; i < 65536; i += 16) begin
                 $fwrite(f, "%04x: ", i[15:0]);
                 for (j = 0; j < 16; j++) begin
@@ -452,6 +471,58 @@ always @(posedge clk) begin
                 for (j = 0; j < 16; j++) begin
                     if (xosera.vram_arb.vram.memory[i+j][7:0] >= 32 && xosera.vram_arb.vram.memory[i+j][7:0] < 127) begin
                         $fwrite(f, "%c", xosera.vram_arb.vram.memory[i+j][7:0]);
+                    end else
+                    begin
+                        $fwrite(f, ".");
+                    end
+                end
+                $fwrite(f, "\n");
+            end
+            $fclose(f);
+`endif
+`ifdef COPMEMDUMP
+            f = $fopen("sim/logs/xosera_tb_isim_copp.txt", "w");
+            for (i = 0; i < 2**xv::COPP_W; i += 16) begin
+                $fwrite(f, "%04x: ", i[15:0]);
+                for (j = 0; j < 16; j++) begin
+                    $fwrite(f, "%04x ", xosera.xrmem_arb.coppermem.bram[i+j][15:0]);
+                end
+                $fwrite(f, "  ");
+                for (j = 0; j < 16; j++) begin
+                    if (xosera.xrmem_arb.coppermem.bram[i+j][15:8] >= 32 && xosera.xrmem_arb.coppermem.bram[i+j][15:8] < 127) begin
+                        $fwrite(f, "%c", xosera.xrmem_arb.coppermem.bram[i+j][15:8]);
+                    end else
+                    begin
+                        $fwrite(f, ".");
+                    end
+                    if (xosera.xrmem_arb.coppermem.bram[i+j][7:0] >= 32 && xosera.xrmem_arb.coppermem.bram[i+j][7:0] < 127) begin
+                        $fwrite(f, "%c", xosera.xrmem_arb.coppermem.bram[i+j][7:0]);
+                    end else
+                    begin
+                        $fwrite(f, ".");
+                    end
+                end
+                $fwrite(f, "\n");
+            end
+            $fclose(f);
+`endif
+`ifdef AUDIOMEMDUMP
+            f = $fopen("sim/logs/xosera_tb_isim_audiomem.txt", "w");
+            for (i = 0; i < 2**xv::AUDIO_W; i += 16) begin
+                $fwrite(f, "%04x: ", i[15:0]);
+                for (j = 0; j < 16; j++) begin
+                    $fwrite(f, "%04x ", xosera.video_gen.audio_mixer.audio_mem.bram[i+j][15:0]);
+                end
+                $fwrite(f, "  ");
+                for (j = 0; j < 16; j++) begin
+                    if (xosera.video_gen.audio_mixer.audio_mem.bram[i+j][15:8] >= 32 && xosera.video_gen.audio_mixer.audio_mem.bram[i+j][15:8] < 127) begin
+                        $fwrite(f, "%c", xosera.xrmem_arb.coppermem.bram[i+j][15:8]);
+                    end else
+                    begin
+                        $fwrite(f, ".");
+                    end
+                    if (xosera.video_gen.audio_mixer.audio_mem.bram[i+j][7:0] >= 32 && xosera.video_gen.audio_mixer.audio_mem.bram[i+j][7:0] < 127) begin
+                        $fwrite(f, "%c", xosera.xrmem_arb.coppermem.bram[i+j][7:0]);
                     end else
                     begin
                         $fwrite(f, ".");

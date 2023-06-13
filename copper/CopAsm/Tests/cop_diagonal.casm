@@ -1,0 +1,44 @@
+//
+// copper - diagonal screen with color table test
+//
+                .list    false
+                .include "../../xosera_m68k_api/xosera_m68k_defs.inc"
+                .macname false
+                .listcond false
+                .list    true
+
+                export  color_tbl,color_end             ; export address offsets for C
+
+H_START         =       160                             ; starting HPOS (visible left edge)
+
+entry
+                MOVE    #HPOS+H_START,hor_pos           ; reset hpos
+                MOVE    #MOVE+color_tbl,color_load      ; reset color table start
+line_loop       MOVE    #$0000,XR_COLOR_A_ADDR+0        ; color[0] = black
+hor_pos         HPOS    #160                            ; wait for HPOS (self-modified)
+color_load      MOVE    color_tbl,XR_COLOR_A_ADDR+0     ; set color[0] from table (self-modified)
+                LDM     hor_pos                         ; load HPOS opcode+pos
+                ADDI    #1                              ; increment
+                STM     hor_pos                         ; save HPOS opcode+pos
+                LDM     color_load                      ; load SETM opcode+source addr
+                ADDI    #1                              ; increment
+                CMPI    #MOVE+color_end                 ; test vs table end (with SETM opcode)
+                BRLT    not_end                         ; branch if not past end
+                LDI     #MOVE+color_tbl                 ; load reset SETM opcode+table start
+not_end         STM     color_load                      ; store modified SETM opcode+source
+                HPOS    #799                            ; wait for last pixel of line
+                BRGE    line_loop                       ; branch always (since last write was A)
+
+                VPOS    #$7FF                           ; wait for SOF (just in case)
+
+color_tbl
+                word    0x0200,0x0400,0x0600,0x0800
+                word    0x0A00,0x0C00,0x0E00,0x0F00
+
+                word    0x0020,0x0040,0x0060,0x0080
+                word    0x00A0,0x00C0,0x00E0,0x00F0
+
+                word    0x0002,0x0004,0x0006,0x0008
+                word    0x000A,0x000C,0x000E,0x000F
+color_end
+                .end

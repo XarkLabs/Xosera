@@ -1,0 +1,41 @@
+{
+    "reg": [
+        {
+            "bits": 10,
+            "name": "tile index",
+            "type": 4,
+            "attr": [
+                "0 - 1023 glyph index"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "V",
+            "type": 5,
+            "attr": [
+                "Vert.",
+                "mirror"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "H",
+            "type": 5,
+            "attr": [
+                "Horiz.",
+                "mirror"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "color index offset",
+            "type": 2,
+            "attr": [
+                "upper color index bits"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

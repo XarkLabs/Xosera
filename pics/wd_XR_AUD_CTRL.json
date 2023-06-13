@@ -1,16 +1,16 @@
 {
     "reg": [
         {
-            "bits": 4,
-            "name": "audio channel enable",
+            "bits": 1,
+            "name": "enable",
             "type": 2,
             "attr": [
-                "1 to enable audio channel",
-                "(if channel not disabled)"
+                "audio",
+                "enable"
             ]
         },
         {
-            "bits": 12,
+            "bits": 15,
             "name": "0",
             "type": 1
         }

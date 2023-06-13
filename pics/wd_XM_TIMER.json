@@ -5,9 +5,7 @@
             "name": "16-bit tenth of millisecond timer",
             "type": 4,
             "attr": [
-                "16-bit timer value when read",
-                "write to set 16-bit timer interrupt match value",
-                "(when TIMER matches, interrupt generated and value reset)"
+                "16-bit timer value when read"
             ]
         }
     ],

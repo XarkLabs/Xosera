@@ -2,52 +2,28 @@
     "reg": [
         {
             "bits": 1,
-            "name": "Aconst",
+            "name": "Sconst",
             "type": 3,
             "attr": [
-                "A term",
+                "S term",
                 "0=mem",
                 "1=const"
             ]
         },
         {
-            "bits": 1,
-            "name": "Bconst",
-            "type": 6,
-            "attr": [
-                "B term",
-                "0=mem",
-                "1=const"
-            ]
+            "bits": 3,
+            "name": "0",
+            "type": 1
         },
         {
             "bits": 1,
-            "name": "notB",
-            "type": 6,
-            "attr": [
-                "NOT B",
-                "0= B",
-                "1=~B"
-            ]
-        },
-        {
-            "bits": 1,
-            "name": "CuseB",
-            "type": 6,
-            "attr": [
-                "C term",
-                "0=C",
-                "1=B"
-            ]
-        },
-        {
-            "bits": 1,
-            "name": "decr",
+            "name": "transp",
             "type": 4,
             "attr": [
-                "direction",
-                "0=incr",
-                "1=decr"
+                "transp.",
+                "testing",
+                "0=off",
+                "1=on"
             ]
         },
         {
@@ -63,6 +39,7 @@
         },
         {
             "bits": 2,
+            "name": "0",
             "type": 1
         },
         {
@@ -72,9 +49,9 @@
             "attr": [
                 "even/odd 4-bit transparent values for 4-bit mode",
                 "or 8-bit transparent value for 8-bit mode",
-                "(tested against B term value with notB ignored)"
+                "(tested against S term)"
             ]
-        },
+        }
     ],
     "config": {
         "bits": 16

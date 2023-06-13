@@ -1,0 +1,615 @@
+//
+// copper - blend dual playfield test
+//
+                .list    false
+                .include "../xosera_m68k_api/xosera_m68k_defs.inc"
+                .macname false
+                .listcond false
+                .list    true
+
+                export  hpos_sol,hpos_eol               ; export HPOS SOL/EOL offsets for 640/848 modes
+
+.macro          hcol    col
+                MOVE    #\col,XR_COLOR_A_ADDR+0
+                HPOS    #0
+.endm
+
+blend_start
+hpos_sol_move   MOVE    #MOVE+vcolor_tbl,color_load     ; reset color table start
+
+line_loop       MOVE    #$0000,XR_COLOR_A_ADDR+0        ; colorA[0] = black
+                MOVE    #$0000,XR_COLOR_B_ADDR+0        ; colorB[0] = black
+color_load      MOVE    vcolor_tbl,XR_COLOR_B_ADDR+0    ; set colorB[0] from table (self-modified)
+
+                LDM     color_load                      ; load SETM opcode+source addr
+                ADDI    #1                              ; increment
+                CMPI    #MOVE+vcolor_end                ; test vs table end (with SETM opcode)
+                BRLT    not_end                         ; branch if not past end
+                LDI     #MOVE+vcolor_tbl                ; load reset SETM opcode+table start
+not_end         STM     color_load                      ; store modified SETM opcode+source
+
+hpos_sol        HPOS    #160-8
+
+                hcol    $0000
+                hcol    $0111
+                hcol    $0222
+                hcol    $0333
+                hcol    $0444
+                hcol    $0555
+                hcol    $0666
+                hcol    $0777
+                hcol    $0888
+                hcol    $0999
+                hcol    $0AAA
+                hcol    $0BBB
+                hcol    $0CCC
+                hcol    $0DDD
+                hcol    $0EEE
+                hcol    $0FFF
+
+                hcol    $0800
+                hcol    $0080
+                hcol    $0008
+
+                hcol    $4000
+                hcol    $4111
+                hcol    $4222
+                hcol    $4333
+                hcol    $4444
+                hcol    $4555
+                hcol    $4666
+                hcol    $4777
+                hcol    $4888
+                hcol    $4999
+                hcol    $4AAA
+                hcol    $4BBB
+                hcol    $4CCC
+                hcol    $4DDD
+                hcol    $4EEE
+                hcol    $4FFF
+
+                hcol    $4800
+                hcol    $4080
+                hcol    $4008
+
+                hcol    $8000
+                hcol    $8111
+                hcol    $8222
+                hcol    $8333
+                hcol    $8444
+                hcol    $8555
+                hcol    $8666
+                hcol    $8777
+                hcol    $8888
+                hcol    $8999
+                hcol    $8AAA
+                hcol    $8BBB
+                hcol    $8CCC
+                hcol    $8DDD
+                hcol    $8EEE
+                hcol    $8FFF
+
+                hcol    $8800
+                hcol    $8080
+                hcol    $8008
+
+                hcol    $C000
+                hcol    $C111
+                hcol    $C222
+                hcol    $C333
+                hcol    $C444
+                hcol    $C555
+                hcol    $C666
+                hcol    $C777
+                hcol    $C888
+                hcol    $C999
+                hcol    $CAAA
+                hcol    $CBBB
+                hcol    $CCCC
+                hcol    $CDDD
+                hcol    $CEEE
+                hcol    $CFFF
+
+                hcol    $C800
+                hcol    $C080
+                hcol    $C008
+
+                hcol    $0000
+
+hpos_eol        HPOS    #799                            ; wait for last pixel of line
+                BRGE    line_loop                       ; branch always (since last write was A)
+
+                VPOS    #$7FF                           ; wait for SOF (just in case)
+
+vcolor_tbl
+                word    $0000
+                word    $0111
+                word    $0222
+                word    $0333
+                word    $0444
+                word    $0555
+                word    $0666
+                word    $0777
+                word    $0888
+                word    $0999
+                word    $0AAA
+                word    $0BBB
+                word    $0CCC
+                word    $0DDD
+                word    $0EEE
+                word    $0FFF
+
+                word    $1000
+                word    $1111
+                word    $1222
+                word    $1333
+                word    $1444
+                word    $1555
+                word    $1666
+                word    $1777
+                word    $1888
+                word    $1999
+                word    $1AAA
+                word    $1BBB
+                word    $1CCC
+                word    $1DDD
+                word    $1EEE
+                word    $1FFF
+
+
+                word    $2000
+                word    $2111
+                word    $2222
+                word    $2333
+                word    $2444
+                word    $2555
+                word    $2666
+                word    $2777
+                word    $2888
+                word    $2999
+                word    $2AAA
+                word    $2BBB
+                word    $2CCC
+                word    $2DDD
+                word    $2EEE
+                word    $2FFF
+
+
+                word    $3000
+                word    $3111
+                word    $3222
+                word    $3333
+                word    $3444
+                word    $3555
+                word    $3666
+                word    $3777
+                word    $3888
+                word    $3999
+                word    $3AAA
+                word    $3BBB
+                word    $3CCC
+                word    $3DDD
+                word    $3EEE
+                word    $3FFF
+
+
+                word    $4000
+                word    $4111
+                word    $4222
+                word    $4333
+                word    $4444
+                word    $4555
+                word    $4666
+                word    $4777
+                word    $4888
+                word    $4999
+                word    $4AAA
+                word    $4BBB
+                word    $4CCC
+                word    $4DDD
+                word    $4EEE
+                word    $4FFF
+
+
+                word    $5000
+                word    $5111
+                word    $5222
+                word    $5333
+                word    $5444
+                word    $5555
+                word    $5666
+                word    $5777
+                word    $5888
+                word    $5999
+                word    $5AAA
+                word    $5BBB
+                word    $5CCC
+                word    $5DDD
+                word    $5EEE
+                word    $5FFF
+
+
+                word    $6000
+                word    $6111
+                word    $6222
+                word    $6333
+                word    $6444
+                word    $6555
+                word    $6666
+                word    $6777
+                word    $6888
+                word    $6999
+                word    $6AAA
+                word    $6BBB
+                word    $6CCC
+                word    $6DDD
+                word    $6EEE
+                word    $6FFF
+
+
+                word    $7000
+                word    $7111
+                word    $7222
+                word    $7333
+                word    $7444
+                word    $7555
+                word    $7666
+                word    $7777
+                word    $7888
+                word    $7999
+                word    $7AAA
+                word    $7BBB
+                word    $7CCC
+                word    $7DDD
+                word    $7EEE
+                word    $7FFF
+
+
+                word    $8000
+                word    $8111
+                word    $8222
+                word    $8333
+                word    $8444
+                word    $8555
+                word    $8666
+                word    $8777
+                word    $8888
+                word    $8999
+                word    $8AAA
+                word    $8BBB
+                word    $8CCC
+                word    $8DDD
+                word    $8EEE
+                word    $8FFF
+
+
+                word    $9000
+                word    $9111
+                word    $9222
+                word    $9333
+                word    $9444
+                word    $9555
+                word    $9666
+                word    $9777
+                word    $9888
+                word    $9999
+                word    $9AAA
+                word    $9BBB
+                word    $9CCC
+                word    $9DDD
+                word    $9EEE
+                word    $9FFF
+
+
+                word    $A000
+                word    $A111
+                word    $A222
+                word    $A333
+                word    $A444
+                word    $A555
+                word    $A666
+                word    $A777
+                word    $A888
+                word    $A999
+                word    $AAAA
+                word    $ABBB
+                word    $ACCC
+                word    $ADDD
+                word    $AEEE
+                word    $AFFF
+
+
+                word    $B000
+                word    $B111
+                word    $B222
+                word    $B333
+                word    $B444
+                word    $B555
+                word    $B666
+                word    $B777
+                word    $B888
+                word    $B999
+                word    $BAAA
+                word    $BBBB
+                word    $BCCC
+                word    $BDDD
+                word    $BEEE
+                word    $BFFF
+
+
+                word    $C000
+                word    $C111
+                word    $C222
+                word    $C333
+                word    $C444
+                word    $C555
+                word    $C666
+                word    $C777
+                word    $C888
+                word    $C999
+                word    $CAAA
+                word    $CBBB
+                word    $CCCC
+                word    $CDDD
+                word    $CEEE
+                word    $CFFF
+
+
+                word    $D000
+                word    $D111
+                word    $D222
+                word    $D333
+                word    $D444
+                word    $D555
+                word    $D666
+                word    $D777
+                word    $D888
+                word    $D999
+                word    $DAAA
+                word    $DBBB
+                word    $DCCC
+                word    $DDDD
+                word    $DEEE
+                word    $DFFF
+
+
+                word    $E000
+                word    $E111
+                word    $E222
+                word    $E333
+                word    $E444
+                word    $E555
+                word    $E666
+                word    $E777
+                word    $E888
+                word    $E999
+                word    $EAAA
+                word    $EBBB
+                word    $ECCC
+                word    $EDDD
+                word    $EEEE
+                word    $EFFF
+
+
+                word    $F000
+                word    $F111
+                word    $F222
+                word    $F333
+                word    $F444
+                word    $F555
+                word    $F666
+                word    $F777
+                word    $F888
+                word    $F999
+                word    $FAAA
+                word    $FBBB
+                word    $FCCC
+                word    $FDDD
+                word    $FEEE
+                word    $FFFF
+
+                word    $5000
+                word    $5100
+                word    $5200
+                word    $5300
+                word    $5400
+                word    $5500
+                word    $5600
+                word    $5700
+                word    $5800
+                word    $5900
+                word    $5A00
+                word    $5B00
+                word    $5C00
+                word    $5D00
+                word    $5E00
+                word    $5F00
+
+                word    $7000
+                word    $7100
+                word    $7200
+                word    $7300
+                word    $7400
+                word    $7500
+                word    $7600
+                word    $7700
+                word    $7800
+                word    $7900
+                word    $7A00
+                word    $7B00
+                word    $7C00
+                word    $7D00
+                word    $7E00
+                word    $7F00
+
+                word    $A000
+                word    $A100
+                word    $A200
+                word    $A300
+                word    $A400
+                word    $A500
+                word    $A600
+                word    $A700
+                word    $A800
+                word    $A900
+                word    $AA00
+                word    $AB00
+                word    $AC00
+                word    $AD00
+                word    $AE00
+                word    $AF00
+
+                word    $F000
+                word    $F100
+                word    $F200
+                word    $F300
+                word    $F400
+                word    $F500
+                word    $F600
+                word    $F700
+                word    $F800
+                word    $F900
+                word    $FA00
+                word    $FB00
+                word    $FC00
+                word    $FD00
+                word    $FE00
+                word    $FF00
+
+                word    $5000
+                word    $5010
+                word    $5020
+                word    $5030
+                word    $5040
+                word    $5050
+                word    $5060
+                word    $5070
+                word    $5080
+                word    $5090
+                word    $50A0
+                word    $50B0
+                word    $50C0
+                word    $50D0
+                word    $50E0
+                word    $50F0
+
+                word    $7000
+                word    $7010
+                word    $7020
+                word    $7030
+                word    $7040
+                word    $7050
+                word    $7060
+                word    $7070
+                word    $7080
+                word    $7090
+                word    $70A0
+                word    $70B0
+                word    $70C0
+                word    $70D0
+                word    $70E0
+                word    $70F0
+
+                word    $A000
+                word    $A010
+                word    $A020
+                word    $A030
+                word    $A040
+                word    $A050
+                word    $A060
+                word    $A070
+                word    $A080
+                word    $A090
+                word    $A0A0
+                word    $A0B0
+                word    $A0C0
+                word    $A0D0
+                word    $A0E0
+                word    $A0F0
+
+                word    $F000
+                word    $F010
+                word    $F020
+                word    $F030
+                word    $F040
+                word    $F050
+                word    $F060
+                word    $F070
+                word    $F080
+                word    $F090
+                word    $F0A0
+                word    $F0B0
+                word    $F0C0
+                word    $F0D0
+                word    $F0E0
+                word    $F0F0
+
+                word    $5000
+                word    $5001
+                word    $5002
+                word    $5003
+                word    $5004
+                word    $5005
+                word    $5006
+                word    $5007
+                word    $5008
+                word    $5009
+                word    $500A
+                word    $500B
+                word    $500C
+                word    $500D
+                word    $500E
+                word    $500F
+
+                word    $7000
+                word    $7001
+                word    $7002
+                word    $7003
+                word    $7004
+                word    $7005
+                word    $7006
+                word    $7007
+                word    $7008
+                word    $7009
+                word    $700A
+                word    $700B
+                word    $700C
+                word    $700D
+                word    $700E
+                word    $700F
+
+                word    $A000
+                word    $A001
+                word    $A002
+                word    $A003
+                word    $A004
+                word    $A005
+                word    $A006
+                word    $A007
+                word    $A008
+                word    $A009
+                word    $A00A
+                word    $A00B
+                word    $A00C
+                word    $A00D
+                word    $A00E
+                word    $A00F
+
+                word    $F000
+                word    $F001
+                word    $F002
+                word    $F003
+                word    $F004
+                word    $F005
+                word    $F006
+                word    $F007
+                word    $F008
+                word    $F009
+                word    $F00A
+                word    $F00B
+                word    $F00C
+                word    $F00D
+                word    $F00E
+                word    $F00F
+vcolor_end
+                .end

@@ -143,9 +143,6 @@ logic [FRAC_BITS-1:0]       reg_timer_frac;
 logic           tick;
 assign          tick        = !reg_timer_frac[FRAC_BITS-1];
 
-`ifdef EN_TIMER_INTR
-`endif
-
 always_ff @(posedge clk) begin
     if (reset_i) begin
         reg_timer           <= '0;
@@ -208,14 +205,28 @@ always_comb begin
         xv::XM_DATA,
         xv::XM_DATA_2:
             rd_temp_word  = reg_data;
-        xv::XM_UNUSED_0C:
-            rd_temp_word  = reg_data;
-        xv::XM_UNUSED_0D:
-            rd_temp_word  = reg_data;
-        xv::XM_UNUSED_0E:
-            rd_temp_word  = reg_data;
-        xv::XM_UNUSED_0F:
-            rd_temp_word  = reg_data;
+        xv::XM_UNUSED_0C,
+        xv::XM_UNUSED_0D,
+        xv::XM_UNUSED_0E,
+        xv::XM_FEATURES:
+            rd_temp_word  = { 2'(xv::FPGA_CONFIG_NUM), 2'b0, 4'(xv::AUDIO_NCHAN), 1'b0,
+`ifdef EN_PF_B
+                1'b1,
+`else
+                1'b0,
+`endif
+`ifdef EN_BLIT
+                1'b1,
+`else
+                1'b0,
+`endif
+`ifdef EN_COPP
+                1'b1,
+`else
+                1'b0,
+`endif
+                4'(xv::VIDEO_MODE_NUM) };
+
     endcase
 end
 

@@ -27,13 +27,13 @@
 #include <machine.h>
 #include <sdfat.h>
 
-//#define DELAY_TIME 15000        // slow human speed
-//#define DELAY_TIME 5000        // human speed
-//#define DELAY_TIME 1000        // impatient human speed
+// #define DELAY_TIME 15000        // slow human speed
+// #define DELAY_TIME 5000        // human speed
+// #define DELAY_TIME 1000        // impatient human speed
 #define DELAY_TIME 500        // machine speed
 
 #define COPPER_TEST            1
-#define INTERACTIVE_AUDIO_TEST 0
+#define INTERACTIVE_AUDIO_TEST 1
 #define BLURB_AUDIO            1
 
 #define BLIT_TEST_PIC      0
@@ -98,6 +98,7 @@ uint8_t moto_m[] = {
 
 #if COPPER_TEST
 // Copper list
+#if 0
 const uint32_t copper_list[] = {COP_WAIT_V(30 * 0),  COP_MOVEP(0x000, 0),
                                 COP_WAIT_V(30 * 1),  COP_MOVEP(0x111, 0),
                                 COP_WAIT_V(30 * 2),  COP_MOVEP(0x222, 0),
@@ -117,8 +118,15 @@ const uint32_t copper_list[] = {COP_WAIT_V(30 * 0),  COP_MOVEP(0x000, 0),
                                 COP_WAIT_V(30 * 16), COP_END()};
 
 const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
+#else
 
-static_assert(NUM_ELEMENTS(copper_list) < 1024, "copper list too long");
+#include "cop_diagonal.h"
+
+#include "cop_blend_test.h"
+
+#endif
+
+static_assert(NUM_ELEMENTS(cop_diagonal_bin) < 1024, "copper list too long");
 
 // 320x200 copper
 // Copper list
@@ -148,7 +156,8 @@ uint32_t global;        // this is used to prevent the compiler from optimizing 
 
 xosera_info_t initinfo;
 
-uint32_t mem_buffer[128 * 1024];
+uint32_t mem_buffer32[128 * 1024];
+uint16_t mem_buffer[128 * 1024];
 
 // timer helpers
 static uint32_t start_tick;
@@ -335,7 +344,7 @@ static void get_textmode_settings()
     uint16_t tile_height = (xreg_getw(PA_TILE_CTRL) & 0xf) + 1;
     screen_addr          = xreg_getw(PA_DISP_ADDR);
     text_columns         = (uint8_t)xreg_getw(PA_LINE_LEN);
-    text_rows            = (uint8_t)(((xreg_getw(VID_VSIZE) / vx) + (tile_height - 1)) / tile_height);
+    text_rows            = (uint8_t)(((xosera_vid_width() / vx) + (tile_height - 1)) / tile_height);
 }
 
 static void xcls()
@@ -377,8 +386,8 @@ static void reset_vid(void)
 
     xreg_setw(VID_CTRL, 0x0008);
     xreg_setw(COPP_CTRL, 0x0000);        // disable copper
-    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
     xreg_setw(PA_GFX_CTRL, 0x0000);
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PA_DISP_ADDR, 0x0000);
@@ -564,12 +573,39 @@ static void install_copper()
         xmem_setw_next(i << 2);
     }
 #else
+#if 0
     for (uint16_t i = 0; i < copper_list_len; i++)
     {
         uint32_t op = copper_list[i];
         xmem_setw_next(op >> 16);
         xmem_setw_next(op & 0xffff);
     }
+#else
+
+#if 1
+    // modify HPOS wait SOL to be left edge horizontal position in 640x480 or 848x480 modes (including overscan)
+    cop_diagonal_bin[cop_diagonal__hpos_sol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 848 - 8 : 800 - 640 - 8);
+    // modify HPOS wait EOL to be right edge horizontal position in 640x480 or 848x480 modes (including overscan)
+    cop_diagonal_bin[cop_diagonal__hpos_eol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 1 : 800 - 1);
+    for (uint16_t i = 0; i < cop_diagonal_size; i++)
+    {
+        uint16_t op = cop_diagonal_bin[i];
+        xmem_setw_next(op);
+    }
+#else
+    for (uint16_t i = 50; i < 100; i++)
+    {
+        xmem_setw_next(0x8000);
+        xmem_setw_next(0x0fff);
+        xmem_setw_next(0x2000 | i);
+        xmem_setw_next(0x8000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x2800);
+    }
+    xmem_setw_next(0x3000);
+#endif
+
+#endif
 #endif
 }
 
@@ -842,8 +878,8 @@ void show_test_pic(int pic_num, uint16_t addr)
     xreg_setw(PB_GFX_CTRL, 0x0080);
     xreg_setw(VID_CTRL, 0x0000);        // set border
     xmem_setw(XR_COLOR_A_ADDR, 0x0000);
-    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
 
     xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, addr);
@@ -1235,8 +1271,8 @@ void test_colormap()
     uint16_t h       = 14;
 
     xreg_setw(VID_CTRL, 0x0000);
-    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
     xreg_setw(PA_GFX_CTRL, 0x0065);
     xreg_setw(PA_TILE_CTRL, 0x0C07);
     xreg_setw(PA_DISP_ADDR, 0x0000);
@@ -1322,6 +1358,33 @@ void test_colormap()
     delay_check(DELAY_TIME * 3);
 }
 
+void test_blend()
+{
+    xreg_setw(COPP_CTRL, 0x0000);
+
+    xreg_setw(PA_GFX_CTRL, 0x0080);        // bitmap + 8-bpp + Hx1 + Vx1
+    xreg_setw(PB_GFX_CTRL, 0x0080);        // bitmap + 8-bpp + Hx1 + Vx1
+    xreg_setw(VID_CTRL, 0x0000);           // border color #0
+
+    // modify HPOS wait SOL to be left edge horizontal position in 640x480 or 848x480 modes (including overscan)
+    cop_blend_test_bin[cop_blend_test__hpos_sol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 848 - 8 : 800 - 640 - 8);
+    // modify HPOS wait EOL to be right edge horizontal position in 640x480 or 848x480 modes (including overscan)
+    cop_blend_test_bin[cop_blend_test__hpos_eol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 1 : 800 - 1);
+    xmem_set_addr(XR_COPPER_ADDR);
+    for (uint16_t i = 0; i < cop_blend_test_size; i++)
+    {
+        uint16_t op = cop_blend_test_bin[i];
+        xmem_setw_next(op);
+    }
+    xreg_setw(COPP_CTRL, 0x8000);
+
+    delay_check(DELAY_TIME * 5);
+
+    xreg_setw(COPP_CTRL, 0x0000);
+    install_copper();
+    xreg_setw(COPP_CTRL, 0x8000);
+}
+
 void test_blit()
 {
     static const int W_4BPP = 320 / 4;
@@ -1344,7 +1407,7 @@ void test_blit()
 
     // crop left and right 2 pixels
     xr_textmode_pb();
-    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640 - 4);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640 - 4);
     xreg_setw(VID_CTRL, 0x00FF);
 
     do
@@ -1368,13 +1431,11 @@ void test_blit()
                 ;
             xmem_setw(XR_COLOR_A_ADDR + 255, 0xf0f0);        // set write address
 
-            xreg_setw(BLIT_CTRL, 0x0003);              // constA, constB, decrement
-            xreg_setw(BLIT_MOD_A, 0x0000);             // no modulo A
-            xreg_setw(BLIT_SRC_A, i << 8 | i);         // A = fill pattern
-            xreg_setw(BLIT_MOD_B, 0x0000);             // no modulo B
-            xreg_setw(BLIT_SRC_B, 0xFFFF);             // AND with B (and disable transparency)
-            xreg_setw(BLIT_MOD_C, 0x0000);             // no modulo C
-            xreg_setw(BLIT_VAL_C, 0x0000);             // XOR with C
+            xreg_setw(BLIT_CTRL, 0x0001);              // no transp, constS
+            xreg_setw(BLIT_ANDC, 0x0000);              // ANDC constant
+            xreg_setw(BLIT_XOR, 0x0000);               // XOR constant
+            xreg_setw(BLIT_MOD_S, 0x0000);             // no modulo S
+            xreg_setw(BLIT_SRC_S, i << 8 | i);         // A = fill pattern
             xreg_setw(BLIT_MOD_D, 0x0000);             // no modulo D
             xreg_setw(BLIT_DST_D, 0x0000);             // VRAM display end address
             xreg_setw(BLIT_SHIFT, 0xFF00);             // no edge masking or shifting
@@ -1389,7 +1450,7 @@ void test_blit()
 
         uint16_t paddr = 0x9b00;
         show_test_pic(0, paddr);
-        xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640 - 4);
+        xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640 - 4);
         xreg_setw(VID_CTRL, 0x00FF);
         xmem_setw(XR_COLOR_A_ADDR + 255, 0x0000);        // set write address
 
@@ -1397,13 +1458,11 @@ void test_blit()
 
         // 2D screen screen copy 0x0000 -> 0x4B00 320x240 4-bpp
         xwait_blit_ready();
-        xreg_setw(BLIT_CTRL, 0x0002);             // constB
-        xreg_setw(BLIT_MOD_A, 0x0000);            // no modulo A
-        xreg_setw(BLIT_SRC_A, paddr);             // A = source
-        xreg_setw(BLIT_MOD_B, 0x0000);            // no modulo B
-        xreg_setw(BLIT_SRC_B, 0xFFFF);            // AND with B (and disable transparency)
-        xreg_setw(BLIT_MOD_C, 0x0000);            // no modulo C
-        xreg_setw(BLIT_VAL_C, 0x0000);            // XOR with C
+        xreg_setw(BLIT_CTRL, 0x0000);             // no transp
+        xreg_setw(BLIT_ANDC, 0x0000);             // ANDC constant
+        xreg_setw(BLIT_XOR, 0x0000);              // XOR constant
+        xreg_setw(BLIT_MOD_S, 0x0000);            // no modulo A
+        xreg_setw(BLIT_SRC_S, paddr);             // A = source
         xreg_setw(BLIT_MOD_D, 0x0000);            // no modulo D
         xreg_setw(BLIT_DST_D, daddr);             // VRAM display end address
         xreg_setw(BLIT_SHIFT, 0xFF00);            // no edge masking or shifting
@@ -1417,13 +1476,11 @@ void test_blit()
         for (int i = 0; i < 128; i++)
         {
             xwait_blit_ready();                             // make sure blit ready (previous blit started)
-            xreg_setw(BLIT_CTRL, 0x0002);                   // constB
-            xreg_setw(BLIT_MOD_A, -1);                      // A modulo
-            xreg_setw(BLIT_SRC_A, paddr);                   // A source VRAM addr (pacman)
-            xreg_setw(BLIT_MOD_B, 0x0000);                  // B modulo
-            xreg_setw(BLIT_SRC_B, 0xFFFF);                  // B const (non-zero to disable transparency)
-            xreg_setw(BLIT_MOD_C, 0x0000);                  // C trans term
-            xreg_setw(BLIT_VAL_C, 0x0000);                  // C const (XOR'd with value stored)
+            xreg_setw(BLIT_CTRL, 0x0000);                   // no transp
+            xreg_setw(BLIT_ANDC, 0x0000);                   // ANDC constant
+            xreg_setw(BLIT_XOR, 0x0000);                    // XOR constant
+            xreg_setw(BLIT_MOD_S, -1);                      // A modulo
+            xreg_setw(BLIT_SRC_S, paddr);                   // A source VRAM addr (pacman)
             xreg_setw(BLIT_MOD_D, -1);                      // D modulo
             xreg_setw(BLIT_DST_D, daddr + (i >> 2));        // D destination VRAM addr
             xreg_setw(BLIT_SHIFT,
@@ -1440,35 +1497,6 @@ void test_blit()
         checkbail();
         xmem_setw(XR_COLOR_A_ADDR + 255, 0xFF0F);        // set write address
         delay_check(DELAY_TIME);
-#if 0        // no left shift
-        static uint16_t blit_rshift[4] = {0x8700, 0xC301, 0xE102, 0xF003};
-
-        xr_printfxy(0, 0, "Blit 320x240 16 color\nShift left (decrement)\n");        // set write address
-        wait_vblank_start();
-        for (int i = 127; i >= 3; i--)
-        {
-            xwait_blit_ready();                                      // make sure blit ready (previous blit started)
-            xreg_setw(BLIT_CTRL, 0x0012);                            // constB
-            xreg_setw(BLIT_MOD_A, 1);                                // A modulo
-            xreg_setw(BLIT_SRC_A, paddr + (H_4BPP * W_4BPP));        // A source VRAM addr (pacman)
-            xreg_setw(BLIT_MOD_B, 0x0000);                           // B modulo
-            xreg_setw(BLIT_SRC_B, 0xFFFF);                           // B const (non-zero to disable transparency)
-            xreg_setw(BLIT_MOD_C, 0x0000);                           // C trans term
-            xreg_setw(BLIT_VAL_C, 0x0000);                           // C const (XOR'd with value stored)
-            xreg_setw(BLIT_MOD_D, 1);                                // D modulo
-            xreg_setw(BLIT_DST_D,
-                      (daddr + (H_4BPP * W_4BPP)) + (i >> 2));        // D destination VRAM addr
-            xreg_setw(BLIT_SHIFT,
-                      blit_rshift[i & 0x3]);          // first, last word nibble masks, and 0-3 shift (low two bits)
-            xreg_setw(BLIT_LINES, H_4BPP - 1);        // lines (0 for 1-D blit)
-            xreg_setw(BLIT_WORDS, W_4BPP);            // words to write -1
-            xmem_setw(XR_COLOR_A_ADDR + 255, 0xfff0);        // set write address
-            xwait_blit_done();
-            xmem_setw(XR_COLOR_A_ADDR + 255, 0xf0f0);        // set write address
-            wait_vblank_start();
-            xmem_setw(XR_COLOR_A_ADDR + 255, 0xff00);        // set write address
-        }
-#endif
         checkbail();
 
         xmem_setw(XR_COLOR_A_ADDR + 255, 0xFF0F);        // set write address
@@ -1495,13 +1523,9 @@ void test_blit()
         }
 
         xwait_blit_ready();
-        xreg_setw(BLIT_CTRL, 0xEE02);             // constB, 4bpp transp=E
-        xreg_setw(BLIT_MOD_A, 0x0000);            // A mod (XOR)
-        xreg_setw(BLIT_SRC_A, paddr);             // A source const word
-        xreg_setw(BLIT_MOD_B, 0x0000);            // B mod (XOR)
-        xreg_setw(BLIT_SRC_B, 0xFFFF);            // B AND const (non-zero to disable transparency)
-        xreg_setw(BLIT_MOD_C, 0x0000);            // C mod (XOR)
-        xreg_setw(BLIT_VAL_C, 0x0000);            // C XOR const
+        xreg_setw(BLIT_CTRL, 0x0000);             // no transp
+        xreg_setw(BLIT_MOD_S, 0x0000);            // A mod (XOR)
+        xreg_setw(BLIT_SRC_S, paddr);             // A source const word
         xreg_setw(BLIT_MOD_D, 0x0000);            // D mod (ADD)
         xreg_setw(BLIT_DST_D, daddr);             // D destination VRAM addr
         xreg_setw(BLIT_SHIFT, 0xFF00);            // first, last word nibble masks, and 0-3 shift (low two bits)
@@ -1517,13 +1541,11 @@ void test_blit()
             {
                 struct bob * bp = &bobs[b];
                 xwait_blit_ready();                          // make sure blit ready (previous blit started)
-                xreg_setw(BLIT_CTRL, 0xEE02);                // constB, 4bpp transp=E
-                xmem_setw_next(W_4BPP - W_LOGO - 1);         // A modulo
-                xmem_setw_next(paddr + bp->w_offset);        // A initial term (not used)
-                xmem_setw_next(0x0000);                      // B modulo
-                xmem_setw_next(0xFFFF);                      // B source+transp VRAM addr (moto_m)
-                xmem_setw_next(0x0000);                      // C modulo
-                xmem_setw_next(0x0000);                      // C XOR const
+                xreg_setw(BLIT_CTRL, 0xEE10);                // E=4bpp transp
+                xmem_setw_next(0x0000);                      // ANCC const
+                xmem_setw_next(0x0000);                      // XOR const
+                xmem_setw_next(W_4BPP - W_LOGO - 1);         // S modulo
+                xmem_setw_next(paddr + bp->w_offset);        // S addr
                 xmem_setw_next(W_4BPP - W_LOGO - 1);         // D modulo
                 xmem_setw_next(daddr + bp->w_offset);        // D destination VRAM addr
                 xmem_setw_next(0xFF00);                // first, last word nibble masks, and 0-3 shift (low two bits)
@@ -1550,13 +1572,11 @@ void test_blit()
                 uint8_t shift    = bp->x_pos & 3;
 
                 xwait_blit_ready();                         // make sure blit ready (previous blit started)
-                xreg_setw(BLIT_CTRL, 0x0001);               // constA
-                xmem_setw_next(0x0000);                     // A modulo
-                xmem_setw_next(0xFFFF);                     // A initial term (not used)
-                xmem_setw_next(-1);                         // B modulo
-                xmem_setw_next(maddr);                      // B source+transp VRAM addr (moto_m)
-                xmem_setw_next(0x0000);                     // C modulo
-                xmem_setw_next(0x0000);                     // C XOR const
+                xreg_setw(BLIT_CTRL, 0x0000);               // no transp
+                xmem_setw_next(0x0000);                     // ANDC const
+                xmem_setw_next(0x0000);                     // XOR const
+                xmem_setw_next(-1);                         // S modulo
+                xmem_setw_next(maddr);                      // S address
                 xmem_setw_next(W_4BPP - W_LOGO - 1);        // D modulo
                 xmem_setw_next(daddr + off);                // D destination VRAM addr
                 xmem_setw_next(blit_shift[shift]);        // first, last word nibble masks, and 0-3 shift (low two bits)
@@ -1580,8 +1600,8 @@ void test_blit()
     xreg_setw(PA_LINE_LEN, 320 / 4);
     xreg_setw(PA_DISP_ADDR, 0x0000);
 
-    xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
 }
 
 void test_true_color()
@@ -1601,7 +1621,7 @@ void test_true_color()
 // this tests a problem switching modes
 void test_mode_glitch()
 {
-    int width = xreg_getw(VID_HSIZE);
+    int width = xosera_vid_width();
     xm_setw(WR_ADDR, 0);
     xm_setw(WR_INCR, 1);
     xm_setbl(SYS_CTRL, 0xF);
@@ -1882,7 +1902,7 @@ void test_vram_speed()
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
-        uint32_t * ptr   = mem_buffer;
+        uint32_t * ptr   = mem_buffer32;
         uint16_t   count = 0x8000;        // VRAM long count
         do
         {
@@ -1922,7 +1942,7 @@ void test_vram_speed()
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
-        uint32_t * ptr   = mem_buffer;
+        uint32_t * ptr   = mem_buffer32;
         uint16_t   count = 0x8000;        // VRAM long count
         do
         {
@@ -2319,10 +2339,10 @@ int    testsampsize;
 static void test_audio_sample(const char * name, int8_t * samp, int bytesize, int speed)
 {
     uint16_t test_vaddr = 0x8000;
-    xreg_setw(AUD0_VOL, 0x0000);           // set volume to 0%
-    xreg_setw(AUD0_PERIOD, 0x0000);        // 1000 clocks per each sample byte
-    xreg_setw(AUD0_LENGTH, 0x0000);        // 1000 clocks per each sample byte
-    xreg_setw(AUD_CTRL, 0x0001);           // enable audio DMA to start playing
+    uint16_t chan       = 0;
+    uint16_t chanoff    = chan << 2;
+
+    xreg_setw(AUD_CTRL, 0x0000);        // audio off
 
     xm_setw(SYS_CTRL, 0x000F);        // make sure no nibbles masked
     xm_setw(WR_INCR, 0x0001);         // set write increment
@@ -2338,6 +2358,17 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
         xm_setbl(DATA, *samp++);
     }
 
+    for (uint16_t v = 0; v < 4; v++)
+    {
+        uint16_t co = v << 2;
+        xreg_setw(AUD0_VOL + co, 0x0000);              // set volume to 0L, 0R
+        xreg_setw(AUD0_PERIOD + co, 0x7F00);           // slow period
+        xreg_setw(AUD0_LENGTH + co, 0x0000);           // 1 word len
+        xreg_setw(AUD0_START + co, test_vaddr);        // address in VRAM
+    }
+    xreg_setw(AUD_CTRL, 0x0001);        // enable audio DMA to start playing
+
+
     uint16_t p  = speed;
     uint8_t  lv = 0x40;
     uint8_t  rv = 0x40;
@@ -2349,15 +2380,17 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
     dprintf("       'Q' and 'W' to change left volume (hold shift for faster)\n");
     dprintf("       'E' and 'R' to change right volume (hold shift for faster)\n");
     dprintf("       ',' and '.' to change sample period (hold shift for faster)\n");
+    dprintf("       '0' to  '3' to change channel\n");
     dprintf("       ESC to reboot rosco\n");
     dprintf("       SPACE to continue to next test\n\n");
 
-    dprintf("Volume (128=1.0): L:%3d/R:%3d    Period (1/pclk): %5d", lv, rv, p);
+    dprintf("%d: Volume (128=1.0): L:%3d/R:%3d    Period (1/pclk): %5d", chan, lv, rv, p);
 
-    xreg_setw(AUD0_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
-    xreg_setw(AUD0_PERIOD, p);                         // 1000 clocks per each sample byte
-    xreg_setw(AUD0_START, test_vaddr);                 // address in VRAM
-    xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+    xreg_setw(AUD0_PERIOD + chanoff, p);                         // 1000 clocks per each sample byte
+    xreg_setw(AUD0_LENGTH + chanoff, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+    xreg_setw(AUD0_START + chanoff, test_vaddr);                 // address in VRAM
+    xreg_setw(AUD0_PERIOD + chanoff, 0x8000 | p);                // 1000 clocks per each sample byte
+    xreg_setw(AUD0_VOL + chanoff, lv << 8 | rv);                 // set left 100% volume, right 50% volume
 
     bool done = false;
 
@@ -2419,6 +2452,34 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
             case '>':
                 p = p + 16;
                 break;
+            case '0':
+                chan = 0;
+                xreg_setw(AUD0_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
+                xreg_setw(AUD0_PERIOD, p);                         // 1000 clocks per each sample byte
+                xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+                xreg_setw(AUD0_START, test_vaddr);                 // address in VRAM
+                break;
+            case '1':
+                chan = 1;
+                xreg_setw(AUD1_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
+                xreg_setw(AUD1_PERIOD, p);                         // 1000 clocks per each sample byte
+                xreg_setw(AUD1_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+                xreg_setw(AUD1_START, test_vaddr);                 // address in VRAM
+                break;
+            case '2':
+                chan = 2;
+                xreg_setw(AUD2_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
+                xreg_setw(AUD2_PERIOD, p);                         // 1000 clocks per each sample byte
+                xreg_setw(AUD2_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+                xreg_setw(AUD2_START, test_vaddr);                 // address in VRAM
+                break;
+            case '3':
+                chan = 3;
+                xreg_setw(AUD3_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
+                xreg_setw(AUD3_PERIOD, p);                         // 1000 clocks per each sample byte
+                xreg_setw(AUD3_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
+                xreg_setw(AUD3_START, test_vaddr);                 // address in VRAM
+                break;
             case ' ':
                 done = true;
                 break;
@@ -2432,16 +2493,21 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
         {
             break;
         }
-        dprintf("\rVolume (128 = 1.0): L:%3d R:%3d  Period (1/pclk): %5d", lv, rv, p);
-        xreg_setw(AUD0_VOL, lv << 8 | rv);        // set left 100% volume, right 50% volume
-        xreg_setw(AUD0_PERIOD, p);                // 1000 clocks per each sample byte
+        dprintf("\r%d: Volume (128 = 1.0): L:%3d R:%3d  Period (1/pclk): %5d", chan, lv, rv, p);
+        chanoff = chan << 2;
+        xreg_setw(AUD0_VOL + chanoff, lv << 8 | rv);        // set left 100% volume, right 50% volume
+        xreg_setw(AUD0_PERIOD + chanoff, p);                // 1000 clocks per each sample byte
     }
 
-    xreg_setw(AUD_CTRL, 0x0000);           // disable audio DMA
-    xreg_setw(AUD0_VOL, 0x0000);           // set volume to 0%
-    xreg_setw(AUD0_PERIOD, 0x0000);        // 1000 clocks per each sample byte
-    xreg_setw(AUD0_LENGTH, 0x0000);        // 1000 clocks per each sample byte
-    xreg_setw(AUD0_START, 0x0000);         // 1000 clocks per each sample byte
+    xreg_setw(AUD_CTRL, 0x0000);        // disable audio DMA
+    for (uint16_t v = 0; v < 4; v++)
+    {
+        uint16_t co = v << 2;
+        xreg_setw(AUD0_VOL + co, 0x0000);           // set volume to 0%
+        xreg_setw(AUD0_PERIOD + co, 0x7F00);        // 1000 clocks per each sample byte
+        xreg_setw(AUD0_LENGTH + co, 0x0000);        // 1000 clocks per each sample byte
+        xreg_setw(AUD0_START + co, 0x0000);         // 1000 clocks per each sample byte
+    }
 
     dprintf("\rSample playback done.                                       \n");
     xr_printfxy(0, 0, "Xosera audio test\n\n");
@@ -2463,12 +2529,13 @@ void wait_scanline()
         ;
 }
 
-#define SILENCE_VADDR 0xffff        // end of VRAM (or TILE)
-#define SILENCE_TILE  0x8000        // tilemem flag
-#define SILENCE_LEN   1             // 1 word (two samples)
+#define SILENCE_TILE  0x8000                                   // tilemem flag
+#define SILENCE_VADDR (XR_TILE_ADDR + XR_TILE_SIZE - 1)        // end of TILE
+#define SILENCE_LEN   1                                        // 1 word (two samples)
 
 uint8_t num_audio_channels;
 uint8_t audio_channel_mask;
+
 
 static int init_audio()
 {
@@ -2487,7 +2554,7 @@ static int init_audio()
     // play "really high pitch" silence to detect channels
     for (int v = 0; v < 4; v++)
     {
-        uint16_t vo = 1 << v;
+        uint16_t vo = v << 2;
         xreg_setw(AUD0_VOL + vo, 0);
         xreg_setw(AUD0_PERIOD + vo, 0);
         xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));
@@ -2498,6 +2565,11 @@ static int init_audio()
     audio_channel_mask = 0;
 
     xreg_setw(AUD_CTRL, 0x0001);        // enable audio
+    for (int v = 0; v < 4; v++)
+    {
+        uint16_t vo = v << 2;
+        xreg_setw(AUD0_PERIOD + vo, 0x8000 | 0);
+    }
     // check if audio fully disbled
     uint8_t aud_ena = xreg_getw(AUD_CTRL) & 1;
     if (!aud_ena)
@@ -2506,7 +2578,6 @@ static int init_audio()
         return 0;
     }
 
-    // channels should instantly trigger ready interrupt
     audio_channel_mask = xm_getbl(INT_CTRL) & INT_CTRL_AUD_ALL_F;
     while (audio_channel_mask & (1 << num_audio_channels))
     {
@@ -2523,9 +2594,9 @@ static int init_audio()
     // set all channels to "full volume" silence at very slow period
     for (int v = 0; v < num_audio_channels; v++)
     {
-        uint16_t vo = 1 << v;
+        uint16_t vo = v << 2;
         xreg_setw(AUD0_VOL + vo, 0x8080);
-        xreg_setw(AUD0_PERIOD + vo, 0x8000 | 0x7FFF);
+        xreg_setw(AUD0_PERIOD + vo, 800);
         xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));
         xreg_setw(AUD0_START + vo, SILENCE_VADDR);
     }
@@ -2545,65 +2616,73 @@ static void upload_audio(void * memdata, uint16_t vaddr, int len)
     }
 }
 
-static void play_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
+static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 {
     if (num_audio_channels != 0)
     {
-        dprintf("Initial INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
+        // set all channels to "full volume" silence at very slow period
+        for (int v = 0; v < num_audio_channels; v++)
+        {
+            uint16_t vo = v << 2;
+            xreg_setw(AUD0_VOL + vo, 0x8080);
+            xreg_setw(AUD0_PERIOD + vo, 0x7FFF);
+            xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));
+            xreg_setw(AUD0_START + vo, SILENCE_VADDR);
+        }
+
         uint16_t ic = xm_getw(INT_CTRL);
         xm_setw(INT_CTRL, ic | INT_CTRL_CLEAR_ALL_F);
-        ic = xm_getw(INT_CTRL);
-        dprintf("Cleared INT_CTRL = 0x%04x\n", xm_getw(INT_CTRL));
+        uint16_t ic2 = xm_getw(INT_CTRL);
+        dprintf("Initial INT_CTRL = 0x%04x\n", ic);
+        dprintf("Cleared INT_CTRL = 0x%04x\n", ic2);
 
-        uint32_t clk_hz = xreg_getw(VID_HSIZE) > 640 ? 33750000 : 25125000;
+        uint32_t clk_hz = xosera_vid_width() > 640 ? 33750000 : 25125000;
         uint16_t period = (clk_hz + rate - 1) / rate;
 
-        for (int v = 0; v < 4; v++)
+        for (int v = 0; v < num_audio_channels; v++)
         {
-            if (audio_channel_mask & (1 << v))
+            uint16_t vo = v << 2;
+            ic          = xm_getw(INT_CTRL);
+            dprintf("Starting channel %d... INT_CTRL = 0x%04x\n", v, ic);
+            if (v & 1)
             {
-                ic = xm_getw(INT_CTRL);
-                dprintf("Starting channel %d... INT_CTRL = 0x%04x\n", v, ic);
-                if (v & 1)
-                {
-                    xreg_setw(AUD0_VOL + (v * 4), 0x4020);
-                }
-                else
-                {
-                    xreg_setw(AUD0_VOL + (v * 4), 0x2040);
-                }
-                xreg_setw(AUD0_START + (v * 4), vaddr);
-                xreg_setw(AUD0_LENGTH + (v * 4), (len / 2) - 1);
-                xreg_setw(AUD0_PERIOD + (v * 4), period | 0x8000);        // force instant sample start
-                ic = xm_getw(INT_CTRL);
-
-                xreg_setw(AUD0_LENGTH + (v * 4), SILENCE_TILE | (SILENCE_LEN - 1));        // length-1 and TILE flag
-                xreg_setw(AUD0_START + (v * 4), SILENCE_VADDR);                            // queue silence
-
-                xm_setw(INT_CTRL, ic | (INT_CTRL_AUD0_INTR_F << v));        // clear voice interrupt status
-
-                ic = xm_getw(INT_CTRL);
-                dprintf("Started               INT_CTRL = 0x%04x\n", ic);
-
-                delay_check(250);
-                period += 350;
+                xreg_setw(AUD0_VOL + vo, 0x4020);
             }
+            else
+            {
+                xreg_setw(AUD0_VOL + vo, 0x2040);
+            }
+            xreg_setw(AUD0_LENGTH + vo, (len / 2) - 1);
+            xreg_setw(AUD0_START + vo, vaddr);
+            xreg_setw(AUD0_PERIOD + vo, period | 0x8000);        // force instant sample start
+
+            ic = xm_getw(INT_CTRL);
+
+            xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));        // length-1 and TILE flag
+            xreg_setw(AUD0_START + vo, SILENCE_VADDR);                            // queue silence
+
+            xm_setw(INT_CTRL, ic | (INT_CTRL_AUD0_INTR_F << v));        // clear voice interrupt status
+            ic2 = xm_getw(INT_CTRL);
+
+            dprintf("Started               INT_CTRL = 0x%04x -> 0x%04x\n", ic, ic2);
+
+            delay_check(250);
+            period += 350;
         }
 
         // wait for each channels to be ready (after they have started SILENCE)
-        for (int v = 0; v < 4; v++)
+        for (int v = 0; v < num_audio_channels; v++)
         {
-            if (audio_channel_mask & (1 << v))
+            uint16_t vo = v << 2;
+            ic          = xm_getw(INT_CTRL);
+            dprintf("Waiting channel  %d... INT_CTRL = 0x%04x\n", v, ic);
+            do
             {
                 ic = xm_getw(INT_CTRL);
-                dprintf("Waiting channel  %d... INT_CTRL = 0x%04x\n", v, ic);
-                do
-                {
-                    delay_check(1);
-                    ic = xm_getw(INT_CTRL);
-                } while ((ic & (1 << (INT_CTRL_AUD0_INTR_B + v))) == 0);
-                dprintf("Finished              INT_CTRL = 0x%04x\n", ic);
-            }
+            } while ((ic & (1 << (INT_CTRL_AUD0_INTR_B + v))) == 0);
+            dprintf("Finished              INT_CTRL = 0x%04x\n", ic);
+            xreg_setw(AUD0_VOL + vo, 0x0000);
+            xreg_setw(AUD0_PERIOD + vo, 0x7F00);
         }
     }
     else
@@ -2621,13 +2700,15 @@ const char blurb[] =
     "source tools and is tailored with features generally appropriate for a\n"
     "Motorola 68K era retro computer like the rosco_m68k (or even an 8-bit CPU).\n"
     "\n"
+    "\n"
     "  \xf9  Uses low-cost FPGA instead of expensive semiconductor fabrication :)\n"
-    "  \xf9  128KB of embedded video VRAM (16-bit words at 33 or 25 MHz)\n"
-    "  \xf9  VGA output at 848x480 or 640x480 (16:9 or 4:3 @ 60Hz)\n"
-    "  \xf9  Register based interface using 16 main 16-bit registers\n"
+    "  \xf9  128KB of embedded video VRAM (16-bit words at 25/33 MHz)\n"
+    "  \xf9  VGA output at 640x480 or 848x480 16:9 wide-screen (both @ 60Hz)\n"
+    "  \xf9  Register based interface using 16 direct 16-bit registers\n"
+    "  \xf9  Additional indirect read/write registers for easy configuration\n"
     "  \xf9  Read/write VRAM with programmable read/write address increment\n"
     "  \xf9  Fast 8-bit bus interface (using MOVEP) for rosco_m68k (by Ross Bamford)\n"
-    "  \xf9  Dual video planes (playfields) with color blending and priority\n"
+    "  \xf9  Dual video planes (playfields) with alpha color blending and priority\n"
     "  \xf9  Dual 256 color palettes with 12-bit RGB (4096 colors) and 4-bit \"alpha\"\n"
     "  \xf9  Read/write tile memory for an additional 10KB of tiles or tilemap\n"
     "  \xf9  Text mode with up to 8x16 glyphs and 16 forground & background colors\n"
@@ -2637,11 +2718,7 @@ const char blurb[] =
     "  \xf9  Screen synchronized \"copper\" to change colors and registers mid-screen\n"
     "  \xf9  Pixel H/V repeat of 1x, 2x, 3x or 4x (e.g. for 424x240 or 320x240)\n"
     "  \xf9  Fractional H/V repeat scaling (e.g. for 320x200 or 512x384 retro modes)\n"
-    "  \xf9  TODO: Wavetable stereo audio (similar to Amiga)\n"
-    "  \xf9  TODO: Hardware sprites for mouse cursor etc. (similar to Amiga)\n"
-    "  \xf9  TODO: High-speed USB UART (using FPGA FTDI interface)?\n"
-    "  \xf9  TODO: Perhaps PS/2 keyboard or fast SPI SD card I/O?\n"
-    "  \xf9  TODO: Whatever else fits into the FPGA while it still makes timing! :)\n"
+    "  \xf9  Wavetable 8-bit stereo audio with 4 channels (2 with dual playfield)\n"
     "\n"
     "\n";
 
@@ -2746,12 +2823,20 @@ void     xosera_test()
 
     dprintf("\nCalling xosera_init(0)...");
     bool success = xosera_init(0);
-    dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+    dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
     cpu_delay(1000);
     xosera_get_info(&initinfo);
     dprintf("xosera_get_info details:\n");
-    hexdump(&initinfo, sizeof(initinfo));
+    //    hexdump(&initinfo, sizeof(initinfo));
+
+    xmem_get_addr(XR_COPPER_ADDR);
+    for (int i = 0; i < XR_COPPER_SIZE; i++)
+    {
+        mem_buffer[i] = xmem_getw_next();
+    }
+    hexdump(mem_buffer + 0x380, 256);
+
     dprintf("\n");
     dprintf("Description : \"%s\"\n", initinfo.description_str);
     dprintf("Version BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
@@ -2825,7 +2910,7 @@ void     xosera_test()
 
     // test_8bpp_tiled();
 
-    // play_sample(0, 0x7fff, 800);
+    // play_blurb_sample(0, 0x7fff, 800);
 
     // readchar();
 
@@ -2895,7 +2980,7 @@ void     xosera_test()
             config_num++;
             dprintf("\n [ xosera_init(%u)...", config_num % 3);
             bool success = xosera_init(config_num % 3);
-            dprintf("%s (%dx%d) ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+            dprintf("%s (%dx%d) ]\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
             init_audio();
 #if COPPER_TEST
             install_copper();
@@ -2905,12 +2990,12 @@ void     xosera_test()
 
         dprintf("\n*** xosera_test_m68k iteration: %u, running %u:%02u:%02u\n", test_count++, h, m, s);
 
-        xreg_setw(VID_LEFT, (xreg_getw(VID_HSIZE) > 640 ? ((xreg_getw(VID_HSIZE) - 640) / 2) : 0) + 0);
-        xreg_setw(VID_RIGHT, (xreg_getw(VID_HSIZE) > 640 ? (xreg_getw(VID_HSIZE) - 640) / 2 : 0) + 640);
+        xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+        xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
 
-        uint16_t features  = xreg_getw(FEATURES);
-        uint16_t monwidth  = xreg_getw(VID_HSIZE);
-        uint16_t monheight = xreg_getw(VID_VSIZE);
+        uint16_t features  = xm_getw(FEATURES);
+        uint16_t monwidth  = xosera_vid_width();
+        uint16_t monheight = xosera_vid_height();
 
         uint16_t sysctrl  = xm_getw(SYS_CTRL);
         uint16_t intctrl  = xm_getw(INT_CTRL);
@@ -2943,16 +3028,16 @@ void     xosera_test()
         dprintf("\n");
 
 #if COPPER_TEST
-        if (test_count & 2)
+        //        if (test_count & 2)
         {
             dprintf("Copper test enabled for this interation.\n");
             xreg_setw(COPP_CTRL, 0x8000);
         }
-        else
-        {
-            dprintf("Copper test disabled for this iteration.\n");
-            xreg_setw(COPP_CTRL, 0x0000);
-        }
+        // else
+        // {
+        //     dprintf("Copper test disabled for this iteration.\n");
+        //     xreg_setw(COPP_CTRL, 0x0000);
+        // }
 #endif
         if (test_count & 1)
         {
@@ -2976,7 +3061,7 @@ void     xosera_test()
 
         xreg_setw(PA_GFX_CTRL, 0x0000);
         xreg_setw(PA_TILE_CTRL, 0x000F);
-        xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) >> 3);
+        xreg_setw(PA_LINE_LEN, xosera_vid_width() >> 3);
         xreg_setw(PA_DISP_ADDR, 0x0000);
         xreg_setw(PA_HV_SCROLL, 0x0000);
         xreg_setw(PA_HV_FSCALE, 0x0000);
@@ -3008,14 +3093,18 @@ void     xosera_test()
         if (num_audio_channels)
         {
             upload_audio(xosera_audio, 0x2000, xosera_audio_len);
-            play_sample(0x2000, xosera_audio_len, 8000);
+            play_blurb_sample(0x2000, xosera_audio_len, 8000);
         }
 #endif
 
-        delay_check(DELAY_TIME);
+        //        xreg_setw(PA_GFX_CTRL, 0x0080);
+        xreg_setw(VID_CTRL, 0x0000);
+        delay_check(DELAY_TIME * 3);
 
         restore_colors();
         test_colormap();
+
+        test_blend();
 
         if (use_sd)
         {

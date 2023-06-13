@@ -1,0 +1,90 @@
+{
+    "reg": [
+        {
+            "bits": 1,
+            "name": "<tt>o 7</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>o 6</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>o 5</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>o 4</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>o 3</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>o-2</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>o 1</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>o 0</tt>",
+            "type": 4,
+            "attr": [
+                "two tile lines, even and odd with MSB even and on left"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "<tt>e 7</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>e 6</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>e 5</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>e 4</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>e 3</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>e 2</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>e 1</tt>",
+            "type": 4
+        },
+        {
+            "bits": 1,
+            "name": "<tt>e 0</tt>",
+            "type": 4
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

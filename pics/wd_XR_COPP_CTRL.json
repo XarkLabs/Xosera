@@ -1,15 +1,7 @@
 {
     "reg": [
         {
-            "bits": 11,
-            "name": "copper start address (in copper XR memory region)",
-            "type": 4,
-            "attr": [
-                "copper starting PC address for each video frame"
-            ]
-        },
-        {
-            "bits": 4,
+            "bits": 15,
             "name": "0",
             "type": 1
         },

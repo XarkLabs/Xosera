@@ -110,9 +110,14 @@
 typedef struct _xosera_info xosera_info_t;        // forward declare
 
 // external function declarations
-bool xosera_init(int reconfig_num);                // wait a bit for Xosera to respond and optional reconfig (if 0 to 3)
-bool xosera_get_info(xosera_info_t * info);        // retrieve init xosera_info_t (valid after xosera reconfig)
-bool xosera_sync();                                // true if Xosera present and responding
+bool xosera_init(int reconfig_num);        // wait a bit for Xosera to respond and optional reconfig (if 0 to 3)
+int  xosera_vid_width();
+int  xosera_vid_height();
+int  xosera_max_hpos();
+int  xosera_max_vpos();
+int  xosera_aud_channels();
+bool xosera_get_info(xosera_info_t * info);              // retrieve init xosera_info_t (valid after xosera reconfig)
+bool xosera_sync();                                      // true if Xosera present and responding
 void xosera_memclear(void * ptr, unsigned int n);        // memory zero
 void cpu_delay(int ms);                                  // delay approx milliseconds with CPU busy wait
 void xv_delay(uint32_t ms);                              // delay milliseconds using Xosera TIMER
@@ -147,12 +152,12 @@ typedef struct _xreg
 // stored at XV_INFO_ADDR after FPGA reconfigure
 typedef struct _xosera_info
 {
-    char          description_str[48];        // ASCII description
-    uint16_t      reserved_48[4];             // 8 reserved bytes (and force alignment)
-    uint16_t      version_bcd;                // BCD version number (xx.yy)
-    unsigned char git_modified;               // non-zero if design modified from githash version
-    unsigned char reserved_59;                // reserved byte
-    uint32_t      githash;                    // git "short hash" version from repository
+    char          description_str[240];        // ASCII description
+    uint16_t      reserved_48[4];              // 8 reserved bytes (and force alignment)
+    uint16_t      version_bcd;                 // BCD version number (xx.yy)
+    unsigned char git_modified;                // non-zero if design modified from githash version
+    unsigned char reserved_59;                 // reserved byte
+    uint32_t      githash;                     // git "short hash" version from repository
 } xosera_info_t;
 
 #ifndef __INTELLISENSE__        // vscode intellisense does not grok m68k (flags as error, but correct for m68k-gcc)

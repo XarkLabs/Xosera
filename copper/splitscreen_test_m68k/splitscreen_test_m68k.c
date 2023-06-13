@@ -28,8 +28,8 @@
 #include <sdfat.h>
 
 #define DELAY_TIME 5000        // human speed
-//#define DELAY_TIME 1000        // impatient human speed
-//#define DELAY_TIME 100        // machine speed
+// #define DELAY_TIME 1000        // impatient human speed
+// #define DELAY_TIME 100        // machine speed
 
 #include "xosera_m68k_api.h"
 
@@ -105,7 +105,7 @@ static void get_textmode_settings()
     uint16_t tile_height = (xreg_getw(PA_TILE_CTRL) & 0xf) + 1;
     screen_addr          = xreg_getw(PA_DISP_ADDR);
     text_columns         = (uint8_t)xreg_getw(PA_LINE_LEN);
-    text_rows            = (uint8_t)(((xreg_getw(VID_VSIZE) / vx) + (tile_height - 1)) / tile_height);
+    text_rows            = (uint8_t)(((xosera_vid_height() / vx) + (tile_height - 1)) / tile_height);
 }
 
 static void xcls()
@@ -207,7 +207,7 @@ void     xosera_splitscreen_test()
     // wait for monitor to unblank
     dprintf("\nxosera_init(0)...");
     bool success = xosera_init(0);
-    dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
+    dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
     dprintf("Loading copper list...\n");
 
@@ -219,9 +219,9 @@ void     xosera_splitscreen_test()
         xmem_setw_next(*wp++);
     }
 
-    uint16_t features  = xreg_getw(FEATURES);
-    uint16_t monwidth  = xreg_getw(VID_HSIZE);
-    uint16_t monheight = xreg_getw(VID_VSIZE);
+    uint16_t features  = xm_getw(FEATURES);
+    uint16_t monwidth  = 640;
+    uint16_t monheight = 480;
 
     uint16_t gfxctrl  = xreg_getw(PA_GFX_CTRL);
     uint16_t tilectrl = xreg_getw(PA_TILE_CTRL);
@@ -318,16 +318,22 @@ void     xosera_splitscreen_test()
         xmem_set_addr(XR_COPPER_ADDR + 4);
         if (up)
         {
-            xmem_setw_next(++current);
-            if (current == 300)
+            current += 1;
+            uint32_t op = COP_WAIT_V(current);
+            xmem_setw_next(op >> 16);
+            xmem_setw_next(op & 0xffff);
+            if (current >= 300)
             {
                 up = false;
             }
         }
         else
         {
-            xmem_setw_next(--current);
-            if (current == 200)
+            current -= 1;
+            uint32_t op = COP_WAIT_V(current);
+            xmem_setw_next(op >> 16);
+            xmem_setw_next(op & 0xffff);
+            if (current <= 200)
             {
                 up = true;
             }

@@ -1,0 +1,15 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "source term ANDC constant value",
+            "type": 4,
+            "attr": [
+                "AND-complement term"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

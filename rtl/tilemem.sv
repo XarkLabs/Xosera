@@ -77,7 +77,6 @@ end
 
 always_ff @(posedge clk) begin
     rd_data_o <= bram[rd_address_i];
-    // TODO: add read vs write "don't care"
 end
 
 endmodule

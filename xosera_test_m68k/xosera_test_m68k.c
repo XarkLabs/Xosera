@@ -2455,30 +2455,30 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
             case '0':
                 chan = 0;
                 xreg_setw(AUD0_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
-                xreg_setw(AUD0_PERIOD, p);                         // 1000 clocks per each sample byte
                 xreg_setw(AUD0_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
                 xreg_setw(AUD0_START, test_vaddr);                 // address in VRAM
+                xreg_setw(AUD0_PERIOD, 0x8000 | p);                // 1000 clocks per each sample byte
                 break;
             case '1':
                 chan = 1;
                 xreg_setw(AUD1_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
-                xreg_setw(AUD1_PERIOD, p);                         // 1000 clocks per each sample byte
                 xreg_setw(AUD1_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
                 xreg_setw(AUD1_START, test_vaddr);                 // address in VRAM
+                xreg_setw(AUD1_PERIOD, 0x8000 | p);                // 1000 clocks per each sample byte
                 break;
             case '2':
                 chan = 2;
                 xreg_setw(AUD2_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
-                xreg_setw(AUD2_PERIOD, p);                         // 1000 clocks per each sample byte
                 xreg_setw(AUD2_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
                 xreg_setw(AUD2_START, test_vaddr);                 // address in VRAM
+                xreg_setw(AUD2_PERIOD, 0x8000 | p);                // 1000 clocks per each sample byte
                 break;
             case '3':
                 chan = 3;
                 xreg_setw(AUD3_VOL, lv << 8 | rv);                 // set left 100% volume, right 50% volume
-                xreg_setw(AUD3_PERIOD, p);                         // 1000 clocks per each sample byte
                 xreg_setw(AUD3_LENGTH, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
                 xreg_setw(AUD3_START, test_vaddr);                 // address in VRAM
+                xreg_setw(AUD3_PERIOD, 0x8000 | p);                // 1000 clocks per each sample byte
                 break;
             case ' ':
                 done = true;

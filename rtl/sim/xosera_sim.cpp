@@ -1547,7 +1547,7 @@ int main(int argc, char ** argv)
             SDL_Event e;
             SDL_PollEvent(&e);
 
-            if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN))
+            if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.mod == 0))
             {
                 log_printf("Window closed\n");
                 break;

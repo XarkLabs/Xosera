@@ -188,9 +188,9 @@ video_timing video_timing
 logic                                   audio_enable;           // all channel enable
 logic                                   audio_reg_wr;           // audio reg write enable
 logic                                   audio_dma_cycle;        // audio DMA request signal
-logic                                   audio_dma_req;          // audio DMA request signal
+logic                                   audio_dma_vram_req;     // audio DMA request signal
+logic                                   audio_dma_tile_req;     // audio DMA request signal
 logic                                   audio_dma_ack;          // audio DMA ack signal
-logic                                   audio_dma_tilemem;      // audio DMA memory type (0=VRAM, 1=TILE)
 addr_t                                  audio_dma_addr;         // audio DMA address
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
@@ -209,7 +209,6 @@ logic [xv::AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel force
 logic [xv::AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample reloaded flag
 logic                                   audio_dma_req;              // audio DMA request signal
 logic                                   audio_dma_ack;              // audio DMA ack signal
-logic                                   audio_dma_tilemem;      // audio DMA memory type (0=VRAM, 1=TILE)
 addr_t                                  audio_dma_addr;         // audio DMA address
 `endif
 `endif
@@ -226,9 +225,12 @@ always_comb begin
 
     vram_sel_o      = 1'b0;
     tilemem_sel_o   = 1'b0;
+    vram_addr_o     = pa_vram_addr;
+    tilemem_addr_o  = pa_tile_addr;
+
+`ifdef EN_AUDIO
     audio_dma_cycle = 1'b0;
-    vram_addr_o     = audio_dma_addr;
-    tilemem_addr_o  = xv::TILE_W'(audio_dma_addr);
+`endif
 
     if (pa_vram_sel) begin
         vram_sel_o  = 1'b1;
@@ -237,9 +239,10 @@ always_comb begin
         vram_sel_o  = 1'b1;
         vram_addr_o = pb_vram_addr;
 `ifdef EN_AUDIO
-    end else if (~audio_dma_ack & audio_dma_req & ~audio_dma_tilemem) begin
+    end else if (~audio_dma_ack & audio_dma_vram_req) begin
         audio_dma_cycle = 1'b1;
-        vram_sel_o  = audio_dma_req & ~audio_dma_tilemem;
+        vram_sel_o      = 1'b1;
+        vram_addr_o     = audio_dma_addr;
 `endif
     end
 
@@ -250,9 +253,10 @@ always_comb begin
         tilemem_sel_o  = 1'b1;
         tilemem_addr_o = pb_tile_addr;
 `ifdef EN_AUDIO
-    end else if (~audio_dma_ack & audio_dma_req & audio_dma_tilemem) begin
+    end else if (~audio_dma_ack & audio_dma_tile_req) begin
         audio_dma_cycle = 1'b1;
-        tilemem_sel_o  = audio_dma_req & audio_dma_tilemem;
+        tilemem_sel_o   = 1'b1;
+        tilemem_addr_o  = xv::TILE_W'(audio_dma_addr);
 `endif
     end
 end
@@ -707,11 +711,11 @@ audio_mixer audio_mixer(
     .audio_restart_nchan_i(audio_restart_nchan),
     .audio_reload_nchan_o(audio_reload_nchan),
 `endif
-    .audio_dma_req_o(audio_dma_req),
+    .audio_dma_vram_req_o(audio_dma_vram_req),
+    .audio_dma_tile_req_o(audio_dma_tile_req),
     .audio_dma_ack_i(audio_dma_ack),
-    .audio_tile_o(audio_dma_tilemem),
-    .audio_addr_o(audio_dma_addr),
-    .audio_word_i(audio_dma_tilemem ? tilemem_data_i : vram_data_i),
+    .audio_dma_addr_o(audio_dma_addr),
+    .audio_dma_word_i(audio_dma_tile_req ? tilemem_data_i : vram_data_i),
 
     .pdm_l_o(audio_pdm_l_o),
     .pdm_r_o(audio_pdm_r_o),

@@ -187,11 +187,11 @@ video_timing video_timing
 `ifdef EN_AUDIO_SLIM
 logic                                   audio_enable;           // all channel enable
 logic                                   audio_reg_wr;           // audio reg write enable
-logic                                   audio_dma_cycle;        // audio DMA request signal
 logic                                   audio_dma_vram_req;     // audio DMA request signal
 logic                                   audio_dma_tile_req;     // audio DMA request signal
-logic                                   audio_dma_ack;          // audio DMA ack signal
 addr_t                                  audio_dma_addr;         // audio DMA address
+logic                                   audio_dma_ack;          // audio DMA ack signal
+logic                                   audio_dma_cycle;        // audio DMA request signal
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
 logic [15*xv::AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
@@ -694,7 +694,7 @@ audio_mixer audio_mixer(
     .audio_enable_i(audio_enable),
 `ifdef EN_AUDIO_SLIM
     .audio_reg_wr_i(audio_reg_wr),
-    .audio_reg_addr_i(vgen_reg_num_i[3:0]),
+    .audio_reg_addr_i(vgen_reg_num_i[xv::CHAN_W+2-1:0]),
     .audio_reg_data_i(vgen_reg_data_i),
     .audio_vol_l_nchan_i(audio_vol_l_nchan),
     .audio_vol_r_nchan_i(audio_vol_r_nchan),
@@ -755,14 +755,21 @@ always_ff @(posedge clk) begin
             end
             if (vgen_reg_wr_en_i) begin
                 case (7'(vgen_reg_num_i))
-                    7'(xv::XR_AUD0_VOL+7'(i*4)):
-                        { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] }; // 7-bit vol 0x80 = 1.0
-                    7'(xv::XR_AUD0_PERIOD+7'(i*4)):
-                        { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
-                    7'(xv::XR_AUD0_LENGTH+7'(i*4)):
+                    7'(xv::XR_AUD0_VOL+7'(i*4)): begin
                         audio_reg_wr        <= 1'b1;                // indicate audio reg write
-                    7'(xv::XR_AUD0_START+7'(i*4)):
-                        { audio_intr_o[i], audio_reg_wr } <= { 1'b0, 1'b1 };
+                        { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] }; // 7-bit vol 0x80 = 1.0
+                    end
+                    7'(xv::XR_AUD0_PERIOD+7'(i*4)): begin
+                        audio_reg_wr        <= 1'b1;                // indicate audio reg write
+                        { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
+                    end
+                    7'(xv::XR_AUD0_LENGTH+7'(i*4)): begin
+                        audio_reg_wr        <= 1'b1;                // indicate audio reg write
+                    end
+                    7'(xv::XR_AUD0_START+7'(i*4)): begin
+                        audio_reg_wr        <= 1'b1;                // indicate audio reg write
+                        audio_intr_o[i]     <= 1'b0;
+                    end
                     default: ;
                 endcase
             end

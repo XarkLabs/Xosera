@@ -239,11 +239,11 @@ always_ff @(posedge clk) begin : chan_process
                 // if underflow or restart then queue LENGTH read and reload else request sample
                 if (audio_rd_data_minus1[15] || fetch_restart[fetch_chan]) begin
                     // queue LENGTH read
-                    audio_mem_rd_addr           <= AUDn_PARAM_LENGTH | (8'(fetch_chan) << 2);
-                    fetch_st                    <= AUD_RELOAD;
+                    audio_mem_rd_addr       <= AUDn_PARAM_LENGTH | (8'(fetch_chan) << 2);
+                    fetch_st                <= AUD_RELOAD;
                 end else begin
-                    fetch_tile                  <= audio_mem_rd_data[15];       // set audio TILEMEM
-                    fetch_st                    <= AUD_RQ_SAMP;
+                    fetch_tile              <= audio_mem_rd_data[15];       // set audio TILEMEM
+                    fetch_st                <= AUD_RQ_SAMP;
                 end
                 fetch_restart[fetch_chan] <= 1'b0;                              // clear restart flag
             end

@@ -22,11 +22,11 @@
 module audio_mixer_slim (
     input wire  logic                           audio_enable_i,
     input wire  logic                           audio_reg_wr_i,
-    input wire  logic [3:0]                     audio_reg_addr_i,
+    input wire  logic [xv::CHAN_W+2-1:0]        audio_reg_addr_i,   // CHAN_W + 2 bits reg per channe
     input       word_t                          audio_reg_data_i,
-    input  wire logic [7*xv::AUDIO_NCHAN-1:0]   audio_vol_l_nchan_i,    // TODO: VOL_W?
+    input  wire logic [7*xv::AUDIO_NCHAN-1:0]   audio_vol_l_nchan_i,
     input  wire logic [7*xv::AUDIO_NCHAN-1:0]   audio_vol_r_nchan_i,
-    input  wire logic [15*xv::AUDIO_NCHAN-1:0]  audio_period_nchan_i,   // TODO: PERIOD_W?
+    input  wire logic [15*xv::AUDIO_NCHAN-1:0]  audio_period_nchan_i,
     input  wire logic [xv::AUDIO_NCHAN-1:0]     audio_restart_nchan_i,
     output      logic [xv::AUDIO_NCHAN-1:0]     audio_reload_nchan_o,
 
@@ -43,7 +43,6 @@ module audio_mixer_slim (
     input wire  logic                           clk
 );
 
-localparam  CHAN_W      = $clog2(xv::AUDIO_NCHAN);      // bits needed for AUDIO_NCHAN
 localparam  DAC_W       = 8;                            // DAC output bits
 
 // output DAC signals
@@ -51,7 +50,7 @@ logic [DAC_W-1:0]                   output_l;           // mixed left channel to
 logic [DAC_W-1:0]                   output_r;           // mixed right channel to output to DAC (unsigned)
 
 // channel mixing signals
-logic [CHAN_W:0]                    mix_chan;           // NOTE: extra "channel" used to clamp, output and clear
+logic [xv::CHAN_W:0]                mix_chan;           // NOTE: extra "channel" used to clamp, output and clear
 logic                               mix_clr;            // clear L & R mix accumulator strobe
 sbyte_t                             value_temp;         // sample value for FMAC attenuation
 sbyte_t                             vol_l_temp;         // left volume for FMAC attenuation
@@ -73,7 +72,7 @@ typedef enum {
 } audio_fetch_st;                                       // sample fetch states
 
 audio_fetch_st                      fetch_st;           // state of fetch FSM
-logic [CHAN_W-1:0]                  fetch_chan;         // fetch channel being processed
+logic [xv::CHAN_W-1:0]              fetch_chan;         // fetch channel being processed
 logic [xv::AUDIO_NCHAN-1:0]         fetch_restart;      // channel restart flags
 logic                               fetch_tile;         // next dma fetch from tilemem
 
@@ -206,19 +205,19 @@ always_ff @(posedge clk) begin : chan_process
                 audio_dma_vram_req_o    <= 1'b0;                            // clear audio sample request
                 audio_dma_tile_req_o    <= 1'b0;                            // clear audio sample request
                 if (!chan_buff_ok[0]) begin
-                    fetch_chan              <= CHAN_W'(0);
+                    fetch_chan              <= xv::CHAN_W'(0);
                     audio_mem_rd_addr       <= AUDn_PARAM_LENCNT | (8'(0) << 2);
                     fetch_st                <= AUD_RD_PTRCNT;
                 end else if (!chan_buff_ok[1]) begin
-                    fetch_chan              <= CHAN_W'(1);
+                    fetch_chan              <= xv::CHAN_W'(1);
                     audio_mem_rd_addr       <= AUDn_PARAM_LENCNT | (8'(1) << 2);
                     fetch_st                <= AUD_RD_PTRCNT;
                 end else if (!chan_buff_ok[2]) begin
-                    fetch_chan              <= CHAN_W'(2);
+                    fetch_chan              <= xv::CHAN_W'(2);
                     audio_mem_rd_addr       <= AUDn_PARAM_LENCNT | (8'(2) << 2);
                     fetch_st                <= AUD_RD_PTRCNT;
                 end else if (!chan_buff_ok[3]) begin
-                    fetch_chan              <= CHAN_W'(3);
+                    fetch_chan              <= xv::CHAN_W'(3);
                     audio_mem_rd_addr       <= AUDn_PARAM_LENCNT | (8'(3) << 2);
                     fetch_st                <= AUD_RD_PTRCNT;
                 end

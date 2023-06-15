@@ -41,7 +41,6 @@ module audio_mixer (
     input wire  logic           clk
 );
 
-localparam  CHAN_W      = $clog2(xv::AUDIO_NCHAN);
 localparam  DAC_W       = 8;
 
 typedef enum {
@@ -50,10 +49,10 @@ typedef enum {
     AUD_FETCH_NEXT
 } audio_fetch_ph;
 
-logic [CHAN_W-1:0]                  fetch_chan;
+logic [xv::CHAN_W-1:0]              fetch_chan;
 audio_fetch_ph                      fetch_phase;
 
-logic [CHAN_W:0]                    mix_chan;
+logic [xv::CHAN_W:0]                mix_chan;
 
 logic                               mix_clr;            // clear mix accumulator
 sbyte_t                             mix_mul_temp;

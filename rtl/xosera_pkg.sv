@@ -80,6 +80,7 @@ localparam COPP_W   = 11;               // 1K words copper mem (and bit for extr
 localparam COPP2_W  = 9;                // 512 words extra copper mem
 localparam COLOR_W  = 8;                // 256 words color table mem (per playfield)
 localparam AUDIO_W  = 8;                // 256 words audio parameter mem
+localparam CHAN_W   = $clog2(AUDIO_NCHAN); // bits needed for AUDIO_NCHAN
 
 // Xosera directly addressable registers (16 x 16-bit words [high/low byte])
 typedef enum logic [3:0] {

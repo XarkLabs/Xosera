@@ -33,7 +33,7 @@
 #define DELAY_TIME 500        // machine speed
 
 #define COPPER_TEST            1
-#define INTERACTIVE_AUDIO_TEST 1
+#define INTERACTIVE_AUDIO_TEST 0
 #define BLURB_AUDIO            1
 
 #define BLIT_TEST_PIC      0
@@ -2361,13 +2361,12 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
     for (uint16_t v = 0; v < 4; v++)
     {
         uint16_t co = v << 2;
-        xreg_setw(AUD0_VOL + co, 0x0000);              // set volume to 0L, 0R
-        xreg_setw(AUD0_PERIOD + co, 0x7F00);           // slow period
-        xreg_setw(AUD0_LENGTH + co, 0x0000);           // 1 word len
-        xreg_setw(AUD0_START + co, test_vaddr);        // address in VRAM
+        xreg_setw(AUD0_VOL + co, 0x0000);                               // set volume to 0L, 0R
+        xreg_setw(AUD0_PERIOD + co, 0x7FFF | AUD_PER_RESTART_F);        // slow period
+        xreg_setw(AUD0_LENGTH + co, 1 - 1);                             // 1 word len, in VRAM
+        xreg_setw(AUD0_START + co, test_vaddr);                         // address in VRAM
     }
     xreg_setw(AUD_CTRL, 0x0001);        // enable audio DMA to start playing
-
 
     uint16_t p  = speed;
     uint8_t  lv = 0x40;
@@ -2386,11 +2385,13 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
 
     dprintf("%d: Volume (128=1.0): L:%3d/R:%3d    Period (1/pclk): %5d", chan, lv, rv, p);
 
-    xreg_setw(AUD0_PERIOD + chanoff, p);                         // 1000 clocks per each sample byte
-    xreg_setw(AUD0_LENGTH + chanoff, (bytesize / 2) - 1);        // length in words (256 8-bit samples)
-    xreg_setw(AUD0_START + chanoff, test_vaddr);                 // address in VRAM
-    xreg_setw(AUD0_PERIOD + chanoff, 0x8000 | p);                // 1000 clocks per each sample byte
-    xreg_setw(AUD0_VOL + chanoff, lv << 8 | rv);                 // set left 100% volume, right 50% volume
+    xreg_setw(AUD0_PERIOD + chanoff,
+              0x7FFF | AUD_PER_RESTART_F);        // restart current sample at slow rate (to prevent restart)
+
+    xreg_setw(AUD0_LENGTH + chanoff, (bytesize / 2) - 1);           // sample length in words -1 (and VRAM/TILE flag)
+    xreg_setw(AUD0_START + chanoff, test_vaddr);                    // sample address in VRAM
+    xreg_setw(AUD0_PERIOD + chanoff, p | AUD_PER_RESTART_F);        // set period and restart sample
+    xreg_setw(AUD0_VOL + chanoff, lv << 8 | rv);                    // set left and right volume
 
     bool done = false;
 
@@ -2529,9 +2530,8 @@ void wait_scanline()
         ;
 }
 
-#define SILENCE_TILE  0x8000                                   // tilemem flag
-#define SILENCE_VADDR (XR_TILE_ADDR + XR_TILE_SIZE - 1)        // end of TILE
-#define SILENCE_LEN   1                                        // 1 word (two samples)
+#define SILENCE_ADDR (XR_TILE_ADDR + XR_TILE_SIZE - 1)        // last word of TILE memory
+#define SILENCE_LEN  (AUD_LEN_TILEMEM_F | (1 - 1))            // tilemem flag, | length -1
 
 uint8_t num_audio_channels;
 uint8_t audio_channel_mask;
@@ -2539,44 +2539,43 @@ uint8_t audio_channel_mask;
 
 static int init_audio()
 {
-    // upload word of silence
-    if (SILENCE_TILE)
+    // upload word of silence (in TILE memory or VRAM)
+    if (SILENCE_LEN & AUD_LEN_TILEMEM_F)
     {
-        xm_setw(WR_XADDR, SILENCE_VADDR);
+        xm_setw(WR_XADDR, SILENCE_ADDR);
         xm_setw(XDATA, 0);
     }
     else
     {
-        xm_setw(WR_ADDR, SILENCE_VADDR);
+        xm_setw(WR_ADDR, SILENCE_ADDR);
         xm_setw(DATA, 0);
     }
 
-    // play "really high pitch" silence to detect channels
+    xreg_setw(AUD_CTRL, 0x0000);        // disable audio
+
+    // play silence to detect channels
     for (int v = 0; v < 4; v++)
     {
         uint16_t vo = v << 2;
         xreg_setw(AUD0_VOL + vo, 0);
-        xreg_setw(AUD0_PERIOD + vo, 0);
-        xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));
-        xreg_setw(AUD0_START + vo, SILENCE_VADDR);
+        xreg_setw(AUD0_LENGTH + vo, SILENCE_LEN);
+        xreg_setw(AUD0_START + vo, SILENCE_ADDR);
+        xreg_setw(AUD0_PERIOD + vo, AUD_PER_RESTART_F | 0x7FFF);
     }
 
     num_audio_channels = 0;
     audio_channel_mask = 0;
 
     xreg_setw(AUD_CTRL, 0x0001);        // enable audio
-    for (int v = 0; v < 4; v++)
-    {
-        uint16_t vo = v << 2;
-        xreg_setw(AUD0_PERIOD + vo, 0x8000 | 0);
-    }
-    // check if audio fully disbled
+
     uint8_t aud_ena = xreg_getw(AUD_CTRL) & 1;
     if (!aud_ena)
     {
         dprintf("Xosera audio support disabled.\n");
         return 0;
     }
+
+    // check if audio fully disbled
 
     audio_channel_mask = xm_getbl(INT_CTRL) & INT_CTRL_AUD_ALL_F;
     while (audio_channel_mask & (1 << num_audio_channels))
@@ -2591,14 +2590,14 @@ static int init_audio()
 
     dprintf("Xosera audio channels = %d\n", num_audio_channels);
 
-    // set all channels to "full volume" silence at very slow period
+    // set all channels to "full volume" silence at very fast period (as stress test)
     for (int v = 0; v < num_audio_channels; v++)
     {
         uint16_t vo = v << 2;
         xreg_setw(AUD0_VOL + vo, 0x8080);
-        xreg_setw(AUD0_PERIOD + vo, 800);
-        xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));
-        xreg_setw(AUD0_START + vo, SILENCE_VADDR);
+        xreg_setw(AUD0_PERIOD + vo, 0x8000);
+        xreg_setw(AUD0_LENGTH + vo, SILENCE_LEN);
+        xreg_setw(AUD0_START + vo, SILENCE_ADDR);
     }
 
     return num_audio_channels;
@@ -2620,24 +2619,27 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 {
     if (num_audio_channels != 0)
     {
+        uint32_t clk_hz = xosera_vid_width() > 640 ? 33750000 : 25125000;
+        uint16_t period = (clk_hz + rate - 1) / rate;
+
+        xreg_setw(AUD_CTRL, 0x0001);        // disable audio
         // set all channels to "full volume" silence at very slow period
         for (int v = 0; v < num_audio_channels; v++)
         {
             uint16_t vo = v << 2;
-            xreg_setw(AUD0_VOL + vo, 0x8080);
-            xreg_setw(AUD0_PERIOD + vo, 0x7FFF);
-            xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));
-            xreg_setw(AUD0_START + vo, SILENCE_VADDR);
+            xreg_setw(AUD0_PERIOD + vo, 0x7FFF);        // slow current sample period (so it won't restart)
+            xreg_setw(AUD0_LENGTH + vo,
+                      SILENCE_LEN);                          // set silence length and vram/tile bit
+            xreg_setw(AUD0_START + vo, SILENCE_ADDR);        // set start address of silence
+            xreg_setw(AUD0_PERIOD + vo, 0xFFFF);             // play slow silence, force restart
+            xreg_setw(AUD0_VOL + vo, 0x8080);                // set full volume
         }
+        xreg_setw(AUD_CTRL, 0x0001);        // enable audio
 
         uint16_t ic = xm_getw(INT_CTRL);
         xm_setw(INT_CTRL, ic | INT_CTRL_CLEAR_ALL_F);
         uint16_t ic2 = xm_getw(INT_CTRL);
-        dprintf("Initial INT_CTRL = 0x%04x\n", ic);
-        dprintf("Cleared INT_CTRL = 0x%04x\n", ic2);
-
-        uint32_t clk_hz = xosera_vid_width() > 640 ? 33750000 : 25125000;
-        uint16_t period = (clk_hz + rate - 1) / rate;
+        dprintf("INT_CTRL:0x%04x -> 0x%04x\n", ic, ic2);
 
         for (int v = 0; v < num_audio_channels; v++)
         {
@@ -2658,8 +2660,8 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 
             ic = xm_getw(INT_CTRL);
 
-            xreg_setw(AUD0_LENGTH + vo, SILENCE_TILE | (SILENCE_LEN - 1));        // length-1 and TILE flag
-            xreg_setw(AUD0_START + vo, SILENCE_VADDR);                            // queue silence
+            xreg_setw(AUD0_LENGTH + vo, SILENCE_LEN);        // length-1 and TILE flag
+            xreg_setw(AUD0_START + vo, SILENCE_ADDR);        // queue silence
 
             xm_setw(INT_CTRL, ic | (INT_CTRL_AUD0_INTR_F << v));        // clear voice interrupt status
             ic2 = xm_getw(INT_CTRL);
@@ -2689,6 +2691,7 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
     {
         dprintf("Audio disabled\n");
     }
+    xreg_setw(AUD_CTRL, 0x0000);        // enable disable
 }
 
 const char blurb[] =
@@ -2878,6 +2881,8 @@ void     xosera_test()
 
     (void)sinData;
 
+    init_audio();
+
 #if INTERACTIVE_AUDIO_TEST        // audio waveform test
     if (load_test_audio("/xosera_8000.raw", &testsamp, &testsampsize))
     {
@@ -2905,8 +2910,6 @@ void     xosera_test()
         xreg_setw(AUD_CTRL, 0x0000);        // stop audio
     }
 #endif
-
-    init_audio();
 
     // test_8bpp_tiled();
 

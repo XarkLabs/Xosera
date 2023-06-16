@@ -13,7 +13,6 @@
 `include "xosera_pkg.sv"
 
 `ifdef EN_AUDIO
-`ifdef EN_AUDIO_SLIM
 
 `ifdef ICE40UP5K
 `define USE_FMAC        // use two SB_MAC16 units for multiply and accumulate
@@ -559,6 +558,5 @@ SB_MAC16 #(
 
 endmodule
 
-`endif
 `endif
 `default_nettype wire               // restore default

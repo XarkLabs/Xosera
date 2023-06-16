@@ -21,9 +21,11 @@
 
 module audio_mixer_slim (
     input wire  logic                           audio_enable_i,
+
     input wire  logic                           audio_reg_wr_i,
     input wire  logic [xv::CHAN_W+2-1:0]        audio_reg_addr_i,   // CHAN_W + 2 bits reg per channe
     input       word_t                          audio_reg_data_i,
+
     input  wire logic [7*xv::AUDIO_NCHAN-1:0]   audio_vol_l_nchan_i,
     input  wire logic [7*xv::AUDIO_NCHAN-1:0]   audio_vol_r_nchan_i,
     input  wire logic [15*xv::AUDIO_NCHAN-1:0]  audio_period_nchan_i,

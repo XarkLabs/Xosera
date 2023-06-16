@@ -18,27 +18,28 @@
 // TODO: try packed struct
 
 module audio_mixer (
-    input  wire logic                               audio_enable_i,
-    input  wire logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_l_nchan_i,    // TODO: VOL_W
-    input  wire logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_r_nchan_i,
-    input  wire logic [15*xv::AUDIO_NCHAN-1:0]          audio_period_nchan_i,   // TODO: PERIOD_W
-    input  wire logic [xv::AUDIO_NCHAN-1:0]             audio_tile_nchan_i,
-    input  wire logic [xv::VRAM_W*xv::AUDIO_NCHAN-1:0]  audio_start_nchan_i,
-    input  wire logic [15*xv::AUDIO_NCHAN-1:0]          audio_len_nchan_i,      // TODO: LENGTH_W
-    input  wire logic [xv::AUDIO_NCHAN-1:0]             audio_restart_nchan_i,
-    output      logic [xv::AUDIO_NCHAN-1:0]             audio_reload_nchan_o,
+    input  wire logic                           audio_enable_i,
 
-    output      logic           audio_dma_req_o,
-    input wire  logic           audio_dma_ack_i,
-    output      logic           audio_tile_o,
-    output      addr_t          audio_addr_o,
-    input       word_t          audio_word_i,
+    input  wire logic [7*xv::AUDIO_NCHAN-1:0]   audio_vol_l_nchan_i,
+    input  wire logic [7*xv::AUDIO_NCHAN-1:0]   audio_vol_r_nchan_i,
+    input  wire logic [15*xv::AUDIO_NCHAN-1:0]  audio_period_nchan_i,
+    input  wire logic [xv::AUDIO_NCHAN-1:0]     audio_tile_nchan_i,
+    input  wire logic [16*xv::AUDIO_NCHAN-1:0]  audio_start_nchan_i,
+    input  wire logic [15*xv::AUDIO_NCHAN-1:0]  audio_len_nchan_i,
+    input  wire logic [xv::AUDIO_NCHAN-1:0]     audio_restart_nchan_i,
+    output      logic [xv::AUDIO_NCHAN-1:0]     audio_reload_nchan_o,
 
-    output      logic           pdm_l_o,
-    output      logic           pdm_r_o,
+    output      logic                           audio_dma_vram_req_o,
+    output      logic                           audio_dma_tile_req_o,
+    output      addr_t                          audio_dma_addr_o,
+    input wire  logic                           audio_dma_ack_i,
+    input       word_t                          audio_dma_word_i,
 
-    input wire  logic           reset_i,
-    input wire  logic           clk
+    output      logic                           pdm_l_o,
+    output      logic                           pdm_r_o,
+
+    input wire  logic                           reset_i,
+    input wire  logic                           clk
 );
 
 localparam  DAC_W       = 8;
@@ -131,9 +132,9 @@ audio_dac #(
 
 always_ff @(posedge clk) begin : chan_process
     if (reset_i) begin
-        audio_dma_req_o         <= '0;
-        audio_tile_o        <= '0;
-        audio_addr_o        <= '0;
+        audio_dma_vram_req_o <= '0;
+        audio_dma_tile_req_o <= '0;
+        audio_dma_addr_o    <= '0;
 
         fetch_chan          <= '0;
         fetch_phase         <= AUD_FETCH_DMA;
@@ -199,23 +200,25 @@ always_ff @(posedge clk) begin : chan_process
         case (fetch_phase)
             // setup DMA fetch for channel
             AUD_FETCH_DMA: begin
-                audio_tile_o    <= chan_tile[fetch_chan];
-                audio_addr_o    <= chan_addr[fetch_chan*xv::VRAM_W+:xv::VRAM_W];
+                audio_dma_addr_o    <= chan_addr[fetch_chan*xv::VRAM_W+:xv::VRAM_W];
 
                 if (audio_enable_i && !chan_buff_ok[fetch_chan]) begin
-                    audio_dma_req_o     <= 1'b1;
+                    audio_dma_vram_req_o    <= ~chan_tile[fetch_chan];
+                    audio_dma_tile_req_o    <= chan_tile[fetch_chan];
 
                     fetch_phase     <= AUD_FETCH_READ;
                 end else begin
-                    audio_dma_req_o     <= 1'b0;
+                    audio_dma_vram_req_o    <= 1'b0;
+                    audio_dma_tile_req_o    <= 1'b0;
 
                     fetch_phase     <= AUD_FETCH_NEXT;
                 end
             end
             AUD_FETCH_READ: begin
                 if (audio_dma_ack_i) begin
-                    audio_dma_req_o                     <= 1'b0;
-                    chan_buff[16*fetch_chan+:16]    <= audio_word_i;
+                    audio_dma_vram_req_o            <= 1'b0;
+                    audio_dma_tile_req_o            <= 1'b0;
+                    chan_buff[16*fetch_chan+:16]    <= audio_dma_word_i;
                     chan_buff_ok[fetch_chan]        <= 1'b1;
 
                     fetch_phase                     <= AUD_FETCH_NEXT;

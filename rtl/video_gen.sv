@@ -184,21 +184,20 @@ video_timing video_timing
 
 `ifdef EN_AUDIO
 // audio
-`ifdef EN_AUDIO_SLIM
 logic                                   audio_enable;           // all channel enable
-logic                                   audio_reg_wr;           // audio reg write enable
 logic                                   audio_dma_vram_req;     // audio DMA request signal
 logic                                   audio_dma_tile_req;     // audio DMA request signal
 addr_t                                  audio_dma_addr;         // audio DMA address
 logic                                   audio_dma_ack;          // audio DMA ack signal
 logic                                   audio_dma_cycle;        // audio DMA request signal
+`ifdef EN_AUDIO_SLIM
+logic                                   audio_reg_wr;           // audio reg write enable
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
 logic [15*xv::AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
 logic [xv::AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel force restart (period bit [15])
 logic [xv::AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample reloaded flag
 `else
-logic                                   audio_enable;           // all channel enable
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
 logic [15*xv::AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
@@ -207,9 +206,6 @@ logic [xv::VRAM_W*xv::AUDIO_NCHAN-1:0]  audio_start_nchan;      // channel sampl
 logic [15*xv::AUDIO_NCHAN-1:0]          audio_len_nchan;        // channel sample length in words
 logic [xv::AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel force restart (period bit [15])
 logic [xv::AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample reloaded flag
-logic                                   audio_dma_req;          // audio DMA request signal
-logic                                   audio_dma_ack;          // audio DMA ack signal
-addr_t                                  audio_dma_addr;         // audio DMA address
 `endif
 `endif
 
@@ -259,6 +255,40 @@ assign vram_sel_o       = pa_vram_sel;
 assign vram_addr_o      = pa_vram_addr;
 assign tilemem_sel_o    = pa_tile_sel;
 assign tilemem_addr_o   = pa_tile_addr;
+
+always_comb begin
+    vram_sel_o      = 1'b0;
+    tilemem_sel_o   = 1'b0;
+    vram_addr_o     = pa_vram_addr;
+    tilemem_addr_o  = pa_tile_addr;
+
+`ifdef EN_AUDIO
+    audio_dma_cycle = 1'b0;
+`endif
+
+    if (pa_vram_sel) begin
+        vram_sel_o  = 1'b1;
+        vram_addr_o = pa_vram_addr;
+`ifdef EN_AUDIO
+    end else if (~audio_dma_ack & audio_dma_vram_req) begin
+        audio_dma_cycle = 1'b1;
+        vram_sel_o      = 1'b1;
+        vram_addr_o     = audio_dma_addr;
+`endif
+    end
+
+    if (pa_tile_sel) begin
+        tilemem_sel_o  = 1'b1;
+        tilemem_addr_o = pa_tile_addr;
+`ifdef EN_AUDIO
+    end else if (~audio_dma_ack & audio_dma_tile_req) begin
+        audio_dma_cycle = 1'b1;
+        tilemem_sel_o   = 1'b1;
+        tilemem_addr_o  = xv::TILE_W'(audio_dma_addr);
+`endif
+    end
+end
+
 `endif
 
 `ifdef EN_AUDIO
@@ -739,7 +769,7 @@ always_ff @(posedge clk) begin
         audio_reg_wr        <= 1'b0;
 
         audio_restart_nchan <= '0;
-        audio_intr_o        <= audio_intr_o | audio_reload_nchan;
+        audio_intr_o        <= audio_intr_o | 4'(audio_reload_nchan);
 
         for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
             if (vgen_reg_wr_en_i) begin
@@ -765,11 +795,10 @@ always_ff @(posedge clk) begin
             end
         end
 `else
+        audio_restart_nchan <= '0;
+        audio_intr_o        <= audio_intr_o | 4'(audio_reload_nchan);
+
         for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
-            audio_restart_nchan[i]    <= 1'b0;
-            if (audio_reload_nchan[i]) begin
-                audio_intr_o[i]  <= 1'b1;                                                                          // ready set
-            end
             if (vgen_reg_wr_en_i) begin
                 case (7'(vgen_reg_num_i))
                     7'(xv::XR_AUD0_VOL+7'(i*4)):

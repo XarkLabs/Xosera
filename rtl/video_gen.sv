@@ -207,21 +207,15 @@ logic [xv::VRAM_W*xv::AUDIO_NCHAN-1:0]  audio_start_nchan;      // channel sampl
 logic [15*xv::AUDIO_NCHAN-1:0]          audio_len_nchan;        // channel sample length in words
 logic [xv::AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel force restart (period bit [15])
 logic [xv::AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample reloaded flag
-logic                                   audio_dma_req;              // audio DMA request signal
-logic                                   audio_dma_ack;              // audio DMA ack signal
+logic                                   audio_dma_req;          // audio DMA request signal
+logic                                   audio_dma_ack;          // audio DMA ack signal
 addr_t                                  audio_dma_addr;         // audio DMA address
 `endif
 `endif
 
 `ifdef EN_PF_B
-// assign pb_stall         = (pa_vram_sel && pb_vram_sel) || (pa_tile_sel && pb_tile_sel);
-// assign vram_sel_o       = pa_vram_sel ? pa_vram_sel  : pb_vram_sel;
-// assign vram_addr_o      = pa_vram_sel ? pa_vram_addr : pb_vram_addr;
-// assign tilemem_sel_o    = pa_tile_sel ? pa_tile_sel  : pb_tile_sel;
-// assign tilemem_addr_o   = pa_tile_sel ? pa_tile_addr : pb_tile_addr;
-
 always_comb begin
-    pb_stall = (pa_vram_sel && pb_vram_sel) || (pa_tile_sel && pb_tile_sel);
+    pb_stall = (pa_vram_sel & pb_vram_sel) | (pa_tile_sel & pb_tile_sel);
 
     vram_sel_o      = 1'b0;
     tilemem_sel_o   = 1'b0;
@@ -277,7 +271,6 @@ always_ff @(posedge clk) begin
 end
 `endif
 
-/* verilator lint_off PINCONNECTEMPTY */
 video_playfield video_pf_a(
     .stall_i(1'b0),                                 // playfield A never stalls
     .mem_fetch_i(mem_fetch & ~pa_blank),
@@ -317,7 +310,6 @@ video_playfield video_pf_a(
     .reset_i(reset_i),
     .clk(clk)
 );
-/* verilator lint_on PINCONNECTEMPTY */
 
 `ifdef EN_PF_B
 logic       pb_vram_rd;                         // last cycle was PB vram read flag
@@ -351,7 +343,6 @@ always_ff @(posedge clk) begin
     pb_tilemem_rd  <= pb_tile_sel;              // remember if this cycle was reading tilemem
 end
 
-/* verilator lint_off PINCONNECTEMPTY */
 video_playfield video_pf_b(
     .stall_i(pb_stall),
     .mem_fetch_i(mem_fetch & ~pb_blank),
@@ -391,7 +382,6 @@ video_playfield video_pf_b(
     .reset_i(reset_i),
     .clk(clk)
 );
-/* verilator lint_on PINCONNECTEMPTY */
 `endif
 
 // video config registers read/write
@@ -748,29 +738,29 @@ always_ff @(posedge clk) begin
 `ifdef EN_AUDIO_SLIM
         audio_reg_wr        <= 1'b0;
 
+        audio_restart_nchan <= '0;
+        audio_intr_o        <= audio_intr_o | audio_reload_nchan;
+
         for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
-            audio_restart_nchan[i]    <= 1'b0;
-            if (audio_reload_nchan[i]) begin
-                audio_intr_o[i]  <= 1'b1;                                                                          // ready set
-            end
             if (vgen_reg_wr_en_i) begin
                 case (7'(vgen_reg_num_i))
                     7'(xv::XR_AUD0_VOL+7'(i*4)): begin
-                        audio_reg_wr        <= 1'b1;                // indicate audio reg write
+                        audio_reg_wr        <= 1'b1;                // write to audio register mem (but not used)
                         { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] }; // 7-bit vol 0x80 = 1.0
                     end
                     7'(xv::XR_AUD0_PERIOD+7'(i*4)): begin
-                        audio_reg_wr        <= 1'b1;                // indicate audio reg write
+                        audio_reg_wr        <= 1'b1;                // write to audio register mem (but not used)
                         { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
                     end
                     7'(xv::XR_AUD0_LENGTH+7'(i*4)): begin
-                        audio_reg_wr        <= 1'b1;                // indicate audio reg write
+                        audio_reg_wr        <= 1'b1;                // write to audio register mem
                     end
                     7'(xv::XR_AUD0_START+7'(i*4)): begin
-                        audio_reg_wr        <= 1'b1;                // indicate audio reg write
-                        audio_intr_o[i]     <= 1'b0;
+                        audio_reg_wr        <= 1'b1;                // write to audio register mem
+                        audio_intr_o[i]     <= 1'b0;                // clear channel interrupt/reload flag
                     end
-                    default: ;
+                    default: begin
+                    end
                 endcase
             end
         end
@@ -789,7 +779,7 @@ always_ff @(posedge clk) begin
                     7'(xv::XR_AUD0_LENGTH+7'(i*4)):
                         { audio_tile_nchan[i], audio_len_nchan[i*15+:15] }          <= vgen_reg_data_i;
                     7'(xv::XR_AUD0_START+7'(i*4)):
-                        { audio_intr_o[i], audio_start_nchan[i*xv::VRAM_W+:16] }   <= { 1'b0, vgen_reg_data_i };   // ready cleared
+                        { audio_intr_o[i], audio_start_nchan[i*xv::VRAM_W+:16] }    <= { 1'b0, vgen_reg_data_i };   // ready cleared
                     default: ;
                 endcase
             end

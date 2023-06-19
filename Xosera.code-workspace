@@ -352,7 +352,8 @@
 			"system_error": "cpp",
 			"type_traits": "cpp",
 			"typeinfo": "cpp",
-			"version": "cpp"
+			"version": "cpp",
+			"stdio.h": "c"
 		},
 		"workbench.colorCustomizations": {
 			"terminal.foreground": "#08D808",

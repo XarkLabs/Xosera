@@ -37,13 +37,7 @@
 `define EN_COPP                         // enable copper
 `define EN_BLIT                         // enable blit unit
 
-// experimental options (uncomment)
-//
-//`define OPT_BUS_DATAOUT_REG             // register 8-bit data bus out signal [Seems critically needed]
-`define OPT_BUS_SB_IO                   // experiment using SB_IO for tristate
-//=================================
-
-`define VERSION 0_35                    // Xosera BCD version code (x.xx)
+`define VERSION 0_37                    // Xosera BCD version code (x.xx)
 
 `ifndef GITCLEAN
 `define GITCLEAN 0                      // unknown Git state (assumed dirty)

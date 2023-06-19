@@ -69,16 +69,16 @@ xosera_dvi:
 
 # Build Xosera iCEBreaker FPGA bitstream
 iceb:
-	$(MAKE) -f icebreaker.mk
+	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_640x480 AUDIO=4 PF_B=true $(MAKE) -f icebreaker.mk
 	@echo Type \"make iceb_prog\" to program the iCEBreaker via USB
 
 # Build and program Xosera UPduino 3.x FPGA bitstream
 upd_prog:
-	$(MAKE) -f upduino.mk prog
+	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_640x480 AUDIO=4 PF_B=true $(MAKE) -f upduino.mk prog
 
 # Build and program Xosera iCEBreaker FPGA bitstream
 iceb_prog:
-	$(MAKE) -f icebreaker.mk prog
+	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_640x480 AUDIO=4 PF_B=true $(MAKE) -f icebreaker.mk prog
 
 # Clean all project targets
 clean:

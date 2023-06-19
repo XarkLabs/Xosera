@@ -46,7 +46,7 @@ module xosera_iceb(
         output logic P1A1, P1A2, P1A3, P1A4, P1A7, P1A8, P1A9, P1A10,   // PMOD 1A
         output logic P1B1, P1B2, P1B3, P1B4, P1B7, P1B8, P1B9, P1B10,   // PMOD 1B
 `ifdef SPI_INTERFACE
-// DBUG        output logic P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10,   // PMOD 2 (8-bit bi-dir data bus)
+        output logic P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10,   // PMOD 2 (8-bit bi-dir data bus)
 `else
         inout  logic P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10,   // PMOD 2 (8-bit bi-dir data bus)
 `endif
@@ -54,12 +54,11 @@ module xosera_iceb(
         input  logic CLK                            // 12Mhz clock
     );
 
-assign FLASH_SSB    = 1'b1;             // prevent SPI flash interfering with other SPI/FTDI pins
-assign LEDG_N       = reset;            // green LED on when not in reset (active LOW LED)
-assign TX = RX;                         // loopback serial
+assign      FLASH_SSB    = 1'b1;        // prevent SPI flash interfering with other SPI/FTDI pins
+assign      LEDG_N       = reset;       // green LED on when not in reset (active LOW LED)
+assign      TX = RX;                    // loopback serial
 
 // gpio pin aliases
-logic       nreset;                     // user button as reset (active LOW button)
 logic       bus_cs_n;                   // bus select (active LOW)
 logic       bus_rd_nwr;                 // bus read not write (write LOW, read HIGH)
 logic       bus_bytesel;                // bus even/odd byte select (even LOW, odd HIGH)
@@ -68,8 +67,6 @@ logic [3:0] bus_reg_num;                // bus 4-bit register index number (16-b
 logic [7:0] bus_data;                   // bus 8-bit bidirectional data I/O
 logic       audio_l;                    // left audio PWM
 logic       audio_r;                    // right audio PWM
-logic       bus_intr;                   // bus interrupt signal output (not used)
-logic       bus_intr_r;                 // registered signal, to improve timing
 /* verilator lint_on UNUSED */
 logic [3:0] vga_r;                      // vga red (4-bit)
 logic [3:0] vga_g;                      // vga green (4-bits)
@@ -77,50 +74,120 @@ logic [3:0] vga_b;                      // vga blue (4-bits)
 logic       vga_hs;                     // vga hsync
 logic       vga_vs;                     // vga vsync
 logic       dv_de;                      // DV display enable
+/* verilator lint_off UNUSED */
+logic       bus_intr;                   // interrupt signal
+logic       bus_intr_r;                 // registered signal, to improve timing
+/* verilator lint_on UNUSED */
 logic       reconfig;                   // set to 1 to force reconfigure of FPGA
 logic       reconfig_r;                 // registered signal, to improve timing
 logic [1:0] boot_select;                // two bit number for flash configuration to load on reconfigure
 logic [1:0] boot_select_r;              // registered signal, to improve timing
-`ifdef SPI_INTERFACE    // SPI target interface (FPGA is the peripheral)
+
+logic       nreset;                     // user button as reset (active LOW button)
+
+// assign gpio pins to bus signals
+
+
+assign nreset       = BTN_N;            // active LOW iCEBreaker reset button
+
+// assign audio output signals to gpio
+`ifndef SPI_INTERFACE   // SPU interface to drive bus signals
+assign bus_cs_n     = LED_RED_N;        // RGB LED red as Xosera select=CS_ENABLED (UP_nCS)
+assign bus_rd_nwr   = LED_GRN_N;        // RGB LED green as RnW_WRITE=0, RnW_READ=1, read= (UP_RnW)
+assign bus_bytesel  = LED_BLU_N;        // RGB LED blue for word byte select (UP_bytesel)
+assign LEDR_N       = bus_cs_n;         // show bus activity on iCEBreaker red LED
+assign FLASH_SCK    = audio_l;
+assign bus_reg_num  = { FLASH_IO3, FLASH_IO2, FLASH_IO1, FLASH_IO0 };       // gpio for register number (UP_R0-UP_R3)
+assign bus_data     = { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 };  // gpio for data bus
+`else
+assign { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 } = '0;    //{ 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0 };  // gpio for data bus
+//assign FLASH_IO2    = audio_l;
+//assign FLASH_IO3    = audio_r;
+`endif
+
+// split tri-state data lines into in/out signals for inside FPGA
+logic [7:0] bus_data_out;               // bus out from Xosera
+logic [7:0] bus_data_out_r;             // registered bus_data_out signal (experimental)
+logic [7:0] bus_data_in;                // bus input to Xosera
+
+`ifndef SPI_INTERFACE   // SPU interface to drive bus signals
+logic bus_out_ena;
+
+// only set bus to output if Xosera is selected and read is selected
+assign bus_out_ena  = (bus_cs_n == xv::CS_ENABLED && bus_rd_nwr == xv::RnW_READ);
+
+`ifdef SYNTHESIS
+// NOTE: Use iCE40 SB_IO primitive to control tri-state properly here
+/* verilator lint_off PINMISSING */
+SB_IO #(
+    .PIN_TYPE(6'b101001)    //PIN_OUTPUT_TRISTATE|PIN_INPUT
+) bus_tristate [7:0] (
+    .PACKAGE_PIN(bus_data),
+    .INPUT_CLK(pclk),
+    .OUTPUT_CLK(pclk),
+    //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
+    .OUTPUT_ENABLE(bus_out_ena),
+    .D_OUT_0(bus_data_out_r),
+    .D_IN_0(bus_data_in)
+);
+/* verilator lint_on PINMISSING */
+`else
+// NOTE: Using the registered ("_r") signal may be a win for <posedge pclk> -> async
+//        timing on bus_data_out signals (but might cause issues?)
+assign bus_data     = bus_out_ena ? bus_data_out_r  : 8'bZ;
+assign bus_data_in  = bus_data;
+`endif
+
+`else       // SPI_INTERFACE to drive bus signals
+logic       spi_reset;                  // SPI "soft" reset (if SPI_INTERFACE)
+
 logic       spi_sck;                    // SPI clock from controller
 logic       spi_copi;                   // SPI controller out/peripheral in
 logic       spi_cipo;                   // SPI controller in/peripheral out
 logic       spi_cs_n;                   // SPI CS for FPGA from controller
+
+// assign SPI GPIO for SPI interface (to emulate bus interface)
+assign spi_cs_n     = LEDR_N;
+assign spi_sck      = FLASH_SCK;
+assign spi_copi     = FLASH_IO0;
+assign FLASH_IO1    = spi_cipo;
+assign FLASH_IO2    = spi_receive_strobe;   // TODO audio_l;
+assign FLASH_IO3    = bus_cs_n;             // TODO audio_r;
 `endif
 
-logic       spi_reset   = 1'b0;         // SPI "soft" reset (if SPI_INTERFACE)
+// update registered signals each clock
+always_ff @(posedge pclk) begin
+    bus_data_out_r  <= bus_data_out;
+    bus_intr_r      <= bus_intr;
+    reconfig_r      <= reconfig;
+    boot_select_r   <= boot_select;
+end
 
-assign      nreset      = BTN_N;        // active LOW reset button
+// PLL to derive proper video frequency from 12MHz oscillator
+logic pclk;                  // video pixel clock output from PLL block
+logic pll_lock;              // indicates when PLL frequency has locked-on
 
-// split tri-state data lines into in/out signals for inside FPGA
-logic [7:0] bus_data_out_r;             // registered bus_data_out signal, this helps timing
-logic [7:0] bus_data_out;
-logic [7:0] bus_data_in;
-
-`ifdef SPI_INTERFACE   // SPU interface to drive bus signals
-    // assign SPI GPIO for SPI interface (to emulate bus interface)
-    assign spi_cs_n     = LEDR_N;
-    assign spi_sck      = FLASH_SCK;
-    assign spi_copi     = FLASH_IO0;
-    assign FLASH_IO1    = spi_cipo;
-    assign FLASH_IO2    = spi_receive_strobe;   // TODO audio_l;
-    assign FLASH_IO3    = bus_cs_n;             // TODO audio_r;
-`else   // direct bus interface (untested on iCEBreaker)
-    logic bus_out_ena;
-    // only set bus to output if Xosera is selected and read is selected
-    assign bus_out_ena  = (bus_cs_n == xv::CS_ENABLED && bus_rd_nwr == xv::RnW_READ);
-
-    // tri-state data bus unless Xosera is both selected and bus is reading
-    // NOTE: No longer need to use iCE40 SB_IO primitive to control tri-state properly here
-    assign bus_data     = bus_out_ena ? bus_data_out_r : 8'bZ;
-    assign bus_data_in  = bus_data;
-    assign bus_cs_n     = LED_RED_N;        // RGB LED red as Xosera select=CS_ENABLED (UP_nCS)
-    assign bus_rd_nwr   = LED_GRN_N;        // RGB LED green as RnW_WRITE=0, RnW_READ=1, read= (UP_RnW)
-    assign bus_bytesel  = LED_BLU_N;        // RGB LED blue for word byte select (UP_bytesel)
-    assign bus_reg_num  = { FLASH_IO3, FLASH_IO2, FLASH_IO1, FLASH_IO0 };       // gpio for register number (UP_R0-UP_R3)
-    assign bus_data     = { P2_1, P2_2, P2_3, P2_4, P2_7, P2_8, P2_9, P2_10 };  // gpio for data bus
-    assign FLASH_SCK    = audio_l;
-    assign LEDR_N       = bus_cs_n;         // show bus activity on red LED
+`ifdef SYNTHESIS
+/* verilator lint_off PINMISSING */
+SB_PLL40_PAD #(
+    .DIVR(xv::PLL_DIVR),        // DIVR from video mode
+    .DIVF(xv::PLL_DIVF),        // DIVF from video mode
+    .DIVQ(xv::PLL_DIVQ),        // DIVQ from video mode
+    .FEEDBACK_PATH("SIMPLE"),
+    .FILTER_RANGE(3'b001),
+    .PLLOUT_SELECT("GENCLK")
+) pll_inst(
+    .LOCK(pll_lock),        // signal indicates PLL lock
+    .RESETB(1'b1),
+    .BYPASS(1'b0),
+    .PACKAGEPIN(CLK),       // input reference clock
+    .PLLOUTGLOBAL(pclk)     // PLL output clock (via global buffer)
+);
+/* verilator lint_on PINMISSING */
+`else
+// for simulation use 1:1 input clock (and testbench can simulate proper frequency)
+assign pll_lock = 1'b1;
+assign pclk     = CLK;
 `endif
 
 // video output signals
@@ -177,41 +244,6 @@ assign {P1B1, P1B2, P1B3, P1B4, P1B7, P1B8, P1B9, P1B10} =
 `endif
 
 
-// update registered signals each clock
-always_ff @(posedge pclk) begin
-    bus_data_out_r  <= bus_data_out;
-    bus_intr_r      <= bus_intr;
-    reconfig_r      <= reconfig;
-    boot_select_r   <= boot_select;
-end
-
-// PLL to derive proper video frequency from 12MHz oscillator
-logic pclk;                  // video pixel clock output from PLL block
-logic pll_lock;              // indicates when PLL frequency has locked-on
-
-`ifdef SYNTHESIS
-/* verilator lint_off PINMISSING */
-SB_PLL40_PAD #(
-    .DIVR(xv::PLL_DIVR),        // DIVR from video mode
-    .DIVF(xv::PLL_DIVF),        // DIVF from video mode
-    .DIVQ(xv::PLL_DIVQ),        // DIVQ from video mode
-    .FEEDBACK_PATH("SIMPLE"),
-    .FILTER_RANGE(3'b001),
-    .PLLOUT_SELECT("GENCLK")
-) pll_inst (
-    .LOCK(pll_lock),        // signal indicates PLL lock
-    .RESETB(1'b1),
-    .BYPASS(1'b0),
-    .PACKAGEPIN(CLK),       // input reference clock
-    .PLLOUTGLOBAL(pclk)     // PLL output clock (via global buffer)
-);
-/* verilator lint_on PINMISSING */
-`else
-// for simulation use 1:1 input clock (and testbench can simulate proper frequency)
-assign pll_lock = 1'b1;
-assign pclk     = CLK;
-`endif
-
 `ifdef SYNTHESIS
 SB_WARMBOOT boot(
     .BOOT(reconfig_r),
@@ -228,7 +260,7 @@ end
 `endif
 
 // reset logic waits for PLL lock & reset button released (with small delay)
-logic reset = 1'b1;         // default in reset state
+logic reset;
 
 always_ff @(posedge pclk) begin
     // reset if pll_lock lost, or reset button or SPI reset
@@ -242,25 +274,25 @@ end
 
 // xosera main module
 xosera_main xosera_main(
-            .red_o(vga_r),
-            .green_o(vga_g),
-            .blue_o(vga_b),
-            .bus_intr_o(bus_intr),
-            .vsync_o(vga_vs),
-            .hsync_o(vga_hs),
-            .dv_de_o(dv_de),
-            .bus_cs_n_i(bus_cs_n),
-            .bus_rd_nwr_i(bus_rd_nwr),
-            .bus_reg_num_i(bus_reg_num),
-            .bus_bytesel_i(bus_bytesel),
-            .bus_data_i(bus_data_in),
-            .bus_data_o(bus_data_out),
-            .audio_l_o(audio_l),
-            .audio_r_o(audio_r),
-            .reconfig_o(reconfig),
-            .boot_select_o(boot_select),
-            .reset_i(reset),
-            .clk(pclk)
+    .red_o(vga_r),
+    .green_o(vga_g),
+    .blue_o(vga_b),
+    .bus_intr_o(bus_intr),
+    .vsync_o(vga_vs),
+    .hsync_o(vga_hs),
+    .dv_de_o(dv_de),
+    .bus_cs_n_i(bus_cs_n),
+    .bus_rd_nwr_i(bus_rd_nwr),
+    .bus_reg_num_i(bus_reg_num),
+    .bus_bytesel_i(bus_bytesel),
+    .bus_data_i(bus_data_in),
+    .bus_data_o(bus_data_out),
+    .audio_l_o(audio_l),
+    .audio_r_o(audio_r),
+    .reconfig_o(reconfig),
+    .boot_select_o(boot_select),
+    .reset_i(reset),
+    .clk(pclk)
 );
 
 `ifdef SPI_INTERFACE
@@ -290,11 +322,11 @@ spi_target  spi_target(
 // SPI cmd byte (all active HIGH):
 //  7  6  5  4  3  2  1  0
 // CS WR RS BS R3 R2 R1 R0
-logic [7:0] spi_cmd_byte        = 8'h00;
-logic [7:0] spi_data_byte       = 8'h00;
-logic       spi_payload_byte    = 1'b0;   // true on 2nd byte (payload byte) of packet
-logic       spi_cs_hold0        = 1'b0;   // saved CS from spi_cmd_byte (held for two cycles)
-logic       spi_cs_hold1        = 1'b0;   // saved CS from spi_cmd_byte (held for two cycles)
+logic [7:0] spi_cmd_byte;
+logic [7:0] spi_data_byte;
+logic       spi_payload_byte;           // true on 2nd byte (payload byte) of packet
+logic       spi_cs_hold0;               // saved CS from spi_cmd_byte (held for two cycles)
+logic       spi_cs_hold1;               // saved CS from spi_cmd_byte (held for two cycles)
 
 assign bus_cs_n             = ~spi_cs_hold0;                            // CS bit
 assign bus_rd_nwr           = ~spi_cmd_byte[6];                         // WR bit

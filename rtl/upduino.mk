@@ -14,7 +14,7 @@
 #       nextpnr-ice40
 #       Verilator               (optional)
 #       Icarus Verilog          (optional)
-#       Built using macOS BigSur and GNU/Linux Ubuntu distribution
+#       Built using macOS and GNU/Linux Ubuntu distribution
 
 # Makefile "best practices" from https://tech.davis-hansson.com/p/make/ (but not forcing gmake)
 SHELL := bash
@@ -41,7 +41,7 @@ $(info === Xosera UPduino [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
 # Maximum number of CPU cores to use before waiting with FMAX_TEST
-MAX_CPUS := 8
+MAX_CPUS ?= 8
 
 # Xosera video mode selection:
 # Supported modes:                           (exact) (actual)
@@ -71,13 +71,13 @@ else
 VMODENAME := vga
 endif
 
+PFB ?=
+
 ifneq ($(strip $(PF_B)),)
 VERILOG_DEFS += -DEN_PF_B
 endif
 
-ifeq ($(strip $(AUDIO)),)
-AUDIO := 0
-endif
+AUDIO ?= 0
 
 ifeq ($(strip $(AUDIO)),0)
 OUTSUFFIX := $(VMODENAME)_$(subst MODE_,,$(VIDEO_MODE))

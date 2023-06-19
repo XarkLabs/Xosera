@@ -91,7 +91,7 @@ module xosera_upd(
 assign spi_cs = 1'b1;                   // prevent SPI flash interfering with other SPI/FTDI pins
 
 // gpio pin aliases
-logic       bus_cs_n;                  // bus select (active LOW)
+logic       bus_cs_n;                   // bus select (active LOW)
 logic       bus_rd_nwr;                 // bus read not write (write LOW, read HIGH)
 logic       bus_bytesel;                // bus even/odd byte select (even LOW, odd HIGH)
 logic [3:0] bus_reg_num;                // bus 4-bit register index number (16-bit registers)
@@ -135,7 +135,6 @@ logic [7:0] bus_data_in;                // bus input to Xosera
 assign bus_out_ena  = (bus_cs_n == xv::CS_ENABLED && bus_rd_nwr == xv::RnW_READ);
 
 `ifdef SYNTHESIS
-`ifdef OPT_BUS_SB_IO
 // NOTE: Use iCE40 SB_IO primitive to control tri-state properly here
 /* verilator lint_off PINMISSING */
 SB_IO #(
@@ -150,7 +149,6 @@ SB_IO #(
     .D_IN_0(bus_data_in)
 );
 /* verilator lint_on PINMISSING */
-`endif
 `else
 // NOTE: Using the registered ("_r") signal may be a win for <posedge pclk> -> async
 //        timing on bus_data_out signals (but might cause issues?)
@@ -191,7 +189,7 @@ SB_PLL40_CORE #(
 `else
 // for simulation use 1:1 input clock (and testbench can simulate proper frequency)
 assign pll_lock = 1'b1;
-assign pclk = gpio_20;
+assign pclk     = gpio_20;
 `endif
 
 // video output signals
@@ -282,24 +280,24 @@ end
 
 // xosera main module
 xosera_main xosera_main(
-                .clk(pclk),
-                .red_o(vga_r),
-                .green_o(vga_g),
-                .blue_o(vga_b),
-                .bus_intr_o(bus_intr),
-                .vsync_o(vga_vs),
-                .hsync_o(vga_hs),
-                .dv_de_o(dv_de),
-                .bus_cs_n_i(bus_cs_n),
-                .bus_rd_nwr_i(bus_rd_nwr),
-                .bus_reg_num_i(bus_reg_num),
-                .bus_bytesel_i(bus_bytesel),
-                .bus_data_i(bus_data_in),
-                .bus_data_o(bus_data_out),
-                .audio_l_o(audio_l),
-                .audio_r_o(audio_r),
-                .reconfig_o(reconfig),
-                .boot_select_o(boot_select),
-                .reset_i(reset)
-            );
+    .red_o(vga_r),
+    .green_o(vga_g),
+    .blue_o(vga_b),
+    .bus_intr_o(bus_intr),
+    .vsync_o(vga_vs),
+    .hsync_o(vga_hs),
+    .dv_de_o(dv_de),
+    .bus_cs_n_i(bus_cs_n),
+    .bus_rd_nwr_i(bus_rd_nwr),
+    .bus_reg_num_i(bus_reg_num),
+    .bus_bytesel_i(bus_bytesel),
+    .bus_data_i(bus_data_in),
+    .bus_data_o(bus_data_out),
+    .audio_l_o(audio_l),
+    .audio_r_o(audio_r),
+    .reconfig_o(reconfig),
+    .boot_select_o(boot_select),
+    .reset_i(reset),
+    .clk(pclk)
+);
 endmodule

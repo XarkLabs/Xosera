@@ -38,7 +38,7 @@ $(info === Xosera iCEBreaker [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
 # Maximum number of CPU cores to use before waiting with FMAX_TEST
-MAX_CPUS := 8
+MAX_CPUS ?= 8
 
 # Xosera video mode selection:
 # Supported modes:                           (exact) (actual)
@@ -69,13 +69,13 @@ else
 VMODENAME := vga
 endif
 
+PFB ?=
+
 ifneq ($(strip $(PF_B)),)
 VERILOG_DEFS += -DEN_PF_B
 endif
 
-ifeq ($(strip $(AUDIO)),)
-AUDIO := 0
-endif
+AUDIO ?= 0
 
 ifeq ($(strip $(AUDIO)),0)
 OUTSUFFIX := $(VMODENAME)_$(subst MODE_,,$(VIDEO_MODE))
@@ -127,7 +127,7 @@ FLOW3 :=
 #YOSYS_SYNTH_ARGS := -device u -abc2 -relut -retime -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -abc9 -relut -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc2 -top $(TOP)
-YOSYS_SYNTH_ARGS := -device u -dsp -no-rw-check -dff -abc9 -top $(TOP)
+YOSYS_SYNTH_ARGS := -device u -no-rw-check -dff -abc9 -top $(TOP)
 #FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
@@ -179,7 +179,7 @@ lint: $(VLT_CONFIG) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 .PHONY: lint
 
 $(DOT): %.dot: %.sv $(MAKEFILE_LIST)
-	mkdir -p icebreaker/dot  $(@D)
+	mkdir -p icebreaker/dot $(@D)
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
@@ -194,15 +194,15 @@ $(DOT): %.dot: %.sv $(MAKEFILE_LIST)
 
 # make ASCII bitstream from JSON description and device parameters
 icebreaker/%_$(OUTSUFFIX).asc: icebreaker/%_$(OUTSUFFIX).json $(PIN_DEF) $(MAKEFILE_LIST)
-	@rm -f $@
+	@-rm -f $@
 	@mkdir -p $(LOGS) $(@D)
 	@-cp $(OUTNAME)_stats.txt $(LOGS)/$(OUTNAME)_stats_last.txt
 ifdef FMAX_TEST	# run nextPNR FMAX_TEST times to determine "Max frequency" range
 	@echo === Synthesizing $(FMAX_TEST) bitstreams for best fMAX
 	@echo $(NEXTPNR) -l $(LOGS)/$(OUTNAME)_nextpnr.log -q $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $@
 	@mkdir -p $(LOGS)/fmax
-	@rm -f $(LOGS)/fmax/*
-	@cp $< $(LOGS)/fmax
+	@-rm -f $(LOGS)/fmax/*
+	@-cp $< $(LOGS)/fmax
 	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
 	  ( \
 	    $(NEXTPNR) -l "$(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log" -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $(LOGS)/fmax/$(OUTNAME)_$${num}.asc ; \

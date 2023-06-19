@@ -66,7 +66,6 @@ localparam FPGA_CONFIG_NUM = 0;
 `endif
 
 `ifdef EN_AUDIO
-`define EN_AUDIO_SLIM
 localparam AUDIO_NCHAN  = `EN_AUDIO;    // set parameter for # audio channels
 `else
 localparam AUDIO_NCHAN  = 0;
@@ -80,6 +79,7 @@ localparam COPP_W   = 11;               // 1K words copper mem (and bit for extr
 localparam COPP2_W  = 9;                // 512 words extra copper mem
 localparam COLOR_W  = 8;                // 256 words color table mem (per playfield)
 localparam AUDIO_W  = 8;                // 256 words audio parameter mem
+localparam CHAN_W   = $clog2(AUDIO_NCHAN); // bits needed for AUDIO_NCHAN
 
 // Xosera directly addressable registers (16 x 16-bit words [high/low byte])
 typedef enum logic [3:0] {
@@ -212,6 +212,9 @@ typedef enum integer {
     BLIT_INTR       = 6                 // blitter ready
 } intr_bit_t;
 
+localparam AUD_PER_RESTART_B    = 15;   // bit in AUDn_PERIOD to restart channel
+localparam AUD_LEN_TILEMEM_B    = 15;   // bit in AUDn_LENGTH to indicate sample in TILEMEM
+
 typedef enum logic [1:0] {
     BPP_1_ATTR      = 2'b00,
     BPP_4           = 2'b01,
@@ -240,10 +243,10 @@ typedef enum {
 //     unsigned char githash[4];
 // } xosera_info_t;
 
-localparam [11:0]   version = 12'H`VERSION;
-localparam [31:0]   builddate = 32'H`BUILDDATE;         // YYYYMMDD
-localparam [8:1]    clean   = `GITCLEAN ? "=" : ">";    // '+' appended to version if non-clean
-localparam [31:0]   githash = 32'H`GITHASH;             // git short hash
+localparam [11:0]   version     = 12'H`VERSION;
+localparam [31:0]   builddate   = 32'H`BUILDDATE;         // YYYYMMDD
+localparam [8:1]    gitclean    = `GITCLEAN ? "=" : ">";    // prepend '=' if clean or '>' if modified
+localparam [31:0]   githash     = 32'H`GITHASH;             // git short hash
 
 localparam [16*8-1:0] hex_str = "FEDCBA9876543210";
 /* verilator lint_off LITENDIAN */  // NOTE: This keeps the letters in forward order for humans
@@ -253,7 +256,7 @@ localparam [0:48*8-1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0"
                                 hex_str[((builddate[23:20])*8)+:8], hex_str[((builddate[19:16])*8)+:8],
                                 hex_str[((builddate[15:12])*8)+:8], hex_str[((builddate[11: 8])*8)+:8],
                                 hex_str[((builddate[ 7: 4])*8)+:8], hex_str[((builddate[ 3: 0])*8)+:8],
-                                " ", clean, "#",
+                                " ", gitclean, "#",
                                 hex_str[((githash[31:28])*8)+:8], hex_str[((githash[27:24])*8)+:8],
                                 hex_str[((githash[23:20])*8)+:8], hex_str[((githash[19:16])*8)+:8],
                                 hex_str[((githash[15:12])*8)+:8], hex_str[((githash[11: 8])*8)+:8],

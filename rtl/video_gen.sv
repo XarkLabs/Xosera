@@ -125,8 +125,8 @@ logic               pb_tile_sel;                        // tile mem read select
 tile_addr_t         pb_tile_addr;                       // tile mem word address out (16x5K)
 `endif
 
-localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;               // memory prefetch starts early
-localparam H_MEM_END        = xv::TOTAL_WIDTH-8;                    // memory fetch can end a bit early
+localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;   // memory prefetch starts early
+localparam H_MEM_END        = xv::TOTAL_WIDTH-8;        // memory fetch can end a bit early
 
 // debug signals
 `ifndef SYNTHESIS
@@ -184,53 +184,114 @@ video_timing video_timing
 
 `ifdef EN_AUDIO
 // audio
-`ifdef EN_AUDIO_SLIM
 logic                                   audio_enable;           // all channel enable
+logic                                   audio_dma_vram_req;     // audio DMA request signal
+logic                                   audio_dma_tile_req;     // audio DMA request signal
+addr_t                                  audio_dma_addr;         // audio DMA address
+logic                                   audio_dma_ack;          // audio DMA ack signal
+logic                                   audio_dma_cycle;        // audio DMA request signal
 logic                                   audio_reg_wr;           // audio reg write enable
-logic                                   audio_req;              // audio DMA request signal
-logic                                   audio_ack;              // audio DMA ack signal
-logic                                   audio_dma_tilemem;      // audio DMA memory type (0=VRAM, 1=TILE)
-addr_t                                  audio_dma_addr;         // audio DMA address
-word_t                                  audio_dma_word;         // audio DMA data out
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
 logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
 logic [15*xv::AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
 logic [xv::AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel force restart (period bit [15])
 logic [xv::AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample reloaded flag
-`else
-logic                                   audio_enable;           // all channel enable
-logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_l_nchan;      // channel L volume/pan
-logic [7*xv::AUDIO_NCHAN-1:0]           audio_vol_r_nchan;      // channel R volume/pan
-logic [15*xv::AUDIO_NCHAN-1:0]          audio_period_nchan;     // channel playback rate
-logic [xv::AUDIO_NCHAN-1:0]             audio_tile_nchan;       // channel sample memory (0=VRAM, 1=TILE)
-logic [xv::VRAM_W*xv::AUDIO_NCHAN-1:0]  audio_start_nchan;      // channel sample start address (in VRAM or TILE)
-logic [15*xv::AUDIO_NCHAN-1:0]          audio_len_nchan;        // channel sample length in words
-logic [xv::AUDIO_NCHAN-1:0]             audio_restart_nchan;    // channel force restart (period bit [15])
-logic [xv::AUDIO_NCHAN-1:0]             audio_reload_nchan;     // channel sample reloaded flag
-logic                                   audio_req;              // audio DMA request signal
-logic                                   audio_ack;              // audio DMA ack signal
-logic                                   audio_dma_tilemem;      // audio DMA memory type (0=VRAM, 1=TILE)
-addr_t                                  audio_dma_addr;         // audio DMA address
-word_t                                  audio_dma_word;         // audio DMA data out
-`endif
 `endif
 
 `ifdef EN_PF_B
-assign pb_stall         = (pa_vram_sel && pb_vram_sel) || (pa_tile_sel && pb_tile_sel);
-assign vram_sel_o       = pa_vram_sel ? pa_vram_sel  : pb_vram_sel;
-assign vram_addr_o      = pa_vram_sel ? pa_vram_addr : pb_vram_addr;
-assign tilemem_sel_o    = pa_tile_sel ? pa_tile_sel  : pb_tile_sel;
-assign tilemem_addr_o   = pa_tile_sel ? pa_tile_addr : pb_tile_addr;
+always_comb begin
+    pb_stall = (pa_vram_sel & pb_vram_sel) | (pa_tile_sel & pb_tile_sel);
+
+    vram_sel_o      = 1'b0;
+    tilemem_sel_o   = 1'b0;
+    vram_addr_o     = pa_vram_addr;
+    tilemem_addr_o  = pa_tile_addr;
+
+`ifdef EN_AUDIO
+    audio_dma_cycle = 1'b0;
+`endif
+
+    if (pa_vram_sel) begin
+        vram_sel_o  = 1'b1;
+        vram_addr_o = pa_vram_addr;
+    end else if (pb_vram_sel) begin
+        vram_sel_o  = 1'b1;
+        vram_addr_o = pb_vram_addr;
+`ifdef EN_AUDIO
+    end else if (~audio_dma_ack & audio_dma_vram_req) begin
+        audio_dma_cycle = 1'b1;
+        vram_sel_o      = 1'b1;
+        vram_addr_o     = audio_dma_addr;
+`endif
+    end
+
+    if (pa_tile_sel) begin
+        tilemem_sel_o  = 1'b1;
+        tilemem_addr_o = pa_tile_addr;
+    end else if (pb_tile_sel) begin
+        tilemem_sel_o  = 1'b1;
+        tilemem_addr_o = pb_tile_addr;
+`ifdef EN_AUDIO
+    end else if (~audio_dma_ack & audio_dma_tile_req) begin
+        audio_dma_cycle = 1'b1;
+        tilemem_sel_o   = 1'b1;
+        tilemem_addr_o  = xv::TILE_W'(audio_dma_addr);
+`endif
+    end
+end
 `else
 assign vram_sel_o       = pa_vram_sel;
 assign vram_addr_o      = pa_vram_addr;
 assign tilemem_sel_o    = pa_tile_sel;
 assign tilemem_addr_o   = pa_tile_addr;
+
+always_comb begin
+    vram_sel_o      = 1'b0;
+    tilemem_sel_o   = 1'b0;
+    vram_addr_o     = pa_vram_addr;
+    tilemem_addr_o  = pa_tile_addr;
+
+`ifdef EN_AUDIO
+    audio_dma_cycle = 1'b0;
 `endif
 
-/* verilator lint_off PINCONNECTEMPTY */
+    if (pa_vram_sel) begin
+        vram_sel_o  = 1'b1;
+        vram_addr_o = pa_vram_addr;
+`ifdef EN_AUDIO
+    end else if (~audio_dma_ack & audio_dma_vram_req) begin
+        audio_dma_cycle = 1'b1;
+        vram_sel_o      = 1'b1;
+        vram_addr_o     = audio_dma_addr;
+`endif
+    end
+
+    if (pa_tile_sel) begin
+        tilemem_sel_o  = 1'b1;
+        tilemem_addr_o = pa_tile_addr;
+`ifdef EN_AUDIO
+    end else if (~audio_dma_ack & audio_dma_tile_req) begin
+        audio_dma_cycle = 1'b1;
+        tilemem_sel_o   = 1'b1;
+        tilemem_addr_o  = xv::TILE_W'(audio_dma_addr);
+`endif
+    end
+end
+
+`endif
+
+`ifdef EN_AUDIO
+always_ff @(posedge clk) begin
+    // latch audio dma read
+    audio_dma_ack       <= 1'b0;
+    if (audio_dma_cycle) begin
+        audio_dma_ack       <= 1'b1;
+    end
+end
+`endif
+
 video_playfield video_pf_a(
-    .stall_i(1'b0),                                     // playfield A never stalls
+    .stall_i(1'b0),                                 // playfield A never stalls
     .mem_fetch_i(mem_fetch & ~pa_blank),
     .mem_fetch_start_i(mem_fetch_h_start),
     .h_count_i(h_count),
@@ -265,104 +326,81 @@ video_playfield video_pf_a(
     .pf_line_start_addr_i(line_set_addr),
     .pf_gfx_ctrl_set_i(pa_gfx_ctrl_set),
     .pf_color_index_o(pa_color_index),
-`ifdef EN_AUDIO
-    .dma_req_i(audio_req),
-    .dma_ack_o(audio_ack),
-    .dma_tile_i(audio_dma_tilemem),
-    .dma_addr_i(audio_dma_addr),
-    .dma_word_o(audio_dma_word),
-`else
-    .dma_req_i(1'b0),
-    .dma_ack_o(),
-    .dma_tile_i(1'b0),
-    .dma_addr_i(16'b0),
-    .dma_word_o(),
-`endif
     .reset_i(reset_i),
     .clk(clk)
 );
-/* verilator lint_on PINCONNECTEMPTY */
 
 `ifdef EN_PF_B
-    logic       pb_vram_rd;                         // last cycle was PB vram read flag
-    logic       pb_vram_rd_save;                    // PB vram read data saved flag
-    word_t      pb_vram_rd_data;                    // PB vram read data
-    logic       pb_tilemem_rd;                      // last cycle was PB tilemem read flag
-    logic       pb_tilemem_rd_save;                 // PB tilemem read data saved flag
-    word_t      pb_tilemem_rd_data;                 // PB tilemem read data
+logic       pb_vram_rd;                         // last cycle was PB vram read flag
+logic       pb_vram_rd_save;                    // PB vram read data saved flag
+word_t      pb_vram_rd_data;                    // PB vram read data
+logic       pb_tilemem_rd;                      // last cycle was PB tilemem read flag
+logic       pb_tilemem_rd_save;                 // PB tilemem read data saved flag
+word_t      pb_tilemem_rd_data;                 // PB tilemem read data
 
-    always_ff @(posedge clk) begin
-        // latch vram read data for playfield B
-        if (pb_vram_rd & ~pb_vram_rd_save) begin    // if was a vram read and result not already saved
-            pb_vram_rd_save <= 1'b1;                // remember vram read saved
-            pb_vram_rd_data <= vram_data_i;         // save vram data
-        end
-        if (~pb_stall) begin                        // if not stalled, clear saved vram data
-            pb_vram_rd_save <= 1'b0;
-        end
-
-        pb_vram_rd  <= pb_vram_sel;                 // remember if this cycle was reading vram
-
-        // latch tilemem read data for playfield B
-        if (pb_tilemem_rd & ~pb_tilemem_rd_save) begin // if was a tilemem read and result not already saved
-            pb_tilemem_rd_save <= 1'b1;             // remember tilemem read saved
-            pb_tilemem_rd_data <= tilemem_data_i;   // save tilemem data
-        end
-        if (~pb_stall) begin                        // if not stalled, clear saved tilemem data
-            pb_tilemem_rd_save <= 1'b0;
-        end
-
-        pb_tilemem_rd  <= pb_tile_sel;              // remember if this cycle was reading tilemem
+always_ff @(posedge clk) begin
+    // latch vram read data for playfield B
+    if (pb_vram_rd & ~pb_vram_rd_save) begin    // if was a vram read and result not already saved
+        pb_vram_rd_save <= 1'b1;                // remember vram read saved
+        pb_vram_rd_data <= vram_data_i;         // save vram data
+    end
+    if (~pb_stall) begin                        // if not stalled, clear saved vram data
+        pb_vram_rd_save <= 1'b0;
     end
 
-/* verilator lint_off PINCONNECTEMPTY */
-    video_playfield video_pf_b(
-        .stall_i(pb_stall),
-        .mem_fetch_i(mem_fetch & ~pb_blank),
-        .mem_fetch_start_i(mem_fetch_h_start),
-        .h_count_i(h_count),
-        .end_of_line_i(end_of_line),
-        .end_of_frame_i(end_of_frame),
-        .border_color_i(pb_colorbase),
-        .vid_left_i(vid_left),
-        .vid_right_i(vid_right),
-        .vram_sel_o(pb_vram_sel),
-        .vram_addr_o(pb_vram_addr),
-        .vram_data_i(pb_vram_rd_save ? pb_vram_rd_data : vram_data_i),
-        .tilemem_sel_o(pb_tile_sel),
-        .tilemem_addr_o(pb_tile_addr),
-        .tilemem_data_i(pb_tilemem_rd_save ? pb_tilemem_rd_data : tilemem_data_i),
-        .pf_blank_i(pb_blank),
-        .pf_start_addr_i(pb_start_addr),
-        .pf_line_len_i(pb_line_len),
-        .pf_colorbase_i(pb_colorbase),
-        .pf_bpp_i(pb_bpp),
-        .pf_bitmap_i(pb_bitmap),
-        .pf_tile_bank_i(pb_tile_bank),
-        .pf_disp_in_tile_i(pb_disp_in_tile),
-        .pf_tile_in_vram_i(pb_tile_in_vram),
-        .pf_tile_height_i(pb_tile_height),
-        .pf_h_repeat_i(pb_h_repeat),
-        .pf_v_repeat_i(pb_v_repeat),
-        .pf_h_frac_repeat_i(pb_h_frac_repeat),
-        .pf_v_frac_repeat_i(pb_v_frac_repeat),
-        .pf_fine_hscroll_i(pb_fine_hscroll),
-        .pf_fine_vscroll_i(pb_fine_vscroll),
-        .pf_line_start_set_i(pb_line_start_set),
-        .pf_line_start_addr_i(line_set_addr),
-        .pf_gfx_ctrl_set_i(pb_gfx_ctrl_set),
-        .pf_color_index_o(pb_color_index),
+    pb_vram_rd  <= pb_vram_sel;                 // remember if this cycle was reading vram
 
-        .dma_req_i(1'b0),
-        .dma_ack_o(),
-        .dma_tile_i(1'b0),
-        .dma_addr_i(16'b0),
-        .dma_word_o(),
+    // latch tilemem read data for playfield B
+    if (pb_tilemem_rd & ~pb_tilemem_rd_save) begin // if was a tilemem read and result not already saved
+        pb_tilemem_rd_save <= 1'b1;             // remember tilemem read saved
+        pb_tilemem_rd_data <= tilemem_data_i;   // save tilemem data
+    end
+    if (~pb_stall) begin                        // if not stalled, clear saved tilemem data
+        pb_tilemem_rd_save <= 1'b0;
+    end
 
-        .reset_i(reset_i),
-        .clk(clk)
-    );
-/* verilator lint_on PINCONNECTEMPTY */
+    pb_tilemem_rd  <= pb_tile_sel;              // remember if this cycle was reading tilemem
+end
+
+video_playfield video_pf_b(
+    .stall_i(pb_stall),
+    .mem_fetch_i(mem_fetch & ~pb_blank),
+    .mem_fetch_start_i(mem_fetch_h_start),
+    .h_count_i(h_count),
+    .end_of_line_i(end_of_line),
+    .end_of_frame_i(end_of_frame),
+    .border_color_i(pb_colorbase),
+    .vid_left_i(vid_left),
+    .vid_right_i(vid_right),
+    .vram_sel_o(pb_vram_sel),
+    .vram_addr_o(pb_vram_addr),
+    .vram_data_i(pb_vram_rd_save ? pb_vram_rd_data : vram_data_i),
+    .tilemem_sel_o(pb_tile_sel),
+    .tilemem_addr_o(pb_tile_addr),
+    .tilemem_data_i(pb_tilemem_rd_save ? pb_tilemem_rd_data : tilemem_data_i),
+    .pf_blank_i(pb_blank),
+    .pf_start_addr_i(pb_start_addr),
+    .pf_line_len_i(pb_line_len),
+    .pf_colorbase_i(pb_colorbase),
+    .pf_bpp_i(pb_bpp),
+    .pf_bitmap_i(pb_bitmap),
+    .pf_tile_bank_i(pb_tile_bank),
+    .pf_disp_in_tile_i(pb_disp_in_tile),
+    .pf_tile_in_vram_i(pb_tile_in_vram),
+    .pf_tile_height_i(pb_tile_height),
+    .pf_h_repeat_i(pb_h_repeat),
+    .pf_v_repeat_i(pb_v_repeat),
+    .pf_h_frac_repeat_i(pb_h_frac_repeat),
+    .pf_v_frac_repeat_i(pb_v_frac_repeat),
+    .pf_fine_hscroll_i(pb_fine_hscroll),
+    .pf_fine_vscroll_i(pb_fine_vscroll),
+    .pf_line_start_set_i(pb_line_start_set),
+    .pf_line_start_addr_i(line_set_addr),
+    .pf_gfx_ctrl_set_i(pb_gfx_ctrl_set),
+    .pf_color_index_o(pb_color_index),
+    .reset_i(reset_i),
+    .clk(clk)
+);
 `endif
 
 // video config registers read/write
@@ -656,37 +694,21 @@ end
 
 // audio generation
 `ifdef EN_AUDIO
-// audio channel mixer
-`ifdef EN_AUDIO_SLIM
 audio_mixer_slim audio_mixer(
-`else
-audio_mixer audio_mixer(
-`endif
     .audio_enable_i(audio_enable),
-`ifdef EN_AUDIO_SLIM
     .audio_reg_wr_i(audio_reg_wr),
-    .audio_reg_addr_i(vgen_reg_num_i[3:0]),
+    .audio_reg_addr_i(vgen_reg_num_i[xv::CHAN_W+2-1:0]),
     .audio_reg_data_i(vgen_reg_data_i),
     .audio_vol_l_nchan_i(audio_vol_l_nchan),
     .audio_vol_r_nchan_i(audio_vol_r_nchan),
     .audio_period_nchan_i(audio_period_nchan),
     .audio_restart_nchan_i(audio_restart_nchan),
     .audio_reload_nchan_o(audio_reload_nchan),
-`else
-    .audio_vol_l_nchan_i(audio_vol_l_nchan),
-    .audio_vol_r_nchan_i(audio_vol_r_nchan),
-    .audio_period_nchan_i(audio_period_nchan),
-    .audio_tile_nchan_i(audio_tile_nchan),
-    .audio_start_nchan_i(audio_start_nchan),
-    .audio_len_nchan_i(audio_len_nchan),
-    .audio_restart_nchan_i(audio_restart_nchan),
-    .audio_reload_nchan_o(audio_reload_nchan),
-`endif
-    .audio_req_o(audio_req),
-    .audio_ack_i(audio_ack),
-    .audio_tile_o(audio_dma_tilemem),
-    .audio_addr_o(audio_dma_addr),
-    .audio_word_i(audio_dma_word),
+    .audio_dma_vram_req_o(audio_dma_vram_req),
+    .audio_dma_tile_req_o(audio_dma_tile_req),
+    .audio_dma_ack_i(audio_dma_ack),
+    .audio_dma_addr_o(audio_dma_addr),
+    .audio_dma_word_i(audio_dma_tile_req ? tilemem_data_i : vram_data_i),
 
     .pdm_l_o(audio_pdm_l_o),
     .pdm_r_o(audio_pdm_r_o),
@@ -698,67 +720,41 @@ audio_mixer audio_mixer(
 // audio channel register writes
 always_ff @(posedge clk) begin
     if (reset_i) begin
-`ifdef EN_AUDIO_SLIM
         audio_reg_wr            <= 1'b0;
         audio_vol_l_nchan       <= '0;
         audio_vol_r_nchan       <= '0;
         audio_period_nchan      <= '0;
         audio_restart_nchan     <= '0;
         audio_intr_o            <= '0;
-`else
-        audio_vol_l_nchan       <= '0;
-        audio_vol_r_nchan       <= '0;
-        audio_period_nchan      <= '0;
-        audio_tile_nchan        <= '0;
-        audio_start_nchan       <= '0;
-        audio_restart_nchan     <= '0;
-        audio_len_nchan         <= '0;
-        audio_intr_o            <= '0;
-`endif
     end else begin
-`ifdef EN_AUDIO_SLIM
         audio_reg_wr        <= 1'b0;
 
+        audio_restart_nchan <= '0;
+        audio_intr_o        <= audio_intr_o | 4'(audio_reload_nchan);
+
         for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
-            audio_restart_nchan[i]    <= 1'b0;
-            if (audio_reload_nchan[i]) begin
-                audio_intr_o[i]  <= 1'b1;                                                                          // ready set
-            end
             if (vgen_reg_wr_en_i) begin
                 case (7'(vgen_reg_num_i))
-                    7'(xv::XR_AUD0_VOL+7'(i*4)):
+                    7'(xv::XR_AUD0_VOL+7'(i*4)): begin
+                        audio_reg_wr        <= 1'b1;                // write to audio register mem (but not used)
                         { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] }; // 7-bit vol 0x80 = 1.0
-                    7'(xv::XR_AUD0_PERIOD+7'(i*4)):
+                    end
+                    7'(xv::XR_AUD0_PERIOD+7'(i*4)): begin
+                        audio_reg_wr        <= 1'b1;                // write to audio register mem (but not used)
                         { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
-                    7'(xv::XR_AUD0_LENGTH+7'(i*4)):
-                        audio_reg_wr        <= 1'b1;                // indicate audio reg write
-                    7'(xv::XR_AUD0_START+7'(i*4)):
-                        { audio_intr_o[i], audio_reg_wr } <= { 1'b0, 1'b1 };
-                    default: ;
+                    end
+                    7'(xv::XR_AUD0_LENGTH+7'(i*4)): begin
+                        audio_reg_wr        <= 1'b1;                // write to audio register mem
+                    end
+                    7'(xv::XR_AUD0_START+7'(i*4)): begin
+                        audio_reg_wr        <= 1'b1;                // write to audio register mem
+                        audio_intr_o[i]     <= 1'b0;                // clear channel interrupt/reload flag
+                    end
+                    default: begin
+                    end
                 endcase
             end
         end
-`else
-        for (integer i = 0; i < xv::AUDIO_NCHAN; i = i + 1) begin
-            audio_restart_nchan[i]    <= 1'b0;
-            if (audio_reload_nchan[i]) begin
-                audio_intr_o[i]  <= 1'b1;                                                                          // ready set
-            end
-            if (vgen_reg_wr_en_i) begin
-                case (7'(vgen_reg_num_i))
-                    7'(xv::XR_AUD0_VOL+7'(i*4)):
-                        { audio_vol_l_nchan[i*7+:7], audio_vol_r_nchan[i*7+:7] }    <= { vgen_reg_data_i[15:9], vgen_reg_data_i[7:1] }; // 7-bit vol 0x80 = 1.0
-                    7'(xv::XR_AUD0_PERIOD+7'(i*4)):
-                        { audio_restart_nchan[i], audio_period_nchan[i*15+:15] }    <= vgen_reg_data_i;
-                    7'(xv::XR_AUD0_LENGTH+7'(i*4)):
-                        { audio_tile_nchan[i], audio_len_nchan[i*15+:15] }          <= vgen_reg_data_i;
-                    7'(xv::XR_AUD0_START+7'(i*4)):
-                        { audio_intr_o[i], audio_start_nchan[i*xv::VRAM_W+:16] }   <= { 1'b0, vgen_reg_data_i };   // ready cleared
-                    default: ;
-                endcase
-            end
-        end
-`endif
     end
 end
 `endif

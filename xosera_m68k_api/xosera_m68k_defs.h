@@ -263,6 +263,11 @@
 #define XR_AUD3_PERIOD 0x2D        // (WO/-) // TODO: WIP
 #define XR_AUD3_LENGTH 0x2E        // (WO/-) // TODO: WIP
 #define XR_AUD3_START  0x2F        // (WO/-) // TODO: WIP
+// Audio flags
+#define AUD_PER_RESTART_B 15        // AUDx_PERIOD bit 15 is force channel restart
+#define AUD_PER_RESTART_F 0x8000
+#define AUD_LEN_TILEMEM_B 15        // AUDx_LENGTH bit 15 is TILEMEM flag
+#define AUD_LEN_TILEMEM_F 0x8000
 
 #define XR_BLIT_CTRL  0x40        // (WO) blit control ([15:8]=transp value, [5]=8 bpp, [4]=transp on, [0]=S constant)
 #define XR_BLIT_ANDC  0x41        // (WO) blit AND-COMPLEMENT constant value

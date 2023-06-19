@@ -172,11 +172,11 @@ static inline uint8_t xvid_getb(uint8_t r, uint8_t bytesel = 1)
     return xmit_buffer[off + 1];
 }
 
-static inline uint8_t xvid_getlb(uint8_t r)
+static inline uint8_t xvid_getbl(uint8_t r)
 {
     return xvid_getb(r, 1);
 };
-static inline uint8_t xvid_gethb(uint8_t r)
+static inline uint8_t xvid_getbh(uint8_t r)
 {
     return xvid_getb(r, 0);
 }
@@ -269,11 +269,9 @@ static void reboot_Xosera(int8_t config)
         spi_queue_flush();
     } while (xvid_getw(XM_RD_ADDR) != 0x1234 || xvid_getw(XM_RD_INCR) != 0xABCD);
 
-    xvid_setw(XM_RD_XADDR, XR_VID_HSIZE);        // select width
-    width = xvid_getw(XM_XDATA);
-    xvid_setw(XM_RD_XADDR, XR_VID_VSIZE);        // select height
-    height = xvid_getw(XM_XDATA);
-    xvid_setw(XM_RD_XADDR, XR_UNUSED_0F);        // select features
+    width  = ((xvid_getbl(XM_FEATURES) & 0xF) == 0) ? 640 : 848;
+    height = 480;
+    xvid_setw(XM_RD_XADDR, XM_FEATURES);        // select features
     features = xvid_getw(XM_XDATA);
     printf("(%dx%d, features=0x%04x) ready.\n", width, height, features);
     columns = width / 8;
@@ -289,7 +287,7 @@ static void wait_vsync(uint16_t num = 1)
     {
         do
         {
-            v_flag = xvid_gethb(XM_SYS_CTRL);                  // set scanline reg
+            v_flag = xvid_getbh(XM_SYS_CTRL);                  // set scanline reg
         } while (!(v_flag & (1 << SYS_CTRL_VBLANK_B)));        // loop if on visible line
     }
 }

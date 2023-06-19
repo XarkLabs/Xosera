@@ -3165,7 +3165,7 @@ void     xosera_test()
             xm_setbh(SYS_CTRL, 0x07);        // disable Xosera vsync interrupt
 
             show_test_pic(TRUECOLOR_TEST_PIC, 0x0000);
-#if BLURB_AUDIO
+#if 0 && BLURB_AUDIO        // play audio while 8bpp+4bpp showing (but corrupts parrot)
             if (num_audio_channels)
             {
                 upload_audio(xosera_audio, 0x2000, xosera_audio_len);

@@ -69,13 +69,15 @@ else
 VMODENAME := vga
 endif
 
-PFB ?=
+PFB ?= true
 
 ifneq ($(strip $(PF_B)),)
 VERILOG_DEFS += -DEN_PF_B
 endif
 
 AUDIO ?= 0
+
+SPI_INTERFACE ?= true
 
 ifeq ($(strip $(AUDIO)),0)
 OUTSUFFIX := $(VMODENAME)_$(subst MODE_,,$(VIDEO_MODE))
@@ -131,7 +133,10 @@ YOSYS_SYNTH_ARGS := -device u -no-rw-check -dff -abc9 -top $(TOP)
 #FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) $(VERILOG_DEFS) -DICE40UP5K -DICEBREAKER -DSPI_INTERFACE
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) $(VERILOG_DEFS) -DICE40UP5K -DICEBREAKER
+ifneq ($(strip $(SPI_INTERFACE)),)
+DEFINES += -DSPI_INTERFACE
+endif
 
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 VLT_CONFIG := icebreaker/ice40_config.vlt

@@ -31,7 +31,7 @@ endif
 
 CPU?=68010
 EXTRA_CFLAGS?=-g -O2 -fomit-frame-pointer -I$(XOSERA_M68K_API)
-#EXTRA_VASMFLAGS?=-showopt
+EXTRA_VASMFLAGS?=
 EXTRA_LIBS?=-L$(XOSERA_M68K_API) -lxosera_m68k_api
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
 SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib

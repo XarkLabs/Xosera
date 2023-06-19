@@ -6,12 +6,5 @@ Yosys 0.30+16 (git sha1 8b2a00102, aarch64-apple-darwin20.2-clang 10.0.0-4ubuntu
 "nextpnr-ice40" -- Next Generation Place and Route (Version nextpnr-0.6-24-g6c0b4443)
 Info: Device utilisation:
 Info: 	         ICESTORM_LC:  4757/ 5280    90%
-Info: 	        ICESTORM_RAM:    29/   30    96%
-Info: 	               SB_IO:    36/   96    37%
-Info: 	               SB_GB:     8/    8   100%
-Info: 	        ICESTORM_PLL:     1/    1   100%
-Info: 	         SB_WARMBOOT:     1/    1   100%
-Info: 	        ICESTORM_DSP:     5/    8    62%
-Info: 	      ICESTORM_SPRAM:     4/    4   100%
 
 Info: Max frequency for clock 'pclk': 36.15 MHz (PASS at 33.77 MHz)

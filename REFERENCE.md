@@ -89,7 +89,7 @@ ___
 ### Xosera Main Registers (XM Registers) Summary
 
 | Reg # | Reg Name          | Access | Description                                                                           |
-|-------|-------------------|--------|---------------------------------------------------------------------------------------|
+| ----- | ----------------- | ------ | ------------------------------------------------------------------------------------- |
 | 0x0   | **`XM_SYS_CTRL`** | R /W   | Status flags, VRAM write masking                                                      |
 | 0x1   | **`XM_INT_CTRL`** | R /W+  | FPGA reconfigure, interrupt masking, interrupt status                                 |
 | 0x2   | **`XM_TIMER`**    | R /W   | Tenth millisecond timer (1/10,000 second) / 8-bit countdown timer                     |
@@ -119,7 +119,7 @@ ___
 **Status bits for memory, blitter, hblank, vblank and VRAM nibble write masking control.**
 
 | Name        | Bits    | R/W | Description                                                                     |
-|-------------|---------|-----|---------------------------------------------------------------------------------|
+| ----------- | ------- | --- | ------------------------------------------------------------------------------- |
 | `MEM_BUSY`  | `[15]`  | R/- | memory read/write operation still in progress (for contended memory)            |
 | `BLIT_FULL` | `[14]`  | R/- | blit queue full (can't safely write to blit registers when set)                 |
 | `BLIT_BUSY` | `[13]`  | R/- | blit busy (blit operations not fully completed, but queue may be empty)         |
@@ -139,7 +139,7 @@ ___
 **FPGA reconfigure, interrupt masking and interrupt status.**
 
 | Name         | Bits   | R/W  | Description                                                         |
-|--------------|--------|------|---------------------------------------------------------------------|
+| ------------ | ------ | ---- | ------------------------------------------------------------------- |
 | `RECONFIG`   | `[15]` | -/W+ | Reconfigure FPGA with `XM_INT_CTRL` bits [9:8] as new configuration |
 | `BLIT_EN`    | `[14]` | R/W  | enable interrupt for blitter queue empty                            |
 | `TIMER_EN`   | `[13]` | R/W  | enable interrupt for countdown timer                                |
@@ -279,21 +279,21 @@ When `XM_DATA_2` is written, the value is written to VRAM at `XM_WR_ADDR` and `X
 <img src="./pics/wd_XM_FEATURES.svg">
 
 **Xosera configured features (read-only)**
-| Name      | Bits      | R/W | Description                                                                |
-|-----------|-----------|-----|----------------------------------------------------------------------------|
-| `CONFIG`  | `[13:12]` | R/- | Current configuration number for Xosera FPGA (0-3 on iCE40UP5K)            |
-| `AUDCHAN` | `[11:8]`  | R/- | Number of audio output channels (typically 2 or 4 _[ideally always 4...]_) |
-| `PF_B`    | `[6]`     | R/- | Playfield B enabled (optional 2nd playfield to blend over playfield A)     |
-| `BLIT`    | `[5]`     | R/- | 2D "blitter engine" enabled                                                |
-| `COPP`    | `[4]`     | R/- | Screen synchronized co-processor enabled                                   |
-| `MONRES`  | `[3:0]`   | R/- | Monitor resolution configured (0=640x480 4:3, 1=848x480 16:9)              |
+| Name      | Bits      | R/W | Description                                                            |
+| --------- | --------- | --- | ---------------------------------------------------------------------- |
+| `CONFIG`  | `[15:12]` | R/- | Current configuration number for Xosera FPGA (0-3 on iCE40UP5K)        |
+| `AUDCHAN` | `[11:8]`  | R/- | Number of audio output channels (normally 4)                           |
+| `PF_B`    | `[6]`     | R/- | Playfield B enabled (optional 2nd playfield to blend over playfield A) |
+| `BLIT`    | `[5]`     | R/- | 2D "blitter engine" enabled                                            |
+| `COPP`    | `[4]`     | R/- | Screen synchronized co-processor enabled                               |
+| `MONRES`  | `[3:0]`   | R/- | Monitor resolution (0=640x480 4:3, 1=848x480 16:9 on iCE40UP5K)        |
 
 ___
 
 ## Xosera Extended Register / Extended Memory Region Summary
 
 | XR Region Name   | XR Region Range | R/W | Description                                |
-|------------------|-----------------|-----|--------------------------------------------|
+| ---------------- | --------------- | --- | ------------------------------------------ |
 | XR video config  | 0x0000-0x000F   | R/W | config XR registers                        |
 | XR playfield A   | 0x0010-0x0017   | R/W | playfield A XR registers                   |
 | XR playfield B   | 0x0018-0x001F   | R/W | playfield B XR registers                   |
@@ -327,7 +327,7 @@ Reading is similar, write the address to `XM_RD_XADDR` then read `XM_XDATA`. Eac
 ### Video Config and Copper XR Registers Summary
 
 | Reg # | Reg Name           | R /W  | Description                                                       |
-|-------|--------------------|-------|-------------------------------------------------------------------|
+| ----- | ------------------ | ----- | ----------------------------------------------------------------- |
 | 0x00  | **`XR_VID_CTRL`**  | R /W  | Border color index and playfield color swap                       |
 | 0x01  | **`XR_COPP_CTRL`** | R /W  | Display synchronized coprocessor control                          |
 | 0x02  | **`XR_AUD_CTRL`**  | R /W  | Audio channel and DMA processing control                          |
@@ -356,7 +356,7 @@ ___
 
 **Border or blanked display color index and playfield A/B colormap swap**  
 | Name      | Bits    | R/W | Description                                                           |
-|-----------|---------|-----|-----------------------------------------------------------------------|
+| --------- | ------- | --- | --------------------------------------------------------------------- |
 | `SWAP_AB` | `[15]`  | R/W | Swap playfield colormaps (PF A uses colormap B, PF B uses colormap A) |
 | `BORDCOL` | `[7:0]` | R/W | Color index for border or blanked pixels (for playfield A)            |
 
@@ -371,7 +371,7 @@ ___
 
 **Enable or disable copper program execution**
 | Name      | Bits   | R/W | Description                                                            |
-|-----------|--------|-----|------------------------------------------------------------------------|
+| --------- | ------ | --- | ---------------------------------------------------------------------- |
 | `COPP_EN` | `[15]` | R/W | Reset and enable copper at start of next frame (and subsequent frames) |
 
 > :mag: **Copper:** At start of frame, copper register `RA` will be `0x0000`, the `B` flag set and copper PC set to
@@ -383,7 +383,7 @@ ___
 
 **Enable or disable audio channel processing**
 | Name     | Bits  | R/W | Description                              |
-|----------|-------|-----|------------------------------------------|
+| -------- | ----- | --- | ---------------------------------------- |
 | `AUD_EN` | `[0]` | R/W | Enable audio DMA and channel procerssing |
 
 #### 0x03 **`XR_SCANLINE`** (R/W) - current video scan line/trigger Xosera host CPU video interrupt
@@ -435,7 +435,7 @@ ___
 ### Playfield A & B Control XR Registers Summary
 
 | Reg # | Name              | R/W | Description                                             |
-|-------|-------------------|-----|---------------------------------------------------------|
+| ----- | ----------------- | --- | ------------------------------------------------------- |
 | 0x10  | `XR_PA_GFX_CTRL`  | R/W | playfield A graphics control                            |
 | 0x11  | `XR_PA_TILE_CTRL` | R/W | playfield A tile control                                |
 | 0x12  | `XR_PA_DISP_ADDR` | R/W | playfield A display VRAM start address (start of frame) |
@@ -463,7 +463,7 @@ ___
 
 **playfield A/B graphics control**
 | Name        | Bits     | R/W | Description                                                                    |
-|-------------|----------|-----|--------------------------------------------------------------------------------|
+| ----------- | -------- | --- | ------------------------------------------------------------------------------ |
 | `V_REPEAT`  | `[1:0]`  | R/W | Vertical pixel repeat count (0=1x, 1=2x, 2=3x, 3=4x)                           |
 | `H_REPEAT`  | `[3:2]`  | R/W | Horizontal pixel repeat count (0=1x, 1=2x, 2=3x, 3=4x)                         |
 | `BPP`       | `[5:4]`  | R/W | Bits-Per-Pixel for color indexing (0=1 BPP, 1=4 BPP, 2=8 BPP, 3=reserved)      |
@@ -478,7 +478,7 @@ ___
 
 **playfield A/B tile control**  
 | Name           | Bits      | R/W | Description                                                                         |
-|----------------|-----------|-----|-------------------------------------------------------------------------------------|
+| -------------- | --------- | --- | ----------------------------------------------------------------------------------- |
 | `TILE_H`       | `[3:0]`   | R/W | Tile height-1 (0 to 15 for 1 to 16 high, stored as 8 or 16 high in tile definition) |
 | `TILE_VRAM`    | `[8]`     | R/W | Tile glyph defintions in TILEMEM or VRAM (0=TILEMEM, 1=VRAM)                        |
 | `DISP_TILEMEM` | `[9]`     | R/W | Tile display indices in VRAM or TILEMEM (0=VRAM, 1=TILEMEM)                         |
@@ -509,13 +509,13 @@ data will be shown multiple times).  Twos complement, so negative values are oka
 
 **playfield A/B  horizontal and vertical fine scroll**  
 | Name       | Bits     | R/W | Description                                |
-|------------|----------|-----|--------------------------------------------|
+| ---------- | -------- | --- | ------------------------------------------ |
 | `H_SCROLL` | `[12:8]` | R/W | Horizontal fine pixel scroll (0-31 pixels) |
 | `V_SCROLL` | `[5:0]`  | R/W | Vertical fine pixel scroll (0-63 pixels)   |
 
 Horizontal fine scroll is typically constrained to the scaled width of 8 pixels (1 tile):
 | `H_REPEAT` | scroll range |
-|------------|--------------|
+| ---------- | ------------ |
 | 0 (1x)     | 0-7 pixels   |
 | 1 (2x)     | 0-15 pixels  |
 | 2 (3x)     | 0-23 pixels  |
@@ -548,7 +548,7 @@ to the integer pixel repeat (so a repeat value of 3x and fractional scale of 1 [
 scale).  
 
 | Repeat     | Horiz. 640 Scaled | Horiz. 848 Scaled | Vert. 480 Scaled |
-|------------|-------------------|-------------------|------------------|
+| ---------- | ----------------- | ----------------- | ---------------- |
 | 0          | 640 pixels        | 848 pixels        | 480 lines        |
 | 1 (1 of 2) | 320 pixels        | 424 pixels        | 240 lines        |
 | 2 (1 of 3) | 426.66 pixels     | 565.33 pixels     | 320 lines        |
@@ -588,7 +588,7 @@ The tile bitmap definitions start at the aligned address specified in `TILEBASE`
 than the size of the maximum glyph index used. When using all possible glyphs in a tileset, alignment would be as follows:
 
 | BPP   | Size | Words    | Number | Alignment       |
-|-------|------|----------|--------|-----------------|
+| ----- | ---- | -------- | ------ | --------------- |
 | 1-BPP | 8x8  | 4 words  | 256    | 0x0400 boundary |
 | 1-BPP | 8x16 | 8 words  | 256    | 0x0800 boundary |
 | 4-BPP | 8x8  | 16 words | 1024   | 0x4000 boundary |
@@ -690,7 +690,7 @@ The biltter will also generate an Xosera interrupt with interrupt source #1 each
 ### 2D Blitter Engine XR Registers Summary
 
 | Reg # | Name            | R/W  | Description                                                          |
-|-------|-----------------|------|----------------------------------------------------------------------|
+| ----- | --------------- | ---- | -------------------------------------------------------------------- |
 | 0x20  | `XR_BLIT_CTRL`  | -/W  | blitter control (transp value, transp_8b, transp, S_const)           |
 | 0x21  | `XR_BLIT_ANDC`  | -/W  | `ANDC` AND-COMPLEMENT constant value                                 |
 | 0x22  | `XR_BLIT_XOR`   | -/W  | `XOR` XOR constant value                                             |
@@ -878,7 +878,7 @@ There are four basic copper instructions: `WAIT`, `SKIP`, `MOVE` and `JUMP`. Bri
 is:
 
 | Instruction | Description                                                                  |
-|-------------|------------------------------------------------------------------------------|
+| ----------- | ---------------------------------------------------------------------------- |
 | `WAIT`      | Wait until the video beam reaches (or exceeds) a specified position          |
 | `SKIP`      | Skip the next instruction if the video beam has reached a specified position |
 | `MOVE`      | Move immediate data to a target destination                                  |
@@ -1007,7 +1007,7 @@ When Xosera is reconfigured (or on power up), the VRAM contents are undefined (g
 memory, COLOR memory and COPPER memory will be restored to default contents as follows:
 
 | TILE address  | Description                                             |
-|---------------|---------------------------------------------------------|
+| ------------- | ------------------------------------------------------- |
 | 0x4000-0x47FF | 8x16 ST font (derived from Atari ST 8x16 font)          |
 | 0x4800-0x4BFF | 8x8 ST font (derived from Atari ST 8x8 font             |
 | 0x4C00-0x4FFF | 8x8 PC font (derived from IBM CGA 8x8)                  |

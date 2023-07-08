@@ -15,18 +15,17 @@ info:
 	@echo " "
 	@echo "Xosera make targets:"
 	@echo "   make all             - build everything (RTL, simulation, uitls and host_spi)"
-	@echo "   make upduino         - build Xosera for UPduino v3 (see rtl/upduino.mk for options)"
-	@echo "   make upd_prog        - build Xosera and program UPduino v3 (see rtl/upduino.mk for options)"
 	@echo "   make xosera_vga      - build Xosera VGA Rosco_m68k board firmware"
 	@echo "   make xosera_vga_640  - build Xosera VGA 640x480 only Rosco_m68k board firmware"
 #	@echo "   make xosera_dvi      - build Xosera DVI Rosco_m68k board firmware"
 	@echo "   make xosera_vga_prog - build & program Xosera VGA Rosco_m68k board firmware"
 	@echo "   make xosera_vga_640_prog - build Xosera VGA 640x480 only Rosco_m68k board firmware"
 #	@echo "   make xosera_dvi_prog - build & program Xosera DVI Rosco_m68k board firmware"
-	@echo "   make icebreaker      - build Xosera for iCEBreaker (see rtl/icebreaker.mk for options)"
-	@echo "   make iceb_prog       - build Xosera and program iCEBreaker (see rtl/icebreaker.mk for options)"
+	@echo "   make upduino         - build Xosera for UPduino v3 (see rtl/upduino.mk for options)"
+	@echo "   make upd_prog        - build Xosera and program UPduino v3"
+	@echo "   make iceb_vga        - build Xosera for iCEBreaker for VGA"
+	@echo "   make iceb_dvi         - build Xosera for iCEBreaker for DVI"
 	@echo "   make rtl             - build UPduino, iCEBreaker bitstreams and simulation targets"
-	@echo "   make def_files       - build C & asm definition files using Icarus Verilog"
 	@echo "   make sim             - build Icarus Verilog and Verilalator simulation files"
 	@echo "   make isim            - build Icarus Verilog simulation files"
 	@echo "   make irun            - build and run Icarus Verilog simulation"
@@ -83,23 +82,16 @@ upd_prog:
 	cd rtl && $(MAKE) upd_prog
 
 # Build iCEBreaker bitstream
-icebreaker:
-	cd rtl && $(MAKE) iceb
+iceb_dvi:
+	cd rtl && $(MAKE) iceb_dvi
 
 # Build iCEBreaker bitstream
-iceb: icebreaker
-
-# Build iCEBreaker bitstream and program via USB
-iceb_prog:
-	cd rtl && $(MAKE) iceb_prog
+iceb_vga:
+	cd rtl && $(MAKE) iceb_vga
 
 # Build all RTL synthesis and simulation targets
 rtl:
 	cd rtl && $(MAKE) all
-
-# Build Icarus and run Verilog simulation
-def_files:
-	cd rtl && $(MAKE) def_files
 
 # Build all simulation targets
 sim:

@@ -40,6 +40,9 @@ XOSERA_CLEAN := 0
 $(info === Xosera UPduino [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
+# Set default FPGA config number (if not set)
+FPGA_CONFIG ?= 0
+
 # Maximum number of CPU cores to use before waiting with FMAX_TEST
 MAX_CPUS ?= 8
 
@@ -71,7 +74,7 @@ else
 VMODENAME := vga
 endif
 
-PFB ?=
+PFB ?= true
 
 ifneq ($(strip $(PF_B)),)
 VERILOG_DEFS += -DEN_PF_B
@@ -133,7 +136,7 @@ YOSYS_SYNTH_ARGS := -device u -no-rw-check -dff -abc9 -top $(TOP)
 #FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) $(VERILOG_DEFS) -DICE40UP5K -DUPDUINO
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) -DFPGA_CONFIG=$(FPGA_CONFIG) $(VERILOG_DEFS) -DICE40UP5K -DUPDUINO
 
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 VLT_CONFIG := upduino/ice40_config.vlt

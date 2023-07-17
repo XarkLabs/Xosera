@@ -59,6 +59,7 @@ XM_WR_INCR              equ     $20         ; (R /W ) increment value for XM_WR_
 XM_WR_ADDR              equ     $24         ; (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
 XM_DATA                 equ     $28         ; (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
 XM_DATA_2               equ     $2C         ; (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
+XM_UART                 equ     $30         ; (R+/W+) USB UART communication
 XM_UNUSED_0C            equ     $30         ; (- /- )
 XM_UNUSED_0D            equ     $34         ; (- /- )
 XM_UNUSED_0E            equ     $38         ; (- /- )

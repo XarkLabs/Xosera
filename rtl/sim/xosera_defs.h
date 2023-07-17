@@ -73,6 +73,7 @@
 #define XM_WR_ADDR   0x09        // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
 #define XM_DATA      0x0A        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
 #define XM_DATA_2    0x0B        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
+#define XM_UART      0x0C        // (R+/W+) USB UART communication
 #define XM_UNUSED_0C 0x0C        //
 #define XM_UNUSED_0D 0x0D        //
 #define XM_UNUSED_0E 0x0E        //
@@ -310,11 +311,11 @@
 #define COP_MOVEP(rgb16, color_num) (0xA0000000 | XB_((uint32_t)(color_num), 16, 13) | ((uint16_t)(rgb16)))
 #define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 16, 13) | ((uint16_t)(val16)))
 #else        // newer "slim copper" versions (but still 32-bit "emulating" previous copper)
-#define COP_WAIT_HV(h_pos, v_pos)   (0x28002000 | XB_((uint32_t)(v_pos), 16, 11) | XB_((uint32_t)(h_pos), 0, 11))
-#define COP_WAIT_H(h_pos)           (0x20002000 | XB_((uint32_t)(h_pos), 0, 11))
-#define COP_WAIT_V(v_pos)           (0x20002800 | XB_((uint32_t)(v_pos), 0, 10))
-#define COP_WAIT_F()                (0x20002FFF)
-#define COP_END()                   (0x20002FFF)
+#define COP_WAIT_HV(h_pos, v_pos) (0x28002000 | XB_((uint32_t)(v_pos), 16, 11) | XB_((uint32_t)(h_pos), 0, 11))
+#define COP_WAIT_H(h_pos)         (0x20002000 | XB_((uint32_t)(h_pos), 0, 11))
+#define COP_WAIT_V(v_pos)         (0x20002800 | XB_((uint32_t)(v_pos), 0, 10))
+#define COP_WAIT_F()              (0x20002FFF)
+#define COP_END()                 (0x20002FFF)
 // #define COP_SKIP_HV(h_pos, v_pos)   (0x20000000 | XB_((uint32_t)(v_pos), 16, 12) | XB_((uint32_t)(h_pos), 4, 12))
 // #define COP_SKIP_H(h_pos)           (0x20000001 | XB_((uint32_t)(h_pos), 4, 12))
 // #define COP_SKIP_V(v_pos)           (0x20000002 | XB_((uint32_t)(v_pos), 16, 12))

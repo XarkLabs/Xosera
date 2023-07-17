@@ -940,6 +940,11 @@ uint16_t     BusInterface::test_data[32768] = {
 
     XREG_SETW(AUD_CTRL, 0x0001),
 
+    REG_B(UART, 'B'),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_B(UART, 'U'),
+
     REG_RW(INT_CTRL),
     REG_RW(INT_CTRL),
     REG_RW(INT_CTRL),

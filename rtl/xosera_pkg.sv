@@ -36,7 +36,7 @@
 `define EN_TIMER_INTR                   // enable timer interrupt
 `define EN_COPP                         // enable copper
 `define EN_BLIT                         // enable blit unit
-`define EN_UART                         // enable USB UART
+//`define EN_UART                         // enable USB UART
 
 `define VERSION 0_37                    // Xosera BCD version code (x.xx)
 
@@ -66,7 +66,7 @@ localparam AUDIO_NCHAN  = `EN_AUDIO;    // set parameter for # audio channels
 localparam AUDIO_NCHAN  = 0;
 `endif
 
-localparam UART_BPS     = 115200;      // UART baud rate
+localparam UART_BPS     = 1000000;      // UART baud rate
 
 // Xosera memory address bit widths
 localparam VRAM_W   = 16;               // 64K words VRAM

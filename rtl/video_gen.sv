@@ -240,11 +240,6 @@ always_comb begin
     end
 end
 `else
-assign vram_sel_o       = pa_vram_sel;
-assign vram_addr_o      = pa_vram_addr;
-assign tilemem_sel_o    = pa_tile_sel;
-assign tilemem_addr_o   = pa_tile_addr;
-
 always_comb begin
     vram_sel_o      = 1'b0;
     tilemem_sel_o   = 1'b0;

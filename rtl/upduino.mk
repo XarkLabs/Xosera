@@ -26,16 +26,14 @@ MAKEFLAGS += --no-builtin-rules
 
 # Version bookkeeping
 BUILDDATE := $(shell date -u "+%Y%m%d")
-GITSHORTHASH := $(shell git rev-parse --short HEAD)
+XOSERA_HASH := $(shell git rev-parse --short HEAD)
 DIRTYFILES := $(shell git status --porcelain --untracked-files=no | grep rtl/ | grep -v _stats.txt | cut -d " " -f 3-)
 ifeq ($(strip $(DIRTYFILES)),)
 # "clean" (unmodified) from git
-XOSERA_HASH := $(GITSHORTHASH)
 XOSERA_CLEAN := 1
 $(info === Xosera UPduino [$(XOSERA_HASH)] is CLEAN from git)
 else
 # "dirty" (HDL modified) from git
-XOSERA_HASH := $(GITSHORTHASH)
 XOSERA_CLEAN := 0
 $(info === Xosera UPduino [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif

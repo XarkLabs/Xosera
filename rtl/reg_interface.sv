@@ -132,7 +132,8 @@ bus_interface bus(
 
 `ifdef EN_UART
 acia #(
-    .BPS_RATE(xv::UART_BPS)
+    .BPS_RATE(xv::UART_BPS),
+    .CLK_HZ(xv::PCLK_HZ)
 ) uart (
     .rd_i(uart_rd),
     .wr_i(uart_wr),

@@ -1,6 +1,6 @@
 // acia.sv - strippped-down version of MC6850 ACIA with home-made TX/RX
 // 03-02-19 E. Brombaugh
-// 07-16-23 Xark 			- modified for Xosera and SystemVerilog
+// 07-16-23 Xark            - modified for Xosera and SystemVerilog
 //
 // MIT License
 //
@@ -32,24 +32,24 @@
 `ifdef EN_UART
 
 module acia #(
-    parameter BPS_RATE          = 115200        // bps rate (baud rate)
+    parameter BPS_RATE,                     // bps rate (baud rate)
+    parameter CLK_HZ                        // clock in Hz
 )(
-    input  wire logic 		    rd_i,			// read strobe
-    input  wire logic 		    wr_i,			// write strobe
-    input  wire logic 		    rs_i,			// register select
-    input  wire logic 		    rx_i,			// serial receive
-    output logic 			    tx_o,			// serial tx_start
-    input  wire logic  [7:0]    din_i,			// data bus input
-    output logic	   [7:0]    dout_o,			// data bus output
-    output logic	            txe_o,			// transmit empty (ready to send char)
-    output logic	            rxf_o,			// receive full (char ready to read)
-    input  wire logic 		    rst_i,			// system reset
-    input  wire logic 		    clk			    // system clock
+    input  wire logic           rd_i,       // read strobe
+    input  wire logic           wr_i,       // write strobe
+    input  wire logic           rs_i,       // register select
+    input  wire logic           rx_i,       // serial receive
+    output logic                tx_o,       // serial transmit
+    input  wire logic  [7:0]    din_i,      // data bus input
+    output logic       [7:0]    dout_o,     // data bus output
+    output logic                txe_o,      // transmit empty (ready to send char)
+    output logic                rxf_o,      // receive full (char ready to read)
+    input  wire logic           rst_i,      // system reset
+    input  wire logic           clk         // system clock
 );
 
-logic			tx_start;
-logic [7:0] 	rx_dat;
-logic           unused_rx_err;
+logic           tx_start;
+logic [7:0]     rx_dat;
 
 // generate tx_start signal on write to register 1
 assign tx_start = rs_i & wr_i;
@@ -59,70 +59,71 @@ always_ff @(posedge clk) begin
     if (rst_i) begin
         txe_o   <= 1'b0;
         rxf_o   <= 1'b0;
-        dout_o	<= '0;
-    end	else begin
+        dout_o  <= '0;
+    end else begin
         txe_o   <= txe;
         rxf_o   <= rxf;
-        dout_o	<= rx_dat;
+        dout_o  <= rx_dat;
     end
 end
 
 // tx_o empty is cleared when tx_start starts, cleared when tx_busy deasserts
-logic		    txe;
-logic		    tx_busy;
-logic		    prev_tx_busy;
+logic           txe;
+logic           tx_busy;
+logic           prev_tx_busy;
 always_ff @(posedge clk) begin
     if (rst_i) begin
-        txe				<= 1'b1;
-        prev_tx_busy	<= 1'b0;
-    end	else begin
-        prev_tx_busy	<= tx_busy;
+        txe             <= 1'b1;
+        prev_tx_busy    <= 1'b0;
+    end else begin
+        prev_tx_busy    <= tx_busy;
 
         if (tx_start) begin
-            txe				<= 1'b0;
+            txe             <= 1'b0;
         end else if (prev_tx_busy & ~tx_busy) begin
-            txe				<= 1'b1;
+            txe             <= 1'b1;
         end
     end
 end
 
 // rx_i full is set when rx_stb pulses, cleared when data logic read
-logic		    rx_stb;
-logic		    rxf;
+logic           rx_stb;
+logic           rxf;
 always_ff @(posedge clk) begin
     if (rst_i) begin
-        rxf		<= 1'b0;
+        rxf     <= 1'b0;
     end else begin
         if (rx_stb) begin
-            rxf		<= 1'b1;
+            rxf     <= 1'b1;
         end else if (rs_i & rd_i) begin
-            rxf		<= 1'b0;
+            rxf     <= 1'b0;
         end
     end
 end
 
 // Async Receiver
 acia_rx #(
-    .BPS_RATE(BPS_RATE) 	    // bps rate
+    .BPS_RATE(BPS_RATE),        // bps rate
+    .CLK_HZ(CLK_HZ)             // clock rate
 ) acia_rx (
-    .rx_serial_i(rx_i),		 	// raw serial input
-    .rx_dat_o(rx_dat),     		// received byte
-    .rx_stb_o(rx_stb),     		// received data available
-    .rx_err_o(unused_rx_err),   // received data error
-    .rst_i(rst_i),			    // system reset
-    .clk(clk)					// system clock
+    .rx_serial_i(rx_i),         // raw serial input
+    .rx_dat_o(rx_dat),          // received byte
+    .rx_stb_o(rx_stb),          // received data available
+    .rst_i(rst_i),              // system reset
+    .clk(clk)                   // system clock
 );
 
 // Transmitter
 acia_tx #(
-    .BPS_RATE(BPS_RATE) 	    // bps rate
+    .BPS_RATE(BPS_RATE),        // bps rate
+    .CLK_HZ(CLK_HZ)             // clock rate
 ) acia_tx (
-    .tx_dat_i(din_i),          	// transmit data byte
-    .tx_start_i(tx_start),    	// trigger transmission
-    .tx_serial_o(tx_o),       	// tx_o serial output
-    .tx_busy_o(tx_busy),       	// tx_o is active (not ready)
-    .rst_i(rst_i),			    // system reset
-    .clk(clk)					// system clock
+    .tx_dat_i(din_i),           // transmit data byte
+    .tx_start_i(tx_start),      // trigger transmission
+    .tx_serial_o(tx_o),         // tx_o serial output
+    .tx_busy_o(tx_busy),        // tx_o is active (not ready)
+    .rst_i(rst_i),              // system reset
+    .clk(clk)                   // system clock
 );
 
 endmodule

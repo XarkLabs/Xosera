@@ -56,7 +56,6 @@ module xosera_iceb(
 
 assign      FLASH_SSB    = 1'b1;        // prevent SPI flash interfering with other SPI/FTDI pins
 assign      LEDG_N       = reset;       // green LED on when not in reset (active LOW LED)
-assign      TX = RX;                    // loopback serial
 
 // gpio pin aliases
 logic       bus_cs_n;                   // bus select (active LOW)
@@ -74,6 +73,8 @@ logic [3:0] vga_b;                      // vga blue (4-bits)
 logic       vga_hs;                     // vga hsync
 logic       vga_vs;                     // vga vsync
 logic       dv_de;                      // DV display enable
+logic       serial_txd;                 // UART tx
+logic       serial_rxd;                 // UART rx
 /* verilator lint_off UNUSED */
 logic       bus_intr;                   // interrupt signal
 logic       bus_intr_r;                 // registered signal, to improve timing
@@ -87,10 +88,11 @@ logic       nreset;                     // user button as reset (active LOW butt
 
 // assign gpio pins to bus signals
 
-
 assign nreset       = BTN_N;            // active LOW iCEBreaker reset button
 
-// assign audio output signals to gpio
+assign TX           = serial_txd;
+assign serial_rxd   = RX;
+
 `ifndef SPI_INTERFACE   // SPU interface to drive bus signals
 assign bus_cs_n     = LED_RED_N;        // RGB LED red as Xosera select=CS_ENABLED (UP_nCS)
 assign bus_rd_nwr   = LED_GRN_N;        // RGB LED green as RnW_WRITE=0, RnW_READ=1, read= (UP_RnW)
@@ -288,6 +290,8 @@ xosera_main xosera_main(
     .bus_data_o(bus_data_out),
     .audio_l_o(audio_l),
     .audio_r_o(audio_r),
+    .serial_txd_o(serial_txd),
+    .serial_rxd_i(serial_rxd),
     .reconfig_o(reconfig),
     .boot_select_o(boot_select),
     .reset_i(reset),

@@ -156,6 +156,10 @@ assign                  intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]    = 4'b0000;
 `ifndef EN_BLIT
 assign                  intr_trigger[xv::BLIT_INTR]     = 1'b0;
 `endif
+`ifndef EN_UART
+assign serial_txd_o = 1'b0;
+logic unused_uart   = serial_rxd_i;
+`endif
 
 `ifdef BUS_DEBUG_SIGNALS
 logic                   dbug_cs_strobe;     // debug "ack" bus strobe

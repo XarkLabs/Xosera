@@ -396,7 +396,12 @@ xrmem_arb xrmem_arb(
 
 // video blending - alpha and other color belding between playfield A and B
 `ifdef EN_PF_B
-video_blend2 video_blend(
+`ifdef ICE40UP5K
+video_blend2    // uses FMAC16 based blending on iCE40
+`else
+video_blend     // uses more limited blending with logic
+`endif
+ video_blend (
     .vsync_i(vsync),
     .hsync_i(hsync),
     .dv_de_i(dv_de),

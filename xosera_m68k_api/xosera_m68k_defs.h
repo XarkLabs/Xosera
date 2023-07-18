@@ -68,6 +68,7 @@
 #define XM_WR_ADDR   0x24        // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
 #define XM_DATA      0x28        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
 #define XM_DATA_2    0x2C        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
+#define XM_UART      0x30        // (R+/W+) USB UART communication
 #define XM_UNUSED_0C 0x30        // (- /- )
 #define XM_UNUSED_0D 0x34        // (- /- )
 #define XM_UNUSED_0E 0x38        // (- /- )

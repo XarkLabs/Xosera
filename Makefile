@@ -129,6 +129,7 @@ m68k:
 	cd xosera_boing_m68k/ && $(MAKE)
 	cd xosera_vramtest_m68k && $(MAKE)
 	cd xosera_test_m68k && $(MAKE)
+	cd uart_test_m68k && $(MAKE)
 	cd copper/copper_test_m68k && $(MAKE)
 	cd copper/crop_test_m68k && $(MAKE)
 	cd copper/splitscreen_test_m68k && $(MAKE)
@@ -170,6 +171,7 @@ m68kclean:
 	cd xosera_boing_m68k/ && $(MAKE) clean
 	cd xosera_vramtest_m68k && $(MAKE) clean
 	cd xosera_test_m68k && $(MAKE) clean
+	cd uart_test_m68k && $(MAKE) clean
 	cd copper/copper_test_m68k && $(MAKE) clean
 	cd copper/crop_test_m68k && $(MAKE) clean
 	cd copper/splitscreen_test_m68k && $(MAKE) clean

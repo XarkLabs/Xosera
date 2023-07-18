@@ -30,7 +30,7 @@
 // 1BitSquared Discord server has also been welcoming and helpful - https://1bitsquared.com/pages/chat
 //
 // Special thanks to everyone involved with the IceStorm/Yosys/NextPNR (etc.) open source FPGA projects.
-// Consider supporting open source FPGA tool development: https://www.patreon.com/fpga_dave
+// Consider helping support open source FPGA tool development: https://www.yosyshq.com
 
 `default_nettype none               // mandatory for Verilog sanity
 `timescale 1ns/1ps                  // mandatory to shut up Icarus Verilog
@@ -53,6 +53,8 @@ module xosera_main(
     output logic                audio_l_o,          // left channel audio PWM output
     output logic                audio_r_o,          // right channel audio PWM output
     output logic                reconfig_o,         // reconfigure iCE40 from flash
+    output logic                serial_txd_o,       // UART transmit
+    input  wire logic           serial_rxd_i,       // UART receive
     output logic      [1:0]     boot_select_o,      // reconfigure configuration number (0-3)
     input  wire logic           reset_i,            // reset signal
     input  wire logic           clk                 // pixel clock
@@ -154,6 +156,10 @@ assign                  intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]    = 4'b0000;
 `ifndef EN_BLIT
 assign                  intr_trigger[xv::BLIT_INTR]     = 1'b0;
 `endif
+`ifndef EN_UART
+assign serial_txd_o = 1'b0;
+logic unused_uart   = serial_rxd_i;
+`endif
 
 `ifdef BUS_DEBUG_SIGNALS
 logic                   dbug_cs_strobe;     // debug "ack" bus strobe
@@ -210,6 +216,10 @@ reg_interface reg_interface(
     .intr_mask_o(intr_mask),            // enabled interrupts from INT_CTRL high byte
     .intr_clear_o(intr_clear),          // strobe clears pending INT_CTRL interrupt
     .intr_status_i(intr_status),        // status read from pending INT_CTRL interrupt
+`ifdef EN_UART
+    .uart_txd_o(serial_txd_o),          // UART transmit pin hookup
+    .uart_rxd_i(serial_rxd_i),          // UART receive pin hookup
+`endif
 `ifdef BUS_DEBUG_SIGNALS
     .bus_ack_o(dbug_cs_strobe),         // debug "ack" bus strobe
 `endif

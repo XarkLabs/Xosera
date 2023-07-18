@@ -46,7 +46,10 @@ module reg_interface (
     output      intr_t          intr_mask_o,       // enabled interrupts (which signal CPU interrupt)
     output      intr_t          intr_clear_o,      // pending interrupts CPU acknowledge (clear)
     input  wire intr_t          intr_status_i,     // pending interrupts CPU status read
-
+`ifdef EN_UART
+    output      logic           uart_txd_o,        // UART receive signal
+    input wire  logic           uart_rxd_i,        // UART transmit signal
+`endif
 `ifdef BUS_DEBUG_SIGNALS
     output      logic           bus_ack_o,         // ACK strobe for bus debug
 `endif
@@ -70,6 +73,15 @@ word_t          reg_timer;              // 1/10 ms timer
 `ifdef EN_TIMER_INTR
 byte_t          reg_timer_interval;     // 8-bit 1/10 ms timer interrupt interval
 byte_t          reg_timer_countdown;    // 8-bit timer interrupt interval counter
+`endif
+
+`ifdef EN_UART
+logic           uart_rd;
+logic           uart_wr;
+logic           uart_txe;
+logic           uart_rxf;
+byte_t          uart_dout;
+byte_t          uart_din;
 `endif
 
 // read flags
@@ -114,9 +126,28 @@ bus_interface bus(
     .reg_num_o(bus_reg_num),              // register number from bus
     .bytesel_o(bus_bytesel),              // register number from bus
     .bytedata_o(bus_data_byte),           // byte data from bus
-    .clk(clk),                            // input clk (should be > 2x faster than bus signals)
-    .reset_i(reset_i)                     // reset
+    .reset_i(reset_i),                     // reset
+    .clk(clk)                             // input clk (should be > 2x faster than bus signals)
 );
+
+`ifdef EN_UART
+acia #(
+    .BPS_RATE(xv::UART_BPS),
+    .CLK_HZ(xv::PCLK_HZ)
+) uart (
+    .rd_i(uart_rd),
+    .wr_i(uart_wr),
+    .rs_i(bus_bytesel),
+    .rx_i(uart_rxd_i),
+    .tx_o(uart_txd_o),
+    .din_i(uart_din),
+    .dout_o(uart_dout),
+    .txe_o(uart_txe),
+    .rxf_o(uart_rxf),
+    .rst_i(reset_i),
+    .clk(clk)
+);
+`endif
 
 // ~1/10th ms timer counter
 //
@@ -173,7 +204,11 @@ end
 
 // continuously output byte selected for read from Xosera (to be put on bus when selected for read)
 word_t      rd_temp_word;
-always_comb bus_data_o = !bus_bytesel ? rd_temp_word[15:8] : rd_temp_word[7:0];
+always_comb bus_data_o  = !bus_bytesel ? rd_temp_word[15:8] : rd_temp_word[7:0];
+
+`ifdef EN_UART
+always_comb uart_rd    = bus_read_strobe && (bus_reg_num == xv::XM_UART);
+`endif
 
 // xm registers read
 always_comb begin
@@ -205,7 +240,12 @@ always_comb begin
         xv::XM_DATA,
         xv::XM_DATA_2:
             rd_temp_word  = reg_data;
+`ifdef EN_UART
+        xv::XM_UART:
+            rd_temp_word  = { uart_rxf, uart_txe, 6'b0, uart_dout };
+`else
         xv::XM_UNUSED_0C,
+`endif
         xv::XM_UNUSED_0D,
         xv::XM_UNUSED_0E,
         xv::XM_FEATURES:
@@ -270,19 +310,26 @@ always_ff @(posedge clk) begin
         reg_timer_interval  <= '0;
 `endif
 
-        rd_incr_flag    <=  1'b0;
-        wr_incr_flag    <=  1'b0;
-        xrd_incr_flag   <=  1'b0;
-        xwr_incr_flag   <=  1'b0;
+`ifdef EN_UART
+        uart_wr         <= 1'b0;
+        uart_din        <= '0;
+`endif
+        rd_incr_flag    <= 1'b0;
+        wr_incr_flag    <= 1'b0;
+        xrd_incr_flag   <= 1'b0;
+        xwr_incr_flag   <= 1'b0;
 
     end else begin
         // clear strobe signals
         intr_clear_o    <= '0;
 
-        rd_incr_flag    <=  1'b0;
-        wr_incr_flag    <=  1'b0;
-        xrd_incr_flag   <=  1'b0;
-        xwr_incr_flag   <=  1'b0;
+`ifdef EN_UART
+        uart_wr         <= 1'b0;
+`endif
+        rd_incr_flag    <= 1'b0;
+        wr_incr_flag    <= 1'b0;
+        xrd_incr_flag   <= 1'b0;
+        xwr_incr_flag   <= 1'b0;
 
         // VRAM access acknowledge
         if (vram_ack_i) begin
@@ -425,6 +472,12 @@ always_ff @(posedge clk) begin
                         regs_data_o         <= { reg_data_even, bus_data_byte };      // output write data
                     end
                 end
+`ifdef EN_UART
+                xv::XM_UART: begin
+                    uart_wr     <= 1'b1;
+                    uart_din    <= bus_data_byte;
+                end
+`endif
             default: begin
             end
             endcase

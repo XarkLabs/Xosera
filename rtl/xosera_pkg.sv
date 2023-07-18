@@ -36,6 +36,7 @@
 `define EN_TIMER_INTR                   // enable timer interrupt
 `define EN_COPP                         // enable copper
 `define EN_BLIT                         // enable blit unit
+//`define EN_UART                         // enable USB UART
 
 `define VERSION 0_37                    // Xosera BCD version code (x.xx)
 
@@ -65,6 +66,8 @@ localparam AUDIO_NCHAN  = `EN_AUDIO;    // set parameter for # audio channels
 localparam AUDIO_NCHAN  = 0;
 `endif
 
+localparam UART_BPS     = 1000000;      // UART baud rate
+
 // Xosera memory address bit widths
 localparam VRAM_W   = 16;               // 64K words VRAM
 localparam TILE_W   = 13;               // 4K words tile mem (and bit for extra 1K words)
@@ -90,7 +93,11 @@ typedef enum logic [3:0] {
     XM_WR_ADDR      = 4'h9,             // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
     XM_DATA         = 4'hA,             // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
     XM_DATA_2       = 4'hB,             // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
+`ifdef EN_UART
+    XM_UART         = 4'hC,             // (R+/W+) USB UART communication
+`else
     XM_UNUSED_0C    = 4'hC,             // (- /- ) // TODO: useful?
+`endif
     XM_UNUSED_0D    = 4'hD,             // (- /- ) // TODO: useful?
     XM_UNUSED_0E    = 4'hE,             // (- /- ) // TODO: useful?
     XM_FEATURES     = 4'hF              // (RO   ) Xosera features, monitor mode
@@ -113,7 +120,7 @@ typedef enum logic [15:0] {
     XR_CONFIG_REGS      = 16'h0000,     // 0x0000-0x000F 16 config/video/copper registers
     XR_PA_REGS          = 16'h0010,     // 0x0010-0x0017 8 playfield A video registers
     XR_PB_REGS          = 16'h0018,     // 0x0018-0x001F 8 playfield B video registers
-    XR_AUDIO_REGS       = 16'h0020,     // 0x0020-0x002F 16 audio playback registers      // TODO: audio
+    XR_AUDIO_REGS       = 16'h0020,     // 0x0020-0x002F 16 audio playback registers
     XR_BLIT_REGS        = 16'h0040,     // 0x0040-0x004B 12 polygon blit registers
     // XR Memory Regions
     XR_TILE_ADDR        = 16'h4000,     // 0x4000-0x53FF 5K 16-bit words of tile memory

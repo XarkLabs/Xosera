@@ -85,6 +85,8 @@ module xosera_upd(
             output logic    gpio_46,        // video enable for HDMI
             output logic    gpio_2,         // video clock for HDMI
             output logic    spi_cs,         // FPGA SPI flash CS (keep high unless using SPI flash)
+            output logic    serial_txd,     // FPGA USB uart tx (shared with SPI flash MISO so keep CS high)
+            input  logic    serial_rxd,     // FPGA USB uart rx (shared with SPI flash SCK so keep CS high)
             input  logic    gpio_20         // input 12MHz clock (UPduino 3.0 needs OSC jumper shorted)
        );
 
@@ -295,6 +297,8 @@ xosera_main xosera_main(
     .bus_data_o(bus_data_out),
     .audio_l_o(audio_l),
     .audio_r_o(audio_r),
+    .serial_txd_o(serial_txd),
+    .serial_rxd_i(serial_rxd),
     .reconfig_o(reconfig),
     .boot_select_o(boot_select),
     .reset_i(reset),

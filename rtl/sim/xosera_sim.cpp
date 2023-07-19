@@ -848,7 +848,7 @@ uint16_t     BusInterface::test_data[32768] = {
 
 #endif
 
-#if 0
+#if 1
     // slim copper test
     XREG_SETW(PA_GFX_CTRL, 0x0080),        // blank screen
     XREG_SETW(PB_GFX_CTRL, 0x0080),        // blank screen

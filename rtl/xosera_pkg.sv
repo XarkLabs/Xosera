@@ -31,8 +31,11 @@
 // features that can be optionally disabled (comment out to disable)
 //
 // set by Makefile: `define EN_PF_B                         // enable PF B (2nd overlay playfield)
-// set by Makefile: `define EN_AUDIO                4       // TODO: enable audio (with number of channels 2-4)
-`define EN_PF_B_BLEND                   // enable pf B blending (else overlay only)
+// set by Makefile: `define EN_AUDIO                4       // number of channels 2/4
+`ifdef EN_PF_B
+`define EN_PF_B_BLND                    // enable pf B blending (otherwise overlay only)
+`endif
+`define EN_BLEND_FULL                   // use full precision blending w/o FMAC (ignored with iCE40UP5K)
 `define EN_TIMER_INTR                   // enable timer interrupt
 `define EN_COPP                         // enable copper
 `define EN_BLIT                         // enable blit unit

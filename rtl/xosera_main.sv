@@ -78,8 +78,7 @@ argb_t                  colorA_xrgb;        // pf A ARGB output
 color_t                 colorB_index;       // pf B color index
 argb_t                  colorB_xrgb;        // pf B ARGB output
 `else
-logic unused;
-assign unused = &{1'b0, colorA_xrgb[15:12] }; // unused alpha
+logic unused_pf = &{ 1'b0, colorA_xrgb[15:12] }; // unused alpha
 `endif
 
 //  VRAM read output data (for vgen, regs, blit)
@@ -394,14 +393,10 @@ xrmem_arb xrmem_arb(
     .clk(clk)
 );
 
+`ifdef EN_PF_B_BLND
 // video blending - alpha and other color belding between playfield A and B
-`ifdef EN_PF_B
-`ifdef ICE40UP5K
-video_blend2    // uses FMAC16 based blending on iCE40
-`else
-video_blend     // uses more limited blending with logic
-`endif
- video_blend (
+// NOTE: "video_blend_2bit" can save logic if not on iCE40UP5K (which uses DSP)
+video_blend_4bit video_blend (
     .vsync_i(vsync),
     .hsync_i(hsync),
     .dv_de_i(dv_de),
@@ -414,15 +409,28 @@ video_blend     // uses more limited blending with logic
     .clk(clk)
 );
 `else
-// TODO: Looks like a cycle delay is "assumed" in syncs & DE signals?
+// no blending, so overlay playfield B (if present with alpha set)
 logic           dv_de_1;            // display enable delayed
 logic           hsync_1;            // hsync delayed
 logic           vsync_1;            // vsync delayed
 
+`ifdef PF_B
+`ifndef EN_PF_B_BLND
+logic unused_blnd = &{ 1'b0, colorA_xrgb[15:12], colorB_xrgb[14:12] };
+`endif
+`endif
+
 always_ff @(posedge clk) begin
-    // color lookup happened on dv_de cycle
+    // color index lookup happened on dv_de cycle
     if (dv_de_1) begin
-        { red_o, green_o, blue_o } <= colorA_xrgb[11:0];
+`ifdef EN_PF_B
+        if (colorB_xrgb[15]) begin  // if pf B alpha set, draw over pf A
+            { red_o, green_o, blue_o } <= colorB_xrgb[11:0];
+        end else
+`endif
+        begin
+            { red_o, green_o, blue_o } <= colorA_xrgb[11:0];
+        end
     end else begin
         { red_o, green_o, blue_o } <= '0;
     end
@@ -459,9 +467,9 @@ end
 initial begin
         $display("   XOSERA xosera_info:            \"%s\"", xv::info_str);
 `ifdef EN_AUDIO
-        $display("   XOSERA configuration:          MODE_%s %s%s%sAUD%x",
+        $display("   XOSERA configuration:          MODE_%s %s%s%s%sAUD%x",
 `else
-        $display("   XOSERA configuration:          MODE_%s %s%s%s",
+        $display("   XOSERA configuration:          MODE_%s %s%s%s%s",
 `endif
             `VIDEO_MODE_NAME,
 `ifdef EN_PF_B
@@ -479,7 +487,12 @@ initial begin
             "",
 `endif
 `ifdef EN_BLIT
-            "BLIT "
+            "BLIT ",
+`else
+            "",
+`endif
+`ifdef EN_UART
+            "UART "
 `else
             ""
 `endif

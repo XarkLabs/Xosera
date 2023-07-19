@@ -1,4 +1,4 @@
-// video_blend.sv
+// video_blend2.sv - full 4-bit blending (low/high precision)
 //
 // vim: set et ts=4 sw=4
 //
@@ -14,7 +14,7 @@
 
 `ifdef EN_PF_B
 
-module video_blend2 (
+module video_blend_4bit (
     // video RGB inputs
     input wire  logic           vsync_i,
     input wire  logic           hsync_i,
@@ -64,13 +64,13 @@ logic unused_signals    = &{    1'b0, colorA_xrgb_i[13:12],
                                 result_r[2:0], result_g[2:0], result_b[2:0] };
 
 always_comb begin
-    // add A and B alpha blend result (with an extra bit to detect overflow)
+    // add A and B 7-bit blend result (result high bit used to detect overflow)
     result_r    = 8'(outA_r[15:9]) + 8'(outB_r[15:9]);
     result_g    = 8'(outA_g[15:9]) + 8'(outB_g[15:9]);
     result_b    = 8'(outA_b[15:9]) + 8'(outB_b[15:9]);
 end
 
-// color RAM lookup (delays video 1 cycle for BRAM)
+// color blending (delays video 1 additional cycle for MAC16)
 always_ff @(posedge clk) begin
     // setup DSP input for next pixel
     colorA_r    <= { colorA_xrgb_i[11:8], colorA_xrgb_i[11:8] };
@@ -120,7 +120,43 @@ always_ff @(posedge clk) begin
     end
 end
 
-// NOTE: Using dual 8x8 MAC16 mode
+`ifndef ZZICE40UP5K   // if no MAC16 primitives
+`ifndef EN_BLEND_FULL
+// use 4-bit precision blending (with inferred multiply) to save logic
+logic unused_low_bits = &{1'b0, colorA_r[3:0], colorA_g[3:0], colorA_b[3:0], colorB_r[3:0], colorB_g[3:0], colorB_b[3:0], alphaA[3:0], alphaB[3:0]};
+always_comb begin
+    if (alphaA[7:4] == 4'hF) begin  // special case 100% alpha
+        outA_r  =  colorA_r[7:4] << 12;
+        outA_g  =  colorA_g[7:4] << 12;
+        outA_b  =  colorA_b[7:4] << 12;
+    end else begin
+        outA_r  =  (colorA_r[7:4] * alphaA[7:4]) << 8;
+        outA_g  =  (colorA_g[7:4] * alphaA[7:4]) << 8;
+        outA_b  =  (colorA_b[7:4] * alphaA[7:4]) << 8;
+    end
+    if (alphaB[7:4] == 4'hF) begin  // special case 100% alpha
+        outB_r  =  colorB_r[7:4] << 12;
+        outB_g  =  colorB_g[7:4] << 12;
+        outB_b  =  colorB_b[7:4] << 12;
+    end else begin
+        outB_r  =  (colorB_r[7:4] * alphaB[7:4]) << 8;
+        outB_g  =  (colorB_g[7:4] * alphaB[7:4]) << 8;
+        outB_b  =  (colorB_b[7:4] * alphaB[7:4]) << 8;
+    end
+end
+`else// full 8-bit precision blending (with inferred multiply)
+always_comb begin
+    outA_r  =  colorA_r * alphaA;
+    outA_g  =  colorA_g * alphaA;
+    outA_b  =  colorA_b * alphaA;
+
+    outB_r  =  colorB_r * alphaB;
+    outB_g  =  colorB_g * alphaB;
+    outB_b  =  colorB_b * alphaB;
+end
+`endif
+`else
+// 8-bit precision blending using dual 8x8 MAC16 on iCE40UP5K
 /* verilator lint_off PINCONNECTEMPTY */
 SB_MAC16 #(
     .NEG_TRIGGER(1'b0),                 // 0=rising/1=falling clk edge
@@ -275,6 +311,7 @@ SB_MAC16 #(
     .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block
 );
 /* verilator lint_on PINCONNECTEMPTY */
+`endif
 
 endmodule
 

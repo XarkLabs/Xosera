@@ -120,7 +120,7 @@ always_ff @(posedge clk) begin
     end
 end
 
-`ifndef ZZICE40UP5K   // if no MAC16 primitives
+`ifndef ICE40UP5K   // if no MAC16 primitives
 `ifndef EN_BLEND_FULL
 // use 4-bit precision blending (with inferred multiply) to save logic
 logic unused_low_bits = &{1'b0, colorA_r[3:0], colorA_g[3:0], colorA_b[3:0], colorB_r[3:0], colorB_g[3:0], colorB_b[3:0], alphaA[3:0], alphaB[3:0]};

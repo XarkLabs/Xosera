@@ -192,9 +192,10 @@ irun: $(VLT_CONFIG) sim/$(TBTOP) sim.mk
 $(VLT_CONFIG):
 	@echo >$(VLT_CONFIG)
 	@echo >>$(VLT_CONFIG) \`verilator_config
-	@echo >>$(VLT_CONFIG) lint_off -rule WIDTH  -file \"$(TECH_LIB)\"
-	@echo >>$(VLT_CONFIG) lint_off -rule UNUSED  -file \"$(TECH_LIB)\"
-	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN  -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule WIDTH      -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule UNUSED     -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN   -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule GENUNNAMED -file \"$(TECH_LIB)\"
 
 # assembler copper file
 %.vsim.h : %.casm

@@ -52,9 +52,9 @@ module xosera_main(
     output logic                dv_de_o,            // pixel visible (aka display enable)
     output logic                audio_l_o,          // left channel audio PWM output
     output logic                audio_r_o,          // right channel audio PWM output
-    output logic                reconfig_o,         // reconfigure iCE40 from flash
     output logic                serial_txd_o,       // UART transmit
     input  wire logic           serial_rxd_i,       // UART receive
+    output logic                reconfig_o,         // reconfigure iCE40 from flash
     output logic      [1:0]     boot_select_o,      // reconfigure configuration number (0-3)
     input  wire logic           reset_i,            // reset signal
     input  wire logic           clk                 // pixel clock

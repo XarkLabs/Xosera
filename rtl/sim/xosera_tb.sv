@@ -35,6 +35,9 @@ logic dv_de;
 logic audio_l;
 logic audio_r;
 
+logic rxd, txd;
+assign rxd = 1'b1;
+
 logic reconfig;
 logic [1:0] boot_select;
 
@@ -78,6 +81,8 @@ xosera_main xosera(
                 .bus_intr_o(bus_intr),          // interrupt signal
                 .audio_l_o(audio_l),            // left audio PWM channel
                 .audio_r_o(audio_r),            // right audio PWM channel
+                .serial_txd_o(txd),             // UART transmit
+                .serial_rxd_i(rxd),             // UART receive
                 .reconfig_o(reconfig),          // reconfigure FPGA
                 .boot_select_o(boot_select),    // reconfigure selection
                 .reset_i(reset)                 // reset signal
@@ -180,6 +185,7 @@ task xvid_setw(
 endtask
 
 // function to continuously select read value to put on bus
+/* verilator lint_off BLKSEQ */
 task inject_file(
     string filename,
     logic [3:0] r_num
@@ -203,6 +209,7 @@ task inject_file(
 
     $fclose(fd);
 endtask
+/* verilator lint_off BLKSEQ */
 
 function automatic logic [63:0] regname(
         input logic [3:0] num

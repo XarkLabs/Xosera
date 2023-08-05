@@ -280,9 +280,11 @@ $(VLT_CONFIG):
 	@echo === Verilator cells_sim.v warning exceptions ===
 	@echo >$(VLT_CONFIG)
 	@echo >>$(VLT_CONFIG) \`verilator_config
-	@echo >>$(VLT_CONFIG) lint_off -rule UNUSED    -file \"$(TECH_LIB)\"
-	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN  -file \"$(TECH_LIB)\"
-	@echo >>$(VLT_CONFIG) lint_off -rule WIDTH     -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule UNUSED     -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN   -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule WIDTH      -file \"$(TECH_LIB)\"
+	@echo >>$(VLT_CONFIG) lint_off -rule GENUNNAMED -file \"$(TECH_LIB)\"
+
 
 # delete all targets that will be re-generated
 clean:

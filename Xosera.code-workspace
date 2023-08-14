@@ -143,6 +143,7 @@
 			"LSHIFT",
 			"LVCMOS",
 			"lvol",
+			"Mbps",
 			"moto",
 			"MOVA",
 			"MOVEC",
@@ -376,6 +377,7 @@
 		"search.quickOpen.history.filterSortOrder": "recency",
 		"C_Cpp.default.includePath": [
 			"${workspaceFolder}/rtl/sim/obj_dir"
-		]
+		],
+		"editor.renderWhitespace": "all"
 	}
 }

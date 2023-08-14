@@ -124,7 +124,7 @@ const addr_range_t xm_regs[] = {
 
 // NOTE: These are bits in high byte of SYS_CTRL word (fastest to access)
 const addr_range_t sys_ctrl_status[] = {
-    {"MEM_BUSY", 7, 1},         // (RO   )  memory read/write operation pending (with contended memory)
+    {"MEM_WAIT", 7, 1},         // (RO   )  memory read/write operation pending (with contended memory)
     {"BLIT_FULL", 6, 1},        // (RO   )  blitter queue is full, do not write new operation to blitter registers
     {"BLIT_BUSY", 5, 1},        // (RO   )  blitter is still busy performing an operation (not done)
     {"SC_BIT_12", 4, 1},        // (RO   )  unused (reads 0)

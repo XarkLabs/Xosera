@@ -42,7 +42,7 @@ module acia #(
     output logic                tx_o,       // serial transmit
     input  wire logic  [7:0]    din_i,      // data bus input
     output logic       [7:0]    dout_o,     // data bus output
-    output logic                txe_o,      // transmit empty (ready to send char)
+    output logic                txf_o,      // transmit empty (ready to send char)
     output logic                rxf_o,      // receive full (char ready to read)
     input  wire logic           rst_i,      // system reset
     input  wire logic           clk         // system clock
@@ -57,31 +57,31 @@ assign tx_start = rs_i & wr_i;
 // load dout_o with rx data
 always_ff @(posedge clk) begin
     if (rst_i) begin
-        txe_o   <= 1'b0;
+        txf_o   <= 1'b0;
         rxf_o   <= 1'b0;
         dout_o  <= '0;
     end else begin
-        txe_o   <= txe;
+        txf_o   <= txf;
         rxf_o   <= rxf;
         dout_o  <= rx_dat;
     end
 end
 
 // tx_o empty is cleared when tx_start starts, cleared when tx_busy deasserts
-logic           txe;
+logic           txf;
 logic           tx_busy;
 logic           prev_tx_busy;
 always_ff @(posedge clk) begin
     if (rst_i) begin
-        txe             <= 1'b1;
+        txf             <= 1'b0;
         prev_tx_busy    <= 1'b0;
     end else begin
         prev_tx_busy    <= tx_busy;
 
         if (tx_start) begin
-            txe             <= 1'b0;
+            txf             <= 1'b1;
         end else if (prev_tx_busy & ~tx_busy) begin
-            txe             <= 1'b1;
+            txf             <= 1'b0;
         end
     end
 end

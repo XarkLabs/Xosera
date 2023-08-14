@@ -39,7 +39,7 @@
 `define EN_TIMER_INTR                   // enable timer interrupt
 `define EN_COPP                         // enable copper
 `define EN_BLIT                         // enable blit unit
-//`define EN_UART                         // enable USB UART
+`define EN_UART                         // enable USB UART
 
 `define VERSION 0_37                    // Xosera BCD version code (x.xx)
 
@@ -107,7 +107,7 @@ typedef enum logic [3:0] {
 } xm_register_t;
 
 typedef enum {
-    SYS_CTRL_MEM_BUSY_B = 15,           // memory read/write operation active (with contended memory)
+    SYS_CTRL_MEM_WAIT_B = 15,           // memory read/write operation active (with contended memory)
     SYS_CTRL_BLIT_FULL_B = 14,          // blitter queue is full, do not write new operation to blitter registers
     SYS_CTRL_BLIT_BUSY_B = 13,          // blitter is busy (not done) performing an operation
     SYS_CTRL_UNUSED_12_B = 12,          // unused (reads 0)
@@ -116,6 +116,26 @@ typedef enum {
     SYS_CTRL_UNUSED_9_B = 9,            // unused (reads 0)
     SYS_CTRL_UNUSED_8_B = 8             // unused (reads 0)
 } xm_sys_ctrl_t;
+
+typedef enum integer {
+    AUD0_INTR       = 0,                // audio ready
+    AUD1_INTR       = 1,                // audio ready
+    AUD2_INTR       = 2,                // audio ready
+    AUD3_INTR       = 3,                // audio ready
+    VIDEO_INTR      = 4,                // v-blank or copper
+    TIMER_INTR      = 5,                // timer interval
+    BLIT_INTR       = 6                 // blitter ready
+} intr_bit_t;
+
+typedef enum integer {
+    FEATURE_CONFIG  = 12,
+    FEATURE_AUDCHAN = 8,
+    FEATURE_UART    = 7,
+    FEATURE_PF_B    = 6,
+    FEATURE_BLIT    = 5,
+    FEATURE_COPP    = 4,
+    FEATURE_MONRES  = 0
+} feature_bit_t;
 
 // XR register / memory regions
 typedef enum logic [15:0] {
@@ -128,10 +148,10 @@ typedef enum logic [15:0] {
     // XR Memory Regions
     XR_TILE_ADDR        = 16'h4000,     // 0x4000-0x53FF 5K 16-bit words of tile memory
     XR_COLOR_ADDR       = 16'h8000,     // 0x8000-0x81FF 256 16-bit 0xXRGB color lookup playfield A & B
-    XR_COPPER_ADDR      = 16'hC000      // 0xC000-0xC7FF 1.5K 16-bit words copper memory
+    XR_COPPER_ADDR      = 16'hC000      // 0xC000-0xC5FF 1.5K 16-bit words copper memory
 } xr_region_t;
 
-// XR read/write registers/memory regions
+// XR read/write registers
 typedef enum logic [6:0] {
     // Video Config / Copper XR Registers
     XR_VID_CTRL     = 7'h00,            // (R /W) border color index/color swap
@@ -205,16 +225,6 @@ typedef enum logic [6:0] {
     // dummy
     XR_none         = 7'h7F             // dummy reg for simulation
 } xr_register_t;
-
-typedef enum integer {
-    AUD0_INTR       = 0,                // audio ready
-    AUD1_INTR       = 1,                // audio ready
-    AUD2_INTR       = 2,                // audio ready
-    AUD3_INTR       = 3,                // audio ready
-    VIDEO_INTR      = 4,                // v-blank or copper
-    TIMER_INTR      = 5,                // timer match
-    BLIT_INTR       = 6                 // blitter ready
-} intr_bit_t;
 
 localparam AUD_PER_RESTART_B    = 15;   // bit in AUDn_PERIOD to restart channel
 localparam AUD_LEN_TILEMEM_B    = 15;   // bit in AUDn_LENGTH to indicate sample in TILEMEM

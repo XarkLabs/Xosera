@@ -1,0 +1,38 @@
+{
+    "reg": [
+        {
+            "bits": 8,
+            "name": "UART read/write data byte",
+            "type": 2,
+            "attr": [
+                "check if RXF=1, then read data (which clears RXF)",
+                "check if TXF=0, then write data (which sets TXF)"
+            ]
+        },
+        {
+            "bits": 6,
+            "name": "0",
+            "type": 1
+        },
+        {
+            "bits": 1,
+            "name": "TXF",
+            "type": 4,
+            "attr": [
+                "TX",
+                "buffer",
+                "full"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "RXF",
+            "type": 3,
+            "attr": [
+                "RX",
+                "buffer",
+                "full"
+            ]
+        }
+    ],
+}

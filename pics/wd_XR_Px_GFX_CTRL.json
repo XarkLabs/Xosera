@@ -30,7 +30,7 @@
                 "00=1-bpp",
                 "01=4-bpp",
                 "10=8-bpp",
-                "11=(TBD)"
+                "11=reserved"
             ]
         },
         {
@@ -49,7 +49,8 @@
             "attr": [
                 "0=on",
                 " ",
-                "1=blanked"
+                "1=playfield",
+                "blanked"
             ]
         },
         {
@@ -57,8 +58,9 @@
             "name": "colorbase",
             "type": 4,
             "attr": [
-                "upper bits for color index",
-                "(when less than 8-bpp)"
+                "exclusive-OR'd with result playfield",
+                "color index as final step",
+                "before colormap look-up"
             ]
         }
     ],

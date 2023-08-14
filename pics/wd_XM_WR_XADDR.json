@@ -13,7 +13,7 @@
                 "5K-word tile/tilemap memory",
                 "256-word color A look-up memory",
                 "256-word color B look-up memory",
-                "1K-word copper program memory"
+                "1.5K-word copper memory"
             ]
         },
         {
@@ -29,7 +29,7 @@
                 "<tt>$4000-$53FF</tt>",
                 "<tt>$8000-$80FF</tt>",
                 "<tt>$8100-$81FF</tt>",
-                "<tt>$C000-$C3FF</tt>"
+                "<tt>$C000-$C5FF</tt>"
             ]
         }
     ],

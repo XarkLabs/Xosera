@@ -3,7 +3,7 @@
         {
             "bits": 4,
             "name": "monitor resolution",
-            "type": 4,
+            "type": 5,
             "attr": [
                 "0x0 = 640x480",
                 "0x1 = 848x480",
@@ -21,7 +21,7 @@
         {
             "bits": 1,
             "name": "BLIT",
-            "type": 6,
+            "type": 4,
             "attr": [
                 "blitter"
             ]
@@ -29,7 +29,7 @@
         {
             "bits": 1,
             "name": "PF_B",
-            "type": 2,
+            "type": 3,
             "attr": [
                 "2nd",
                 "playfield",
@@ -38,13 +38,16 @@
         },
         {
             "bits": 1,
-            "name": "0",
-            "type": 1
+            "name": "UART",
+            "type": 4,
+            "attr": [
+                "UART"
+            ]
         },
         {
-            "name": "audio channels",
             "bits": 4,
-            "type": 4,
+            "name": "audio channels",
+            "type": 3,
             "attr": [
                 "number of",
                 "audio channels",
@@ -52,9 +55,9 @@
             ]
         },
         {
-            "name": "config",
             "bits": 2,
-            "type": 3,
+            "name": "config",
+            "type": 5,
             "attr": [
                 "FPGA",
                 "config",

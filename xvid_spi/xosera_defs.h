@@ -71,7 +71,7 @@
 
 // SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
 // indirect with no offset)
-#define SYS_CTRL_MEM_BUSY_B  7        // (RO   )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_MEM_WAIT_B  7        // (RO   )  memory read/write operation pending (with contended memory)
 #define SYS_CTRL_BLIT_FULL_B 6        // (RO   )  blitter queue is full, do not write new operation to blitter registers
 #define SYS_CTRL_BLIT_BUSY_B 5        // (RO   )  blitter is still busy performing an operation (not done)
 #define SYS_CTRL_UNUSED_12_B 4        // (RO   )  unused (reads 0)
@@ -80,7 +80,7 @@
 #define SYS_CTRL_UNUSED_9_B  1        // (RO   )  unused (reads 0)
 #define SYS_CTRL_UNUSED_8_B  0        // (- /- )
 // SYS_CTRL bit flags
-#define SYS_CTRL_MEM_BUSY_F  0x80        // (RO   )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_MEM_WAIT_F  0x80        // (RO   )  memory read/write operation pending (with contended memory)
 #define SYS_CTRL_BLIT_FULL_F 0x40        // (RO   )  blitter queue is full (do not write to blitter registers)
 #define SYS_CTRL_BLIT_BUSY_F 0x20        // (RO   )  blitter is still busy performing an operation (not done)
 #define SYS_CTRL_UNUSED_12_F 0x10        // (RO   )  unused (reads 0)

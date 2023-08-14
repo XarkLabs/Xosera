@@ -21,43 +21,45 @@ While the FPGA design is adaptable, the current primary development focus is for
 
 Current Xosera features include:
 
-* VGA output at 640x480@60Hz or 848x480@60Hz (16:9 widescreen 480p)
-* Register based interface using 16 16-bit main registers (accessed 8-bits at a time)
-* 128KB of embedded main video RAM (limited by current modest FPGA)
-* 10KB of tile RAM for tilemaps or tile glyph definitions (or either can be stored in main VRAM)
-* Xosera memory accessed via multiple 16-bit read/write ports with auto-increment and nibble write masking
-* Dual 256 x 16-bit ARGB colormap RAM (16 "blend" values and 4096 colors), one colormap palette per video "playfield"
-* Dual overlaid video "playfields" with 4-levels of "alpha blending" or additive blending (wrapping or saturating)
-* 8x8 or 8x16 tile based display modes (with adjustable displayed height, e.g., for 8x11)
-* 1-bit tiled mode allows 256 8x8/8x16 glyphs (8-bit) and 16 forground/background colors (similar to PC text mode)
-* 4-bit and 8-bit tiled modes allow 1024 8x8 glyphs (10-bit), H and/or V mirroring and 16 colormap choices (similar to some consoles)
-* 1-bit bitmap mode with 16 forground/background color attribute byte (similar to bitmapped PC text mode)
-* 4 or 8-bit "chunky pixel" bitmap mode with 16 or 256 colors (128KB VRAM permitting, not enough for full bitmap at 256 colors)
-* Horizontal and/or vertical pixel replication, so pixel size can be from 1x1 up to 4x4 native pixels (e.g., for 320x240 mode)
-* Fractional horizontal and/or vertical scaling (e.g., to allow scaling to modes like 640x200 or 512x384 using non-uniform pixel size)
-* Smooth horizontal and vertical tile scrolling (native pixel scroll offset)
-* Amiga-inspired video-synchronized co-processor ("copper") to alter video display registers or colors on the fly
-* Rectangular bitmap "blitter" with support for logical operations, transparency, masking and shifting (~10 million words/sec)
-* C API that provides easy low-level register access (and transforms into efficient inline 68K assembly code)
-* GNU Make based build using the pre-built [YosysHQ OSS CAD Suite Builds](https://github.com/YosysHQ/oss-cad-suite-build/releases/latest) tested on Linux (Ubuntu 20.04 and also Ubuntu on RPi4 and RISC-V 64), Windows 10 and MacOS.
-* Fast Verilator simulation including SPI interface and using SDL2 for PNG screenshot of each video frame
-* Icarus Verilog simulation
+**Main Xosera Features:**
 
-Planned Xosera features TODO:
+- Uses low-cost FPGA instead of expensive semiconductor fabrication :D
+- 128KB of embedded video VRAM (16-bit words at 25/33 MHz)
+- CPU can read/write VRAM with separate read/write address and arbitrary increment
+- VGA output at 640x480 4:3 or 848x480 16:9 wide-screen (both ~60 Hz)
+- Pixel H/V repeat of 1x, 2x, 3x or 4x (e.g. for 320x240 or 424x240)
+- Fractional H/V repeat scaling (e.g. for 320x200 or 512x384 retro modes)
+- Dual independant video planes (playfields) with multiple 4-bit alpha blending modes
+- Dual 256 color palettes with 12-bit RGB (4096 colors) and 4-bit \"alpha\" value
+- Bitmap with 2 indexed colors (and attribute) as well as 16 and 256 indexed color modes
+- Graphic tile modes with 1024 8x8 glyphs, 16/256 colors and H/V tile mirror
+- VGA style text mode with 8x8 up to 8x16 font and 16 forground & background colors
+- Bitmap and tilemap screens can be at any VRAM address and word width
+- Smooth horizontal and vertical fine scrolling (at native pixel resolution)
+- 4 voice 8-bit wavetable audio with stereo/panning using DMA (very similar to Amiga)
+- Register based programming interface using 16 direct access 16-bit registers
+- Additional indirect read/write registers allows easy access to more registers and memories
+- Read/write tile memory for an additional 10KB of tile, tilemap or audio data
+- Fast 2-D \"blitter\" unit with transparency, masking, shifting and logic ops (and queue to reduce idle time)
+- Flexible screen synchronized \"copper\" CPU for pixel exact registers and memory modification
+- External interupt generation from multiple internal sources (vsync, audio, blitter, timer etc.)
+- 16-bit 0.1 ms free running timer and 8-bit interval timer with interrupt
+- [Xosera PCB available for rosco_m68k](https://www.tindie.com/products/rosco/xosera-fpga-video-r1/) (from Ross Bamford), powered by [UPduino v3](https://tinyvision.ai/products/upduino-v3-1) FPGA board
+- C API that provides easy low-level register access (and transforms into efficient inline 68K assembly code)
+- Make based build using [YosysHQ OSS CAD Suite Builds](https://github.com/YosysHQ/oss-cad-suite-build/releases/latest) on Linux and macOS (and likely Windows with WSL2 or MSYS2)
+- Fast Verilator simulation including SPI interface and using SDL2 for PNG screenshot of each video frame
+- Icarus Verilog simulation and test bench
 
-* DVI/HDMI output at 640x480@60Hz or 848x480@60Hz (16:9 widescreen 480p) using 1BitSquared DV PMOD (currently this _mostly works_, but is not 100% solid at this point - not exactly sure the issue).
-* 4 dual 8-bit (stereo) audio channels with full channel mixer for audio output similar to Amiga
-* At least one "cursor" sprite above video playfields (and ideally more, probably with 16 or 256 colors)
+Planned Xosera features (TODO):
 
-Possible improvements for the future:
+- DVI/HDMI output at 640x480@60Hz or 848x480@60Hz (16:9 widescreen 480p) using 1BitSquared DV PMOD (currently this _mostly works_, but is not 100% solid at this point - not exactly sure the issue).  It seems good testing design on iCEBreaker FPGA board.
+- At least one "cursor" sprite above video playfields (and ideally more, probably with 16 or 256 colors)
 
-* Convert VRAM to be 32-bit from current 16-bit width to allow more bandwidth per cycle
-* Treat VRAM as multiple banks to allow for more concurrent operations (probably minor win though)
-* Line-draw or polygon acceleration (but very "tight" on iCE40UP5K FPGA resources currently)
-* In the fullness of time, port to a larger FPGA (like Lattice ECP5) to support more VRAM and improved resolution and features
+![Self portrat showing 256 color bitmap](pics/Xosera_self_portrait.jpg )  
+A Self portrait picture of Xosera rendered in 320x240x8 bitmap mode
+
+![Xosera VT terminal ANSI Art Test](pics/Xosera_ANSI_art.jpg )  
+Rosco_m68k ANSI terminal firmware using Xosera to show ANSI art image
 
 ![Xosera 16-color 640x400 VGA Test](pics/Xosera_16_color_test.jpg)  
-Picture of Xosera 16-color 640x400 VGA Test
-
-![Early Xosera 848x480 DVI Font Test](pics/XoseraTest_848x480_DVI.jpg)  
-Picture of early Xosera 848x480 DVI Font Test (using iCEBreaker board)
+Picture of Xosera 16-color 320x200 test (classic Deluxe Paint image)

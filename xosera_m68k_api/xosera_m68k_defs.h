@@ -76,7 +76,7 @@
 
 // SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
 // indirect with no offset)
-#define SYS_CTRL_MEM_BUSY_B  7        // (RO   )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_MEM_WAIT_B  7        // (RO   )  memory read/write operation pending (with contended memory)
 #define SYS_CTRL_BLIT_FULL_B 6        // (RO   )  blitter queue is full, do not write new operation to blitter registers
 #define SYS_CTRL_BLIT_BUSY_B 5        // (RO   )  blitter is still busy performing an operation (not done)
 #define SYS_CTRL_UNUSED_12_B 4        // (RO   )  unused (reads 0)
@@ -85,7 +85,7 @@
 #define SYS_CTRL_UNUSED_9_B  1        // (RO   )  unused (reads 0)
 #define SYS_CTRL_UNUSED_8_B  0        // (- /- )
 // SYS_CTRL bit flags
-#define SYS_CTRL_MEM_BUSY_F  0x80        // (RO   )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_MEM_WAIT_F  0x80        // (RO   )  memory read/write operation pending (with contended memory)
 #define SYS_CTRL_BLIT_FULL_F 0x40        // (RO   )  blitter queue is full (do not write to blitter registers)
 #define SYS_CTRL_BLIT_BUSY_F 0x20        // (RO   )  blitter is still busy performing an operation (not done)
 #define SYS_CTRL_UNUSED_12_F 0x10        // (RO   )  unused (reads 0)
@@ -93,7 +93,6 @@
 #define SYS_CTRL_VBLANK_F    0x04        // (RO   )  video signal is in vertical blank period
 #define SYS_CTRL_UNUSED_9_F  0x02        // (RO   )  unused (reads 0)
 #define SYS_CTRL_UNUSED_8_F  0x01        // (- /- )
-
 // INT_CTRL bit numbers within word
 #define INT_CTRL_RECONFIG_B   15        // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
 #define INT_CTRL_BLIT_EN_B    14        // blitter ready interrupt mask
@@ -132,13 +131,18 @@
 #define INT_CTRL_AUD0_INTR_F  0x0001        // audio channel ready interrupt (read status, write acknowledge)
 #define INT_CTRL_AUD_ALL_F    0x000F        // all audio channels status/acknowledge
 #define INT_CTRL_CLEAR_ALL_F  0x007F        // clear all interrupts
-
+// UART status bit number within even byte of XM_UART
+#define UART_RXF_B 7           // UART receive buffer full (data waiting)
+#define UART_TXF_B 6           // UART transmit buffer full (busy transmitting data)
+#define UART_RXF_F 0x80        // UART receive buffer full (data waiting)
+#define UART_TXF_F 0x40        // UART transmit buffer full (busy transmitting data)
 // FEATURES bit numbers within word (for fields wider than 1 bit, XB_(xxx_B, xxx_W) macro can be used)
 #define FEATURES_MONRES_B  0         // rightmost bit number for 4-bit monitor mode field
 #define FEATURES_MONRES_W  4         // bit width for 4-bit monitor mode field
 #define FEATURES_COPP_B    4         // bit number indicating presence of COPPER
 #define FEATURES_BLIT_B    5         // bit number indicating presence of BLITTER
 #define FEATURES_PF_B_B    6         // bit number indicating presence of playfield B (2nd playfield)
+#define FEATURES_UART_B    7         // bit number indicating presence of debug UART
 #define FEATURES_AUDCHAN_B 8         // rightmost bit number for 4-bit audio channels field
 #define FEATURES_AUDCHAN_W 4         // bit width for 4-bit audio channels field
 #define FEATURES_CONFIG_B  12        // rightmost bit number for 4-bit FPGA config field
@@ -148,6 +152,7 @@
 #define FEATURES_COPP_F    0x0010        // bit flag indicating presence of COPPER
 #define FEATURES_BLIT_F    0x0020        // bit flag indicating presence of BLITTER
 #define FEATURES_PF_B_F    0x0040        // bit flag indicating presence of playfield B (2nd playfield)
+#define FEATURES_UART_F    0x0080        // bit flag indicating presence of debug UART
 #define FEATURES_AUDCHAN_F 0x0F00        // bit-mask for 4-bit audio channels field
 #define FEATURES_CONFIG_F  0xF000        // bit-mask for 4-bit config field
 

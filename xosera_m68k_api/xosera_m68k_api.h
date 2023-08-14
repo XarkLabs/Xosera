@@ -450,4 +450,16 @@ extern xosera_ptr_t xosera_ptr;
 // wait until scanout is not in horizontal blank (visible line on display)
 #define xwait_not_vblank() xwait_ctrl_bit_clear(VBLANK)
 
+// return true if ready to transmit character
+#define uart_send_ready() (!(xm_getbh(UART) & UART_TXF_B))
+
+// transmit UART character (call when uart_send_ready() returns true)
+#define uart_send_byte(byte) (xosera_ptr[(XM_UART) >> 2].b.l = (byte))
+
+// return true if RX character waiting
+#define uart_get_ready() (xm_getbh(UART) & UART_RXF_B)
+
+// return UART received character (call when uart_get_ready() returns true)
+#define uart_get_byte() (xosera_ptr[XM_UART >> 2].b.l)
+
 #endif        // XOSERA_M68K_API_H

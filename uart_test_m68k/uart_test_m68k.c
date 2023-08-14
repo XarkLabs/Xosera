@@ -84,19 +84,18 @@ void uart_test()
 
     while (1)
     {
-        uint8_t st = xm_getbh(UART);
-        if (st & 0x80)
+        if (uart_get_ready())
         {
-            uint8_t c = xm_getbl(UART);
-            sendchar(c);
+            uint8_t c = uart_get_byte();
+            sendchar(c);        // echo to rosco UART
         }
-        if (st & 0x40)
+        if (uart_send_ready())
         {
-            if (!*bp)
+            uart_send_byte(*bp++);
+            if (*bp == '\0')
             {
                 bp = blurb;
             }
-            xm_setbl(UART, *bp++);
         }
     }
 }

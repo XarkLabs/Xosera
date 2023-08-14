@@ -78,7 +78,7 @@ byte_t          reg_timer_countdown;    // 8-bit timer interrupt interval counte
 `ifdef EN_UART
 logic           uart_rd;
 logic           uart_wr;
-logic           uart_txe;
+logic           uart_txf;
 logic           uart_rxf;
 byte_t          uart_dout;
 byte_t          uart_din;
@@ -142,7 +142,7 @@ acia #(
     .tx_o(uart_txd_o),
     .din_i(uart_din),
     .dout_o(uart_dout),
-    .txe_o(uart_txe),
+    .txf_o(uart_txf),
     .rxf_o(uart_rxf),
     .rst_i(reset_i),
     .clk(clk)
@@ -242,30 +242,30 @@ always_comb begin
             rd_temp_word  = reg_data;
 `ifdef EN_UART
         xv::XM_UART:
-            rd_temp_word  = { uart_rxf, uart_txe, 6'b0, uart_dout };
+            rd_temp_word  = { uart_rxf, uart_txf, 6'b0, uart_dout };
 `else
         xv::XM_UNUSED_0C,
 `endif
         xv::XM_UNUSED_0D,
         xv::XM_UNUSED_0E,
         xv::XM_FEATURES:
-            rd_temp_word  = { 4'(xv::FPGA_CONFIG_NUM), 4'(xv::AUDIO_NCHAN), 1'b0,
+            rd_temp_word  =
+                (16'(xv::FPGA_CONFIG_NUM)   << xv::FEATURE_CONFIG)  |
+                (16'(xv::AUDIO_NCHAN)       << xv::FEATURE_AUDCHAN) |
+
+`ifdef EN_UART
+                (16'b1                      << xv::FEATURE_UART)    |
+`endif
 `ifdef EN_PF_B
-                1'b1,
-`else
-                1'b0,
+                (16'b1                      << xv::FEATURE_PF_B)    |
 `endif
 `ifdef EN_BLIT
-                1'b1,
-`else
-                1'b0,
+                (16'b1                      << xv::FEATURE_BLIT)    |
 `endif
 `ifdef EN_COPP
-                1'b1,
-`else
-                1'b0,
+                (16'b1                      << xv::FEATURE_COPP)    |
 `endif
-                4'(xv::VIDEO_MODE_NUM) };
+                (16'(xv::VIDEO_MODE_NUM)    << xv::FEATURE_MONRES);
 
     endcase
 end

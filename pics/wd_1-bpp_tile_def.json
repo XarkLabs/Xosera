@@ -2,42 +2,42 @@
     "reg": [
         {
             "bits": 1,
-            "name": "<tt>o 7</tt>",
+            "name": "o 7",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>o 6</tt>",
+            "name": "o 6",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>o 5</tt>",
+            "name": "o 5",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>o 4</tt>",
+            "name": "o 4",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>o 3</tt>",
+            "name": "o 3",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>o-2</tt>",
+            "name": "o 2",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>o 1</tt>",
+            "name": "o 1",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>o 0</tt>",
+            "name": "o 0",
             "type": 4,
             "attr": [
                 "two tile lines, even and odd with MSB even and on left"
@@ -45,42 +45,42 @@
         },
         {
             "bits": 1,
-            "name": "<tt>e 7</tt>",
+            "name": "e 7",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>e 6</tt>",
+            "name": "e 6",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>e 5</tt>",
+            "name": "e 5",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>e 4</tt>",
+            "name": "e 4",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>e 3</tt>",
+            "name": "e 3",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>e 2</tt>",
+            "name": "e 2",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>e 1</tt>",
+            "name": "e 1",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>e 0</tt>",
+            "name": "e 0",
             "type": 4
         }
     ],

@@ -5,11 +5,9 @@
             "name": "nibble shift",
             "type": 3,
             "attr": [
-                "shift word from",
-                "VRAM 0 to 3",
-                "4-bit nibbles",
-                "to the right",
-                "(or left if </tt>DECR</tt>"
+                "shift words",
+                "right 0 to 3",
+                "4-bit nibbles"
             ]
         },
         {
@@ -23,7 +21,8 @@
             "attr": [
                 "on last word of line",
                 "0=nibble unmodified",
-                "1=nibble overwritten"
+                "1=nibble overwritten",
+                "(right edge)"
             ]
         },
         {
@@ -33,7 +32,8 @@
             "attr": [
                 "on first word of line",
                 "0=nibble unmodified",
-                "1=nibble overwritten"
+                "1=nibble overwritten",
+                "(left edge)"
             ]
         }
     ],

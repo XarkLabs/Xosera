@@ -2,7 +2,7 @@
     "reg": [
         {
             "bits": 16,
-            "name": "modulo value added to <tt>S</tt> address at end of each line",
+            "name": "modulo value added to S address at end of each line",
             "type": 4
         }
     ],

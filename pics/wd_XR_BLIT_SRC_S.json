@@ -2,7 +2,7 @@
     "reg": [
         {
             "bits": 16,
-            "name": "source term <tt>S</tt> VRAM address or constant value (if <tt>constS</tt> set)",
+            "name": "source term S VRAM address or constant value (if constS set)",
             "type": 4,
             "attr": []
         }

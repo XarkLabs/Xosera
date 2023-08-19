@@ -54,7 +54,8 @@ This document is meant to provide the low-level reference register information t
     - [Playfield A \& B Control XR Registers Details](#playfield-a--b-control-xr-registers-details)
       - [Bitmap Display Formats](#bitmap-display-formats)
       - [Tile Display Formats](#tile-display-formats)
-      - [Final Color Index Selection and Look-Up](#final-color-index-selection-and-look-up)
+      - [Final Color Index Selection](#final-color-index-selection)
+      - [Color Look-up and Playfield Blending](#color-look-up-and-playfield-blending)
     - [2D Blitter Engine Operation](#2d-blitter-engine-operation)
       - [Logic Operation Applied to Blitter Operations](#logic-operation-applied-to-blitter-operations)
       - [Transparency Testing and Masking Applied to Blitter Operations](#transparency-testing-and-masking-applied-to-blitter-operations)
@@ -148,7 +149,7 @@ ___
 | `AUD1_INTR`  | `[1]`  | R/W  | interrupt pending for audio channel 1 ready                         |
 | `AUD0_INTR`  | `[0]`  | R/W  | interrupt pending for audio channel 0 ready                         |
 
-> :mag: **Xosera Reconfig:** Writing a 1 to bit `[15]` will immediately reset and reconfigure the Xosera FPGA into one of four FPGA configurations stored in flash memory.  Normally, default config #0 is standard VGA 640x480 and config #1 is 848x480 wide-screen 16:9 (the other configurations are user defined and config #0 is used if not present).  The new configuration is selected with bits `[1:0]` in `XM_SYS_CTRL` (low two VRAM mask bits) prior to setting the `RECONFIG` bit. Reconfiguration can take up to 100ms and during this period Xosera will be unresponsive (and no display will be generated, so monitor will blank).
+> :mag: **Xosera Reconfig:** Writing a 1 to bit `[15]` will immediately reset and reconfigure the Xosera FPGA into one of four FPGA configurations stored in flash memory.  Normally, default config #0 is standard VGA 640x480 and config #1 is 848x480 wide-screen 16:9 (the other configurations are user defined and it will fall back to config #0 on missing or invalid configurations).  The new configuration is selected with bits `[1:0]` in `XM_SYS_CTRL` (low two VRAM mask bits) prior to setting the `RECONFIG` bit. Reconfiguration can take up to 100ms and during this period Xosera will be unresponsive (and no display will be generated, so monitor will blank).
 
 #### 0x2 **`XM_TIMER`** (R/W) - Timer Functions
 
@@ -157,13 +158,12 @@ ___
 **Tenth millisecond timer / 8-bit countdown timer.**  
 
 **Read 16-bit timer, increments every 1/10<sup>th</sup> of a millisecond (10,000 Hz)**  
-Can be used for fairly accurate timing. Internal fractional value is maintined (so as accurate as FPGA clock).  Can be used for
-elapsed time up to ~6.5 seconds (or unlimited, if the cumulative elapsed time is updated at least as often as timer wrap value).
+Can be used for fairly accurate timing. Internal fractional value is maintined (so as accurate as FPGA clock).  Can be used for elapsed time up to ~6.5 seconds (or unlimited, if the cumulative elapsed time is updated at least as often as timer wrap value).
 
 > :mag: **`TIMER` atomic read:** To ensure an atomic 16-bit value, when the high byte of `TIMER` is read, the low byte is saved into an internal register and returned when `TIMER` low byte is read. Because of this, reading the full 16-bit `TIMER` register is recommended (or first even byte, then odd byte, or odd byte value may not be updated).
 
 **Write to set 8-bit countdown timer interval**  
-When written, the lower 8 bits sets a write-only 8-bit countdown timer interval.  Timer is decremented every 1/10<sup>th</sup> millisecond and when timer reaches zero an Xosera timer interrupt (`TIMER_INTR`) will be generated and the count will be reset.  This register setting has no effect on the `TIMER` read (only uses same 1/10<sup>th</sup> ms time-base).
+When written, the lower 8 bits sets a write-only 8-bit countdown timer interval.  Timer is decremented every 1/10<sup>th</sup>  millisecond and when timer reaches zero an Xosera timer interrupt (`TIMER_INTR`) will be generated and the count will be reset.  This register setting has no effect on the `TIMER` read (only uses same 1/10<sup>th</sup> ms time-base).
 
 > :mag: **8-bit countdown timer** interval can only be written (as a read will return the free running `TIMER` value).  It is only useful to generate an interrupt (or polling bit in `XM_INT_CTRL`)
 
@@ -174,9 +174,7 @@ When written, the lower 8 bits sets a write-only 8-bit countdown timer interval.
  **XR Register / Memory Read Address**
 
 **Extended register or memory address for data *read* via `XM_XDATA`**  
-Specifies the XR register or XR region address to be read or written via `XM_XDATA`.  As soon as this register is written,
-a 16-bit read operation will take place on the register or memory region specified (and the data wil be made available from
-`XM_XDATA`).
+Specifies the XR register or XR region address to be read or written via `XM_XDATA`.  As soon as this register is written, a 16-bit read operation will take place on the register or memory region specified (and the data wil be made available from `XM_XDATA`).
 
 #### 0x4 **`XM_WR_XADDR`** (R/W) - XR Write Address
 
@@ -184,7 +182,7 @@ a 16-bit read operation will take place on the register or memory region specifi
 
 **XR Register / Memory Write Address for data *written* to `XM_XDATA`**  
 Specifies the XR register or XR region address to be accessed via `XM_XDATA`.  
-The register ordering with `XM_WR_XADDR` followed by `XM_XDATA` allows a 32-bit write to set both the XR register/address `rrrr` and the immediate word value `XXXX`, similar to:  
+The register ordering with `XM_WR_XADDR` followed by `XM_XDATA` allows a 32-bit write to set both the XR register/address `rrrr`  and the immediate word value `XXXX`, similar to:  
 
 ```text
 MOVE.L #$rrrrXXXX,D0
@@ -196,10 +194,8 @@ MOVEP.L D0,XR_WR_XADDR(A1)
 <img src="./pics/wd_XM_XDATA.svg">
 
 **XR Register / Memory Read Data or Write Data**  
-Read XR register/memory value from `XM_RD_XADDR` or write value to `XM_WR_XADDR` and increment `XM_RD_XADDR`/`XM_WR_XADDR`,
-respectively.  
-When `XM_XDATA` is read, data pre-read from XR address `XM_RD_XADDR` is returned and then `XM_RD_XADDR` is incremented by
-one and pre-reading the next word begins.  
+Read XR register/memory value from `XM_RD_XADDR` or write value to `XM_WR_XADDR` and increment `XM_RD_XADDR`/`XM_WR_XADDR`, respectively.  
+When `XM_XDATA` is read, data pre-read from XR address `XM_RD_XADDR` is returned and then `XM_RD_XADDR` is incremented by one and pre-reading the next word begins.  
 When `XM_XDATA` is written, value is written to XR address `XM_WR_XADDR` and then `XM_WR_XADDR` is incremented by one.
 
 #### 0x6 **`XM_RD_INCR`** (R/W) - Increment for VRAM Read Address
@@ -236,16 +232,14 @@ Allows quickly writing to Xosera VRAM via `XM_DATA`/`XM_DATA_2` when using a fix
 <img src="./pics/wd_XM_WR_ADDR.svg">
 
  **VRAM *write* address for `XM_DATA`/`XM_DATA_2`**  
-Specifies VRAM address used when writing to VRAM via `XM_DATA`/`XM_DATA_2`. Writing a value here does
-not cause any VRAM access (which happens when data *written* to `XM_DATA` or `XM_DATA_2`).
+Specifies VRAM address used when writing to VRAM via `XM_DATA`/`XM_DATA_2`. Writing a value here does not cause any VRAM access (which happens when data *written* to `XM_DATA` or `XM_DATA_2`).
 
 #### 0xA **`XM_DATA`** (R+/W+) - VRAM Read/Write Data
 
 <img src="./pics/wd_XM_DATA.svg">
 
 **VRAM memory value *read* from `XM_RD_ADDR` or value to *write* to `XM_WR_ADDR`**  
-When `XM_DATA` is read, data from VRAM at `XM_RD_ADDR` is returned and `XM_RD_INCR` is added to `XM_RD_ADDR` and pre-reading the
-new VRAM address begins.  
+When `XM_DATA` is read, data from VRAM at `XM_RD_ADDR` is returned and `XM_RD_INCR` is added to `XM_RD_ADDR` and pre-reading the new VRAM address begins.  
 When `XM_DATA` is written, the value is written to VRAM at `XM_WR_ADDR` and `XM_WR_INCR` is added to `XM_WR_ADDR`.
 
 #### 0xB **`XM_DATA_2`** (R+/W+) - VRAM Read/Write Data (2nd)
@@ -253,8 +247,7 @@ When `XM_DATA` is written, the value is written to VRAM at `XM_WR_ADDR` and `XM_
 <img src="./pics/wd_XM_DATA.svg">
 
 **VRAM memory value *read* from `XM_RD_ADDR` or value to *write* to `XM_WR_ADDR`**  
-When `XM_DATA_2` is read, data from VRAM at `XM_RD_ADDR` is returned and `XM_RD_INCR` is added to `XM_RD_ADDR` and pre-reading the
-new VRAM address begins.  
+When `XM_DATA_2` is read, data from VRAM at `XM_RD_ADDR` is returned and `XM_RD_INCR` is added to `XM_RD_ADDR` and pre-reading the new VRAM address begins.  
 When `XM_DATA_2` is written, the value is written to VRAM at `XM_WR_ADDR` and `XM_WR_INCR` is added to `XM_WR_ADDR`.
 > :mag: **`XM_DATA_2`** This register is treated *identically* to `XM_DATA` and is intended to allow for 32-bit "long" `MOVEP.L` transfers to/from `XM_DATA` for additional transfer speed (back-to-back 16-bit data transfers with one instruction).
 
@@ -588,17 +581,19 @@ mirroring.
 In 2 or 4 BPP the tile definition is the same as the corresponding bitmap mode, using 64 contiguous pixels for each 8x8 tile.  
 Each 4-BPP tile is 16 words and 8-bpp tile is 32 words (a total of 32KiB or 64KiB respectively, with 1024 glyphs).
 
-#### Final Color Index Selection and Look-Up
+#### Final Color Index Selection
 
 In *all* of the above bitmap or tile modes for every native pixel (even border or blanked pixels), a color index is formed and used to look-up the final 16-bit ARGB color blended with the other playfield to form the color on the screen.  The final index for each playfield to look-up in its colormap is first exclusive-OR'd with the playfields respective `XR_Px_GFX_CTRL[15:8]` 8-bit "colorbase" value.  This allows utilization of the the entire colormap, even on formats that have less than 8-BPP and no "color index" offset attribute (and also useful as an additional color index modifier, even with an 8-BPP index).
 
 E.g., if a playfield mode produced a color index of `0x07`, and the playfield `XR_Px_GFX_CTRL[15:8]` colorbase had a value `0x51`, a final index of `0x07` XOR `0x51` = `0x56` would be used for the colormap look-up.
 
+#### Color Look-up and Playfield Blending
+
 ___
 
 ### 2D Blitter Engine Operation
 
-The Xosera blitter is a VRAM data read/write "engine" that operates on 16-bit words in VRAM to copy, fill and do logic operations on arbitrary two-dimensional rectangular areas of Xosera VRAM (i.e., to draw, copy and manipulate "chunky" 4/8 bit pixel bitmap images). It supports a VRAM source and destination. The source can also be set to a constant. It repeats a basic word length operation for each "line" of a rectanglar area, and at the end of each line adds "modulo" values to source and destination addresses (to position source and destination for next line). It also has a "nibble shifter" that can shift a line of word data 0 to 3 nibbles to allow for pixel level positioning and drawing. There are also first and last word edge transparency masks, to remove unwanted pixels from the words at the start end end line allowing for arbitrary pixel sized rectangular operations. There is a fixed logic equation with ANDC and XOR terms (a combination of which can set, clear, invert or pass through any source color bits). This also works in conjunction with "transparency" testing that can mask-out specified 4-bit or 8-bit pixel values when writing. This transparency masking allows specified nibbles in a word to remain unaltered when the word is overwritten (without read-modify-write VRAM access, and no speed penalty). The combination of these features allow for many useful graphical "pixel" operations to be performed in a single pass (copying, masking, shifting and logical operations).
+The Xosera "blitter" is a simple VRAM data read/write "engine" that operates on 16-bit words in VRAM to copy, fill and do logic operations on arbitrary two-dimensional rectangular areas of Xosera VRAM (i.e., to draw, copy and manipulate "chunky" 4/8 bit pixel bitmap images). It supports a VRAM source and destination. The source can also be set to a constant. It repeats a basic word length operation for each "line" of a rectanglar area, and at the end of each line adds arbitrary "modulo" values to source and destination addresses (to position source and destination for the start of the next line). It also has a "nibble shifter" that can shift a line of word data 0 to 3 4-bit nibbles to allow for 4-bit/8-bit pixel level positioning and drawing. There are also first and last word edge transparency masks, to remove unwanted pixels from the words at the start and end of each line allowing for arbitrary pixel sized rectangular operations. There is a fixed logic equation with ANDC and XOR terms (a combination of which can set, clear, invert or pass through any source color bits). This also works in conjunction with "transparency" testing that can mask-out specified 4-bit or 8-bit pixel values when writing. This transparency masking allows specified nibbles in a word to remain unaltered when the word is overwritten (without read-modify-write VRAM access, and no speed penalty). The combination of these features allow for many useful graphical "pixel" operations to be performed in a single pass (copying, masking, shifting and logical operations).  To minimize idle time between blitter operations (during CPU setup), there is a one deep queue for operations (an interrupt can also be generated when the queue becomes empty).
 
 ___
 
@@ -616,30 +611,22 @@ ___
 - `XOR` constant XOR source word
   - source word is XOR'd with the this word
 
-Address values (`XR_BLIT_SRC_S`, `XR_BLIT_DST_D`) will be incremented each word and the `XR_BLIT_MOD_S` and `XR_BLIT_MOD_D`
-will be added at the end of each line (in a 2-D blit operation).
+Address values (`XR_BLIT_SRC_S`, `XR_BLIT_DST_D`) will be incremented each word and the `XR_BLIT_MOD_S` and `XR_BLIT_MOD_D` will be added at the end of each line (in a 2-D blit operation).
 
 #### Transparency Testing and Masking Applied to Blitter Operations
 
-&nbsp;&nbsp;&nbsp;4-bit mask `M = (S != {T})` where `T` is even/odd transparency nibbles or an 8-bit transparent value
-(for 8-bit pixel mode)
+&nbsp;&nbsp;&nbsp;4-bit mask `M = (S != {T})` where `T` is even/odd transparency nibbles or an 8-bit transparent value (for 8-bit pixel mode)
 
 - `M` transparency result is 0 for transparent nibbles (ones that will not be altered in the destination word).
 - `S` source word used in logical operation above
   - Either read from VRAM or a constant (when `S_CONST` set in `XR_BLIT_CTRL`)
 - `T` transparency constant nibble pair/byte set in upper byte of `XR_BLIT_CTRL`
 
-Transparency testing is enabled with `TRANSP` in `XR_BLIT_CTRL`.  When enabled a 4-bit nibble transparency mask will be set in
-two-bit pairs for 8-bit pixels when `TRANSP_8B` set in `XR_BLIT_CTRL` (both bits zero only when both nibbles of the transparency
-test are zero, otherwise both one). This allows any 4-bit or 8-bit pixel value in `S` to be considered transparent.  
+Transparency testing is enabled with `TRANSP` in `XR_BLIT_CTRL`.  When enabled a 4-bit nibble transparency mask will be set in two-bit pairs for 8-bit pixels when `TRANSP_8B` set in `XR_BLIT_CTRL` (both bits zero only when both nibbles of the transparency test are zero, otherwise both one). This allows any 4-bit or 8-bit pixel value in `S` to be considered transparent.
 
 #### Nibble Shifting and First/Last Word Edge Masking
 
-The `BLIT_SHIFT` register controls the nibble shifter that can shift 0 to 3 pixels to the right (or to the left in
-`DECR` mode). Pixels shifted out of a word, will be shifted into the next word. There are also first and last word 4-bit
-masks to mask unwanted pixels on the edges of a rectangle (when not word aligned, and pixels shifted off the end of the
-previous line). When drawing in normal increment mode, the first word mask will trim pixels on the left edge and the
-last word mask the right edge (or both at once for single word width).
+The `BLIT_SHIFT` register controls the nibble shifter that can shift 0 to 3 pixels to the right (or to the left in `DECR` mode). Pixels shifted out of a word, will be shifted into the next word. There are also first and last word 4-bit masks to mask unwanted pixels on the edges of a rectangle (when not word aligned, and pixels shifted off the end of the previous line). When drawing in normal increment mode, the first word mask will trim pixels on the left edge and the last word mask the right edge (or both at once for single word width).
 
 #### Blitter Operation Status
 
@@ -651,14 +638,13 @@ The blitter provides two bits of status information that can be read from the XM
   operation in progress and one queued in registers. Use this bit to check if the blitter is ready to have a new
   operation stored into its registers (so it can stay busy, without idle pauses while a new operation is setup).
 
-The biltter will also generate an Xosera interrupt with interrupt source #1 each time each blit operation is completed
-(when interrupt source #1 mask is 1 in `XM_SYS_CTRL`).
+The biltter will also generate an Xosera interrupt with interrupt source #1 each time each blit operation is completed (which will be masked unless interrupt source #1 mask bit is set in `XM_SYS_CTRL`).
 
 ### 2D Blitter Engine XR Registers Summary
 
 | Reg # | Name            | R/W  | Description                                                          |
 |-------|-----------------|------|----------------------------------------------------------------------|
-| 0x20  | `XR_BLIT_CTRL`  | -/W  | blitter control (transp value, transp_8b, transp, S_const)           |
+| 0x20  | `XR_BLIT_CTRL`  | -/W  | blitter control (transparency value, transp_8b, transp, S_const)     |
 | 0x21  | `XR_BLIT_ANDC`  | -/W  | `ANDC` AND-COMPLEMENT constant value                                 |
 | 0x22  | `XR_BLIT_XOR`   | -/W  | `XOR` XOR constant value                                             |
 | 0x23  | `XR_BLIT_MOD_S` | -/W  | end of line modulo value added to `S` address                        |
@@ -667,7 +653,7 @@ The biltter will also generate an Xosera interrupt with interrupt source #1 each
 | 0x26  | `XR_BLIT_DST_D` | -/W  | `D` destination write VRAM address                                   |
 | 0x27  | `XR_BLIT_SHIFT` | -/W  | first and last word nibble masks and nibble shift amount (0-3)       |
 | 0x28  | `XR_BLIT_LINES` | -/W  | number of lines minus 1, (repeats blit word count after modulo calc) |
-| 0x29  | `XR_BLIT_WORDS` | -/W+ | word count minus 1 per line (write starts blit operation)            |
+| 0x29  | `XR_BLIT_WORDS` | -/W+ | word count minus 1 per line (write queues blit operation)            |
 | 0x2A  | `XR_BLIT_2A`    | -/-  | RESERVED                                                             |
 | 0x2B  | `XR_BLIT_2B`    | -/-  | RESERVED                                                             |
 | 0x2C  | `XR_BLIT_2C`    | -/-  | RESERVED                                                             |
@@ -775,20 +761,16 @@ pixel is masked by either the left mask, right mask or is considered transparent
 
 <img src="./pics/wd_XR_BLIT_LINES.svg">
 
-**15-bit number of lines high - 1 (1 to 32768)**  
+**15-bit number of lines high - 1 (or 0 to 32767 representing 1 to 32768)**  
 Number of times to repeat blit operation minus one. Typically source image height with modulo values advancing addresses
-for the next line to be drawn).
+for the next line of source and destination).  If `XR_BLIT_LINES` is zero (representing 1 line), then the blitter will effectively do a "1-D" linear operation on `XR_BLIT_WORDS` of data (useful to copy or fill contiguous VRAM words).
 
 **0x29 `XR_BLIT_WORDS`** (-/W) - write starts operation, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times)
 
 <img src="./pics/wd_XR_BLIT_WORDS.svg">
 
 **write starts blit, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times))**  
-Write starts blit operation, you should check `BLIT_FULL` bit in `XM_SYS_CTRL` to make sure the blitter is ready to
-accept a new operation (it supports one operation in progress and one operation queued to start - after that it reports
-`BLIT_FULL` true and you should wait before altering any BLIT registers).  
-To check if all blit operation has completely finished (and no operations queued), you can check the `BLIT_BUSY`
-bit in `XM_SYS_CTRL` which will read true until the blit operation has come to a complete stop.
+Write to `XR_BLIT_WORDS` queues blit operation which either starts immediately (if blitter not busy), or will start when current operation completes. Before writing to any blitter registers, check `BLIT_FULL` bit in `XM_SYS_CTRL` to make sure the blitter is ready to accept a new operation.  The blitter supports one operation currently in progress and one operation queued up to start.  Once it has an operation queued  it reports `BLIT_FULL` (which means to wait before altering any BLIT registers). To check if all blit operation has completely finished (and no operations queued), you can check the `BLIT_BUSY` bit in `XM_SYS_CTRL` which will read true until the blit operation has come to a complete stop (e.g., when you want to use the result of a blitter operation and need to be sure it has completed).
 
 ___
 

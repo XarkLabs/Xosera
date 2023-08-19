@@ -2,22 +2,22 @@
     "reg": [
         {
             "bits": 1,
-            "name": "<tt>7</tt>",
+            "name": "pix 7",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>6</tt>",
+            "name": "pix 6",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>5</tt>",
+            "name": "pix 5",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>4</tt>",
+            "name": "pix 4",
             "type": 4,
             "attr": [
                 "one bit per pixel, MSB on left"
@@ -25,22 +25,22 @@
         },
         {
             "bits": 1,
-            "name": "<tt>3</tt>",
+            "name": "pix 3",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>2</tt>",
+            "name": "pix 2",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>1</tt>",
+            "name": "pix 1",
             "type": 4
         },
         {
             "bits": 1,
-            "name": "<tt>0</tt>",
+            "name": "pix 0",
             "type": 4
         },
         {

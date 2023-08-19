@@ -5,7 +5,7 @@
             "name": "tile index",
             "type": 4,
             "attr": [
-                "0 - 1023 glyph index"
+                "0 - 1023 tile glyph index"
             ]
         },
         {

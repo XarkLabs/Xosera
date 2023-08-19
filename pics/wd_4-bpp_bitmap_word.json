@@ -2,17 +2,17 @@
     "reg": [
         {
             "bits": 4,
-            "name": "<tt>3</tt>",
+            "name": "pixel 3",
             "type": 4
         },
         {
             "bits": 4,
-            "name": "<tt>2</tt>",
+            "name": "pixel 2",
             "type": 4
         },
         {
             "bits": 4,
-            "name": "<tt>1</tt>",
+            "name": "pixel 1",
             "type": 4,
             "attr": [
                 "4 bits per pixel, MSB on left"
@@ -20,7 +20,7 @@
         },
         {
             "bits": 4,
-            "name": "<tt>0</tt>",
+            "name": "pixel 0",
             "type": 4
         }
     ],

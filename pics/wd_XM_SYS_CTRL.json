@@ -5,10 +5,10 @@
             "name": "VRAM nibble write mask",
             "type": 2,
             "attr": [
-                "<tt>XM_DATA/XM_DATA_2</tt>",
+                "XM_DATA/XM_DATA_2",
                 "VRAM word nibble mask",
-                "<tt>0</tt>=mask write to nibble",
-                "<tt>1</tt>=allow write to nibble"
+                "0=mask write to nibble",
+                "1=allow write to nibble"
             ]
         },
         {
@@ -28,8 +28,8 @@
             "attr": [
                 "in",
                 "V-blank",
-                "<tt>0</tt>=no",
-                "<tt>1</tt>=yes"
+                "0=no",
+                "1=yes"
             ]
         },
         {
@@ -39,8 +39,8 @@
             "attr": [
                 "in",
                 "H-blank",
-                "<tt>0</tt>=no",
-                "<tt>1</tt>=yes"
+                "0=no",
+                "1=yes"
             ]
         },
         {
@@ -55,8 +55,8 @@
             "attr": [
                 "blit",
                 "working",
-                "<tt>0</tt>=idle",
-                "<tt>1</tt>=busy"
+                "0=idle",
+                "1=busy"
             ]
         },
         {
@@ -66,8 +66,8 @@
             "attr": [
                 "blit",
                 "queue",
-                "<tt>0</tt>=ready",
-                "<tt>1</tt>=wait"
+                "0=ready",
+                "1=wait"
             ]
         },
         {
@@ -76,9 +76,9 @@
             "type": 2,
             "attr": [
                 "memory",
-                "ready",
-                "<tt>0</tt>=ready",
-                "<tt>1</tt>=wait"
+                "wait",
+                "0=ready",
+                "1=wait"
             ]
         }
     ],

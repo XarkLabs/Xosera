@@ -79,6 +79,7 @@ localparam TILE2_W  = 10;               // 1K words extra tile mem
 localparam COPP_W   = 11;               // 1K words copper mem (and bit for extra 512 words)
 localparam COPP2_W  = 9;                // 512 words extra copper mem
 localparam COLOR_W  = 8;                // 256 words color table mem (per playfield)
+localparam POINTER_W= 8;                // 256 words pointer mem (32x32 4-bpp)
 localparam AUDIO_W  = 8;                // 256 words audio parameter mem
 localparam CHAN_W   = $clog2(AUDIO_NCHAN); // bits needed for AUDIO_NCHAN
 
@@ -647,6 +648,7 @@ typedef logic [xv::VRAM_W-1:0]                  addr_t;         // vram or xmem 
 typedef logic [xv::TILE_W-1:0]                  tile_addr_t;    // tile address
 typedef logic [xv::COPP_W-1:0]                  copp_addr_t;    // copper address
 typedef logic [xv::COLOR_W-1:0]                 color_t;        // color look up index
+typedef logic [xv::POINTER_W-1:0]               pointer_t;      // pointer image mem addr
 
 typedef logic [$clog2(xv::TOTAL_WIDTH)-1:0]     hres_t;         // horizontal coordinate types
 typedef logic [$clog2(xv::TOTAL_HEIGHT)-1:0]    vres_t;         // vertical coordinate types

@@ -471,7 +471,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(SYS_CTRL, 0x000F),        // write mask
 
     XREG_SETW(POINTER_H, 300),
-    XREG_SETW(POINTER_V, 0xF000 | 200),
+    XREG_SETW(POINTER_V, 0x0000 | 200),
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),

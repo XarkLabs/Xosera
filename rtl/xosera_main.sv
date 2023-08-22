@@ -80,6 +80,10 @@ argb_t                  colorB_xrgb;        // pf B ARGB output
 `else
 logic unused_pf = &{ 1'b0, colorA_xrgb[15:12] }; // unused alpha
 `endif
+`ifdef EN_POINTER
+pointer_t               pointer_addr;
+word_t                  pointer_data;
+`endif
 
 //  VRAM read output data (for vgen, regs, blit)
 word_t                  vram_data_out;
@@ -248,6 +252,10 @@ video_gen video_gen(
 `ifdef EN_PF_B
     .colorB_index_o(colorB_index),
 `endif
+`ifdef EN_POINTER
+    .pointer_addr_o(pointer_addr),
+    .pointer_data_i(pointer_data),
+`endif
     .hsync_o(hsync),
     .vsync_o(vsync),
     .dv_de_o(dv_de),
@@ -377,6 +385,13 @@ xrmem_arb xrmem_arb(
     .vgen_colorB_data_o(colorB_xrgb),
     .vgen_colorB_addr_i(colorB_index),
 `endif
+
+`ifdef EN_POINTER
+    // pointer image sprite
+    .pointer_addr_i(pointer_addr),
+    .pointer_data_o(pointer_data),
+`endif
+
 
     // video generation tilemem bus (read-only)
     .vgen_tile_sel_i(vgen_tile_sel),

@@ -2600,8 +2600,8 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
         uint32_t clk_hz = xosera_vid_width() > 640 ? 33750000 : 25125000;
         uint16_t period = (clk_hz + rate - 1) / rate;
 
-        uint16_t ic = xm_getw(INT_CTRL);
-        xm_setw(INT_CTRL, ic | INT_CTRL_CLEAR_ALL_F);
+        uint16_t ic = xm_getbl(INT_CTRL);
+        xm_setbl(INT_CTRL, INT_CTRL_CLEAR_ALL_F);
         uint16_t ic2 = xm_getw(INT_CTRL);
         dprintf("INT_CTRL:0x%04x -> 0x%04x\n", ic, ic2);
 
@@ -2610,7 +2610,7 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
             uint16_t vo = v << 2;
             ic          = xm_getw(INT_CTRL);
             dprintf("Starting channel %d... INT_CTRL = 0x%04x\n", v, ic);
-            xm_setw(INT_CTRL, (INT_CTRL_AUD0_INTR_F << v));        // clear voice interrupt status
+            xm_setbl(INT_CTRL, (INT_CTRL_AUD0_INTR_F << v));        // clear voice interrupt status
             if (v & 1)
             {
                 xreg_setw(AUD0_VOL + vo, 0x4020);
@@ -2631,7 +2631,7 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
             xreg_setw(AUD0_LENGTH + vo, SILENCE_LEN);        // length-1 and TILE flag
             xreg_setw(AUD0_START + vo, SILENCE_ADDR);        // queue silence
 
-            xm_setw(INT_CTRL, (INT_CTRL_AUD0_INTR_F << v));        // clear voice interrupt status
+            xm_setbl(INT_CTRL, (INT_CTRL_AUD0_INTR_F << v));        // clear voice interrupt status
 
             ic2 = xm_getw(INT_CTRL);
 
@@ -2717,7 +2717,7 @@ static void test_audio_ping_pong()
     pingpong_length[0] = (pingpong_length[0] >> 1) - 1;
     pingpong_length[1] = (pingpong_length[1] >> 1) - 1;
 
-    xm_setw(INT_CTRL, 0xf);
+    xm_setbl(INT_CTRL, 0xf);
     uint16_t plays = 0;
     uint16_t ic;
     while (plays < 200)
@@ -2738,7 +2738,7 @@ static void test_audio_ping_pong()
                 xreg_setw(AUD0_VOL + vo, pp ? 0x8010 : 0x1080);
                 xreg_setw(AUD0_PERIOD + vo, p);
 
-                xm_setw(INT_CTRL, vb);
+                xm_setbl(INT_CTRL, vb);
 
                 xr_pos(0, 8 + v);
                 xr_printf("%d #%3d Play %s %4d", v, plays, pp ? "pong" : "ping", p);
@@ -2749,7 +2749,7 @@ static void test_audio_ping_pong()
         }
         delay_check(1);
     }
-    xm_setw(INT_CTRL, 0xF);
+    xm_setbl(INT_CTRL, 0xF);
     do
     {
         ic = xm_getw(INT_CTRL);
@@ -2997,7 +2997,6 @@ void     xosera_test()
     }
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
-
 #if 1
     uint16_t ic = xm_getw(INT_CTRL);
     dprintf("Installing interrupt handler.  INT_CTRL=0x%04x\n", ic);
@@ -3033,8 +3032,276 @@ void     xosera_test()
 #if COPPER_TEST
             install_copper();
 #endif
+#if 1
+            uint16_t ic = xm_getw(INT_CTRL);
+            dprintf("Installing interrupt handler.  INT_CTRL=0x%04x\n", ic);
+            install_intr();
+            ic = xm_getw(INT_CTRL);
+            dprintf("Done.                          INT_CTRL=0x%04x\n", ic);
+
+#else
+            dprintf("NOT Installing interrupt handler\n");
+#endif
             cpu_delay(1000);        // give monitor time to adjust with grey screen (vs black)
         }
+
+        xmem_set_addr(XR_POINTER_ADDR);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xf000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x0000);
+        xmem_setw_next(0x000f);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
+        xmem_setw_next(0xffff);
 
         dprintf("\n*** xosera_test_m68k iteration: %u, running %u:%02u:%02u\n", test_count++, h, m, s);
 
@@ -3075,6 +3342,18 @@ void     xosera_test()
         dprintf("PA_HV_SCROLL: 0x%04x  PA_HV_FSCALE: 0x%04x\n", hvscroll, hvfscale);
         dprintf("\n");
 
+        if (monwidth > 640)
+        {
+            xreg_setw(POINTER_H, 240 - 6);
+            xreg_setw(POINTER_V, 0xF000 | 0);
+        }
+        else
+        {
+            xreg_setw(POINTER_H, 160 - 6);
+            xreg_setw(POINTER_V, 0xF000 | 0);
+        }
+
+
 #if COPPER_TEST
         //        if (test_count & 2)
         {
@@ -3114,9 +3393,6 @@ void     xosera_test()
         xreg_setw(PA_HV_SCROLL, 0x0000);
         xreg_setw(PA_HV_FSCALE, 0x0000);
 
-
-        xreg_setw(POINTER_H, 300);
-        xreg_setw(POINTER_V, 0xF000 | 200);
 
         xcls();
 

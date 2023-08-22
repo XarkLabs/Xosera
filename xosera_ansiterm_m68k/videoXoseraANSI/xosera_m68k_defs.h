@@ -40,6 +40,8 @@
 #define XR_COLOR_A_SIZE 0x0100        //                     256 x 16-bit words (0xARGB)
 #define XR_COLOR_B_ADDR 0x8100        // (R/W) 0x8100-0x81FF B 256 entry color lookup memory
 #define XR_COLOR_B_SIZE 0x0100        //                     256 x 16-bit words (0xARGB)
+#define XR_POINTER_ADDR 0x8200        // (-/W) 0x8200-0x82FF 256 word 32x32 4-bpp pointer image
+#define XR_POINTER_SIZE 0x0100        //                     256 x 16-bit words (4-bit pixels)
 #define XR_COPPER_ADDR  0xC000        // (R/W) 0xC000-0xC5FF copper memory (16-bit words)
 #define XR_COPPER_SIZE  0x0600        //                     1024+512 x 16-bit copper memory words
 

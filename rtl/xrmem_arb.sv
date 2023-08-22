@@ -44,6 +44,11 @@ module xrmem_arb(
     output      argb_t                  vgen_colorB_data_o,
 `endif
 
+`ifdef EN_POINTER
+    input  wire pointer_t               pointer_addr_i,
+    output      word_t                  pointer_data_o,
+`endif
+
     // video generation tilemem bus (read-only)
     input  wire logic                   vgen_tile_sel_i,
     input  wire tile_addr_t             vgen_tile_addr_i,
@@ -66,6 +71,9 @@ argb_t                          colorA_data_out ;
 `ifdef EN_PF_B
 logic [xv::COLOR_W-1:0]         colorB_addr;
 argb_t                          colorB_data_out;
+`endif
+`ifdef EN_PF_B
+word_t                          pointer_data_out;
 `endif
 
 // internal TILEMEM signals
@@ -127,6 +135,10 @@ assign  vgen_tile_data_o    = !tile_addr[xv::TILE_W-1] ? tile_data_out : tile2_d
 `ifdef EN_COPP
 assign  copp_prog_data_o    = !copp_addr[xv::COPP_W-1] ? copp_data_out : copp2_data_out; ;
 `endif
+`ifdef EN_POINTER
+assign  pointer_data_o      = pointer_data_out;
+`endif
+
 
 // decode flags for XR interface
 assign  xr_regs_sel     = (xr_addr_i[15:14] == xv::XR_CONFIG_REGS[15:14]);
@@ -296,7 +308,11 @@ colormem #(
     .rd_address_i(colorA_addr),
     .rd_data_o(colorA_data_out),
     .wr_clk(clk),
-    .wr_en_i(color_wr_en & ~xr_addr[xv::COLOR_W]),
+    .wr_en_i(color_wr_en & ~xr_addr[xv::COLOR_W]
+`ifdef EN_POINTER
+    & ~xr_addr[xv::COLOR_W+1]
+`endif
+    ),
     .wr_address_i(xr_addr[xv::COLOR_W-1:0]),
     .wr_data_i(xr_write_data)
 );
@@ -311,8 +327,25 @@ colormem #(
     .rd_address_i(colorB_addr),
     .rd_data_o(colorB_data_out),
     .wr_clk(clk),
-    .wr_en_i(color_wr_en & xr_addr[xv::COLOR_W]),
+    .wr_en_i(color_wr_en & xr_addr[xv::COLOR_W]
+`ifdef EN_POINTER
+    & ~xr_addr[xv::COLOR_W+1]
+`endif
+    ),
     .wr_address_i(xr_addr[xv::COLOR_W-1:0]),
+    .wr_data_i(xr_write_data)
+);
+`endif
+
+`ifdef EN_POINTER
+// pointer image RAM (32x32 4-bpp)
+pointermem pointermem(
+    .clk(clk),
+    .rd_address_i(pointer_addr_i),
+    .rd_data_o(pointer_data_out),
+    .wr_clk(clk),
+    .wr_en_i(color_wr_en & xr_addr[xv::COLOR_W+1]),
+    .wr_address_i(xr_addr[xv::POINTER_W-1:0]),
     .wr_data_i(xr_write_data)
 );
 `endif

@@ -48,6 +48,10 @@ module video_gen (
 `ifdef EN_PF_B
     output      color_t         colorB_index_o,         // color palette index output (16x256)
 `endif
+`ifdef EN_POINTER
+    output      pointer_t       pointer_addr_o,         // pointer image address (32x32 4-bpp)
+    input  wire word_t          pointer_data_i,         // pointer image data
+`endif
     output      logic           vsync_o, hsync_o,       // video sync outputs
     output      logic           dv_de_o,                // video active signal (needed for HDMI)
 `ifdef EN_AUDIO
@@ -681,7 +685,6 @@ localparam          POINTER_HEIGHT   = 32;
 localparam          CURSH_W         = $clog2(POINTER_WIDTH);
 localparam          CURSV_W         = $clog2(POINTER_HEIGHT);
 
-word_t              pointer_data;        // data word from pointer memory
 word_t              pointer_word;        // current data word (nibble shifting left)
 logic [CURSH_W:0]   pointer_h_cnt;       // extra bit for POINTER_WIDTH+3
 logic [CURSV_W:0]   pointer_v_cnt;       // extra bit to detect overflow
@@ -692,6 +695,8 @@ logic               pointer_v_draw;
 assign              pointer_v_draw   = (!pointer_v_cnt[CURSV_W]) ? 1'b1 : 1'b0;
 logic [3:0]         pointer_color;
 assign              pointer_color    = pointer_word[15:12];
+
+assign              pointer_addr_o   = { pointer_v_cnt[4:0], pointer_h_cnt[4:2] };
 
 // pointer sprite
 always_ff @(posedge clk) begin
@@ -720,7 +725,7 @@ always_ff @(posedge clk) begin
         pointer_word <=  { pointer_word[11:0], 4'b000 };
 
         if (pointer_h_cnt[1:0] == 2'b11) begin
-            pointer_word     <= pointer_data;
+            pointer_word     <= pointer_data_i;
         end
 
         if (!pointer_h_draw || !pointer_v_draw) begin
@@ -728,17 +733,6 @@ always_ff @(posedge clk) begin
         end
     end
 end
-
-// playfield A color lookup RAM
-pointermem pointermem(
-    .clk(clk),
-    .rd_address_i({ pointer_v_cnt[4:0], pointer_h_cnt[4:2] }),
-    .rd_data_o(pointer_data),
-    .wr_clk(clk),
-    .wr_en_i(1'b0),
-    .wr_address_i('0),
-    .wr_data_i('0)
-);
 `endif
 
 
@@ -769,7 +763,7 @@ always_ff @(posedge clk) begin
 `ifdef EN_POINTER
         if (pointer_color != 0) begin
             colorA_index_o      <= { vid_pointer_col, pointer_color };
-//            colorB_index_o      <= { vid_pointer_col, pointer_color };
+            colorB_index_o      <= '0;
         end
 `endif
 `else

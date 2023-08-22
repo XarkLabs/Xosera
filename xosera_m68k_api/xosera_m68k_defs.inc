@@ -37,6 +37,8 @@ XR_COLOR_A_ADDR         equ     $8000       ; (R/W) $8000-$80FF A 256 entry colo
 XR_COLOR_A_SIZE         equ     $0100       ;                     256 x 16-bit words ($ARGB)
 XR_COLOR_B_ADDR         equ     $8100       ; (R/W) $8100-$81FF B 256 entry color lookup memory
 XR_COLOR_B_SIZE         equ     $0100       ;                     256 x 16-bit words ($ARGB)
+XR_POINTER_ADDR         equ     $8200       ; (-/W) 0x8200-0x82FF 256 word 32x32 4-bpp pointer image
+XR_POINTER_SIZE         equ     $0100       ;                     256 x 16-bit words (4-bit pixels)
 XR_COPPER_ADDR          equ     $C000       ; (R/W) $C000-$C5FF copper memory (16-bit instructions)
 XR_COPPER_SIZE          equ     $0600       ;                     1024+512 x 16-bit copper memory words
 

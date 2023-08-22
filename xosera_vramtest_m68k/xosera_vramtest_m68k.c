@@ -1074,6 +1074,8 @@ void xosera_vramtest()
                 (unsigned int)monheight,
                 (unsigned int)initinfo.githash);
 
+        install_intr();
+
         for (int i = 0; i < TEST_MODES; i++)
         {
             for (int j = 0; j < TEST_SPEEDS - 1; j++)

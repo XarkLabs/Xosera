@@ -48,7 +48,6 @@ module slim_copper(
 // | --11 0ccc cccc cccc | BRGE   cadd11        |     |  4  | if (B==0) PC <= cadd11           |
 // | --11 1ccc cccc cccc | BRLT   cadd11        |     |  4  | if (B==1) PC <= cadd11           |
 // |---------------------|----------------------|-----|-----|----------------------------------|
-// NOTE: SETM can be 4 or 5 cycles, 4 cycles costs a few LCs (but enabled)
 //
 // xadr14   =   XR region + 12-bit offset           xx00 oooo oooo oooo (1st word SETI, dest)
 // im16     =   16-bit immediate word               iiii iiii iiii iiii (2nd word SETI, source)

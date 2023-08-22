@@ -72,7 +72,7 @@ argb_t                          colorA_data_out ;
 logic [xv::COLOR_W-1:0]         colorB_addr;
 argb_t                          colorB_data_out;
 `endif
-`ifdef EN_PF_B
+`ifdef EN_POINTER
 word_t                          pointer_data_out;
 `endif
 

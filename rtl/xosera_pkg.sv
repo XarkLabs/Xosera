@@ -39,7 +39,7 @@
 `define EN_TIMER_INTR                   // enable timer interrupt
 `define EN_COPP                         // enable copper
 `define EN_BLIT                         // enable blit unit
-`define EN_POINTER                       // enable pointer sprite
+`define EN_POINTER                      // enable pointer sprite
 //`define EN_UART                         // enable USB UART
 
 `define VERSION 0_37                    // Xosera BCD version code (x.xx)

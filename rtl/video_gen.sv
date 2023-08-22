@@ -63,10 +63,16 @@ module video_gen (
 
 // video generation signals
 color_t             border_color;
-logic               vid_colorswap;
-hres_vis_t          vid_left;
-hres_vis_t          vid_right;
+logic               vid_colorswap;                      // COLORMEM A/B swap
+hres_vis_t          vid_left;                           // left video border
+hres_vis_t          vid_right;                          // right video border
 addr_t              line_set_addr;                      // address for on-the-fly addr set
+
+`ifdef EN_POINTER
+hres_t              vid_pointer_h;                      // pointer H position
+vres_t              vid_pointer_v;                      // pointer V position
+logic [3:0]         vid_pointer_col;                    // pointer color select (upper 4-bits of color index)
+`endif
 
 // playfield A generation control signals
 logic               pa_blank;                           // disable plane A
@@ -407,6 +413,12 @@ always_ff @(posedge clk) begin
         vid_left            <= '0;
         vid_right           <= $bits(vid_right)'(xv::VISIBLE_WIDTH);
 
+`ifdef EN_POINTER
+        vid_pointer_h        <= '0;
+        vid_pointer_v        <= '0;
+        vid_pointer_col      <= '0;
+`endif
+
         pa_blank            <= 1'b1;                // playfield A starts blanked
         pa_start_addr       <= 16'h0000;
         pa_line_len         <= xv::TILES_WIDE[15:0];
@@ -502,9 +514,16 @@ always_ff @(posedge clk) begin
                 6'(xv::XR_VID_RIGHT): begin
                     vid_right       <= $bits(vid_right)'(vgen_reg_data_i);
                 end
-                6'(xv::XR_UNUSED_06): begin
+                6'(xv::XR_POINTER_H): begin
+`ifdef EN_POINTER
+                    vid_pointer_h    <= $bits(vid_pointer_h)'(vgen_reg_data_i);
+`endif
                 end
-                6'(xv::XR_UNUSED_07): begin
+                6'(xv::XR_POINTER_V): begin
+`ifdef EN_POINTER
+                    vid_pointer_v    <= $bits(vid_pointer_v)'(vgen_reg_data_i);
+                    vid_pointer_col  <= vgen_reg_data_i[15:12];
+`endif
                 end
                 6'(xv::XR_UNUSED_08): begin
                 end
@@ -655,6 +674,74 @@ always_comb begin
     endcase
 end
 
+`ifdef EN_POINTER
+// 32x32 4-bpp pointer sprite
+localparam          POINTER_WIDTH    = 32;
+localparam          POINTER_HEIGHT   = 32;
+localparam          CURSH_W         = $clog2(POINTER_WIDTH);
+localparam          CURSV_W         = $clog2(POINTER_HEIGHT);
+
+word_t              pointer_data;        // data word from pointer memory
+word_t              pointer_word;        // current data word (nibble shifting left)
+logic [CURSH_W:0]   pointer_h_cnt;       // extra bit for POINTER_WIDTH+3
+logic [CURSV_W:0]   pointer_v_cnt;       // extra bit to detect overflow
+
+logic               pointer_h_draw;
+assign              pointer_h_draw   = (pointer_h_cnt < POINTER_WIDTH+3) ? 1'b1 : 1'b0;    // +3 for memory latency delay
+logic               pointer_v_draw;
+assign              pointer_v_draw   = (!pointer_v_cnt[CURSV_W]) ? 1'b1 : 1'b0;
+logic [3:0]         pointer_color;
+assign              pointer_color    = pointer_word[15:12];
+
+// pointer sprite
+always_ff @(posedge clk) begin
+    if (reset_i) begin
+        pointer_h_cnt    <= '0;
+        pointer_v_cnt    <= '0;
+        pointer_word     <= '0;
+    end else begin
+
+        if (pointer_h_draw) begin
+            pointer_h_cnt    <= pointer_h_cnt + 1'b1;
+        end
+
+        if (vid_pointer_h == h_count) begin
+            pointer_h_cnt    <= '0;
+
+            if (pointer_v_draw) begin
+                pointer_v_cnt    <= pointer_v_cnt + 1'b1;
+            end
+
+            if (vid_pointer_v == v_count) begin
+                pointer_v_cnt    <= '0;
+            end
+        end
+
+        pointer_word <=  { pointer_word[11:0], 4'b000 };
+
+        if (pointer_h_cnt[1:0] == 2'b11) begin
+            pointer_word     <= pointer_data;
+        end
+
+        if (!pointer_h_draw || !pointer_v_draw) begin
+            pointer_word     <= '0;
+        end
+    end
+end
+
+// playfield A color lookup RAM
+pointermem pointermem(
+    .clk(clk),
+    .rd_address_i({ pointer_v_cnt[4:0], pointer_h_cnt[4:2] }),
+    .rd_data_o(pointer_data),
+    .wr_clk(clk),
+    .wr_en_i(1'b0),
+    .wr_address_i('0),
+    .wr_data_i('0)
+);
+`endif
+
+
 // combinational block for video fetch start and stop
 logic           mem_fetch;                   // true when fetching display data
 logic           mem_fetch_next;
@@ -678,6 +765,13 @@ always_ff @(posedge clk) begin
 `ifdef EN_PF_B
         colorA_index_o      <= !vid_colorswap ? pa_color_index : pb_color_index;
         colorB_index_o      <= !vid_colorswap ? pb_color_index : pa_color_index;
+
+`ifdef EN_POINTER
+        if (pointer_color != 0) begin
+            colorA_index_o      <= { vid_pointer_col, pointer_color };
+//            colorB_index_o      <= { vid_pointer_col, pointer_color };
+        end
+`endif
 `else
         colorA_index_o      <= pa_color_index;
 

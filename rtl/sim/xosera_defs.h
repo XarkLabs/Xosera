@@ -47,8 +47,8 @@
 #define XR_COLOR_A_SIZE 0x0100        //                     256 x 16-bit words (0xARGB)
 #define XR_COLOR_B_ADDR 0x8100        // (R/W) 0x8100-0x81FF B 256 entry color lookup memory
 #define XR_COLOR_B_SIZE 0x0100        //                     256 x 16-bit words (0xARGB)
-#define XR_COPPER_ADDR  0xC000        // (R/W) 0xC000-0xC3FF copper program memory (16-bit instructions)
-#define XR_COPPER_SIZE  0x0400        //                     1024 x 16-bit copper program memory addresses
+#define XR_COPPER_ADDR  0xC000        // (R/W) 0xC000-0xC5FF copper memory (16-bit words)
+#define XR_COPPER_SIZE  0x0600        //                     1024+512 x 16-bit copper memory words
 
 // Xosera version info put in COPPER memory after FPGA reconfigure
 #define XV_INFO_ADDR (XR_COPPER_ADDR + XR_COPPER_SIZE - 128)
@@ -97,7 +97,6 @@
 #define SYS_CTRL_VBLANK_F    0x04        // (RO   )  video signal is in vertical blank period
 #define SYS_CTRL_UNUSED_9_F  0x02        // (RO   )  unused (reads 0)
 #define SYS_CTRL_UNUSED_8_F  0x01        // (- /- )
-
 // INT_CTRL bit numbers within word
 #define INT_CTRL_RECONFIG_B   15        // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
 #define INT_CTRL_BLIT_EN_B    14        // blitter ready interrupt mask
@@ -136,13 +135,18 @@
 #define INT_CTRL_AUD0_INTR_F  0x0001        // audio channel ready interrupt (read status, write acknowledge)
 #define INT_CTRL_AUD_ALL_F    0x000F        // all audio channels status/acknowledge
 #define INT_CTRL_CLEAR_ALL_F  0x007F        // clear all interrupts
-
+// UART status bit number within even byte of XM_UART
+#define UART_RXF_B 7           // UART receive buffer full (data waiting)
+#define UART_TXF_B 6           // UART transmit buffer full (busy transmitting data)
+#define UART_RXF_F 0x80        // UART receive buffer full (data waiting)
+#define UART_TXF_F 0x40        // UART transmit buffer full (busy transmitting data)
 // FEATURES bit numbers within word (for fields wider than 1 bit, XB_(xxx_B, xxx_W) macro can be used)
 #define FEATURES_MONRES_B  0         // rightmost bit number for 4-bit monitor mode field
 #define FEATURES_MONRES_W  4         // bit width for 4-bit monitor mode field
 #define FEATURES_COPP_B    4         // bit number indicating presence of COPPER
 #define FEATURES_BLIT_B    5         // bit number indicating presence of BLITTER
 #define FEATURES_PF_B_B    6         // bit number indicating presence of playfield B (2nd playfield)
+#define FEATURES_UART_B    7         // bit number indicating presence of debug UART
 #define FEATURES_AUDCHAN_B 8         // rightmost bit number for 4-bit audio channels field
 #define FEATURES_AUDCHAN_W 4         // bit width for 4-bit audio channels field
 #define FEATURES_CONFIG_B  12        // rightmost bit number for 4-bit FPGA config field
@@ -152,6 +156,7 @@
 #define FEATURES_COPP_F    0x0010        // bit flag indicating presence of COPPER
 #define FEATURES_BLIT_F    0x0020        // bit flag indicating presence of BLITTER
 #define FEATURES_PF_B_F    0x0040        // bit flag indicating presence of playfield B (2nd playfield)
+#define FEATURES_UART_F    0x0080        // bit flag indicating presence of debug UART
 #define FEATURES_AUDCHAN_F 0x0F00        // bit-mask for 4-bit audio channels field
 #define FEATURES_CONFIG_F  0xF000        // bit-mask for 4-bit config field
 
@@ -164,8 +169,8 @@
 #define XR_SCANLINE  0x03        // (R /W) read scanline (incl. offscreen), write signal video interrupt
 #define XR_VID_LEFT  0x04        // (R /W) left edge of active display window (typically 0)
 #define XR_VID_RIGHT 0x05        // (R /W) right edge of active display window +1 (typically 640 or 848)
-#define XR_UNUSED_06 0x06        // (- /-) unused XR 06
-#define XR_UNUSED_07 0x07        // (- /-) unused XR 07
+#define XR_POINTER_H 0x06        // (- /W) pointer sprite raw H position
+#define XR_POINTER_V 0x07        // (- /W) pointer sprite raw V position / pointer color select
 #define XR_UNUSED_08 0x08        // (- /-) unused XR 08
 #define XR_UNUSED_09 0x09        // (- /-) unused XR 09
 #define XR_UNUSED_0A 0x0A        // (- /-) unused XR 0A
@@ -268,6 +273,11 @@
 #define XR_AUD3_PERIOD 0x2D        // (WO/-) // TODO: WIP
 #define XR_AUD3_LENGTH 0x2E        // (WO/-) // TODO: WIP
 #define XR_AUD3_START  0x2F        // (WO/-) // TODO: WIP
+// Audio flags
+#define AUD_PER_RESTART_B 15        // AUDx_PERIOD bit 15 is force channel restart
+#define AUD_PER_RESTART_F 0x8000
+#define AUD_LEN_TILEMEM_B 15        // AUDx_LENGTH bit 15 is TILEMEM flag
+#define AUD_LEN_TILEMEM_F 0x8000
 
 #define XR_BLIT_CTRL  0x40        // (WO) blit control ([15:8]=transp value, [5]=8 bpp, [4]=transp on, [0]=S constant)
 #define XR_BLIT_ANDC  0x41        // (WO) blit AND-COMPLEMENT constant value

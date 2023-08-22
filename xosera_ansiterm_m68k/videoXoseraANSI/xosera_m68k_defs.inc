@@ -156,8 +156,8 @@ XR_AUD_CTRL             equ     $02         ; (- /-) TODO: audio channel control
 XR_SCANLINE             equ     $03         ; (R /W) read scanline (incl. offscreen), write signal video interrupt
 XR_VID_LEFT             equ     $04         ; (R /W) left edge of active display window (typically 0)
 XR_VID_RIGHT            equ     $05         ; (R /W) right edge of active display window +1 (typically 640 or 848)
-XR_UNUSED_06            equ     $06         ; (- /-) unused XR 06
-XR_UNUSED_07            equ     $07         ; (- /-) unused XR 07
+XR_POINTER_H            equ     $06         ; (- /W) pointer sprite raw H position
+XR_POINTER_V            equ     $07         ; (- /W) pointer sprite raw V position / pointer color select
 XR_UNUSED_08            equ     $08         ; (- /-) unused XR 08
 XR_UNUSED_09            equ     $09         ; (- /-) unused XR 09
 XR_UNUSED_0A            equ     $0A         ; (- /-) unused XR 0A

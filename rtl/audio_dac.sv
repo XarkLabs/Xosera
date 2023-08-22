@@ -12,6 +12,8 @@
 
 `include "xosera_pkg.sv"
 
+`ifdef EN_AUDIO
+
 module audio_dac #(
     parameter WIDTH = 8
 )(
@@ -37,4 +39,6 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
+
+`endif
 `default_nettype wire               // restore default

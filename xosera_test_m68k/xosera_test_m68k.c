@@ -3114,6 +3114,10 @@ void     xosera_test()
         xreg_setw(PA_HV_SCROLL, 0x0000);
         xreg_setw(PA_HV_FSCALE, 0x0000);
 
+
+        xreg_setw(POINTER_H, 300);
+        xreg_setw(POINTER_V, 0xF000 | 200);
+
         xcls();
 
         const char * bp    = blurb;

@@ -72,7 +72,7 @@
 #define XM_UNUSED_0C 0x30        // (- /- )
 #define XM_UNUSED_0D 0x34        // (- /- )
 #define XM_UNUSED_0E 0x38        // (- /- )
-#define XM_FEATURES  0x3C        // (RO)
+#define XM_FEATURES  0x3C        // (RO   ) Xosera features, monitor mode
 
 // SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
 // indirect with no offset)
@@ -165,8 +165,8 @@
 #define XR_SCANLINE  0x03        // (R /W) read scanline (incl. offscreen), write signal video interrupt
 #define XR_VID_LEFT  0x04        // (R /W) left edge of active display window (typically 0)
 #define XR_VID_RIGHT 0x05        // (R /W) right edge of active display window +1 (typically 640 or 848)
-#define XR_UNUSED_06 0x06        // (- /-) unused XR 06
-#define XR_UNUSED_07 0x07        // (- /-) unused XR 07
+#define XR_POINTER_H 0x06        // (- /W) pointer sprite raw H position
+#define XR_POINTER_V 0x07        // (- /W) pointer sprite raw V position / pointer color select
 #define XR_UNUSED_08 0x08        // (- /-) unused XR 08
 #define XR_UNUSED_09 0x09        // (- /-) unused XR 09
 #define XR_UNUSED_0A 0x0A        // (- /-) unused XR 0A

@@ -39,7 +39,8 @@
 `define EN_TIMER_INTR                   // enable timer interrupt
 `define EN_COPP                         // enable copper
 `define EN_BLIT                         // enable blit unit
-`define EN_UART                         // enable USB UART
+`define EN_POINTER                       // enable pointer sprite
+//`define EN_UART                         // enable USB UART
 
 `define VERSION 0_37                    // Xosera BCD version code (x.xx)
 
@@ -107,24 +108,35 @@ typedef enum logic [3:0] {
 } xm_register_t;
 
 typedef enum {
-    SYS_CTRL_MEM_WAIT_B = 15,           // memory read/write operation active (with contended memory)
+    SYS_CTRL_MEM_WAIT_B  = 15,          // memory read/write operation active (with contended memory)
     SYS_CTRL_BLIT_FULL_B = 14,          // blitter queue is full, do not write new operation to blitter registers
     SYS_CTRL_BLIT_BUSY_B = 13,          // blitter is busy (not done) performing an operation
     SYS_CTRL_UNUSED_12_B = 12,          // unused (reads 0)
-    SYS_CTRL_HBLANK_B = 11,             // video signal is in horizontal blank period
-    SYS_CTRL_VBLANK_B = 10,             // video signal is in vertical blank period
-    SYS_CTRL_UNUSED_9_B = 9,            // unused (reads 0)
-    SYS_CTRL_UNUSED_8_B = 8             // unused (reads 0)
+    SYS_CTRL_HBLANK_B    = 11,          // video signal is in horizontal blank period
+    SYS_CTRL_VBLANK_B    = 10,          // video signal is in vertical blank period
+    SYS_CTRL_UNUSED_9_B  = 9,           // unused (reads 0)
+    SYS_CTRL_UNUSED_8_B  = 8,           // unused (reads 0)
+    SYS_CTRL_MASK_B      = 0,           // leftmost bit of 4 bit nibble mask
+    SYS_CTRL_MASK_W      = 4            // width  of 4 bit nibble mask
 } xm_sys_ctrl_t;
 
 typedef enum integer {
-    AUD0_INTR       = 0,                // audio ready
-    AUD1_INTR       = 1,                // audio ready
-    AUD2_INTR       = 2,                // audio ready
-    AUD3_INTR       = 3,                // audio ready
-    VIDEO_INTR      = 4,                // v-blank or copper
+    RECONFIG        = 15,               // reset and reconfig
+    BLIT_MASK_INTR  = 14,               // blitter ready mask
+    TIMER_MASK_INTR = 13,               // timer interval mask
+    VIDEO_MASK_INTR = 12,               // v-blank or copper mask
+    AUD3_MASK_INTR  = 11,               // audio 3 ready mask
+    AUD2_MASK_INTR  = 10,               // audio 2 ready mask
+    AUD1_MASK_INTR  = 9,                // audio 1 ready mask
+    AUD0_MASK_INTR  = 8,                // audio 0 ready mask
+    UNUSED7_INTR    = 7,
+    BLIT_INTR       = 6,                // blitter ready
     TIMER_INTR      = 5,                // timer interval
-    BLIT_INTR       = 6                 // blitter ready
+    VIDEO_INTR      = 4,                // v-blank or copper
+    AUD3_INTR       = 3,                // audio 3 ready
+    AUD2_INTR       = 2,                // audio 2 ready
+    AUD1_INTR       = 1,                // audio 1 ready
+    AUD0_INTR       = 0                 // audio 0 ready
 } intr_bit_t;
 
 typedef enum integer {
@@ -160,8 +172,8 @@ typedef enum logic [6:0] {
     XR_SCANLINE     = 7'h03,            // (R /W) read scanline (incl. offscreen), write signal video interrupt
     XR_VID_LEFT     = 7'h04,            // (R /W) left edge of active display window (typically 0)
     XR_VID_RIGHT    = 7'h05,            // (R /W) right edge of active display window +1 (typically 640 or 848)
-    XR_UNUSED_06    = 7'h06,            // (- /-) unused XR 06
-    XR_UNUSED_07    = 7'h07,            // (- /-) unused XR 07
+    XR_POINTER_H     = 7'h06,            // (- /W) pointer sprite raw H
+    XR_POINTER_V     = 7'h07,            // (- /W) pointer sprite raw V pos
     XR_UNUSED_08    = 7'h08,            // (- /-) unused XR 08
     XR_UNUSED_09    = 7'h09,            // (- /-) unused XR 09
     XR_UNUSED_0A    = 7'h0A,            // (- /-) unused XR 0A
@@ -559,8 +571,8 @@ function automatic xv::xr_register_t xr_reg_to_enum(
             7'h03:      xr_reg_to_enum = xv::XR_SCANLINE;
             7'h04:      xr_reg_to_enum = xv::XR_VID_LEFT;
             7'h05:      xr_reg_to_enum = xv::XR_VID_RIGHT;
-            7'h06:      xr_reg_to_enum = xv::XR_UNUSED_06;
-            7'h07:      xr_reg_to_enum = xv::XR_UNUSED_07;
+            7'h06:      xr_reg_to_enum = xv::XR_POINTER_H;
+            7'h07:      xr_reg_to_enum = xv::XR_POINTER_V;
             7'h08:      xr_reg_to_enum = xv::XR_UNUSED_08;
             7'h09:      xr_reg_to_enum = xv::XR_UNUSED_09;
             7'h0A:      xr_reg_to_enum = xv::XR_UNUSED_0A;

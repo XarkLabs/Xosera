@@ -195,9 +195,7 @@ $(VLT_CONFIG):
 	@echo >>$(VLT_CONFIG) lint_off -rule WIDTH      -file \"$(TECH_LIB)\"
 	@echo >>$(VLT_CONFIG) lint_off -rule UNUSED     -file \"$(TECH_LIB)\"
 	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN   -file \"$(TECH_LIB)\"
-ifeq ($(shell uname),Linux)	# Linux uses newer Verilator that needs this supporessed
 	@echo >>$(VLT_CONFIG) lint_off -rule GENUNNAMED -file \"$(TECH_LIB)\"
-endif
 
 # assembler copper file
 %.vsim.h : %.casm

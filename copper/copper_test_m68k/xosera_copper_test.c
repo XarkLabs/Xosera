@@ -132,7 +132,7 @@ void xosera_copper_test()
     xreg_setw(VID_CTRL, 0x0000);        // border uses color 0
     xreg_setw(COPP_CTRL, 0x8000);
 
-    uint16_t features  = xm_getw(FEATURES);
+    uint8_t  feature   = xm_getbh(FEATURE);
     uint16_t monwidth  = xosera_vid_width();
     uint16_t monheight = xosera_vid_height();
 
@@ -143,7 +143,7 @@ void xosera_copper_test()
     uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
     uint16_t hvfscale = xreg_getw(PA_HV_FSCALE);
 
-    dprintf("Xosera - Features: 0x%04x\n", features);
+    dprintf("Xosera - Features: 0x%02x\n", feature);
     dprintf("Monitor Mode: %dx%d\n", monwidth, monheight);
     dprintf("\nPlayfield A:\n");
     dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);

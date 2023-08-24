@@ -430,12 +430,13 @@ const char * BusInterface::reg_name[] = {"XM_SYS_CTRL ",
                                          "XM_WR_ADDR  ",
                                          "XM_DATA     ",
                                          "XM_DATA_2   ",
-                                         "XM_UNUSED_0C",
-                                         "XM_UNUSED_0D",
-                                         "XM_UNUSED_0E",
-                                         "XM_FEATURES "};
+                                         "XM_PIXEL_INI",
+                                         "XM_PIXEL_X  ",
+                                         "XM_PIXEL_Y  ",
+                                         "XM_FEATURE  "};
 
-#define REG_B(r, v)      (((XM_##r) | 0x10) << 8) | ((v)&0xff)
+#define REG_BH(r, v)     (((XM_##r) | 0x00) << 8) | ((v)&0xff)
+#define REG_BL(r, v)     (((XM_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_W(r, v)      ((XM_##r) << 8) | (((v) >> 8) & 0xff), (((XM_##r) | 0x10) << 8) | ((v)&0xff)
 #define REG_RW(r)        (((XM_##r) | 0x80) << 8), (((XM_##r) | 0x90) << 8)
 #define XREG_SETW(xr, v) REG_W(WR_XADDR, XR_##xr), REG_W(XDATA, (v))
@@ -467,11 +468,58 @@ uint16_t     BusInterface::test_data[32768] = {
 
     REG_WAITHSYNC(),
     XREG_SETW(PA_GFX_CTRL, 0x0000),        // unblank screen
-    REG_RW(FEATURES),
+    REG_RW(FEATURE),
     REG_W(SYS_CTRL, 0x000F),        // write mask
 
-    XREG_SETW(POINTER_H, 300),
-    XREG_SETW(POINTER_V, 0x0000 | 200),
+    XREG_SETW(POINTER_H, 200),
+    XREG_SETW(POINTER_V, 0xF000 | 100),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+    REG_W(PIXEL_X, 0xC000),        // base
+    REG_W(PIXEL_Y, 0x0100),        // width
+    REG_BH(FEATURE, 0x00),         // set base, width
+
+    REG_W(PIXEL_X, 0x0000),
+    REG_W(PIXEL_Y, 0x0000),
+    REG_W(DATA, 0xAAAA),
+
+    REG_W(PIXEL_X, 0x0000),
+    REG_W(PIXEL_Y, 0x0005),
+    REG_W(DATA, 0x5555),
+
+    REG_W(PIXEL_X, 0x0005),
+    REG_W(PIXEL_Y, 0x0000),
+    REG_W(DATA, 0xAAAA),
+
+    REG_W(PIXEL_X, 0x0005),
+    REG_W(PIXEL_Y, 0x0005),
+    REG_W(DATA, 0x5555),
+
+    REG_W(PIXEL_X, 0xC000),        // base
+    REG_W(PIXEL_Y, 0x0100),        // width
+    REG_BH(FEATURE, 0x01),         // set base, width
+
+    REG_W(PIXEL_X, 0x0000),
+    REG_W(PIXEL_Y, 0x0000),
+    REG_W(DATA, 0xAAAA),
+
+    REG_W(PIXEL_X, 0x0000),
+    REG_W(PIXEL_Y, 0x0005),
+    REG_W(DATA, 0x5555),
+
+    REG_W(PIXEL_X, 0x0005),
+    REG_W(PIXEL_Y, 0x0000),
+    REG_W(DATA, 0xAAAA),
+
+    REG_W(PIXEL_X, 0x0004),
+    REG_W(PIXEL_Y, 0x0005),
+    REG_W(DATA, 0x5555),
+
+    REG_W(PIXEL_X, 0x0005),
+    REG_W(PIXEL_Y, 0x0005),
+    REG_W(DATA, 0x5555),
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
@@ -485,7 +533,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(RW_ADDR, 0x1234),
     REG_RW(RW_DATA),
     REG_RW(RW_DATA),
-    REG_B(SYS_CTRL, 0x1F),
+    REG_BL(SYS_CTRL, 0x1F),
     REG_W(RW_INCR, 0x1),
     REG_W(RW_ADDR, 0x1234),
     REG_RW(RW_DATA),
@@ -943,10 +991,10 @@ uint16_t     BusInterface::test_data[32768] = {
 
     XREG_SETW(AUD_CTRL, 0x0001),
 
-    REG_B(UART, 'B'),
+    REG_BL(FEATURE, 'B'),
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
-    REG_B(UART, 'U'),
+    REG_BL(FEATURE, 'U'),
 
     REG_RW(INT_CTRL),
     REG_RW(INT_CTRL),
@@ -1118,45 +1166,45 @@ uint16_t     BusInterface::test_data[32768] = {
 uint16_t     BusInterface::test_stfont[1024] = {REG_W(WR_ADDR, 0x3),
                                           REG_W(WR_INC, 0x1),
                                           REG_W(DATA, 0x0200 | 'H'),
-                                          REG_B(DATA, 'e'),
-                                          REG_B(DATA, 'l'),
-                                          REG_B(DATA, 'l'),
-                                          REG_B(DATA, 'o'),
-                                          REG_B(DATA, '!'),
+                                          REG_BL(DATA, 'e'),
+                                          REG_BL(DATA, 'l'),
+                                          REG_BL(DATA, 'l'),
+                                          REG_BL(DATA, 'o'),
+                                          REG_BL(DATA, '!'),
                                           REG_W(WR_ADDR, 0x0),
                                           REG_W(DATA, 0x0e00 | '\x0e'),
                                           REG_W(DATA, 0x0e00 | '\x0f'),
                                           REG_W(WR_ADDR, X_COLS * 5),
                                           REG_W(DATA, 0x0200 | 'A'),
-                                          REG_B(DATA, 't'),
-                                          REG_B(DATA, 'a'),
-                                          REG_B(DATA, 'r'),
-                                          REG_B(DATA, 'i'),
-                                          REG_B(DATA, ' '),
-                                          REG_B(DATA, 'S'),
-                                          REG_B(DATA, 'T'),
-                                          REG_B(DATA, ' '),
-                                          REG_B(DATA, '8'),
-                                          REG_B(DATA, 'x'),
-                                          REG_B(DATA, '1'),
-                                          REG_B(DATA, '6'),
-                                          REG_B(DATA, ' '),
-                                          REG_B(DATA, 'F'),
-                                          REG_B(DATA, 'o'),
-                                          REG_B(DATA, 'n'),
-                                          REG_B(DATA, 't'),
-                                          REG_B(DATA, ' '),
-                                          REG_B(DATA, 'T'),
-                                          REG_B(DATA, 'e'),
-                                          REG_B(DATA, 's'),
-                                          REG_B(DATA, 't'),
-                                          REG_B(DATA, ' '),
-                                          REG_B(DATA, '\x1c'),
-                                          REG_B(WR_INC, X_COLS - 1),
-                                          REG_B(DATA, '\x1d'),
-                                          REG_B(WR_INC, 1),
-                                          REG_B(DATA, '\x1e'),
-                                          REG_B(DATA, '\x1f'),
+                                          REG_BL(DATA, 't'),
+                                          REG_BL(DATA, 'a'),
+                                          REG_BL(DATA, 'r'),
+                                          REG_BL(DATA, 'i'),
+                                          REG_BL(DATA, ' '),
+                                          REG_BL(DATA, 'S'),
+                                          REG_BL(DATA, 'T'),
+                                          REG_BL(DATA, ' '),
+                                          REG_BL(DATA, '8'),
+                                          REG_BL(DATA, 'x'),
+                                          REG_BL(DATA, '1'),
+                                          REG_BL(DATA, '6'),
+                                          REG_BL(DATA, ' '),
+                                          REG_BL(DATA, 'F'),
+                                          REG_BL(DATA, 'o'),
+                                          REG_BL(DATA, 'n'),
+                                          REG_BL(DATA, 't'),
+                                          REG_BL(DATA, ' '),
+                                          REG_BL(DATA, 'T'),
+                                          REG_BL(DATA, 'e'),
+                                          REG_BL(DATA, 's'),
+                                          REG_BL(DATA, 't'),
+                                          REG_BL(DATA, ' '),
+                                          REG_BL(DATA, '\x1c'),
+                                          REG_BL(WR_INC, X_COLS - 1),
+                                          REG_BL(DATA, '\x1d'),
+                                          REG_BL(WR_INC, 1),
+                                          REG_BL(DATA, '\x1e'),
+                                          REG_BL(DATA, '\x1f'),
                                           REG_END()};
 #endif
 

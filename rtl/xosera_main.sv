@@ -163,6 +163,9 @@ assign                  intr_trigger[xv::BLIT_INTR]     = 1'b0;
 assign serial_txd_o = 1'b0;
 logic unused_uart   = serial_rxd_i;
 `endif
+`ifndef EN_TIMER_INTR
+assign                  intr_trigger[xv::TIMER_INTR]     = 1'b0;
+`endif
 
 `ifdef BUS_DEBUG_SIGNALS
 logic                   dbug_cs_strobe;     // debug "ack" bus strobe
@@ -480,41 +483,31 @@ end
 
 // display configuration info at build time
 initial begin
-        $display("   XOSERA xosera_info:            \"%s\"", xv::info_str);
-`ifdef EN_AUDIO
-        $display("   XOSERA configuration:          MODE_%s %s%s%s%sAUD%x",
-`else
-        $display("   XOSERA configuration:          MODE_%s %s%s%s%s",
-`endif
-            `VIDEO_MODE_NAME,
+    $display("   XOSERA xosera_info:            \"%s\"", xv::info_str);
+    $write("   XOSERA configuration:          MODE_%s ", `VIDEO_MODE_NAME);
 `ifdef EN_PF_B
-`ifdef EN_PF_B_BLEND
-            "PF_B BLND ",
+`ifdef EN_PF_B_BLND
+        $write("PF_B BLND ");
 `else
-            "PF_B ",
+        $write("PF_B ");
 `endif
-`else
-            "",
 `endif
 `ifdef EN_COPP
-            "COPP ",
-`else
-            "",
+        $write("COPP ");
 `endif
 `ifdef EN_BLIT
-            "BLIT ",
-`else
-            "",
+        $write("BLIT ");
+`endif
+`ifdef EN_PIXEL_ADDR
+        $write("PIXA ");
 `endif
 `ifdef EN_UART
-            "UART "
-`else
-            ""
+        $write("UART ");
 `endif
 `ifdef EN_AUDIO
-            , 4'(`EN_AUDIO)
+        $write("AUD%x ", 4'(`EN_AUDIO));
 `endif
-        );
+    $write("\n");
 end
 
 endmodule

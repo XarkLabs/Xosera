@@ -61,10 +61,10 @@ XM_WR_INCR              equ     $20         ; (R /W ) increment value for XM_WR_
 XM_WR_ADDR              equ     $24         ; (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
 XM_DATA                 equ     $28         ; (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
 XM_DATA_2               equ     $2C         ; (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
-XM_UART                 equ     $30         ; (R+/W+) USB UART communication
-XM_UNUSED_0D            equ     $34         ; (- /- )
-XM_UNUSED_0E            equ     $38         ; (- /- )
-XM_FEATURES             equ     $3C         ; (RO)
+XM_PIXEL_X              equ     $30         ; (   W+) pixel X coordinate / pixel base address
+XM_PIXEL_Y              equ     $34         ; (   W+) pixel Y coordinate / pixel line width
+XM_UNUSED_E             equ     $38         ; (- /- )
+XM_FEATURE              equ     $3C         ; (R+/W+) Xosera feature flags, odd byte UART
 
 ; SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
 ; indirect with no offset)
@@ -124,30 +124,24 @@ INT_CTRL_AUD1_INTR_F    equ     $0002       ; audio channel ready interrupt (rea
 INT_CTRL_AUD0_INTR_F    equ     $0001       ; audio channel ready interrupt (read status, write acknowledge)
 INT_CTRL_AUD_ALL_F      equ     $000F       ; all audio channels status/acknowledge
 INT_CTRL_CLEAR_ALL_F    equ     $007F       ; clear all interrupts
-; UART bit number within word/mask
-UART_RXF_B              equ     15          ; UART receive buffer full (data waiting)
-UART_TXF_B              equ     14          ; UART transmit buffer full (busy transmitting data)
-UART_RXF_F              equ     $8000       ; UART receive buffer full (data waiting)
-UART_TXF_F              equ     $4000       ; UART transmit buffer full (busy transmitting data)
-; FEATURES bit numbers within word (for fields wider than 1 bit, XB_(xxx_B, xxx_W) macro can be used)
-FEATURES_MONRES_B       equ     0           ; rightmost bit number for 4-bit monitor mode field
-FEATURES_MONRES_W       equ     4           ; bit width for 4-bit monitor mode field
-FEATURES_COPP_B         equ     4           ; bit number indicating presence of COPPER
-FEATURES_BLIT_B         equ     5           ; bit number indicating presence of BLITTER
-FEATURES_PF_B_B         equ     6           ; bit number indicating presence of playfield B (2nd playfield)
-FEATURES_UART_B         equ     7           ; bit number indicating presence of debug UART
-FEATURES_AUDCHAN_B      equ     8           ; rightmost bit number for 4-bit audio channels field
-FEATURES_AUDCHAN_W      equ     4           ; bit width for 4-bit audio channels field
-FEATURES_CONFIG_B       equ     12          ; rightmost bit number for 4-bit FPGA config field
-FEATURES_CONFIG_W       equ     4           ; bit width for 4-bit FPGA config field
-; FEATURES flag/mask
-FEATURES_MONRES_F       equ     $000F       ; bit-mask for 4-bit monitor mode field
-FEATURES_COPP_F         equ     $0010       ; bit flag indicating presence of COPPER
-FEATURES_BLIT_F         equ     $0020       ; bit flag indicating presence of BLITTER
-FEATURES_PF_B_F         equ     $0040       ; bit flag indicating presence of playfield B (2nd playfield)
-FEATURES_UART_F         equ     $0080       ; bit flag indicating presence of debug UART
-FEATURES_AUDCHAN_F      equ     $0F00       ; bit-mask for 4-bit audio channels field
-FEATURES_CONFIG_F       equ     $F000       ; bit-mask for 4-bit config field
+; FEATURE bit numbers within high byte, low byte UART data
+FEATURE_UART_RXF_B       equ     7           ; UART receive buffer full (data waiting)
+FEATURE_UART_TXF_B       equ     6           ; UART transmit buffer full (busy transmitting data)
+FEATURE_UART_B          equ     5           ; UART present flag (debug feature)
+FEATURE_AUDIO_B         equ     4           ; audio present
+FEATURE_BLIT_B          equ     3           ; blitter present
+FEATURE_COPP_B          equ     2           ; copper present
+FEATURE_PF_B_B          equ     1           ; playfield B present
+FEATURE_PF_WIDE_B       equ     0           ; 0 = 640x480 4:3, 1 = 848x480 16:9 widescreen
+; FEATURES flag/mask within high byte, low byte UART data
+FEATURE_RX_F            equ     $80        ; UART receive buffer full (data waiting)
+FEATURE_TX_F            equ     $40        ; UART transmit buffer full (busy transmitting data)
+FEATURE_UART_F          equ     $20        ; UART present flag (debug feature)
+FEATURE_AUDIO_F         equ     $10        ; audio present
+FEATURE_BLIT_F          equ     $08        ; blitter present
+FEATURE_COPP_F          equ     $04        ; copper present
+FEATURE_PF_B_F          equ     $02        ; playfield B present
+FEATURE_PF_WIDE_F       equ     $01        ; 0 = 640x480 4:3, 1 = 848x480 16:9 widescreen
 
 ; XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 

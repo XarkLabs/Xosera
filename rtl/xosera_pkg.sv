@@ -34,15 +34,16 @@
 // set by Makefile: `define EN_AUDIO                4       // number of channels 2/4
 `ifdef EN_PF_B
 `define EN_PF_B_BLND                    // enable pf B blending (otherwise overlay only)
-`endif
 `define EN_BLEND_FULL                   // use full precision blending w/o FMAC (ignored with iCE40UP5K)
+`endif
 `define EN_TIMER_INTR                   // enable timer interrupt
 `define EN_COPP                         // enable copper
 `define EN_BLIT                         // enable blit unit
 `define EN_POINTER                      // enable pointer sprite
+`define EN_PIXEL_ADDR                   // pixel coordinate address generation
 //`define EN_UART                         // enable USB UART
 
-`define VERSION 0_37                    // Xosera BCD version code (x.xx)
+`define VERSION 0_38                    // Xosera BCD version code (x.xx)
 
 `ifndef GITCLEAN
 `define GITCLEAN 0                      // unknown Git state (assumed dirty)
@@ -88,7 +89,7 @@ typedef enum logic [3:0] {
     // register 16-bit read/write
     XM_SYS_CTRL     = 4'h0,             // (R /W ) status/option flags, VRAM write masking
     XM_INT_CTRL     = 4'h1,             // (R /W ) interrupt status/control
-    XM_TIMER        = 4'h2,             // (RO   ) read 1/10th millisecond timer
+    XM_TIMER        = 4'h2,             // (RO/ -) read 1/10th millisecond timer
     XM_RD_XADDR     = 4'h3,             // (R /W+) XR register/address for XM_XDATA read access
     XM_WR_XADDR     = 4'h4,             // (R /W ) XR register/address for XM_XDATA write access
     XM_XDATA        = 4'h5,             // (R /W+) read/write XR register/memory at XM_RD_XADDR/XM_WR_XADDR
@@ -98,14 +99,10 @@ typedef enum logic [3:0] {
     XM_WR_ADDR      = 4'h9,             // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
     XM_DATA         = 4'hA,             // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
     XM_DATA_2       = 4'hB,             // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
-`ifdef EN_UART
-    XM_UART         = 4'hC,             // (R+/W+) USB UART communication
-`else
-    XM_UNUSED_0C    = 4'hC,             // (- /- ) // TODO: useful?
-`endif
-    XM_UNUSED_0D    = 4'hD,             // (- /- ) // TODO: useful?
-    XM_UNUSED_0E    = 4'hE,             // (- /- ) // TODO: useful?
-    XM_FEATURES     = 4'hF              // (RO   ) Xosera features, monitor mode
+    XM_PIXEL_X      = 4'hC,             // (- /WO) pixel address generation setup
+    XM_PIXEL_Y      = 4'hD,             // (- /WO) pixel address generation setup
+    XM_UNUSED_E     = 4'hE,             // (- / -)
+    XM_FEATURE      = 4'hF              // (R+/W+) Xosera features, debug UART
 } xm_register_t;
 
 typedef enum {
@@ -140,14 +137,16 @@ typedef enum integer {
     AUD0_INTR       = 0                 // audio 0 ready
 } intr_bit_t;
 
+// upper byte of XR_FEATURE
 typedef enum integer {
-    FEATURE_CONFIG  = 12,
-    FEATURE_AUDCHAN = 8,
-    FEATURE_UART    = 7,
-    FEATURE_PF_B    = 6,
-    FEATURE_BLIT    = 5,
-    FEATURE_COPP    = 4,
-    FEATURE_MONRES  = 0
+    FEATURE_UART_RX = 7,
+    FEATURE_UART_TX = 6,
+    FEATURE_UART    = 5,
+    FEATURE_AUDIO   = 4,
+    FEATURE_BLIT    = 3,
+    FEATURE_COPP    = 2,
+    FEATURE_PF_B    = 1,
+    FEATURE_PF_WIDE = 0
 } feature_bit_t;
 
 // XR register / memory regions

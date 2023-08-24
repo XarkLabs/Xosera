@@ -228,10 +228,10 @@ function automatic logic [63:0] regname(
             4'h9: regname = "WR_ADDR ";
             4'hA: regname = "DATA    ";
             4'hB: regname = "DATA_2  ";
-            4'hC: regname = "UNUSED_C";
-            4'hD: regname = "UNUSED_D";
-            4'hE: regname = "UNUSED_E";
-            4'hF: regname = "FEATURES";
+            4'hC: regname = "PIXELINI";
+            4'hD: regname = "PIXEL_X ";
+            4'hE: regname = "PIXEL_Y ";
+            4'hF: regname = "FEATURE ";
             default: regname = "????????";
         endcase
     end
@@ -271,8 +271,8 @@ always begin
     // #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0007);
     // // TODO end
 
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_FEATURES, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_FEATURES, readword[7:0]);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_FEATURE, readword[15:8]);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_FEATURE, readword[7:0]);
     $fdisplay(logfile, "%0t REG READ %s[%x] => %04x", $realtime, regname(xosera.reg_interface.bus_reg_num), xosera.reg_interface.bus_reg_num, readword);
 
 // audio test

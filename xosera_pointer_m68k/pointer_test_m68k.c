@@ -198,7 +198,7 @@ static bool load_sd_colors(const char * filename)
 }
 
 uint32_t test_count;
-void     xosera_splitscreen_test()
+void     xosera_pointer_test()
 {
     printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
@@ -219,7 +219,7 @@ void     xosera_splitscreen_test()
         xmem_setw_next(*wp++);
     }
 
-    uint16_t features  = xm_getbh(FEATURE);
+    uint8_t  features  = xm_getbh(FEATURE);
     uint16_t monwidth  = 640;
     uint16_t monheight = 480;
 
@@ -230,7 +230,7 @@ void     xosera_splitscreen_test()
     uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
     uint16_t hvfscale = xreg_getw(PA_HV_FSCALE);
 
-    dprintf("Xosera - Features: 0x%04x\n", features);
+    dprintf("Xosera - Features: 0x%02x\n", features);
     dprintf("Monitor Mode: %dx%d\n", monwidth, monheight);
     dprintf("\nPlayfield A:\n");
     dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
@@ -311,8 +311,22 @@ void     xosera_splitscreen_test()
     bool     up      = false;
     uint16_t current = 240;
 
+    int32_t px = 300UL << 8, py = 400UL << 8;
+    int16_t pxd = 0x0104, pyd = (int16_t)0xfff8;
+
     while (!checkchar())
     {
+        xreg_setw(POINTER_H, px >> 8);
+        xreg_setw(POINTER_V, py >> 8);
+
+        px += pxd;
+        py += pyd;
+
+        if (px < 120 || px > 640 + 120)
+            pxd = -pxd;
+        if (py < -40 || py > 500)
+            pyd = -pyd;
+
         wait_vblank_start();
 
         xmem_set_addr(XR_COPPER_ADDR + 4);

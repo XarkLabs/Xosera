@@ -137,7 +137,7 @@ int xosera_vid_width()
 {
     xv_prep();
 
-    return ((xm_getbl(FEATURES) & 0xF) == 0) ? 640 : 848;
+    return ((xm_getbh(FEATURE) & FEATURE_PF_WIDE_F) == 0) ? 640 : 848;
 }
 
 int xosera_vid_height()
@@ -149,21 +149,21 @@ int xosera_max_hpos()
 {
     xv_prep();
 
-    return ((xm_getbl(FEATURES) & 0xF) == 0) ? 800 - 1 : 1088 - 1;
+    return ((xm_getbh(FEATURE) & FEATURE_PF_WIDE_F) == 0) ? 800 - 1 : 1088 - 1;
 }
 
 int xosera_max_vpos()
 {
     xv_prep();
 
-    return ((xm_getbl(FEATURES) & 0xF) == 0) ? 525 - 1 : 517 - 1;
+    return ((xm_getbh(FEATURE) & FEATURE_PF_WIDE_F) == 0) ? 525 - 1 : 517 - 1;
 }
 
 int xosera_aud_channels()
 {
     xv_prep();
 
-    return xm_getbh(FEATURES) & 0xF;
+    return ((xm_getbh(FEATURE) & FEATURE_AUDIO_F) == 0) ? 0 : 4;
 }
 
 bool xosera_get_info(xosera_info_t * info)

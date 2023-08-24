@@ -172,7 +172,12 @@ localparam  FRAC_BITS       = $clog2(CLK_REDUCED)+1;
 logic [FRAC_BITS-1:0]       reg_timer_frac;
 
 logic           tick;
-assign          tick        = !reg_timer_frac[FRAC_BITS-1];
+assign          tick            = !reg_timer_frac[FRAC_BITS-1];
+logic           reg_timer_zero;
+assign          reg_timer_zero  = (reg_timer_countdown == 0) ? 1'b1 : 1'b0;
+byte_t          reg_timer_next;         // 8-bit timer interrupt interval counter next cycle
+assign          reg_timer_next  = reg_timer_zero ? reg_timer_interval : reg_timer_countdown - 1'b1;
+assign          timer_intr_o    = reg_timer_zero;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -180,21 +185,13 @@ always_ff @(posedge clk) begin
         reg_timer_frac      <= '0;
 `ifdef EN_TIMER_INTR
         reg_timer_countdown <= '0;
-        timer_intr_o        <= 1'b0;
 `endif
     end else begin
-`ifdef EN_TIMER_INTR
-        timer_intr_o    <= 1'b0;
-`endif
         if (tick) begin
             reg_timer_frac      <= reg_timer_frac + (HZ_REDUCED - CLK_REDUCED);
             reg_timer           <= reg_timer + 1'b1;
 `ifdef EN_TIMER_INTR
-            reg_timer_countdown <= reg_timer_countdown - 1'b1;
-            if (reg_timer_countdown == 0) begin
-                reg_timer_countdown <= reg_timer_interval;
-                timer_intr_o        <= 1'b1;
-            end
+            reg_timer_countdown <= reg_timer_next;
 `endif
         end else begin
             reg_timer_frac      <= reg_timer_frac + HZ_REDUCED;
@@ -202,12 +199,140 @@ always_ff @(posedge clk) begin
     end
 end
 
+`ifdef EN_PIXEL_ADDR
+logic           pixel_strobe;       // start computation
+
+word_t          reg_pixel_x;        // x pixel coordinate
+word_t          reg_pixel_y;        // y pixel coordinate
+word_t          pixel_base;         // base address of bitmap
+word_t          pixel_width;        // width of bitmap in words
+logic           pixel_bpp;          // bpp-4/8
+word_t          pixel_xw;           // x word offset
+word_t          pixel_mult;         // result of (reg_pixel_y * pixel_width) + pixel_xw
+word_t          unused_high;        // unused high bits from multiply
+word_t          unused_high2;        // unused high bits from multiply
+
+word_t          pixel_addr;         // final result
+logic [3:0]     pixel_xm;           // nibble mask within word
+
+//assign pixel_addr  = /* pixel_base + */ pixel_mult;
+assign pixel_xw    = reg_pixel_x >> 2;
+assign pixel_xm    = { 1'b1, pixel_bpp, 2'b00 } >> reg_pixel_x[1:0];
+
+/* verilator lint_off PINCONNECTEMPTY */
+SB_MAC16 #(
+    .NEG_TRIGGER(1'b0),                 // 0=rising/1=falling clk edge
+    .C_REG(1'b0),                       // 1=register input C
+    .A_REG(1'b0),                       // 1=register input A
+    .B_REG(1'b0),                       // 1=register input B
+    .D_REG(1'b0),                       // 1=register input D
+    .TOP_8x8_MULT_REG(1'b0),            // 1=register top 8x8 output
+    .BOT_8x8_MULT_REG(1'b0),            // 1=register bot 8x8 output
+    .PIPELINE_16x16_MULT_REG1(1'b0),    // 1=register reg1 16x16 output
+    .PIPELINE_16x16_MULT_REG2(1'b0),    // 1=register reg2 16x16 output
+    .TOPOUTPUT_SELECT(2'b00),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPADDSUB_LOWERINPUT(2'b10),       // 00=input A, 01=8x8 mult top, 10=16x16 upper 16-bit, 11=sext Z15
+    .TOPADDSUB_UPPERINPUT(1'b1),        // 0=add/sub accumulate, 1=input C
+    .TOPADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower add/sub ACCUMOUT, 11=lower add/sub CO
+    .BOTOUTPUT_SELECT(2'b00),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTADDSUB_LOWERINPUT(2'b10),       // 00=input A, 01=8x8 mult top, 10=16x16 upper 16-bit, 11=sext SIGNEXTIN
+    .BOTADDSUB_UPPERINPUT(1'b1),        // 0=add/sub accumulate, 1=input D
+    .BOTADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower DSP ACCUMOUT, 11=lower DSP CO
+    .MODE_8x8(1'b0),                    // 0=16x16 mode, 1=8x8 mode (low power)
+    .A_SIGNED(1'b0),                    // 0=unsigned/1=signed input A
+    .B_SIGNED(1'b0)                     // 0=unsigned/1=signed input B
+) pixeladdr (
+    .CLK(clk),                          // clock
+    .CE(1'b1),                          // clock enable
+    .A(reg_pixel_y),                    // 16-bit input A
+    .B(pixel_width),                    // 16-bit input B
+    .C('0),                             // 16-bit input C
+    .D(pixel_xw),                       // 16-bit input D
+    .AHOLD(1'b0),                       // 0=load, 1=hold input A
+    .BHOLD(1'b0),                       // 0=load, 1=hold input B
+    .CHOLD(1'b0),                       // 0=load, 1=hold input C
+    .DHOLD(1'b0),                       // 0=load, 1=hold input D
+    .IRSTTOP(1'b0),                     // 1=reset input A, C and 8x8 mult upper
+    .IRSTBOT(1'b0),                     // 1=reset input A, C and 8x8 mult lower
+    .ORSTTOP(1'b0),                     // 1=reset output accumulator upper
+    .ORSTBOT(1'b0),                     // 1=reset output accumulator lower
+    .OLOADTOP(1'b0),                    // 0=no load/1=load top accumulator from input C
+    .OLOADBOT(1'b0),                    // 0=no load/1=load bottom accumulator from input D
+    .ADDSUBTOP(1'b0),                   // 0=add/1=sub for top accumulator
+    .ADDSUBBOT(1'b0),                   // 0=add/1=sub for bottom accumulator
+    .OHOLDTOP(1'b0),                    // 0=load/1=hold into top accumulator
+    .OHOLDBOT(1'b0),                    // 0=load/1=hold into bottom accumulator
+    .CI(1'b0),                          // cascaded add/sub carry in from previous DSP block
+    .ACCUMCI(1'b0),                     // cascaded accumulator carry in from previous DSP block
+    .SIGNEXTIN(1'b0),                   // cascaded sign extension in from previous DSP block
+    .O({ unused_high, pixel_mult }),    // 32-bit result output (dual 8x8=16-bit mode with top used)
+    .CO(),                              // cascaded add/sub carry output to next DSP block
+    .ACCUMCO(),                         // cascaded accumulator carry output to next DSP block
+    .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block
+);
+/* verilator lint_on PINCONNECTEMPTY */
+
+/* verilator lint_off PINCONNECTEMPTY */
+SB_MAC16 #(
+    .NEG_TRIGGER(1'b0),                 // 0=rising/1=falling clk edge
+    .C_REG(1'b0),                       // 1=register input C
+    .A_REG(1'b0),                       // 1=register input A
+    .B_REG(1'b0),                       // 1=register input B
+    .D_REG(1'b0),                       // 1=register input D
+    .TOP_8x8_MULT_REG(1'b0),            // 1=register top 8x8 output
+    .BOT_8x8_MULT_REG(1'b0),            // 1=register bot 8x8 output
+    .PIPELINE_16x16_MULT_REG1(1'b0),    // 1=register reg1 16x16 output
+    .PIPELINE_16x16_MULT_REG2(1'b0),    // 1=register reg2 16x16 output
+    .TOPOUTPUT_SELECT(2'b00),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .TOPADDSUB_LOWERINPUT(2'b00),       // 00=input A, 01=8x8 mult top, 10=16x16 upper 16-bit, 11=sext Z15
+    .TOPADDSUB_UPPERINPUT(1'b1),        // 0=add/sub accumulate, 1=input C
+    .TOPADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower add/sub ACCUMOUT, 11=lower add/sub CO
+    .BOTOUTPUT_SELECT(2'b00),           // 00=add/sub, 01=add/sub registered, 10=8x8 mult, 11=16x16 mult
+    .BOTADDSUB_LOWERINPUT(2'b00),       // 00=input A, 01=8x8 mult top, 10=16x16 upper 16-bit, 11=sext SIGNEXTIN
+    .BOTADDSUB_UPPERINPUT(1'b1),        // 0=add/sub accumulate, 1=input D
+    .BOTADDSUB_CARRYSELECT(2'b00),      // 00=carry 0, 01=carry 1, 10=lower DSP ACCUMOUT, 11=lower DSP CO
+    .MODE_8x8(1'b0),                    // 0=16x16 mode, 1=8x8 mode (low power)
+    .A_SIGNED(1'b0),                    // 0=unsigned/1=signed input A
+    .B_SIGNED(1'b0)                     // 0=unsigned/1=signed input B
+) pixelbase (
+    .CLK(clk),                          // clock
+    .CE(1'b1),                          // clock enable
+    .A('0),                             // 16-bit input A
+    .B(pixel_mult),                     // 16-bit input B
+    .C('0),                             // 16-bit input C
+    .D(pixel_base),                     // 16-bit input D
+    .AHOLD(1'b0),                       // 0=load, 1=hold input A
+    .BHOLD(1'b0),                       // 0=load, 1=hold input B
+    .CHOLD(1'b0),                       // 0=load, 1=hold input C
+    .DHOLD(1'b0),                       // 0=load, 1=hold input D
+    .IRSTTOP(1'b0),                     // 1=reset input A, C and 8x8 mult upper
+    .IRSTBOT(1'b0),                     // 1=reset input A, C and 8x8 mult lower
+    .ORSTTOP(1'b0),                     // 1=reset output accumulator upper
+    .ORSTBOT(1'b0),                     // 1=reset output accumulator lower
+    .OLOADTOP(1'b0),                    // 0=no load/1=load top accumulator from input C
+    .OLOADBOT(1'b0),                    // 0=no load/1=load bottom accumulator from input D
+    .ADDSUBTOP(1'b0),                   // 0=add/1=sub for top accumulator
+    .ADDSUBBOT(1'b0),                   // 0=add/1=sub for bottom accumulator
+    .OHOLDTOP(1'b0),                    // 0=load/1=hold into top accumulator
+    .OHOLDBOT(1'b0),                    // 0=load/1=hold into bottom accumulator
+    .CI(1'b0),                          // cascaded add/sub carry in from previous DSP block
+    .ACCUMCI(1'b0),                     // cascaded accumulator carry in from previous DSP block
+    .SIGNEXTIN(1'b0),                   // cascaded sign extension in from previous DSP block
+    .O({ unused_high2, pixel_addr }),   // 32-bit result output (dual 8x8=16-bit mode with top used)
+    .CO(),                              // cascaded add/sub carry output to next DSP block
+    .ACCUMCO(),                         // cascaded accumulator carry output to next DSP block
+    .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block
+);
+/* verilator lint_on PINCONNECTEMPTY */
+
+`endif
+
 // continuously output byte selected for read from Xosera (to be put on bus when selected for read)
 word_t      rd_temp_word;
 always_comb bus_data_o  = !bus_bytesel ? rd_temp_word[15:8] : rd_temp_word[7:0];
 
 `ifdef EN_UART
-always_comb uart_rd    = bus_read_strobe && (bus_reg_num == xv::XM_UART);
+always_comb uart_rd    = bus_read_strobe && bus_bytesel && (bus_reg_num == xv::XM_FEATURE);
 `endif
 
 // xm registers read
@@ -217,7 +342,7 @@ always_comb begin
 `ifdef EN_BLIT
             rd_temp_word  = { mem_wait, blit_full_i, blit_busy_i, 1'b0, h_blank_i, v_blank_i, 1'b0, 1'b0, 4'b0, regs_wrmask_o };
 `else
-            rd_temp_word  = { mem_wait, 1'b0, 1'b0, 1'b0, h_blank_i, v_blank_i, 1'b0, 1'b0, 4'b0, regs_wrmask_o };
+            rd_temp_word  = { mem_wait, 1'b0,        1'b0,        1'b0, h_blank_i, v_blank_i, 1'b0, 1'b0, 4'b0, regs_wrmask_o };
 `endif
         xv::XM_INT_CTRL:
             rd_temp_word  = { 1'b0, intr_mask, 1'b0, intr_status_i };
@@ -240,33 +365,34 @@ always_comb begin
         xv::XM_DATA,
         xv::XM_DATA_2:
             rd_temp_word  = reg_data;
-`ifdef EN_UART
-        xv::XM_UART:
-            rd_temp_word  = { uart_rxf, uart_txf, 6'b0, uart_dout };
-`else
-        xv::XM_UNUSED_0C,
-`endif
-        xv::XM_UNUSED_0D,
-        xv::XM_UNUSED_0E,
-        xv::XM_FEATURES:
+        xv::XM_PIXEL_X,
+        xv::XM_PIXEL_Y,
+        xv::XM_UNUSED_E,
+        xv::XM_FEATURE:
             rd_temp_word  =
-                (16'(xv::FPGA_CONFIG_NUM)   << xv::FEATURE_CONFIG)  |
-                (16'(xv::AUDIO_NCHAN)       << xv::FEATURE_AUDCHAN) |
-
+              {
 `ifdef EN_UART
-                (16'b1                      << xv::FEATURE_UART)    |
+                ( 8'({ uart_rxf, uart_txf, 1'b1 }) << xv::FEATURE_UART) |
 `endif
-`ifdef EN_PF_B
-                (16'b1                      << xv::FEATURE_PF_B)    |
+`ifdef EN_AUDIO
+                (8'b1 << xv::FEATURE_AUDIO) |
 `endif
 `ifdef EN_BLIT
-                (16'b1                      << xv::FEATURE_BLIT)    |
+                (8'b1 << xv::FEATURE_BLIT) |
 `endif
 `ifdef EN_COPP
-                (16'b1                      << xv::FEATURE_COPP)    |
+                (8'b1 << xv::FEATURE_COPP) |
 `endif
-                (16'(xv::VIDEO_MODE_NUM)    << xv::FEATURE_MONRES);
-
+`ifdef EN_PF_B
+                (8'b1 << xv::FEATURE_PF_B) |
+`endif
+                (8'(xv::VIDEO_MODE_NUM & 1) << xv::FEATURE_PF_WIDE),
+`ifdef EN_UART
+                uart_dout
+`else
+                8'h00
+`endif
+            };
     endcase
 end
 
@@ -298,6 +424,13 @@ always_ff @(posedge clk) begin
         regs_wrmask_o   <= 4'b1111;
         intr_mask       <= '0;
 
+        pixel_strobe    <= '0;
+        reg_pixel_x     <= '0;
+        reg_pixel_y     <= '0;
+        pixel_base      <= '0;
+        pixel_width     <= '0;
+        pixel_bpp       <= '0;
+
         // temp registers
         timer_latch_val <= 8'h00;
         reg_data_even   <= 8'h00;
@@ -322,6 +455,10 @@ always_ff @(posedge clk) begin
     end else begin
         // clear strobe signals
         intr_clear_o    <= '0;
+
+`ifdef EN_PIXEL_ADDR
+        pixel_strobe    <= 1'b0;
+`endif
 
 `ifdef EN_UART
         uart_wr         <= 1'b0;
@@ -472,12 +609,37 @@ always_ff @(posedge clk) begin
                         regs_data_o         <= { reg_data_even, bus_data_byte };      // output write data
                     end
                 end
-`ifdef EN_UART
-                xv::XM_UART: begin
-                    uart_wr     <= 1'b1;
-                    uart_din    <= bus_data_byte;
+`ifdef EN_PIXEL_ADDR
+                xv::XM_PIXEL_X: begin
+                        if (!bus_bytesel) begin
+                        reg_pixel_x[15:8]   <= bus_data_byte;
+                    end else begin
+                        reg_pixel_x[7:0]    <= bus_data_byte;
+                        pixel_strobe        <= 1'b1;
+                    end
+                end
+                xv::XM_PIXEL_Y: begin
+                    if (!bus_bytesel) begin
+                        reg_pixel_y[15:8]   <= bus_data_byte;
+                    end else begin
+                        reg_pixel_y[7:0]    <= bus_data_byte;
+                        pixel_strobe        <= 1'b1;
+                    end
                 end
 `endif
+                xv::XM_FEATURE: begin
+`ifdef EN_UART
+                    if (bus_bytesel) begin
+                        uart_wr     <= 1'b1;
+                        uart_din    <= bus_data_byte;
+                    end else
+`endif
+                    begin
+                        pixel_bpp   <=  bus_data_byte[0];
+                        pixel_base  <=  reg_pixel_x;
+                        pixel_width <=  reg_pixel_y;
+                    end
+                end
             default: begin
             end
             endcase
@@ -497,6 +659,11 @@ always_ff @(posedge clk) begin
                 regs_vram_sel_o     <= 1'b1;            // select VRAM
                 vram_rd             <= 1'b1;            // remember pending vram read request
             end
+        end
+
+        if (pixel_strobe) begin
+            reg_wr_addr     <= pixel_addr;
+            regs_wrmask_o   <= pixel_xm;
         end
 
         // latch low byte of timer when upper byte read

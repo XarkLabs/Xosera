@@ -2878,7 +2878,7 @@ void     xosera_test()
     {
         mem_buffer[i] = xmem_getw_next();
     }
-    hexdump(mem_buffer + 0x380, 256);
+    hexdump(mem_buffer + ((XR_COPPER_SIZE << 1) - 256), 256);
 
     dprintf("\n");
     dprintf("Description : \"%s\"\n", initinfo.description_str);
@@ -3308,7 +3308,7 @@ void     xosera_test()
         xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
         xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
 
-        uint16_t features  = xm_getw(FEATURES);
+        uint8_t  feature   = xm_getbh(FEATURE);
         uint16_t monwidth  = xosera_vid_width();
         uint16_t monheight = xosera_vid_height();
 
@@ -3329,7 +3329,7 @@ void     xosera_test()
         dprintf("DESCRIPTION : \"%s\"\n", initinfo.description_str);
         dprintf("VERSION BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
         dprintf("GIT HASH    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
-        dprintf("FEATURES    : 0x%04x\n", features);
+        dprintf("FEATURE     : 0x%02x\n", feature);
         dprintf("MONITOR RES : %dx%d\n", monwidth, monheight);
         dprintf("\nConfig:\n");
         dprintf("SYS_CTRL    : 0x%04x  INT_CTRL    : 0x%04x\n", sysctrl, intctrl);
@@ -3344,12 +3344,12 @@ void     xosera_test()
 
         if (monwidth > 640)
         {
-            xreg_setw(POINTER_H, 240 - 6);
+            xreg_setw(POINTER_H, 0);
             xreg_setw(POINTER_V, 0xF000 | 0);
         }
         else
         {
-            xreg_setw(POINTER_H, 160 - 6);
+            xreg_setw(POINTER_H, 0);
             xreg_setw(POINTER_V, 0xF000 | 0);
         }
 

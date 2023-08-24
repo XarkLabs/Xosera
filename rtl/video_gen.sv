@@ -698,6 +698,13 @@ assign              pointer_color    = pointer_word[15:12];
 
 assign              pointer_addr_o   = { pointer_v_cnt[4:0], pointer_h_cnt[4:2] };
 
+logic [CURSH_W:0]   vid_pointer_h_next;
+assign              vid_pointer_h_next  = pointer_h_draw ? pointer_h_cnt + 1'b1 : pointer_h_cnt;
+logic [CURSV_W:0]   vid_pointer_v_next;
+assign              vid_pointer_v_next  = pointer_v_draw ? pointer_v_cnt + 1'b1 : pointer_v_cnt;
+word_t              pointer_word_next;
+assign              pointer_word_next   = { pointer_word[11:0], 4'b000 };  // shift pixel
+
 // pointer sprite
 always_ff @(posedge clk) begin
     if (reset_i) begin
@@ -706,23 +713,17 @@ always_ff @(posedge clk) begin
         pointer_word     <= '0;
     end else begin
 
-        if (pointer_h_draw) begin
-            pointer_h_cnt    <= pointer_h_cnt + 1'b1;
-        end
+        pointer_word    <= pointer_word_next;
+        pointer_h_cnt   <= vid_pointer_h_next;
 
-        if (vid_pointer_h == h_count) begin
+        if ((vid_pointer_h + xv::OFFSCREEN_WIDTH-6) == h_count) begin
             pointer_h_cnt    <= '0;
-
-            if (pointer_v_draw) begin
-                pointer_v_cnt    <= pointer_v_cnt + 1'b1;
-            end
+            pointer_v_cnt    <= vid_pointer_v_next;
 
             if (vid_pointer_v == v_count) begin
                 pointer_v_cnt    <= '0;
             end
         end
-
-        pointer_word <=  { pointer_word[11:0], 4'b000 };
 
         if (pointer_h_cnt[1:0] == 2'b11) begin
             pointer_word     <= pointer_data_i;
@@ -733,8 +734,8 @@ always_ff @(posedge clk) begin
         end
     end
 end
-`endif
 
+`endif
 
 // combinational block for video fetch start and stop
 logic           mem_fetch;                   // true when fetching display data
@@ -752,25 +753,20 @@ always_ff @(posedge clk) begin
 `ifdef EN_PF_B
         colorB_index_o      <= 8'b0;
 `endif
-
         mem_fetch           <= 1'b0;
     end else begin
         // set output pixel index from pixel shift-out
 `ifdef EN_PF_B
         colorA_index_o      <= !vid_colorswap ? pa_color_index : pb_color_index;
         colorB_index_o      <= !vid_colorswap ? pb_color_index : pa_color_index;
-
+`else
+        colorA_index_o      <= pa_color_index;
+`endif
 `ifdef EN_POINTER
         if (pointer_color != 0) begin
             colorA_index_o      <= { vid_pointer_col, pointer_color };
-            colorB_index_o      <= '0;
         end
 `endif
-`else
-        colorA_index_o      <= pa_color_index;
-
-`endif
-
         mem_fetch           <= mem_fetch_next;
     end
 end

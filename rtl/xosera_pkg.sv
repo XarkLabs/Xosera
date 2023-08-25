@@ -32,6 +32,8 @@
 //
 // set by Makefile: `define EN_PF_B                         // enable PF B (2nd overlay playfield)
 // set by Makefile: `define EN_AUDIO                4       // number of channels 2/4
+//`undef EN_PF_B
+//`undef EN_AUDIO
 `ifdef EN_PF_B
 `define EN_PF_B_BLND                    // enable pf B blending (otherwise overlay only)
 `define EN_BLEND_FULL                   // use full precision blending w/o FMAC (ignored with iCE40UP5K)
@@ -43,7 +45,7 @@
 `define EN_PIXEL_ADDR                   // pixel coordinate address generation
 //`define EN_UART                         // enable USB UART
 
-`define VERSION 0_38                    // Xosera BCD version code (x.xx)
+`define VERSION 0_39                    // Xosera BCD version code (x.xx)
 
 `ifndef GITCLEAN
 `define GITCLEAN 0                      // unknown Git state (assumed dirty)

@@ -27,28 +27,11 @@
 #include <machine.h>
 #include <sdfat.h>
 
-#define DELAY_TIME 5000        // human speed
-// #define DELAY_TIME 1000        // impatient human speed
-// #define DELAY_TIME 100        // machine speed
-
 #include "xosera_m68k_api.h"
 
-bool              use_sd;
-volatile uint32_t optguard;
+bool use_sd;
 
-// NOTE: 8 pixels before EOL is good spot to change GFX_CTRL settings for next line
-// Copper list
-uint32_t copper_list[] = {
-    COP_MOVER(0x55, PA_GFX_CTRL),           // mover 0055, PA_GFX_CTRL    First half of screen in 4-bpp + Hx2 + Vx2 //
-    COP_MOVEP(0x0ec6, 0xf),                 // movep 0x0ec6, 0xf          Palette entry 0xf from tut bitmap
-    COP_WAIT_V(240),                        // wait  632, 240             Wait for 640-8, 240
-    COP_MOVER(0x0040, PA_GFX_CTRL),         // mover 0x0040, PA_GFX_CTRL  1-bpp + Hx1 + Vx1
-    COP_MOVER(0x3e80, PA_LINE_ADDR),        // mover 0x3e80, PA_LINE_ADDR Line start now at 16000
-    COP_MOVEP(0x0fff, 0xf),                 // movep 0x0fff, 0xf          Palette entry 0xf to white for 1bpp bitmap
-    COP_END()                               // nextf                      Wait for next frame
-};
-
-uint32_t mem_buffer[128 * 1024];
+uint8_t mem_buffer[512];
 
 static void dputc(char c)
 {
@@ -90,35 +73,6 @@ void wait_vblank_start()
 {
     xwait_not_vblank();
     xwait_vblank();
-}
-
-uint16_t screen_addr;
-uint8_t  text_color = 0x02;        // dark green on black
-uint8_t  text_columns;
-uint8_t  text_rows;
-int8_t   text_h;
-int8_t   text_v;
-
-static void get_textmode_settings()
-{
-    uint16_t vx          = (xreg_getw(PA_GFX_CTRL) & 3) + 1;
-    uint16_t tile_height = (xreg_getw(PA_TILE_CTRL) & 0xf) + 1;
-    screen_addr          = xreg_getw(PA_DISP_ADDR);
-    text_columns         = (uint8_t)xreg_getw(PA_LINE_LEN);
-    text_rows            = (uint8_t)(((xosera_vid_height() / vx) + (tile_height - 1)) / tile_height);
-}
-
-static void xcls()
-{
-    get_textmode_settings();
-    xm_setw(WR_ADDR, screen_addr);
-    xm_setw(WR_INCR, 1);
-    xm_setbh(DATA, text_color);
-    for (uint16_t i = 0; i < (text_columns * text_rows); i++)
-    {
-        xm_setbl(DATA, ' ');
-    }
-    xm_setw(WR_ADDR, screen_addr);
 }
 
 static bool load_sd_bitmap(const char * filename, uint16_t base_address)
@@ -203,21 +157,9 @@ void     xosera_pointer_test()
     printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
     dprintf("Xosera_test_m68k\n");
-
-    // wait for monitor to unblank
     dprintf("\nxosera_init(0)...");
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
-
-    dprintf("Loading copper list...\n");
-
-    xmem_set_addr(XR_COPPER_ADDR);
-    uint16_t * wp = (uint16_t *)copper_list;
-    for (uint8_t i = 0; i < sizeof(copper_list) / sizeof(uint32); i++)
-    {
-        xmem_setw_next(*wp++);
-        xmem_setw_next(*wp++);
-    }
 
     uint8_t  features  = xm_getbh(FEATURE);
     uint16_t monwidth  = 640;
@@ -263,20 +205,8 @@ void     xosera_pointer_test()
         return;
     }
 
-
     // load palette, and images into vram
     dprintf("Loading data...\n");
-#if 0
-    if (!load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw"))
-    {
-        return;
-    }
-
-    if (!load_sd_bitmap("/ST_KingTut_Dpaint_16.raw", 0))
-    {
-        return;
-    }
-#else
     if (!load_sd_colors("/pacbox-320x240_pal.raw"))
     {
         return;
@@ -286,79 +216,108 @@ void     xosera_pointer_test()
     {
         return;
     }
-#endif
 
-    if (!load_sd_bitmap("/mountains_mono_640x480w.raw", 16000))
+    xmem_set_addr(XR_POINTER_ADDR);
+    for (uint8_t v = 0; v < 32; v++)
     {
-        return;
-    }
-
-    /* For manual testing tut, if copper disabled */
-    // xreg_setw(PA_GFX_CTRL, 0x0065);
-
-    // Set line len here, if the two res had different the copper
-    // would handle this instead...
-    xreg_setw(PA_LINE_LEN, 80);
-
-    dprintf("Ready - enabling copper...\n");
-    xreg_setw(COPP_CTRL, 0x8000);
-
-    /* For manual testing mountain if copper disabled... */
-    // xreg_setw(PA_GFX_CTRL, 0x0040);
-    // xreg_setw(PA_LINE_LEN, 80);
-    // xreg_setw(PA_DISP_ADDR, 0x3e80);
-
-    bool     up      = false;
-    uint16_t current = 240;
-
-    int32_t px = 300UL << 8, py = 400UL << 8;
-    int16_t pxd = 0x0104, pyd = (int16_t)0xfff8;
-
-    while (!checkchar())
-    {
-        xreg_setw(POINTER_H, px >> 8);
-        xreg_setw(POINTER_V, py >> 8);
-
-        px += pxd;
-        py += pyd;
-
-        if (px < 120 || px > 640 + 120)
-            pxd = -pxd;
-        if (py < -40 || py > 500)
-            pyd = -pyd;
-
-        wait_vblank_start();
-
-        xmem_set_addr(XR_COPPER_ADDR + 4);
-        if (up)
+        if (v == 0 || v == 31)
         {
-            current += 1;
-            uint32_t op = COP_WAIT_V(current);
-            xmem_setw_next(op >> 16);
-            xmem_setw_next(op & 0xffff);
-            if (current >= 300)
+            for (uint8_t h = 0; h < (32 / 4); h++)
             {
-                up = false;
+                xmem_setw_next(0xffff);
             }
         }
         else
         {
-            current -= 1;
-            uint32_t op = COP_WAIT_V(current);
-            xmem_setw_next(op >> 16);
-            xmem_setw_next(op & 0xffff);
-            if (current <= 200)
+            xmem_setw_next(0xf000);
+            for (uint8_t h = 0; h < ((32 - 8) / 4); h++)
             {
-                up = true;
+                xmem_setw_next(0x0000);
             }
+            xmem_setw_next(0x000f);
         }
     }
 
-    // disable Copper
-    xreg_setw(COPP_CTRL, 0x0000);
+    /* For manual testing tut, if copper disabled */
+    xreg_setw(PA_GFX_CTRL, 0x0055);
 
-    // restore text mode
-    xosera_init(1);
+    // Set line len here, if the two res had different the copper
+    // would handle this instead...
+    xreg_setw(PA_LINE_LEN, 320 / 4);
+
+    int32_t px = 300, py = 200;
+    int16_t pxd = 0, pyd = 0;
+    bool    done = false;
+
+    xm_setw(WR_INCR, 0);
+    uint16_t color = 0x0000;
+
+    // init
+    xm_setw(PIXEL_X, 0x0000);         // base VRAM address
+    xm_setw(PIXEL_Y, 320 / 4);        // words per line
+    xm_setbh(FEATURE, 0);             // init pixel address generator
+
+    {
+        // plot pixel
+        xm_setw(PIXEL_X, px);        // set X coordinate
+        xm_setw(PIXEL_Y, py);        // set Y coordinate
+        xm_setw(DATA, color);        // plot color (write mask set to isolate pixel)
+    }
+
+    while (!done)
+    {
+        if (checkchar())
+        {
+            char c = readchar();
+
+            if (c == 'z')
+                py += 0x1;
+            else if (c == 'a')
+                py -= 0x1;
+            else if (c == ',')
+                px -= 0x1;
+            else if (c == '.')
+                px += 0x1;
+            else if (c == ' ')
+            {
+                if (color == 0xffff)
+                {
+                    color = 0x0000;
+                }
+                else
+                {
+                    color += 0x1111;
+                }
+                xm_setw(PIXEL_X, px);        // set X coordinate
+                xm_setw(PIXEL_Y, py);        // set Y coordinate
+                xm_setw(DATA, color);        // plot color (write mask set to isolate pixel)
+            }
+            else if (c == '\x1b' || c == 'k' || c == 'K')
+                done = true;
+
+            px &= 0x7ff;
+            py &= 0x3ff;
+
+            dprintf("PTR=%04x, %04x  %d,%d\n", px, py, px, py);
+        }
+
+        px &= 0x7ff;
+        py &= 0x3ff;
+
+        xreg_setw(POINTER_H, px);
+        xreg_setw(POINTER_V, 0xF000 | (py));
+
+        px += pxd;
+        py += pyd;
+
+        // if (px < (120 << 8) || px > (640 + 120) << 8)
+        //     pxd = -pxd;
+        // if (py < (int16_t)(((uint16_t)-40) << 8) || py > (500 << 8))
+        //     pyd = -pyd;
+
+        wait_vblank_start();
+    }
+
     xreg_setw(PA_GFX_CTRL, 0x0000);        // un-blank screen
     print("\033c");                        // reset & clear
 }

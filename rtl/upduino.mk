@@ -131,7 +131,7 @@ FLOW3 :=
 #YOSYS_SYNTH_ARGS := -device u -abc9 -relut -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc2 -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -no-rw-check -dff -abc9 -top $(TOP)
-YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc2 -dff -top $(TOP)
+YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc9 -dff -top $(TOP)
 #FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules

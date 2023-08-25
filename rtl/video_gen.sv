@@ -680,17 +680,16 @@ end
 
 `ifdef EN_POINTER
 // 32x32 4-bpp pointer sprite
-localparam          POINTER_WIDTH    = 32;
-localparam          POINTER_HEIGHT   = 32;
-localparam          CURSH_W         = $clog2(POINTER_WIDTH);
-localparam          CURSV_W         = $clog2(POINTER_HEIGHT);
+localparam          POINTER_SIZE    = 32;   // 32x32 4-bpp
+localparam          CURSH_W         = $clog2(POINTER_SIZE);
+localparam          CURSV_W         = $clog2(POINTER_SIZE);
 
 word_t              pointer_word;        // current data word (nibble shifting left)
 logic [CURSH_W:0]   pointer_h_cnt;       // extra bit for POINTER_WIDTH+3
 logic [CURSV_W:0]   pointer_v_cnt;       // extra bit to detect overflow
 
 logic               pointer_h_draw;
-assign              pointer_h_draw   = (pointer_h_cnt < POINTER_WIDTH+3) ? 1'b1 : 1'b0;    // +3 for memory latency delay
+assign              pointer_h_draw   = (pointer_h_cnt < POINTER_SIZE+3) ? 1'b1 : 1'b0;    // +3 for memory latency delay
 logic               pointer_v_draw;
 assign              pointer_v_draw   = (!pointer_v_cnt[CURSV_W]) ? 1'b1 : 1'b0;
 logic [3:0]         pointer_color;
@@ -716,7 +715,7 @@ always_ff @(posedge clk) begin
         pointer_word    <= pointer_word_next;
         pointer_h_cnt   <= vid_pointer_h_next;
 
-        if ((vid_pointer_h + xv::OFFSCREEN_WIDTH-6) == h_count) begin
+        if (vid_pointer_h == h_count) begin
             pointer_h_cnt    <= '0;
             pointer_v_cnt    <= vid_pointer_v_next;
 

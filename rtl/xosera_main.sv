@@ -77,9 +77,14 @@ argb_t                  colorA_xrgb;        // pf A ARGB output
 `ifdef EN_PF_B
 color_t                 colorB_index;       // pf B color index
 argb_t                  colorB_xrgb;        // pf B ARGB output
-`else
-logic unused_pf = &{ 1'b0, colorA_xrgb[15:12] }; // unused alpha
+`ifndef EN_PF_B_BLND
+logic unused_pfa = &{ 1'b0, colorA_xrgb[15:12] }; // unused alpha
+logic unused_pfb = &{ 1'b0, colorB_xrgb[15:12] }; // unused alpha
 `endif
+`else
+logic unused_pfa = &{ 1'b0, colorA_xrgb[15:12] }; // unused alpha
+`endif
+
 `ifdef EN_POINTER
 pointer_t               pointer_addr;
 word_t                  pointer_data;
@@ -500,6 +505,9 @@ initial begin
 `endif
 `ifdef EN_PIXEL_ADDR
         $write("PIXA ");
+`endif
+`ifdef EN_POINTER
+        $write("PNTR ");
 `endif
 `ifdef EN_UART
         $write("UART ");

@@ -271,6 +271,10 @@ typedef enum {
 //     unsigned char githash[4];
 // } xosera_info_t;
 
+localparam XR_COPPER_SIZE       = 16'h0600;   // 1024+512 x 16-bit copper memory words
+localparam XV_INFO_WORDS        = 128;        // 128 16-bit words (last 128 words in copper memory)
+localparam XV_INFO_ADDR         = (XR_COPPER_ADDR + XR_COPPER_SIZE - XV_INFO_WORDS);
+
 localparam [11:0]   version     = 12'H`VERSION;
 localparam [31:0]   builddate   = 32'H`BUILDDATE;         // YYYYMMDD
 localparam [8:1]    gitclean    = `GITCLEAN ? "=" : ">";    // prepend '=' if clean or '>' if modified
@@ -278,7 +282,7 @@ localparam [31:0]   githash     = 32'H`GITHASH;             // git short hash
 
 localparam [16*8-1:0] hex_str = "FEDCBA9876543210";
 /* verilator lint_off LITENDIAN */  // NOTE: This keeps the letters in forward order for humans
-localparam [0:48*8-1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]),
+localparam [0:89*8-1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]),
                                 " ",
                                 hex_str[((builddate[31:28])*8)+:8], hex_str[((builddate[27:24])*8)+:8],
                                 hex_str[((builddate[23:20])*8)+:8], hex_str[((builddate[19:16])*8)+:8],
@@ -290,10 +294,61 @@ localparam [0:48*8-1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0"
                                 hex_str[((githash[15:12])*8)+:8], hex_str[((githash[11: 8])*8)+:8],
                                 hex_str[((githash[ 7: 4])*8)+:8], hex_str[((githash[ 3: 0])*8)+:8],
 `ifdef ICE40UP5K
-                                " iCE40UP5K 128KB"
+                                " iCE40UP5K 128KB",
 `else
-                                " Unknown FPGA   "
+                                " Unknown FPGA   ",
 `endif
+
+`ifdef EN_PF_B
+                                " PF_B",
+`endif
+`ifdef EN_PF_B_BLND
+                                " BLND",
+`endif
+`ifdef EN_COPP
+                                " COPP",
+`endif
+`ifdef EN_BLIT
+                                " BLIT",
+`endif
+`ifdef EN_PIXEL_ADDR
+                                " PIXA",
+`endif
+`ifdef EN_POINTER
+                                " PNTR",
+`endif
+`ifdef EN_UART
+                                " UART",
+`endif
+`ifdef EN_AUDIO
+                                " AUD", hex_str[((`EN_AUDIO)*8)+:8],
+`endif
+
+`ifndef EN_PF_B
+                                8'd0,8'd0,8'd0,8'd0,8'd0,
+`endif
+`ifndef EN_PF_B_BLND
+                                8'd0,8'd0,8'd0,8'd0,8'd0,
+`endif
+`ifndef EN_COPP
+                                8'd0,8'd0,8'd0,8'd0,8'd0,
+`endif
+`ifndef EN_BLIT
+                                8'd0,8'd0,8'd0,8'd0,8'd0,
+`endif
+`ifndef EN_PIXEL_ADDR
+                                8'd0,8'd0,8'd0,8'd0,8'd0,
+`endif
+`ifndef EN_POINTER
+                                8'd0,8'd0,8'd0,8'd0,8'd0,
+`endif
+`ifndef EN_UART
+                                8'd0,8'd0,8'd0,8'd0,8'd0,
+`endif
+`ifndef EN_AUDIO
+                                8'd0,8'd0,8'd0,8'd0,8'd0,
+`endif
+                                8'd0
                                 };
 /* verilator lint_on LITENDIAN */
 

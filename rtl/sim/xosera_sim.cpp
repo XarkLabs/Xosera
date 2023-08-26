@@ -471,7 +471,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_RW(FEATURE),
     REG_W(SYS_CTRL, 0x000F),        // write mask
 
-    XREG_SETW(POINTER_H, 200),
+    XREG_SETW(POINTER_H, OFFSCREEN_WIDTH + 390),
     XREG_SETW(POINTER_V, 0xF000 | 100),
 
     REG_WAITVTOP(),
@@ -528,16 +528,11 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
-#if 0
-    REG_W(RW_INCR, 0x1),
-    REG_W(RW_ADDR, 0x1234),
-    REG_RW(RW_DATA),
-    REG_RW(RW_DATA),
-    REG_BL(SYS_CTRL, 0x1F),
-    REG_W(RW_INCR, 0x1),
-    REG_W(RW_ADDR, 0x1234),
-    REG_RW(RW_DATA),
-    REG_RW(RW_DATA),
+#if 1
+    REG_W(WR_INCR, 0x10),
+    REG_W(WR_ADDR, 0x2000),
+    REG_W(DATA, 1234),
+    REG_W(DATA, 5678),
 
     REG_W(WR_XADDR, XR_COLOR_A_ADDR),
     REG_W(XDATA, 0x1234),
@@ -548,19 +543,40 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_RW(XDATA),
 #endif
 
-
 #if 0
+
+    // 16-color 320x200 color tut
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    XREG_SETW(PA_GFX_CTRL, 0x0065),           // bitmap, 8-bpp, Hx2, Vx2
+    XREG_SETW(PA_TILE_CTRL, 0x000F),          // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
+    XREG_SETW(PA_DISP_ADDR, 0x0000),          // display start address
+    XREG_SETW(PA_LINE_LEN, (320 / 2)),        // display line word length (320 pixels with 2 pixels per word at 8-bpp)
+    XREG_SETW(PB_GFX_CTRL, 0x0080),           // disable
+
+    REG_W(WR_XADDR, XR_COLOR_ADDR),        // upload color palette
+    REG_UPLOAD_AUX(),
+
+    REG_W(WR_INCR, 0x0001),
+    REG_W(WR_ADDR, 0x0000),
+    REG_UPLOAD(),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+
+#endif
+
+#if 1
     XREG_SETW(PA_GFX_CTRL, 0x005F),         // bitmap, 4-bpp, Hx4, Vx4
     XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
     XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address
     XREG_SETW(PA_LINE_LEN, 320 / 4),        // display line word length (320 pixels with 4 pixels per word at 4-bpp)
 
-    REG_W(WR_XADDR, XR_COLOR_ADDR),        // upload color palette
-    REG_UPLOAD_AUX(),
-
-    REG_W(WR_INCR, 0x0001),        // 16x16 logo to 0xF000
-    REG_W(WR_ADDR, 0x0000),
-    REG_UPLOAD(),        // RG 8-bpp + 4-bpp B
+    // REG_W(WR_XADDR, XR_COLOR_ADDR),        // upload color palette
+    // REG_UPLOAD_AUX(),
 
     // upload moto logo to 0xF000
     REG_W(WR_INCR, 0x0001),
@@ -615,11 +631,11 @@ uint16_t     BusInterface::test_data[32768] = {
 
     // 2D moto blit 0, 0
     REG_WAIT_BLIT_READY(),
-    XREG_SETW(BLIT_CTRL, 0x0001),                             // enable 4-bit transp=0x00
+    XREG_SETW(BLIT_CTRL, 0x0010),                             // enable 4-bit transp=0x00
     XREG_SETW(BLIT_ANDC, 0x0000),                             // no ANDC
     XREG_SETW(BLIT_XOR, 0x0000),                              // no XOR
     XREG_SETW(BLIT_MOD_S, 0x0000),                            // no S modulo (contiguous source)
-    XREG_SETW(BLIT_SRC_S, 0xF0F0),                            // S = start of moto logo
+    XREG_SETW(BLIT_SRC_S, 0xF000),                            // S = start of moto logo
     XREG_SETW(BLIT_MOD_D, W_4BPP - W_LOGO),                   // D modulo = dest width - source width
     XREG_SETW(BLIT_DST_D, 0x0000 + (20 * W_4BPP) + 1),        // D = start dest address
     XREG_SETW(BLIT_SHIFT, 0xFF00),                            // no masking or shifting
@@ -946,7 +962,7 @@ uint16_t     BusInterface::test_data[32768] = {
 
 #endif
 
-#if 1        // lame audio test
+#if 0        // lame audio test
     REG_RW(INT_CTRL),
     REG_W(INT_CTRL, 0x000F),
     REG_RW(INT_CTRL),

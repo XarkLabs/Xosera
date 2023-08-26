@@ -2871,14 +2871,7 @@ void     xosera_test()
 
     xosera_get_info(&initinfo);
     dprintf("xosera_get_info details:\n");
-    //    hexdump(&initinfo, sizeof(initinfo));
-
-    xmem_get_addr(XR_COPPER_ADDR);
-    for (int i = 0; i < XR_COPPER_SIZE; i++)
-    {
-        mem_buffer[i] = xmem_getw_next();
-    }
-    hexdump(mem_buffer + ((XR_COPPER_SIZE << 1) - 256), 256);
+    hexdump(&initinfo, sizeof(initinfo));
 
     dprintf("\n");
     dprintf("Description : \"%s\"\n", initinfo.description_str);

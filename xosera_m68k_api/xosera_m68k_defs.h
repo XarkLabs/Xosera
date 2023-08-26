@@ -46,8 +46,9 @@
 #define XR_COPPER_SIZE  0x0600        //                     1024+512 x 16-bit copper memory words
 
 // Xosera version info put in COPPER memory after FPGA reconfigure
-#define XV_INFO_ADDR (XR_COPPER_ADDR + XR_COPPER_SIZE - 128)
-#define XV_INFO_SIZE 256        // 64 bytes total for "struct _xosera_info" (last 128 words in copper memory)
+#define XV_INFO_BYTES 256        // 256 bytes total for "struct _xosera_info" (last 128 words in copper memory)
+#define XV_INFO_WORDS 128        // 128 16-bit words (last 128 words in copper memory)
+#define XV_INFO_ADDR  (XR_COPPER_ADDR + XR_COPPER_SIZE - XV_INFO_WORDS)
 
 // Macros to make bit-fields easier (works similar to Verilog "+:" operator, e.g., word[RIGHTMOST_BIT +: BIT_WIDTH])
 // encode value into bit-field for register

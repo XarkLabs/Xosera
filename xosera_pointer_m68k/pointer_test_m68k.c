@@ -217,6 +217,13 @@ void     xosera_pointer_test()
         return;
     }
 
+#if 1
+    // set corners of default pointer for testing
+    xmem_setw(XR_POINTER_ADDR + 7, 0x000f);
+    xmem_setw(XR_POINTER_ADDR + 31 * 8, 0xf000);
+    xmem_setw(XR_POINTER_ADDR + 31 * 8 + 7, 0x000f);
+#else
+    // box for testing
     xmem_set_addr(XR_POINTER_ADDR);
     for (uint8_t v = 0; v < 32; v++)
     {
@@ -237,6 +244,7 @@ void     xosera_pointer_test()
             xmem_setw_next(0x000f);
         }
     }
+#endif
 
     /* For manual testing tut, if copper disabled */
     xreg_setw(PA_GFX_CTRL, 0x0055);
@@ -246,23 +254,15 @@ void     xosera_pointer_test()
     xreg_setw(PA_LINE_LEN, 320 / 4);
 
     int32_t px = 300, py = 200;
-    int16_t pxd = 0, pyd = 0;
     bool    done = false;
 
     xm_setw(WR_INCR, 0);
-    uint16_t color = 0x0000;
+    uint16_t color = 0x1111;
 
     // init
-    xm_setw(PIXEL_X, 0x0000);         // base VRAM address
-    xm_setw(PIXEL_Y, 320 / 4);        // words per line
-    xm_setbh(FEATURE, 0);             // init pixel address generator
-
-    {
-        // plot pixel
-        xm_setw(PIXEL_X, px);        // set X coordinate
-        xm_setw(PIXEL_Y, py);        // set Y coordinate
-        xm_setw(DATA, color);        // plot color (write mask set to isolate pixel)
-    }
+    xm_setw(PIXEL_X, (320 / 4) * 16);        // base VRAM address
+    xm_setw(PIXEL_Y, 320 / 4);               // words per line
+    xm_setbh(FEATURE, 0);                    // init pixel address generator
 
     while (!done)
     {
@@ -270,7 +270,12 @@ void     xosera_pointer_test()
         {
             char c = readchar();
 
-            if (c == 'z')
+            if (c == 'r')
+            {
+                px = 640 / 2;
+                py = 480 / 2;
+            }
+            else if (c == 'z')
                 py += 0x1;
             else if (c == 'a')
                 py -= 0x1;
@@ -288,36 +293,20 @@ void     xosera_pointer_test()
                 {
                     color += 0x1111;
                 }
-                xm_setw(PIXEL_X, px);        // set X coordinate
-                xm_setw(PIXEL_Y, py);        // set Y coordinate
-                xm_setw(DATA, color);        // plot color (write mask set to isolate pixel)
             }
             else if (c == '\x1b' || c == 'k' || c == 'K')
                 done = true;
 
-            px &= 0x7ff;
-            py &= 0x3ff;
-
-            dprintf("PTR=%04x, %04x  %d,%d\n", px, py, px, py);
+            xm_setw(PIXEL_X, px >> 1);        // set X coordinate (convert from 640 -> 320)
+            xm_setw(PIXEL_Y, py >> 1);        // set Y coordinate (convert from 480 -> 240)
+            xm_setw(DATA, color);             // plot color (write mask set to isolate pixel)
         }
 
-        px &= 0x7ff;
-        py &= 0x3ff;
-
-        xreg_setw(POINTER_H, px);
-        xreg_setw(POINTER_V, 0xF000 | (py));
-
-        px += pxd;
-        py += pyd;
-
-        // if (px < (120 << 8) || px > (640 + 120) << 8)
-        //     pxd = -pxd;
-        // if (py < (int16_t)(((uint16_t)-40) << 8) || py > (500 << 8))
-        //     pyd = -pyd;
-
         wait_vblank_start();
+        xosera_set_pointer(px, py, 0xF000);
     }
 
     xreg_setw(PA_GFX_CTRL, 0x0000);        // un-blank screen
+    xm_setbl(SYS_CTRL, 0x000F);            // restore write mask
     print("\033c");                        // reset & clear
 }

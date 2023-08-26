@@ -488,8 +488,8 @@ end
 
 // display configuration info at build time
 initial begin
-    $display("   XOSERA xosera_info:            \"%s\"", xv::info_str);
-    $write("   XOSERA configuration:          MODE_%s ", `VIDEO_MODE_NAME);
+    $display("   XOSERA xosera_info:    %s", xv::info_str);
+    $write("   XOSERA configuration:  MODE_%s ", `VIDEO_MODE_NAME);
 `ifdef EN_PF_B
 `ifdef EN_PF_B_BLND
         $write("PF_B BLND ");

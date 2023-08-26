@@ -79,7 +79,8 @@ VERILOG_DEFS := -D$(VIDEO_MODE)
 #VRUN_TESTDATA ?=   -u ../testdata/raw/sintable.raw -u ../testdata/raw/ramptable.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/pacbox-320x240_pal.raw -u ../testdata/raw/pacbox-320x240.raw -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
-VRUN_TESTDATA ?=   -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
+#VRUN_TESTDATA ?=   -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
+VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/xosera_r1_pal.raw -u ../testdata/raw/xosera_r1.raw ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
 

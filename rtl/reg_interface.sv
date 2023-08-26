@@ -510,17 +510,17 @@ always_ff @(posedge clk) begin
                 end
 `endif
                 xv::XM_FEATURE: begin
-`ifdef EN_UART
-                    if (bus_bytesel) begin
-                        uart_wr     <= 1'b1;
-                        uart_din    <= bus_data_byte;
-                    end else
-`endif
+                    if (!bus_bytesel) begin
 `ifdef EN_PIXEL_ADDR
-                    begin
                         pixel_bpp   <=  bus_data_byte[1:0];
                         pixel_base  <=  reg_pixel_x;
                         pixel_width <=  reg_pixel_y;
+`endif
+                    end
+`ifdef EN_UART
+                    else begin
+                        uart_wr     <= 1'b1;
+                        uart_din    <= bus_data_byte;
                     end
 `endif
                 end

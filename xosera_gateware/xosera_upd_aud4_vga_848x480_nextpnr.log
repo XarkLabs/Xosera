@@ -1,7 +1,9 @@
-Info: Generated random seed: 2007665815
+Info: Generated random seed: 381803716
 Info: constrained 'led_red' to bel 'X6/Y31/io0'
 Info: constrained 'led_green' to bel 'X4/Y31/io0'
 Info: constrained 'led_blue' to bel 'X5/Y31/io0'
+Info: constrained 'serial_txd' to bel 'X23/Y0/io0'
+Info: constrained 'serial_rxd' to bel 'X24/Y0/io0'
 Info: constrained 'spi_cs' to bel 'X24/Y0/io1'
 Info: constrained 'gpio_23' to bel 'X19/Y31/io0'
 Info: constrained 'gpio_25' to bel 'X19/Y31/io1'
@@ -39,18 +41,6 @@ Info: constrained 'gpio_2' to bel 'X8/Y0/io0'
 
 Info: Packing constants..
 Info: Packing IOs..
-Info: gpio_46 feeds SB_IO dv_signals_sbio[14], removing $nextpnr_obuf gpio_46.
-Info: gpio_45 feeds SB_IO dv_signals_sbio[4], removing $nextpnr_obuf gpio_45.
-Info: gpio_44 feeds SB_IO dv_signals_sbio[9], removing $nextpnr_obuf gpio_44.
-Info: gpio_4 feeds SB_IO dv_signals_sbio[5], removing $nextpnr_obuf gpio_4.
-Info: gpio_3 feeds SB_IO dv_signals_sbio[1], removing $nextpnr_obuf gpio_3.
-Info: gpio_21 feeds SB_IO dv_signals_sbio[13], removing $nextpnr_obuf gpio_21.
-Info: gpio_2 feeds SB_IO dv_clk_sbio, removing $nextpnr_obuf gpio_2.
-Info: gpio_19 feeds SB_IO dv_signals_sbio[7], removing $nextpnr_obuf gpio_19.
-Info: gpio_18 feeds SB_IO dv_signals_sbio[3], removing $nextpnr_obuf gpio_18.
-Info: gpio_13 feeds SB_IO dv_signals_sbio[11], removing $nextpnr_obuf gpio_13.
-Info: gpio_12 feeds SB_IO dv_signals_sbio[12], removing $nextpnr_obuf gpio_12.
-Info: gpio_11 feeds SB_IO dv_signals_sbio[10], removing $nextpnr_obuf gpio_11.
 Info: gpio_42 feeds SB_IO bus_tristate[5], removing $nextpnr_iobuf gpio_42.
 Info: gpio_38 feeds SB_IO bus_tristate[6], removing $nextpnr_iobuf gpio_38.
 Info: gpio_37 feeds SB_IO bus_tristate[1], removing $nextpnr_iobuf gpio_37.
@@ -63,11 +53,23 @@ Info: gpio_9 feeds SB_IO dv_signals_sbio[6], removing $nextpnr_obuf gpio_9.
 Info: gpio_6 feeds SB_IO dv_signals_sbio[2], removing $nextpnr_obuf gpio_6.
 Info: gpio_48 feeds SB_IO dv_signals_sbio[8], removing $nextpnr_obuf gpio_48.
 Info: gpio_47 feeds SB_IO dv_signals_sbio[0], removing $nextpnr_obuf gpio_47.
+Info: gpio_46 feeds SB_IO dv_signals_sbio[14], removing $nextpnr_obuf gpio_46.
+Info: gpio_45 feeds SB_IO dv_signals_sbio[4], removing $nextpnr_obuf gpio_45.
+Info: gpio_44 feeds SB_IO dv_signals_sbio[9], removing $nextpnr_obuf gpio_44.
+Info: gpio_4 feeds SB_IO dv_signals_sbio[5], removing $nextpnr_obuf gpio_4.
+Info: gpio_3 feeds SB_IO dv_signals_sbio[1], removing $nextpnr_obuf gpio_3.
+Info: gpio_21 feeds SB_IO dv_signals_sbio[13], removing $nextpnr_obuf gpio_21.
+Info: gpio_2 feeds SB_IO dv_clk_sbio, removing $nextpnr_obuf gpio_2.
+Info: gpio_19 feeds SB_IO dv_signals_sbio[7], removing $nextpnr_obuf gpio_19.
+Info: gpio_18 feeds SB_IO dv_signals_sbio[3], removing $nextpnr_obuf gpio_18.
+Info: gpio_13 feeds SB_IO dv_signals_sbio[11], removing $nextpnr_obuf gpio_13.
+Info: gpio_12 feeds SB_IO dv_signals_sbio[12], removing $nextpnr_obuf gpio_12.
+Info: gpio_11 feeds SB_IO dv_signals_sbio[10], removing $nextpnr_obuf gpio_11.
 Info: Packing LUT-FFs..
-Info:     2452 LCs used as LUT4 only
-Info:     1297 LCs used as LUT4 and DFF
+Info:     2561 LCs used as LUT4 only
+Info:     1345 LCs used as LUT4 and DFF
 Info: Packing non-LUT FFs..
-Info:      931 LCs used as DFF only
+Info:     1036 LCs used as DFF only
 Info: Packing carries..
 Info:       75 LCs used as CARRY only
 Info: Packing indirect carry+LUT pairs...
@@ -83,25 +85,25 @@ Info:     Derived frequency constraint of 33.8 MHz for net pclk
 Info:   PLL 'pll_inst' has LOCK output, need to pass all outputs via LUT
 Info:   constrained 'pll_lock_SB_LUT4_I3_LC' to X1/Y30/lc0
 Info: Promoting globals..
-Info: promoting reset [reset] (fanout 1896)
-Info: promoting $PACKER_VCC_NET [logic] (fanout 255)
-Info: promoting xosera_main.copper.cop_RA_SB_DFFESR_Q_D_SB_LUT4_O_I3_SB_LUT4_O_I3_SB_CARRY_CI_CO_SB_LUT4_I3_O_SB_LUT4_I3_O[0] [reset] (fanout 92)
-Info: promoting xosera_main.blitter.blit_mod_S_SB_DFFESR_Q_E [cen] (fanout 101)
+Info: promoting reset [reset] (fanout 2026)
+Info: promoting $PACKER_VCC_NET [logic] (fanout 272)
+Info: promoting xosera_main.copper.cop_ex_state_SB_DFF_Q_2_D_SB_LUT4_O_I3[0] [reset] (fanout 92)
+Info: promoting xosera_main.blitter.blit_mod_S_SB_DFFESR_Q_E[2] [cen] (fanout 101)
+Info: promoting xosera_main.video_gen.pb_bpp[1] [logic] (fanout 86)
 Info: promoting xosera_main.video_gen.pa_bpp[1] [logic] (fanout 85)
-Info: promoting xosera_main.video_gen.pb_bpp[1] [logic] (fanout 85)
-Info: promoting xosera_main.video_gen.pa_bpp[0] [logic] (fanout 75)
+Info: promoting xosera_main.video_gen.pb_bpp[0] [logic] (fanout 76)
 Info: Constraining chains...
-Info:       49 LCs used to legalise carry chains.
-Info: Checksum: 0xa55b77f5
+Info:       55 LCs used to legalise carry chains.
+Info: Checksum: 0x3aaff477
 
 Info: Device utilisation:
-Info: 	         ICESTORM_LC:  4761/ 5280    90%
-Info: 	        ICESTORM_RAM:    29/   30    96%
-Info: 	               SB_IO:    36/   96    37%
+Info: 	         ICESTORM_LC:  5030/ 5280    95%
+Info: 	        ICESTORM_RAM:    30/   30   100%
+Info: 	               SB_IO:    38/   96    39%
 Info: 	               SB_GB:     8/    8   100%
 Info: 	        ICESTORM_PLL:     1/    1   100%
 Info: 	         SB_WARMBOOT:     1/    1   100%
-Info: 	        ICESTORM_DSP:     5/    8    62%
+Info: 	        ICESTORM_DSP:     8/    8   100%
 Info: 	      ICESTORM_HFOSC:     0/    1     0%
 Info: 	      ICESTORM_LFOSC:     0/    1     0%
 Info: 	              SB_I2C:     0/    2     0%
@@ -111,89 +113,61 @@ Info: 	         SB_LEDDA_IP:     0/    1     0%
 Info: 	         SB_RGBA_DRV:     0/    1     0%
 Info: 	      ICESTORM_SPRAM:     4/    4   100%
 
-Info: Placed 39 cells based on constraints.
-Info: Creating initial analytic placement for 4253 cells, random placement wirelen = 119664.
-Info:     at initial placer iter 0, wirelen = 1697
-Info:     at initial placer iter 1, wirelen = 1558
-Info:     at initial placer iter 2, wirelen = 1488
-Info:     at initial placer iter 3, wirelen = 1468
-Info: Running main analytical placer, max placement attempts per cell = 2934253.
-Info:     at iteration #1, type ALL: wirelen solved = 1415, spread = 46061, legal = 72903; time = 1.16s
-Info:     at iteration #2, type ALL: wirelen solved = 2405, spread = 39369, legal = 68360; time = 1.29s
-Info:     at iteration #3, type ALL: wirelen solved = 2797, spread = 32967, legal = 62361; time = 1.13s
-Info:     at iteration #4, type ALL: wirelen solved = 4251, spread = 31312, legal = 62051; time = 1.50s
-Info:     at iteration #5, type ALL: wirelen solved = 5862, spread = 30146, legal = 58322; time = 0.90s
-Info:     at iteration #6, type ALL: wirelen solved = 7073, spread = 28666, legal = 55013; time = 0.82s
-Info:     at iteration #7, type ALL: wirelen solved = 8416, spread = 27773, legal = 57180; time = 1.11s
-Info:     at iteration #8, type ALL: wirelen solved = 8679, spread = 27449, legal = 58105; time = 0.99s
-Info:     at iteration #9, type ALL: wirelen solved = 9321, spread = 27252, legal = 54836; time = 0.88s
-Info:     at iteration #10, type ALL: wirelen solved = 10180, spread = 27032, legal = 56375; time = 1.20s
-Info:     at iteration #11, type ALL: wirelen solved = 10824, spread = 26654, legal = 53905; time = 0.95s
-Info:     at iteration #12, type ALL: wirelen solved = 11205, spread = 26257, legal = 54576; time = 1.01s
-Info:     at iteration #13, type ALL: wirelen solved = 11558, spread = 26047, legal = 52070; time = 0.79s
-Info:     at iteration #14, type ALL: wirelen solved = 12095, spread = 26038, legal = 53687; time = 1.16s
-Info:     at iteration #15, type ALL: wirelen solved = 12373, spread = 26072, legal = 56244; time = 0.87s
-Info:     at iteration #16, type ALL: wirelen solved = 13178, spread = 26599, legal = 52934; time = 1.01s
-Info:     at iteration #17, type ALL: wirelen solved = 13688, spread = 26379, legal = 51501; time = 0.93s
-Info:     at iteration #18, type ALL: wirelen solved = 13851, spread = 26375, legal = 49264; time = 0.74s
-Info:     at iteration #19, type ALL: wirelen solved = 14693, spread = 26275, legal = 49706; time = 0.86s
-Info:     at iteration #20, type ALL: wirelen solved = 14548, spread = 26545, legal = 53104; time = 0.83s
-Info:     at iteration #21, type ALL: wirelen solved = 15099, spread = 26728, legal = 52101; time = 0.87s
-Info:     at iteration #22, type ALL: wirelen solved = 15837, spread = 27156, legal = 46541; time = 0.69s
-Info:     at iteration #23, type ALL: wirelen solved = 16204, spread = 26805, legal = 49573; time = 0.81s
-Info:     at iteration #24, type ALL: wirelen solved = 16603, spread = 27197, legal = 49156; time = 0.78s
-Info:     at iteration #25, type ALL: wirelen solved = 16643, spread = 27538, legal = 47832; time = 0.62s
-Info:     at iteration #26, type ALL: wirelen solved = 16918, spread = 27114, legal = 46047; time = 0.56s
-Info:     at iteration #27, type ALL: wirelen solved = 17063, spread = 27286, legal = 49882; time = 0.70s
-Info:     at iteration #28, type ALL: wirelen solved = 17693, spread = 27675, legal = 49019; time = 0.66s
-Info:     at iteration #29, type ALL: wirelen solved = 19050, spread = 28455, legal = 47256; time = 0.65s
-Info:     at iteration #30, type ALL: wirelen solved = 18875, spread = 28365, legal = 46459; time = 0.73s
-Info:     at iteration #31, type ALL: wirelen solved = 18921, spread = 28558, legal = 47247; time = 0.65s
-Info: HeAP Placer Time: 29.26s
-Info:   of which solving equations: 3.09s
-Info:   of which spreading cells: 0.33s
-Info:   of which strict legalisation: 25.01s
+Info: Placed 41 cells based on constraints.
+Info: Creating initial analytic placement for 4518 cells, random placement wirelen = 126754.
+Info:     at initial placer iter 0, wirelen = 1571
+Info:     at initial placer iter 1, wirelen = 1500
+Info:     at initial placer iter 2, wirelen = 1481
+Info:     at initial placer iter 3, wirelen = 1413
+Info: Running main analytical placer, max placement attempts per cell = 3276800.
+Info:     at iteration #1, type ALL: wirelen solved = 1481, spread = 48758, legal = 80549; time = 1.57s
+Info:     at iteration #2, type ALL: wirelen solved = 2397, spread = 41970, legal = 72174; time = 3.15s
+Info:     at iteration #3, type ALL: wirelen solved = 3504, spread = 35403, legal = 66086; time = 2.89s
+Info:     at iteration #4, type ALL: wirelen solved = 5529, spread = 34199, legal = 67167; time = 1.30s
+Info:     at iteration #5, type ALL: wirelen solved = 6562, spread = 33556, legal = 65401; time = 2.71s
+Info:     at iteration #6, type ALL: wirelen solved = 7601, spread = 32311, legal = 65009; time = 1.32s
+Info:     at iteration #7, type ALL: wirelen solved = 8446, spread = 31502, legal = 68225; time = 1.92s
+Info:     at iteration #8, type ALL: wirelen solved = 9040, spread = 30993, legal = 66509; time = 1.56s
+Info:     at iteration #9, type ALL: wirelen solved = 9767, spread = 30526, legal = 64771; time = 1.48s
+Info:     at iteration #10, type ALL: wirelen solved = 10593, spread = 30159, legal = 61395; time = 1.88s
+Info:     at iteration #11, type ALL: wirelen solved = 11196, spread = 29913, legal = 62731; time = 1.83s
+Info:     at iteration #12, type ALL: wirelen solved = 12015, spread = 29750, legal = 62476; time = 1.93s
+Info:     at iteration #13, type ALL: wirelen solved = 12537, spread = 30062, legal = 63057; time = 1.35s
+Info:     at iteration #14, type ALL: wirelen solved = 13168, spread = 29273, legal = 64838; time = 2.35s
+Info:     at iteration #15, type ALL: wirelen solved = 13232, spread = 30079, legal = 60648; time = 1.61s
+Info:     at iteration #16, type ALL: wirelen solved = 13958, spread = 29100, legal = 58415; time = 0.97s
+Info:     at iteration #17, type ALL: wirelen solved = 14917, spread = 29052, legal = 60833; time = 1.65s
+Info:     at iteration #18, type ALL: wirelen solved = 15166, spread = 29632, legal = 60141; time = 1.94s
+Info:     at iteration #19, type ALL: wirelen solved = 15110, spread = 29538, legal = 59216; time = 2.60s
+Info:     at iteration #20, type ALL: wirelen solved = 15580, spread = 29618, legal = 55300; time = 2.29s
+Info:     at iteration #21, type ALL: wirelen solved = 15864, spread = 30217, legal = 59344; time = 1.43s
+Info:     at iteration #22, type ALL: wirelen solved = 16292, spread = 30187, legal = 58719; time = 1.54s
+Info:     at iteration #23, type ALL: wirelen solved = 16652, spread = 30530, legal = 57546; time = 0.93s
+Info:     at iteration #24, type ALL: wirelen solved = 17745, spread = 30847, legal = 58645; time = 1.63s
+Info:     at iteration #25, type ALL: wirelen solved = 18036, spread = 31251, legal = 59275; time = 1.38s
+Info: HeAP Placer Time: 46.01s
+Info:   of which solving equations: 1.79s
+Info:   of which spreading cells: 0.20s
+Info:   of which strict legalisation: 43.60s
 
 Info: Running simulated annealing placer for refinement.
-Info:   at iteration #1: temp = 0.000000, timing cost = 1183, wirelen = 46047
-Info:   at iteration #5: temp = 0.000000, timing cost = 1373, wirelen = 38687
-Info:   at iteration #10: temp = 0.000000, timing cost = 1335, wirelen = 35923
-Info:   at iteration #15: temp = 0.000000, timing cost = 1288, wirelen = 34400
-Info:   at iteration #20: temp = 0.000000, timing cost = 1241, wirelen = 33452
-Info:   at iteration #25: temp = 0.000000, timing cost = 1205, wirelen = 33080
-Info:   at iteration #27: temp = 0.000000, timing cost = 1188, wirelen = 33024 
-Info: SA placement time 5.32s
+Info:   at iteration #1: temp = 0.000000, timing cost = 894, wirelen = 55300
+Info:   at iteration #5: temp = 0.000000, timing cost = 2040, wirelen = 47347
+Info:   at iteration #10: temp = 0.000000, timing cost = 2438, wirelen = 44442
+Info:   at iteration #15: temp = 0.000000, timing cost = 2083, wirelen = 42814
+Info:   at iteration #20: temp = 0.000000, timing cost = 2021, wirelen = 41703
+Info:   at iteration #25: temp = 0.000000, timing cost = 2136, wirelen = 41442
+Info:   at iteration #30: temp = 0.000000, timing cost = 2176, wirelen = 41305
+Info:   at iteration #32: temp = 0.000000, timing cost = 2137, wirelen = 41285 
+Info: SA placement time 3.15s
 
-Info: Max frequency for clock 'pclk': 33.34 MHz (FAIL at 33.77 MHz)
+Info: Max frequency for clock 'pclk': 34.08 MHz (PASS at 33.77 MHz)
 
-Info: Max delay <async>      -> <async>     : 7.05 ns
-Info: Max delay <async>      -> posedge pclk: 6.62 ns
-Info: Max delay posedge pclk -> <async>     : 9.13 ns
+Info: Max delay <async>      -> <async>     : 7.94 ns
+Info: Max delay <async>      -> posedge pclk: 5.71 ns
+Info: Max delay posedge pclk -> <async>     : 7.43 ns
 
-Info: Slack histogram:
-Info:  legend: * represents 69 endpoint(s)
-Info:          + represents [1,69) endpoint(s)
-Info: [  -380,   3649) |*+
-Info: [  3649,   7678) |*********+
-Info: [  7678,  11707) |*****************+
-Info: [ 11707,  15736) |**************+
-Info: [ 15736,  19765) |************************************************************ 
-Info: [ 19765,  23794) |************************+
-Info: [ 23794,  27823) |******************+
-Info: [ 27823,  31852) | 
-Info: [ 31852,  35881) | 
-Info: [ 35881,  39910) | 
-Info: [ 39910,  43939) | 
-Info: [ 43939,  47968) | 
-Info: [ 47968,  51997) | 
-Info: [ 51997,  56026) | 
-Info: [ 56026,  60055) | 
-Info: [ 60055,  64084) | 
-Info: [ 64084,  68113) | 
-Info: [ 68113,  72142) | 
-Info: [ 72142,  76171) |+
-Info: [ 76171,  80200) |+
-Info: Checksum: 0xcfcddc9e
+Info: Checksum: 0x2df1a9bc
 Info: Running timing-driven placement optimisation...
 Info:    Iteration 0...
 Info:    Iteration 1...
@@ -228,362 +202,990 @@ Info:    Iteration 29...
 
 Info: Routing..
 Info: Setting up routing queue.
-Info: Routing 16682 arcs.
+Info: Routing 17499 arcs.
 Info:            |   (re-)routed arcs  |   delta    | remaining|       time spent     |
 Info:    IterCnt |  w/ripup   wo/ripup |  w/r  wo/r |      arcs| batch(sec) total(sec)|
-Info:       1000 |      156        843 |  156   843 |     15885|       1.72       1.72|
-Info:       2000 |      292       1707 |  136   864 |     15078|       0.67       2.40|
-Info:       3000 |      528       2471 |  236   764 |     14393|       0.69       3.09|
-Info:       4000 |      779       3220 |  251   749 |     13800|       0.54       3.63|
-Info:       5000 |     1079       3920 |  300   700 |     13305|       0.57       4.20|
-Info:       6000 |     1467       4532 |  388   612 |     12953|       0.63       4.83|
-Info:       7000 |     1900       5099 |  433   567 |     12680|       0.76       5.60|
-Info:       8000 |     2305       5694 |  405   595 |     12376|       0.55       6.15|
-Info:       9000 |     2814       6185 |  509   491 |     12227|       0.65       6.80|
-Info:      10000 |     3322       6677 |  508   492 |     12092|       0.72       7.52|
-Info:      11000 |     3818       7181 |  496   504 |     11954|       0.81       8.33|
-Info:      12000 |     4387       7612 |  569   431 |     11881|       0.70       9.03|
-Info:      13000 |     4907       8092 |  520   480 |     11699|       0.55       9.58|
-Info:      14000 |     5453       8546 |  546   454 |     11604|       0.79      10.37|
-Info:      15000 |     5991       9008 |  538   462 |     11492|       0.79      11.16|
-Info:      16000 |     6529       9470 |  538   462 |     11367|       1.00      12.16|
-Info:      17000 |     7135       9864 |  606   394 |     11358|       0.76      12.92|
-Info:      18000 |     7686      10313 |  551   449 |     11288|       0.75      13.67|
-Info:      19000 |     8214      10785 |  528   472 |     11145|       0.63      14.31|
-Info:      20000 |     8757      11233 |  543   448 |     11028|       0.63      14.93|
-Info:      21000 |     9266      11724 |  509   491 |     10875|       0.67      15.60|
-Info:      22000 |     9812      12178 |  546   454 |     10739|       0.56      16.17|
-Info:      23000 |    10388      12602 |  576   424 |     10696|       0.86      17.02|
-Info:      24000 |    10972      13018 |  584   416 |     10647|       0.75      17.77|
-Info:      25000 |    11572      13418 |  600   400 |     10593|       0.91      18.68|
-Info:      26000 |    12082      13908 |  510   490 |     10418|       0.86      19.54|
-Info:      27000 |    12643      14347 |  561   439 |     10350|       0.83      20.36|
-Info:      28000 |    13266      14724 |  623   377 |     10358|       0.69      21.05|
-Info:      29000 |    13851      15139 |  585   415 |     10265|       0.73      21.78|
-Info:      30000 |    14428      15562 |  577   423 |     10204|       0.68      22.46|
-Info:      31000 |    15047      15943 |  619   381 |     10193|       0.91      23.37|
-Info:      32000 |    15625      16362 |  578   419 |     10082|       0.67      24.04|
-Info:      33000 |    16198      16789 |  573   427 |     10034|       0.67      24.71|
-Info:      34000 |    16775      17212 |  577   423 |      9961|       0.83      25.54|
-Info:      35000 |    17350      17637 |  575   425 |      9886|       0.66      26.20|
-Info:      36000 |    17887      18100 |  537   463 |      9752|       0.66      26.86|
-Info:      37000 |    18467      18520 |  580   420 |      9706|       0.69      27.55|
-Info:      38000 |    19103      18884 |  636   364 |      9701|       0.65      28.19|
-Info:      39000 |    19684      19303 |  581   419 |      9646|       0.67      28.86|
-Info:      40000 |    20255      19732 |  571   429 |      9483|       0.75      29.62|
-Info:      41000 |    20854      20133 |  599   401 |      9406|       0.72      30.33|
-Info:      42000 |    21450      20537 |  596   404 |      9324|       0.83      31.16|
-Info:      43000 |    22036      20951 |  586   414 |      9242|       1.08      32.24|
-Info:      44000 |    22651      21336 |  615   385 |      9122|       0.65      32.89|
-Info:      45000 |    23235      21752 |  584   416 |      9001|       0.57      33.46|
-Info:      46000 |    23854      22133 |  619   381 |      8960|       0.71      34.17|
-Info:      47000 |    24475      22512 |  621   379 |      8940|       0.84      35.01|
-Info:      48000 |    25057      22930 |  582   418 |      8859|       0.67      35.68|
-Info:      49000 |    25617      23370 |  560   440 |      8756|       0.81      36.49|
-Info:      50000 |    26179      23808 |  562   438 |      8714|       0.65      37.14|
-Info:      51000 |    26751      24236 |  572   428 |      8611|       0.64      37.77|
-Info:      52000 |    27361      24626 |  610   390 |      8590|       0.78      38.55|
-Info:      53000 |    27913      25074 |  552   448 |      8572|       0.77      39.33|
-Info:      54000 |    28465      25508 |  552   434 |      8435|       0.50      39.83|
-Info:      55000 |    29105      25868 |  640   360 |      8461|       0.89      40.72|
-Info:      56000 |    29672      26301 |  567   433 |      8379|       0.62      41.34|
-Info:      57000 |    30294      26679 |  622   378 |      8390|       1.01      42.35|
-Info:      58000 |    30876      27094 |  582   415 |      8271|       0.54      42.90|
-Info:      59000 |    31503      27467 |  627   373 |      8253|       0.70      43.59|
-Info:      60000 |    32093      27877 |  590   410 |      8154|       0.62      44.21|
-Info:      61000 |    32658      28312 |  565   435 |      8054|       0.62      44.83|
-Info:      62000 |    33271      28699 |  613   387 |      7972|       0.80      45.63|
-Info:      63000 |    33908      29062 |  637   363 |      7916|       0.87      46.49|
-Info:      64000 |    34509      29461 |  601   399 |      7863|       1.13      47.62|
-Info:      65000 |    35226      29744 |  717   283 |      7855|       0.72      48.34|
-Info:      66000 |    35845      30125 |  619   381 |      7813|       0.81      49.15|
-Info:      67000 |    36392      30569 |  547   444 |      7713|       0.71      49.85|
-Info:      68000 |    36970      30991 |  578   422 |      7675|       0.77      50.63|
-Info:      69000 |    37585      31376 |  615   385 |      7660|       0.94      51.57|
-Info:      70000 |    38168      31793 |  583   417 |      7590|       0.72      52.29|
-Info:      71000 |    38806      32155 |  638   362 |      7583|       0.64      52.93|
-Info:      72000 |    39475      32474 |  669   319 |      7524|       0.63      53.56|
-Info:      73000 |    40149      32796 |  674   322 |      7520|       1.49      55.05|
-Info:      74000 |    40790      33155 |  641   359 |      7440|       0.75      55.79|
-Info:      75000 |    41465      33480 |  675   325 |      7427|       1.09      56.89|
-Info:      76000 |    42135      33810 |  670   330 |      7360|       0.73      57.62|
-Info:      77000 |    42780      34139 |  645   329 |      7250|       0.59      58.20|
-Info:      78000 |    43411      34508 |  631   369 |      7148|       0.99      59.20|
-Info:      79000 |    44066      34853 |  655   345 |      7082|       0.66      59.86|
-Info:      80000 |    44696      35223 |  630   370 |      7058|       0.98      60.85|
-Info:      81000 |    45347      35572 |  651   349 |      7060|       0.77      61.62|
-Info:      82000 |    45978      35941 |  631   369 |      7036|       0.84      62.46|
-Info:      83000 |    46634      36285 |  656   344 |      6985|       0.81      63.27|
-Info:      84000 |    47292      36627 |  658   342 |      6961|       0.80      64.07|
-Info:      85000 |    47927      36980 |  635   353 |      6946|       0.89      64.96|
-Info:      86000 |    48562      37337 |  635   357 |      6860|       1.02      65.99|
-Info:      87000 |    49214      37685 |  652   348 |      6806|       0.84      66.83|
-Info:      88000 |    49821      38068 |  607   383 |      6729|       0.69      67.53|
-Info:      89000 |    50419      38470 |  598   402 |      6690|       0.83      68.36|
-Info:      90000 |    50960      38929 |  541   459 |      6691|       0.85      69.21|
-Info:      91000 |    51582      39307 |  622   378 |      6603|       0.66      69.88|
-Info:      92000 |    52215      39674 |  633   367 |      6589|       0.70      70.58|
-Info:      93000 |    52915      39974 |  700   300 |      6545|       0.86      71.43|
-Info:      94000 |    53510      40379 |  595   405 |      6504|       0.83      72.26|
-Info:      95000 |    54152      40737 |  642   358 |      6476|       0.55      72.81|
-Info:      96000 |    54782      41106 |  630   369 |      6401|       0.69      73.49|
-Info:      97000 |    55347      41541 |  565   435 |      6363|       0.83      74.33|
-Info:      98000 |    56014      41874 |  667   333 |      6322|       0.95      75.28|
-Info:      99000 |    56652      42236 |  638   362 |      6238|       0.78      76.06|
-Info:     100000 |    57238      42635 |  586   399 |      6126|       0.50      76.56|
-Info:     101000 |    57912      42961 |  674   326 |      6068|       0.77      77.32|
-Info:     102000 |    58553      43320 |  641   359 |      6043|       1.06      78.39|
-Info:     103000 |    59165      43708 |  612   388 |      6018|       0.69      79.08|
-Info:     104000 |    59777      44096 |  612   388 |      6012|       1.02      80.10|
-Info:     105000 |    60299      44551 |  522   455 |      5844|       0.85      80.94|
-Info:     106000 |    60929      44921 |  630   370 |      5874|       1.13      82.07|
-Info:     107000 |    61605      45245 |  676   324 |      5846|       0.80      82.87|
-Info:     108000 |    62266      45583 |  661   338 |      5792|       1.19      84.06|
-Info:     109000 |    62884      45959 |  618   376 |      5753|       1.14      85.21|
-Info:     110000 |    63593      46250 |  709   291 |      5737|       0.70      85.90|
-Info:     111000 |    64175      46656 |  582   406 |      5639|       0.80      86.70|
-Info:     112000 |    64764      47064 |  589   408 |      5604|       0.92      87.62|
-Info:     113000 |    65461      47367 |  697   303 |      5574|       1.09      88.71|
-Info:     114000 |    66031      47797 |  570   430 |      5574|       0.61      89.32|
-Info:     115000 |    66617      48187 |  586   390 |      5441|       0.53      89.85|
-Info:     116000 |    67214      48590 |  597   403 |      5343|       0.65      90.50|
-Info:     117000 |    67890      48914 |  676   324 |      5309|       1.07      91.57|
-Info:     118000 |    68537      49267 |  647   353 |      5285|       0.87      92.44|
-Info:     119000 |    69195      49597 |  658   330 |      5256|       2.26      94.70|
-Info:     120000 |    69858      49932 |  663   335 |      5225|       1.44      96.13|
-Info:     121000 |    70489      50284 |  631   352 |      5106|       0.82      96.95|
-Info:     122000 |    71171      50597 |  682   313 |      5094|       0.72      97.67|
-Info:     123000 |    71874      50894 |  703   297 |      5083|       1.40      99.07|
-Info:     124000 |    72564      51204 |  690   310 |      5081|       0.91      99.98|
-Info:     125000 |    73235      51533 |  671   329 |      5079|       1.24     101.22|
-Info:     126000 |    73960      51808 |  725   275 |      5060|       0.94     102.16|
-Info:     127000 |    74528      52226 |  568   418 |      4971|       0.93     103.10|
-Info:     128000 |    75131      52623 |  603   397 |      4962|       0.99     104.09|
-Info:     129000 |    75689      53054 |  558   431 |      4903|       0.57     104.66|
-Info:     130000 |    76265      53471 |  576   417 |      4821|       0.76     105.42|
-Info:     131000 |    76886      53850 |  621   379 |      4786|       1.10     106.51|
-Info:     132000 |    77556      54180 |  670   330 |      4776|       1.61     108.13|
-Info:     133000 |    78191      54541 |  635   361 |      4678|       0.62     108.75|
-Info:     134000 |    78879      54848 |  688   307 |      4590|       0.62     109.37|
-Info:     135000 |    79520      55206 |  641   358 |      4531|       0.86     110.23|
-Info:     136000 |    80206      55515 |  686   309 |      4476|       1.02     111.25|
-Info:     137000 |    80970      55751 |  764   236 |      4492|       1.04     112.29|
-Info:     138000 |    81598      56123 |  628   372 |      4454|       1.10     113.39|
-Info:     139000 |    82289      56432 |  691   309 |      4440|       0.87     114.26|
-Info:     140000 |    82969      56752 |  680   320 |      4413|       0.93     115.18|
-Info:     141000 |    83579      57142 |  610   390 |      4359|       1.03     116.21|
-Info:     142000 |    84263      57451 |  684   309 |      4310|       1.59     117.80|
-Info:     143000 |    84848      57839 |  585   388 |      4218|       0.97     118.77|
-Info:     144000 |    85587      58096 |  739   257 |      4203|       1.53     120.30|
-Info:     145000 |    86297      58386 |  710   290 |      4233|       1.87     122.17|
-Info:     146000 |    86959      58724 |  662   338 |      4189|       1.22     123.40|
-Info:     147000 |    87619      59064 |  660   340 |      4199|       1.08     124.47|
-Info:     148000 |    88330      59353 |  711   289 |      4167|       1.31     125.78|
-Info:     149000 |    88953      59720 |  623   367 |      4075|       0.75     126.53|
-Info:     150000 |    89674      59999 |  721   279 |      4073|       0.86     127.39|
-Info:     151000 |    90286      60387 |  612   388 |      4075|       1.15     128.54|
-Info:     152000 |    90999      60674 |  713   287 |      4069|       1.20     129.74|
-Info:     153000 |    91683      60990 |  684   316 |      4083|       0.71     130.45|
-Info:     154000 |    92299      61374 |  616   384 |      4059|       0.99     131.44|
-Info:     155000 |    92985      61688 |  686   314 |      4060|       1.05     132.49|
-Info:     156000 |    93584      62074 |  599   386 |      3879|       0.72     133.21|
-Info:     157000 |    94283      62364 |  699   290 |      3839|       1.61     134.82|
-Info:     158000 |    94927      62720 |  644   356 |      3801|       1.07     135.89|
-Info:     159000 |    95528      63112 |  601   392 |      3712|       1.01     136.91|
-Info:     160000 |    96184      63456 |  656   344 |      3685|       1.02     137.93|
-Info:     161000 |    96806      63834 |  622   378 |      3656|       0.78     138.70|
-Info:     162000 |    97502      64138 |  696   304 |      3658|       1.03     139.73|
-Info:     163000 |    98175      64465 |  673   327 |      3651|       1.81     141.54|
-Info:     164000 |    98853      64778 |  678   313 |      3544|       0.87     142.41|
-Info:     165000 |    99386      65219 |  533   441 |      3404|       0.66     143.07|
-Info:     166000 |   100016      65589 |  630   370 |      3384|       0.86     143.93|
-Info:     167000 |   100712      65893 |  696   304 |      3337|       1.60     145.52|
-Info:     168000 |   101349      66256 |  637   363 |      3318|       1.24     146.77|
-Info:     169000 |   102026      66579 |  677   323 |      3310|       1.37     148.14|
-Info:     170000 |   102656      66949 |  630   370 |      3307|       1.26     149.40|
-Info:     171000 |   103262      67343 |  606   394 |      3304|       1.35     150.76|
-Info:     172000 |   103929      67676 |  667   333 |      3309|       1.12     151.87|
-Info:     173000 |   104642      67963 |  713   287 |      3322|       1.60     153.48|
-Info:     174000 |   105267      68338 |  625   375 |      3294|       1.42     154.90|
-Info:     175000 |   105882      68723 |  615   385 |      3281|       0.99     155.89|
-Info:     176000 |   106482      69123 |  600   400 |      3237|       1.09     156.98|
-Info:     177000 |   107099      69505 |  617   382 |      3210|       0.99     157.97|
-Info:     178000 |   107640      69956 |  541   451 |      3113|       0.78     158.75|
-Info:     179000 |   108311      70285 |  671   329 |      3039|       1.15     159.90|
-Info:     180000 |   109018      70578 |  707   293 |      3032|       1.15     161.05|
-Info:     181000 |   109708      70888 |  690   310 |      3046|       1.44     162.49|
-Info:     182000 |   110441      71155 |  733   267 |      3006|       1.77     164.25|
-Info:     183000 |   111169      71427 |  728   272 |      3031|       2.01     166.26|
-Info:     184000 |   111743      71853 |  574   426 |      3027|       1.62     167.88|
-Info:     185000 |   112372      72224 |  629   371 |      2972|       2.73     170.60|
-Info:     186000 |   113101      72495 |  729   271 |      2958|       1.73     172.34|
-Info:     187000 |   113771      72825 |  670   330 |      2966|       0.91     173.25|
-Info:     188000 |   114517      73079 |  746   254 |      2952|       1.34     174.59|
-Info:     189000 |   115183      73413 |  666   334 |      2944|       0.91     175.50|
-Info:     190000 |   115932      73664 |  749   251 |      2940|       1.55     177.05|
-Info:     191000 |   116568      74019 |  636   355 |      2818|       0.72     177.77|
-Info:     192000 |   117249      74338 |  681   319 |      2768|       3.23     181.00|
-Info:     193000 |   117930      74657 |  681   319 |      2735|       0.88     181.87|
-Info:     194000 |   118596      74991 |  666   334 |      2681|       1.20     183.08|
-Info:     195000 |   119270      75317 |  674   326 |      2655|       0.89     183.96|
-Info:     196000 |   119955      75632 |  685   315 |      2669|       4.50     188.46|
-Info:     197000 |   120561      76026 |  606   394 |      2626|       0.94     189.39|
-Info:     198000 |   121157      76430 |  596   404 |      2576|       1.40     190.79|
-Info:     199000 |   121848      76729 |  691   299 |      2513|       0.94     191.73|
-Info:     200000 |   122578      76999 |  730   270 |      2538|       0.79     192.53|
-Info:     201000 |   123293      77284 |  715   285 |      2493|       1.04     193.57|
-Info:     202000 |   123962      77615 |  669   331 |      2483|       0.87     194.44|
-Info:     203000 |   124623      77954 |  661   339 |      2476|       1.21     195.65|
-Info:     204000 |   125278      78298 |  655   344 |      2465|       1.15     196.80|
-Info:     205000 |   125960      78616 |  682   318 |      2501|       2.13     198.93|
-Info:     206000 |   126628      78948 |  668   332 |      2476|       1.27     200.20|
-Info:     207000 |   127319      79257 |  691   309 |      2486|       1.74     201.94|
-Info:     208000 |   127931      79645 |  612   388 |      2419|       0.79     202.73|
-Info:     209000 |   128593      79983 |  662   338 |      2412|       1.78     204.51|
-Info:     210000 |   129282      80294 |  689   311 |      2395|       1.15     205.65|
-Info:     211000 |   129904      80672 |  622   378 |      2400|       1.53     207.18|
-Info:     212000 |   130553      81023 |  649   351 |      2366|       1.04     208.22|
-Info:     213000 |   131281      81295 |  728   272 |      2385|       1.24     209.46|
-Info:     214000 |   131966      81610 |  685   315 |      2375|       1.00     210.46|
-Info:     215000 |   132621      81955 |  655   345 |      2402|       2.20     212.66|
-Info:     216000 |   133313      82262 |  692   307 |      2372|       0.89     213.56|
-Info:     217000 |   133941      82631 |  628   369 |      2257|       1.33     214.89|
-Info:     218000 |   134631      82941 |  690   310 |      2290|       0.90     215.79|
-Info:     219000 |   135363      83209 |  732   268 |      2261|       1.12     216.91|
-Info:     220000 |   136057      83515 |  694   306 |      2246|       0.69     217.60|
-Info:     221000 |   136691      83881 |  634   366 |      2219|       0.52     218.12|
-Info:     222000 |   137335      84237 |  644   356 |      2208|       0.95     219.07|
-Info:     223000 |   138028      84544 |  693   307 |      2164|       0.50     219.57|
-Info:     224000 |   138736      84836 |  708   292 |      2155|       1.32     220.89|
-Info:     225000 |   139421      85151 |  685   315 |      2131|       1.49     222.38|
-Info:     226000 |   140131      85441 |  710   290 |      2133|       1.05     223.42|
-Info:     227000 |   140859      85713 |  728   272 |      2143|       0.60     224.02|
-Info:     228000 |   141563      86009 |  704   296 |      2123|       0.77     224.79|
-Info:     229000 |   142210      86361 |  647   352 |      2107|       0.48     225.28|
-Info:     230000 |   142917      86654 |  707   293 |      2044|       0.84     226.11|
-Info:     231000 |   143711      86860 |  794   206 |      2046|       2.76     228.88|
-Info:     232000 |   144229      87333 |  518   473 |      1847|       0.71     229.59|
-Info:     233000 |   144859      87695 |  630   362 |      1653|       0.58     230.16|
-Info:     234000 |   145572      87982 |  713   287 |      1665|       0.59     230.75|
-Info:     235000 |   146240      88314 |  668   332 |      1639|       0.42     231.17|
-Info:     236000 |   146835      88712 |  595   398 |      1477|       0.35     231.52|
-Info:     237000 |   147410      89130 |  575   418 |      1284|       0.62     232.15|
-Info:     238000 |   148089      89451 |  679   321 |      1144|       1.45     233.60|
-Info:     239000 |   148722      89818 |  633   367 |      1014|       0.36     233.96|
-Info:     240000 |   149051      90489 |  329   671 |       494|       0.75     234.71|
-Info:     241000 |   149562      90978 |  511   489 |       195|       1.08     235.79|
-Info:     242000 |   150196      91344 |  634   366 |        28|       1.35     237.14|
-Info:     243000 |   150866      91674 |  670   330 |        20|       1.05     238.19|
-Info:     243471 |   151217      91795 |  351   121 |         0|       0.62     238.81|
+Info:       1000 |      191        808 |  191   808 |     16720|       1.19       1.19|
+Info:       2000 |      347       1652 |  156   844 |     15925|       0.46       1.65|
+Info:       3000 |      598       2401 |  251   749 |     15284|       0.52       2.17|
+Info:       4000 |      922       3077 |  324   676 |     14752|       0.40       2.57|
+Info:       5000 |     1336       3663 |  414   586 |     14342|       0.53       3.10|
+Info:       6000 |     1756       4243 |  420   580 |     14027|       0.55       3.65|
+Info:       7000 |     2265       4734 |  509   491 |     13830|       0.59       4.25|
+Info:       8000 |     2716       5283 |  451   549 |     13610|       0.52       4.76|
+Info:       9000 |     3250       5749 |  534   466 |     13461|       0.56       5.32|
+Info:      10000 |     3796       6203 |  546   454 |     13323|       0.67       5.99|
+Info:      11000 |     4375       6624 |  579   421 |     13211|       0.72       6.71|
+Info:      12000 |     4945       7054 |  570   430 |     13108|       0.55       7.25|
+Info:      13000 |     5507       7492 |  562   438 |     12966|       0.58       7.83|
+Info:      14000 |     6088       7911 |  581   419 |     12907|       0.54       8.37|
+Info:      15000 |     6652       8347 |  564   436 |     12785|       0.50       8.87|
+Info:      16000 |     7223       8776 |  571   429 |     12728|       0.56       9.42|
+Info:      17000 |     7842       9157 |  619   381 |     12652|       0.57       9.99|
+Info:      18000 |     8390       9609 |  548   452 |     12549|       0.61      10.60|
+Info:      19000 |     8973      10026 |  583   417 |     12460|       0.61      11.21|
+Info:      20000 |     9575      10424 |  602   398 |     12361|       0.51      11.73|
+Info:      21000 |    10184      10815 |  609   391 |     12308|       0.52      12.25|
+Info:      22000 |    10792      11207 |  608   392 |     12241|       0.55      12.79|
+Info:      23000 |    11397      11602 |  605   395 |     12192|       0.59      13.38|
+Info:      24000 |    11964      12035 |  567   433 |     12158|       0.53      13.91|
+Info:      25000 |    12524      12475 |  560   440 |     12099|       0.70      14.60|
+Info:      26000 |    13136      12863 |  612   388 |     12097|       0.51      15.11|
+Info:      27000 |    13751      13248 |  615   385 |     12084|       0.71      15.83|
+Info:      28000 |    14311      13688 |  560   440 |     11989|       0.64      16.47|
+Info:      29000 |    14891      14108 |  580   420 |     11941|       0.52      16.99|
+Info:      30000 |    15498      14501 |  607   393 |     11920|       0.69      17.68|
+Info:      31000 |    16056      14943 |  558   442 |     11853|       0.53      18.21|
+Info:      32000 |    16652      15347 |  596   404 |     11774|       0.81      19.02|
+Info:      33000 |    17253      15746 |  601   399 |     11678|       0.64      19.66|
+Info:      34000 |    17872      16127 |  619   381 |     11636|       0.50      20.16|
+Info:      35000 |    18452      16547 |  580   420 |     11577|       0.56      20.72|
+Info:      36000 |    19051      16948 |  599   401 |     11476|       0.57      21.30|
+Info:      37000 |    19662      17337 |  611   389 |     11432|       0.53      21.83|
+Info:      38000 |    20232      17760 |  570   423 |     11346|       0.53      22.36|
+Info:      39000 |    20823      18169 |  591   409 |     11237|       0.49      22.85|
+Info:      40000 |    21456      18534 |  633   365 |     11136|       0.52      23.37|
+Info:      41000 |    22087      18903 |  631   369 |     11083|       0.68      24.06|
+Info:      42000 |    22768      19222 |  681   319 |     11070|       0.64      24.70|
+Info:      43000 |    23440      19550 |  672   328 |     11010|       0.59      25.29|
+Info:      44000 |    24021      19969 |  581   419 |     10941|       0.43      25.72|
+Info:      45000 |    24606      20381 |  585   412 |     10946|       0.58      26.30|
+Info:      46000 |    25196      20791 |  590   410 |     10918|       0.56      26.86|
+Info:      47000 |    25806      21181 |  610   390 |     10904|       0.63      27.49|
+Info:      48000 |    26422      21565 |  616   384 |     10888|       0.51      27.99|
+Info:      49000 |    27018      21969 |  596   404 |     10838|       0.57      28.57|
+Info:      50000 |    27648      22339 |  630   370 |     10802|       0.73      29.30|
+Info:      51000 |    28239      22748 |  591   409 |     10765|       0.61      29.91|
+Info:      52000 |    28881      23106 |  642   358 |     10782|       0.59      30.50|
+Info:      53000 |    29513      23474 |  632   368 |     10736|       0.73      31.23|
+Info:      54000 |    30108      23879 |  595   405 |     10643|       0.66      31.89|
+Info:      55000 |    30699      24288 |  591   409 |     10607|       0.72      32.61|
+Info:      56000 |    31351      24636 |  652   348 |     10523|       0.54      33.15|
+Info:      57000 |    31955      25032 |  604   396 |     10443|       0.46      33.60|
+Info:      58000 |    32592      25395 |  637   363 |     10409|       0.53      34.14|
+Info:      59000 |    33260      25727 |  668   332 |     10378|       0.49      34.63|
+Info:      60000 |    33914      26073 |  654   346 |     10334|       0.57      35.20|
+Info:      61000 |    34499      26488 |  585   415 |     10258|       0.54      35.74|
+Info:      62000 |    35153      26834 |  654   346 |     10197|       0.61      36.36|
+Info:      63000 |    35791      27196 |  638   362 |     10178|       0.51      36.86|
+Info:      64000 |    36420      27567 |  629   371 |     10124|       0.80      37.66|
+Info:      65000 |    37057      27930 |  637   363 |     10100|       0.65      38.32|
+Info:      66000 |    37690      28297 |  633   367 |     10057|       0.58      38.90|
+Info:      67000 |    38312      28675 |  622   378 |     10016|       0.48      39.38|
+Info:      68000 |    38896      29091 |  584   416 |      9911|       0.52      39.90|
+Info:      69000 |    39525      29462 |  629   371 |      9858|       0.61      40.51|
+Info:      70000 |    40219      29768 |  694   306 |      9834|       0.61      41.12|
+Info:      71000 |    40854      30133 |  635   365 |      9830|       0.71      41.83|
+Info:      72000 |    41458      30529 |  604   396 |      9783|       0.57      42.40|
+Info:      73000 |    42038      30949 |  580   420 |      9748|       0.67      43.07|
+Info:      74000 |    42554      31433 |  516   484 |      9724|       0.54      43.62|
+Info:      75000 |    43161      31826 |  607   393 |      9644|       0.50      44.11|
+Info:      76000 |    43800      32187 |  639   361 |      9601|       0.54      44.65|
+Info:      77000 |    44383      32604 |  583   417 |      9522|       0.50      45.16|
+Info:      78000 |    45040      32947 |  657   343 |      9473|       0.45      45.61|
+Info:      79000 |    45712      33275 |  672   328 |      9487|       0.52      46.13|
+Info:      80000 |    46396      33591 |  684   316 |      9514|       0.69      46.82|
+Info:      81000 |    47074      33913 |  678   322 |      9513|       0.73      47.55|
+Info:      82000 |    47765      34222 |  691   309 |      9472|       0.68      48.24|
+Info:      83000 |    48443      34544 |  678   322 |      9427|       0.71      48.95|
+Info:      84000 |    49115      34872 |  672   328 |      9402|       0.73      49.67|
+Info:      85000 |    49800      35187 |  685   315 |      9429|       1.21      50.88|
+Info:      86000 |    50411      35576 |  611   389 |      9394|       0.68      51.56|
+Info:      87000 |    51053      35934 |  642   358 |      9367|       0.60      52.15|
+Info:      88000 |    51808      36179 |  755   245 |      9338|       0.44      52.60|
+Info:      89000 |    52509      36478 |  701   299 |      9326|       0.81      53.41|
+Info:      90000 |    53079      36908 |  570   430 |      9249|       0.52      53.93|
+Info:      91000 |    53803      37184 |  724   276 |      9236|       0.56      54.49|
+Info:      92000 |    54465      37522 |  662   338 |      9212|       0.72      55.21|
+Info:      93000 |    55104      37883 |  639   361 |      9205|       0.97      56.18|
+Info:      94000 |    55682      38305 |  578   422 |      9208|       0.93      57.11|
+Info:      95000 |    56329      38658 |  647   353 |      9165|       0.91      58.02|
+Info:      96000 |    57036      38951 |  707   293 |      9158|       0.86      58.88|
+Info:      97000 |    57605      39368 |  569   417 |      9081|       0.44      59.32|
+Info:      98000 |    58212      39761 |  607   393 |      9046|       0.66      59.99|
+Info:      99000 |    58849      40124 |  637   363 |      8960|       0.67      60.66|
+Info:     100000 |    59554      40419 |  705   295 |      8983|       0.85      61.50|
+Info:     101000 |    60165      40808 |  611   389 |      8921|       0.53      62.03|
+Info:     102000 |    60797      41176 |  632   368 |      8919|       0.60      62.64|
+Info:     103000 |    61384      41589 |  587   413 |      8873|       0.36      63.00|
+Info:     104000 |    62021      41952 |  637   363 |      8844|       1.00      64.00|
+Info:     105000 |    62705      42268 |  684   316 |      8803|       1.16      65.15|
+Info:     106000 |    63396      42562 |  691   294 |      8730|       0.60      65.75|
+Info:     107000 |    64053      42905 |  657   343 |      8704|       0.91      66.67|
+Info:     108000 |    64606      43352 |  553   447 |      8700|       0.89      67.56|
+Info:     109000 |    65280      43678 |  674   326 |      8695|       1.17      68.73|
+Info:     110000 |    65929      44029 |  649   351 |      8685|       0.66      69.39|
+Info:     111000 |    66571      44387 |  642   358 |      8658|       0.88      70.27|
+Info:     112000 |    67229      44729 |  658   342 |      8618|       0.71      70.97|
+Info:     113000 |    67847      45111 |  618   382 |      8596|       1.13      72.10|
+Info:     114000 |    68499      45459 |  652   348 |      8615|       1.59      73.69|
+Info:     115000 |    69137      45821 |  638   362 |      8618|       0.95      74.64|
+Info:     116000 |    69763      46195 |  626   374 |      8596|       1.22      75.86|
+Info:     117000 |    70412      46546 |  649   351 |      8593|       0.95      76.81|
+Info:     118000 |    71041      46917 |  629   371 |      8540|       0.97      77.78|
+Info:     119000 |    71640      47318 |  599   401 |      8513|       1.10      78.88|
+Info:     120000 |    72288      47670 |  648   352 |      8502|       0.87      79.75|
+Info:     121000 |    72962      47996 |  674   326 |      8447|       0.62      80.37|
+Info:     122000 |    73557      48401 |  595   405 |      8400|       0.97      81.34|
+Info:     123000 |    74219      48739 |  662   338 |      8358|       0.85      82.19|
+Info:     124000 |    74915      49043 |  696   304 |      8355|       0.55      82.75|
+Info:     125000 |    75559      49399 |  644   356 |      8285|       0.55      83.30|
+Info:     126000 |    76203      49755 |  644   356 |      8220|       1.04      84.34|
+Info:     127000 |    76903      50055 |  700   300 |      8203|       0.67      85.01|
+Info:     128000 |    77593      50365 |  690   310 |      8198|       0.78      85.79|
+Info:     129000 |    78260      50698 |  667   333 |      8122|       0.61      86.40|
+Info:     130000 |    78912      51046 |  652   348 |      8109|       0.70      87.10|
+Info:     131000 |    79517      51441 |  605   395 |      8089|       0.70      87.80|
+Info:     132000 |    80197      51748 |  680   307 |      8014|       0.52      88.32|
+Info:     133000 |    80776      52169 |  579   421 |      7975|       0.66      88.98|
+Info:     134000 |    81476      52469 |  700   300 |      7961|       2.81      91.79|
+Info:     135000 |    82104      52841 |  628   372 |      7868|       0.36      92.15|
+Info:     136000 |    82742      53203 |  638   362 |      7858|       0.89      93.05|
+Info:     137000 |    83361      53584 |  619   381 |      7817|       0.74      93.78|
+Info:     138000 |    83971      53974 |  610   390 |      7812|       0.95      94.74|
+Info:     139000 |    84691      54254 |  720   280 |      7779|       0.90      95.64|
+Info:     140000 |    85381      54564 |  690   310 |      7788|       1.41      97.05|
+Info:     141000 |    86089      54856 |  708   292 |      7772|       0.84      97.90|
+Info:     142000 |    86786      55159 |  697   303 |      7783|       1.18      99.08|
+Info:     143000 |    87532      55413 |  746   254 |      7787|       0.96     100.04|
+Info:     144000 |    88186      55759 |  654   346 |      7725|       1.11     101.15|
+Info:     145000 |    88864      56081 |  678   322 |      7716|       1.00     102.15|
+Info:     146000 |    89468      56469 |  604   388 |      7650|       0.89     103.04|
+Info:     147000 |    90171      56766 |  703   297 |      7646|       1.45     104.49|
+Info:     148000 |    90851      57086 |  680   320 |      7651|       1.11     105.61|
+Info:     149000 |    91547      57390 |  696   304 |      7640|       1.12     106.73|
+Info:     150000 |    92244      57693 |  697   303 |      7617|       0.74     107.47|
+Info:     151000 |    92907      58030 |  663   337 |      7607|       0.70     108.17|
+Info:     152000 |    93476      58461 |  569   431 |      7544|       0.86     109.03|
+Info:     153000 |    94104      58833 |  628   372 |      7540|       0.94     109.97|
+Info:     154000 |    94864      59073 |  760   240 |      7530|       0.72     110.69|
+Info:     155000 |    95558      59379 |  694   306 |      7518|       1.45     112.14|
+Info:     156000 |    96235      59702 |  677   323 |      7495|       0.73     112.87|
+Info:     157000 |    96908      60029 |  673   327 |      7428|       0.96     113.83|
+Info:     158000 |    97576      60361 |  668   332 |      7387|       0.84     114.67|
+Info:     159000 |    98252      60685 |  676   324 |      7326|       0.83     115.50|
+Info:     160000 |    98979      60958 |  727   273 |      7292|       0.76     116.26|
+Info:     161000 |    99610      61327 |  631   369 |      7290|       0.68     116.95|
+Info:     162000 |   100255      61682 |  645   355 |      7245|       0.78     117.73|
+Info:     163000 |   100943      61994 |  688   312 |      7255|       0.98     118.70|
+Info:     164000 |   101521      62416 |  578   422 |      7226|       0.96     119.66|
+Info:     165000 |   102166      62760 |  645   344 |      7172|       0.79     120.45|
+Info:     166000 |   102838      63088 |  672   328 |      7170|       1.02     121.46|
+Info:     167000 |   103508      63418 |  670   330 |      7127|       1.75     123.22|
+Info:     168000 |   104145      63781 |  637   363 |      7133|       0.86     124.08|
+Info:     169000 |   104811      64115 |  666   334 |      7105|       3.70     127.78|
+Info:     170000 |   105482      64444 |  671   329 |      7096|       0.78     128.56|
+Info:     171000 |   106209      64717 |  727   273 |      7079|       1.26     129.82|
+Info:     172000 |   106929      64997 |  720   280 |      7068|       1.12     130.95|
+Info:     173000 |   107608      65318 |  679   321 |      7012|       0.76     131.71|
+Info:     174000 |   108269      65655 |  661   337 |      6963|       0.99     132.70|
+Info:     175000 |   108952      65972 |  683   317 |      6937|       0.96     133.67|
+Info:     176000 |   109632      66292 |  680   320 |      6933|       2.52     136.18|
+Info:     177000 |   110281      66643 |  649   351 |      6937|       1.99     138.17|
+Info:     178000 |   110950      66974 |  669   331 |      6922|       1.65     139.83|
+Info:     179000 |   111645      67279 |  695   305 |      6924|       1.19     141.02|
+Info:     180000 |   112303      67621 |  658   342 |      6911|       2.19     143.21|
+Info:     181000 |   112990      67934 |  687   313 |      6946|       0.90     144.11|
+Info:     182000 |   113630      68294 |  640   360 |      6888|       1.07     145.17|
+Info:     183000 |   114310      68614 |  680   320 |      6890|       0.81     145.98|
+Info:     184000 |   114924      69000 |  614   386 |      6830|       0.86     146.84|
+Info:     185000 |   115548      69376 |  624   376 |      6835|       0.87     147.71|
+Info:     186000 |   116210      69714 |  662   338 |      6785|       1.11     148.82|
+Info:     187000 |   116850      70074 |  640   360 |      6751|       0.97     149.80|
+Info:     188000 |   117565      70359 |  715   285 |      6733|       0.79     150.59|
+Info:     189000 |   118246      70678 |  681   319 |      6713|       0.68     151.27|
+Info:     190000 |   118991      70933 |  745   255 |      6722|       1.01     152.28|
+Info:     191000 |   119654      71270 |  663   337 |      6695|       1.13     153.40|
+Info:     192000 |   120341      71583 |  687   313 |      6692|       1.56     154.97|
+Info:     193000 |   121010      71914 |  669   331 |      6701|       1.06     156.02|
+Info:     194000 |   121691      72233 |  681   319 |      6692|       1.42     157.44|
+Info:     195000 |   122423      72501 |  732   268 |      6668|       0.95     158.39|
+Info:     196000 |   123046      72878 |  623   377 |      6619|       1.19     159.58|
+Info:     197000 |   123747      73177 |  701   299 |      6601|       0.75     160.33|
+Info:     198000 |   124439      73475 |  692   298 |      6556|       1.01     161.35|
+Info:     199000 |   125057      73857 |  618   382 |      6557|       0.96     162.30|
+Info:     200000 |   125772      74142 |  715   285 |      6523|       1.19     163.49|
+Info:     201000 |   126465      74449 |  693   307 |      6521|       1.09     164.58|
+Info:     202000 |   127150      74764 |  685   315 |      6523|       1.93     166.51|
+Info:     203000 |   127802      75098 |  652   334 |      6493|       1.72     168.23|
+Info:     204000 |   128466      75434 |  664   336 |      6454|       1.58     169.81|
+Info:     205000 |   129061      75839 |  595   405 |      6460|       2.03     171.84|
+Info:     206000 |   129748      76152 |  687   313 |      6444|       2.08     173.92|
+Info:     207000 |   130392      76508 |  644   356 |      6450|       4.86     178.78|
+Info:     208000 |   131096      76804 |  704   296 |      6451|       4.48     183.26|
+Info:     209000 |   131814      77079 |  718   275 |      6452|       1.27     184.53|
+Info:     210000 |   132534      77358 |  720   279 |      6371|       0.82     185.35|
+Info:     211000 |   133191      77676 |  657   318 |      6323|       1.92     187.27|
+Info:     212000 |   133841      78026 |  650   350 |      6295|       0.84     188.11|
+Info:     213000 |   134554      78302 |  713   276 |      6246|       0.91     189.01|
+Info:     214000 |   135190      78666 |  636   364 |      6231|       1.16     190.17|
+Info:     215000 |   135881      78975 |  691   309 |      6256|       1.56     191.73|
+Info:     216000 |   136601      79255 |  720   280 |      6290|       2.71     194.44|
+Info:     217000 |   137282      79574 |  681   319 |      6265|       1.15     195.59|
+Info:     218000 |   138017      79839 |  735   265 |      6258|       1.65     197.24|
+Info:     219000 |   138656      80200 |  639   361 |      6229|       1.84     199.08|
+Info:     220000 |   139366      80490 |  710   290 |      6220|       1.02     200.10|
+Info:     221000 |   140077      80779 |  711   289 |      6194|       1.31     201.41|
+Info:     222000 |   140746      81110 |  669   331 |      6190|       1.20     202.61|
+Info:     223000 |   141441      81415 |  695   305 |      6205|       1.66     204.27|
+Info:     224000 |   142155      81701 |  714   286 |      6210|       1.37     205.64|
+Info:     225000 |   142909      81947 |  754   246 |      6203|       1.59     207.23|
+Info:     226000 |   143578      82269 |  669   322 |      6175|       1.05     208.28|
+Info:     227000 |   144193      82651 |  615   382 |      6135|       0.96     209.25|
+Info:     228000 |   144836      83006 |  643   355 |      6112|       0.94     210.19|
+Info:     229000 |   145535      83307 |  699   301 |      6068|       0.87     211.06|
+Info:     230000 |   146232      83610 |  697   303 |      6050|       1.74     212.79|
+Info:     231000 |   146912      83923 |  680   313 |      6015|       2.08     214.88|
+Info:     232000 |   147624      84211 |  712   288 |      6001|       1.05     215.93|
+Info:     233000 |   148278      84556 |  654   345 |      5986|       1.93     217.86|
+Info:     234000 |   148952      84882 |  674   326 |      5958|       1.33     219.19|
+Info:     235000 |   149642      85192 |  690   310 |      5932|       2.26     221.45|
+Info:     236000 |   150356      85478 |  714   286 |      5958|       1.58     223.03|
+Info:     237000 |   150979      85855 |  623   377 |      5915|       1.97     225.00|
+Info:     238000 |   151657      86175 |  678   320 |      5891|       1.74     226.74|
+Info:     239000 |   152280      86538 |  623   363 |      5832|       1.45     228.19|
+Info:     240000 |   152974      86844 |  694   306 |      5826|       1.56     229.74|
+Info:     241000 |   153584      87234 |  610   390 |      5759|       1.09     230.83|
+Info:     242000 |   154229      87589 |  645   355 |      5699|       1.08     231.92|
+Info:     243000 |   154889      87927 |  660   338 |      5669|       2.78     234.70|
+Info:     244000 |   155605      88211 |  716   284 |      5674|       2.10     236.80|
+Info:     245000 |   156366      88450 |  761   239 |      5720|       3.69     240.49|
+Info:     246000 |   157056      88760 |  690   310 |      5728|       1.27     241.77|
+Info:     247000 |   157731      89085 |  675   325 |      5735|       1.55     243.31|
+Info:     248000 |   158386      89430 |  655   345 |      5726|       4.00     247.31|
+Info:     249000 |   159050      89766 |  664   336 |      5689|       1.97     249.28|
+Info:     250000 |   159750      90066 |  700   300 |      5708|       1.30     250.59|
+Info:     251000 |   160493      90323 |  743   257 |      5661|       1.36     251.95|
+Info:     252000 |   161165      90651 |  672   328 |      5638|       2.10     254.04|
+Info:     253000 |   161831      90968 |  666   317 |      5563|       1.49     255.53|
+Info:     254000 |   162526      91273 |  695   305 |      5527|       2.42     257.96|
+Info:     255000 |   163147      91651 |  621   378 |      5526|       0.94     258.90|
+Info:     256000 |   163858      91940 |  711   289 |      5500|       1.66     260.55|
+Info:     257000 |   164571      92227 |  713   287 |      5508|       2.50     263.06|
+Info:     258000 |   165285      92513 |  714   286 |      5498|       1.16     264.22|
+Info:     259000 |   165960      92838 |  675   325 |      5532|       2.96     267.17|
+Info:     260000 |   166680      93118 |  720   280 |      5550|       1.32     268.49|
+Info:     261000 |   167361      93437 |  681   319 |      5512|       1.99     270.48|
+Info:     262000 |   168050      93748 |  689   311 |      5475|       2.01     272.48|
+Info:     263000 |   168726      94069 |  676   321 |      5452|       1.50     273.98|
+Info:     264000 |   169414      94380 |  688   311 |      5439|       1.30     275.29|
+Info:     265000 |   170094      94700 |  680   320 |      5411|       1.32     276.61|
+Info:     266000 |   170698      95096 |  604   396 |      5396|       2.73     279.34|
+Info:     267000 |   171414      95380 |  716   284 |      5376|       1.31     280.65|
+Info:     268000 |   172080      95714 |  666   334 |      5375|       1.74     282.39|
+Info:     269000 |   172710      96083 |  630   369 |      5360|       2.21     284.60|
+Info:     270000 |   173322      96471 |  612   388 |      5336|       1.37     285.97|
+Info:     271000 |   173982      96811 |  660   340 |      5332|       0.93     286.90|
+Info:     272000 |   174684      97108 |  702   297 |      5325|       1.47     288.37|
+Info:     273000 |   175379      97413 |  695   305 |      5332|       1.63     290.00|
+Info:     274000 |   176094      97698 |  715   285 |      5318|       2.45     292.45|
+Info:     275000 |   176800      97992 |  706   294 |      5318|       4.11     296.56|
+Info:     276000 |   177509      98270 |  709   278 |      5255|       1.86     298.42|
+Info:     277000 |   178203      98576 |  694   306 |      5273|       1.35     299.77|
+Info:     278000 |   178989      98790 |  786   214 |      5261|       1.00     300.77|
+Info:     279000 |   179682      99097 |  693   307 |      5256|       1.15     301.92|
+Info:     280000 |   180355      99424 |  673   327 |      5220|       1.30     303.22|
+Info:     281000 |   181033      99746 |  678   322 |      5160|       2.03     305.25|
+Info:     282000 |   181761     100018 |  728   272 |      5168|       2.16     307.41|
+Info:     283000 |   182494     100285 |  733   267 |      5158|       1.64     309.06|
+Info:     284000 |   183163     100616 |  669   331 |      5134|       1.11     310.17|
+Info:     285000 |   183861     100918 |  698   302 |      5088|       2.44     312.61|
+Info:     286000 |   184562     101217 |  701   299 |      5128|       1.90     314.51|
+Info:     287000 |   185175     101604 |  613   387 |      5093|       1.55     316.06|
+Info:     288000 |   185846     101933 |  671   329 |      5106|       2.63     318.70|
+Info:     289000 |   186482     102297 |  636   364 |      5054|       1.05     319.75|
+Info:     290000 |   187161     102618 |  679   321 |      5061|       1.38     321.13|
+Info:     291000 |   187784     102995 |  623   377 |      5048|       2.15     323.27|
+Info:     292000 |   188494     103285 |  710   290 |      5019|       2.40     325.67|
+Info:     293000 |   189195     103579 |  701   294 |      4960|       0.92     326.59|
+Info:     294000 |   189853     103917 |  658   338 |      4922|       1.09     327.68|
+Info:     295000 |   190529     104241 |  676   324 |      4923|       1.98     329.66|
+Info:     296000 |   191233     104537 |  704   296 |      4874|       1.52     331.18|
+Info:     297000 |   191980     104790 |  747   253 |      4878|       3.47     334.65|
+Info:     298000 |   192657     105113 |  677   323 |      4795|       1.48     336.14|
+Info:     299000 |   193294     105460 |  637   347 |      4758|       3.70     339.83|
+Info:     300000 |   193927     105827 |  633   367 |      4745|       2.10     341.93|
+Info:     301000 |   194521     106233 |  594   406 |      4748|       1.79     343.72|
+Info:     302000 |   195188     106566 |  667   333 |      4730|       1.89     345.61|
+Info:     303000 |   195901     106853 |  713   287 |      4725|       2.29     347.90|
+Info:     304000 |   196600     107154 |  699   301 |      4705|       2.87     350.77|
+Info:     305000 |   197296     107458 |  696   304 |      4692|       3.97     354.74|
+Info:     306000 |   197998     107756 |  702   298 |      4673|       2.44     357.17|
+Info:     307000 |   198699     108048 |  701   292 |      4621|       1.57     358.74|
+Info:     308000 |   199323     108411 |  624   363 |      4589|       1.38     360.12|
+Info:     309000 |   200014     108720 |  691   309 |      4559|       2.21     362.33|
+Info:     310000 |   200712     109012 |  698   292 |      4531|       1.84     364.17|
+Info:     311000 |   201352     109372 |  640   360 |      4530|       4.46     368.62|
+Info:     312000 |   202004     109720 |  652   348 |      4527|       1.74     370.36|
+Info:     313000 |   202658     110066 |  654   346 |      4535|       1.62     371.98|
+Info:     314000 |   203364     110360 |  706   294 |      4580|       2.22     374.20|
+Info:     315000 |   204014     110710 |  650   350 |      4551|       3.00     377.20|
+Info:     316000 |   204751     110973 |  737   263 |      4537|       4.34     381.53|
+Info:     317000 |   205423     111301 |  672   328 |      4513|       2.09     383.63|
+Info:     318000 |   206071     111653 |  648   352 |      4535|       5.17     388.80|
+Info:     319000 |   206784     111940 |  713   287 |      4505|       7.17     395.97|
+Info:     320000 |   207518     112206 |  734   266 |      4495|       1.95     397.92|
+Info:     321000 |   208129     112595 |  611   389 |      4490|       1.61     399.53|
+Info:     322000 |   208787     112937 |  658   342 |      4530|       3.67     403.20|
+Info:     323000 |   209489     113235 |  702   298 |      4517|       2.37     405.58|
+Info:     324000 |   210169     113555 |  680   320 |      4459|       3.83     409.40|
+Info:     325000 |   210822     113902 |  653   347 |      4501|       5.46     414.86|
+Info:     326000 |   211448     114276 |  626   374 |      4464|       2.32     417.18|
+Info:     327000 |   212126     114598 |  678   322 |      4457|       7.66     424.84|
+Info:     328000 |   212784     114940 |  658   342 |      4443|       1.42     426.26|
+Info:     329000 |   213454     115270 |  670   330 |      4449|       2.02     428.28|
+Info:     330000 |   214128     115596 |  674   326 |      4438|       3.69     431.97|
+Info:     331000 |   214785     115932 |  657   336 |      4383|       1.85     433.82|
+Info:     332000 |   215550     116167 |  765   235 |      4392|       6.77     440.60|
+Info:     333000 |   216270     116447 |  720   280 |      4435|       3.41     444.01|
+Info:     334000 |   217004     116713 |  734   266 |      4442|       3.05     447.06|
+Info:     335000 |   217702     117015 |  698   302 |      4422|       3.90     450.97|
+Info:     336000 |   218478     117239 |  776   224 |      4436|       3.43     454.39|
+Info:     337000 |   219179     117538 |  701   299 |      4427|       2.86     457.25|
+Info:     338000 |   219907     117810 |  728   272 |      4423|       1.72     458.97|
+Info:     339000 |   220552     118165 |  645   355 |      4382|       1.45     460.42|
+Info:     340000 |   221296     118421 |  744   256 |      4382|       2.19     462.61|
+Info:     341000 |   221966     118751 |  670   330 |      4365|       6.22     468.83|
+Info:     342000 |   222656     119061 |  690   310 |      4367|       4.30     473.13|
+Info:     343000 |   223437     119280 |  781   219 |      4358|       5.81     478.94|
+Info:     344000 |   224156     119561 |  719   281 |      4341|       1.11     480.05|
+Info:     345000 |   224925     119791 |  769   230 |      4319|       2.76     482.81|
+Info:     346000 |   225638     120078 |  713   287 |      4300|       4.08     486.88|
+Info:     347000 |   226306     120400 |  668   322 |      4247|       1.85     488.73|
+Info:     348000 |   226929     120777 |  623   377 |      4257|       6.99     495.72|
+Info:     349000 |   227590     121116 |  661   339 |      4260|       4.00     499.72|
+Info:     350000 |   228218     121488 |  628   372 |      4244|       6.69     506.40|
+Info:     351000 |   228936     121770 |  718   282 |      4247|       6.26     512.67|
+Info:     352000 |   229654     122052 |  718   282 |      4241|       8.58     521.24|
+Info:     353000 |   230420     122286 |  766   234 |      4272|       3.27     524.52|
+Info:     354000 |   231118     122588 |  698   302 |      4235|       1.98     526.50|
+Info:     355000 |   231808     122885 |  690   297 |      4192|       1.56     528.06|
+Info:     356000 |   232478     123194 |  670   309 |      4145|       2.02     530.08|
+Info:     357000 |   233092     123580 |  614   386 |      4138|       1.00     531.07|
+Info:     358000 |   233785     123877 |  693   297 |      4130|       3.28     534.35|
+Info:     359000 |   234405     124257 |  620   380 |      4136|       2.61     536.96|
+Info:     360000 |   234929     124733 |  524   476 |      4173|       2.25     539.21|
+Info:     361000 |   235569     125093 |  640   360 |      4179|       2.67     541.88|
+Info:     362000 |   236272     125390 |  703   297 |      4240|       1.45     543.33|
+Info:     363000 |   236958     125704 |  686   314 |      4231|       2.51     545.84|
+Info:     364000 |   237583     126079 |  625   375 |      4202|       3.16     549.00|
+Info:     365000 |   238253     126409 |  670   330 |      4240|       2.00     551.00|
+Info:     366000 |   238959     126703 |  706   294 |      4235|       2.74     553.74|
+Info:     367000 |   239697     126965 |  738   262 |      4246|       2.89     556.64|
+Info:     368000 |   240355     127307 |  658   342 |      4234|       2.15     558.79|
+Info:     369000 |   240981     127681 |  626   374 |      4230|       1.70     560.48|
+Info:     370000 |   241686     127976 |  705   295 |      4164|       1.39     561.88|
+Info:     371000 |   242339     128323 |  653   347 |      4150|       3.22     565.10|
+Info:     372000 |   243114     128548 |  775   225 |      4137|       4.20     569.29|
+Info:     373000 |   243879     128783 |  765   235 |      4090|       3.12     572.41|
+Info:     374000 |   244557     129105 |  678   322 |      4064|       4.02     576.43|
+Info:     375000 |   245231     129431 |  674   326 |      4046|       4.87     581.30|
+Info:     376000 |   245897     129765 |  666   334 |      4035|       1.41     582.71|
+Info:     377000 |   246564     130098 |  667   333 |      4057|       2.06     584.77|
+Info:     378000 |   247294     130368 |  730   270 |      4010|       6.10     590.87|
+Info:     379000 |   247989     130669 |  695   301 |      3971|       1.92     592.79|
+Info:     380000 |   248612     131046 |  623   377 |      3996|       3.40     596.19|
+Info:     381000 |   249286     131372 |  674   326 |      3955|       3.70     599.89|
+Info:     382000 |   249938     131720 |  652   348 |      3964|       9.68     609.57|
+Info:     383000 |   250671     131987 |  733   267 |      3980|       1.90     611.46|
+Info:     384000 |   251389     132269 |  718   282 |      3960|       2.37     613.83|
+Info:     385000 |   252174     132484 |  785   215 |      3951|       5.37     619.21|
+Info:     386000 |   252844     132814 |  670   330 |      3955|       1.40     620.61|
+Info:     387000 |   253534     133124 |  690   310 |      3953|       4.01     624.62|
+Info:     388000 |   254216     133442 |  682   318 |      3962|       3.93     628.55|
+Info:     389000 |   254903     133755 |  687   313 |      4033|       7.21     635.76|
+Info:     390000 |   255583     134075 |  680   320 |      3979|       2.29     638.05|
+Info:     391000 |   256265     134393 |  682   318 |      3937|       1.97     640.02|
+Info:     392000 |   256886     134772 |  621   379 |      3939|       3.64     643.66|
+Info:     393000 |   257515     135143 |  629   371 |      3923|       3.74     647.40|
+Info:     394000 |   258235     135423 |  720   280 |      3917|       3.86     651.27|
+Info:     395000 |   258978     135680 |  743   257 |      3918|       4.96     656.22|
+Info:     396000 |   259645     136013 |  667   333 |      3913|       3.36     659.59|
+Info:     397000 |   260362     136296 |  717   283 |      3921|       2.59     662.17|
+Info:     398000 |   260985     136673 |  623   377 |      3919|       5.03     667.20|
+Info:     399000 |   261671     136987 |  686   314 |      3928|       3.08     670.28|
+Info:     400000 |   262541     137117 |  870   130 |      3938|       2.05     672.33|
+Info:     401000 |   263268     137390 |  727   273 |      3943|       2.60     674.94|
+Info:     402000 |   263951     137707 |  683   317 |      3921|       3.98     678.92|
+Info:     403000 |   264652     138006 |  701   299 |      3926|       4.91     683.83|
+Info:     404000 |   265339     138319 |  687   313 |      3929|       1.93     685.76|
+Info:     405000 |   265960     138698 |  621   379 |      3918|       2.04     687.80|
+Info:     406000 |   266594     139053 |  634   355 |      3854|       1.50     689.30|
+Info:     407000 |   267246     139398 |  652   345 |      3734|       1.07     690.37|
+Info:     408000 |   267911     139733 |  665   335 |      3724|       0.99     691.36|
+Info:     409000 |   268598     140046 |  687   313 |      3710|       2.65     694.01|
+Info:     410000 |   269274     140365 |  676   319 |      3676|       1.39     695.41|
+Info:     411000 |   269955     140684 |  681   319 |      3662|       1.58     696.99|
+Info:     412000 |   270643     140996 |  688   312 |      3662|       3.76     700.75|
+Info:     413000 |   271371     141268 |  728   272 |      3657|       3.86     704.61|
+Info:     414000 |   272079     141560 |  708   292 |      3654|       2.00     706.60|
+Info:     415000 |   272744     141895 |  665   335 |      3649|       1.68     708.28|
+Info:     416000 |   273363     142276 |  619   381 |      3639|       2.33     710.61|
+Info:     417000 |   274051     142588 |  688   312 |      3656|       1.70     712.31|
+Info:     418000 |   274781     142858 |  730   270 |      3691|       3.61     715.92|
+Info:     419000 |   275541     143098 |  760   240 |      3647|       2.50     718.41|
+Info:     420000 |   276232     143407 |  691   309 |      3635|       3.72     722.13|
+Info:     421000 |   276876     143763 |  644   356 |      3638|       2.00     724.14|
+Info:     422000 |   277545     144094 |  669   331 |      3624|       3.85     727.98|
+Info:     423000 |   278189     144450 |  644   356 |      3618|       2.42     730.40|
+Info:     424000 |   278897     144742 |  708   292 |      3625|       3.80     734.20|
+Info:     425000 |   279629     145010 |  732   268 |      3618|       3.55     737.74|
+Info:     426000 |   280389     145250 |  760   240 |      3625|       3.26     741.01|
+Info:     427000 |   281088     145551 |  699   301 |      3632|       6.44     747.44|
+Info:     428000 |   281785     145854 |  697   303 |      3623|       2.40     749.84|
+Info:     429000 |   282489     146150 |  704   296 |      3636|       4.71     754.55|
+Info:     430000 |   283132     146507 |  643   357 |      3643|       2.06     756.61|
+Info:     431000 |   283799     146840 |  667   333 |      3609|       2.36     758.97|
+Info:     432000 |   284514     147125 |  715   285 |      3612|       3.09     762.06|
+Info:     433000 |   285242     147397 |  728   272 |      3596|       2.53     764.59|
+Info:     434000 |   286022     147617 |  780   220 |      3598|       2.38     766.97|
+Info:     435000 |   286801     147838 |  779   221 |      3642|       4.22     771.19|
+Info:     436000 |   287495     148144 |  694   306 |      3652|       4.50     775.69|
+Info:     437000 |   288164     148475 |  669   331 |      3624|       3.61     779.30|
+Info:     438000 |   288879     148760 |  715   285 |      3599|       6.84     786.14|
+Info:     439000 |   289626     149013 |  747   253 |      3607|       6.70     792.84|
+Info:     440000 |   290290     149349 |  664   336 |      3639|       3.66     796.50|
+Info:     441000 |   290979     149660 |  689   311 |      3635|       2.32     798.83|
+Info:     442000 |   291692     149947 |  713   287 |      3634|       3.88     802.70|
+Info:     443000 |   292413     150226 |  721   279 |      3596|       7.88     810.58|
+Info:     444000 |   293088     150551 |  675   325 |      3573|       3.37     813.96|
+Info:     445000 |   293745     150894 |  657   343 |      3572|       6.59     820.55|
+Info:     446000 |   294432     151207 |  687   313 |      3569|       4.52     825.06|
+Info:     447000 |   295000     151638 |  568   431 |      3534|       2.15     827.22|
+Info:     448000 |   295736     151902 |  736   264 |      3523|       2.61     829.83|
+Info:     449000 |   296487     152151 |  751   249 |      3530|       3.70     833.53|
+Info:     450000 |   297152     152486 |  665   335 |      3497|       3.60     837.13|
+Info:     451000 |   297842     152796 |  690   310 |      3470|       2.48     839.61|
+Info:     452000 |   298446     153192 |  604   396 |      3484|       5.36     844.97|
+Info:     453000 |   299203     153435 |  757   243 |      3481|       3.69     848.65|
+Info:     454000 |   299901     153737 |  698   302 |      3485|       5.94     854.59|
+Info:     455000 |   300688     153950 |  787   213 |      3484|      19.42     874.01|
+Info:     456000 |   301331     154307 |  643   357 |      3467|       5.39     879.40|
+Info:     457000 |   301970     154668 |  639   361 |      3477|       5.97     885.37|
+Info:     458000 |   302700     154938 |  730   270 |      3469|       1.83     887.20|
+Info:     459000 |   303456     155182 |  756   244 |      3490|       4.31     891.51|
+Info:     460000 |   304183     155455 |  727   273 |      3485|       2.92     894.43|
+Info:     461000 |   304925     155713 |  742   258 |      3470|       1.99     896.42|
+Info:     462000 |   305523     156115 |  598   402 |      3402|       2.62     899.04|
+Info:     463000 |   306183     156450 |  660   335 |      3352|       2.38     901.42|
+Info:     464000 |   306895     156738 |  712   288 |      3362|       6.11     907.53|
+Info:     465000 |   307612     157021 |  717   283 |      3386|       1.36     908.88|
+Info:     466000 |   308281     157352 |  669   331 |      3392|       3.24     912.13|
+Info:     467000 |   308795     157838 |  514   486 |      3370|       3.45     915.57|
+Info:     468000 |   309557     158076 |  762   238 |      3360|       4.72     920.29|
+Info:     469000 |   310310     158323 |  753   247 |      3379|       7.21     927.51|
+Info:     470000 |   310957     158676 |  647   353 |      3394|       9.49     937.00|
+Info:     471000 |   311555     159078 |  598   402 |      3358|       3.68     940.68|
+Info:     472000 |   312273     159360 |  718   282 |      3322|       3.09     943.77|
+Info:     473000 |   312935     159698 |  662   338 |      3391|       7.69     951.46|
+Info:     474000 |   313571     160062 |  636   364 |      3355|       2.93     954.39|
+Info:     475000 |   314224     160409 |  653   347 |      3339|       4.79     959.17|
+Info:     476000 |   314806     160827 |  582   418 |      3364|       2.48     961.65|
+Info:     477000 |   315555     161078 |  749   251 |      3358|       6.45     968.10|
+Info:     478000 |   316344     161289 |  789   211 |      3343|       3.44     971.54|
+Info:     479000 |   316933     161700 |  589   411 |      3336|       3.68     975.21|
+Info:     480000 |   317583     162050 |  650   350 |      3375|       3.35     978.56|
+Info:     481000 |   318288     162345 |  705   295 |      3341|       1.94     980.50|
+Info:     482000 |   319030     162603 |  742   258 |      3359|       9.61     990.11|
+Info:     483000 |   319740     162893 |  710   290 |      3359|       2.03     992.14|
+Info:     484000 |   320411     163222 |  671   329 |      3325|       3.52     995.66|
+Info:     485000 |   321172     163461 |  761   239 |      3332|       6.64    1002.29|
+Info:     486000 |   321857     163776 |  685   315 |      3308|       2.04    1004.33|
+Info:     487000 |   322620     164013 |  763   237 |      3308|       3.21    1007.53|
+Info:     488000 |   323290     164343 |  670   330 |      3301|       4.20    1011.74|
+Info:     489000 |   324001     164632 |  711   289 |      3326|       2.97    1014.71|
+Info:     490000 |   324742     164891 |  741   259 |      3327|       3.55    1018.25|
+Info:     491000 |   325349     165284 |  607   393 |      3305|       3.73    1021.98|
+Info:     492000 |   326001     165632 |  652   348 |      3294|       1.52    1023.51|
+Info:     493000 |   326714     165919 |  713   287 |      3307|       3.79    1027.30|
+Info:     494000 |   327285     166348 |  571   429 |      3291|       3.44    1030.74|
+Info:     495000 |   328010     166623 |  725   275 |      3306|       4.44    1035.18|
+Info:     496000 |   328629     167004 |  619   381 |      3284|       2.16    1037.34|
+Info:     497000 |   329344     167289 |  715   285 |      3291|       2.92    1040.26|
+Info:     498000 |   330022     167611 |  678   322 |      3289|       4.83    1045.09|
+Info:     499000 |   330752     167881 |  730   270 |      3294|       8.76    1053.85|
+Info:     500000 |   331538     168095 |  786   214 |      3288|       5.65    1059.50|
+Info:     501000 |   332164     168468 |  626   373 |      3274|       3.76    1063.26|
+Info:     502000 |   332813     168819 |  649   351 |      3275|       6.12    1069.39|
+Info:     503000 |   333441     169191 |  628   372 |      3261|       4.03    1073.42|
+Info:     504000 |   334070     169562 |  629   371 |      3292|       4.54    1077.96|
+Info:     505000 |   334739     169893 |  669   331 |      3272|       3.69    1081.65|
+Info:     506000 |   335469     170163 |  730   270 |      3258|       4.98    1086.63|
+Info:     507000 |   336116     170516 |  647   353 |      3219|       2.96    1089.59|
+Info:     508000 |   336762     170857 |  646   341 |      3140|       5.06    1094.65|
+Info:     509000 |   337401     171217 |  639   360 |      3086|       2.09    1096.74|
+Info:     510000 |   338117     171500 |  716   283 |      3100|       1.17    1097.92|
+Info:     511000 |   338780     171829 |  663   329 |      3047|       2.61    1100.53|
+Info:     512000 |   339411     172198 |  631   369 |      3036|       3.08    1103.60|
+Info:     513000 |   340145     172464 |  734   266 |      3029|       4.98    1108.58|
+Info:     514000 |   340933     172676 |  788   212 |      3039|       7.19    1115.77|
+Info:     515000 |   341711     172898 |  778   222 |      3070|       5.10    1120.87|
+Info:     516000 |   342498     173111 |  787   213 |      3069|       3.38    1124.25|
+Info:     517000 |   343219     173390 |  721   279 |      3080|       2.32    1126.57|
+Info:     518000 |   343952     173657 |  733   267 |      3059|       5.12    1131.69|
+Info:     519000 |   344683     173926 |  731   269 |      3062|       5.40    1137.09|
+Info:     520000 |   345478     174131 |  795   205 |      3057|       3.68    1140.77|
+Info:     521000 |   346144     174465 |  666   334 |      3065|       1.86    1142.63|
+Info:     522000 |   346898     174711 |  754   246 |      3027|       2.37    1145.01|
+Info:     523000 |   347489     175120 |  591   409 |      3017|       2.06    1147.07|
+Info:     524000 |   348205     175404 |  716   284 |      3024|       4.56    1151.63|
+Info:     525000 |   348979     175630 |  774   226 |      3023|       3.51    1155.14|
+Info:     526000 |   349727     175882 |  748   252 |      3034|       4.90    1160.04|
+Info:     527000 |   350509     176100 |  782   218 |      3040|       2.65    1162.70|
+Info:     528000 |   351232     176377 |  723   277 |      3049|       3.86    1166.56|
+Info:     529000 |   351896     176713 |  664   336 |      3026|       4.98    1171.53|
+Info:     530000 |   352574     177035 |  678   322 |      3028|       1.98    1173.52|
+Info:     531000 |   353219     177390 |  645   355 |      3018|       5.33    1178.85|
+Info:     532000 |   353888     177721 |  669   331 |      3023|       4.27    1183.12|
+Info:     533000 |   354639     177970 |  751   249 |      3020|      10.31    1193.43|
+Info:     534000 |   355256     178353 |  617   383 |      3010|       3.42    1196.84|
+Info:     535000 |   355895     178714 |  639   361 |      3023|       4.28    1201.13|
+Info:     536000 |   356503     179106 |  608   392 |      2999|       4.04    1205.17|
+Info:     537000 |   357150     179459 |  647   353 |      3018|       2.05    1207.22|
+Info:     538000 |   357889     179720 |  739   261 |      2999|       2.59    1209.81|
+Info:     539000 |   358693     179916 |  804   196 |      3015|       2.28    1212.08|
+Info:     540000 |   359404     180205 |  711   289 |      3003|       1.40    1213.48|
+Info:     541000 |   360180     180429 |  776   224 |      2973|       2.12    1215.61|
+Info:     542000 |   360878     180731 |  698   302 |      2973|       6.96    1222.56|
+Info:     543000 |   361623     180986 |  745   255 |      2998|      12.48    1235.04|
+Info:     544000 |   362362     181247 |  739   261 |      3007|       3.90    1238.94|
+Info:     545000 |   363061     181548 |  699   301 |      3017|       5.57    1244.51|
+Info:     546000 |   363775     181834 |  714   286 |      3012|       7.13    1251.64|
+Info:     547000 |   364543     182066 |  768   232 |      3002|       6.99    1258.63|
+Info:     548000 |   365249     182360 |  706   294 |      2967|       4.21    1262.85|
+Info:     549000 |   366007     182602 |  758   242 |      2970|       7.64    1270.49|
+Info:     550000 |   366765     182844 |  758   242 |      2964|       6.50    1277.00|
+Info:     551000 |   367527     183082 |  762   238 |      2968|       4.31    1281.31|
+Info:     552000 |   368178     183431 |  651   349 |      2946|       1.13    1282.43|
+Info:     553000 |   368972     183637 |  794   206 |      2943|       3.70    1286.13|
+Info:     554000 |   369633     183969 |  661   332 |      2895|       1.26    1287.39|
+Info:     555000 |   370406     184196 |  773   227 |      2895|       2.69    1290.08|
+Info:     556000 |   371094     184502 |  688   306 |      2819|       2.76    1292.84|
+Info:     557000 |   371866     184730 |  772   228 |      2783|       2.08    1294.91|
+Info:     558000 |   372549     185047 |  683   317 |      2779|       5.64    1300.56|
+Info:     559000 |   373190     185406 |  641   359 |      2805|       4.85    1305.41|
+Info:     560000 |   373950     185646 |  760   240 |      2800|      18.42    1323.83|
+Info:     561000 |   374607     185989 |  657   343 |      2832|       1.97    1325.80|
+Info:     562000 |   375239     186357 |  632   368 |      2843|       4.16    1329.96|
+Info:     563000 |   375950     186646 |  711   289 |      2828|       4.06    1334.02|
+Info:     564000 |   376792     186804 |  842   158 |      2845|       4.22    1338.24|
+Info:     565000 |   377515     187081 |  723   277 |      2855|       4.60    1342.83|
+Info:     566000 |   378285     187311 |  770   230 |      2861|       2.31    1345.15|
+Info:     567000 |   379001     187595 |  716   284 |      2849|       1.37    1346.52|
+Info:     568000 |   379767     187829 |  766   234 |      2804|       2.48    1348.99|
+Info:     569000 |   380356     188240 |  589   411 |      2798|       2.61    1351.60|
+Info:     570000 |   381020     188576 |  664   336 |      2798|       2.55    1354.16|
+Info:     571000 |   381773     188823 |  753   247 |      2782|       3.89    1358.05|
+Info:     572000 |   382525     189071 |  752   248 |      2776|       1.52    1359.57|
+Info:     573000 |   383196     189400 |  671   329 |      2775|       6.74    1366.31|
+Info:     574000 |   383889     189707 |  693   307 |      2777|       6.58    1372.89|
+Info:     575000 |   384642     189954 |  753   247 |      2795|       6.01    1378.90|
+Info:     576000 |   385245     190351 |  603   397 |      2796|       7.37    1386.27|
+Info:     577000 |   385926     190670 |  681   319 |      2811|       5.44    1391.71|
+Info:     578000 |   386679     190917 |  753   247 |      2777|       3.15    1394.87|
+Info:     579000 |   387392     191204 |  713   287 |      2818|       3.96    1398.83|
+Info:     580000 |   388117     191479 |  725   275 |      2807|       4.56    1403.39|
+Info:     581000 |   388877     191719 |  760   240 |      2794|       1.86    1405.25|
+Info:     582000 |   389498     192098 |  621   379 |      2817|       1.92    1407.17|
+Info:     583000 |   390193     192403 |  695   305 |      2867|       3.26    1410.43|
+Info:     584000 |   390901     192695 |  708   292 |      2837|       1.91    1412.33|
+Info:     585000 |   391666     192930 |  765   235 |      2836|       9.93    1422.26|
+Info:     586000 |   392309     193287 |  643   357 |      2825|       2.01    1424.28|
+Info:     587000 |   392880     193716 |  571   429 |      2796|       5.51    1429.79|
+Info:     588000 |   393543     194046 |  663   330 |      2746|       5.29    1435.08|
+Info:     589000 |   394236     194353 |  693   307 |      2752|       5.87    1440.95|
+Info:     590000 |   394968     194621 |  732   268 |      2747|      13.02    1453.97|
+Info:     591000 |   395735     194854 |  767   233 |      2729|       7.24    1461.20|
+Info:     592000 |   396431     195158 |  696   304 |      2716|       3.87    1465.07|
+Info:     593000 |   397168     195421 |  737   263 |      2701|       3.65    1468.73|
+Info:     594000 |   397887     195702 |  719   281 |      2700|       4.66    1473.38|
+Info:     595000 |   398660     195929 |  773   227 |      2691|       2.54    1475.92|
+Info:     596000 |   399400     196189 |  740   260 |      2697|       2.30    1478.22|
+Info:     597000 |   400108     196481 |  708   292 |      2685|       8.01    1486.24|
+Info:     598000 |   400750     196839 |  642   358 |      2693|       5.08    1491.32|
+Info:     599000 |   401490     197099 |  740   260 |      2686|      11.72    1503.04|
+Info:     600000 |   402197     197392 |  707   293 |      2695|       6.19    1509.23|
+Info:     601000 |   402937     197652 |  740   260 |      2691|       3.79    1513.02|
+Info:     602000 |   403588     198001 |  651   349 |      2733|      10.04    1523.06|
+Info:     603000 |   404297     198292 |  709   291 |      2747|       4.60    1527.66|
+Info:     604000 |   405055     198534 |  758   242 |      2712|       4.11    1531.77|
+Info:     605000 |   405737     198852 |  682   318 |      2681|       4.84    1536.61|
+Info:     606000 |   406483     199106 |  746   254 |      2679|       5.30    1541.90|
+Info:     607000 |   407225     199364 |  742   258 |      2691|       2.24    1544.15|
+Info:     608000 |   407908     199681 |  683   317 |      2676|       3.29    1547.44|
+Info:     609000 |   408673     199915 |  765   234 |      2669|       4.45    1551.89|
+Info:     610000 |   409471     200117 |  798   202 |      2669|       3.96    1555.85|
+Info:     611000 |   410120     200468 |  649   351 |      2694|       8.85    1564.71|
+Info:     612000 |   410789     200799 |  669   331 |      2664|       3.17    1567.87|
+Info:     613000 |   411371     201217 |  582   418 |      2668|       3.56    1571.43|
+Info:     614000 |   412060     201528 |  689   311 |      2667|       4.15    1575.58|
+Info:     615000 |   412708     201880 |  648   352 |      2656|       4.94    1580.53|
+Info:     616000 |   413500     202088 |  792   208 |      2661|       9.09    1589.62|
+Info:     617000 |   414285     202303 |  785   215 |      2658|      10.13    1599.75|
+Info:     618000 |   414950     202638 |  665   335 |      2661|       3.67    1603.42|
+Info:     619000 |   415704     202884 |  754   246 |      2663|       2.35    1605.77|
+Info:     620000 |   416395     203193 |  691   309 |      2657|       2.92    1608.69|
+Info:     621000 |   417017     203566 |  622   373 |      2587|       1.78    1610.46|
+Info:     622000 |   417646     203937 |  629   371 |      2557|       4.87    1615.33|
+Info:     623000 |   418340     204243 |  694   306 |      2545|       2.59    1617.93|
+Info:     624000 |   419143     204440 |  803   197 |      2531|       2.67    1620.60|
+Info:     625000 |   419906     204677 |  763   237 |      2526|       3.08    1623.68|
+Info:     626000 |   420621     204962 |  715   285 |      2524|       3.61    1627.29|
+Info:     627000 |   421391     205192 |  770   230 |      2523|       3.76    1631.05|
+Info:     628000 |   422116     205467 |  725   275 |      2525|       2.19    1633.24|
+Info:     629000 |   422751     205832 |  635   365 |      2536|       2.03    1635.28|
+Info:     630000 |   423464     206119 |  713   287 |      2518|       1.28    1636.55|
+Info:     631000 |   424140     206443 |  676   324 |      2518|       3.12    1639.67|
+Info:     632000 |   424876     206707 |  736   264 |      2513|       2.10    1641.77|
+Info:     633000 |   425590     206993 |  714   286 |      2526|       1.99    1643.76|
+Info:     634000 |   426459     207124 |  869   131 |      2516|       2.24    1646.00|
+Info:     635000 |   427159     207424 |  700   300 |      2499|       4.26    1650.26|
+Info:     636000 |   427860     207723 |  701   299 |      2509|       5.95    1656.21|
+Info:     637000 |   428604     207979 |  744   256 |      2530|       7.56    1663.77|
+Info:     638000 |   429252     208331 |  648   352 |      2498|       2.02    1665.78|
+Info:     639000 |   429990     208593 |  738   262 |      2502|       5.90    1671.69|
+Info:     640000 |   430680     208903 |  690   310 |      2513|      17.71    1689.40|
+Info:     641000 |   431237     209346 |  557   443 |      2525|       4.03    1693.43|
+Info:     642000 |   431959     209624 |  722   278 |      2481|       3.42    1696.85|
+Info:     643000 |   432660     209923 |  701   299 |      2501|       7.94    1704.80|
+Info:     644000 |   433453     210130 |  793   207 |      2536|      17.61    1722.41|
+Info:     645000 |   434164     210419 |  711   289 |      2493|       5.38    1727.79|
+Info:     646000 |   434821     210762 |  657   343 |      2508|       5.27    1733.06|
+Info:     647000 |   435452     211131 |  631   369 |      2491|       3.62    1736.69|
+Info:     648000 |   436276     211307 |  824   176 |      2482|       5.39    1742.07|
+Info:     649000 |   436973     211610 |  697   303 |      2458|       4.27    1746.34|
+Info:     650000 |   437629     211954 |  656   344 |      2462|       4.83    1751.17|
+Info:     651000 |   438385     212198 |  756   244 |      2444|       2.33    1753.51|
+Info:     652000 |   439042     212541 |  657   343 |      2446|       2.13    1755.64|
+Info:     653000 |   439740     212843 |  698   302 |      2446|       2.63    1758.26|
+Info:     654000 |   440537     213046 |  797   203 |      2454|       3.61    1761.87|
+Info:     655000 |   441235     213348 |  698   302 |      2446|       7.25    1769.13|
+Info:     656000 |   441793     213790 |  558   442 |      2470|       3.78    1772.91|
+Info:     657000 |   442522     214061 |  729   271 |      2444|       2.72    1775.63|
+Info:     658000 |   443118     214465 |  596   404 |      2435|       3.16    1778.79|
+Info:     659000 |   443857     214726 |  739   261 |      2496|       5.43    1784.22|
+Info:     660000 |   444604     214979 |  747   253 |      2516|       5.40    1789.61|
+Info:     661000 |   445395     215188 |  791   209 |      2507|       5.18    1794.79|
+Info:     662000 |   446147     215436 |  752   248 |      2459|       5.13    1799.92|
+Info:     663000 |   446950     215633 |  803   197 |      2466|       3.74    1803.66|
+Info:     664000 |   447631     215952 |  681   319 |      2448|       3.39    1807.05|
+Info:     665000 |   448341     216242 |  710   290 |      2437|       4.28    1811.33|
+Info:     666000 |   449099     216484 |  758   242 |      2434|       4.26    1815.59|
+Info:     667000 |   449812     216771 |  713   287 |      2434|       8.21    1823.80|
+Info:     668000 |   450398     217185 |  586   414 |      2444|       3.67    1827.47|
+Info:     669000 |   451080     217503 |  682   318 |      2431|       5.27    1832.74|
+Info:     670000 |   451792     217791 |  712   288 |      2403|       4.62    1837.36|
+Info:     671000 |   452520     218063 |  728   272 |      2418|       4.00    1841.36|
+Info:     672000 |   453198     218385 |  678   322 |      2402|       1.92    1843.28|
+Info:     673000 |   453878     218705 |  680   320 |      2422|       2.68    1845.96|
+Info:     674000 |   454559     219024 |  681   319 |      2403|       2.79    1848.75|
+Info:     675000 |   455246     219337 |  687   313 |      2402|       8.06    1856.81|
+Info:     676000 |   456072     219511 |  826   174 |      2372|       5.87    1862.67|
+Info:     677000 |   456702     219881 |  630   370 |      2313|       1.55    1864.23|
+Info:     678000 |   457398     220185 |  696   304 |      2282|       2.72    1866.95|
+Info:     679000 |   458087     220496 |  689   311 |      2283|       5.06    1872.01|
+Info:     680000 |   458759     220824 |  672   328 |      2246|       2.51    1874.52|
+Info:     681000 |   459479     221104 |  720   280 |      2257|       2.84    1877.36|
+Info:     682000 |   460175     221408 |  696   304 |      2240|       5.03    1882.40|
+Info:     683000 |   460870     221713 |  695   305 |      2260|       8.38    1890.78|
+Info:     684000 |   461574     222009 |  704   296 |      2238|       3.73    1894.50|
+Info:     685000 |   462343     222240 |  769   231 |      2244|       6.34    1900.85|
+Info:     686000 |   463080     222503 |  737   263 |      2249|      13.53    1914.38|
+Info:     687000 |   463791     222792 |  711   289 |      2240|       3.01    1917.39|
+Info:     688000 |   464565     223018 |  774   226 |      2230|       9.74    1927.12|
+Info:     689000 |   465338     223245 |  773   227 |      2230|       2.30    1929.42|
+Info:     690000 |   466061     223522 |  723   277 |      2225|       2.39    1931.81|
+Info:     691000 |   466863     223720 |  802   198 |      2256|       3.74    1935.54|
+Info:     692000 |   467602     223981 |  739   261 |      2242|       4.95    1940.50|
+Info:     693000 |   468455     224128 |  853   147 |      2270|       4.02    1944.52|
+Info:     694000 |   469250     224333 |  795   205 |      2290|       3.58    1948.11|
+Info:     695000 |   469959     224624 |  709   291 |      2283|       2.72    1950.83|
+Info:     696000 |   470652     224931 |  693   307 |      2289|       5.80    1956.63|
+Info:     697000 |   471424     225159 |  772   228 |      2320|       2.13    1958.75|
+Info:     698000 |   472046     225537 |  622   378 |      2299|       2.38    1961.13|
+Info:     699000 |   472884     225699 |  838   162 |      2322|       9.15    1970.29|
+Info:     700000 |   473583     226000 |  699   301 |      2342|       9.19    1979.48|
+Info:     701000 |   474319     226264 |  736   264 |      2342|       2.96    1982.44|
+Info:     702000 |   475040     226543 |  721   279 |      2342|       5.25    1987.69|
+Info:     703000 |   475761     226822 |  721   279 |      2298|       3.80    1991.49|
+Info:     704000 |   476525     227058 |  764   236 |      2316|       5.63    1997.12|
+Info:     705000 |   477262     227321 |  737   263 |      2303|       7.09    2004.21|
+Info:     706000 |   478088     227495 |  826   174 |      2294|       3.91    2008.12|
+Info:     707000 |   478857     227726 |  769   231 |      2301|       1.88    2010.00|
+Info:     708000 |   479636     227947 |  779   221 |      2288|       2.48    2012.48|
+Info:     709000 |   480397     228186 |  761   239 |      2300|       3.57    2016.05|
+Info:     710000 |   481065     228518 |  668   332 |      2289|       2.43    2018.48|
+Info:     711000 |   481750     228833 |  685   315 |      2305|       5.97    2024.45|
+Info:     712000 |   482531     229052 |  781   219 |      2295|       7.07    2031.53|
+Info:     713000 |   483230     229353 |  699   301 |      2306|       3.18    2034.71|
+Info:     714000 |   483837     229746 |  607   393 |      2277|       2.05    2036.76|
+Info:     715000 |   484629     229954 |  792   208 |      2278|       5.45    2042.21|
+Info:     716000 |   485371     230212 |  742   258 |      2284|       2.37    2044.58|
+Info:     717000 |   486085     230498 |  714   286 |      2268|       2.89    2047.47|
+Info:     718000 |   486803     230780 |  718   282 |      2261|       3.22    2050.69|
+Info:     719000 |   487491     231092 |  688   312 |      2231|       3.78    2054.47|
+Info:     720000 |   488173     231410 |  682   318 |      2259|       3.22    2057.69|
+Info:     721000 |   488839     231744 |  666   334 |      2244|       2.01    2059.70|
+Info:     722000 |   489514     232069 |  675   325 |      2215|       4.51    2064.21|
+Info:     723000 |   490220     232363 |  706   294 |      2229|       6.70    2070.91|
+Info:     724000 |   490897     232686 |  677   323 |      2216|       3.44    2074.35|
+Info:     725000 |   491627     232956 |  730   270 |      2218|       4.10    2078.45|
+Info:     726000 |   492432     233151 |  805   195 |      2280|       8.35    2086.80|
+Info:     727000 |   493229     233354 |  797   203 |      2303|       5.74    2092.53|
+Info:     728000 |   493992     233591 |  763   237 |      2290|      10.03    2102.56|
+Info:     729000 |   494826     233757 |  834   166 |      2302|       2.55    2105.11|
+Info:     730000 |   495594     233989 |  768   232 |      2260|       8.41    2113.51|
+Info:     731000 |   496409     234174 |  815   185 |      2267|       6.10    2119.61|
+Info:     732000 |   497071     234512 |  662   338 |      2276|       5.59    2125.21|
+Info:     733000 |   497786     234797 |  715   285 |      2275|      12.07    2137.28|
+Info:     734000 |   498524     235059 |  738   262 |      2292|      11.00    2148.28|
+Info:     735000 |   499309     235274 |  785   215 |      2312|       5.28    2153.55|
+Info:     736000 |   500086     235497 |  777   223 |      2321|       6.90    2160.46|
+Info:     737000 |   500904     235679 |  818   182 |      2328|      12.61    2173.07|
+Info:     738000 |   501560     236023 |  656   344 |      2321|       4.84    2177.91|
+Info:     739000 |   502327     236256 |  767   233 |      2335|       5.04    2182.95|
+Info:     740000 |   502982     236601 |  655   345 |      2325|       4.15    2187.11|
+Info:     741000 |   503805     236778 |  823   177 |      2313|       7.12    2194.23|
+Info:     742000 |   504646     236937 |  841   159 |      2316|       5.96    2200.19|
+Info:     743000 |   505402     237181 |  756   244 |      2308|       5.11    2205.30|
+Info:     744000 |   506107     237476 |  705   295 |      2264|       3.74    2209.04|
+Info:     745000 |   506839     237744 |  732   268 |      2289|       3.62    2212.66|
+Info:     746000 |   507588     237995 |  749   251 |      2249|       9.71    2222.37|
+Info:     747000 |   508333     238250 |  745   255 |      2241|       6.41    2228.78|
+Info:     748000 |   509092     238491 |  759   241 |      2252|       5.81    2234.58|
+Info:     749000 |   509787     238796 |  695   305 |      2269|       4.61    2239.20|
+Info:     750000 |   510513     239070 |  726   274 |      2274|      10.80    2249.99|
+Info:     751000 |   511372     239211 |  859   141 |      2285|      11.78    2261.77|
+Info:     752000 |   512160     239423 |  788   212 |      2279|       9.54    2271.31|
+Info:     753000 |   512925     239658 |  765   235 |      2274|       4.79    2276.09|
+Info:     754000 |   513626     239957 |  701   299 |      2243|       3.77    2279.86|
+Info:     755000 |   514498     240085 |  872   128 |      2239|       6.99    2286.85|
+Info:     756000 |   515067     240516 |  569   431 |      2213|       4.12    2290.97|
+Info:     757000 |   515770     240813 |  703   297 |      2203|       3.98    2294.95|
+Info:     758000 |   516429     241154 |  659   341 |      2189|       2.98    2297.93|
+Info:     759000 |   517032     241551 |  603   397 |      2177|       4.79    2302.72|
+Info:     760000 |   517787     241796 |  755   245 |      2216|      12.03    2314.75|
+Info:     761000 |   518470     242113 |  683   317 |      2210|       2.85    2317.60|
+Info:     762000 |   519279     242304 |  809   191 |      2220|       5.84    2323.44|
+Info:     763000 |   519976     242607 |  697   303 |      2215|       5.40    2328.84|
+Info:     764000 |   520674     242909 |  698   302 |      2198|       6.43    2335.28|
+Info:     765000 |   521343     243240 |  669   331 |      2179|       3.91    2339.19|
+Info:     766000 |   522097     243486 |  754   246 |      2175|       3.96    2343.15|
+Info:     767000 |   522867     243716 |  770   230 |      2190|       3.27    2346.41|
+Info:     768000 |   523663     243920 |  796   204 |      2193|       3.65    2350.07|
+Info:     769000 |   524462     244121 |  799   201 |      2180|      10.87    2360.94|
+Info:     770000 |   525114     244469 |  652   348 |      2201|       2.78    2363.72|
+Info:     771000 |   525855     244728 |  741   259 |      2165|       2.40    2366.12|
+Info:     772000 |   526626     244957 |  771   229 |      2185|       3.87    2369.99|
+Info:     773000 |   527374     245209 |  748   252 |      2160|       6.01    2376.00|
+Info:     774000 |   528206     245377 |  832   168 |      2184|       6.76    2382.76|
+Info:     775000 |   528977     245606 |  771   229 |      2182|       4.04    2386.80|
+Info:     776000 |   529631     245952 |  654   346 |      2194|       2.53    2389.33|
+Info:     777000 |   530331     246252 |  700   300 |      2157|       2.19    2391.52|
+Info:     778000 |   531123     246460 |  792   208 |      2156|       6.06    2397.58|
+Info:     779000 |   531783     246800 |  660   340 |      2166|       3.85    2401.42|
+Info:     780000 |   532467     247116 |  684   316 |      2147|       8.38    2409.80|
+Info:     781000 |   533189     247394 |  722   278 |      2152|       4.86    2414.66|
+Info:     782000 |   533921     247662 |  732   268 |      2143|       6.26    2420.93|
+Info:     783000 |   534793     247790 |  872   128 |      2188|       8.56    2429.49|
+Info:     784000 |   535489     248094 |  696   304 |      2224|       6.32    2435.81|
+Info:     785000 |   536143     248440 |  654   346 |      2217|       2.66    2438.47|
+Info:     786000 |   536808     248775 |  665   335 |      2174|       3.80    2442.27|
+Info:     787000 |   537559     249024 |  751   249 |      2203|       9.72    2451.99|
+Info:     788000 |   538263     249320 |  704   296 |      2178|       2.57    2454.57|
+Info:     789000 |   539006     249577 |  743   257 |      2150|       2.31    2456.87|
+Info:     790000 |   539777     249806 |  771   229 |      2151|       3.11    2459.98|
+Info:     791000 |   540501     250082 |  724   276 |      2145|       2.81    2462.79|
+Info:     792000 |   541279     250304 |  778   222 |      2143|       2.96    2465.75|
+Info:     793000 |   542140     250443 |  861   139 |      2158|       7.78    2473.53|
+Info:     794000 |   542900     250683 |  760   240 |      2129|       2.63    2476.16|
+Info:     795000 |   543715     250868 |  815   185 |      2129|       3.07    2479.23|
+Info:     796000 |   544516     251067 |  801   199 |      2133|       3.22    2482.46|
+Info:     797000 |   545348     251235 |  832   168 |      2123|       2.87    2485.33|
+Info:     798000 |   546056     251527 |  708   292 |      2130|       6.82    2492.15|
+Info:     799000 |   546691     251892 |  635   365 |      2133|       8.12    2500.26|
+Info:     800000 |   547398     252185 |  707   293 |      2130|      15.98    2516.25|
+Info:     801000 |   548279     252304 |  881   119 |      2122|      10.45    2526.69|
+Info:     802000 |   549037     252546 |  758   242 |      2124|       4.27    2530.97|
+Info:     803000 |   549836     252747 |  799   201 |      2137|       7.19    2538.16|
+Info:     804000 |   550455     253128 |  619   381 |      2124|       5.03    2543.19|
+Info:     805000 |   551150     253433 |  695   305 |      2119|       4.84    2548.03|
+Info:     806000 |   551898     253685 |  748   252 |      2124|       9.59    2557.62|
+Info:     807000 |   552648     253935 |  750   250 |      2111|       2.99    2560.61|
+Info:     808000 |   553303     254279 |  655   344 |      2084|       4.29    2564.90|
+Info:     809000 |   553961     254621 |  658   342 |      2046|       2.78    2567.68|
+Info:     810000 |   554756     254826 |  795   205 |      2034|       3.50    2571.18|
+Info:     811000 |   555425     255157 |  669   331 |      2022|       2.67    2573.85|
+Info:     812000 |   556246     255336 |  821   179 |      2046|       6.04    2579.89|
+Info:     813000 |   556916     255648 |  670   312 |      1965|       3.35    2583.25|
+Info:     814000 |   557684     255880 |  768   232 |      1944|       6.42    2589.67|
+Info:     815000 |   558460     256104 |  776   224 |      1938|       5.63    2595.30|
+Info:     816000 |   559118     256446 |  658   342 |      1963|       7.87    2603.17|
+Info:     817000 |   559834     256730 |  716   284 |      1943|       5.58    2608.75|
+Info:     818000 |   560367     257197 |  533   467 |      1943|       4.65    2613.40|
+Info:     819000 |   560989     257574 |  622   377 |      1925|       4.68    2618.09|
+Info:     820000 |   561718     257845 |  729   271 |      1923|       6.97    2625.05|
+Info:     821000 |   562384     258179 |  666   334 |      1914|       2.48    2627.53|
+Info:     822000 |   563191     258372 |  807   193 |      1934|       7.17    2634.70|
+Info:     823000 |   563826     258737 |  635   365 |      1922|       2.82    2637.52|
+Info:     824000 |   564581     258982 |  755   245 |      1921|       3.00    2640.51|
+Info:     825000 |   565351     259212 |  770   230 |      1916|       3.86    2644.37|
+Info:     826000 |   566155     259408 |  804   196 |      1912|       3.07    2647.44|
+Info:     827000 |   567018     259545 |  863   137 |      1914|       9.09    2656.53|
+Info:     828000 |   567706     259857 |  688   312 |      1919|       2.25    2658.78|
+Info:     829000 |   568483     260080 |  777   223 |      1937|       5.50    2664.28|
+Info:     830000 |   569296     260267 |  813   187 |      1911|       3.21    2667.48|
+Info:     831000 |   570116     260447 |  820   180 |      1895|       2.23    2669.72|
+Info:     832000 |   570803     260760 |  687   313 |      1899|       3.32    2673.03|
+Info:     833000 |   571522     261041 |  719   281 |      1886|       5.39    2678.42|
+Info:     834000 |   572105     261458 |  583   417 |      1898|       4.77    2683.19|
+Info:     835000 |   572766     261797 |  661   339 |      1887|       5.84    2689.03|
+Info:     836000 |   573540     262023 |  774   226 |      1864|       5.52    2694.55|
+Info:     837000 |   574302     262261 |  762   238 |      1863|       2.42    2696.97|
+Info:     838000 |   575009     262544 |  707   283 |      1777|       3.15    2700.12|
+Info:     839000 |   575647     262906 |  638   362 |      1725|       2.66    2702.78|
+Info:     840000 |   576391     263162 |  744   256 |      1739|       4.75    2707.52|
+Info:     841000 |   577145     263408 |  754   246 |      1766|       7.77    2715.30|
+Info:     842000 |   577836     263717 |  691   309 |      1784|       5.66    2720.96|
+Info:     843000 |   578408     264145 |  572   428 |      1828|       4.09    2725.04|
+Info:     844000 |   578927     264626 |  519   481 |      1807|       4.09    2729.14|
+Info:     845000 |   579558     264995 |  631   369 |      1840|       6.95    2736.09|
+Info:     846000 |   580187     265366 |  629   371 |      1778|       4.12    2740.21|
+Info:     847000 |   580909     265644 |  722   278 |      1778|       3.60    2743.81|
+Info:     848000 |   581655     265898 |  746   254 |      1787|       6.00    2749.80|
+Info:     849000 |   582449     266104 |  794   206 |      1794|       4.66    2754.46|
+Info:     850000 |   583219     266334 |  770   230 |      1797|       4.46    2758.92|
+Info:     851000 |   583983     266570 |  764   236 |      1781|       3.16    2762.08|
+Info:     852000 |   584679     266874 |  696   304 |      1808|       4.69    2766.78|
+Info:     853000 |   585300     267253 |  621   379 |      1760|       5.07    2771.85|
+Info:     854000 |   586072     267481 |  772   228 |      1764|       4.91    2776.76|
+Info:     855000 |   586821     267732 |  749   251 |      1740|       2.21    2778.97|
+Info:     856000 |   587537     268016 |  716   284 |      1765|       4.81    2783.77|
+Info:     857000 |   588156     268397 |  619   381 |      1762|       3.07    2786.84|
+Info:     858000 |   588991     268562 |  835   165 |      1739|       4.34    2791.18|
+Info:     859000 |   589590     268963 |  599   401 |      1715|       1.61    2792.79|
+Info:     860000 |   590352     269201 |  762   238 |      1678|       2.72    2795.51|
+Info:     861000 |   591068     269485 |  716   284 |      1682|       2.83    2798.34|
+Info:     862000 |   591809     269744 |  741   259 |      1674|       4.96    2803.30|
+Info:     863000 |   592589     269958 |  780   214 |      1625|       2.46    2805.77|
+Info:     864000 |   593291     270256 |  702   298 |      1564|       5.90    2811.66|
+Info:     865000 |   593960     270583 |  669   327 |      1524|       3.04    2814.70|
+Info:     866000 |   594703     270840 |  743   257 |      1538|       3.08    2817.78|
+Info:     867000 |   595344     271199 |  641   359 |      1522|       2.51    2820.29|
+Info:     868000 |   596084     271459 |  740   260 |      1517|       3.23    2823.52|
+Info:     869000 |   596853     271690 |  769   231 |      1515|       3.94    2827.46|
+Info:     870000 |   597619     271924 |  766   234 |      1502|       2.46    2829.92|
+Info:     871000 |   598371     272172 |  752   248 |      1522|       3.30    2833.21|
+Info:     872000 |   599089     272454 |  718   282 |      1505|       2.61    2835.82|
+Info:     873000 |   599892     272651 |  803   197 |      1520|       6.20    2842.03|
+Info:     874000 |   600639     272904 |  747   253 |      1524|       3.05    2845.07|
+Info:     875000 |   601343     273200 |  704   296 |      1523|       2.49    2847.57|
+Info:     876000 |   602010     273533 |  667   333 |      1501|       2.31    2849.88|
+Info:     877000 |   602787     273756 |  777   223 |      1517|       3.79    2853.67|
+Info:     878000 |   603379     274155 |  592   399 |      1317|       3.22    2856.89|
+Info:     879000 |   604023     274511 |  644   356 |      1224|       2.79    2859.68|
+Info:     880000 |   604707     274827 |  684   316 |      1239|       2.65    2862.32|
+Info:     881000 |   605450     275084 |  743   257 |      1158|       1.04    2863.36|
+Info:     882000 |   606190     275344 |  740   260 |      1134|       8.90    2872.26|
+Info:     883000 |   606879     275655 |  689   311 |      1116|       3.28    2875.54|
+Info:     884000 |   607647     275887 |  768   232 |      1095|       2.12    2877.66|
+Info:     885000 |   608398     276136 |  751   249 |      1110|       7.35    2885.01|
+Info:     886000 |   609065     276469 |  667   333 |      1112|       5.71    2890.73|
+Info:     887000 |   609812     276722 |  747   253 |      1085|       2.62    2893.35|
+Info:     888000 |   610496     277038 |  684   316 |      1098|       3.95    2897.30|
+Info:     889000 |   611208     277326 |  712   288 |      1049|       1.45    2898.75|
+Info:     890000 |   611985     277549 |  777   223 |       980|       4.18    2902.93|
+Info:     891000 |   612317     278217 |  332   668 |       410|       1.21    2904.14|
+Info:     892000 |   612959     278575 |  642   358 |       253|       2.70    2906.84|
+Info:     893000 |   613676     278858 |  717   283 |       203|       3.05    2909.90|
+Info:     894000 |   614328     279206 |  652   348 |       186|       3.24    2913.14|
+Info:     895000 |   615063     279471 |  735   265 |       101|       5.40    2918.54|
+Info:     896000 |   615790     279744 |  727   273 |        87|       3.65    2922.20|
+Info:     897000 |   616459     280075 |  669   331 |        74|       7.94    2930.13|
+Info:     898000 |   617172     280362 |  713   287 |        45|       5.48    2935.62|
+Info:     899000 |   617845     280689 |  673   327 |        41|       2.49    2938.11|
+Info:     900000 |   618575     280959 |  730   270 |         9|       4.06    2942.17|
+Info:     901000 |   619218     281316 |  643   357 |        31|       7.29    2949.46|
+Info:     902000 |   619954     281580 |  736   264 |        35|      10.10    2959.55|
+Info:     903000 |   620697     281837 |  743   257 |        55|      12.26    2971.81|
+Info:     904000 |   621426     282108 |  729   271 |        50|      12.44    2984.25|
+Info:     905000 |   622229     282305 |  803   197 |        18|       2.66    2986.91|
+Info:     905262 |   622432     282365 |  203    60 |         0|       0.72    2987.63|
 Info: Routing complete.
-Info: Router1 time 238.81s
-Info: Checksum: 0xd8b6f3b1
+Info: Router1 time 2987.63s
+Info: Checksum: 0xd0ac863b
 
 Info: Critical path report for clock 'pclk' (posedge -> posedge):
 Info: curr total
-Info:  1.4  1.4  Source xosera_main.blitter.blit_ctrl_transp_T_SB_DFFESR_Q_7_DFFLC.O
-Info:  2.4  3.8    Net xosera_main.blitter.blit_ctrl_transp_T[0] (5,23) -> (4,25)
-Info:                Sink xosera_main.blitter.blit_ctrl_transp_SB_LUT4_I1_1_O_SB_LUT4_O_LC.I1
+Info:  1.4  1.4  Source xosera_main.blit_vram_ack_SB_DFFSR_Q_DFFLC.O
+Info:  5.5  6.9    Net xosera_main.blit_vram_ack (12,5) -> (8,24)
+Info:                Sink xosera_main.blit_vram_ack_SB_LUT4_I2_LC.I2
 Info:                Defined in:
-Info:                  upduino/xosera_upd.sv:282.13-302.2
-Info:                  ./blitter_slim.sv:139.17-139.35
-Info:                  ./xosera_main.sv:287.18-303.6
-Info:  1.2  5.0  Source xosera_main.blitter.blit_ctrl_transp_SB_LUT4_I1_1_O_SB_LUT4_O_LC.O
-Info:  3.0  8.0    Net xosera_main.blitter.blit_ctrl_transp_SB_LUT4_I1_1_O[3] (4,25) -> (4,21)
-Info:                Sink xosera_main.blitter.blit_ctrl_transp_SB_LUT4_I1_1_O_SB_LUT4_I2_LC.I3
-Info:                Defined in:
-Info:                  /Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_map.v:6.21-6.22
-Info:  0.9  8.9  Source xosera_main.blitter.blit_ctrl_transp_SB_LUT4_I1_1_O_SB_LUT4_I2_LC.O
-Info:  1.8 10.6    Net xosera_main.blitter.blit_f_mask_SB_LUT4_I1_O_SB_LUT4_O_1_I2[1] (4,21) -> (4,20)
-Info:                Sink xosera_main.blitter.blit_f_mask_SB_LUT4_I1_O_SB_LUT4_O_1_LC.I3
+Info:                  upduino/xosera_upd.sv:284.13-306.2
+Info:                  ./vram_arb.sv:31.33-31.43
+Info:                  ./xosera_main.sv:336.10-361.2
+Info:  1.2  8.1  Source xosera_main.blit_vram_ack_SB_LUT4_I2_LC.O
+Info:  1.8  9.9    Net xosera_main.blit_vram_ack_SB_LUT4_I2_O[1] (8,24) -> (8,23)
+Info:                Sink xosera_main.video_gen.audio_dma_vram_req_SB_LUT4_I1_O_SB_LUT4_O_LC.I3
 Info:                Defined in:
 Info:                  /Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_map.v:6.21-6.22
-Info:  0.9 11.5  Source xosera_main.blitter.blit_f_mask_SB_LUT4_I1_O_SB_LUT4_O_1_LC.O
-Info:  1.8 13.3    Net xosera_main.blitter.blit_f_mask_SB_LUT4_I1_O[3] (4,20) -> (4,19)
-Info:                Sink xosera_main.blitter.blit_ctrl_transp_SB_LUT4_I0_1_LC.I3
+Info:  0.9 10.8  Source xosera_main.video_gen.audio_dma_vram_req_SB_LUT4_I1_O_SB_LUT4_O_LC.O
+Info:  3.6 14.4    Net xosera_main.blit_wr_SB_LUT4_I0_I2[3] (8,23) -> (3,25)
+Info:                Sink xosera_main.blitter.blit_f_mask_SB_LUT4_I1_1_O_SB_LUT4_O_LC.I3
 Info:                Defined in:
 Info:                  /Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_map.v:6.21-6.22
-Info:  0.9 14.1  Source xosera_main.blitter.blit_ctrl_transp_SB_LUT4_I0_1_LC.O
-Info:  1.8 15.9    Net xosera_main.blitter.blit_ctrl_transp_SB_LUT4_I0_1_O[3] (4,19) -> (3,18)
-Info:                Sink xosera_main.blitter.blit_f_mask_SB_LUT4_I1_1_LC.I3
+Info:  0.9 15.2  Source xosera_main.blitter.blit_f_mask_SB_LUT4_I1_1_O_SB_LUT4_O_LC.O
+Info:  6.7 21.9    Net xosera_main.blitter.blit_ctrl_transp_8b_SB_LUT4_I0_1_O[1] (3,25) -> (1,1)
+Info:                Sink xosera_main.vram_arb.vram.umem0_DATAIN_7_SB_LUT4_O_LC.I3
 Info:                Defined in:
 Info:                  /Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_map.v:6.21-6.22
-Info:  0.9 16.8  Source xosera_main.blitter.blit_f_mask_SB_LUT4_I1_1_LC.O
-Info:  1.8 18.5    Net xosera_main.blitter.blit_f_mask_SB_LUT4_I1_1_O[2] (3,18) -> (3,18)
-Info:                Sink xosera_main.vram_arb.vram.umem0_MASKWREN_SB_LUT4_O_LC.I3
-Info:                Defined in:
-Info:                  /Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_map.v:6.21-6.22
-Info:  0.9 19.4  Source xosera_main.vram_arb.vram.umem0_MASKWREN_SB_LUT4_O_LC.O
-Info:  7.6 27.0    Net xosera_main.vram_arb.vram.umem0_MASKWREN (3,18) -> (25,0)
-Info:                Sink xosera_main.vram_arb.vram.umem1_RAM.MASKWREN_3
-Info:  0.1 27.1  Setup xosera_main.vram_arb.vram.umem1_RAM.MASKWREN_3
-Info: 7.1 ns logic, 20.0 ns routing
+Info:  0.9 22.8  Source xosera_main.vram_arb.vram.umem0_DATAIN_7_SB_LUT4_O_LC.O
+Info:  5.7 28.5    Net xosera_main.vram_arb.vram.umem0_DATAIN_7 (1,1) -> (25,0)
+Info:                Sink xosera_main.vram_arb.vram.umem3_RAM.DATAIN_8
+Info:  0.1 28.6  Setup xosera_main.vram_arb.vram.umem3_RAM.DATAIN_8
+Info: 5.3 ns logic, 23.3 ns routing
 
 Info: Critical path report for cross-domain path '<async>' -> '<async>':
 Info: curr total
 Info:  0.0  0.0  Source led_green$sb_io.D_IN_0
-Info:  1.8  1.8    Net led_green$SB_IO_IN (4,31) -> (5,30)
+Info:  3.5  3.5    Net led_green$SB_IO_IN (4,31) -> (8,30)
 Info:                Sink bus_out_ena_SB_LUT4_O_LC.I2
 Info:                Defined in:
-Info:                  upduino/xosera_upd.sv:282.13-302.2
-Info:                  ./reg_interface.sv:17.33-17.45
-Info:                  ./xosera_main.sv:178.15-218.2
-Info:  1.2  3.0  Source bus_out_ena_SB_LUT4_O_LC.O
-Info:  4.5  7.5    Net bus_out_ena (5,30) -> (16,31)
-Info:                Sink bus_tristate[0].OUTPUT_ENABLE
+Info:                  upduino/xosera_upd.sv:284.13-306.2
+Info:                  ./reg_interface.sv:19.33-19.45
+Info:                  ./xosera_main.sv:197.15-243.2
+Info:  1.2  4.7  Source bus_out_ena_SB_LUT4_O_LC.O
+Info:  4.1  8.8    Net bus_out_ena (8,30) -> (17,31)
+Info:                Sink bus_tristate[7].OUTPUT_ENABLE
 Info:                Defined in:
-Info:                  upduino/xosera_upd.sv:129.7-129.18
-Info: 1.2 ns logic, 6.2 ns routing
+Info:                  upduino/xosera_upd.sv:131.7-131.18
+Info: 1.2 ns logic, 7.6 ns routing
 
 Info: Critical path report for cross-domain path '<async>' -> 'posedge pclk':
 Info: curr total
-Info:  0.0  0.0  Source bus_tristate[2].D_IN_0
-Info:  8.0  8.0    Net bus_data_in[2] (13,31) -> (10,14)
-Info:                Sink xosera_main.reg_interface.bus.data_ff0_SB_DFFSR_Q_5_DFFLC.I0
+Info:  0.0  0.0  Source led_red$sb_io.D_IN_0
+Info:  5.1  5.1    Net led_red$SB_IO_IN (6,31) -> (21,30)
+Info:                Sink xosera_main.reg_interface.bus.cs_n_ff0_SB_DFFSR_Q_DFFLC.I0
 Info:                Defined in:
-Info:                  upduino/xosera_upd.sv:282.13-302.2
-Info:                  ./reg_interface.sv:20.33-20.43
-Info:                  ./xosera_main.sv:178.15-218.2
-Info:  1.2  9.3  Setup xosera_main.reg_interface.bus.data_ff0_SB_DFFSR_Q_5_DFFLC.I0
-Info: 1.2 ns logic, 8.0 ns routing
+Info:                  upduino/xosera_upd.sv:284.13-306.2
+Info:                  ./reg_interface.sv:18.33-18.43
+Info:                  ./xosera_main.sv:197.15-243.2
+Info:  1.2  6.4  Setup xosera_main.reg_interface.bus.cs_n_ff0_SB_DFFSR_Q_DFFLC.I0
+Info: 1.2 ns logic, 5.1 ns routing
 
 Info: Critical path report for cross-domain path 'posedge pclk' -> '<async>':
 Info: curr total
-Info:  1.4  1.4  Source boot_select_r_SB_DFF_Q_1_DFFLC.O
-Info:  8.7 10.1    Net boot_select_r[0] (16,28) -> (25,0)
-Info:                Sink boot.S0
+Info:  1.4  1.4  Source bus_data_out_r_SB_DFF_Q_4_D_SB_LUT4_O_LC.O
+Info:  9.2 10.6    Net bus_data_out_r[3] (15,22) -> (9,31)
+Info:                Sink bus_tristate[3].D_OUT_0
 Info:                Defined in:
-Info:                  upduino/xosera_upd.sv:112.13-112.26
-Info: 1.4 ns logic, 8.7 ns routing
+Info:                  upduino/xosera_upd.sv:133.13-133.27
+Info: 1.4 ns logic, 9.2 ns routing
 
-Info: Max frequency for clock 'pclk': 36.89 MHz (PASS at 33.77 MHz)
+Info: Max frequency for clock 'pclk': 35.00 MHz (PASS at 33.77 MHz)
 
-Info: Max delay <async>      -> <async>     : 7.45 ns
-Info: Max delay <async>      -> posedge pclk: 9.28 ns
-Info: Max delay posedge pclk -> <async>     : 10.14 ns
-
-Info: Slack histogram:
-Info:  legend: * represents 65 endpoint(s)
-Info:          + represents [1,65) endpoint(s)
-Info: [  2509,   6393) |******+
-Info: [  6393,  10277) |*******************+
-Info: [ 10277,  14161) |*********+
-Info: [ 14161,  18045) |******************************+
-Info: [ 18045,  21929) |***************************+
-Info: [ 21929,  25813) |************************************************************ 
-Info: [ 25813,  29697) |+
-Info: [ 29697,  33581) | 
-Info: [ 33581,  37465) | 
-Info: [ 37465,  41349) | 
-Info: [ 41349,  45233) | 
-Info: [ 45233,  49117) | 
-Info: [ 49117,  53001) | 
-Info: [ 53001,  56885) | 
-Info: [ 56885,  60769) | 
-Info: [ 60769,  64653) | 
-Info: [ 64653,  68537) | 
-Info: [ 68537,  72421) | 
-Info: [ 72421,  76305) |+
-Info: [ 76305,  80189) |+
+Info: Max delay <async>      -> <async>     : 8.84 ns
+Info: Max delay <async>      -> posedge pclk: 6.36 ns
+Info: Max delay posedge pclk -> <async>     : 10.59 ns
 
 Info: Program finished normally.

@@ -167,6 +167,8 @@ assign                  intr_trigger[xv::BLIT_INTR]     = 1'b0;
 `ifndef EN_UART
 assign serial_txd_o = 1'b0;
 logic unused_uart   = serial_rxd_i;
+`elsif EN_UART_TX
+logic unused_uart_tx   = serial_rxd_i;
 `endif
 `ifndef EN_TIMER_INTR
 assign                  intr_trigger[xv::TIMER_INTR]     = 1'b0;
@@ -229,7 +231,9 @@ reg_interface reg_interface(
     .intr_status_i(intr_status),        // status read from pending INT_CTRL interrupt
 `ifdef EN_UART
     .uart_txd_o(serial_txd_o),          // UART transmit pin hookup
+`ifndef EN_UART_TX
     .uart_rxd_i(serial_rxd_i),          // UART receive pin hookup
+`endif
 `endif
 `ifdef BUS_DEBUG_SIGNALS
     .bus_ack_o(dbug_cs_strobe),         // debug "ack" bus strobe

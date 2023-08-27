@@ -50,7 +50,9 @@ module reg_interface (
     input  wire intr_t          intr_status_i,     // pending interrupts CPU status read
 `ifdef EN_UART
     output      logic           uart_txd_o,        // UART receive signal
+`ifndef EN_UART_TX
     input wire  logic           uart_rxd_i,        // UART transmit signal
+`endif
 `endif
 `ifdef BUS_DEBUG_SIGNALS
     output      logic           bus_ack_o,         // ACK strobe for bus debug
@@ -78,12 +80,14 @@ byte_t          reg_timer_countdown;    // 8-bit timer interrupt interval counte
 `endif
 
 `ifdef EN_UART
-logic           uart_rd;
 logic           uart_wr;
 logic           uart_txf;
+byte_t          uart_din;
+`ifndef EN_UART_TX
+logic           uart_rd;
 logic           uart_rxf;
 byte_t          uart_dout;
-byte_t          uart_din;
+`endif
 `endif
 
 // read flags
@@ -137,15 +141,23 @@ acia #(
     .BPS_RATE(xv::UART_BPS),
     .CLK_HZ(xv::PCLK_HZ)
 ) uart (
+`ifndef EN_UART_TX
     .rd_i(uart_rd),
+`endif
     .wr_i(uart_wr),
     .rs_i(bus_bytesel),
+`ifndef EN_UART_TX
     .rx_i(uart_rxd_i),
+`endif
     .tx_o(uart_txd_o),
     .din_i(uart_din),
+`ifndef EN_UART_TX
     .dout_o(uart_dout),
+`endif
     .txf_o(uart_txf),
+`ifndef EN_UART_TX
     .rxf_o(uart_rxf),
+`endif
     .rst_i(reset_i),
     .clk(clk)
 );
@@ -208,7 +220,9 @@ word_t      rd_temp_word;
 always_comb bus_data_o  = !bus_bytesel ? rd_temp_word[15:8] : rd_temp_word[7:0];
 
 `ifdef EN_UART
+`ifndef EN_UART_TX
 always_comb uart_rd    = bus_read_strobe && (bus_reg_num == xv::XM_UART);
+`endif
 `endif
 
 // xm registers read
@@ -243,7 +257,11 @@ always_comb begin
             rd_temp_word  = reg_data;
 `ifdef EN_UART
         xv::XM_UART:
+`ifndef EN_UART_TX
             rd_temp_word  = {uart_rxf, uart_txf, 6'b000000, uart_dout };
+`else
+            rd_temp_word  = {1'b0, uart_txf, 6'b000000, 8'h00 };
+`endif
 `else
         xv::XM_UART,
 `endif
@@ -511,7 +529,8 @@ always_ff @(posedge clk) begin
 
 `ifdef EN_UART
                 xv::XM_UART: begin
-                    else begin
+                    if (!bus_bytesel) begin
+                    end else begin
                         uart_wr     <= 1'b1;
                         uart_din    <= bus_data_byte;
                     end

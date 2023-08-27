@@ -1,0 +1,12 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "signed 16-bit X pixel coordinate for WR_ADDR and SYS_CTRL mask calculation (also used for PIXEL_BASE)",
+            "type": 4
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

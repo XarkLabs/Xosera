@@ -2,15 +2,15 @@
     "reg": [
         {
             "bits": 11,
-            "name": "video window left-edge",
+            "name": "pointer sprite raw native H position",
             "type": 4,
             "attr": [
-                "left-most native pixel of video display window (inclusive)"
+                "left edge of 32x32 sprite (first visible pixel at 160-6 [640x480] or 240-6 [848x480])"
             ]
         },
         {
             "bits": 5,
-            "name": "0",
+            "name": "-",
             "type": 1
         }
     ],

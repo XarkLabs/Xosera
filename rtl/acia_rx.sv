@@ -30,6 +30,7 @@
 `include "xosera_pkg.sv"
 
 `ifdef EN_UART
+`ifndef EN_UART_TX
 
 module acia_rx #(
     parameter BPS_RATE,                     // bps rate (baud rate)
@@ -118,5 +119,6 @@ end
 
 endmodule
 
+`endif
 `endif
 `default_nettype wire               // restore default

@@ -43,7 +43,8 @@
 `define EN_BLIT                         // enable blit unit
 `define EN_POINTER                      // enable pointer sprite
 `define EN_PIXEL_ADDR                   // pixel coordinate address generation
-//`define EN_UART                         // enable USB UART
+`define EN_UART                         // enable USB UART
+`define EN_UART_TX                      // TX only UART (no RX if EN_UART defined)
 
 `define VERSION 0_39                    // Xosera BCD version code (x.xx)
 
@@ -73,7 +74,7 @@ localparam AUDIO_NCHAN  = `EN_AUDIO;    // set parameter for # audio channels
 localparam AUDIO_NCHAN  = 0;
 `endif
 
-localparam UART_BPS     = 1000000;      // UART baud rate
+localparam UART_BPS     = 230400;      // UART baud rate
 
 // Xosera memory address bit widths
 localparam VRAM_W   = 16;               // 64K words VRAM
@@ -172,8 +173,8 @@ typedef enum logic [6:0] {
     XR_SCANLINE     = 7'h03,            // (R /W) read scanline (incl. offscreen), write signal video interrupt
     XR_VID_LEFT     = 7'h04,            // (R /W) left edge of active display window (typically 0)
     XR_VID_RIGHT    = 7'h05,            // (R /W) right edge of active display window +1 (typically 640 or 848)
-    XR_POINTER_H     = 7'h06,            // (- /W) pointer sprite raw H
-    XR_POINTER_V     = 7'h07,            // (- /W) pointer sprite raw V pos
+    XR_POINTER_H    = 7'h06,            // (- /W) pointer sprite raw H
+    XR_POINTER_V    = 7'h07,            // (- /W) pointer sprite raw V pos
     XR_UNUSED_08    = 7'h08,            // (- /-) unused XR 08
     XR_UNUSED_09    = 7'h09,            // (- /-) unused XR 09
     XR_UNUSED_0A    = 7'h0A,            // (- /-) unused XR 0A

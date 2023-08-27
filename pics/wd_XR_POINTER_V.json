@@ -1,0 +1,32 @@
+{
+    "reg": [
+        {
+            "bits": 11,
+            "name": "pointer sprite raw native V position",
+            "type": 4,
+            "attr": [
+                "top edge of 32x32 sprite (first visible pixel at 0)",
+                "to clip partially off top edge, V position needs to",
+                "be 525-n [640x480] or 517-n [848x480] to clip n lines"
+            ]
+        },
+        {
+            "name": "-",
+            "bits": 1,
+            "type": 1
+        },
+        {
+            "name": "colormap select",
+            "bits": 4,
+            "type": 2,
+            "attr": [
+                "upper 4-bits of pointer color",
+                "index (0 pixel transparent)",
+                "color_A used for look-up"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

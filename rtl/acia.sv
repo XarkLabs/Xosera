@@ -35,21 +35,31 @@ module acia #(
     parameter BPS_RATE,                     // bps rate (baud rate)
     parameter CLK_HZ                        // clock in Hz
 )(
+`ifndef EN_UART_TX
     input  wire logic           rd_i,       // read strobe
+`endif
     input  wire logic           wr_i,       // write strobe
     input  wire logic           rs_i,       // register select
+`ifndef EN_UART_TX
     input  wire logic           rx_i,       // serial receive
+`endif
     output logic                tx_o,       // serial transmit
     input  wire logic  [7:0]    din_i,      // data bus input
+`ifndef EN_UART_TX
     output logic       [7:0]    dout_o,     // data bus output
+`endif
     output logic                txf_o,      // transmit empty (ready to send char)
+`ifndef EN_UART_TX
     output logic                rxf_o,      // receive full (char ready to read)
+`endif
     input  wire logic           rst_i,      // system reset
     input  wire logic           clk         // system clock
 );
 
 logic           tx_start;
+`ifndef EN_UART_TX
 logic [7:0]     rx_dat;
+`endif
 
 // generate tx_start signal on write to register 1
 assign tx_start = rs_i & wr_i;
@@ -58,12 +68,16 @@ assign tx_start = rs_i & wr_i;
 always_ff @(posedge clk) begin
     if (rst_i) begin
         txf_o   <= 1'b0;
+`ifndef EN_UART_TX
         rxf_o   <= 1'b0;
         dout_o  <= '0;
+`endif
     end else begin
         txf_o   <= txf;
+`ifndef EN_UART_TX
         rxf_o   <= rxf;
         dout_o  <= rx_dat;
+`endif
     end
 end
 
@@ -86,6 +100,7 @@ always_ff @(posedge clk) begin
     end
 end
 
+`ifndef EN_UART_TX
 // rx_i full is set when rx_stb pulses, cleared when data logic read
 logic           rx_stb;
 logic           rxf;
@@ -112,6 +127,8 @@ acia_rx #(
     .rst_i(rst_i),              // system reset
     .clk(clk)                   // system clock
 );
+
+`endif
 
 // Transmitter
 acia_tx #(

@@ -1,0 +1,30 @@
+;
+; copper - default boot program
+;
+; vim: set et ts=8 sw=8
+;
+                .list    false
+                .include "../xosera_m68k_api/xosera_m68k_defs.inc"
+                .macname false
+                .listcond false
+                .list    true
+entry
+                VPOS    #$000                           ; wait for SOF (just in case)
+                MOVE    #$0001,XR_BLIT_CTRL             ; no transp, constS
+                MOVE    #$0000,XR_BLIT_ANDC             ; ANDC constant
+                MOVE    #$0000,XR_BLIT_XOR              ; XOR constant
+                MOVE    #$0000,XR_BLIT_MOD_S            ; no modulo S
+                MOVE    #$8888,XR_BLIT_SRC_S            ; A = fill pattern
+                MOVE    #$0000,XR_BLIT_MOD_D            ; no modulo D
+                MOVE    #$0000,XR_BLIT_DST_D            ; VRAM display end address
+                MOVE    #$FF00,XR_BLIT_SHIFT            ; no edge masking or shifting
+                MOVE    #$0001,XR_BLIT_LINES            ; 2D
+                MOVE    #$10000-1,XR_BLIT_WORDS         ; 2*64KW VRAM - start blit
+
+                MOVE    #$0000,XR_PA_GFX_CTRL
+
+                MOVE    #(VPOS|$7FF),entry
+                MOVE    #$0000,XR_COPP_CTRL             ; disable copper execution
+                VPOS    #$7FF                           ; wait for SOF (just in case)
+
+                .end

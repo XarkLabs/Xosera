@@ -25,8 +25,8 @@
 #include <machine.h>
 
 #define DELAY_TIME 5000        // human speed
-//#define DELAY_TIME 1000        // impatient human speed
-//#define DELAY_TIME 100        // machine speed
+// #define DELAY_TIME 1000        // impatient human speed
+// #define DELAY_TIME 100        // machine speed
 
 #include "xosera_api.h"
 
@@ -422,14 +422,14 @@ void     xosera_demo()
         uint32_t githash   = (xv_reg_getw(githash_h) << 16) | xv_reg_getw(githash_l);
         uint16_t width     = xv_reg_getw(vidwidth);
         uint16_t height    = xv_reg_getw(vidheight);
-        uint16_t features  = xv_reg_getw(features);
+        uint16_t feature   = xv_reg_getw(feature);
         uint16_t dispstart = xv_reg_getw(dispstart);
         uint16_t dispwidth = xv_reg_getw(dispwidth);
         uint16_t scrollxy  = xv_reg_getw(scrollxy);
         uint16_t gfxctrl   = xv_reg_getw(gfxctrl);
 
         xprintf("Xosera #%08x\n", githash);
-        xprintf("Mode: %dx%d  Features:0x%04x\n", width, height, features);
+        xprintf("Mode: %dx%d  Features:0x%04x\n", width, height, feature);
         xprintf("dispstart:0x%04x dispwidth:0x%04x\n", dispstart, dispwidth);
         xprintf(" scrollxy:0x%04x   gfxctrl:0x%04x\n", scrollxy, gfxctrl);
 

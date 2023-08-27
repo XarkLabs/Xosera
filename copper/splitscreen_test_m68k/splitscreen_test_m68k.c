@@ -219,7 +219,7 @@ void     xosera_splitscreen_test()
         xmem_setw_next(*wp++);
     }
 
-    uint16_t features  = xm_getbh(FEATURE);
+    uint16_t feature   = xm_getbh(FEATURE);
     uint16_t monwidth  = 640;
     uint16_t monheight = 480;
 
@@ -230,7 +230,7 @@ void     xosera_splitscreen_test()
     uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
     uint16_t hvfscale = xreg_getw(PA_HV_FSCALE);
 
-    dprintf("Xosera - Features: 0x%04x\n", features);
+    dprintf("Xosera - Features: 0x%04x\n", feature);
     dprintf("Monitor Mode: %dx%d\n", monwidth, monheight);
     dprintf("\nPlayfield A:\n");
     dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);

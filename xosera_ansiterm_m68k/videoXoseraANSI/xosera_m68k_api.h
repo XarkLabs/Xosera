@@ -454,15 +454,15 @@ extern xosera_ptr_t xosera_ptr;
 #define xwait_not_vblank() xwait_ctrl_bit_clear(VBLANK)
 
 // return true if ready to transmit character
-#define uart_send_ready() (!(xm_getbh(FEATURE) & FEATURE_UART_TXF_B))
+#define uart_send_ready() (!(xm_getbh(UART) & UART_TXF_B))
 
 // transmit UART character (call when uart_send_ready() returns true)
-#define uart_send_byte(byte) (xosera_ptr[XM_FEATURE >> 2].b.l = (byte))
+#define uart_send_byte(byte) (xosera_ptr[(XM_UART) >> 2].b.l = (byte))
 
 // return true if RX character waiting
-#define uart_get_ready() (xm_getbh(FEATURE) & FEATURE_UART_RXF_B)
+#define uart_get_ready() (xm_getbh(UART) & UART_RXF_B)
 
 // return UART received character (call when uart_get_ready() returns true)
-#define uart_get_byte() (xosera_ptr[XM_FEATURE >> 2].b.l)
+#define uart_get_byte() (xosera_ptr[XM_UART >> 2].b.l)
 
 #endif        // XOSERA_M68K_API_H

@@ -430,9 +430,9 @@ const char * BusInterface::reg_name[] = {"XM_SYS_CTRL ",
                                          "XM_WR_ADDR  ",
                                          "XM_DATA     ",
                                          "XM_DATA_2   ",
-                                         "XM_PIXEL_INI",
                                          "XM_PIXEL_X  ",
                                          "XM_PIXEL_Y  ",
+                                         "XM_UART",
                                          "XM_FEATURE  "};
 
 #define REG_BH(r, v)     (((XM_##r) | 0x00) << 8) | ((v)&0xff)
@@ -476,7 +476,7 @@ uint16_t     BusInterface::test_data[32768] = {
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
-
+#if 0
     REG_W(PIXEL_X, 0xC000),        // base
     REG_W(PIXEL_Y, 0x0100),        // width
     REG_BH(FEATURE, 0x00),         // set base, width
@@ -520,7 +520,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_W(PIXEL_X, 0x0005),
     REG_W(PIXEL_Y, 0x0005),
     REG_W(DATA, 0x5555),
-
+#endif
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
@@ -528,7 +528,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 
-#if 1
+#if 0
     REG_W(WR_INCR, 0x10),
     REG_W(WR_ADDR, 0x2000),
     REG_W(DATA, 1234),
@@ -569,7 +569,8 @@ uint16_t     BusInterface::test_data[32768] = {
 
 #endif
 
-#if 1
+#if 0
+    REG_W(SYS_CTRL, 0x000F),                // write mask
     XREG_SETW(PA_GFX_CTRL, 0x005F),         // bitmap, 4-bpp, Hx4, Vx4
     XREG_SETW(PA_TILE_CTRL, 0x000F),        // tileset 0x0000 in TILEMEM, tilemap in VRAM, 16-high font
     XREG_SETW(PA_DISP_ADDR, 0x0000),        // display start address

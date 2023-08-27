@@ -66,7 +66,7 @@
 // Xosera Main Registers (XM Registers, directly CPU accessable)
 #define XM_SYS_CTRL 0x00        // (R /W+) status bits, FPGA config, write masking
 #define XM_INT_CTRL 0x01        // (R /W ) interrupt status/control
-#define XM_TIMER    0x02        // (RO   ) read 1/10th millisecond timer
+#define XM_TIMER    0x02        // (R /W+) read 1/10th millisecond timer, write 8-bit interval timer count
 #define XM_RD_XADDR 0x03        // (R /W+) XR register/address for XM_XDATA read access
 #define XM_WR_XADDR 0x04        // (R /W ) XR register/address for XM_XDATA write access
 #define XM_XDATA    0x05        // (R /W+) read/write XR register/memory at XM_RD_XADDR/XM_WR_XADDR
@@ -76,12 +76,13 @@
 #define XM_WR_ADDR  0x09        // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
 #define XM_DATA     0x0A        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
 #define XM_DATA_2   0x0B        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
-#define XM_PIXEL_X  0x0C        // (   W+) pixel X coordinate / pixel base address
-#define XM_PIXEL_Y  0x0D        // (   W+) pixel Y coordinate / pixel line width
-#define XM_UNUSED_E 0x0E        // (- /- )
-#define XM_FEATURE  0x0F        // (R+/W+) Xosera feature flags, odd byte UART
+#define XM_PIXEL_X  0x0C        // (- /W+) pixel X coordinate / pixel base address
+#define XM_PIXEL_Y  0x0D        // (- /W+) pixel Y coordinate / pixel line width
+#define XM_UART     0x0E        // (R+/W+) optional debug USB UART communication
+#define XM_FEATURE  0x0F        // (R /W+) Xosera feature flags, write sets pixel base, width to X, Y and mask mode
 
-// NOTE: These are bits in high byte of SYS_CTRL word (fastest to access)
+// SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
+// indirect with no offset)
 #define SYS_CTRL_MEM_WAIT_B  7        // (RO   )  memory read/write operation pending (with contended memory)
 #define SYS_CTRL_BLIT_FULL_B 6        // (RO   )  blitter queue is full, do not write new operation to blitter registers
 #define SYS_CTRL_BLIT_BUSY_B 5        // (RO   )  blitter is still busy performing an operation (not done)
@@ -137,24 +138,30 @@
 #define INT_CTRL_AUD0_INTR_F  0x0001        // audio channel ready interrupt (read status, write acknowledge)
 #define INT_CTRL_AUD_ALL_F    0x000F        // all audio channels status/acknowledge
 #define INT_CTRL_CLEAR_ALL_F  0x007F        // clear all interrupts
-// FEATURE bit numbers within high byte, low byte UART data
-#define FEATURE_UART_RXF_B 7        // UART receive buffer full (data waiting)
-#define FEATURE_UART_TXF_B 6        // UART transmit buffer full (busy transmitting data)
-#define FEATURE_UART_B     5        // UART present flag (debug feature)
-#define FEATURE_AUDIO_B    4        // audio present
-#define FEATURE_BLIT_B     3        // blitter present
-#define FEATURE_COPP_B     2        // copper present
-#define FEATURE_PF_B_B     1        // playfield B present
-#define FEATURE_PF_WIDE_B  0        // 0 = 640x480 4:3, 1 = 848x480 16:9 widescreen
-// FEATURES flag/mask within high byte, low byte UART data
-#define FEATURE_RX_F      0x80        // UART receive buffer full (data waiting)
-#define FEATURE_TX_F      0x40        // UART transmit buffer full (busy transmitting data)
-#define FEATURE_UART_F    0x20        // UART present flag (debug feature)
-#define FEATURE_AUDIO_F   0x10        // audio present
-#define FEATURE_BLIT_F    0x08        // blitter present
-#define FEATURE_COPP_F    0x04        // copper present
-#define FEATURE_PF_B_F    0x02        // playfield B present
-#define FEATURE_PF_WIDE_F 0x01        // 0 = 640x480 4:3, 1 = 848x480 16:9 widescreen
+// UART status bit number within even byte of XM_UART
+#define UART_RXF_B 7           // UART receive buffer full (data waiting)
+#define UART_TXF_B 6           // UART transmit buffer full (busy transmitting data)
+#define UART_RXF_F 0x80        // UART receive buffer full (data waiting)
+#define UART_TXF_F 0x40        // UART transmit buffer full (busy transmitting data)
+// FEATURE bit numbers within word (for fields wider than 1 bit, XB_(xxx_B, xxx_W) macro can be used)
+#define FEATURE_MONRES_B  0         // rightmost bit number for 4-bit monitor mode field
+#define FEATURE_MONRES_W  4         // bit width for 4-bit monitor mode field
+#define FEATURE_COPP_B    4         // bit number indicating presence of COPPER
+#define FEATURE_BLIT_B    5         // bit number indicating presence of BLITTER
+#define FEATURE_PF_B_B    6         // bit number indicating presence of playfield B (2nd playfield)
+#define FEATURE_UART_B    7         // bit number indicating presence of debug UART
+#define FEATURE_AUDCHAN_B 8         // rightmost bit number for 4-bit audio channels field
+#define FEATURE_AUDCHAN_W 4         // bit width for 4-bit audio channels field
+#define FEATURE_CONFIG_B  12        // rightmost bit number for 4-bit FPGA config field
+#define FEATURE_CONFIG_W  4         // bit width for 4-bit FPGA config field
+// FEATURE flag/mask
+#define FEATURE_MONRES_F  0x000F        // bit-mask for 4-bit monitor mode field
+#define FEATURE_COPP_F    0x0010        // bit flag indicating presence of COPPER
+#define FEATURE_BLIT_F    0x0020        // bit flag indicating presence of BLITTER
+#define FEATURE_PF_B_F    0x0040        // bit flag indicating presence of playfield B (2nd playfield)
+#define FEATURE_UART_F    0x0080        // bit flag indicating presence of debug UART
+#define FEATURE_AUDCHAN_F 0x0F00        // bit-mask for 4-bit audio channels field
+#define FEATURE_CONFIG_F  0xF000        // bit-mask for 4-bit config field
 
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 

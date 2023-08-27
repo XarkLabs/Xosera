@@ -208,7 +208,7 @@ word_t      rd_temp_word;
 always_comb bus_data_o  = !bus_bytesel ? rd_temp_word[15:8] : rd_temp_word[7:0];
 
 `ifdef EN_UART
-always_comb uart_rd    = bus_read_strobe && bus_bytesel && (bus_reg_num == xv::XM_FEATURE);
+always_comb uart_rd    = bus_read_strobe && (bus_reg_num == xv::XM_UART);
 `endif
 
 // xm registers read
@@ -241,34 +241,33 @@ always_comb begin
         xv::XM_DATA,
         xv::XM_DATA_2:
             rd_temp_word  = reg_data;
+`ifdef EN_UART
+        xv::XM_UART:
+            rd_temp_word  = {uart_rxf, uart_txf, 6'b000000, uart_dout };
+`else
+        xv::XM_UART,
+`endif
         xv::XM_PIXEL_X,
         xv::XM_PIXEL_Y,
-        xv::XM_UNUSED_E,
         xv::XM_FEATURE:
             rd_temp_word  =
-              {
+                (16'(xv::FPGA_CONFIG_NUM)   << xv::FEATURE_CONFIG)  |
+                (16'(xv::AUDIO_NCHAN)       << xv::FEATURE_AUDCHAN) |
+
 `ifdef EN_UART
-                ( 8'({ uart_rxf, uart_txf, 1'b1 }) << xv::FEATURE_UART) |
-`endif
-`ifdef EN_AUDIO
-                (8'b1 << xv::FEATURE_AUDIO) |
-`endif
-`ifdef EN_BLIT
-                (8'b1 << xv::FEATURE_BLIT) |
-`endif
-`ifdef EN_COPP
-                (8'b1 << xv::FEATURE_COPP) |
+                (16'b1                      << xv::FEATURE_UART)    |
 `endif
 `ifdef EN_PF_B
-                (8'b1 << xv::FEATURE_PF_B) |
+                (16'b1                      << xv::FEATURE_PF_B)    |
 `endif
-                (8'(xv::VIDEO_MODE_NUM & 1) << xv::FEATURE_PF_WIDE),
-`ifdef EN_UART
-                uart_dout
-`else
-                8'h00
+`ifdef EN_BLIT
+                (16'b1                      << xv::FEATURE_BLIT)    |
 `endif
-            };
+`ifdef EN_COPP
+                (16'b1                      << xv::FEATURE_COPP)    |
+`endif
+                (16'(xv::VIDEO_MODE_NUM)    << xv::FEATURE_MONRES);
+
     endcase
 end
 
@@ -509,6 +508,16 @@ always_ff @(posedge clk) begin
                     end
                 end
 `endif
+
+`ifdef EN_UART
+                xv::XM_UART: begin
+                    else begin
+                        uart_wr     <= 1'b1;
+                        uart_din    <= bus_data_byte;
+                    end
+                end
+`endif
+
                 xv::XM_FEATURE: begin
                     if (!bus_bytesel) begin
 `ifdef EN_PIXEL_ADDR
@@ -517,15 +526,10 @@ always_ff @(posedge clk) begin
                         pixel_width <=  reg_pixel_y;
 `endif
                     end
-`ifdef EN_UART
-                    else begin
-                        uart_wr     <= 1'b1;
-                        uart_din    <= bus_data_byte;
-                    end
-`endif
                 end
-            default: begin
-            end
+
+                default: begin
+                end
             endcase
         end
 

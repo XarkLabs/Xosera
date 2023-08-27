@@ -91,7 +91,7 @@ typedef enum logic [3:0] {
     // register 16-bit read/write
     XM_SYS_CTRL     = 4'h0,             // (R /W ) status/option flags, VRAM write masking
     XM_INT_CTRL     = 4'h1,             // (R /W ) interrupt status/control
-    XM_TIMER        = 4'h2,             // (RO/ -) read 1/10th millisecond timer
+    XM_TIMER        = 4'h2,             // (R /W+) read 1/10th millisecond timer, write 8-bit interval timer count
     XM_RD_XADDR     = 4'h3,             // (R /W+) XR register/address for XM_XDATA read access
     XM_WR_XADDR     = 4'h4,             // (R /W ) XR register/address for XM_XDATA write access
     XM_XDATA        = 4'h5,             // (R /W+) read/write XR register/memory at XM_RD_XADDR/XM_WR_XADDR
@@ -101,10 +101,10 @@ typedef enum logic [3:0] {
     XM_WR_ADDR      = 4'h9,             // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
     XM_DATA         = 4'hA,             // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
     XM_DATA_2       = 4'hB,             // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
-    XM_PIXEL_X      = 4'hC,             // (- /WO) pixel address generation setup
-    XM_PIXEL_Y      = 4'hD,             // (- /WO) pixel address generation setup
-    XM_UNUSED_E     = 4'hE,             // (- / -)
-    XM_FEATURE      = 4'hF              // (R+/W+) Xosera features, debug UART
+    XM_PIXEL_X      = 4'hC,             // (- /W+) X / BASE  pixel address gen (sets WR_ADDR and SYS_CTRL write mask)
+    XM_PIXEL_Y      = 4'hD,             // (- /W+) Y / WIDTH pixel address gen (sets WR_ADDR and SYS_CTRL write mask)
+    XM_UART         = 4'hE,             // (R+/W+) optional debug UART
+    XM_FEATURE      = 4'hF              // (RO/W+) feature info, write set pixel address gen BASE, WIDTH from X,Y and mask mode
 } xm_register_t;
 
 typedef enum {
@@ -139,16 +139,14 @@ typedef enum integer {
     AUD0_INTR       = 0                 // audio 0 ready
 } intr_bit_t;
 
-// upper byte of XR_FEATURE
 typedef enum integer {
-    FEATURE_UART_RX = 7,
-    FEATURE_UART_TX = 6,
-    FEATURE_UART    = 5,
-    FEATURE_AUDIO   = 4,
-    FEATURE_BLIT    = 3,
-    FEATURE_COPP    = 2,
-    FEATURE_PF_B    = 1,
-    FEATURE_PF_WIDE = 0
+    FEATURE_CONFIG  = 12,
+    FEATURE_AUDCHAN = 8,
+    FEATURE_UART    = 7,
+    FEATURE_PF_B    = 6,
+    FEATURE_BLIT    = 5,
+    FEATURE_COPP    = 4,
+    FEATURE_MONRES  = 0
 } feature_bit_t;
 
 // XR register / memory regions

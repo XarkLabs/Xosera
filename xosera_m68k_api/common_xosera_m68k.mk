@@ -64,6 +64,8 @@ AS=m68k-elf-as
 LD=m68k-elf-ld
 NM=m68k-elf-nm
 LD=m68k-elf-ld
+AR=m68k-elf-ar
+RANLIB=m68k-elf-ranlib
 OBJDUMP=m68k-elf-objdump
 OBJCOPY=m68k-elf-objcopy
 SIZE=m68k-elf-size
@@ -101,9 +103,11 @@ OBJECTS=$(addsuffix .o,$(basename $(SOURCES)))
 
 all: $(BINARY) $(DISASM)
 
+ifneq ($(BUILD_XOSERA_API),true)
 $(XOSERA_M68K_API)/libxosera_m68k_api.a:
 	@echo === Building Xosera m68k API...
 	cd $(XOSERA_M68K_API) && $(MAKE)
+endif
 
 $(COPASM):
 	@echo === Building copper assembler...

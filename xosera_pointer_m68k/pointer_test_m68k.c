@@ -161,9 +161,9 @@ void     xosera_pointer_test()
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
-    uint8_t  features  = xm_getbh(FEATURE);
-    uint16_t monwidth  = 640;
-    uint16_t monheight = 480;
+    uint8_t  feature   = xm_getbh(FEATURE);
+    uint16_t monwidth  = xosera_vid_width();
+    uint16_t monheight = xosera_vid_height();
 
     uint16_t gfxctrl  = xreg_getw(PA_GFX_CTRL);
     uint16_t tilectrl = xreg_getw(PA_TILE_CTRL);
@@ -172,7 +172,7 @@ void     xosera_pointer_test()
     uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
     uint16_t hvfscale = xreg_getw(PA_HV_FSCALE);
 
-    dprintf("Xosera - Features: 0x%02x\n", features);
+    dprintf("Xosera - FEATURE: 0x%04x\n", feature);
     dprintf("Monitor Mode: %dx%d\n", monwidth, monheight);
     dprintf("\nPlayfield A:\n");
     dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);

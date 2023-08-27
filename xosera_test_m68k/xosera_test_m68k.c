@@ -2677,6 +2677,7 @@ const char blurb[] =
     "  \xf9  Register based interface using 16 direct 16-bit registers\n"
     "  \xf9  Additional indirect read/write registers for easy use and programming\n"
     "  \xf9  Read/write VRAM with programmable read/write address increment\n"
+    "  \xf9  Optional easy pixel X,Y bitmap address and write-mask calculation\n"
     "  \xf9  Fast 8-bit bus interface (using MOVEP) for rosco_m68k (by Ross Bamford)\n"
     "  \xf9  Dual video planes (playfields) with alpha color blending and priority\n"
     "  \xf9  Dual 256 color palettes with 12-bit RGB (4096 colors) and 4-bit \"alpha\"\n"
@@ -2684,11 +2685,12 @@ const char blurb[] =
     "  \xf9  Text mode with up to 8x16 glyphs and 16 forground & background colors\n"
     "  \xf9  Graphic tile modes with 1024 8x8 glyphs, 16/256 colors and H/V tile mirror\n"
     "  \xf9  Bitmap modes with 1 (plus attribute colors), 4 or 8 bits per pixel\n"
+    "  \xf9  32x32 16 color native resolution pointer \"sprite\" overlay\n"
     "  \xf9  Fast 2-D \"blitter\" unit with transparency, masking, shifting and logic ops\n"
     "  \xf9  Screen synchronized \"copper\" CPU to change colors and registers mid-screen\n"
+    "  \xf9  Wavetable DMA 8-bit audio with 4 independent stereo channels\n"
     "  \xf9  Pixel H/V repeat of 1x, 2x, 3x or 4x (e.g. for 424x240 or 320x240)\n"
     "  \xf9  Fractional H/V repeat scaling (e.g. for 320x200 or 512x384 retro modes)\n"
-    "  \xf9  Wavetable DMA 8-bit audio with 4 independent stereo channels\n"
     "\n"
     "\n";
 
@@ -2870,10 +2872,10 @@ void     xosera_test()
     init_audio();
 
     xosera_get_info(&initinfo);
-    dprintf("xosera_get_info details:\n");
-    hexdump(&initinfo, sizeof(initinfo));
+    // dprintf("xosera_get_info details:\n");
+    // hexdump(&initinfo, sizeof(initinfo));
+    // dprintf("\n");
 
-    dprintf("\n");
     dprintf("Description : \"%s\"\n", initinfo.description_str);
     dprintf("Version BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
     dprintf("Git hash    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
@@ -3301,7 +3303,7 @@ void     xosera_test()
         xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
         xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
 
-        uint8_t  feature   = xm_getbh(FEATURE);
+        uint16_t feature   = xm_getw(FEATURE);
         uint16_t monwidth  = xosera_vid_width();
         uint16_t monheight = xosera_vid_height();
 
@@ -3322,7 +3324,7 @@ void     xosera_test()
         dprintf("DESCRIPTION : \"%s\"\n", initinfo.description_str);
         dprintf("VERSION BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
         dprintf("GIT HASH    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
-        dprintf("FEATURE     : 0x%02x\n", feature);
+        dprintf("FEATURE     : 0x%04x\n", feature);
         dprintf("MONITOR RES : %dx%d\n", monwidth, monheight);
         dprintf("\nConfig:\n");
         dprintf("SYS_CTRL    : 0x%04x  INT_CTRL    : 0x%04x\n", sysctrl, intctrl);
@@ -3334,17 +3336,6 @@ void     xosera_test()
         dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
         dprintf("PA_HV_SCROLL: 0x%04x  PA_HV_FSCALE: 0x%04x\n", hvscroll, hvfscale);
         dprintf("\n");
-
-        if (monwidth > 640)
-        {
-            xreg_setw(POINTER_H, 0);
-            xreg_setw(POINTER_V, 0xF000 | 0);
-        }
-        else
-        {
-            xreg_setw(POINTER_H, 0);
-            xreg_setw(POINTER_V, 0xF000 | 0);
-        }
 
 
 #if COPPER_TEST

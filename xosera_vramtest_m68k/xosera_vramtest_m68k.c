@@ -1054,7 +1054,7 @@ void xosera_vramtest()
                 s,
                 vram_test_fail_count);
 
-        uint8_t  features  = xm_getbh(FEATURE);        // TODO: this is feature codes
+        uint16_t feature   = xm_getw(FEATURE);        // TODO: this is feature codes
         uint16_t monwidth  = xosera_vid_width();
         uint16_t monheight = xosera_vid_height();
 
@@ -1067,9 +1067,9 @@ void xosera_vramtest()
             dprintf("    ID: (no COPPER mem)\n");
         }
 
-        dprintf("    Config #%d [%02x]   Res:%ux%u   Git:0x%08x\n",
+        dprintf("    Config #%d [%04x]   Res:%ux%u   Git:0x%08x\n",
                 cur_xosera_config,
-                (unsigned int)features,
+                (unsigned int)feature,
                 (unsigned int)monwidth,
                 (unsigned int)monheight,
                 (unsigned int)initinfo.githash);

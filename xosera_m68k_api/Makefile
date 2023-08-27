@@ -3,101 +3,118 @@
 # Copyright (c) 2022 Xark
 # MIT LICENSE
 
-ifeq (, $(shell m68k-elf-gcc --version))
-$(info No m68k-elf-* build tools found in path)
-else
-ifndef ROSCO_M68K_DIR
-$(info Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
-endif
-endif
+# location of xosera_m68k_api
+XOSERA_M68K_API?=../xosera_m68k_api
 
-XOSERA_M68K_API?=./
+BUILD_XOSERA_API=true
 
-EXTRA_CFLAGS?=-g -O2 -fomit-frame-pointer
-#EXTRA_VASMFLAGS?=-showopt
-SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
-SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib
-DEFINES=-DROSCO_M68K
-CFLAGS=-std=c11 -ffreestanding -ffunction-sections -fdata-sections \
-    -Wall -Wextra -Werror -Wno-unused-function -pedantic -I$(SYSINCDIR) \
-    -I$(XOSERA_M68K_API) \
-    -mcpu=68010 -march=68010 -mtune=68010 $(DEFINES)
-# EVIL    	CFLAGS += -Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla -Warray-bounds=2 -Wimplicit-fallthrough=3 -Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion -Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wformat-signedness -Wshadow -Wstrict-overflow=4 -Wswitch-default -Wswitch-enum -Wstack-usage=1000000 -Wcast-align=strict
-# Too-EVIL 	-Wundef -Wstrict-prototypes  -Wtraditional-conversion
-GCC_LIBS=$(shell $(CC) --print-search-dirs \
-    | grep libraries:\ = \
-    | sed 's/libraries: =/-L/g' \
-    | sed 's/:/m68000\/ -L/g')m68000/
-LIBS=-lheap -lsdfat -lprintf -lcstdlib -lmachine -lstart_serial -lgcc
-ARFLAGS=rcs
-ASFLAGS=-mcpu=68010 -march=68010
-LDFLAGS=-T $(SYSLIBDIR)/ld/serial/rosco_m68k_program.ld -L $(SYSLIBDIR) \
-    -Map=$(MAP) --gc-sections --oformat=elf32-m68k
-VASMFLAGS=-Felf -m68010 -quiet -Lnf $(DEFINES)
-CC=m68k-elf-gcc
-AS=m68k-elf-as
-LD=m68k-elf-ld
-NM=m68k-elf-nm
-LD=m68k-elf-ld
-AR=m68k-elf-ar
-RANLIB=m68k-elf-ranlib
-OBJDUMP=m68k-elf-objdump
-OBJCOPY=m68k-elf-objcopy
-SIZE=m68k-elf-size
-VASM=vasmm68k_mot
-RM=rm -f
-KERMIT=kermit
-SERIAL?=/dev/modem
-BAUD?=9600
+# use generic common make rules for Xosera + rosco_m68k build
+include $(XOSERA_M68K_API)/common_xosera_m68k.mk
 
-# Output config (assume name of directory)
-PROGRAM_BASENAME=$(shell basename $(CURDIR))
-
-# Set other output files using output basname
-MAIN=api_test
-ELF=$(PROGRAM_BASENAME)_test.elf
-MAP=$(PROGRAM_BASENAME)_test.map
-SYM=$(PROGRAM_BASENAME)_test.sym
-DISASM=$(PROGRAM_BASENAME)_test.dis
 LIBRARY=lib$(PROGRAM_BASENAME).a
+LINKOBJECTS=$(filter-out api_test.o,$(OBJECTS))
 
-# Assume source files in Makefile directory are source files for project
-CSOURCES=$(filter-out $(MAIN).c,$(wildcard *.c))
-CINCLUDES=$(wildcard *.h)
-SSOURCES=$(wildcard *.S)
-ASMSOURCES=$(wildcard *.asm)
-SOURCES=$(CSOURCES) $(SSOURCES) $(ASMSOURCES)
+all: $(XOSERA_M68K_API)/$(LIBRARY) $(BINARY) $(DISASM)
 
-# Assume each source files makes an object file
-OBJECTS=$(addsuffix .o,$(basename $(SOURCES)))
-
-all: $(LIBRARY) $(ELF) $(DISASM)
-
-$(ELF): $(MAIN).o $(LIBRARY)
-	$(LD) $(LDFLAGS) $(GCC_LIBS) $^ -o $@ $(LIBS)
-	$(NM) --numeric-sort $@ >$(SYM)
-	$(SIZE) $@
-	-chmod a-x $@
-
-$(LIBRARY) : $(OBJECTS)
+$(XOSERA_M68K_API)/$(LIBRARY) : $(LINKOBJECTS)
 	$(AR) $(ARFLAGS) $@ $^
 	$(RANLIB) $@
 
-$(DISASM) : $(ELF) $(MAKEFILE_LIST)
-	$(OBJDUMP) --disassemble -S $(ELF) >$(DISASM)
+# ifeq (, $(shell m68k-elf-gcc --version))
+# $(info No m68k-elf-* build tools found in path)
+# else
+# ifndef ROSCO_M68K_DIR
+# $(info Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
+# endif
+# endif
 
-$(OBJECTS): $(CINCLUDES) $(MAKEFILE_LIST)
+# XOSERA_M68K_API?=./
 
-%.o : %.c
-	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) -o $@ $<
+# EXTRA_CFLAGS?=-g -O2 -fomit-frame-pointer
+# #EXTRA_VASMFLAGS?=-showopt
+# SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
+# SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib
+# DEFINES=-DROSCO_M68K
+# CFLAGS=-std=c11 -ffreestanding -ffunction-sections -fdata-sections \
+#     -Wall -Wextra -Werror -Wno-unused-function -pedantic -I$(SYSINCDIR) \
+#     -I$(XOSERA_M68K_API) \
+#     -mcpu=68010 -march=68010 -mtune=68010 $(DEFINES)
+# # EVIL    	CFLAGS += -Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla -Warray-bounds=2 -Wimplicit-fallthrough=3 -Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion -Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wformat-signedness -Wshadow -Wstrict-overflow=4 -Wswitch-default -Wswitch-enum -Wstack-usage=1000000 -Wcast-align=strict
+# # Too-EVIL 	-Wundef -Wstrict-prototypes  -Wtraditional-conversion
+# GCC_LIBS=$(shell $(CC) --print-search-dirs \
+#     | grep libraries:\ = \
+#     | sed 's/libraries: =/-L/g' \
+#     | sed 's/:/m68000\/ -L/g')m68000/
+# LIBS=-lheap -lsdfat -lprintf -lcstdlib -lmachine -lstart_serial -lgcc
+# ARFLAGS=rcs
+# ASFLAGS=-mcpu=68010 -march=68010
+# LDFLAGS=-T $(SYSLIBDIR)/ld/serial/rosco_m68k_program.ld -L $(SYSLIBDIR) \
+#     -Map=$(MAP) --gc-sections --oformat=elf32-m68k
+# VASMFLAGS=-Felf -m68010 -quiet -Lnf $(DEFINES)
+# CC=m68k-elf-gcc
+# AS=m68k-elf-as
+# LD=m68k-elf-ld
+# NM=m68k-elf-nm
+# LD=m68k-elf-ld
+# AR=m68k-elf-ar
+# RANLIB=m68k-elf-ranlib
+# OBJDUMP=m68k-elf-objdump
+# OBJCOPY=m68k-elf-objcopy
+# SIZE=m68k-elf-size
+# VASM=vasmm68k_mot
+# RM=rm -f
+# KERMIT=kermit
+# SERIAL?=/dev/modem
+# BAUD?=9600
 
-%.o : %.asm $(MAKEFILE_LIST)
-	$(VASM) $(VASMFLAGS) $(EXTRA_VASMFLAGS) -L $(basename $@).lst -o $@ $<
+# # Output config (assume name of directory)
+# PROGRAM_BASENAME=$(shell basename $(CURDIR))
 
-# remove targets that can be generated by this Makefile
-clean:
-	$(RM) $(OBJECTS) $(MAIN).o $(ELF) $(BINARY) $(MAP) $(SYM) $(DISASM) $(LIBRARY) $(addsuffix .lst,$(basename $(SSOURCES) $(ASMSOURCES)))
+# # Set other output files using output basname
+# MAIN=api_test
+# ELF=$(PROGRAM_BASENAME)_test.elf
+# MAP=$(PROGRAM_BASENAME)_test.map
+# SYM=$(PROGRAM_BASENAME)_test.sym
+# DISASM=$(PROGRAM_BASENAME)_test.dis
+# LIBRARY=lib$(PROGRAM_BASENAME).a
 
-disasm: $(DISASM)
-# Makefile magic (for "phony" targets that are not real files)
-.PHONY: all clean disasm
+# # Assume source files in Makefile directory are source files for project
+# CSOURCES=$(filter-out $(MAIN).c,$(wildcard *.c))
+# CINCLUDES=$(wildcard *.h)
+# SSOURCES=$(wildcard *.S)
+# ASMSOURCES=$(wildcard *.asm)
+# SOURCES=$(CSOURCES) $(SSOURCES) $(ASMSOURCES)
+
+# # Assume each source files makes an object file
+# OBJECTS=$(addsuffix .o,$(basename $(SOURCES)))
+
+# all: $(LIBRARY) $(ELF) $(DISASM)
+
+# $(ELF): $(MAIN).o $(LIBRARY)
+# 	$(LD) $(LDFLAGS) $(GCC_LIBS) $^ -o $@ $(LIBS)
+# 	$(NM) --numeric-sort $@ >$(SYM)
+# 	$(SIZE) $@
+# 	-chmod a-x $@
+
+# $(LIBRARY) : $(OBJECTS)
+# 	$(AR) $(ARFLAGS) $@ $^
+# 	$(RANLIB) $@
+
+# $(DISASM) : $(ELF) $(MAKEFILE_LIST)
+# 	$(OBJDUMP) --disassemble -S $(ELF) >$(DISASM)
+
+# $(OBJECTS): $(CINCLUDES) $(MAKEFILE_LIST)
+
+# %.o : %.c
+# 	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) -o $@ $<
+
+# %.o : %.asm $(MAKEFILE_LIST)
+# 	$(VASM) $(VASMFLAGS) $(EXTRA_VASMFLAGS) -L $(basename $@).lst -o $@ $<
+
+# # remove targets that can be generated by this Makefile
+# clean:
+# 	$(RM) $(OBJECTS) $(MAIN).o $(ELF) $(BINARY) $(MAP) $(SYM) $(DISASM) $(LIBRARY) $(addsuffix .lst,$(basename $(SSOURCES) $(ASMSOURCES)))
+
+# disasm: $(DISASM)
+# # Makefile magic (for "phony" targets that are not real files)
+# .PHONY: all clean disasm

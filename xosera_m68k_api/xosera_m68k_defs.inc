@@ -63,7 +63,7 @@ XM_DATA                 equ     $28         ; (R+/W+) read/write VRAM word at XM
 XM_DATA_2               equ     $2C         ; (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
 XM_PIXEL_X              equ     $30         ; (   W+) pixel X coordinate / pixel base address
 XM_PIXEL_Y              equ     $34         ; (   W+) pixel Y coordinate / pixel line width
-XM_UNUSED_E             equ     $38         ; (- /- )
+XM_UART                 equ     $38         ; (R+/W+) optional debug USB UART communication
 XM_FEATURE              equ     $3C         ; (R+/W+) Xosera feature flags, odd byte UART
 
 ; SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
@@ -133,7 +133,7 @@ FEATURE_BLIT_B          equ     3           ; blitter present
 FEATURE_COPP_B          equ     2           ; copper present
 FEATURE_PF_B_B          equ     1           ; playfield B present
 FEATURE_PF_WIDE_B       equ     0           ; 0 = 640x480 4:3, 1 = 848x480 16:9 widescreen
-; FEATURES flag/mask within high byte, low byte UART data
+; FEATURE flag/mask within high byte, low byte UART data
 FEATURE_RX_F            equ     $80        ; UART receive buffer full (data waiting)
 FEATURE_TX_F            equ     $40        ; UART transmit buffer full (busy transmitting data)
 FEATURE_UART_F          equ     $20        ; UART present flag (debug feature)

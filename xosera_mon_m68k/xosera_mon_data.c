@@ -21,6 +21,8 @@
 
 #include "xosera_mon_m68k.h"
 
+// TODO: This file is very out of date
+
 // Xosera XR Memory Regions (size in 16-bit words)
 const addr_range_t xr_mem[] = {
     {"VID_CTRL", 0x00, 0x1},         // (R /W) display control and border color index
@@ -32,7 +34,7 @@ const addr_range_t xr_mem[] = {
     {"UNUSED_06", 0x06, 0x1},        // (- /-) TODO: unused XR 06
     {"UNUSED_07", 0x07, 0x1},        // (- /-) TODO: unused XR 07
     {"SCANLINE", 0x08, 0x1},         // (RO  ) scanline (including offscreen >= 480)
-    {"FEATURES", 0x09, 0x1},         // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
+    {"FEATURE", 0x09, 0x1},          // (RO  ) update frequency of monitor mode in BCD 1/100th Hz (0x5997 = 59.97 Hz)
     {"VID_HSIZE", 0x0A, 0x1},        // (RO  ) native pixel width of monitor mode (e.g. 640/848)
     {"VID_VSIZE", 0x0B, 0x1},        // (RO  ) native pixel height of monitor mode (e.g. 480)
     {"UNUSED_0C", 0x0C, 0x1},        // (- /-) TODO: unused XR 0C

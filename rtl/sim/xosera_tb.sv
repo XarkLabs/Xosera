@@ -228,9 +228,9 @@ function automatic logic [63:0] regname(
             4'h9: regname = "WR_ADDR ";
             4'hA: regname = "DATA    ";
             4'hB: regname = "DATA_2  ";
-            4'hC: regname = "PIXELINI";
             4'hD: regname = "PIXEL_X ";
             4'hE: regname = "PIXEL_Y ";
+            4'hC: regname = "UART    ";
             4'hF: regname = "FEATURE ";
             default: regname = "????????";
         endcase

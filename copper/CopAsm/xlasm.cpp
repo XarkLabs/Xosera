@@ -83,9 +83,9 @@ void fatal_error(const char * msg, ...)
     va_list ap;
     va_start(ap, msg);
 
-    printf("FATAL ERROR: ");
+    printf(TERM_ERROR "FATAL ERROR: ");
     vprintf(msg, ap);
-    printf("\n");
+    printf(TERM_CLEAR "\n");
 
     va_end(ap);
 
@@ -481,7 +481,9 @@ int32_t xlasm::pass_reset()
     switch (ctxt.pass)
     {
         case context_t::PASS_1: {
+#if 0
             dprintf("Pass %2d (initial)\n", pass_count);
+#endif
             break;
         }
         case context_t::PASS_OPT: {
@@ -493,15 +495,19 @@ int32_t xlasm::pass_reset()
                     nonopt,
                     pending_secs);
 #else
+#if 0
             dprintf("Pass %2d (" PR_D64 " words)\n", pass_count, total_size_generated >> 1);
+#endif
 #endif
             last_size_generated = total_size_generated;
             break;
         }
         case context_t::PASS_2: {
+#if 0
             std::string saved;
             strprintf(saved, ", optimization saved 0x" PR_X64 "/" PR_D64 " bytes", bytes_optimized, bytes_optimized);
             dprintf("Pass %2d (final%s)\n", pass_count, (bytes_optimized) ? saved.c_str() : "");
+#endif
             last_size_generated = total_size_generated;
             break;
         }
@@ -3935,11 +3941,11 @@ void xlasm::error(const char * msg, ...)
     diag_flush();
 
     printf("%s:%d: ", ctxt.file->name.c_str(), ctxt.line + ctxt.file->line_start);
-    printf("ERROR: ");
+    printf(TERM_ERROR "ERROR: ");
     if (ctxt.macroexp_ptr)
         printf("[in MACRO \"%s\"] ", ctxt.macroexp_ptr->name.c_str());
     vprintf(msg, ap);
-    printf("\n");
+    printf(TERM_CLEAR "\n");
 
     va_end(ap);
 
@@ -3948,9 +3954,10 @@ void xlasm::error(const char * msg, ...)
         std::string outmsg;
         va_start(ap, msg);
 
-        strprintf(outmsg, "ERROR: ");
+        strprintf(outmsg, TERM_ERROR "ERROR: ");
         if (ctxt.macroexp_ptr)
             strprintf(outmsg, "[in MACRO \"%s\"] ", ctxt.macroexp_ptr->name.c_str());
+        strprintf(outmsg, TERM_CLEAR);
         vstrprintf(outmsg, msg, ap);
 
         pre_messages.push_back(outmsg);
@@ -3974,11 +3981,11 @@ void xlasm::warning(const char * msg, ...)
 
     if (ctxt.file)
         printf("%s:%d: ", ctxt.file->name.c_str(), ctxt.line + ctxt.file->line_start);
-    printf("WARNING: ");
+    printf(TERM_WARN "WARNING: ");
     if (ctxt.macroexp_ptr)
         printf("[in MACRO \"%s\"] ", ctxt.macroexp_ptr->name.c_str());
     vprintf(msg, ap);
-    printf("\n");
+    printf(TERM_CLEAR "\n");
 
     va_end(ap);
 
@@ -3987,9 +3994,10 @@ void xlasm::warning(const char * msg, ...)
         std::string outmsg;
         va_start(ap, msg);
 
-        strprintf(outmsg, "WARNING: ");
+        strprintf(outmsg, TERM_WARN "WARNING: ");
         if (ctxt.macroexp_ptr)
             strprintf(outmsg, "[in MACRO \"%s\"] ", ctxt.macroexp_ptr->name.c_str());
+        strprintf(outmsg, TERM_CLEAR);
         vstrprintf(outmsg, msg, ap);
 
         pre_messages.push_back(outmsg);
@@ -4265,11 +4273,17 @@ int main(int argc, char ** argv)
 
                 case 'o':
                     if (argv[i][2] != 0)
+                    {
                         object_file = &argv[i][2];
+                    }
                     else if (i + 1 < argc)
+                    {
                         object_file = argv[++i];
+                    }
                     else
+                    {
                         fatal_error("Expected filename after -o output file option");
+                    }
                     break;
 
                 case 'q':

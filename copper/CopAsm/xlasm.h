@@ -25,6 +25,10 @@
 #define PR_DSSIZET "%zd"
 #define PR_XSIZET  "%zx"
 
+#define TERM_WARN  "\033[0;35m"
+#define TERM_ERROR "\033[0;33m"
+#define TERM_CLEAR "\033[0m"
+
 #if defined(__GNUC__) || defined(__clang__)
 #define ATTRIBUTE(x) __attribute__(x)
 #else

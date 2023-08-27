@@ -151,6 +151,93 @@ static bool load_sd_colors(const char * filename)
     }
 }
 
+void line_draw(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color)
+{
+    int16_t x = x1, y = y1;
+    int16_t d;
+    int16_t a = x2 - x1, b = y2 - y1;
+    int16_t dx_diag, dy_diag;
+    int16_t dx_nondiag, dy_nondiag;
+    int16_t inc_nondiag, inc_diag;
+    int16_t temp;
+
+    xv_prep();
+
+    if (a < 0)
+    {
+        a       = -a;
+        dx_diag = -1;
+    }
+    else
+    {
+        dx_diag = 1;
+    }
+
+    if (b < 0)
+    {
+        b       = -b;
+        dy_diag = -1;
+    }
+    else
+    {
+        dy_diag = 1;
+    }
+
+    if (a < b)
+    {
+        temp       = a;
+        a          = b;
+        b          = temp;
+        dx_nondiag = 0;
+        dy_nondiag = dy_diag;
+    }
+    else
+    {
+        dx_nondiag = dx_diag;
+        dy_nondiag = 0;
+    }
+
+    d           = b + b - a;
+    inc_nondiag = b + b;
+    inc_diag    = b + b - a - a;
+
+    for (int16_t i = 0; i < a; i++)
+    {
+        xm_setw(PIXEL_X, x);
+        xm_setw(PIXEL_Y, y);
+        xm_setw(DATA, color);
+
+        if (d < 0)
+        {
+            x += dx_nondiag;
+            y += dy_nondiag;
+            d += inc_nondiag;
+        }
+        else
+        {
+            x += dx_diag;
+            y += dy_diag;
+            d += inc_diag;
+        }
+    }
+}
+
+void line_test()
+{
+    uint16_t color = 0;
+
+    for (int16_t x = 0; x < 320; x += 7)
+    {
+        line_draw(x, 0, 319 - x, 239, color);
+        color = (color == 0xffff) ? 0 : color + 0x1111;
+    }
+    for (int16_t y = 0; y < 240; y += 7)
+    {
+        line_draw(0, y, 319, 239 - y, color);
+        color = (color == 0xffff) ? 0 : color + 0x1111;
+    }
+}
+
 uint32_t test_count;
 void     xosera_pointer_test()
 {
@@ -260,9 +347,11 @@ void     xosera_pointer_test()
     uint16_t color = 0x1111;
 
     // init
-    xm_setw(PIXEL_X, (320 / 4) * 16);        // base VRAM address
-    xm_setw(PIXEL_Y, 320 / 4);               // words per line
-    xm_setbh(FEATURE, 0);                    // init pixel address generator
+    xm_setw(PIXEL_X, 0x0000);         // base VRAM address
+    xm_setw(PIXEL_Y, 320 / 4);        // words per line
+    xm_setbh(FEATURE, 0x00);          // init pixel address generator
+
+    line_test();
 
     while (!done)
     {

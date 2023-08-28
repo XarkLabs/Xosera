@@ -61,7 +61,7 @@ xosera_vga_prog: xosera_vga
 
 # Build and program combo Xosera UPduino 3.x VGA FPGA bitstream for rosco_m6k board (640x480 only)
 xosera_vga_640_prog: xosera_vga_640
-	@echo === Programming Xosera board UPduino VGA firmware (640x480 only) ===
+	@echo === Programming Xosera board UPduino VGA firmware for 640x480 only ===
 	$(ICEPROG) -d i:0x0403:0x6014 rtl/xosera_board_vga_640.bin
 
 # Build and program combo Xosera UPduino 3.x DVI FPGA bitstream for rosco_m6k board

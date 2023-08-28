@@ -412,10 +412,10 @@ video_playfield video_pf_b(
 always_ff @(posedge clk) begin
     if (reset_i) begin
         video_intr_o        <= 1'b0;
-        border_color        <= 8'h08;               // defaulting to dark grey to show operational
+        border_color        <= '0;
         vid_colorswap       <= 1'b0;
         vid_left            <= '0;
-        vid_right           <= $bits(vid_right)'(xv::VISIBLE_WIDTH);
+        vid_right           <= '0;
 
 `ifdef EN_POINTER
         vid_pointer_h        <= '0;
@@ -423,12 +423,12 @@ always_ff @(posedge clk) begin
         vid_pointer_col      <= '0;
 `endif
 
-        pa_blank            <= 1'b1;                // playfield A starts blanked
+        pa_blank            <= 1'b0;
         pa_start_addr       <= 16'h0000;
-        pa_line_len         <= xv::TILES_WIDE[15:0];
+        pa_line_len         <= '0;
         pa_fine_hscroll     <= 5'b0;
         pa_fine_vscroll     <= 6'b0;
-        pa_tile_height      <= 4'b1111;
+        pa_tile_height      <= '0;
         pa_tile_bank        <= 6'b0;
         pa_disp_in_tile     <= 1'b0;
         pa_tile_in_vram     <= 1'b0;
@@ -443,12 +443,12 @@ always_ff @(posedge clk) begin
         pa_gfx_ctrl_set     <= 1'b0;
 
 `ifdef EN_PF_B
-        pb_blank            <= 1'b1;            // playfield B starts blanked
+        pb_blank            <= 1'b0;
         pb_start_addr       <= 16'h0000;
-        pb_line_len         <= xv::TILES_WIDE[15:0];
+        pb_line_len         <= '0;
         pb_fine_hscroll     <= 5'b0;
         pb_fine_vscroll     <= 6'b0;
-        pb_tile_height      <= 4'b1111;
+        pb_tile_height      <= '0;
         pb_tile_bank        <= 6'b0;
         pb_disp_in_tile     <= 1'b0;
         pb_tile_in_vram     <= 1'b0;
@@ -475,7 +475,11 @@ always_ff @(posedge clk) begin
 `endif
 
 `ifndef SYNTHESIS
-        pa_blank            <= 1'b0;            // don't blank playfield A in simulation
+        vid_right           <= $bits(vid_right)'(xv::VISIBLE_WIDTH);
+        pa_line_len         <= xv::TILES_WIDE[15:0];
+        pa_tile_height      <= 4'b1111;
+        pb_line_len         <= xv::TILES_WIDE[15:0];
+        pb_tile_height      <= 4'b1111;
 `endif
 
     end else begin

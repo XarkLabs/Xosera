@@ -489,7 +489,7 @@ always @(posedge clk) begin
 `endif
 `ifdef COPMEMDUMP
             f = $fopen("sim/logs/xosera_tb_isim_copp.txt", "w");
-            for (i = 0; i < 2**xv::COPP_W; i += 16) begin
+            for (i = 0; i < 'h400; i += 16) begin
                 $fwrite(f, "%04x: ", i[15:0]);
                 for (j = 0; j < 16; j++) begin
                     $fwrite(f, "%04x ", xosera.xrmem_arb.coppermem.bram[i+j][15:0]);
@@ -511,24 +511,49 @@ always @(posedge clk) begin
                 end
                 $fwrite(f, "\n");
             end
+
+            for (i = 0; i < 'h200; i += 16) begin
+                $fwrite(f, "%04x: ", i[15:0]);
+                for (j = 0; j < 16; j++) begin
+                    $fwrite(f, "%04x ", xosera.xrmem_arb.coppermem_2.bram[i+j][15:0]);
+                end
+                $fwrite(f, "  ");
+                for (j = 0; j < 16; j++) begin
+                    if (xosera.xrmem_arb.coppermem_2.bram[i+j][15:8] >= 32 && xosera.xrmem_arb.coppermem_2.bram[i+j][15:8] < 127) begin
+                        $fwrite(f, "%c", xosera.xrmem_arb.coppermem_2.bram[i+j][15:8]);
+                    end else
+                    begin
+                        $fwrite(f, ".");
+                    end
+                    if (xosera.xrmem_arb.coppermem_2.bram[i+j][7:0] >= 32 && xosera.xrmem_arb.coppermem_2.bram[i+j][7:0] < 127) begin
+                        $fwrite(f, "%c", xosera.xrmem_arb.coppermem_2.bram[i+j][7:0]);
+                    end else
+                    begin
+                        $fwrite(f, ".");
+                    end
+                end
+                $fwrite(f, "\n");
+            end
+
             $fclose(f);
 `endif
+`ifdef EN_AUDIO
 `ifdef AUDIOMEMDUMP
             f = $fopen("sim/logs/xosera_tb_isim_audiomem.txt", "w");
             for (i = 0; i < 2**xv::AUDIO_W; i += 16) begin
                 $fwrite(f, "%04x: ", i[15:0]);
                 for (j = 0; j < 16; j++) begin
-                    $fwrite(f, "%04x ", xosera.video_gen.audio_mixer.audio_mem.bram[i+j][15:0]);
+                    $fwrite(f, "%04x ", xosera.video_gen.audio_mixer_slim.audio_mem.bram[i+j][15:0]);
                 end
                 $fwrite(f, "  ");
                 for (j = 0; j < 16; j++) begin
-                    if (xosera.video_gen.audio_mixer.audio_mem.bram[i+j][15:8] >= 32 && xosera.video_gen.audio_mixer.audio_mem.bram[i+j][15:8] < 127) begin
+                    if (xosera.video_gen.audio_mixer_slim.audio_mem.bram[i+j][15:8] >= 32 && xosera.video_gen.audio_mixer_slim.audio_mem.bram[i+j][15:8] < 127) begin
                         $fwrite(f, "%c", xosera.xrmem_arb.coppermem.bram[i+j][15:8]);
                     end else
                     begin
                         $fwrite(f, ".");
                     end
-                    if (xosera.video_gen.audio_mixer.audio_mem.bram[i+j][7:0] >= 32 && xosera.video_gen.audio_mixer.audio_mem.bram[i+j][7:0] < 127) begin
+                    if (xosera.video_gen.audio_mixer_slim.audio_mem.bram[i+j][7:0] >= 32 && xosera.video_gen.audio_mixer_slim.audio_mem.bram[i+j][7:0] < 127) begin
                         $fwrite(f, "%c", xosera.xrmem_arb.coppermem.bram[i+j][7:0]);
                     end else
                     begin
@@ -538,6 +563,7 @@ always @(posedge clk) begin
                 $fwrite(f, "\n");
             end
             $fclose(f);
+`endif
 `endif
             $finish;
         end

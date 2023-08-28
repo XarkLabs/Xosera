@@ -37,11 +37,12 @@ XOSERA_CLEAN := 0
 $(info === Xosera simulation [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
-# copper assembler
-COPASM=../copper/CopAsm/bin/copasm
+
+# needed for copasm
+XOSERA_M68K_API?=../xosera_m68k_api
 
 # Maximum number of CPU cores to use before waiting with FMAX_TEST
-MAX_CPUS := 8
+MAX_CPUS ?= 8
 
 # Xosera video mode selection:
 # Supported modes:                           (exact) (actual)
@@ -57,6 +58,14 @@ MAX_CPUS := 8
 VIDEO_MODE ?= MODE_640x480
 AUDIO?=4
 PF_B?=true
+
+# copper assembly
+COPASM=../copper/CopAsm/bin/copasm
+ifeq ($(findstring 640x,$(VIDEO_MODE)),)
+RESET_COPMEM=default_copper_848.mem
+else
+RESET_COPMEM=default_copper_640.mem
+endif
 
 VERILOG_DEFS := -D$(VIDEO_MODE)
 
@@ -161,30 +170,27 @@ all: $(COPASM) vsim isim
 
 $(COPSRC): $(COPASM)
 
-$(COPASM):
-	cd ../copper/CopAsm && make
-
 # build native simulation executable
-vsim: $(COPASM) $(VLT_CONFIG) sim/obj_dir/V$(VTOP) sim.mk
+vsim: $(COPASM) $(RESET_COPMEM) $(VLT_CONFIG) sim/obj_dir/V$(VTOP) sim.mk
 	@echo === Verilator simulation configured for: $(VIDEO_MODE) ===
 	@echo Completed building Verilator simulation, use \"make vrun\" to run.
 .PHONY: vsim
 
 
-isim: $(COPASM) $(VLT_CONFIG) sim/$(TBTOP) sim.mk
+isim: $(COPASM) $(RESET_COPMEM) $(VLT_CONFIG) sim/$(TBTOP) sim.mk
 	@echo === Icarus Verilog simulation configured for: $(VIDEO_MODE) ===
 	@echo Completed building Icarus Verilog simulation, use \"make irun\" to run.
 .PHONY: isim
 
 # run Verilator to build and run native simulation executable
-vrun: $(VLT_CONFIG) sim/obj_dir/V$(VTOP) sim.mk
+vrun: $(RESET_COPMEM) $(VLT_CONFIG) sim/obj_dir/V$(VTOP) sim.mk
 	@mkdir -p $(LOGS)
 	sim/obj_dir/V$(VTOP) $(VRUN_TESTDATA)
 .PHONY: vrun
 
 
 # run Verilator to build and run native simulation executable
-irun: $(VLT_CONFIG) sim/$(TBTOP) sim.mk
+irun: $(RESET_COPMEM) $(VLT_CONFIG) sim/$(TBTOP) sim.mk
 	@mkdir -p $(LOGS)
 	$(VVP) sim/$(TBTOP) -fst
 .PHONY: irun
@@ -198,8 +204,18 @@ $(VLT_CONFIG):
 	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN   -file \"$(TECH_LIB)\"
 	@echo >>$(VLT_CONFIG) lint_off -rule GENUNNAMED -file \"$(TECH_LIB)\"
 
+# build copper assembler
+$(COPASM):
+	@echo === Building copper assembler...
+	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE)
+
+# assemble casm into mem file
+%.mem : %.casm $(COPASM)
+	@mkdir -p $(@D)
+	$(COPASM) -l -o $@ $<
+
 # assembler copper file
-%.vsim.h : %.casm
+%.vsim.h : %.casm $(COPASM)
 	@mkdir -p $(@D)
 	$(COPASM) -l -o $@ $<
 
@@ -217,7 +233,7 @@ sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) sim.mk
 
 # delete all targets that will be re-generated
 clean:
-	rm -rf sim/obj_dir $(VLT_CONFIG) sim/$(TBTOP) sim/*.vsim.h sim/*.lst
+	rm -rf sim/obj_dir $(VLT_CONFIG) $(RESET_COPMEM) sim/$(TBTOP) sim/*.vsim.h sim/*.lst
 .PHONY: clean
 
 # prevent make from deleting any intermediate files

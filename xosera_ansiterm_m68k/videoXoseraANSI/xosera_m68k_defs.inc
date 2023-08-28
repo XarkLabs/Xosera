@@ -43,8 +43,9 @@ XR_COPPER_ADDR          equ     $C000       ; (R/W) $C000-$C5FF copper memory (1
 XR_COPPER_SIZE          equ     $0600       ;                     1024+512 x 16-bit copper memory words
 
 ; Xosera version info put in COPPER memory after FPGA reconfigure
-XV_INFO_ADDR            equ     XR_COPPER_ADDR+XR_COPPER_SIZE-128
-XV_INFO_SIZE            equ     256        ; 256 bytes total for "struct _xosera_info" (last 128 words in copper memory)
+XV_INFO_BYTES           equ     256        ; 256 bytes total for "struct _xosera_info" (last 128 words in copper memory)
+XV_INFO_WORDS           equ     128        ; 128 16-bit words (last 128 words in copper memory)
+XV_INFO_ADDR            equ     (XR_COPPER_ADDR + XR_COPPER_SIZE - XV_INFO_WORDS)
 
 ; Xosera Main Registers (XM Registers, directly CPU accessable)
 ; NOTE: Main register numbers are multiplied by 4 for rosco_m68k, because of even byte 6800 8-bit addressing plus

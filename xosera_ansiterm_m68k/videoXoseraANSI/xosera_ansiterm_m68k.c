@@ -338,6 +338,7 @@ static __attribute__((noinline)) void xansi_clear(uint16_t start, uint16_t end)
     uint16_t count = end - start;
 
     xv_prep();
+    xm_setbl(SYS_CTRL, 0x0F);
 
     xwait_blit_ready();
     xreg_setw(BLIT_CTRL, 0x0001);                  // no transp, constS

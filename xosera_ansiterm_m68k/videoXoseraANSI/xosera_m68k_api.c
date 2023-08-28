@@ -98,7 +98,8 @@ bool xosera_sync()
     }
     xm_setw(RD_INCR, rd_incr);
 
-    return true;
+    // make sure memory and blitter report not busy/running
+    return (xm_getbh(SYS_CTRL) & (SYS_CTRL_MEM_WAIT_F | SYS_CTRL_BLIT_BUSY_F)) == 0;
 }
 
 // wait for Xosera to respond after reconfigure

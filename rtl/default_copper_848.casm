@@ -3,13 +3,30 @@
 ;
 ; vim: set et ts=8 sw=8
 ;
+
+
                 .list    false
                 .include "../xosera_m68k_api/xosera_m68k_defs.inc"
                 .macname false
                 .listcond false
                 .list    true
+
+H_RES           =       848
+
 entry
-                VPOS    #$000                           ; wait for SOF (just in case)
+                HPOS    #H_RES-1                        ; wait a bit
+
+                MOVE    #$0008,XR_VID_CTRL              ; grey border color
+                MOVE    #H_RES,XR_VID_RIGHT             ; set right border
+
+                MOVE    #$0080,XR_PA_GFX_CTRL           ; blank pa
+                MOVE    #$000F,XR_PA_TILE_CTRL          ; set to 8x16 tiles
+                MOVE    #H_RES/8,XR_PA_LINE_LEN         ; set default line len
+
+                MOVE    #$0080,XR_PB_GFX_CTRL           ; blank pb
+                MOVE    #$000F,XR_PB_TILE_CTRL          ; set to 8x16 tiles
+                MOVE    #H_RES/8,XR_PB_LINE_LEN         ; set default line len
+
                 MOVE    #$0001,XR_BLIT_CTRL             ; no transp, constS
                 MOVE    #$0000,XR_BLIT_ANDC             ; ANDC constant
                 MOVE    #$0000,XR_BLIT_XOR              ; XOR constant
@@ -21,9 +38,8 @@ entry
                 MOVE    #$0001,XR_BLIT_LINES            ; 2D
                 MOVE    #$10000-1,XR_BLIT_WORDS         ; 2*64KW VRAM - start blit
 
-                MOVE    #$0000,XR_PA_GFX_CTRL
+                MOVE    #(VPOS|$7FF),entry              ; don't run again
 
-                MOVE    #(VPOS|$7FF),entry
                 MOVE    #$0000,XR_COPP_CTRL             ; disable copper execution
                 VPOS    #$7FF                           ; wait for SOF (just in case)
 

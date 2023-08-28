@@ -38,6 +38,9 @@ XOSERA_CLEAN := 0
 $(info === Xosera UPduino [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
 
+# needed for copasm
+XOSERA_M68K_API?=../xosera_m68k_api
+
 # Set default FPGA config number (if not set)
 FPGA_CONFIG ?= 0
 
@@ -64,6 +67,14 @@ VIDEO_MODE ?= MODE_848x480
 #   PMOD_MUSE_VGA       12-bit VGA, PMOD 1A&1B  https://www.tindie.com/products/johnnywu/pmod-vga-expansion-board/
 VIDEO_OUTPUT ?= PMOD_DIGILENT_VGA
 
+# copper assembly
+COPASM=../copper/CopAsm/bin/copasm
+ifeq ($(findstring 640x,$(VIDEO_MODE)),)
+RESET_COPMEM=default_copper_848.mem
+else
+RESET_COPMEM=default_copper_640.mem
+endif
+
 VERILOG_DEFS := -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT)
 
 ifeq ($(strip $(VIDEO_OUTPUT)), PMOD_1B2_DVI12)
@@ -72,8 +83,7 @@ else
 VMODENAME := vga
 endif
 
-PFB ?= true
-
+PF_B ?= true
 ifneq ($(strip $(PF_B)),)
 VERILOG_DEFS += -DEN_PF_B
 endif
@@ -166,18 +176,18 @@ timing: upduino/$(OUTNAME).rpt $(MAKEFILE_LIST)
 .PHONY: timing
 
 # run Yosys to generate a "dot" graphical representation of each design file
-show: $(DOT) $(MAKEFILE_LIST)
+show: $(RESET_COPMEM) $(DOT) $(MAKEFILE_LIST)
 .PHONY: show
 
 # run Yosys with "noflatten", which will produce a resource count per module
-count: $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+count: $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	@mkdir -p $(LOGS)
 	@-cp $(LOGS)/$(OUTNAME)_yosys_count.log $(LOGS)/$(OUTNAME)_yosys_count_last.log
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 .PHONY: count
 
 # run Verilator to check for Verilog issues
-lint: $(VLT_CONFIG) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+lint: $(VLT_CONFIG) $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC)
 .PHONY: lint
 
@@ -186,7 +196,7 @@ $(DOT): %.dot: %.sv $(MAKEFILE_LIST)
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
-%.json: $(VLT_CONFIG) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+%.json: $(VLT_CONFIG) $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	@echo === Building UPduino Xosera ===
 	@rm -f $@
 	@mkdir -p $(LOGS) $(@D)
@@ -282,9 +292,18 @@ $(VLT_CONFIG):
 	@echo >>$(VLT_CONFIG) lint_off -rule WIDTH      -file \"$(TECH_LIB)\"
 	@echo >>$(VLT_CONFIG) lint_off -rule GENUNNAMED -file \"$(TECH_LIB)\"
 
+# build copper assembler
+$(COPASM):
+	@echo === Building copper assembler...
+	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE)
+
+# assemble casm into mem file
+%.mem : %.casm $(COPASM)
+	$(COPASM) -l -o $@ $<
+
 # delete all targets that will be re-generated
 clean:
-	rm -f $(VLT_CONFIG) xosera_upd.bin $(wildcard upduino/*.json) $(wildcard upduino/*.asc) $(wildcard upduino/*.rpt) $(wildcard upduino/*.bin)
+	rm -f $(VLT_CONFIG) $(RESET_COPMEM) xosera_upd.bin $(wildcard upduino/*.json) $(wildcard upduino/*.asc) $(wildcard upduino/*.rpt) $(wildcard upduino/*.bin)
 .PHONY: clean
 
 # prevent make from deleting any intermediate files

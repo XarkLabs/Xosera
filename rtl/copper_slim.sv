@@ -197,8 +197,8 @@ end
 // copper control xreg (enable/disable), also does start of frame reset
 always_ff @(posedge clk) begin
     if (reset_i) begin
+        cop_reset       <= 1'b1;
         cop_en          <= 1'b1;
-        cop_reset       <= 1'b0;
         cop_run         <= 1'b1;
     end else begin
         // keep in reset if not enabled and reset at SOF

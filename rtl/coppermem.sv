@@ -48,7 +48,9 @@ word_t bram[0:2**AWIDTH-1] /* verilator public*/;
 integer x;
 
 initial begin
-    $readmemh("default_coppermem.mem", bram, 0);
+    for (integer i = 0; i < (2**AWIDTH); i = i + 1) begin
+        bram[i]    = 16'h2FFF;
+    end
     if (ADDINFO == "Y") begin
         // Xosera init info stored in last 256 bytes of default copper memory (see xosera_pkg.sv)
         x = 0;
@@ -65,6 +67,15 @@ initial begin
         bram[(2**AWIDTH)-3]  = { `GITCLEAN ? 8'b0 : 8'b1, 8'b0 };
         bram[(2**AWIDTH)-2]  = xv::githash[31:16];
         bram[(2**AWIDTH)-1]  = xv::githash[15:0];
+    end else begin
+`ifdef SYNTHESIS
+        // use default copper program to init Xosera
+`ifdef MODE_640x480
+        $readmemh("default_copper_640.mem", bram, 0);
+`else
+        $readmemh("default_copper_848.mem", bram, 0);
+`endif
+`endif
     end
 end
 

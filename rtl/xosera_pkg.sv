@@ -32,7 +32,6 @@
 //
 // set by Makefile: `define EN_PF_B                         // enable PF B (2nd overlay playfield)
 // set by Makefile: `define EN_AUDIO                4       // number of channels 2/4
-`undef EN_AUDIO
 //`undef EN_PF_B
 //`undef EN_AUDIO
 `ifdef EN_PF_B

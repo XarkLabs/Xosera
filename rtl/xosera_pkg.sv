@@ -32,6 +32,7 @@
 //
 // set by Makefile: `define EN_PF_B                         // enable PF B (2nd overlay playfield)
 // set by Makefile: `define EN_AUDIO                4       // number of channels 2/4
+`undef EN_AUDIO
 //`undef EN_PF_B
 //`undef EN_AUDIO
 `ifdef EN_PF_B
@@ -43,8 +44,8 @@
 `define EN_BLIT                         // enable blit unit
 `define EN_POINTER                      // enable pointer sprite
 `define EN_PIXEL_ADDR                   // pixel coordinate address generation
-`define EN_UART                         // enable USB UART
-`define EN_UART_TX                      // TX only UART (no RX if EN_UART defined)
+//`define EN_UART                         // enable USB UART
+//`define EN_UART_TX                      // TX only UART (no RX if EN_UART defined)
 
 `define VERSION 0_39                    // Xosera BCD version code (x.xx)
 

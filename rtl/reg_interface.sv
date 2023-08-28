@@ -262,11 +262,7 @@ always_comb begin
 `else
             rd_temp_word  = {1'b0, uart_txf, 6'b000000, 8'h00 };
 `endif
-`else
-        xv::XM_UART,
 `endif
-        xv::XM_PIXEL_X,
-        xv::XM_PIXEL_Y,
         xv::XM_FEATURE:
             rd_temp_word  =
                 (16'(xv::FPGA_CONFIG_NUM)   << xv::FEATURE_CONFIG)  |
@@ -285,7 +281,8 @@ always_comb begin
                 (16'b1                      << xv::FEATURE_COPP)    |
 `endif
                 (16'(xv::VIDEO_MODE_NUM)    << xv::FEATURE_MONRES);
-
+        default:
+            rd_temp_word    = '0;
     endcase
 end
 
@@ -539,6 +536,7 @@ always_ff @(posedge clk) begin
 
                 xv::XM_FEATURE: begin
                     if (!bus_bytesel) begin
+                    end else begin
 `ifdef EN_PIXEL_ADDR
                         pixel_bpp   <=  bus_data_byte[1:0];
                         pixel_base  <=  reg_pixel_x;

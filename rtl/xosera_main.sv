@@ -293,7 +293,7 @@ video_gen video_gen(
 
 `ifdef EN_COPP
 // copper - video synchronized co-processor
-slim_copper copper(
+copper_slim copper(
     .xr_wr_en_o(copp_xr_wr_en),
     .xr_wr_ack_i(copp_xr_ack),
     .xr_wr_addr_o(copp_xr_addr),

@@ -498,7 +498,7 @@ static void set_default_colors(volatile xmreg_t * const xosera_ptr)
                                               0x0f5f,         // light magenta
                                               0x0ff5,         // yellow
                                               0x0fff};        // bright white
-    xmem_set_addr(XR_COLOR_ADDR);
+    xmem_setw_next_addr(XR_COLOR_ADDR);
     for (uint16_t i = 0; i < 16; i++)
     {
         xmem_setw_next(def_colors16[i]);

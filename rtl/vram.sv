@@ -31,11 +31,13 @@ module vram(
 
 word_t memory[0: 65535] /* verilator public*/;
 
+`ifdef TESTPATTERN
 localparam [16*8:1] hex_str = "FEDCBA9876543210";
+`endif
 
 // clear RAM to avoid simulation errors
 initial begin
-`ifndef NO_TESTPATTERN
+`ifdef TESTPATTERN
     for (integer i = 0; i < 65536; i = i + 1) begin : TESTPATTERN
         if (i[3:0] == 4'h1) begin
             memory[i] =  { 8'h02, hex_str[((i[15:12])*8)+1+:8] };

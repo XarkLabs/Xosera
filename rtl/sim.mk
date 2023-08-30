@@ -165,7 +165,7 @@ CSRC := sim/xosera_sim.cpp
 COPSRC := sim/cop_blend_test.vsim.h
 
 # default build native simulation executable
-all: $(COPASM) vsim isim
+all: $(RESET_COPMEM) $(COPASM) vsim isim
 .PHONY: all
 
 $(COPSRC): $(COPASM)
@@ -220,13 +220,13 @@ $(COPASM):
 	$(COPASM) -l -o $@ $<
 
 # use Verilator to build native simulation executable
-sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) $(COPSRC) sim.mk
+sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) $(RESET_COPMEM) $(COPSRC) sim.mk
 	@mkdir -p $(@D)
 	$(VERILATOR) $(VERILATOR_ARGS) -O3 --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(SRC) $(current_dir)/$(CSRC)
 	cd sim/obj_dir && make -f V$(VTOP).mk
 
 # use Icarus Verilog to build vvp simulation executable
-sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) sim.mk
+sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) $(RESET_COPMEM) $(COPASM) sim.mk
 	@mkdir -p $(@D)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES)  -v $(TECH_LIB) --top-module $(TBTOP) sim/$(TBTOP).sv $(SRC)
 	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -D$(VIDEO_MODE) -o sim/$(TBTOP) $(current_dir)/sim/$(TBTOP).sv $(SRC)

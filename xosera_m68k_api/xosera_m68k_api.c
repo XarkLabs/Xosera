@@ -98,8 +98,7 @@ bool xosera_sync()
     }
     xm_setw(RD_INCR, rd_incr);
 
-    // make sure memory and blitter report not busy/running
-    return (xm_getbh(SYS_CTRL) & (SYS_CTRL_MEM_WAIT_F | SYS_CTRL_BLIT_BUSY_F)) == 0;
+    return true;
 }
 
 // wait for Xosera to respond after reconfigure
@@ -133,6 +132,14 @@ bool xosera_init(int reconfig_num)
             xwait_vblank();
             xm_setbh(INT_CTRL, 0x80 | reconfig_num);        // reconfig FPGA to config_num
             detected = xosera_wait_sync();                  // wait for detect
+            if (detected)
+            {
+                // wait until both initial copper program, and memory+blit finished
+                // TODO: add timeout here (just in case)
+                while ((xreg_getw(COPP_CTRL) != 0) ||
+                       ((xm_getbh(SYS_CTRL) & (SYS_CTRL_MEM_WAIT_F | SYS_CTRL_BLIT_BUSY_F)) != 0))
+                    ;
+            }
         }
     }
 
@@ -224,13 +231,13 @@ bool xosera_get_info(xosera_info_t * info)
 
     bool valid = false;
 
-    xmem_get_addr(XV_INFO_ADDR);
+    xmem_getw_next_addr(XV_INFO_ADDR);
     if (xmem_getw_next_wait() == (('X' << 8) | 'o') && xmem_getw_next_wait() == (('s' << 8) | 'e') &&
         xmem_getw_next_wait() == (('r' << 8) | 'a'))
     {
         // xosera_info stored at end COPPER program memory
         uint16_t * wp = (uint16_t *)info;
-        xmem_get_addr(XV_INFO_ADDR);
+        xmem_getw_next_addr(XV_INFO_ADDR);
         for (uint16_t i = 0; i < (sizeof(xosera_info_t) / 2); i++)
         {
             *wp++ = xmem_getw_next_wait();

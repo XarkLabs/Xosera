@@ -14,7 +14,7 @@ This document is meant to provide the low-level reference register information t
   - [Xosera Reference Information](#xosera-reference-information)
     - [Xosera Main Registers (XM Registers) Summary](#xosera-main-registers-xm-registers-summary)
     - [Xosera Main Register Details (XM Registers)](#xosera-main-register-details-xm-registers)
-      - [0x0 **`XM_SYS_CTRL`** (R/W) - System Control](#0x0-xm_sys_ctrl-rw---system-control)
+      - [0x0 **`XM_SYS_CTRL`** (R/W+) - System Control](#0x0-xm_sys_ctrl-rw---system-control)
       - [0x1 **`XM_INT_CTRL`** (R/W+) - Interrupt Control](#0x1-xm_int_ctrl-rw---interrupt-control)
       - [0x2 **`XM_TIMER`** (R/W) - Timer Functions](#0x2-xm_timer-rw---timer-functions)
       - [0x3 **`XM_RD_XADDR`** (R/W+) - XR Read Address](#0x3-xm_rd_xaddr-rw---xr-read-address)
@@ -29,7 +29,7 @@ This document is meant to provide the low-level reference register information t
       - [0xC **`PIXEL_X`** (-/W+) - X coordinate for pixel address/mask generation (also used to set `PIXEL_BASE`)](#0xc-pixel_x--w---x-coordinate-for-pixel-addressmask-generation-also-used-to-set-pixel_base)
       - [0xD **`PIXEL_Y`** (-/W+) - Y coordinate for pixel address/mask generation (also used to set `PIXEL_WIDTH`)](#0xd-pixel_y--w---y-coordinate-for-pixel-addressmask-generation-also-used-to-set-pixel_width)
       - [0xE **`XM_UART`** (R+/W+)](#0xe-xm_uart-rw)
-      - [0xF **`XM_FEATURE`** (R/-) - Xosera features, write sets `PIXEL_BASE`, `PIXEL_WIDTH` and mask options](#0xf-xm_feature-r----xosera-features-write-sets-pixel_base-pixel_width-and-mask-options)
+      - [0xF **`XM_FEATURE`** (R/-) - Xosera feature bits](#0xf-xm_feature-r----xosera-feature-bits)
   - [Xosera Extended Register / Extended Memory Region Summary](#xosera-extended-register--extended-memory-region-summary)
     - [Xosera Extended Registers Details (XR Registers)](#xosera-extended-registers-details-xr-registers)
     - [Video Config and Copper XR Registers Summary](#video-config-and-copper-xr-registers-summary)
@@ -84,9 +84,9 @@ ___
 
 | Reg # | Reg Name          | Access | Description                                                                           |
 |-------|-------------------|--------|---------------------------------------------------------------------------------------|
-| 0x0   | **`XM_SYS_CTRL`** | R /W   | Status flags, VRAM write masking                                                      |
+| 0x0   | **`XM_SYS_CTRL`** | R /W+  | Status flags, write to [15:8] inits `PIXEL_X/Y`, [3:0] VRAM write nibble mask         |
 | 0x1   | **`XM_INT_CTRL`** | R /W+  | FPGA reconfigure, interrupt masking, interrupt status                                 |
-| 0x2   | **`XM_TIMER`**    | R /W   | Tenth millisecond timer (1/10,000 second) / 8-bit countdown timer                     |
+| 0x2   | **`XM_TIMER`**    | R /W+  | Read 16-bit tenth millisecond timer (1/10,000 second), write 8-bit interval timer     |
 | 0x3   | **`XM_RD_XADDR`** | R /W+  | XR register/address used for `XM_XDATA` read access                                   |
 | 0x4   | **`XM_WR_XADDR`** | R /W   | XR register/address used for `XM_XDATA` write access                                  |
 | 0x5   | **`XM_XDATA`**    | R+/W+  | Read from `XM_RD_XADDR` or write to `XM_WR_XADDR` (and increment address by 1)        |
@@ -96,10 +96,10 @@ ___
 | 0x9   | **`XM_WR_ADDR`**  | R /W   | VRAM address for writing to VRAM when `XM_DATA`/`XM_DATA_2` is written                |
 | 0xA   | **`XM_DATA`**     | R+/W+  | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
 | 0xB   | **`XM_DATA_2`**   | R+/W+  | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
-| 0xC   | **`PIXEL_X`**     | - /W+  | X pixel sets `WR_ADDR` and nibble mask (also `PIXEL_BASE` on `FEATURE` write)         |
-| 0xD   | **`PIXEL_Y`**     | - /W+  | Y pixel sets `WR_ADDR` and nibble mask (also `PIXEL_WIDTH` on `FEATURE` write)        |
+| 0xC   | **`PIXEL_X`**     | - /W+  | X pixel sets `WR_ADDR` and nibble mask (also `PIXEL_BASE` for `XM_SYS_CTRL` write)    |
+| 0xD   | **`PIXEL_Y`**     | - /W+  | Y pixel sets `WR_ADDR` and nibble mask (also `PIXEL_WIDTH` for `XM_SYS_CTRL` write)   |
 | 0xE   | **`XM_UART`**     | R+/W+  | USB UART using FTDI chip in UPduino for additional 1 Mbps USB connection to PC *[1]*  |
-| 0xF   | **`XM_FEATURE`**  | R /W+  | Feature bits, write loads `PIXEL_BASE`, `PIXEL_WIDTH` and sets mask options           |
+| 0xF   | **`XM_FEATURE`**  | R /-   | Feature bits                                                                          |
 
 (`R+` or `W+` indicates that reading or writing this register can have additional "side effects", respectively)
 *[1]* USB UART is an optional debug convenience feature, since FTDI chip was present on UPduino.  It may not always be present.
@@ -107,22 +107,30 @@ ___
 
 ### Xosera Main Register Details (XM Registers)
 
-#### 0x0 **`XM_SYS_CTRL`** (R/W) - System Control
+#### 0x0 **`XM_SYS_CTRL`** (R/W+) - System Control
 
 <img src="./pics/wd_XM_SYS_CTRL.svg">
 
-**Status bits for memory, blitter, hblank, vblank and VRAM nibble write masking control.**
+**Status bits for memory, blitter, hblank, vblank, `PIXEL_X/Y` setup and VRAM nibble write masking**
 
-| Name        | Bits    | R/W | Description                                                                     |
-|-------------|---------|-----|---------------------------------------------------------------------------------|
-| `MEM_WAIT`  | `[15]`  | R/- | memory read/write operation still in progress (for contended memory)            |
-| `BLIT_FULL` | `[14]`  | R/- | blit queue full (can't safely write to blit registers when set)                 |
-| `BLIT_BUSY` | `[13]`  | R/- | blit busy (blit operations not fully completed, but queue may be empty)         |
-| `HBLANK`    | `[11]`  | R/- | horizontal blank flag (i.e., current pixel is not visible, off left/right edge) |
-| `VBLANK`    | `[10]`  | R/- | vertical blank flag (i.e., current line is not visible, off top/bottom edge)    |
-| `WR_MASK`   | `[3:0]` | R/W | `XM_DATA`/`XM_DATA_2` VRAM nibble write mask (see below)                        |
+| Name          | Bits    | R/W  | Description                                                                     |
+|---------------|---------|------|---------------------------------------------------------------------------------|
+| `MEM_WAIT`    | `[15]`  | R/-  | memory read/write operation still in progress (for contended memory)            |
+| `BLIT_FULL`   | `[14]`  | R/-  | blit queue full (can't safely write to blit registers when set)                 |
+| `BLIT_BUSY`   | `[13]`  | R/-  | blit busy (blit operations not fully completed, but queue may be empty)         |
+| `HBLANK`      | `[11]`  | R/-  | horizontal blank flag (i.e., current pixel is not visible, off left/right edge) |
+| `VBLANK`      | `[10]`  | R/-  | vertical blank flag (i.e., current line is not visible, off top/bottom edge)    |
+| `PIX_NO_MASK` | `[9]`   | R/W+ | `PIXEL_X/Y` won't set `WR_MASK` (low two bits of `PIXEL_X` ignored)             |
+| `PIX_8B_MASK` | `[8]`   | R/W+ | `PIXEL_X/Y` 8-bit pixel mask for WR_MASK (on even 4-BPP coordinates)            |
+| `WR_MASK`     | `[3:0]` | R/W  | `XM_DATA`/`XM_DATA_2` VRAM nibble write mask (see below)                        |
 
-> :mag: **VRAM Write mask:**  When a bit corresponding to a given nibble is zero, writes to that nibble are ignored and the original nibble is retained. For example, if the nibble mask is `0010` then only bits `[7:4]` in a word would be over-written writing to VRAM via `XM_DATA`/`XM_DATA_2` (other nibbles will be unmodified).  This can be useful to isolate pixels within a word of VRAM (without needing read, modify, write).
+When bits `[15:8]` (even/upper byte) of `SYS_CTRL` is written, besides setting`PIXEL_X/Y` address generation options `PIX_NO_MASK` and `PIX_8B_MASK`, it also will initialize the internal registers `PIXEL_BASE` (base VRAM address) and `PIXEL_WIDTH` (width of line in words). `PIXEL_X` will be copied into `PIXEL_BASE` and `PIXEL_Y` into `PIXEL_WIDTH` (so generally they should be set before writing bits `[15:8]`).
+
+> :mag: **`PIX_8B_MASK`** The X coordinate of `PIXEL_X` assumes 4-bit pixels, but if `PIX_8B_MASK` is enabled in `SYS_CTRL`, then mask will be set for 2 nibbles (8-bits) on even coordinates for easy use with 8-bit pixels.
+
+> :mag: **`PIX_NO_MASK`** If `PIX_NO_MASK` is enabled in `SYS_CTRL`, then when writing to `PIXEL_X` or `PIXEL_Y` it will only update `WR_ADDR` and not the `SYS_CTRL` nibble write mask.  This is useful to allow writing the entire VRAM word.  This will make the lower two bits of `PIXEL_X` effectively ignored.
+
+> :mag: **VRAM write mask:**  When a bit corresponding to a given nibble is zero, writes to that nibble are ignored and the original nibble is retained. For example, if the nibble mask is `0010` then only bits `[7:4]` in a word would be over-written writing to VRAM via `XM_DATA`/`XM_DATA_2` (other nibbles will be unmodified).  This can be useful to isolate pixels within a word of VRAM (without needing read, modify, write).  This can also be set automatically by `PIXEL_X/Y` (to isolate a specific 4-bit or 8-bit pixel via X, Y coordinate).
 
 #### 0x1 **`XM_INT_CTRL`** (R/W+) - Interrupt Control
 
@@ -130,26 +138,26 @@ ___
 
 **FPGA reconfigure, interrupt masking and interrupt status.**
 
-| Name         | Bits   | R/W  | Description                                                         |
-|--------------|--------|------|---------------------------------------------------------------------|
-| `RECONFIG`   | `[15]` | -/W+ | Reconfigure FPGA with `XM_INT_CTRL` bits [9:8] as new configuration |
-| `BLIT_EN`    | `[14]` | R/W  | enable interrupt for blitter queue empty                            |
-| `TIMER_EN`   | `[13]` | R/W  | enable interrupt for countdown timer                                |
-| `VIDEO_EN`   | `[12]` | R/W  | enable interrupt for video (vblank/COPPER)                          |
-| `AUD3_EN`    | `[11]` | R/W  | enable interrupt for audio channel 3 ready                          |
-| `AUD2_EN`    | `[10]` | R/W  | enable interrupt for audio channel 2 ready                          |
-| `AUD1_EN`    | `[9]`  | R/W  | enable interrupt for audio channel 1 ready                          |
-| `AUD0_EN`    | `[8]`  | R/W  | enable interrupt for audio channel 0 ready                          |
-|              | `[7]`  | -/-  |                                                                     |
-| `BLIT_INTR`  | `[6]`  | R/W  | interrupt pending for blitter queue empty                           |
-| `TIMER_INTR` | `[5]`  | R/W  | interrupt pending for countdown timer                               |
-| `VIDEO_INTR` | `[4]`  | R/W  | interrupt pending for video (vblank/COPPER)                         |
-| `AUD3_INTR`  | `[3]`  | R/W  | interrupt pending for audio channel 3 ready                         |
-| `AUD2_INTR`  | `[2]`  | R/W  | interrupt pending for audio channel 2 ready                         |
-| `AUD1_INTR`  | `[1]`  | R/W  | interrupt pending for audio channel 1 ready                         |
-| `AUD0_INTR`  | `[0]`  | R/W  | interrupt pending for audio channel 0 ready                         |
+| Name         | Bits   | R/W  | Description                                                             |
+|--------------|--------|------|-------------------------------------------------------------------------|
+| `RECONFIG`   | `[15]` | -/W+ | Reconfigure FPGA with `SYS_CTRL` `WR_MASK` `[1:0]` as new configuration |
+| `BLIT_EN`    | `[14]` | R/W  | enable interrupt for blitter queue empty                                |
+| `TIMER_EN`   | `[13]` | R/W  | enable interrupt for countdown timer                                    |
+| `VIDEO_EN`   | `[12]` | R/W  | enable interrupt for video (vblank/COPPER)                              |
+| `AUD3_EN`    | `[11]` | R/W  | enable interrupt for audio channel 3 ready                              |
+| `AUD2_EN`    | `[10]` | R/W  | enable interrupt for audio channel 2 ready                              |
+| `AUD1_EN`    | `[9]`  | R/W  | enable interrupt for audio channel 1 ready                              |
+| `AUD0_EN`    | `[8]`  | R/W  | enable interrupt for audio channel 0 ready                              |
+|              | `[7]`  | -/-  |                                                                         |
+| `BLIT_INTR`  | `[6]`  | R/W  | interrupt pending for blitter queue empty                               |
+| `TIMER_INTR` | `[5]`  | R/W  | interrupt pending for countdown timer                                   |
+| `VIDEO_INTR` | `[4]`  | R/W  | interrupt pending for video (vblank/COPPER)                             |
+| `AUD3_INTR`  | `[3]`  | R/W  | interrupt pending for audio channel 3 ready                             |
+| `AUD2_INTR`  | `[2]`  | R/W  | interrupt pending for audio channel 2 ready                             |
+| `AUD1_INTR`  | `[1]`  | R/W  | interrupt pending for audio channel 1 ready                             |
+| `AUD0_INTR`  | `[0]`  | R/W  | interrupt pending for audio channel 0 ready                             |
 
-> :mag: **Xosera Reconfig:** Writing a 1 to bit `[15]` will immediately reset and reconfigure the Xosera FPGA into one of four FPGA configurations stored in flash memory.  Normally, default config #0 is standard VGA 640x480 and config #1 is 848x480 wide-screen 16:9 (the other configurations are user defined and it will fall back to config #0 on missing or invalid configurations).  The new configuration is selected with bits `[1:0]` in `XM_SYS_CTRL` (low two VRAM mask bits) prior to setting the `RECONFIG` bit. Reconfiguration can take up to 100ms and during this period Xosera will be unresponsive (and no display will be generated, so monitor will blank).
+> :mag: **Xosera Reconfig:** Writing a 1 to bit `[15]` will immediately reset and reconfigure the Xosera FPGA into one of four FPGA configurations stored in flash memory.  Normally, default config #0 is standard VGA 640x480 and config #1 is 848x480 wide-screen 16:9 (the other configurations are user defined and it will fall back to config #0 on missing or invalid configurations).  The new configuration is selected with bits `[1:0]` in `XM_SYS_CTRL` (low two VRAM mask bits) prior to setting the `RECONFIG` bit. Reconfiguration can take up to 100ms and during this period Xosera will be unresponsive (and no display will be generated, so monitor will blank).  All register settings, VRAM, TILEMEM and other memory on Xosera will be reset and restored to defaults.
 
 #### 0x2 **`XM_TIMER`** (R/W) - Timer Functions
 
@@ -255,33 +263,29 @@ When `XM_DATA_2` is written, the value is written to VRAM at `XM_WR_ADDR` and `X
 
 <img src="./pics/wd_XM_PIXEL_X.svg">
 
-**signed X coordinate for pixel address and mask calculation, write sets `WR_ADDR` and `SYS_CTRL` nibble mask to isolate pixel**
+**signed X coordinate for pixel addressing, write sets `WR_ADDR` and `SYS_CTRL` `WR_MASK` nibble mask to isolate pixel**
 
-Used to allow using pixel coordinates to calculate VRAM write address and also isolate a specific 4-BPP or 8-BPP pixel to update. Upon write, sets:  
+Used to allow using pixel coordinates to calculate VRAM write address and also isolate a specific 4-bit or 8-bit pixel to update. Upon write, sets:  
  `WR_ADDR = PIXEL_BASE + (PIXEL_Y * PIXEL_WIDTH) + (PIXEL_X >> 2)`  
- Also sets `SYS_CTRL` nibble write mask (unless `NO_MASK` was set in `FEATURE`) to binary:  
- `1p00 >> (PIXEL_X & 0x3)` (the `p` can be `0` for 4-BPP pixels or `1` for 8-BPP, and also using doubled even X coordinates).  
- The value in this register is also used to set `PIXEL_BASE` when `FEATURE` is written to (see `FEATURE` below).  Generally this needs to be done before using the pixel address generation feature.
+ Also sets `SYS_CTRL` nibble write mask (unless `PIX_NO_MASK` was set in `SYS_CTRL`) to binary:  
+ `1p00 >> PIXEL_X[1:0]` (the `p` can be `0` for 4-BPP or `1` for 8-BPP on even X coordinates).  
+ The value in this register is also used to set `PIXEL_BASE` when `SYS_CTRL[15:8]` is written to (see `SYS_CTRL`).  Generally this needs to be done before using the pixel address generation feature.
 
-> :mag: **`WR_ADDR` and `SYS_CTRL` write mask** These registers will generally be altered immediately whenever this register is altered, keep this in mind (especially it is easy to unintentionally alter the write mask, causing issues later with garbed writes to VRAM if it is not restored to `0xF`).
-
-> :mag: **`MASK_8_BPP`** The X coordinate assumes 4-BPP pixels, but if `MASK_8_BPP` enabled when writing `FEATURE`, then by using doubled (even) X coordinates, an 8-BPP pixel can be isolated.  
-
-> :mag: **`NO_MASK`** If `NO_MASK` enabled when writing `FEATURE`, then writing to `PIXEL_X` or `PIXEL_Y` will only update `WR_ADDR` and not the `SYS_CTRL` nibble write mask.  This is useful to allow writing the entire VRAM word.  This will make the lower two bits of `PIXEL_X` effectively ignored.
+> :mag: **`WR_ADDR` and `SYS_CTRL` write mask** These registers will generally be altered immediately whenever this register is altered, keep this in mind (especially it is easy to unintentionally alter the write mask, causing issues later with garbed writes to VRAM if it is not restored to `0xF`).  Also `SYS_CTRL` `PIX_NO_MASK` set will prevent the mask from being altered.
 
 #### 0xD **`PIXEL_Y`** (-/W+) - Y coordinate for pixel address/mask generation (also used to set `PIXEL_WIDTH`)
 
 <img src="./pics/wd_XM_PIXEL_Y.svg">
 
-**signed Y coordinate for pixel address and mask calculation, write sets `WR_ADDR` and `SYS_CTRL` nibble mask to isolate pixel**
+**signed Y coordinate for pixel addressing, write sets `WR_ADDR` and `SYS_CTRL` `WR_MASK` nibble mask to isolate pixel**
 
-Used to allow using pixel coordinates to calculate VRAM write address and also isolate a specific 4-BPP or 8-BPP pixel to update. Upon write, sets:  
+Used to allow using pixel coordinates to calculate VRAM write address and also isolate a specific 4-bit or 8-bit pixel to update. Upon write, sets:  
  `WR_ADDR = PIXEL_BASE + (PIXEL_Y * PIXEL_WIDTH) + (PIXEL_X >> 2)`  
- Also  sets `SYS_CTRL` nibble write mask (unless `NO_MASK` was set in `FEATURE`) to binary:  
- `1p00 >> (PIXEL_X & 0x3)` (the `p` can be `0` for 4-BPP pixels or `1` for 8-BPP, and also using doubled even X coordinates).  
-The value in this register is also used to set `PIXEL_WIDTH` when `FEATURE` is written to (see `FEATURE` below).  Generally this needs to be done before using the pixel address generation feature.
+ Also sets `SYS_CTRL` nibble write mask (unless `PIX_NO_MASK` was set in `SYS_CTRL`) to binary:  
+ `1p00 >> PIXEL_X[1:0]` (the `p` can be `0` for 4-BPP or `1` for 8-BPP on even X coordinates).  
+The value in this register is also used to set `PIXEL_WIDTH` when `SYS_CTRL[15:8]` is written to (see `SYS_CTRL`).  Generally this needs to be done before using the pixel address generation feature.
 
-> :mag: **`WR_ADDR` and `SYS_CTRL` write mask** These registers will generally be altered immediately whenever this register is altered, keep this in mind (especially it is easy to unintentionally alter the write mask, causing issues later with garbed writes to VRAM if it is not restored to `0xF`).
+> :mag: **`WR_ADDR` and `SYS_CTRL` write mask** These registers will generally be altered immediately whenever this register is altered, keep this in mind (especially it is easy to unintentionally alter the write mask, causing issues later with garbed writes to VRAM if it is not restored to `0xF`).  If `SYS_CTRL` `PIX_NO_MASK` is set, the mask will not be altered.
 
 #### 0xE **`XM_UART`** (R+/W+)
 
@@ -292,32 +296,22 @@ Basic UART allowing send/receive communication with host PC at 230,400 bps (aka 
 
 > :mag: **USB UART** This register is an optional debug feature and may not always be present (in which case this register is ignored and will read as all zero).  THe `XM_FEATURE` has a `UART` bit which will be set if UART is present.
 
-#### 0xF **`XM_FEATURE`** (R/-) - Xosera features, write sets `PIXEL_BASE`, `PIXEL_WIDTH` and mask options
+#### 0xF **`XM_FEATURE`** (R/-) - Xosera feature bits
 
 <img src="./pics/wd_XM_FEATURE.svg">
 
 **Xosera configured features (when reading)**
-| Name      | Bits      | R/W | Description                                                            |
-|-----------|-----------|-----|------------------------------------------------------------------------|
-| `CONFIG`  | `[15:12]` | R/- | Current configuration number for Xosera FPGA (0-3 on iCE40UP5K)        |
-| `AUDCHAN` | `[11:8]`  | R/- | Number of audio output channels (normally 4)                           |
-| `UART`    | `[7]`     | R/- | Debug UART is present                                                  |
-| `PF_B`    | `[6]`     | R/- | Playfield B enabled (optional 2nd playfield to blend over playfield A) |
-| `BLIT`    | `[5]`     | R/- | 2D "blitter engine" enabled                                            |
-| `COPP`    | `[4]`     | R/- | Screen synchronized co-processor enabled                               |
-| `MONRES`  | `[3:0]`   | R/- | Monitor resolution (0=640x480 4:3, 1=848x480 16:9 on iCE40UP5K)        |
+| Name      | Bits      | R/W | Description                                                     |
+|-----------|-----------|-----|-----------------------------------------------------------------|
+| `CONFIG`  | `[15:12]` | R/- | Current configuration number for Xosera FPGA (0-3 on iCE40UP5K) |
+| `AUDCHAN` | `[11:8]`  | R/- | Number of audio output channels (normally 4)                    |
+| `UART`    | `[7]`     | R/- | Debug UART is present                                           |
+| `PF_B`    | `[6]`     | R/- | Playfield B enabled (2nd playfield to blend over playfield A)   |
+| `BLIT`    | `[5]`     | R/- | 2D "blitter engine" enabled                                     |
+| `COPP`    | `[4]`     | R/- | Screen synchronized co-processor enabled                        |
+| `MONRES`  | `[3:0]`   | R/- | Monitor resolution (0=640x480 4:3, 1=848x480 16:9 on iCE40UP5K) |
 
-<img src="./pics/wd_XM_FEATURE_wr.svg">
-
-**Pixel address generation `PIXEL_BASE`, `PIXEL_WIDTH` and mask options (when written)**
-| Name         | Bits  | R/W | Description                                                                            |
-|--------------|-------|-----|----------------------------------------------------------------------------------------|
-| `NO_MASK`    | `[1]` | -/W | When set, `SYS_CTRL` nibble mask will not be altered (allowing full word modification) |
-| `MASK_8_BPP` | `[0]` | -/W | 8-BPP `SYS_CTRL` nibble mask, isolates 8-BPP pixel (on even 4-BPP coordinates)         |
-
-When writing, besides setting the above options, the `PIXEL_X` value will be loaded into internal `PIXEL_BASE` register to set base VRAM address for pixel address generation and the `PIXEL_Y` value will be loaded into internal register `PIXEL_WIDTH` to set pixel address generation line width (in 16-bit words).  The values should be set in `PIXEL_X` and `PIXEL_Y` before writing this register.
-
-> :mag: **`WR_ADDR` and `SYS_CTRL` write mask** Since these registers will generally be altered immediately whenever `PIXEL_X` or `PIXEL_Y` are written, in the course of setting `PIXEL_BASE` and `PIXEL_WIDTH` initially `WR_ADDR` and (espcially) `SYS_CTRL` write mask may be set to undesired values.  To guard against this, either set the registers again to the desired values or, in the case of `SYS_CTRL` write mask, you can write to `FEATURE` first with `NO_MASK` set, then write `PIXEL_X` and `PIXEL_Y` and write to `FEATURE` again to setup pixel address generation with both `NO_MASK` preventing initial and subsequent changes to write mask.
+> :mag: These can be used to (e.g.) quickly check for presence of a feature, or to detect the current monitor mode.  There is more detailed Xosera configuration information (including feature string, version code, build date and git hash) stored in the last 128 words of copper memory (`XR_COPPER_ADDR+0x580`) after initialization or reconfig.
 
 ___
 
@@ -331,13 +325,13 @@ ___
 | XR audio control  | 0x0020-0x002F   | -/W | audio channel XR registers                    |
 | XR blit engine    | 0x0040-0x004B   | -/W | 2D-blit engine XR registers                   |
 | `XR_TILE_ADDR`    | 0x4000-0x53FF   | R/W | 5KW 16-bit tilemap/tile storage memory        |
-| `XR_COLOR_ADDR`   | 0x8000-0x81FF   | R/W | 2 x 256W 16-bit color lookup memory (XRGB)    |
+| `XR_COLOR_ADDR`   | 0x8000-0x81FF   | R/W | 2 x 256W 16-bit color lookup memory (0xARGB)  |
 | `XR_POINTER_ADDR` | 0x8200-0x82FF   | -/W | 256W 16-bit 32x32 4-BPP pointer sprite bitmap |
 | `XR_COPPER_ADDR`  | 0xC000-0xC5FF   | R/W | 1.5KW 16-bit copper memory                    |
 
 To access an XR register or XR memory address, write the XR register number or address to `XM_RD_XADDR` or `XM_WR_XADDR` then read or write (respectively) to `XM_XDATA`. Each word read or written to `XM_XDATA` will also automatically increment `XM_RD_XADDR` or `XM_WR_XADDR` (respectively) for contiguous reads or writes.  
-While all XR memory regions can be read, when there is high memory contention (e.g., it is being used for video generation or other use), there is a `mem_wait` bit in `XM_SYS_CTRL` that will indicate when the last memory operation is still pending.  Usually this is not needed when writing, but can be needed reading (e.g., this is generally needed reading from COLOR memory).
-Also note that unlike the 16 main `XM` registers, the XR region should only be accessed as full 16-bit words (either reading or writing both bytes). The full 16-bits of the `XM_XDATA` value are pre-read when `XM_RD_XADDR` is written or incremented and a full 16-bit word is written when the odd (low-byte) of `XM_XDATA` is written (the even/upper byte is latched).
+While almost all XR memory regions can be read (except `POINTER`), when there is high memory contention (e.g., it is being used for video generation or other use), there is a `mem_wait` bit in `XM_SYS_CTRL` that will indicate when the last memory operation is still pending.  Usually this is not needed when writing, but can be needed reading (e.g., this is generally needed reading from COLOR memory, since it is used for every active pixel, even when the screen is blanked or inactive for the border color).
+Also note that unlike the 16 main `XM` registers, the XR region should only be accessed as full 16-bit words (either reading or writing both bytes). The full 16-bits of the `XM_XDATA` value are pre-read when `XM_RD_XADDR` is written or incremented and a full 16-bit word is written when the odd (low-byte) of `XM_XDATA` is written (the even/upper byte is stored until the odd/lower byte).
 ___
 
 ### Xosera Extended Registers Details (XR Registers)
@@ -830,7 +824,7 @@ ___
 
 Xosera provides a dedicated video co-processor, synchronized to the display pixel clock called the "copper" (in homage to the similar unit in the Amiga). The copper can be programmed to perform video register manipulation in sync with the video beam. With careful programming this enables many advanced effects to be achieved, such as multi-resolution displays and simultaneous display of more colors than would otherwise be possible.
 
-> :mag: **A note about the copper:** Originally Xosera used a copper designed and programmed by Ross Bamford (roscopeco).  It was a solid design, somewhat similar conceptually to the one in the Amiga.  It was especially impressive as it was his first design done in Verilog and worked great.  The original copper design was in use for months, but eventually resource limitations in the FPGA forced me to make some hard choices in order to implement all the audio features planned.  To free up some FPGA resources, the current "slim copper" design was created (after squeezing everything else I could).  This design is not that much smaller in logic than the original, but it can make more efficient use of copper memory, so it was reasonable to "steal" back some memory blocks needed to complete the audio design.  I am happy I was able to get the audio features implemented and fitting, but still a bit sad that I needed to replace Ross's fine copper design to do it.
+> :mag: **A note about the copper:** Originally Xosera used a copper designed and programmed by Ross Bamford (roscopeco).  It was a solid design, somewhat similar conceptually to the one in the Amiga.  It was especially impressive as it was pretty much his first Verilog design and it worked great.  The original copper design was in use for months, but eventually resource limitations in the FPGA forced me to make some hard choices in order to implement all the audio features planned.  To free up some FPGA resources, the current "copper slim" design was created (after squeezing everything else I could).  The new design is a bit "slimmer" in logic than the original, but the main feature is it can make more efficient use of copper memory, so it was reasonable to "steal" back some memory blocks needed to complete the audio design (and add a pointer sprite).  I am happy I was able to get the audio features implemented and fitting, but still a bit sad that I needed to replace Ross's fine copper design to do it.
 
 Interaction with the copper happens via:
 
@@ -851,10 +845,10 @@ As mentioned, copper programs reside in XR memory at `0xC000-0xC5FF` (`XR_COPPER
 
 As far as the copper is concerned, all coordinates are in absolute native pixel resolution, including offset (non-visible) pixels. The coordinates used by the copper are absolute per video mode (640 or 848 widescren) are are not affected by pixel doubling, scrolling or other video mode settings.
 
-| Video Mode     | Full Res.  | H Visible   | V Visible |
-|----------------|------------|-------------|-----------|
-| 640 x 480 4:3  | 800 x 525  | 160 to 799  | 0 to 479  |
-| 848 x 480 16:9 | 1088 x 525 | 240 to 1079 | 0 to 479  |
+| Aspect | Video Mode | Full Res.  | H Visible   | V Visible |
+|--------|------------|------------|-------------|-----------|
+| 4:3    | 640 x 480  | 800 x 525  | 160 to 799  | 0 to 479  |
+| 16:9   | 848 x 480  | 1088 x 517 | 240 to 1079 | 0 to 479  |
 ___
 
 ### Co-processor Instruction Set

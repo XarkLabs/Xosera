@@ -132,7 +132,7 @@ static bool load_sd_colors(const char * filename)
             }
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
-            xmem_set_addr(XR_COLOR_ADDR);
+            xmem_setw_next_addr(XR_COLOR_ADDR);
             for (int i = 0; i < (cnt >> 1); i++)
             {
                 xmem_setw_next(*maddr++);
@@ -407,9 +407,11 @@ uint16_t eks[256] = {
 uint32_t test_count;
 void     xosera_pointer_test()
 {
+    cpu_delay(1000);
     printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
-    dprintf("Xosera_test_m68k\n");
+    dprintf("pointer_test_m68k\n");
+
     dprintf("\nxosera_init(0)...");
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
@@ -472,7 +474,7 @@ void     xosera_pointer_test()
 
 #if 1
     // X for testing
-    xmem_set_addr(XR_POINTER_ADDR);
+    xmem_setw_next_addr(XR_POINTER_ADDR);
     for (uint16_t v = 0; v < XR_POINTER_SIZE; v++)
     {
         xmem_setw_next(eks[v]);
@@ -485,7 +487,7 @@ void     xosera_pointer_test()
     xmem_setw(XR_POINTER_ADDR + 31 * 8 + 7, 0x000f);
 #else
     // box for testing
-    xmem_set_addr(XR_POINTER_ADDR);
+    xmem_setw_next_addr(XR_POINTER_ADDR);
     for (uint8_t v = 0; v < 32; v++)
     {
         if (v == 0 || v == 31)
@@ -523,7 +525,7 @@ void     xosera_pointer_test()
     // init
     xm_setw(PIXEL_X, 0x0000);         // base VRAM address
     xm_setw(PIXEL_Y, 320 / 4);        // words per line
-    xm_setbh(FEATURE, 0x00);          // init pixel address generator
+    xm_setbh(SYS_CTRL, 0x00);         // set PIXEL_BASE and PIXEL_WIDTH for 4-bpp
 
     dprintf("\nLine benchmark:\n");
     line_test_orig();

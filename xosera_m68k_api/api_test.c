@@ -57,7 +57,7 @@ void kmain(void)
     nop();
     xreg_setw(SCANLINE, 0x1337);
     nop();
-    xreg_set_addr(SCANLINE);
+    xreg_set_next_addr(SCANLINE);
     nop();
     xreg_setw_next(0xC0DE);
     nop();
@@ -73,7 +73,7 @@ void kmain(void)
     nop();
     xmem_setw(XR_TILE_ADDR, 0xBEEF);
     nop();
-    xmem_set_addr(XR_COPPER_ADDR);
+    xmem_setw_next_addr(XR_COPPER_ADDR);
     nop();
     xmem_setw_next(0xBABE);
     nop();
@@ -91,13 +91,13 @@ void kmain(void)
     nop();
     xreg_getw(SCANLINE);
     nop();
-    xreg_get_addr(VID_CTRL);
+    xreg_get_next_addr(VID_CTRL);
     nop();
     xreg_getw_next();
     nop();
     xmem_getw(XR_COLOR_ADDR + 3);
     nop();
-    xmem_get_addr(XR_TILE_ADDR + 3);
+    xmem_getw_next_addr(XR_TILE_ADDR + 3);
     nop();
     xmem_getw_next();
     nop();

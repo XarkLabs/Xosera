@@ -120,7 +120,7 @@ static inline void check_vblank()
 void restore_colors()
 {
     wait_vblank_start();
-    xmem_set_addr(XR_COLOR_ADDR);
+    xmem_setw_next_addr(XR_COLOR_ADDR);
     uint16_t * cp = def_colors;
     for (uint16_t i = 0; i < 256; i++)
     {

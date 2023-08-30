@@ -78,23 +78,23 @@
 
 // SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
 // indirect with no offset)
-#define SYS_CTRL_MEM_WAIT_B  7        // (RO   )  memory read/write operation pending (with contended memory)
-#define SYS_CTRL_BLIT_FULL_B 6        // (RO   )  blitter queue is full, do not write new operation to blitter registers
-#define SYS_CTRL_BLIT_BUSY_B 5        // (RO   )  blitter is still busy performing an operation (not done)
-#define SYS_CTRL_UNUSED_12_B 4        // (RO   )  unused (reads 0)
-#define SYS_CTRL_HBLANK_B    3        // (RO   )  video signal is in horizontal blank period
-#define SYS_CTRL_VBLANK_B    2        // (RO   )  video signal is in vertical blank period
-#define SYS_CTRL_UNUSED_9_B  1        // (RO   )  unused (reads 0)
-#define SYS_CTRL_UNUSED_8_B  0        // (- /- )
+#define SYS_CTRL_MEM_WAIT_B    7        // (RO   )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_BLIT_FULL_B   6        // (RO   )  blitter queue is full, do not write new operation to blitter registers
+#define SYS_CTRL_BLIT_BUSY_B   5        // (RO   )  blitter is still busy performing an operation (not done)
+#define SYS_CTRL_UNUSED_12_B   4        // (RO   )  unused (reads 0)
+#define SYS_CTRL_HBLANK_B      3        // (RO   )  video signal is in horizontal blank period
+#define SYS_CTRL_VBLANK_B      2        // (RO   )  video signal is in vertical blank period
+#define SYS_CTRL_PIX_NO_MASK_B 1        // (R /W )  PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
+#define SYS_CTRL_PIX_8B_MASK_B 0        // (R /W )  PIXEL_X/Y 8-bit pixel mask for WR_MASK
 // SYS_CTRL bit flags
-#define SYS_CTRL_MEM_WAIT_F  0x80        // (RO   )  memory read/write operation pending (with contended memory)
-#define SYS_CTRL_BLIT_FULL_F 0x40        // (RO   )  blitter queue is full (do not write to blitter registers)
-#define SYS_CTRL_BLIT_BUSY_F 0x20        // (RO   )  blitter is still busy performing an operation (not done)
-#define SYS_CTRL_UNUSED_12_F 0x10        // (RO   )  unused (reads 0)
-#define SYS_CTRL_HBLANK_F    0x08        // (RO   )  video signal is in horizontal blank period
-#define SYS_CTRL_VBLANK_F    0x04        // (RO   )  video signal is in vertical blank period
-#define SYS_CTRL_UNUSED_9_F  0x02        // (RO   )  unused (reads 0)
-#define SYS_CTRL_UNUSED_8_F  0x01        // (- /- )
+#define SYS_CTRL_MEM_WAIT_F    0x80        // (RO   )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_BLIT_FULL_F   0x40        // (RO   )  blitter queue is full (do not write to blitter registers)
+#define SYS_CTRL_BLIT_BUSY_F   0x20        // (RO   )  blitter is still busy performing an operation (not done)
+#define SYS_CTRL_UNUSED_12_F   0x10        // (RO   )  unused (reads 0)
+#define SYS_CTRL_HBLANK_F      0x08        // (RO   )  video signal is in horizontal blank period
+#define SYS_CTRL_VBLANK_F      0x04        // (RO   )  video signal is in vertical blank period
+#define SYS_CTRL_PIX_NO_MASK_F 0x02        // (R /W )  PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
+#define SYS_CTRL_PIX_8B_MASK_F 0x01        // (R /W )  PIXEL_X/Y 8-bit pixel mask for WR_MASK
 // INT_CTRL bit numbers within word
 #define INT_CTRL_RECONFIG_B   15        // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
 #define INT_CTRL_BLIT_EN_B    14        // blitter ready interrupt mask

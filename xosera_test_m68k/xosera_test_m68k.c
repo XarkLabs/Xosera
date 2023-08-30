@@ -155,6 +155,7 @@ uint32_t copper_320x200[] = {
 // dummy global variable
 uint32_t global;        // this is used to prevent the compiler from optimizing out tests
 
+uint16_t      cop_buffer[XR_COPPER_SIZE];
 xosera_info_t initinfo;
 
 uint32_t mem_buffer32[128 * 1024];
@@ -221,7 +222,7 @@ static inline void check_vblank()
 _NOINLINE void restore_colors()
 {
     wait_vblank_start();
-    xmem_set_addr(XR_COLOR_A_ADDR);
+    xmem_setw_next_addr(XR_COLOR_A_ADDR);
     for (uint16_t i = 0; i < 256; i++)
     {
         xmem_setw_next(def_colors[i]);
@@ -237,7 +238,7 @@ _NOINLINE void restore_colors()
 _NOINLINE void restore_colors2(uint8_t alpha)
 {
     wait_vblank_start();
-    xmem_set_addr(XR_COLOR_B_ADDR);
+    xmem_setw_next_addr(XR_COLOR_B_ADDR);
     uint16_t sa = (alpha & 0xf) << 12;
     for (uint16_t i = 0; i < 256; i++)
     {
@@ -250,7 +251,7 @@ _NOINLINE void restore_colors2(uint8_t alpha)
 _NOINLINE void restore_colors3()
 {
     wait_vblank_start();
-    xmem_set_addr(XR_COLOR_B_ADDR);
+    xmem_setw_next_addr(XR_COLOR_B_ADDR);
     for (uint16_t i = 0; i < 256; i++)
     {
         uint16_t w = i ? ((i & 0x3) << 14) | (def_colors[i] & 0xfff) : 0x0000;
@@ -332,6 +333,79 @@ static void hexdump(void * ptr, size_t bytes)
         dprintf("%02x", p[i]);
     }
     dprintf("\n");
+}
+
+void dump_xosera_regs(void)
+{
+    xv_prep();
+    xmem_getw_next_addr(XR_COPPER_ADDR);
+    uint16_t * wp = &cop_buffer[0];
+    for (uint16_t i = 0; i < (sizeof(cop_buffer) / 2); i++)
+    {
+        *wp++ = xmem_getw_next_wait();
+    }
+
+    uint16_t feature   = xm_getw(FEATURE);
+    uint16_t monwidth  = xosera_vid_width();
+    uint16_t monheight = xosera_vid_height();
+
+    uint16_t sysctrl = xm_getw(SYS_CTRL);
+    uint16_t intctrl = xm_getw(INT_CTRL);
+
+    uint16_t vidctrl  = xreg_getw(VID_CTRL);
+    uint16_t coppctrl = xreg_getw(COPP_CTRL);
+    uint16_t audctrl  = xreg_getw(AUD_CTRL);
+    uint16_t vidleft  = xreg_getw(VID_LEFT);
+    uint16_t vidright = xreg_getw(VID_RIGHT);
+
+    uint16_t pa_gfxctrl  = xreg_getw(PA_GFX_CTRL);
+    uint16_t pa_tilectrl = xreg_getw(PA_TILE_CTRL);
+    uint16_t pa_dispaddr = xreg_getw(PA_DISP_ADDR);
+    uint16_t pa_linelen  = xreg_getw(PA_LINE_LEN);
+    uint16_t pa_hvscroll = xreg_getw(PA_HV_SCROLL);
+    uint16_t pa_hvfscale = xreg_getw(PA_HV_FSCALE);
+
+    uint16_t pb_gfxctrl  = xreg_getw(PB_GFX_CTRL);
+    uint16_t pb_tilectrl = xreg_getw(PB_TILE_CTRL);
+    uint16_t pb_dispaddr = xreg_getw(PB_DISP_ADDR);
+    uint16_t pb_linelen  = xreg_getw(PB_LINE_LEN);
+    uint16_t pb_hvscroll = xreg_getw(PB_HV_SCROLL);
+    uint16_t pb_hvfscale = xreg_getw(PB_HV_FSCALE);
+
+    dprintf("Initial Xosera state after init:\n");
+    dprintf("DESCRIPTION : \"%s\"\n", initinfo.description_str);
+    dprintf("VERSION BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
+    dprintf("GIT HASH    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
+    dprintf("FEATURE     : 0x%04x\n", feature);
+    dprintf("MONITOR RES : %dx%d\n", monwidth, monheight);
+    dprintf("\nConfig:\n");
+    dprintf("SYS_CTRL    : 0x%04x  INT_CTRL    : 0x%04x\n", sysctrl, intctrl);
+    dprintf("VID_CTRL    : 0x%04x  COPP_CTRL   : 0x%04x\n", vidctrl, coppctrl);
+    dprintf("AUD_CTRL    : 0x%04x\n", audctrl);
+    dprintf("VID_LEFT    : 0x%04x  VID_RIGHT   : 0x%04x\n", vidleft, vidright);
+    dprintf("\nPlayfield A:                                Playfield B:\n");
+    dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x  PB_GFX_CTRL : 0x%04x  PB_TILE_CTRL: 0x%04x\n",
+            pa_gfxctrl,
+            pa_tilectrl,
+            pb_gfxctrl,
+            pb_tilectrl);
+    dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x  PB_DISP_ADDR: 0x%04x  PB_LINE_LEN : 0x%04x\n",
+            pa_dispaddr,
+            pa_linelen,
+            pb_dispaddr,
+            pb_linelen);
+
+    dprintf("PA_HV_SCROLL: 0x%04x  PA_HV_FSCALE: 0x%04x  PB_HV_SCROLL: 0x%04x  PB_HV_FSCALE: 0x%04x\n",
+            pa_hvscroll,
+            pa_hvfscale,
+            pb_hvscroll,
+            pb_hvfscale);
+    dprintf("\n\n");
+
+    // spammy...
+    // dprintf("Initial copper program\n");
+    // hexdump(&cop_buffer[0], 0x100);
+    // dprintf("\n");
 }
 
 static uint16_t screen_addr;
@@ -453,7 +527,7 @@ static void xr_cls()
 {
     xv_prep();
     wait_vblank_start();
-    xmem_set_addr(xr_screen_addr);
+    xmem_setw_next_addr(xr_screen_addr);
     for (int i = 0; i < xr_text_columns * xr_text_rows; i++)
     {
         xmem_setw_next(' ');
@@ -508,7 +582,7 @@ static void xr_pos(int x, int y)
 
 static void xr_putc(const char c)
 {
-    xmem_set_addr(xr_screen_addr + (xr_y * xr_text_columns) + xr_x);
+    xmem_setw_next_addr(xr_screen_addr + (xr_y * xr_text_columns) + xr_x);
     if (c == '\n')
     {
         while (xr_x < xr_text_columns)
@@ -566,7 +640,7 @@ static void xr_printfxy(int x, int y, const char * fmt, ...)
 static void install_copper()
 {
     wait_vblank_start();
-    xmem_set_addr(XR_COPPER_ADDR);
+    xmem_setw_next_addr(XR_COPPER_ADDR);
 
 #if 0        // copper torture test
     for (uint16_t i = 0; i < 1024; i++)
@@ -894,7 +968,7 @@ void show_test_pic(int pic_num, uint16_t addr)
     if (ti->color)
     {
         wp = ti->color;
-        xmem_set_addr(XR_COLOR_A_ADDR);
+        xmem_setw_next_addr(XR_COLOR_A_ADDR);
         for (int w = 0; w < ti->num_colors; w++)
         {
             xmem_setw_next(*wp++);
@@ -987,7 +1061,7 @@ static void load_sd_colors(const char * filename)
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
             xwait_vblank();
-            xmem_set_addr(XR_COLOR_ADDR);
+            xmem_setw_next_addr(XR_COLOR_ADDR);
             for (int i = 0; i < (cnt >> 1); i++)
             {
                 uint16_t v = *maddr++;
@@ -1372,7 +1446,7 @@ void test_blend()
     cop_blend_test_bin[cop_blend_test__hpos_sol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 848 - 8 : 800 - 640 - 8);
     // modify HPOS wait EOL to be right edge horizontal position in 640x480 or 848x480 modes (including overscan)
     cop_blend_test_bin[cop_blend_test__hpos_eol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 1 : 800 - 1);
-    xmem_set_addr(XR_COPPER_ADDR);
+    xmem_setw_next_addr(XR_COPPER_ADDR);
     for (uint16_t i = 0; i < cop_blend_test_size; i++)
     {
         uint16_t op = cop_blend_test_bin[i];
@@ -1687,7 +1761,7 @@ void test_dual_8bpp()
         xreg_setw(PA_GFX_CTRL, 0x0080);        // blank screen
         xreg_setw(PB_GFX_CTRL, 0x0080);
         // install 320x200 "crop" copper list
-        xmem_set_addr(XR_COPPER_ADDR);
+        xmem_setw_next_addr(XR_COPPER_ADDR);
         for (uint16_t i = 0; i < NUM_ELEMENTS(copper_320x200); i++)
         {
             xmem_setw_next(copper_320x200[i] >> 16);
@@ -2038,7 +2112,7 @@ void test_8bpp_tiled()
     }
 
 
-    xmem_set_addr(XR_TILE_ADDR + 0x0000);
+    xmem_setw_next_addr(XR_TILE_ADDR + 0x0000);
     for (int i = 0x0000; i < 0x1000; i++)
     {
         xmem_setw_next(i & 0x08 ? ~(uint16_t)i : (uint16_t)i);
@@ -2397,7 +2471,14 @@ static int init_audio()
         dprintf("Strange... Xosera has audio support, but no channels?\n");
     }
 
-    dprintf("Xosera audio channels = %d\n", num_audio_channels);
+    dprintf("Xosera audio channels detected via INT_CTRL = %d\n", num_audio_channels);
+    uint8_t feature_chans = XV_(xm_getw(FEATURE), FEATURE_AUDCHAN_B, FEATURE_AUDCHAN_W);
+    dprintf("Xosera audio channels detected via FEATURE = %d\n", feature_chans);
+
+    if (num_audio_channels != feature_chans)
+    {
+        dprintf("FIXME Mismatch between detected channels and FEATURE!\n");
+    }
 
     // set all channels to "full volume" silence at very slow period
     for (int v = 0; v < num_audio_channels; v++)
@@ -2854,39 +2935,40 @@ int    xosera_audio_len;
 uint32_t test_count;
 void     xosera_test()
 {
+    xv_prep();
+
     printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
     dprintf("Xosera_test_m68k\n");
 
-    cpu_delay(3000);
+    cpu_delay(1000);
 
-    dprintf("\nCalling xosera_sync()...");
+    dprintf("Calling xosera_sync()...");
     bool syncok = xosera_sync();
-    dprintf("%s\n\n", syncok ? "succeeded" : "FAILED");
+    dprintf("%s\n", syncok ? "detected" : "not-detected");
 
-    dprintf("\nCalling xosera_init(0)...");
+    dprintf("Calling xosera_init(0)...");
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
-    cpu_delay(100);
-    init_audio();
+    if (!success)
+    {
+        dprintf("Exiting without Xosera init.\n");
+        exit(1);
+    }
 
     xosera_get_info(&initinfo);
-    // dprintf("xosera_get_info details:\n");
-    // hexdump(&initinfo, sizeof(initinfo));
-    // dprintf("\n");
+    dump_xosera_regs();
+    init_audio();
 
-    dprintf("Description : \"%s\"\n", initinfo.description_str);
-    dprintf("Version BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
-    dprintf("Git hash    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
     while (checkchar())        // clear any queued input
     {
         readchar();
     }
-    xv_prep();
-    cpu_delay(1000);
+    cpu_delay(5000);
 
-    dprintf("\nBegin...\n");
+    // dprintf("\nPress key to begin...\n");
+    // readchar();
 
     wait_vblank_start();
     xreg_setw(PA_GFX_CTRL, 0x0080);            // PA blanked
@@ -3039,318 +3121,25 @@ void     xosera_test()
 #endif
             cpu_delay(1000);        // give monitor time to adjust with grey screen (vs black)
         }
-
-        xmem_set_addr(XR_POINTER_ADDR);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xf000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x000f);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-        xmem_setw_next(0xffff);
-
         dprintf("\n*** xosera_test_m68k iteration: %u, running %u:%02u:%02u\n", test_count++, h, m, s);
 
         xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
         xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
 
-        uint16_t feature   = xm_getw(FEATURE);
-        uint16_t monwidth  = xosera_vid_width();
-        uint16_t monheight = xosera_vid_height();
-
-        uint16_t sysctrl  = xm_getw(SYS_CTRL);
-        uint16_t intctrl  = xm_getw(INT_CTRL);
-        uint16_t gfxctrl  = xreg_getw(PA_GFX_CTRL);
-        uint16_t tilectrl = xreg_getw(PA_TILE_CTRL);
-        uint16_t dispaddr = xreg_getw(PA_DISP_ADDR);
-        uint16_t linelen  = xreg_getw(PA_LINE_LEN);
-        uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
-        uint16_t hvfscale = xreg_getw(PA_HV_FSCALE);
-        uint16_t vidctrl  = xreg_getw(VID_CTRL);
-        uint16_t coppctrl = xreg_getw(COPP_CTRL);
-        uint16_t audctrl  = xreg_getw(AUD_CTRL);
-        uint16_t vidleft  = xreg_getw(VID_LEFT);
-        uint16_t vidright = xreg_getw(VID_RIGHT);
-
-        dprintf("DESCRIPTION : \"%s\"\n", initinfo.description_str);
-        dprintf("VERSION BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
-        dprintf("GIT HASH    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
-        dprintf("FEATURE     : 0x%04x\n", feature);
-        dprintf("MONITOR RES : %dx%d\n", monwidth, monheight);
-        dprintf("\nConfig:\n");
-        dprintf("SYS_CTRL    : 0x%04x  INT_CTRL    : 0x%04x\n", sysctrl, intctrl);
-        dprintf("VID_CTRL    : 0x%04x  COPP_CTRL   : 0x%04x\n", vidctrl, coppctrl);
-        dprintf("AUD_CTRL    : 0x%04x\n", audctrl);
-        dprintf("VID_LEFT    : 0x%04x  VID_RIGHT   : 0x%04x\n", vidleft, vidright);
-        dprintf("\nPlayfield A:\n");
-        dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
-        dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
-        dprintf("PA_HV_SCROLL: 0x%04x  PA_HV_FSCALE: 0x%04x\n", hvscroll, hvfscale);
-        dprintf("\n");
-
 
 #if COPPER_TEST
-        //        if (test_count & 2)
+        if (test_count & 1)
         {
             dprintf("Copper test enabled for this interation.\n");
             xreg_setw(COPP_CTRL, 0x8000);
         }
-        // else
-        // {
-        //     dprintf("Copper test disabled for this iteration.\n");
-        //     xreg_setw(COPP_CTRL, 0x0000);
-        // }
+        else
+        {
+            dprintf("Copper test disabled for this iteration.\n");
+            xreg_setw(COPP_CTRL, 0x0000);
+        }
 #endif
-        if (test_count & 1)
+        if (test_count & 2)
         {
             dprintf("Color cycling enabled for this iteration.\n");
             NukeColor = 0;

@@ -31,7 +31,7 @@
 
 bool use_sd;
 
-uint8_t mem_buffer[512];
+uint16_t mem_buffer[256];
 
 static void dputc(char c)
 {

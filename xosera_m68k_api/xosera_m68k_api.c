@@ -134,11 +134,7 @@ bool xosera_init(int reconfig_num)
             detected = xosera_wait_sync();                  // wait for detect
             if (detected)
             {
-                // wait until both initial copper program, and memory+blit finished
-                // TODO: add timeout here (just in case)
-                while ((xreg_getw(COPP_CTRL) != 0) ||
-                       ((xm_getbh(SYS_CTRL) & (SYS_CTRL_MEM_WAIT_F | SYS_CTRL_BLIT_BUSY_F)) != 0))
-                    ;
+                cpu_delay(10);
             }
         }
     }

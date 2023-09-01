@@ -25,8 +25,12 @@
 // debug options that can be enabled (remove comment)
 //
 //`define USE_HEXFONT                     // use hex font instead of default fonts
-//`define NO_TESTPATTERN                  // don't initialize VRAM with test pattern and fonts in simulation
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
+
+`ifndef SYNTHESIS
+//`define NO_COPPER_INIT                     // initialize VRAM with test pattern and fonts, also no init copper
+//`define NO_TESTPATTERN                     // initialize VRAM with test pattern and fonts, also no init copper
+`endif
 
 // features that can be optionally disabled (comment out to disable)
 //
@@ -74,7 +78,7 @@ localparam AUDIO_NCHAN  = `EN_AUDIO;    // set parameter for # audio channels
 localparam AUDIO_NCHAN  = 0;
 `endif
 
-localparam UART_BPS     = 230400;      // UART baud rate
+localparam UART_BPS     = 230400;       // USB UART baud rate
 
 // Xosera memory address bit widths
 localparam VRAM_W   = 16;               // 64K words VRAM
@@ -90,8 +94,8 @@ localparam CHAN_W   = $clog2(AUDIO_NCHAN); // bits needed for AUDIO_NCHAN
 // Xosera directly addressable registers (16 x 16-bit words [high/low byte])
 typedef enum logic [3:0] {
     // register 16-bit read/write
-    XM_SYS_CTRL     = 4'h0,             // (R /W ) status/option flags, VRAM write masking
-    XM_INT_CTRL     = 4'h1,             // (R /W ) interrupt status/control
+    XM_SYS_CTRL     = 4'h0,             // (R /W+) status/option flags, init PIXEL_X/Y options, VRAM write masking
+    XM_INT_CTRL     = 4'h1,             // (R /W+) interrupt status/control
     XM_TIMER        = 4'h2,             // (R /W+) read 1/10th millisecond timer, write 8-bit interval timer count
     XM_RD_XADDR     = 4'h3,             // (R /W+) XR register/address for XM_XDATA read access
     XM_WR_XADDR     = 4'h4,             // (R /W ) XR register/address for XM_XDATA write access
@@ -102,12 +106,13 @@ typedef enum logic [3:0] {
     XM_WR_ADDR      = 4'h9,             // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
     XM_DATA         = 4'hA,             // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
     XM_DATA_2       = 4'hB,             // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
-    XM_PIXEL_X      = 4'hC,             // (- /W+) X / BASE  pixel address gen (sets WR_ADDR and SYS_CTRL write mask)
-    XM_PIXEL_Y      = 4'hD,             // (- /W+) Y / WIDTH pixel address gen (sets WR_ADDR and SYS_CTRL write mask)
+    XM_PIXEL_X      = 4'hC,             // (- /W+) PIXEL_X (or PIXEL_BASE w/SYS_CTRL[15:8] write) pixel coord (sets WR_ADDR SYS_CTRL wrmask)
+    XM_PIXEL_Y      = 4'hD,             // (- /W+) PIXEL_Y (or PIXEL_WIDTH w/SYS_CTRL[15:8] write) pixel coord (sets WR_ADDR SYS_CTRL wrmask)
     XM_UART         = 4'hE,             // (R+/W+) optional debug UART
-    XM_FEATURE      = 4'hF              // (RO/W+) feature info, write set pixel address gen BASE, WIDTH from X,Y and mask mode
+    XM_FEATURE      = 4'hF              // (R /- ) feature info
 } xm_register_t;
 
+// NOTE: Any write to SYS_CTRL[15:8] will also set PIXEL_BASE and PIXEL_WIDTH with PIXEL_X/Y (as well as mask options)
 typedef enum {
     SYS_CTRL_MEM_WAIT_B  = 15,          // memory read/write operation active (with contended memory)
     SYS_CTRL_BLIT_FULL_B = 14,          // blitter queue is full, do not write new operation to blitter registers
@@ -115,8 +120,8 @@ typedef enum {
     SYS_CTRL_UNUSED_12_B = 12,          // unused (reads 0)
     SYS_CTRL_HBLANK_B    = 11,          // video signal is in horizontal blank period
     SYS_CTRL_VBLANK_B    = 10,          // video signal is in vertical blank period
-    SYS_CTRL_UNUSED_9_B  = 9,           // unused (reads 0)
-    SYS_CTRL_UNUSED_8_B  = 8,           // unused (reads 0)
+    SYS_CTRL_PIX_NO_MASK = 9,           // PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
+    SYS_CTRL_PIX_8B_MASK = 8,           // PIXEL_X/Y 8-bit pixel mask for WR_MASK
     SYS_CTRL_MASK_B      = 0,           // leftmost bit of 4 bit nibble mask
     SYS_CTRL_MASK_W      = 4            // width  of 4 bit nibble mask
 } xm_sys_ctrl_t;
@@ -173,8 +178,8 @@ typedef enum logic [6:0] {
     XR_SCANLINE     = 7'h03,            // (R /W) read scanline (incl. offscreen), write signal video interrupt
     XR_VID_LEFT     = 7'h04,            // (R /W) left edge of active display window (typically 0)
     XR_VID_RIGHT    = 7'h05,            // (R /W) right edge of active display window +1 (typically 640 or 848)
-    XR_POINTER_H    = 7'h06,            // (- /W) pointer sprite raw H
-    XR_POINTER_V    = 7'h07,            // (- /W) pointer sprite raw V pos
+    XR_POINTER_H    = 7'h06,            // (- /W) pointer sprite H pos (full display h_pos -6)
+    XR_POINTER_V    = 7'h07,            // (- /W) pointer sprite V pos (full display v_pos)
     XR_UNUSED_08    = 7'h08,            // (- /-) unused XR 08
     XR_UNUSED_09    = 7'h09,            // (- /-) unused XR 09
     XR_UNUSED_0A    = 7'h0A,            // (- /-) unused XR 0A

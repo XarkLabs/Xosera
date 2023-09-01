@@ -122,7 +122,7 @@ void xosera_copper_test()
 {
     dprintf("Xosera_copper_test\n");
 
-    xmem_set_addr(XR_COPPER_ADDR);
+    xmem_setw_next_addr(XR_COPPER_ADDR);
 
     for (uint8_t i = 0; i < copper_list_len; i++)
     {

@@ -70,9 +70,9 @@ VIDEO_OUTPUT ?= PMOD_DIGILENT_VGA
 # copper assembly
 COPASM=../copper/CopAsm/bin/copasm
 ifeq ($(findstring 640x,$(VIDEO_MODE)),)
-RESET_COPMEM=default_copper_848.mem
+RESET_COPMEM=default_copper_848
 else
-RESET_COPMEM=default_copper_640.mem
+RESET_COPMEM=default_copper_640
 endif
 
 VERILOG_DEFS := -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT)
@@ -176,18 +176,18 @@ timing: upduino/$(OUTNAME).rpt $(MAKEFILE_LIST)
 .PHONY: timing
 
 # run Yosys to generate a "dot" graphical representation of each design file
-show: $(RESET_COPMEM) $(DOT) $(MAKEFILE_LIST)
+show: $(RESET_COPMEM).mem $(DOT) $(MAKEFILE_LIST)
 .PHONY: show
 
 # run Yosys with "noflatten", which will produce a resource count per module
-count: $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+count: $(RESET_COPMEM).mem $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	@mkdir -p $(LOGS)
 	@-cp $(LOGS)/$(OUTNAME)_yosys_count.log $(LOGS)/$(OUTNAME)_yosys_count_last.log
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 .PHONY: count
 
 # run Verilator to check for Verilog issues
-lint: $(VLT_CONFIG) $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+lint: $(VLT_CONFIG) $(RESET_COPMEM).mem $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC)
 .PHONY: lint
 
@@ -196,7 +196,7 @@ $(DOT): %.dot: %.sv $(MAKEFILE_LIST)
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
-%.json: $(VLT_CONFIG) $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+%.json: $(VLT_CONFIG) $(RESET_COPMEM).mem $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	@echo === Building UPduino Xosera ===
 	@rm -f $@
 	@mkdir -p $(LOGS) $(@D)
@@ -303,7 +303,7 @@ $(COPASM):
 
 # delete all targets that will be re-generated
 clean:
-	rm -f $(VLT_CONFIG) $(RESET_COPMEM) xosera_upd.bin $(wildcard upduino/*.json) $(wildcard upduino/*.asc) $(wildcard upduino/*.rpt) $(wildcard upduino/*.bin)
+	rm -f $(VLT_CONFIG) $(wildcard default_copper_*.mem) $(wildcard default_copper_*.lst)  xosera_upd.bin $(wildcard upduino/*.json) $(wildcard upduino/*.asc) $(wildcard upduino/*.rpt) $(wildcard upduino/*.bin)
 .PHONY: clean
 
 # prevent make from deleting any intermediate files

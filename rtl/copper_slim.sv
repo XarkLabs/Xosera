@@ -1,4 +1,4 @@
-// copper.sv
+// copper_slim.sv
 //
 // vim: set et ts=4 sw=4
 //
@@ -14,7 +14,7 @@
 
 `include "xosera_pkg.sv"
 
-module slim_copper(
+module copper_slim(
     output       logic          xr_wr_en_o,             // XR bus write enable
     input   wire logic          xr_wr_ack_i,            // XR bus ack
     output       addr_t         xr_wr_addr_o,           // XR bus address
@@ -33,7 +33,7 @@ module slim_copper(
 
 // `define AVOID_RD_RW_HAZARD          // delay read to next cycle if also writing (iCE40UP5K does not need this)
 
-`define SETM_4CYCLE                    // SETM also 4 cycles at slight LC cost (~27 LCs)
+`define SETM_4CYCLE                    // SETM also 4 cycles at slight LC cost (~27 LCs, worth it)
 
 //  Slim Copper opcodes:
 //
@@ -197,9 +197,9 @@ end
 // copper control xreg (enable/disable), also does start of frame reset
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        cop_reset       <= 1'b1;
-        cop_en          <= 1'b1;
-        cop_run         <= 1'b1;
+        cop_en          <= 1'b0;
+        cop_reset       <= 1'b0;
+        cop_run         <= 1'b0;
     end else begin
         // keep in reset if not enabled and reset at SOF
         if (end_of_line_i && (v_count_i == 0)) begin

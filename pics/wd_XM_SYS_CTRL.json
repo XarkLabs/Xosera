@@ -17,9 +17,25 @@
             "type": 1
         },
         {
-            "bits": 2,
-            "name": "0",
-            "type": 1
+            "bits": 1,
+            "name": "8-bit",
+            "type": 2,
+            "attr": [
+                "pix x/y",
+                "8-bit",
+                "even",
+                "coord"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "nomask",
+            "type": 2,
+            "attr": [
+                "pix x/y",
+                "no",
+                "mask"
+            ]
         },
         {
             "bits": 1,
@@ -35,7 +51,7 @@
         {
             "bits": 1,
             "name": "H-blank",
-            "type": 2,
+            "type": 4,
             "attr": [
                 "in",
                 "H-blank",
@@ -73,7 +89,7 @@
         {
             "bits": 1,
             "name": "wait",
-            "type": 2,
+            "type": 5,
             "attr": [
                 "memory",
                 "wait",

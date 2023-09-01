@@ -88,8 +88,8 @@ VERILOG_DEFS := -D$(VIDEO_MODE)
 #VRUN_TESTDATA ?=   -u ../testdata/raw/sintable.raw -u ../testdata/raw/ramptable.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/pacbox-320x240_pal.raw -u ../testdata/raw/pacbox-320x240.raw -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
-#VRUN_TESTDATA ?=   -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
-VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/xosera_r1_pal.raw -u ../testdata/raw/xosera_r1.raw ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
+VRUN_TESTDATA ?=   -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
+#VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/xosera_r1_pal.raw -u ../testdata/raw/xosera_r1.raw ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
 
@@ -162,10 +162,10 @@ VERILATOR_ARGS := --sv --language 1800-2012 --timing -I$(SRCDIR) -v $(TECH_LIB) 
 CSRC := sim/xosera_sim.cpp
 
 # copper asm source
-COPSRC := sim/cop_blend_test.vsim.h
+COPSRC := sim/cop_blend_test.vsim.h sim/cop_audio_evil.vsim.h
 
 # default build native simulation executable
-all: $(COPASM) vsim isim
+all: $(RESET_COPMEM) $(COPASM) vsim isim
 .PHONY: all
 
 $(COPSRC): $(COPASM)
@@ -220,13 +220,13 @@ $(COPASM):
 	$(COPASM) -l -o $@ $<
 
 # use Verilator to build native simulation executable
-sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) $(COPSRC) sim.mk
+sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) $(RESET_COPMEM) $(COPSRC) sim.mk
 	@mkdir -p $(@D)
 	$(VERILATOR) $(VERILATOR_ARGS) -O3 --cc --exe --trace $(DEFINES) $(CFLAGS) $(LDFLAGS) --top-module $(VTOP) $(SRC) $(current_dir)/$(CSRC)
 	cd sim/obj_dir && make -f V$(VTOP).mk
 
 # use Icarus Verilog to build vvp simulation executable
-sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) sim.mk
+sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) $(RESET_COPMEM) $(COPASM) sim.mk
 	@mkdir -p $(@D)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES)  -v $(TECH_LIB) --top-module $(TBTOP) sim/$(TBTOP).sv $(SRC)
 	$(IVERILOG) $(IVERILOG_ARGS) $(DEFINES) -D$(VIDEO_MODE) -o sim/$(TBTOP) $(current_dir)/sim/$(TBTOP).sv $(SRC)

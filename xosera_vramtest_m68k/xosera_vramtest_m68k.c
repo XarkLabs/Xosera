@@ -159,7 +159,7 @@ static uint8_t  xr_y;
 
 static void xr_savefont()
 {
-    xmem_get_addr(XR_TILE_ADDR);
+    xmem_getw_next_addr(XR_TILE_ADDR);
     for (uint32_t i = 0; i < NUM_ELEMENTS(xr_fontsave); i++)
     {
         xr_fontsave[i] = xmem_getw_next_wait();
@@ -177,7 +177,7 @@ static void xr_cls()
     xr_x = 0;
     xr_y = 0;
     wait_vblank_start();
-    xmem_set_addr(xr_screen_addr);
+    xmem_setw_next_addr(xr_screen_addr);
     for (int i = 0; i < xr_text_columns * xr_text_rows; i++)
     {
         xmem_setw_next(' ');
@@ -237,7 +237,7 @@ static void xr_putc(const char c)
     {
         return;
     }
-    xmem_set_addr(xr_screen_addr + (xr_y * xr_text_columns) + xr_x);
+    xmem_setw_next_addr(xr_screen_addr + (xr_y * xr_text_columns) + xr_x);
     if (c == '\n')
     {
         while (xr_x < xr_text_columns)
@@ -859,19 +859,19 @@ static void read_xmem_buffer()
     xv_prep();
 
     // read XMEM back into vram_buffer
-    xmem_get_addr(XR_COLOR_ADDR);
+    xmem_getw_next_addr(XR_COLOR_ADDR);
     for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + colormem_size); addr++)
     {
         uint16_t data     = xmem_getw_next_wait();
         vram_buffer[addr] = data;
     }
-    xmem_get_addr(XR_TILE_ADDR);
+    xmem_getw_next_addr(XR_TILE_ADDR);
     for (int addr = XR_TILE_ADDR; addr < (XR_TILE_ADDR + XR_TILE_SIZE); addr++)
     {
         uint16_t data     = xmem_getw_next_wait();
         vram_buffer[addr] = data;
     }
-    xmem_get_addr(XR_COPPER_ADDR);
+    xmem_getw_next_addr(XR_COPPER_ADDR);
     for (int addr = XR_COPPER_ADDR; addr < (XR_COPPER_ADDR + XR_COPPER_SIZE); addr++)
     {
         uint16_t data     = xmem_getw_next_wait();
@@ -889,7 +889,7 @@ int test_xmem(bool LFSR, int mode)
     wait_vblank_start();
     xreg_setw(PA_GFX_CTRL, 0x0080);
     xreg_setw(VID_RIGHT, xosera_vid_width());        // restore border
-    xmem_set_addr(XR_TILEMAP);
+    xmem_setw_next_addr(XR_TILEMAP);
     for (int i = 0; i < (XR_COLS * XR_ROWS); i++)
     {
         xmem_setw_next(i);
@@ -931,20 +931,20 @@ int test_xmem(bool LFSR, int mode)
         } while (start_time == check_time);
 
         // word color mem
-        xmem_set_addr(XR_COLOR_ADDR);
+        xmem_setw_next_addr(XR_COLOR_ADDR);
         for (int addr = XR_COLOR_ADDR; addr < (XR_COLOR_ADDR + colormem_size); addr++)
         {
             xmem_setw_next(pattern_buffer[addr]);
         }
 
         // word tile mem
-        xmem_set_addr(XR_TILE_ADDR);
+        xmem_setw_next_addr(XR_TILE_ADDR);
         for (int addr = XR_TILE_ADDR; addr < (XR_TILE_ADDR + XR_TILE_SIZE); addr++)
         {
             xmem_setw_next(pattern_buffer[addr]);
         }
         // word copper mem
-        xmem_set_addr(XR_COPPER_ADDR);
+        xmem_setw_next_addr(XR_COPPER_ADDR);
         for (int addr = XR_COPPER_ADDR; addr < (XR_COPPER_ADDR + XR_COPPER_SIZE); addr++)
         {
             xmem_setw_next(pattern_buffer[addr]);

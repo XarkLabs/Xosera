@@ -39,12 +39,13 @@
 
 // --- set XR register (extended registers, omit XR_ from xreg name):
 // void     xreg_setw(xreg, word_value)
-// void     xreg_set_addr(xreg)
+// void     xreg_set_next_addr(xreg)
 // void     xreg_setw_next(word_value)
 
 // --- set VRAM memory address:
 // void     vram_setw(vram, word_value)
 // void     vram_set_addr_incr(vram, incr)
+// void     vram_set_next_addr(vram)
 // void     vram_setw_next(word_value)
 // void     vram_setw_wait(vram, wordval)
 // void     vram_setw_next_wait(word_value)
@@ -55,7 +56,7 @@
 
 // --- set XR memory address (or XR register address):
 // void     xmem_setw(xrmem, word_value)
-// void     xmem_set_addr(xrmem)
+// void     xmem_setw_next_addr(xrmem)
 // void     xmem_setw_next(word_value)
 // void     xmem_setw_wait(xrmem, wordval)
 // void     xmem_setw_next_wait(word_value)
@@ -69,7 +70,7 @@
 
 // --- get XR registers (extended registers, omit XR_ from xreg name):
 // uint16_t xreg_getw(xreg)
-// uint16_t xreg_get_addr(xreg)
+// uint16_t xreg_get_next_addr(xreg)
 // uint16_t xreg_getw_next(xreg)
 
 // NOTE: "*_wait" functions wait if there is memory contention (with xwait_mem_ready() before a read or after a write).
@@ -91,7 +92,7 @@
 
 // --- get XR data from XR address (or XR register):
 // uint16_t xmem_getw(xrmem)
-// void xmem_get_addr(xrmem)
+// void xmem_getw_next_addr(xrmem)
 // uint16_t xmem_getw_next()
 // uint16_t xmem_getw_wait(xrmem)
 // uint16_t xmem_getw_next_wait()
@@ -266,6 +267,9 @@ extern xosera_ptr_t xosera_ptr;
         xm_setw(WR_ADDR, (vram));                                                                                      \
     } while (false)
 
+// set next vram addr to write (use before vram_setw_next)
+#define vram_set_next_addr(vram) xm_setw(WR_ADDR, (vram))
+
 // set next vram data (i.e., next WR_ADDR after increment) 16-bit word value
 #define vram_setw_next(word_value) xm_setw(DATA, (word_value))
 
@@ -294,13 +298,13 @@ extern xosera_ptr_t xosera_ptr;
     } while (false)
 
 // set XR memory write address xrmem (use xmem_setw_next()/xmem_setw_next_wait() to write data)
-#define xreg_set_addr(xreg) xm_setw(WR_XADDR, (XR_##xreg))
+#define xreg_set_next_addr(xreg) xm_setw(WR_XADDR, (XR_##xreg))
 
 // set next xreg (i.e., next WR_XADDR after increment) 16-bit word value
 #define xreg_setw_next(word_value) xm_setw(XDATA, (word_value))
 
 // set XR memory write address xrmem (use xmem_setw_next()/xmem_setw_next_wait() to write data)
-#define xmem_set_addr(xrmem) xm_setw(WR_XADDR, (xrmem))
+#define xmem_setw_next_addr(xrmem) xm_setw(WR_XADDR, (xrmem))
 
 // set next xmem (i.e., next WR_XADDR after increment) 16-bit word value
 #define xmem_setw_next(word_value) xm_setw(XDATA, (word_value))
@@ -368,7 +372,7 @@ extern xosera_ptr_t xosera_ptr;
     })
 
 // set XR memory read address xrmem (use xmem_getw_next()/xmem_getw_next_wait() to read data)
-#define xreg_get_addr(xreg)                                                                                            \
+#define xreg_get_next_addr(xreg)                                                                                       \
     do                                                                                                                 \
     {                                                                                                                  \
         (void)(XR_##xreg);                                                                                             \
@@ -386,7 +390,7 @@ extern xosera_ptr_t xosera_ptr;
     })
 
 // set XR memory read address xrmem (use xmem_getw_next()/xmem_getw_next_wait() to read data)
-#define xmem_get_addr(xrmem) xm_setw(RD_XADDR, (xrmem))
+#define xmem_getw_next_addr(xrmem) xm_setw(RD_XADDR, (xrmem))
 
 // return next xmem (i.e., next RD_XADDR after increment) 16-bit word value
 #define xmem_getw_next() xreg_getw_next()

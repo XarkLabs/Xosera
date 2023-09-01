@@ -11,7 +11,9 @@
 
 `include "xosera_pkg.sv"
 
-`define WR_ADD_MAC
+`ifdef ICE40UP5K
+`define WR_ADD_MAC                  // "waste" a DSP block for 16-bit adder (saves ~20 LCs)
+`endif
 
 module reg_interface (
     // bus interface signals
@@ -229,11 +231,19 @@ always_comb uart_rd    = bus_read_strobe && (bus_reg_num == xv::XM_UART);
 always_comb begin
     case (bus_reg_num)
         xv::XM_SYS_CTRL:
+            rd_temp_word  = { mem_wait,
 `ifdef EN_BLIT
-            rd_temp_word  = { mem_wait, blit_full_i, blit_busy_i, 1'b0, h_blank_i, v_blank_i, 1'b0, 1'b0, 4'b0, regs_wrmask_o };
+                blit_full_i, blit_busy_i,
 `else
-            rd_temp_word  = { mem_wait, 1'b0,        1'b0,        1'b0, h_blank_i, v_blank_i, 1'b0, 1'b0, 4'b0, regs_wrmask_o };
+                1'b0,        1'b0,
 `endif
+                1'b0, h_blank_i, v_blank_i,
+`ifdef EN_PIXEL_ADDR
+                pixel_bpp,
+`else
+                1'b0, 1'b0,
+`endif
+                4'b0, regs_wrmask_o };
         xv::XM_INT_CTRL:
             rd_temp_word  = { 1'b0, intr_mask, 1'b0, intr_status_i };
         xv::XM_TIMER:
@@ -419,6 +429,11 @@ always_ff @(posedge clk) begin
             case (bus_reg_num)
                 xv::XM_SYS_CTRL: begin
                     if (!bus_bytesel) begin
+`ifdef EN_PIXEL_ADDR
+                        pixel_bpp   <=  bus_data_byte[1:0];
+                        pixel_base  <=  reg_pixel_x;
+                        pixel_width <=  reg_pixel_y;
+`endif
                     end else begin
                         regs_wrmask_o       <= bus_data_byte[3:0];
                     end
@@ -533,17 +548,6 @@ always_ff @(posedge clk) begin
                     end
                 end
 `endif
-
-                xv::XM_FEATURE: begin
-                    if (!bus_bytesel) begin
-                    end else begin
-`ifdef EN_PIXEL_ADDR
-                        pixel_bpp   <=  bus_data_byte[1:0];
-                        pixel_base  <=  reg_pixel_x;
-                        pixel_width <=  reg_pixel_y;
-`endif
-                    end
-                end
 
                 default: begin
                 end

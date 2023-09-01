@@ -139,7 +139,7 @@ static inline void check_vblank()
 _NOINLINE void restore_def_colors()
 {
     wait_vblank_start();
-    xmem_set_addr(XR_COLOR_A_ADDR);
+    xmem_setw_next_addr(XR_COLOR_A_ADDR);
     for (uint16_t i = 0; i < 256; i++)
     {
         xmem_setw_next(def_colors[i]);
@@ -563,7 +563,7 @@ void xosera_modetest(void)
     xosera_get_info(&initinfo);
     dprintf("xosera_get_info details:\n");
     xv_prep();
-    xmem_get_addr(XR_COPPER_ADDR);
+    xmem_getw_next_addr(XR_COPPER_ADDR);
 
     dprintf("\n");
     dprintf("Description : \"%s\"\n", initinfo.description_str);

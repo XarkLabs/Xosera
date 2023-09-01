@@ -31,7 +31,9 @@ module vram(
 
 word_t memory[0: 65535] /* verilator public*/;
 
+`ifndef NO_TESTPATTERN
 localparam [16*8:1] hex_str = "FEDCBA9876543210";
+`endif
 
 // clear RAM to avoid simulation errors
 initial begin

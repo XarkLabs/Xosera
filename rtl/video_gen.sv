@@ -466,18 +466,19 @@ always_ff @(posedge clk) begin
         line_set_addr       <= 16'h0000;        // user set display addr
 
 `ifdef EN_COPP
-        copp_reg_wr_o       <= 1'b0;
-        copp_reg_enable_o   <= 1'b0;
+        copp_reg_wr_o       <= 1'b1;            // start copper at boot so it can do reg init
+        copp_reg_enable_o   <= 1'b1;
 `endif
 
 `ifdef EN_AUDIO
         audio_enable        <= 1'b0;
 `endif
 
-`ifndef SYNTHESIS
+`ifdef TESTPATTERN
         vid_right           <= $bits(vid_right)'(xv::VISIBLE_WIDTH);
         pa_line_len         <= xv::TILES_WIDE[15:0];
         pa_tile_height      <= 4'b1111;
+        pb_blank            <= 1'b1;
         pb_line_len         <= xv::TILES_WIDE[15:0];
         pb_tile_height      <= 4'b1111;
 `endif

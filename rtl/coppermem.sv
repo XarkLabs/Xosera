@@ -66,7 +66,7 @@ initial begin
         bram[(2**AWIDTH)-2]  = xv::githash[31:16];
         bram[(2**AWIDTH)-1]  = xv::githash[15:0];
     end else begin
-`ifndef TESTPATTERN
+`ifndef NO_COPPER_INIT
         // use default copper program to init Xosera
 `ifdef MODE_640x480
         $readmemh("default_copper_640.mem", bram, 0);

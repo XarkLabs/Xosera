@@ -28,7 +28,8 @@
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
 
 `ifndef SYNTHESIS
-//`define TESTPATTERN                     // initialize VRAM with test pattern and fonts, also no init copper
+//`define NO_COPPER_INIT                     // initialize VRAM with test pattern and fonts, also no init copper
+//`define NO_TESTPATTERN                     // initialize VRAM with test pattern and fonts, also no init copper
 `endif
 
 // features that can be optionally disabled (comment out to disable)

@@ -391,7 +391,7 @@ ___
 
 Setting `COPP_EN` allows control of the copper co-processor.  When disabled, copper execution stops immediately.  When enabled the copper execution state is reset, and at the beginning of the next frame (line 0, off the left edge) will start program execution at location `0x0000` (and the same at the start of each subsequent frame until disabled).  Unless care is taken when modifying running copper code, it is advised to disable the copper before modifying copper memory to avoid unexpected Xosera register or memory modifications (e.g., when uploading a new copper program, disable `COPP_EN` and re-enable it when the upload is complete and ready to run).
 
-> :mag: **Copper:** At start of each frame, copper register `RA` will be reset to`0x0000`, the `B` flag set and copper PC set to XM address `0xC000` (first word of copper memory). See section below for details about copper operation.
+> :mag: **Copper:** At start of each frame, copper register `RA` will be reset to`0x0000`, the `B` flag cleared and copper PC set to XM address `0xC000` (first word of copper memory). See section below for details about copper operation.
 
 #### 0x02 **`XR_AUD_CTRL`** (R/W) - Audio Control
 
@@ -833,11 +833,11 @@ Interaction with the copper happens via:
 
 In general, programming the copper comprises loading a copper program (aka 'copper list') into the `XR_COPPER_ADDR` area, and then enabling copper execution with the `XR_COPP_CTRL` register.
 
-When the copper is enabled, at the beginning of each new frame the copper state is reset (but not copper memory) and and execution will begin at the start of copper memory (`XR_COPPER_ADDR` or offset 0), with `RA` set to 0 and the `B` flag set.  
+When the copper is enabled, at the beginning of each new frame the copper state is reset (but not copper memory) and and execution will begin at the start of copper memory (`XR_COPPER_ADDR` or offset 0), with `RA` set to 0 and the `B` flag cleared.  
 
 You should make sure a valid copper program is present in copper memory *before* you enable it (although there is a default program present after reset).
 
-> :mag: **Copper execution:** When enabled, copper execution won't begin until the start of the next video frame (in the horizontal blank off the left edge of scan line 0).  It will also be restarted the same way at the start of each subsequent video frame (with copper `PC`=`0x000`, `RA`=`0` and `B`=`1`).  Copper memory is unaltered between frames.
+> :mag: **Copper execution:** When enabled, copper execution won't begin until the start of the next video frame (in the horizontal blank off the left edge of scan line 0).  It will also be restarted the same way at the start of each subsequent video frame (with copper `PC`=`0x000`, `RA`=`0x0000` and `B`=`0`).  Copper memory is unaltered between frames.
 
 ### Programming the Co-processor
 

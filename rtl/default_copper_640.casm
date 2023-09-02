@@ -26,7 +26,7 @@ entry
                 MOVE    #$0080,XR_PB_GFX_CTRL           ; blank pb
                 MOVE    #$000F,XR_PB_TILE_CTRL          ; set to 8x16 tiles @ tilemem 0x0000
                 MOVE    #H_RES/8,XR_PB_LINE_LEN         ; set default line len
-.if 0   ; this works fine, but backing off until rosco firmware updated to wait
+.if 1
                 MOVE    #$0001,XR_BLIT_CTRL             ; no transp, constS
                 MOVE    #$0000,XR_BLIT_ANDC             ; ANDC constant
                 MOVE    #$0000,XR_BLIT_XOR              ; XOR constant

@@ -466,8 +466,8 @@ always_ff @(posedge clk) begin
         line_set_addr       <= 16'h0000;        // user set display addr
 
 `ifdef EN_COPP
-        copp_reg_wr_o       <= 1'b1;            // start copper at boot so it can do reg init
-        copp_reg_enable_o   <= 1'b1;
+        copp_reg_wr_o       <= 1'b0;
+        copp_reg_enable_o   <= 1'b1;            // copper starts at init (and will disable itself)
 `endif
 
 `ifdef EN_AUDIO

@@ -108,7 +108,7 @@ const addr_range_t xr_mem[] = {
 const addr_range_t xm_regs[] = {
     {"SYS_CTRL", 0x00, 0x01},        // (R /W+) status bits, FPGA config, write masking
     {"INT_CTRL", 0x01, 0x01},        // (R /W ) interrupt status/control
-    {"TIMER", 0x02, 0x01},           // (RO   ) read 1/10th millisecond timer
+    {"TIMER", 0x02, 0x01},           // (R /- ) read 1/10th millisecond timer
     {"RD_XADDR", 0x03, 0x01},        // (R /W+) XR register/address for XM_XDATA read access
     {"WR_XADDR", 0x04, 0x01},        // (R /W ) XR register/address for XM_XDATA write access
     {"XDATA", 0x05, 0x01},           // (R /W+) read/write XR register/memory at XM_RD_XADDR/XM_WR_XADDR
@@ -126,14 +126,14 @@ const addr_range_t xm_regs[] = {
 
 // NOTE: These are bits in high byte of SYS_CTRL word (fastest to access)
 const addr_range_t sys_ctrl_status[] = {
-    {"MEM_WAIT", 7, 1},         // (RO   )  memory read/write operation pending (with contended memory)
-    {"BLIT_FULL", 6, 1},        // (RO   )  blitter queue is full, do not write new operation to blitter registers
-    {"BLIT_BUSY", 5, 1},        // (RO   )  blitter is still busy performing an operation (not done)
-    {"SC_BIT_12", 4, 1},        // (RO   )  unused (reads 0)
-    {"HBLANK", 3, 1},           // (RO   )  video signal is in horizontal blank period
-    {"VBLANK", 2, 1},           // (RO   )  video signal is in vertical blank period
-    {"SC_BIT_9", 1, 1},         // (RO   )  unused (reads 0)
-    {"SC_BIT_8", 0, 1},         // (RO   )  unused (reads 0)
+    {"MEM_WAIT", 7, 1},         // (R /- )  memory read/write operation pending (with contended memory)
+    {"BLIT_FULL", 6, 1},        // (R /- )  blitter queue is full, do not write new operation to blitter registers
+    {"BLIT_BUSY", 5, 1},        // (R /- )  blitter is still busy performing an operation (not done)
+    {"SC_BIT_12", 4, 1},        // (R /- )  unused (reads 0)
+    {"HBLANK", 3, 1},           // (R /- )  video signal is in horizontal blank period
+    {"VBLANK", 2, 1},           // (R /- )  video signal is in vertical blank period
+    {"SC_BIT_9", 1, 1},         // (R /- )  unused (reads 0)
+    {"SC_BIT_8", 0, 1},         // (R /- )  unused (reads 0)
     {NULL, 0, 0}};
 
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)

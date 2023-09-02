@@ -3718,7 +3718,10 @@ int32_t xlasm::source_t::read_file(xlasm * xa, const std::string & n)
         nline = line_buff;
         file_size += nline.size();
         rtrim(nline, " \r\n");
-        orig_line.push_back(nline);
+        if (nline.size() < 3 || nline[0] != '#' || nline[1] != ' ' || (nline[2] < '0' && nline[2] > '9'))
+        {
+            orig_line.push_back(nline);
+        }
     }
 
     if (!feof(fp))

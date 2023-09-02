@@ -57,7 +57,7 @@
 // Xosera Main Registers (XM Registers, directly CPU accessable)
 #define XM_SYS_CTRL 0x00        // (R /W+) status bits, FPGA config, write masking
 #define XM_INT_CTRL 0x01        // (R /W ) interrupt status/control
-#define XM_TIMER    0x02        // (RO   ) read 1/10th millisecond timer
+#define XM_TIMER    0x02        // (R /- ) read 1/10th millisecond timer
 #define XM_RD_XADDR 0x03        // (R /W+) XR register/address for XM_XDATA read access
 #define XM_WR_XADDR 0x04        // (R /W ) XR register/address for XM_XDATA write access
 #define XM_XDATA    0x05        // (R /W+) read/write XR register/memory at XM_RD_XADDR/XM_WR_XADDR
@@ -74,22 +74,22 @@
 
 // SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
 // indirect with no offset)
-#define SYS_CTRL_MEM_WAIT_B  7        // (RO   )  memory read/write operation pending (with contended memory)
-#define SYS_CTRL_BLIT_FULL_B 6        // (RO   )  blitter queue is full, do not write new operation to blitter registers
-#define SYS_CTRL_BLIT_BUSY_B 5        // (RO   )  blitter is still busy performing an operation (not done)
-#define SYS_CTRL_UNUSED_12_B 4        // (RO   )  unused (reads 0)
-#define SYS_CTRL_HBLANK_B    3        // (RO   )  video signal is in horizontal blank period
-#define SYS_CTRL_VBLANK_B    2        // (RO   )  video signal is in vertical blank period
-#define SYS_CTRL_UNUSED_9_B  1        // (RO   )  unused (reads 0)
+#define SYS_CTRL_MEM_WAIT_B  7        // (R /- )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_BLIT_FULL_B 6        // (R /- )  blitter queue is full, do not write new operation to blitter registers
+#define SYS_CTRL_BLIT_BUSY_B 5        // (R /- )  blitter is still busy performing an operation (not done)
+#define SYS_CTRL_UNUSED_12_B 4        // (R /- )  unused (reads 0)
+#define SYS_CTRL_HBLANK_B    3        // (R /- )  video signal is in horizontal blank period
+#define SYS_CTRL_VBLANK_B    2        // (R /- )  video signal is in vertical blank period
+#define SYS_CTRL_UNUSED_9_B  1        // (R /- )  unused (reads 0)
 #define SYS_CTRL_UNUSED_8_B  0        // (- /- )
 // SYS_CTRL bit flags
-#define SYS_CTRL_MEM_WAIT_F  0x80        // (RO   )  memory read/write operation pending (with contended memory)
-#define SYS_CTRL_BLIT_FULL_F 0x40        // (RO   )  blitter queue is full (do not write to blitter registers)
-#define SYS_CTRL_BLIT_BUSY_F 0x20        // (RO   )  blitter is still busy performing an operation (not done)
-#define SYS_CTRL_UNUSED_12_F 0x10        // (RO   )  unused (reads 0)
-#define SYS_CTRL_HBLANK_F    0x08        // (RO   )  video signal is in horizontal blank period
-#define SYS_CTRL_VBLANK_F    0x04        // (RO   )  video signal is in vertical blank period
-#define SYS_CTRL_UNUSED_9_F  0x02        // (RO   )  unused (reads 0)
+#define SYS_CTRL_MEM_WAIT_F  0x80        // (R /- )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_BLIT_FULL_F 0x40        // (R /- )  blitter queue is full (do not write to blitter registers)
+#define SYS_CTRL_BLIT_BUSY_F 0x20        // (R /- )  blitter is still busy performing an operation (not done)
+#define SYS_CTRL_UNUSED_12_F 0x10        // (R /- )  unused (reads 0)
+#define SYS_CTRL_HBLANK_F    0x08        // (R /- )  video signal is in horizontal blank period
+#define SYS_CTRL_VBLANK_F    0x04        // (R /- )  video signal is in vertical blank period
+#define SYS_CTRL_UNUSED_9_F  0x02        // (R /- )  unused (reads 0)
 #define SYS_CTRL_UNUSED_8_F  0x01        // (- /- )
 // INT_CTRL bit numbers within word
 #define INT_CTRL_RECONFIG_B   15        // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
@@ -175,22 +175,22 @@
 #define XR_UNUSED_0F 0x0F        // (- /-) unused XR 0F
 
 // XR_VID_CTRL bit numbers within word)
-#define XR_VID_CTRL_SWAP_AB_B 15        // bit number to colormap used (pf A uses colormap B and vice versa)
-#define XR_VID_CTRL_BORDCOL_B 0         // rightmost bit number of pf A color index
-#define XR_VID_CTRL_BORDCOL_W 8         // bit width for pf A color index
+#define VID_CTRL_SWAP_AB_B 15        // bit number to colormap used (pf A uses colormap B and vice versa)
+#define VID_CTRL_BORDCOL_B 0         // rightmost bit number of pf A color index
+#define VID_CTRL_BORDCOL_W 8         // bit width for pf A color index
 // XR_VID_CTRL flag/mask
-#define XR_VID_CTRL_SWAP_AB_F 0x8000        // flag to swap colormap used (pf A uses colormap B and vice versa)
-#define XR_VID_CTRL_BORDCOL_F 0x00FF        // mask for pf A color index
+#define VID_CTRL_SWAP_AB_F 0x8000        // flag to swap colormap used (pf A uses colormap B and vice versa)
+#define VID_CTRL_BORDCOL_F 0x00FF        // mask for pf A color index
 
 // XR_COPP_CTRL bit numbers within word)
-#define XR_COPP_CTRL_COPP_EN_B 15        // bit number to enable/disable copper
+#define COPP_CTRL_COPP_EN_B 15        // bit number to enable/disable copper
 // XR_COPP_CTRL bit flag/mask
-#define XR_COPP_CTRL_COPP_EN_F 0x8000        // flag to enable/disable copper
+#define COPP_CTRL_COPP_EN_F 0x8000        // flag to enable/disable copper
 
 // XR_AUD_CTRL bit numbers within word)
-#define XR_AUD_CTRL_AUD_EN_B 0        // bit number to enable/disable audio
+#define AUD_CTRL_AUD_EN_B 0        // bit number to enable/disable audio
 // XR_AUD_CTRL bit flag/mask
-#define XR_AUD_CTRL_AUD_EN_F 0x0001        // flag to enable/disable audio
+#define AUD_CTRL_AUD_EN_F 0x0001        // flag to enable/disable audio
 
 // Playfield A Control XR Registers
 #define XR_PA_GFX_CTRL  0x10        // (R /W) playfield A graphics control
@@ -213,42 +213,42 @@
 #define XR_PB_UNUSED_1F 0x1F        // (- /-)
 
 // Playfield GFX BPP constants
-#define XR_GFX_BPP_1 0        // Px_GFX_CTRL.bpp (1-bpp + fore/back attribute color)
-#define XR_GFX_BPP_4 1        // Px_GFX_CTRL.bpp (4-bpp, 16 color)
-#define XR_GFX_BPP_8 2        // Px_GFX_CTRL.bpp (8-bpp 256 color)
-#define XR_GFX_BPP_X 3        // Px_GFX_CTRL.bpp (reserved)
+#define GFX_BPP_1 0        // Px_GFX_CTRL.bpp (1-bpp + fore/back attribute color)
+#define GFX_BPP_4 1        // Px_GFX_CTRL.bpp (4-bpp, 16 color)
+#define GFX_BPP_8 2        // Px_GFX_CTRL.bpp (8-bpp 256 color)
+#define GFX_BPP_X 3        // Px_GFX_CTRL.bpp (reserved)
 
 // XR_Px_GFX_CTRL bit numbers within word)
-#define XR_GFX_CTRL_V_REPEAT_B  0
-#define XR_GFX_CTRL_V_REPEAT_W  2
-#define XR_GFX_CTRL_H_REPEAT_B  2
-#define XR_GFX_CTRL_H_REPEAT_W  2
-#define XR_GFX_CTRL_BPP_B       4
-#define XR_GFX_CTRL_BPP_W       2
-#define XR_GFX_CTRL_BITMAP_B    6
-#define XR_GFX_CTRL_BLANK_B     7
-#define XR_GFX_CTRL_COLORBASE_B 8
-#define XR_GFX_CTRL_COLORBASE_W 8
+#define GFX_CTRL_V_REPEAT_B  0
+#define GFX_CTRL_V_REPEAT_W  2
+#define GFX_CTRL_H_REPEAT_B  2
+#define GFX_CTRL_H_REPEAT_W  2
+#define GFX_CTRL_BPP_B       4
+#define GFX_CTRL_BPP_W       2
+#define GFX_CTRL_BITMAP_B    6
+#define GFX_CTRL_BLANK_B     7
+#define GFX_CTRL_COLORBASE_B 8
+#define GFX_CTRL_COLORBASE_W 8
 // XR_Px_GFX_CTRL bit flag/mask
-#define XR_GFX_CTRL_V_REPEAT_F  0x0003
-#define XR_GFX_CTRL_H_REPEAT_F  0x000C
-#define XR_GFX_CTRL_BPP_F       0x0030
-#define XR_GFX_CTRL_BITMAP_F    0x0040
-#define XR_GFX_CTRL_BLANK_F     0x0080
-#define XR_GFX_CTRL_COLORBASE_F 0xFF00
+#define GFX_CTRL_V_REPEAT_F  0x0003
+#define GFX_CTRL_H_REPEAT_F  0x000C
+#define GFX_CTRL_BPP_F       0x0030
+#define GFX_CTRL_BITMAP_F    0x0040
+#define GFX_CTRL_BLANK_F     0x0080
+#define GFX_CTRL_COLORBASE_F 0xFF00
 
 // XR_Px_TILE_CTRL bit numbers within word)
-#define XR_TILE_CTRL_TILE_H_B       0
-#define XR_TILE_CTRL_TILE_H_W       4
-#define XR_TILE_CTRL_TILE_VRAM_B    8
-#define XR_TILE_CTRL_DISP_TILEMEM_B 9
-#define XR_TILE_CTRL_TILEBASE_B     10
-#define XR_TILE_CTRL_TILEBASE_W     6
+#define TILE_CTRL_TILE_H_B       0
+#define TILE_CTRL_TILE_H_W       4
+#define TILE_CTRL_TILE_VRAM_B    8
+#define TILE_CTRL_DISP_TILEMEM_B 9
+#define TILE_CTRL_TILEBASE_B     10
+#define TILE_CTRL_TILEBASE_W     6
 // XR_Px_TILE_CTRL bit flag/mask
-#define XR_TILE_CTRL_TILE_H_F       0x000F
-#define XR_TILE_CTRL_TILE_VRAM_F    0x0100
-#define XR_TILE_CTRL_DISP_TILEMEM_F 0x0200
-#define XR_TILE_CTRL_TILEBASE_F     0xFC00
+#define TILE_CTRL_TILE_H_F       0x000F
+#define TILE_CTRL_TILE_VRAM_F    0x0100
+#define TILE_CTRL_DISP_TILEMEM_F 0x0200
+#define TILE_CTRL_TILEBASE_F     0xFC00
 
 // Audio Registers
 #define XR_AUD0_VOL    0x20        // (WO/-) // TODO: WIP

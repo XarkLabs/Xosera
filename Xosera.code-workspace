@@ -16,7 +16,7 @@
 			"strings": "off",
 			"other": "off"
 		},
-		"editor.formatOnSave": true,
+		"editor.formatOnSave": false,
 		"editor.dragAndDrop": false,
 		"editor.codeActionsOnSave": {
 			"source.fixAll.markdownlint": true

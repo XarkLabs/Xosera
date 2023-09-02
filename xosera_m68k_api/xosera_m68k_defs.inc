@@ -45,14 +45,14 @@ XR_COPPER_SIZE          equ     $0600       ;                     1024+512 x 16-
 ; Xosera version info put in COPPER memory after FPGA reconfigure
 XV_INFO_BYTES           equ     256        ; 256 bytes total for "struct _xosera_info" (last 128 words in copper memory)
 XV_INFO_WORDS           equ     128        ; 128 16-bit words (last 128 words in copper memory)
-XV_INFO_ADDR            equ     (XR_COPPER_ADDR + XR_COPPER_SIZE - XV_INFO_WORDS)
+XV_INFO_ADDR            equ     (XR_COPPER_ADDR+XR_COPPER_SIZE-XV_INFO_WORDS)
 
 ; Xosera Main Registers (XM Registers, directly CPU accessable)
 ; NOTE: Main register numbers are multiplied by 4 for rosco_m68k, because of even byte 6800 8-bit addressing plus
 ; 16-bit registers
 XM_SYS_CTRL             equ     $00         ; (R /W+) status bits, FPGA config, write masking
 XM_INT_CTRL             equ     $04         ; (R /W ) interrupt status/control
-XM_TIMER                equ     $08         ; (RO   ) read 1/10th millisecond timer
+XM_TIMER                equ     $08         ;  (R /- ) read 1/10th millisecond timer
 XM_RD_XADDR             equ     $0C         ; (R /W+) XR register/address for XM_XDATA read access
 XM_WR_XADDR             equ     $10         ; (R /W ) XR register/address for XM_XDATA write access
 XM_XDATA                equ     $14         ; (R /W+) read/write XR register/memory at XM_RD_XADDR/XM_WR_XADDR
@@ -69,22 +69,22 @@ XM_FEATURE              equ     $3C         ; (R+/W+) Xosera feature flags, odd 
 
 ; SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
 ; indirect with no offset)
-SYS_CTRL_MEM_WAIT_B     equ     7           ; (RO   )  memory read/write operation pending (with contended memory)
-SYS_CTRL_BLIT_FULL_B    equ     6           ; (RO   )  blitter queue is full, do not write new operation to blitter registers
-SYS_CTRL_BLIT_BUSY_B    equ     5           ; (RO   )  blitter is still busy performing an operation (not done)
-SYS_CTRL_UNUSED_12_B    equ     4           ; (RO   )  unused (reads 0)
-SYS_CTRL_HBLANK_B       equ     3           ; (RO   )  video signal is in horizontal blank period
-SYS_CTRL_VBLANK_B       equ     2           ; (RO   )  video signal is in vertical blank period
-SYS_CTRL_UNUSED_9_B     equ     1           ; (RO   )  unused (reads 0)
+SYS_CTRL_MEM_WAIT_B     equ     7           ;  (R /- )  memory read/write operation pending (with contended memory)
+SYS_CTRL_BLIT_FULL_B    equ     6           ;  (R /- )  blitter queue is full, do not write new operation to blitter registers
+SYS_CTRL_BLIT_BUSY_B    equ     5           ;  (R /- )  blitter is still busy performing an operation (not done)
+SYS_CTRL_UNUSED_12_B    equ     4           ;  (R /- )  unused (reads 0)
+SYS_CTRL_HBLANK_B       equ     3           ;  (R /- )  video signal is in horizontal blank period
+SYS_CTRL_VBLANK_B       equ     2           ;  (R /- )  video signal is in vertical blank period
+SYS_CTRL_UNUSED_9_B     equ     1           ;  (R /- )  unused (reads 0)
 SYS_CTRL_UNUSED_8_B     equ     0           ; (- /- )
 ; SYS_CTRL bit flags
-SYS_CTRL_MEM_WAIT_F     equ     $80         ; (RO   )  memory read/write operation pending (with contended memory)
-SYS_CTRL_BLIT_FULL_F    equ     $40         ; (RO   )  blitter queue is full (do not write to blitter registers)
-SYS_CTRL_BLIT_BUSY_F    equ     $20         ; (RO   )  blitter is still busy performing an operation (not done)
-SYS_CTRL_UNUSED_12_F    equ     $10         ; (RO   )  unused (reads 0)
-SYS_CTRL_HBLANK_F       equ     $08         ; (RO   )  video signal is in horizontal blank period
-SYS_CTRL_VBLANK_F       equ     $04         ; (RO   )  video signal is in vertical blank period
-SYS_CTRL_UNUSED_9_F     equ     $02         ; (RO   )  unused (reads 0)
+SYS_CTRL_MEM_WAIT_F     equ     $80         ;  (R /- )  memory read/write operation pending (with contended memory)
+SYS_CTRL_BLIT_FULL_F    equ     $40         ;  (R /- )  blitter queue is full (do not write to blitter registers)
+SYS_CTRL_BLIT_BUSY_F    equ     $20         ;  (R /- )  blitter is still busy performing an operation (not done)
+SYS_CTRL_UNUSED_12_F    equ     $10         ;  (R /- )  unused (reads 0)
+SYS_CTRL_HBLANK_F       equ     $08         ;  (R /- )  video signal is in horizontal blank period
+SYS_CTRL_VBLANK_F       equ     $04         ;  (R /- )  video signal is in vertical blank period
+SYS_CTRL_UNUSED_9_F     equ     $02         ;  (R /- )  unused (reads 0)
 SYS_CTRL_UNUSED_8_F     equ     $01         ; (- /- )
 
 ; INT_CTRL bit numbers NOTE: These are word bits for INT_CTRL word
@@ -164,22 +164,22 @@ XR_UNUSED_0D            equ     $0D         ; (- /-) unused XR 0D
 XR_UNUSED_0E            equ     $0E         ; (- /-) unused XR 0E
 XR_UNUSED_0F            equ     $0F         ; (- /-) unused XR 0F
 ; XR_VID_CTRL bit numbers within word)
-XR_VID_CTRL_SWAP_AB_B   equ     15          ; bit number to colormap used (pf A uses colormap B and vice versa)
-XR_VID_CTRL_BORDCOL_B   equ     0           ; rightmost bit number of pf A color index
-XR_VID_CTRL_BORDCOL_W   equ     8           ; bit width for pf A color index
+VID_CTRL_SWAP_AB_B   equ     15          ; bit number to colormap used (pf A uses colormap B and vice versa)
+VID_CTRL_BORDCOL_B   equ     0           ; rightmost bit number of pf A color index
+VID_CTRL_BORDCOL_W   equ     8           ; bit width for pf A color index
 ; XR_VID_CTRL flag/mask
-XR_VID_CTRL_SWAP_AB_F   equ     $8000       ; flag to swap colormap used (pf A uses colormap B and vice versa)
-XR_VID_CTRL_BORDCOL_F   equ     $00FF       ; mask for pf A color index
+VID_CTRL_SWAP_AB_F   equ     $8000       ; flag to swap colormap used (pf A uses colormap B and vice versa)
+VID_CTRL_BORDCOL_F   equ     $00FF       ; mask for pf A color index
 
 ; XR_COPP_CTRL bit numbers within word)
-XR_COPP_CTRL_COPP_EN_B      equ     15      ; bit number to enable/disable copper
+COPP_CTRL_COPP_EN_B      equ     15      ; bit number to enable/disable copper
 ; XR_COPP_CTRL bit flag/mask
-XR_COPP_CTRL_COPP_EN_F      equ     $8000    ; flag to enable/disable copper
+COPP_CTRL_COPP_EN_F      equ     $8000    ; flag to enable/disable copper
 
 ; XR_AUD_CTRL bit numbers within word)
-XR_AUD_CTRL_AUD_EN_B        equ     0           ; bit number to enable/disable audio
+AUD_CTRL_AUD_EN_B        equ     0           ; bit number to enable/disable audio
 ; XR_AUD_CTRL bit flag/mask
-XR_AUD_CTRL_AUD_EN_F        equ     $0001       ; flag to enable/disable audio
+AUD_CTRL_AUD_EN_F        equ     $0001       ; flag to enable/disable audio
 
 
 ; Playfield A Control XR Registers
@@ -203,42 +203,42 @@ XR_PB_LINE_ADDR         equ     $1E         ; (- /W) playfield B scanline start 
 XR_PB_UNUSED_1F         equ     $1F         ; (- /-)
 
 ; Playfield GFX BPP constants
-XR_GFX_BPP_1            equ     0           ; Px_GFX_CTRL.bpp (1-bpp + fore/back attribute color)
-XR_GFX_BPP_4            equ     1           ; Px_GFX_CTRL.bpp (4-bpp, 16 color)
-XR_GFX_BPP_8            equ     2           ; Px_GFX_CTRL.bpp (8-bpp 256 color)
-XR_GFX_BPP_X            equ     3           ; Px_GFX_CTRL.bpp (reserved)
+GFX_BPP_1            equ     0           ; Px_GFX_CTRL.bpp (1-bpp + fore/back attribute color)
+GFX_BPP_4            equ     1           ; Px_GFX_CTRL.bpp (4-bpp, 16 color)
+GFX_BPP_8            equ     2           ; Px_GFX_CTRL.bpp (8-bpp 256 color)
+GFX_BPP_X            equ     3           ; Px_GFX_CTRL.bpp (reserved)
 
 ; XR_AUD_CTRL bit numbers within word)
-XR_GFX_CTRL_V_REPEAT_B  equ     0
-XR_GFX_CTRL_V_REPEAT_W  equ     2
-XR_GFX_CTRL_H_REPEAT_B  equ     2
-XR_GFX_CTRL_H_REPEAT_W  equ     2
-XR_GFX_CTRL_BPP_B       equ     4
-XR_GFX_CTRL_BPP_W       equ     2
-XR_GFX_CTRL_BITMAP_B    equ     6
-XR_GFX_CTRL_BLANK_B     equ     7
-XR_GFX_CTRL_COLORBASE_B equ     8
-XR_GFX_CTRL_COLORBASE_W equ     8
+GFX_CTRL_V_REPEAT_B  equ     0
+GFX_CTRL_V_REPEAT_W  equ     2
+GFX_CTRL_H_REPEAT_B  equ     2
+GFX_CTRL_H_REPEAT_W  equ     2
+GFX_CTRL_BPP_B       equ     4
+GFX_CTRL_BPP_W       equ     2
+GFX_CTRL_BITMAP_B    equ     6
+GFX_CTRL_BLANK_B     equ     7
+GFX_CTRL_COLORBASE_B equ     8
+GFX_CTRL_COLORBASE_W equ     8
 ; XR_AUD_CTRL bit flag/mask
-XR_GFX_CTRL_V_REPEAT_F  equ     $0003
-XR_GFX_CTRL_H_REPEAT_F  equ     $000C
-XR_GFX_CTRL_BPP_F       equ     $0030
-XR_GFX_CTRL_BITMAP_F    equ     $0040
-XR_GFX_CTRL_BLANK_F     equ     $0080
-XR_GFX_CTRL_COLORBASE_F equ     $FF00
+GFX_CTRL_V_REPEAT_F  equ     $0003
+GFX_CTRL_H_REPEAT_F  equ     $000C
+GFX_CTRL_BPP_F       equ     $0030
+GFX_CTRL_BITMAP_F    equ     $0040
+GFX_CTRL_BLANK_F     equ     $0080
+GFX_CTRL_COLORBASE_F equ     $FF00
 
 ; XR_Px_TILE_CTRL bit numbers within word)
-XR_TILE_CTRL_TILE_H_B       equ 0
-XR_TILE_CTRL_TILE_H_W       equ 4
-XR_TILE_CTRL_TILE_VRAM_B    equ 8
-XR_TILE_CTRL_DISP_TILEMEM_B equ 9
-XR_TILE_CTRL_TILEBASE_B     equ 10
-XR_TILE_CTRL_TILEBASE_W     equ 6
+TILE_CTRL_TILE_H_B       equ 0
+TILE_CTRL_TILE_H_W       equ 4
+TILE_CTRL_TILE_VRAM_B    equ 8
+TILE_CTRL_DISP_TILEMEM_B equ 9
+TILE_CTRL_TILEBASE_B     equ 10
+TILE_CTRL_TILEBASE_W     equ 6
 ; XR_Px_TILE_CTRL bit flag/mask
-XR_TILE_CTRL_TILE_H_F       equ $000F
-XR_TILE_CTRL_TILE_VRAM_F    equ $0100
-XR_TILE_CTRL_DISP_TILEMEM_F equ $0200
-XR_TILE_CTRL_TILEBASE_F     equ $FC00
+TILE_CTRL_TILE_H_F       equ $000F
+TILE_CTRL_TILE_VRAM_F    equ $0100
+TILE_CTRL_DISP_TILEMEM_F equ $0200
+TILE_CTRL_TILEBASE_F     equ $FC00
 
 ; Audio Registers
 XR_AUD0_VOL             equ     $20         ; (WO/-) ; TODO: WIP

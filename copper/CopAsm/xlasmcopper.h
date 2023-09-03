@@ -189,8 +189,8 @@ struct copper : public Ixlarch
                                      {OP_STM, 0x1000, 0x3000, "STM", {XM16}, 2, 0, 4},
                                      {OP_SUBI, 0x0801, 0x3FFF, "SUBI", {IM16}, 2, 0, 4},
                                      {OP_ADDI, 0x0801, 0x3FFF, "ADDI", {NIM16}, 2, 0, 4},
-                                     {OP_SUBM, 0x1000, 0x3000, "SUBM", {XM16}, 2, 0, 4},
+                                     {OP_SUBM, 0x1000, 0x3000, "SUBM", {CM}, 2, 0, 4},
                                      {OP_CMPI, 0x07FF, 0x3FFF, "CMPI", {IM16}, 2, 0, 4},
-                                     {OP_CMPM, 0x1000, 0x3000, "CMPM", {XM16}, 2, 0, 4},
+                                     {OP_CMPM, 0x1000, 0x3000, "CMPM", {CM}, 2, 0, 4},
                                      {OP_MOVE, 0x0000, 0x0000, "MOVE", {MS, MD}, 2, 0, 4}};
 };

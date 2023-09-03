@@ -33,8 +33,10 @@
 #define WIDESCREEN    false
 #define PAINT_BALL    true
 #define USE_AUDIO     true
-#define USE_COPASM    true        // if both these are false,
+#define USE_COPASM    true         // if both these are false,
 #define USE_COPMACROS false        // then uses CPU initiated blit
+
+// USE_COPMACROS still "buggy" (trashes audio sample)
 
 #if USE_AUDIO
 extern char _binary_Boing_raw_start[];
@@ -47,7 +49,6 @@ uint32_t clk_hz;           // pixel clock Hz (25125000 at 640x480 or 33750000 at
 uint8_t  bg_bitmap[HEIGHT_A][WIDTH_A]                                                                     = {0};
 uint8_t  ball_bitmap[BALL_BITMAP_HEIGHT][BALL_BITMAP_WIDTH]                                               = {0};
 uint16_t ball_tiles[BALL_TILES_HEIGHT][BALL_TILES_WIDTH][TILE_HEIGHT_B][TILE_WIDTH_B / PIXELS_PER_WORD_B] = {0};
-
 
 static void dputc(char c)
 {
@@ -472,7 +473,7 @@ void draw_ball_at(int width_words, int height_words, int x, int y)
         xreg_setw(BLIT_XOR, 0x0000);
         xreg_setw(BLIT_MOD_S, 0x0000);
         xreg_setw(BLIT_SRC_S, 0x0000);
-        xreg_setw(BLIT_MOD_D, width_words - BALL_TILES_WIDTH);
+        xreg_setw(BLIT_MOD_D, WIDTH_WORDS_B - BALL_TILES_WIDTH);
         xreg_setw(BLIT_DST_D, prev_dst);
         xreg_setw(BLIT_SHIFT, 0xFF00);
         xreg_setw(BLIT_LINES, BALL_TILES_HEIGHT - 1);
@@ -482,8 +483,14 @@ void draw_ball_at(int width_words, int height_words, int x, int y)
 
     xwait_blit_ready();
     xreg_setw(BLIT_CTRL, 0x0000);
+    xreg_setw(BLIT_ANDC, 0x0000);
+    xreg_setw(BLIT_XOR, 0x0000);
+    xreg_setw(BLIT_MOD_S, 0x0000);
     xreg_setw(BLIT_SRC_S, VRAM_BASE_BALL);
+    xreg_setw(BLIT_MOD_D, WIDTH_WORDS_B - BALL_TILES_WIDTH);
     xreg_setw(BLIT_DST_D, dst);
+    xreg_setw(BLIT_SHIFT, 0xFF00);
+    xreg_setw(BLIT_LINES, BALL_TILES_HEIGHT - 1);
     xreg_setw(BLIT_WORDS, BALL_TILES_WIDTH - 1);        // Starts operation
 
     xreg_setw(PB_HV_SCROLL, MAKE_HV_SCROLL(scroll_x, scroll_y << 2));
@@ -1020,7 +1027,8 @@ void xosera_boing()
         uint8_t     palatte_index      = angle_in_cycle * 14;
         uint8_t     colour_base        = palatte_index * 16;
 
-        while (xreg_getw(SCANLINE) < 480)
+        xwait_not_vblank();
+        while (xreg_getw(SCANLINE) < 460)
             ;
 
         draw_ball_at(WIDTH_WORDS_B, HEIGHT_WORDS_B, pos_x_int, pos_y_int);

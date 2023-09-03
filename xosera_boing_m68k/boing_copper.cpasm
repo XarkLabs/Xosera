@@ -19,31 +19,36 @@
 
 entry
                 VPOS    #480                                            ; wait for offscreen
-                STM     delme
-                CMPM    ball_prev
-                BRGE    draw_ball
-                ; set fixed blitter registers
+
+                CMPM    ball_prev                                       ; check for zero ball_prev
+                BRGE    draw_ball                                       ; skip erase before 1st draw
+
+                ; blank previous ball
                 MOVE    #$0001,XR_BLIT_CTRL                             ; no transp, constS
                 MOVE    #$0000,XR_BLIT_ANDC                             ; ANDC constant
                 MOVE    #$0000,XR_BLIT_XOR                              ; XOR constant
                 MOVE    #$0000,XR_BLIT_MOD_S                            ; no modulo S
                 MOVE    #$0000,XR_BLIT_SRC_S                            ; blank ball
                 MOVE    #WIDTH_WORDS_B-BALL_TILES_WIDTH,XR_BLIT_MOD_D   ; modulo D
-                MOVE    #$FF00,XR_BLIT_SHIFT                            ; no edge masking or shifting
-                MOVE    #BALL_TILES_HEIGHT-1,XR_BLIT_LINES              ; 1-D blit (no repeat count)
-
-                ; blank previous ball
                 MOVE    ball_prev,XR_BLIT_DST_D                         ; previous ball position
+                MOVE    #$FF00,XR_BLIT_SHIFT                            ; no edge masking or shifting
+                MOVE    #BALL_TILES_HEIGHT-1,XR_BLIT_LINES              ; 2-D blit
                 MOVE    #BALL_TILES_WIDTH-1,XR_BLIT_WORDS               ; go!
 
-                ; draw ball
 draw_ball
-                ; update previous position
+                ; update previous ball position
                 MOVE    ball_dst,ball_prev
 
+                ; draw ball bitmap
                 MOVE    #$0000,XR_BLIT_CTRL                             ; no transp, no constS
+                MOVE    #$0000,XR_BLIT_ANDC                             ; ANDC constant
+                MOVE    #$0000,XR_BLIT_XOR                              ; XOR constant
+                MOVE    #$0000,XR_BLIT_MOD_S                            ; no modulo S
                 MOVE    #VRAM_BASE_BALL,XR_BLIT_SRC_S                   ; ball
+                MOVE    #WIDTH_WORDS_B-BALL_TILES_WIDTH,XR_BLIT_MOD_D   ; modulo D
                 MOVE    ball_dst,XR_BLIT_DST_D                          ; ball position
+                MOVE    #$FF00,XR_BLIT_SHIFT                            ; no edge masking or shifting
+                MOVE    #BALL_TILES_HEIGHT-1,XR_BLIT_LINES              ; 2-D blit
                 MOVE    #BALL_TILES_WIDTH-1,XR_BLIT_WORDS               ; go!
 
                 ; update playfield registers
@@ -57,5 +62,4 @@ ball_dst        word    0
 ball_prev       word    0
 ball_gfx_ctrl   word    0
 ball_hv_scroll  word    0
-delme  word    0
 

@@ -134,7 +134,13 @@ bool xosera_init(int reconfig_num)
             detected = xosera_wait_sync();                  // wait for detect
             if (detected)
             {
-                cpu_delay(10);
+                uint16_t timeout = 100;
+                do
+                {
+                    cpu_delay(1);
+                } while (
+                    ((xreg_getw(COPP_CTRL) & COPP_CTRL_COPP_EN_F) || (xm_getbh(SYS_CTRL) & SYS_CTRL_BLIT_BUSY_F)) &&
+                    --timeout);
             }
         }
     }

@@ -19,21 +19,29 @@
 
 entry
                 VPOS    #480                                            ; wait for offscreen
+                STM     delme
+                CMPM    ball_prev
+                BRGE    draw_ball
                 ; set fixed blitter registers
-                MOVE    #$0000,XR_BLIT_CTRL                             ; no transp, no constS
+                MOVE    #$0001,XR_BLIT_CTRL                             ; no transp, constS
                 MOVE    #$0000,XR_BLIT_ANDC                             ; ANDC constant
                 MOVE    #$0000,XR_BLIT_XOR                              ; XOR constant
                 MOVE    #$0000,XR_BLIT_MOD_S                            ; no modulo S
+                MOVE    #$0000,XR_BLIT_SRC_S                            ; blank ball
                 MOVE    #WIDTH_WORDS_B-BALL_TILES_WIDTH,XR_BLIT_MOD_D   ; modulo D
                 MOVE    #$FF00,XR_BLIT_SHIFT                            ; no edge masking or shifting
                 MOVE    #BALL_TILES_HEIGHT-1,XR_BLIT_LINES              ; 1-D blit (no repeat count)
 
                 ; blank previous ball
-                MOVE    #VRAM_BASE_BLANK,XR_BLIT_SRC_S                  ; blank ball
                 MOVE    ball_prev,XR_BLIT_DST_D                         ; previous ball position
                 MOVE    #BALL_TILES_WIDTH-1,XR_BLIT_WORDS               ; go!
 
                 ; draw ball
+draw_ball
+                ; update previous position
+                MOVE    ball_dst,ball_prev
+
+                MOVE    #$0000,XR_BLIT_CTRL                             ; no transp, no constS
                 MOVE    #VRAM_BASE_BALL,XR_BLIT_SRC_S                   ; ball
                 MOVE    ball_dst,XR_BLIT_DST_D                          ; ball position
                 MOVE    #BALL_TILES_WIDTH-1,XR_BLIT_WORDS               ; go!
@@ -42,9 +50,6 @@ entry
                 MOVE    ball_gfx_ctrl,XR_PB_GFX_CTRL
                 MOVE    ball_hv_scroll,XR_PB_HV_SCROLL
 
-                ; update previous position
-                MOVE    ball_dst,ball_prev
-
                 ; wait for next frame
                 VPOS    #$7FF
 
@@ -52,4 +57,5 @@ ball_dst        word    0
 ball_prev       word    0
 ball_gfx_ctrl   word    0
 ball_hv_scroll  word    0
+delme  word    0
 

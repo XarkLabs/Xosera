@@ -34,21 +34,19 @@
 #include "xosera_m68k_api.h"
 
 bool              use_sd;
-volatile uint32_t optguard;
 
-// NOTE: 8 pixels before EOL is good spot to change GFX_CTRL settings for next line
 // Copper list
-uint32_t copper_list[] = {
-    COP_MOVER(0x55, PA_GFX_CTRL),           // mover 0055, PA_GFX_CTRL    First half of screen in 4-bpp + Hx2 + Vx2 //
-    COP_MOVEP(0x0ec6, 0xf),                 // movep 0x0ec6, 0xf          Palette entry 0xf from tut bitmap
-    COP_WAIT_V(240),                        // wait  632, 240             Wait for 640-8, 240
-    COP_MOVER(0x0040, PA_GFX_CTRL),         // mover 0x0040, PA_GFX_CTRL  1-bpp + Hx1 + Vx1
-    COP_MOVER(0x3e80, PA_LINE_ADDR),        // mover 0x3e80, PA_LINE_ADDR Line start now at 16000
-    COP_MOVEP(0x0fff, 0xf),                 // movep 0x0fff, 0xf          Palette entry 0xf to white for 1bpp bitmap
-    COP_END()                               // nextf                      Wait for next frame
+uint16_t copper_list[] = {
+    COP_MOVER(0x0055, PA_GFX_CTRL),               //  0: First half of screen in 4-bpp + Hx2 + Vx2 //
+    COP_MOVE(0x0ec6, XR_COLOR_ADDR + 0xf),        //  2: Palette entry 0xf from tut bitmap
+    COP_VPOS(240),                                //  4: Wait for 640-8, 240
+    COP_MOVER(0x0040, PA_GFX_CTRL),               //  5: 1-bpp + Hx1 + Vx1
+    COP_MOVER(0x3e80, PA_LINE_ADDR),              //  7: Line start now at 16000
+    COP_MOVE(0x0fff, XR_COLOR_ADDR + 0xf),        //  9: Palette entry 0xf to white for 1bpp bitmap
+    COP_END()                                     // 11:Wait for next frame
 };
 
-uint32_t mem_buffer[128 * 1024];
+uint32_t file_buffer[512];
 
 static void dputc(char c)
 {
@@ -85,6 +83,7 @@ static void dprintf(const char * fmt, ...)
     dprint(dprint_buff);
     va_end(args);
 }
+#if 0
 
 void wait_vblank_start()
 {
@@ -120,6 +119,70 @@ static void xcls()
     }
     xm_setw(WR_ADDR, screen_addr);
 }
+#endif
+
+static xosera_info_t initinfo;
+
+void dump_xosera_regs(void)
+{
+    xv_prep();
+
+    uint16_t feature   = xm_getw(FEATURE);
+    uint16_t monwidth  = xosera_vid_width();
+    uint16_t monheight = xosera_vid_height();
+
+    uint16_t sysctrl = xm_getw(SYS_CTRL);
+    uint16_t intctrl = xm_getw(INT_CTRL);
+
+    uint16_t vidctrl  = xreg_getw(VID_CTRL);
+    uint16_t coppctrl = xreg_getw(COPP_CTRL);
+    uint16_t audctrl  = xreg_getw(AUD_CTRL);
+    uint16_t vidleft  = xreg_getw(VID_LEFT);
+    uint16_t vidright = xreg_getw(VID_RIGHT);
+
+    uint16_t pa_gfxctrl  = xreg_getw(PA_GFX_CTRL);
+    uint16_t pa_tilectrl = xreg_getw(PA_TILE_CTRL);
+    uint16_t pa_dispaddr = xreg_getw(PA_DISP_ADDR);
+    uint16_t pa_linelen  = xreg_getw(PA_LINE_LEN);
+    uint16_t pa_hvscroll = xreg_getw(PA_HV_SCROLL);
+    uint16_t pa_hvfscale = xreg_getw(PA_HV_FSCALE);
+
+    uint16_t pb_gfxctrl  = xreg_getw(PB_GFX_CTRL);
+    uint16_t pb_tilectrl = xreg_getw(PB_TILE_CTRL);
+    uint16_t pb_dispaddr = xreg_getw(PB_DISP_ADDR);
+    uint16_t pb_linelen  = xreg_getw(PB_LINE_LEN);
+    uint16_t pb_hvscroll = xreg_getw(PB_HV_SCROLL);
+    uint16_t pb_hvfscale = xreg_getw(PB_HV_FSCALE);
+
+    dprintf("Xosera state:\n");
+    dprintf("DESCRIPTION : \"%s\"\n", initinfo.description_str);
+    dprintf("VERSION BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
+    dprintf("GIT HASH    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
+    dprintf("FEATURE     : 0x%04x\n", feature);
+    dprintf("MONITOR RES : %dx%d\n", monwidth, monheight);
+    dprintf("\nConfig:\n");
+    dprintf("SYS_CTRL    : 0x%04x  INT_CTRL    : 0x%04x\n", sysctrl, intctrl);
+    dprintf("VID_CTRL    : 0x%04x  COPP_CTRL   : 0x%04x\n", vidctrl, coppctrl);
+    dprintf("AUD_CTRL    : 0x%04x\n", audctrl);
+    dprintf("VID_LEFT    : 0x%04x  VID_RIGHT   : 0x%04x\n", vidleft, vidright);
+    dprintf("\nPlayfield A:                                Playfield B:\n");
+    dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x  PB_GFX_CTRL : 0x%04x  PB_TILE_CTRL: 0x%04x\n",
+            pa_gfxctrl,
+            pa_tilectrl,
+            pb_gfxctrl,
+            pb_tilectrl);
+    dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x  PB_DISP_ADDR: 0x%04x  PB_LINE_LEN : 0x%04x\n",
+            pa_dispaddr,
+            pa_linelen,
+            pb_dispaddr,
+            pb_linelen);
+    dprintf("PA_HV_SCROLL: 0x%04x  PA_HV_FSCALE: 0x%04x  PB_HV_SCROLL: 0x%04x  PB_HV_FSCALE: 0x%04x\n",
+            pa_hvscroll,
+            pa_hvfscale,
+            pb_hvscroll,
+            pb_hvfscale);
+    dprintf("\n\n");
+}
 
 static bool load_sd_bitmap(const char * filename, uint16_t base_address)
 {
@@ -133,14 +196,14 @@ static bool load_sd_bitmap(const char * filename, uint16_t base_address)
 
         xm_setw(WR_INCR, 0x0001);        // needed to be set
 
-        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
+        while ((cnt = fl_fread(file_buffer, 1, 512, file)) > 0)
         {
             if ((vaddr & 0xFFF) == 0)
             {
                 dprintf(".");
             }
 
-            uint16_t * maddr = (uint16_t *)mem_buffer;
+            uint16_t * maddr = (uint16_t *)file_buffer;
             xm_setw(WR_ADDR, vaddr);
             for (int i = 0; i < (cnt >> 1); i++)
             {
@@ -170,14 +233,14 @@ static bool load_sd_colors(const char * filename)
         int cnt   = 0;
         int vaddr = 0;
 
-        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
+        while ((cnt = fl_fread(file_buffer, 1, 512, file)) > 0)
         {
             if ((vaddr & 0x7) == 0)
             {
                 dprintf(".");
             }
 
-            uint16_t * maddr = (uint16_t *)mem_buffer;
+            uint16_t * maddr = (uint16_t *)file_buffer;
             xmem_setw_next_addr(XR_COLOR_ADDR);
             for (int i = 0; i < (cnt >> 1); i++)
             {
@@ -197,7 +260,6 @@ static bool load_sd_colors(const char * filename)
     }
 }
 
-uint32_t test_count;
 void     xosera_splitscreen_test()
 {
     printf("\033c\033[?25l");        // ANSI reset, disable input cursor
@@ -208,34 +270,16 @@ void     xosera_splitscreen_test()
     dprintf("\nxosera_init(0)...");
     bool success = xosera_init(0);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
+    xosera_get_info(&initinfo);
+    dump_xosera_regs();
 
     dprintf("Loading copper list...\n");
-
     xmem_setw_next_addr(XR_COPPER_ADDR);
-    uint16_t * wp = (uint16_t *)copper_list;
-    for (uint8_t i = 0; i < sizeof(copper_list) / sizeof(uint32); i++)
+    uint16_t * wp = copper_list;
+    for (uint8_t i = 0; i < sizeof(copper_list) / sizeof(copper_list[0]); i++)
     {
         xmem_setw_next(*wp++);
-        xmem_setw_next(*wp++);
     }
-
-    uint16_t feature   = xm_getbh(FEATURE);
-    uint16_t monwidth  = 640;
-    uint16_t monheight = 480;
-
-    uint16_t gfxctrl  = xreg_getw(PA_GFX_CTRL);
-    uint16_t tilectrl = xreg_getw(PA_TILE_CTRL);
-    uint16_t dispaddr = xreg_getw(PA_DISP_ADDR);
-    uint16_t linelen  = xreg_getw(PA_LINE_LEN);
-    uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
-    uint16_t hvfscale = xreg_getw(PA_HV_FSCALE);
-
-    dprintf("Xosera - Features: 0x%04x\n", feature);
-    dprintf("Monitor Mode: %dx%d\n", monwidth, monheight);
-    dprintf("\nPlayfield A:\n");
-    dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
-    dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
-    dprintf("PA_HV_SCROLL: 0x%04x  PA_HV_FSCALE: 0x%04x\n", hvscroll, hvfscale);
 
     if (SD_check_support())
     {
@@ -313,15 +357,15 @@ void     xosera_splitscreen_test()
 
     while (!checkchar())
     {
-        wait_vblank_start();
+        xwait_not_vblank();
+        xwait_vblank();
 
         xmem_setw_next_addr(XR_COPPER_ADDR + 4);
         if (up)
         {
             current += 1;
-            uint32_t op = COP_WAIT_V(current);
-            xmem_setw_next(op >> 16);
-            xmem_setw_next(op & 0xffff);
+            uint16_t op = COP_VPOS(current);
+            xmem_setw_next(op);
             if (current >= 300)
             {
                 up = false;
@@ -330,9 +374,8 @@ void     xosera_splitscreen_test()
         else
         {
             current -= 1;
-            uint32_t op = COP_WAIT_V(current);
-            xmem_setw_next(op >> 16);
-            xmem_setw_next(op & 0xffff);
+            uint16_t op = COP_VPOS(current);
+            xmem_setw_next(op);
             if (current <= 200)
             {
                 up = true;
@@ -344,7 +387,7 @@ void     xosera_splitscreen_test()
     xreg_setw(COPP_CTRL, 0x0000);
 
     // restore text mode
-    xosera_init(1);
+    xosera_init(0);
     xreg_setw(PA_GFX_CTRL, 0x0000);        // un-blank screen
     print("\033c");                        // reset & clear
 }

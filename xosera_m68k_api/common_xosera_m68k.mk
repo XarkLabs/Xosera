@@ -74,10 +74,10 @@ SIZE=m68k-elf-size
 VASM=vasmm68k_mot
 RM=rm -f
 KERMIT=kermit
+COPASM=$(XOSERA_M68K_API)/bin/copasm
+
 SERIAL?=/dev/modem
 BAUD?=9600
-
-COPASM=../copper/CopAsm/bin/copasm
 
 # Output config (assume name of directory)
 PROGRAM_BASENAME=$(shell basename $(CURDIR))
@@ -111,10 +111,6 @@ $(XOSERA_M68K_API)/libxosera_m68k_api.a:
 	cd $(XOSERA_M68K_API) && $(MAKE)
 endif
 
-$(COPASM):
-	@echo === Building copper assembler...
-	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE)
-
 $(ELF) : $(OBJECTS) $(XOSERA_M68K_API)/libxosera_m68k_api.a
 	$(LD) $(LDFLAGS) $(GCC_LIBS) $^ -o $@ $(LIBS)
 	$(NM) --numeric-sort $@ >$(SYM)
@@ -129,12 +125,12 @@ $(DISASM) : $(ELF)
 
 $(OBJECTS): $(HEADERS) $(MAKEFILE_LIST)
 
-%.h : %.casm $(COPASM)
+%.h : %.casm
 	$(COPASM) -l -o $@ $<
 
-%.h : %.cpasm $(COPASM)
+%.h : %.cpasm
 	$(CPP) $< -o $(basename $<).casm.ii
-	$(COPASM) -l -o $@ $(basename $<).casm.ii
+	$(COPASM) -v -l -o $@ $(basename $<).casm.ii
 
 %.o : %.c
 	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) -o $@ $<

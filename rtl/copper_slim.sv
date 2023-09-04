@@ -26,7 +26,10 @@ module copper_slim(
     input   wire logic          cop_xreg_enable_i,      // COPP_CTRL register enable write data
     input   wire hres_t         h_count_i,              // horizontal video position
     input   wire vres_t         v_count_i,              // vertical video position
-    input   wire logic          end_of_line_i,          // end of line signal
+    input   wire logic          end_of_line_i,          // end of line signal\
+`ifdef EN_COPP_VBLITWAIT
+    input   wire logic          blit_busy_i,            // blitter busy signal
+`endif
     input   wire logic          reset_i,
     input   wire logic          clk
 );
@@ -108,7 +111,8 @@ typedef enum logic [1:0] {
 // opcode decode bits
 localparam  B_OPCODE        = 12;   // 2-bits
 localparam  B_HV_SEL        = 11;   // HPOS/VPOS select bit
-localparam  B_HV_POS        = 10;   // 11-bit operand/HVPOS or Bcc bit
+localparam  B_HV_POS        = 10;   // 11-bit operand
+localparam  B_V_BLIT        = 10;   // VPOS wait blit busy
 localparam  B_BR_SEL        = 11;   // BRGE/BRLT select bit
 localparam  B_BR_ADR        = 10;   // 11-bit copper address
 localparam  B_COP_REG       = 11;   // cop RA register bit
@@ -400,6 +404,20 @@ always_ff @(posedge clk) begin
                 wait_hv_flag    <= 1'b0;
             end
         end
+
+`ifdef EN_COPP_HWAITEOL
+        // Feature: stop waiting for HPOS at the start of a new line
+        if (wait_hv_flag & end_of_line_i & !wait_for_v) begin
+            wait_hv_flag    <= 1'b0;
+        end
+`endif
+
+`ifdef EN_COPP_VBLITWAIT
+        // Feature: stop waiting for VPOS #$7FF [B_V_BLIT] when blit not busy
+        if (wait_hv_flag & cop_IR[B_V_BLIT] & wait_for_v & !blit_busy_i) begin
+            wait_hv_flag    <= 1'b0;
+        end
+`endif
 
     end
 end

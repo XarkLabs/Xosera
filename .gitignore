@@ -63,22 +63,23 @@ copper/CopAsm/bin/*
 copper/CopAsm/obj/*
 **/*.lst
 
-# macOS thing
+# macOS things
 .DS_Store
-utils/raw256to16color
-utils/pal_to_raw
-utils/image_pal
 
 # Vim swaps
 **/*.swp
 
 .vscode/*.log
+**/**.vsim.h
 
+utils/raw256to16color
+utils/pal_to_raw
+utils/image_pal
 utils/true_color_hack
 xosera_test_m68k/cop_diagonal.h
 xosera_test_m68k/cop_blend_test.h
-rtl/sim/cop_blend_test.vsim.h
 rtl/default_copper_640.mem
 rtl/default_copper_848.mem
-xosera_boing_m68k/boing_copper.casm.ii
+xosera_boing_m68k/*.ii
 xosera_boing_m68k/boing_copper.h
+xosera_m68k_api/bin/copasm

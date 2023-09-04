@@ -38,19 +38,25 @@
 // set by Makefile: `define EN_AUDIO                4       // number of channels 2/4
 //`undef EN_PF_B
 //`undef EN_AUDIO
-`ifdef EN_PF_B
-`define EN_PF_B_BLND                    // enable pf B blending (otherwise overlay only)
-`define EN_BLEND_FULL                   // use full precision blending w/o FMAC (ignored with iCE40UP5K)
-`endif
-`define EN_TIMER_INTR                   // enable timer interrupt
-`define EN_COPP                         // enable copper
 `define EN_BLIT                         // enable blit unit
 `define EN_POINTER                      // enable pointer sprite
 `define EN_PIXEL_ADDR                   // pixel coordinate address generation
+`define EN_TIMER_INTR                   // enable timer interrupt
+`ifdef EN_PF_B
+  `define EN_PF_B_BLND                    // enable pf B blending (otherwise overlay only)
+  `define EN_BLEND_FULL                   // use full precision blending w/o FMAC (ignored with iCE40UP5K)
+`endif
+`define EN_COPP                         // enable copper
+`ifdef EN_COPP
+  `define EN_COPP_HWAITEOL                   // enable copper HPOS stop at EOL
+  `ifdef EN_BLIT
+    `define EN_COPP_VBLITWAIT              // VPOS #$XXX > $3FF waits for blitter
+  `endif
+`endif
 //`define EN_UART                         // enable USB UART
 //`define EN_UART_TX                      // TX only UART (no RX if EN_UART defined)
 
-`define VERSION 0_39                    // Xosera BCD version code (x.xx)
+`define VERSION 0_40                    // Xosera BCD version code (x.xx)
 
 `ifndef GITCLEAN
 `define GITCLEAN 0                      // unknown Git state (assumed dirty)

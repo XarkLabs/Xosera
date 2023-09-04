@@ -114,7 +114,9 @@ struct copper : public Ixlarch
     enum op_t
     {
         OP_SETI,
+        OP_MOVI,
         OP_SETM,
+        OP_MOVM,
         OP_HPOS,
         OP_VPOS,
         OP_BRGE,
@@ -123,6 +125,7 @@ struct copper : public Ixlarch
         OP_LDI,
         OP_LDM,
         OP_STM,
+        OP_CLRB,
         OP_SUBI,
         OP_ADDI,
         OP_SUBM,
@@ -179,7 +182,9 @@ struct copper : public Ixlarch
     static constexpr xlasm::directive_t directives_list[] = {{"WORD", xlasm::DIR_DEF_16}, {"DW", xlasm::DIR_DEF_16}};
 
     static constexpr op_tbl ops[] = {{OP_SETI, 0x0000, 0x3000, "SETI", {XM14, IM16}, 2, 0, 4},
+                                     {OP_MOVI, 0x0000, 0x3000, "MOVI", {IM16, XM14}, 2, 0, 4},
                                      {OP_SETM, 0x1000, 0x3000, "SETM", {XM16, CM}, 2, 0, 4},
+                                     {OP_MOVM, 0x1000, 0x3000, "MOVM", {CM, XM16}, 2, 0, 4},
                                      {OP_HPOS, 0x2000, 0x3800, "HPOS", {IM11}, 1, 0, 5},
                                      {OP_VPOS, 0x2800, 0x3800, "VPOS", {IM11}, 1, 0, 5},
                                      {OP_BRGE, 0x3000, 0x3800, "BRGE", {CM}, 1, 0, 4},
@@ -187,6 +192,7 @@ struct copper : public Ixlarch
                                      {OP_LDI, 0x0800, 0x3FFF, "LDI", {IM16}, 2, 0, 4},
                                      {OP_LDM, 0x1000, 0x3000, "LDM", {CM}, 2, 0, 4},
                                      {OP_STM, 0x1000, 0x3000, "STM", {XM16}, 2, 0, 4},
+                                     {OP_CLRB, 0x1800, 0x3800, "CLRB", {}, 2, 0, 4},
                                      {OP_SUBI, 0x0801, 0x3FFF, "SUBI", {IM16}, 2, 0, 4},
                                      {OP_ADDI, 0x0801, 0x3FFF, "ADDI", {NIM16}, 2, 0, 4},
                                      {OP_SUBM, 0x1000, 0x3000, "SUBM", {CM}, 2, 0, 4},

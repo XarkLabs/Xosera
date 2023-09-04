@@ -66,7 +66,7 @@ VIDEO_MODE ?= MODE_848x480
 VIDEO_OUTPUT ?= PMOD_1B2_DVI12
 
 # copper assembly
-COPASM=../copper/CopAsm/bin/copasm
+COPASM=$(XOSERA_M68K_API)/bin/copasm
 ifeq ($(findstring 640x,$(VIDEO_MODE)),)
 RESET_COPMEM=default_copper_848
 else

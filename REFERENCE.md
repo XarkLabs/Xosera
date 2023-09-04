@@ -69,6 +69,7 @@ This document is meant to provide the low-level reference register information t
       - [Copper Pseudo Instructions (when using CopAsm)](#copper-pseudo-instructions-when-using-copasm)
       - [Notes on Copper Memory Access](#notes-on-copper-memory-access)
     - [Copper Assembler CopAsm](#copper-assembler-copasm)
+      - [Copper Assembler Examples](#copper-assembler-examples)
     - [Default TILE, COLOR and COPPER Memory Contents](#default-tile-color-and-copper-memory-contents)
 
 ## Xosera Reference Information
@@ -96,7 +97,7 @@ ___
 | 0x8   | **`XM_WR_INCR`**  | R /W   | increment value for `XM_WR_ADDR` on write to `XM_DATA`/`XM_DATA_2`                    |
 | 0x9   | **`XM_WR_ADDR`**  | R /W   | VRAM address for writing to VRAM when `XM_DATA`/`XM_DATA_2` is written                |
 | 0xA   | **`XM_DATA`**     | R+/W+  | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
-| 0xB   | **`XM_DATA_2`**   | R+/W+  | 2nd `XM_DATA`(to allow for 32-bit read/write access)                                  |
+| 0xB   | **`XM_DATA_2`**   | R+/W+  | 2<sup>nd</sup> `XM_DATA`(to allow for 32-bit read/write access)                                  |
 | 0xC   | **`PIXEL_X`**     | - /W+  | X pixel sets `WR_ADDR` and nibble mask (also `PIXEL_BASE` for `XM_SYS_CTRL` write)    |
 | 0xD   | **`PIXEL_Y`**     | - /W+  | Y pixel sets `WR_ADDR` and nibble mask (also `PIXEL_WIDTH` for `XM_SYS_CTRL` write)   |
 | 0xE   | **`XM_UART`**     | R+/W+  | USB UART using FTDI chip in UPduino for additional 1 Mbps USB connection to PC *[1]*  |
@@ -251,14 +252,15 @@ Specifies VRAM address used when writing to VRAM via `XM_DATA`/`XM_DATA_2`. Writ
 When `XM_DATA` is read, data from VRAM at `XM_RD_ADDR` is returned and `XM_RD_INCR` is added to `XM_RD_ADDR` and pre-reading the new VRAM address begins.  
 When `XM_DATA` is written, the value is written to VRAM at `XM_WR_ADDR` and `XM_WR_INCR` is added to `XM_WR_ADDR`.
 
-#### 0xB **`XM_DATA_2`** (R+/W+) - VRAM Read/Write Data (2nd)
+#### 0xB **`XM_DATA_2`** (R+/W+) - VRAM Read/Write Data (2<sup>nd</sup>)
 
 <img src="./pics/wd_XM_DATA.svg">
 
 **VRAM memory value *read* from `XM_RD_ADDR` or value to *write* to `XM_WR_ADDR`**  
 When `XM_DATA_2` is read, data from VRAM at `XM_RD_ADDR` is returned and `XM_RD_INCR` is added to `XM_RD_ADDR` and pre-reading the new VRAM address begins.  
 When `XM_DATA_2` is written, the value is written to VRAM at `XM_WR_ADDR` and `XM_WR_INCR` is added to `XM_WR_ADDR`.
-> :mag: **`XM_DATA_2`** This register is treated *identically* to `XM_DATA` and is intended to allow for 32-bit "long" `MOVEP.L` transfers to/from `XM_DATA` for additional transfer speed (back-to-back 16-bit data transfers with one instruction).
+
+> :mag: **`XM_DATA_2`** This register is treated *identically* to `XM_DATA` and is intended to allow for two back-to-back 16-bit transfers to/from `XM_DATA` by using 32-bit `MOVEP.L` instruction (for additional transfer speed).
 
 #### 0xC **`PIXEL_X`** (-/W+) - X coordinate for pixel address/mask generation (also used to set `PIXEL_BASE`)
 
@@ -307,7 +309,7 @@ Basic UART allowing send/receive communication with host PC at 230,400 bps (aka 
 | `CONFIG`  | `[15:12]` | R/- | Current configuration number for Xosera FPGA (0-3 on iCE40UP5K) |
 | `AUDCHAN` | `[11:8]`  | R/- | Number of audio output channels (normally 4)                    |
 | `UART`    | `[7]`     | R/- | Debug UART is present                                           |
-| `PF_B`    | `[6]`     | R/- | Playfield B enabled (2nd playfield to blend over playfield A)   |
+| `PF_B`    | `[6]`     | R/- | Playfield B enabled (2<sup>nd</sup> playfield to blend over playfield A)   |
 | `BLIT`    | `[5]`     | R/- | 2D "blitter engine" enabled                                     |
 | `COPP`    | `[4]`     | R/- | Screen synchronized co-processor enabled                        |
 | `MONRES`  | `[3:0]`   | R/- | Monitor resolution (0=640x480 4:3, 1=848x480 16:9 on iCE40UP5K) |
@@ -855,26 +857,26 @@ As far as the copper is concerned, all coordinates are always in absolute native
 
 | Copper Opcode Bits          | Assembly                    | Flag | Words | Cycles | Description                              |
 |-----------------------------|-----------------------------|------|-------|--------|------------------------------------------|
-| `rr00` `oooo` `oooo` `oooo` | `SETI`   *xadr14*,`#`*im16* | `B`  | 2     | 4      | dest [xadr14] <= source #val16           |
+| `rr00` `oooo` `oooo` `oooo` | `SETI`   *xadr14*,`#`*im16* | `B`  | 2     | 4      | dest [xadr14] &larr; source #val16       |
 | `iiii` `iiii` `iiii` `iiii` | + *im16* *value*            | -    | -     | -      | *(2<sup>nd</sup> word of `SETI` opcode)* |
-| `--01` `rccc` `cccc` `cccc` | `SETM`  *xadr16*,*cadr11*   | `B`  | 2     | 4      | dest [xadr16] <= source [cadr11]         |
+| `--01` `rccc` `cccc` `cccc` | `SETM`  *xadr16*,*cadr12*   | `B`  | 2     | 4      | dest [xadr16] &larr; source [cadr12]     |
 | `rroo` `oooo` `oooo` `oooo` | + *xadr16* *address*        | -    | -     | -      | *(2<sup>nd</sup> word of `SETM` opcode)* |
 | `--10` `0iii` `iiii` `iiii` | `HPOS`   `#`*im11*          | -    | 1     | 4+     | wait until video `HPOS` >= *im11*        |
 | `--10` `1iii` `iiii` `iiii` | `VPOS`   `#`*im11*          | -    | 1     | 4+     | wait until video `VPOS` >= *im11*        |
-| `--11` `0ccc` `cccc` `cccc` | `BRGE`   *cadd11*           | -    | 1     | 4      | if (`B`==0) `PC` <= *cadd11*             |
-| `--11` `1ccc` `cccc` `cccc` | `BRLT`   *cadd11*           | -    | 1     | 4      | if (`B`==1) `PC` <= *cadd11*             |
+| `--11` `0ccc` `cccc` `cccc` | `BRGE`   *cadd11*           | -    | 1     | 4      | if (`B`==0) `PC` &larr; *cadd11*         |
+| `--11` `1ccc` `cccc` `cccc` | `BRLT`   *cadd11*           | -    | 1     | 4      | if (`B`==1) `PC` &larr; *cadd11*         |
 
 **Legend:**
 
-- *xadr14*   =   2-bit XR region + 12-bit offset (1st word of `SETI`, destination address)
-- *im16*     =   16-bit immediate word (2nd word of `SETI`, source address)
-- *cadr11*   =   11-bit copper address or register with bit [11] (1st word of `SETM`, source adress)
-- *xadr16*   =   XR region + 14-bit offset (2nd word of `SETM`, destination address)
+- *xadr14*   =   2-bit XR region + 12-bit offset (1<sup>st</sup> word of `SETI`, destination address)
+- *im16*     =   16-bit immediate word (2<sup>nd</sup> word of `SETI`, source address)
+- *cadr12*   =   11-bit copper address or register with bit [11] (1<sup>st</sup> word of `SETM`, source adress)
+- *xadr16*   =   XR region + 14-bit offset (2<sup>nd</sup> word of `SETM`, destination address)
 - *im11*     =   11-bit immediate value (used with `HPOS`, `VPOS` wait opcodes)
 - *cadd11*   =   11-bit copper address (used with `BRGE`, `BRLT` branch opcodes)
 - `B`        =   borrow flag set when `RA` < *val16* written (borrow after unsigned subtract)
 
-> :mag: **copper addresses** *cadr11*/*cadd11* bits`[15:14]` are ignored and copper memory is always used when reading, when writing *xadr14*/*xadr16* bits `[15:14]` can be set to `11` (`XR_COPPER_ADDR` region) to write to copper memory. To help reduce confusion the CopAsm assembler uses `11`region bits in addresses for both reading and writing copper memory (even though these bits are ignored reading).
+> :mag: **copper addresses** *cadr12*/*cadd11* bits`[15:14]` are ignored and copper memory is always used when reading or branching. When writing *xadr14*/*xadr16* bits `[15:14]` can be set to `11` (`XR_COPPER_ADDR` region) to write to copper memory. To help reduce confusion the CopAsm assembler sets `11`region bits in addresses for both reading and writing copper memory (even though these bits are ignored reading).
 
 > :mag: **tilemem high addresses**  Note *xadr14* offset`[11:0]`is 12-bits and that is not enough to write to the last`0x400` words of the`XR_TILE_ADDR` area (`0x4000-0x53FF`) with`SETI`.  However, this area can be written to using a 16-bit word read from copper memory and `SETM` (which uses a full 16-bit *xadr16* destination).
 
@@ -897,18 +899,21 @@ As far as the copper is concerned, all coordinates are always in absolute native
 
 In addition to above instructions, these synthetic instructions can help make code more clear (all map to a single copper instruction):
 
-| Instruction              | Description                                                              |
-|--------------------------|--------------------------------------------------------------------------|
-| `MOVE` *cadr11*,*xadr16* | m68k style `MOVE` contents of *cadr11* copper memory into *xadr16*       |
-| `MOVE` #*imm16*,*xadr14* | m68k style `MOVE` #*imm16* immediate value into *xadr14*                 |
-| `LDI` #*imm16*           | Load `RA` register with value *imm16*, set `B`=`0`                       |
-| `LDM` *cadr11*           | Load `RA` register with contents of memory *cadr11*, set `B`=`0`         |
-| `STM` *cadr11*           | Store `RA` register contents into memory *cadr11*, set `B`=`0`           |
-| `SUBI` #*imm16*          | `RA` = `RA` - *imm16*, `B` flag updated                                  |
-| `ADDI` #*imm16*          | `RA` = `RA` + *imm16*, `B` flag updated (for subtract of -*imm16*)       |
-| `SUBM` *cadr11*          | `RA` = `RA` - contents of *cadr11*, `B` flag updated                     |
-| `CMPI` #*imm16*          | test if `RA` < *imm16*, `B` flag updated (`RA` not altered)              |
-| `CMPM` *cadr11*          | test it `RA` < contents of *cadr11*, `B` flag updated (`RA` not altered) |
+| Instruction                | Alias  | Words | Description                                                              |
+|----------------------------|--------|-------|--------------------------------------------------------------------------|
+| `MOVE` `#`*imm16*,*xadr14* | `SETI` | 2     | m68k style `MOVE` immediate, copy `#`*imm16* &rarr; *xadr16*             |
+| `MOVE` *cadr12*,*xadr16*   | `SETM` | 2     | m68k style `MOVE` memory, copy *source* &rarr; *dest*                    |
+| `MOVI` `#`*imm16*,*xadr14* | `SETI` | 2     | m68k order `SETI`, copy `#`*imm16* &rarr; *cadr12*                       |
+| `MOVM` *cadr12*,*xadr16*   | `SETM` | 2     | m68k order`SETM`, copy *cadr12* &rarr; *xadr16*                          |
+| `LDI` `#`*imm16*           | `SETI` | 2     | Load `RA` register with value *imm16*, set `B`=`0`                       |
+| `LDM` *cadr12*             | `SETM` | 2     | Load `RA` register with contents of memory *cadr12*, set `B`=`0`         |
+| `STM` *xadr16*             | `SETM` | 2     | Store `RA` register contents into memory *xadr16*, set `B`=`0`           |
+| `CLRB`                     | `SETM` | 2     | Store `RA` register into `RA`, set `B`=`0`                               |
+| `SUBI` `#`*imm16*          | `SETI` | 2     | `RA` = `RA` - *imm16*, `B` flag updated                                  |
+| `ADDI` `#`*imm16*          | `SETI` | 2     | `RA` = `RA` + *imm16*, `B` flag updated (for subtract of -*imm16*)       |
+| `SUBM` *cadr12*            | `SETM` | 2     | `RA` = `RA` - contents of *cadr12*, `B` flag updated                     |
+| `CMPI` `#`*imm16*          | `SETI` | 2     | test if `RA` < *imm16*, `B` flag updated (`RA` not altered)              |
+| `CMPM` *cadr12*            | `SETM` | 2     | test it `RA` < contents of *cadr12*, `B` flag updated (`RA` not altered) |
 
 Copper programs reside in XR memory at `0xC000-0xC5FF` (`XR_COPPER_ADDR`). This memory segment is 1.5K 16-bit words in size and can contain an arbitrary mix of copper program instructions or data.  From the perspective of the copper program, this memory area is `0x000` to `0x5FF`, but the copper address space extends to `0xFFF` (including some special addresses shown below).
 
@@ -938,6 +943,8 @@ It is also possible to change the copper program dynamically, both with copper c
 
 Copper programs self-modifying themselves during execution can be very useful to overcome limitations of the instruction set on the copper (e.g., to simulate indirect addressing, by modifying a subsequent opcode). Notably it is "safe" for the copper code to "self-modify" program instructions (including writing over the very next opcode or operand, where it will use the newly written value).
 
+> :mag: **Source/Destination Operand Order**: Be careful when self-modifying `SETI`/`MOVI` or `SETM`/`MOVM` opcodes as the order of source and destination is reversed between them (which can be confusing).  The first opcode word of `SETM`|`MOVM` also needs the opcode bits set, generally with an OR operation (e.g., `SETM|` or `MOVN|`). The `SETI`/`MOVI` opcode also need opcode bits, but since they are zero they generally default correctly.  Remember that in the case of `SETI`/`MOVI` the first operand is the *destinaton* XR address (and 2<sup>nd</sup> is 16-bit immediate), and with `SETM`/`MOVM` the first operand is the *source* copper address (and 2<sup>nd</sup> is 16-bit XR address).
+>
 ### Copper Assembler CopAsm
 
 Co-processor instructions can be written programatically (and there are some C macros to help with that). However, you may also  find it useful to write copper programs in a slightly higher-level assembler language, and have these translated automatically into binary, hex or program source code fragments.  The assembler can also produce "export" information to make it easier to modify the copper program from the host CPU (for dynamic copper program or data modification at run-time).
@@ -945,6 +952,33 @@ Co-processor instructions can be written programatically (and there are some C m
 The included CopAsm is a reasonably full featured assembler tailored for copper program creation.  For more information about CopAsm see [CopAsm Reference](copper/CopAsm/copasm-REFERENCE.md)
 
 Additionally, there are C macros (in the Xosera API headers) that facilitate writing readable copper code directly in C source code. The included examples (in `copper` directory) demonstrate the different ways of embedding copper code in C source.
+
+#### Copper Assembler Examples
+
+Here are a some example copper programs to illustrate how to get around some copper limitations.
+
+**Set background color to "raster bars" colors read from a table**
+
+This shows a basic example of self-modifying a MOVM to read from a table:
+
+```code
+; starts off left edge of line 0
+entry
+                MOVI    #MOVM|colors,copy_color         ; reset MOVM source addr to table start (OR'd with opcode)
+copy_color      MOVM    colors,XR_COLOR_A_ADDR+$00      ; move current table color to COLOR_A #0
+                HPOS    #H_EOL                          ; wait until end of line
+                LDM     copy_color                      ; load MOVM source address into RA
+                ADDI    #1                              ; increment source address in RA
+                STM     copy_color                      ; store RA over MOVM source address
+                CMPI    #MOVM|end_colors                ; compare RA source address with end of table address (OR'd with opcode)
+                BRLT    copy_color                      ; branch if RA source address < end_colors
+                BRGE    entry                           ; branch and reset MOVM source address to beginning of table
+                VPOS    #V_EOF                          ; wait until end of frame (not executed)
+
+colors          WORD    $0111,$0222,$0333,$0444,$0555   ; table with color per scan line
+                WORD    $0444,$0333,$0222,$0111,$0000
+end_colors
+```
 
 ___
 

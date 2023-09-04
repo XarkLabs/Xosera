@@ -18,7 +18,11 @@
                 export  ball_hv_scroll
 
 entry
-                VPOS    #480                                            ; wait for offscreen
+;                VPOS    #480                                            ; wait for offscreen
+                VPOS    #300                                            ; wait for offscreen
+
+                CLRB
+                STM     RA
 
                 CMPM    ball_prev                                       ; check for zero ball_prev
                 BRGE    draw_ball                                       ; skip erase before 1st draw
@@ -39,6 +43,10 @@ draw_ball
                 ; update previous ball position
                 MOVE    ball_dst,ball_prev
 
+                MOVE    #$0F00,XR_COLOR_ADDR+0
+                VPOS    #V_WAITBLIT
+                MOVE    #$00F0,XR_COLOR_ADDR+0
+
                 ; draw ball bitmap
                 MOVE    #$0000,XR_BLIT_CTRL                             ; no transp, no constS
                 MOVE    #$0000,XR_BLIT_ANDC                             ; ANDC constant
@@ -55,8 +63,15 @@ draw_ball
                 MOVE    ball_gfx_ctrl,XR_PB_GFX_CTRL
                 MOVE    ball_hv_scroll,XR_PB_HV_SCROLL
 
+                MOVE    #$0F00,XR_COLOR_ADDR+0
+                VPOS    #V_WAITBLIT
+                MOVE    #$00FF,XR_COLOR_ADDR+0
+                HPOS    #H_EOL
+                HPOS    #H_EOL
+                MOVE    #$0000,XR_COLOR_ADDR+0
+
                 ; wait for next frame
-                VPOS    #$7FF
+                VPOS    #V_EOF
 
 ball_dst        word    0
 ball_prev       word    0

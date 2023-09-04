@@ -5,14 +5,15 @@
             "name": "XR register number / XR memory offset",
             "type": 4,
             "attr": [
-                "config/video xregs",
+                "video/config xregs",
                 "video playfield A xregs",
                 "video playfield B xregs",
-                "audio control xregs",
-                "blitter unit xregs",
-                "5K-word tile/tilemap memory",
+                "audio control xregs (write only)",
+                "blitter unit xregs (write only)",
+                "5K-word tile/tilemap/audio memory",
                 "256-word color A look-up memory",
                 "256-word color B look-up memory",
+                "256-word pointer sprite memory 32x32x4-bit (write only)",
                 "1.5K-word copper memory"
             ]
         },
@@ -23,12 +24,13 @@
             "attr": [
                 "00 $0000-$000F",
                 "00 $0010-$0017",
-                "00 $0018-$001F",
+                "00 $0000-$007F",
                 "00 $0020-$002F",
                 "00 $0040-$004F",
                 "01 $4000-$53FF",
                 "10 $8000-$80FF",
                 "10 $8100-$81FF",
+                "10 $8200-$82FF",
                 "11 $C000-$C5FF"
             ]
         }

@@ -68,7 +68,7 @@ VIDEO_MODE ?= MODE_848x480
 VIDEO_OUTPUT ?= PMOD_DIGILENT_VGA
 
 # copper assembly
-COPASM=../copper/CopAsm/bin/copasm
+COPASM=$(XOSERA_M68K_API)/bin/copasm
 ifeq ($(findstring 640x,$(VIDEO_MODE)),)
 RESET_COPMEM=default_copper_848
 else
@@ -296,6 +296,8 @@ $(VLT_CONFIG):
 $(COPASM):
 	@echo === Building copper assembler...
 	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE)
+	@mkdir	-p $(XOSERA_M68K_API)/bin
+	cp -v $(XOSERA_M68K_API)/../copper/CopAsm/bin/copasm $(COPASM)
 
 # assemble casm into mem file
 %.mem : %.casm $(COPASM)

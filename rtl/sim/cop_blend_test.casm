@@ -116,10 +116,10 @@ hpos_sol        HPOS    #160-8
 
                 hcol    $0000
 
-hpos_eol        HPOS    #799                            ; wait for last pixel of line
+hpos_eol        HPOS    #$7FF                           ; wait for last pixel of line
                 BRGE    line_loop                       ; branch always (since last write was A)
 
-                VPOS    #$7FF                           ; wait for SOF (just in case)
+                VPOS    #$3FF                           ; wait for SOF (just in case)
 
 vcolor_tbl
                 word    $0000

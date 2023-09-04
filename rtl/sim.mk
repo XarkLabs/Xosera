@@ -60,7 +60,7 @@ AUDIO?=4
 PF_B?=true
 
 # copper assembly
-COPASM=../copper/CopAsm/bin/copasm
+COPASM=$(XOSERA_M68K_API)/bin/copasm
 ifeq ($(findstring 640x,$(VIDEO_MODE)),)
 RESET_COPMEM=default_copper_848.mem
 else
@@ -162,7 +162,7 @@ VERILATOR_ARGS := --sv --language 1800-2012 --timing -I$(SRCDIR) -v $(TECH_LIB) 
 CSRC := sim/xosera_sim.cpp
 
 # copper asm source
-COPSRC := sim/cop_blend_test.vsim.h sim/cop_audio_evil.vsim.h
+COPSRC := sim/cop_blend_test.vsim.h sim/cop_audio_evil.vsim.h sim/cop_wait_test.vsim.h
 
 # default build native simulation executable
 all: $(RESET_COPMEM) $(COPASM) vsim isim
@@ -208,6 +208,8 @@ $(VLT_CONFIG):
 $(COPASM):
 	@echo === Building copper assembler...
 	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE)
+	@mkdir	-p $(XOSERA_M68K_API)/bin
+	cp -v $(XOSERA_M68K_API)/../copper/CopAsm/bin/copasm $(COPASM)
 
 # assemble casm into mem file
 %.mem : %.casm $(COPASM)

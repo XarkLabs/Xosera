@@ -131,23 +131,23 @@ static_assert(NUM_ELEMENTS(cop_diagonal_bin) < 1024, "copper list too long");
 
 // 320x200 copper
 // Copper list
-uint32_t copper_320x200[] = {
-    COP_WAIT_V(40),                        // wait  0, 40                   ; Wait for line 40, H position ignored
-    COP_MOVER(0x0065, PA_GFX_CTRL),        // mover 0x0065, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
-    COP_MOVER(0x0065, PB_GFX_CTRL),        // mover 0x0065, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
-    COP_WAIT_V(440),                       // wait  0, 440                  ; Wait for line 440, H position ignored
-    COP_MOVER(0x00E5, PA_GFX_CTRL),        // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
-    //    COP_MOVER(0x00E5, PB_GFX_CTRL),         // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
-    COP_MOVER((XR_TILE_ADDR + 0x1000), PB_LINE_ADDR),
-    COP_MOVER(0xF009, PB_GFX_CTRL),         // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
-    COP_MOVER(0x0E07, PB_TILE_CTRL),        // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
-    COP_MOVER(28, PB_LINE_LEN),
-    COP_WAIT_V(480),        // wait  0, 440                  ; Wait for line 440, H position ignored
-    COP_MOVER(160, PB_LINE_LEN),
-    COP_MOVER(0x000F, PB_TILE_CTRL),
-    COP_MOVER(0x00E5, PA_GFX_CTRL),        // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
-    COP_MOVER(0x00E5, PB_GFX_CTRL),        // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
-    COP_END()                              // nextf
+uint16_t copper_320x200[] = {
+    COP_VPOS(40),                          // Wait for line 40
+    COP_MOVER(0x0065, PA_GFX_CTRL),        // Set to 8-bpp + Hx2 + Vx2
+    COP_MOVER(0x0065, PB_GFX_CTRL),        // Set to 8-bpp + Hx2 + Vx2
+    COP_VPOS(440),                         // Wait for line 440
+    COP_MOVER(0x00E5, PA_GFX_CTRL),        // Set to Blank + 8-bpp + Hx2 + Vx2
+    //    COP_MOVER(0x00E5, PB_GFX_CTRL),         // Set to Blank + 8-bpp + Hx2 + Vx2
+    COP_MOVER(XR_TILE_ADDR + 0x1000, PB_LINE_ADDR),        // Set PB line address to tilemem address
+    COP_MOVER(0xF009, PB_GFX_CTRL),                        // Set to Blank + 8-bpp + Hx2 + Vx2
+    COP_MOVER(0x0E07, PB_TILE_CTRL),                       // Set to Blank + 8-bpp + Hx2 + Vx2
+    COP_MOVER(28, PB_LINE_LEN),                            // Set PB line length
+    COP_VPOS(480),                                         // Wait for line 440
+    COP_MOVER(160, PB_LINE_LEN),                           // Set PB line length
+    COP_MOVER(0x000F, PB_TILE_CTRL),                       // set back to 8x16 tiles
+    COP_MOVER(0x00E5, PA_GFX_CTRL),                        // Set to Blank + 8-bpp + Hx2 + Vx2
+    COP_MOVER(0x00E5, PB_GFX_CTRL),                        // Set to Blank + 8-bpp + Hx2 + Vx2
+    COP_END()                                              // wait until next frame
 };
 
 #endif
@@ -1764,8 +1764,7 @@ void test_dual_8bpp()
         xmem_setw_next_addr(XR_COPPER_ADDR);
         for (uint16_t i = 0; i < NUM_ELEMENTS(copper_320x200); i++)
         {
-            xmem_setw_next(copper_320x200[i] >> 16);
-            xmem_setw_next(copper_320x200[i] & 0xffff);
+            xmem_setw_next(copper_320x200[i]);
         }
         xreg_setw(COPP_CTRL, 0x8000);
         // set pf A 320x240 8bpp (cropped to 320x200)

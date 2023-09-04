@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "xosera_defs.h"
+#include "video_mode_defs.h"
 
 #include "verilated.h"
 
@@ -915,6 +916,21 @@ uint16_t     BusInterface::test_data[32768] = {
 
 #endif
 
+#if 1
+    // slim copper wait test
+    XREG_SETW(PA_GFX_CTRL, 0x0080),        // blank screen
+    XREG_SETW(PB_GFX_CTRL, 0x0080),        // blank screen
+    XREG_SETW(VID_CTRL, 0x0000),           // border color #0
+
+#include "cop_wait_test.vsim.h"
+
+    XREG_SETW(COPP_CTRL, 0x8000),        // enable copper
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+#endif
+
 #if 0
     // slim copper test
     XREG_SETW(PA_GFX_CTRL, 0x0080),        // blank screen
@@ -930,6 +946,7 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 #endif
+
 
 
 #if 0
@@ -962,7 +979,7 @@ uint16_t     BusInterface::test_data[32768] = {
 
 #endif
 
-#if 1        // lame audio test
+#if 0        // lame audio test
     XREG_SETW(VID_CTRL, 0x0000),
     XREG_SETW(VID_RIGHT, 640 - 4),
 

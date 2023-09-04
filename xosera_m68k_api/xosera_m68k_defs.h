@@ -327,18 +327,34 @@
 
 #define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 8, 0) | XB_(intmask, 0, 4))
 
-// 32-bit copper instruction helper macros (CopAsm recommended for complex lists)
-#define COP_WAIT_HV(h_pos, v_pos)   (0x28002000 | XB_((uint32_t)(v_pos), 16, 11) | XB_((uint32_t)(h_pos), 0, 11))
-#define COP_WAIT_H(h_pos)           (0x20002000 | XB_((uint32_t)(h_pos), 0, 11))
-#define COP_WAIT_V(v_pos)           (0x20002800 | XB_((uint32_t)(v_pos), 0, 10))
-#define COP_WAIT_F()                (0x20002FFF)
-#define COP_END()                   (0x20002FFF)
-#define COP_JUMP(cop_addr)          (0x30003800 | XB_((uint32_t)(cop_addr), 16, 11) | XB_((uint32_t)(cop_addr), 0, 11))
-#define COP_MOVER(val16, xreg)      (0x00000000 | XB_((uint32_t)(XR_##xreg), 16, 12) | ((uint16_t)(val16)))
-#define COP_MOVEF(val16, tile_addr) (0x40000000 | XB_((uint32_t)(tile_addr), 16, 12) | ((uint16_t)(val16)))
-#define COP_MOVEP(rgb16, color_num) (0x80000000 | XB_((uint32_t)(color_num), 16, 12) | ((uint16_t)(rgb16)))
-#define COP_MOVEC(val16, cop_addr)  (0xC0000000 | XB_((uint32_t)(cop_addr), 16, 12) | ((uint16_t)(val16)))
-#define COP_MOVEM(cop_src, xaddr)   (0x10000000 | XB_(((uint32_t)(cop_src)&0xCFFF), 16, 12) | ((uint16_t)(xaddr)))
-#define COP_MOVE(val16, xaddr)      (0x00000000 | XB_(((uint32_t)(xaddr)&0xCFFF), 16, 12) | ((uint16_t)(val16)))
+// copper constants for HPOS/VPOS
+#define COP_H_EOL      0x7FF        // copper HPOS value for wait end of line
+#define COP_V_EOF      0x3FF        // copper VPOS value for wait end of frame
+#define COP_V_WAITBLIT 0x7FF        // copper VPOS value for wait blit ready or end of frame
+// copper special memory addresses
+#define COP_RA     0xC800        // copper address for RA register
+#define COP_RA_SUB 0xC801        // copper address for RA = RA - writeval
+#define COP_RA_CMP 0xC7FF        // copper address for set B if RA < writeval
+// copper instructions
+#define COP_SETI(d_xadr14, i_val16)  ((uint16_t)0x0000 | ((uint16_t)(d_xadr14)&0xCFFF)), ((uint16_t)(i_val16))
+#define COP_SETM(d_xadr16, s_cadr12) ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(d_xadr16))
+#define COP_HPOS(h_wait)             ((uint16_t)0x2000 | ((uint16_t)(h_wait)&0x07FF))
+#define COP_VPOS(v_wait)             ((uint16_t)0x2800 | ((uint16_t)(v_wait)&0x07FF))
+#define COP_BRGE(cadr11)             ((uint16_t)0x3000 | ((uint16_t)(cadr11)&0x07FF))
+#define COP_BRLT(cadr11)             ((uint16_t)0x3800 | ((uint16_t)(cadr11)&0x07FF))
+// copper pseudo instructions
+#define COP_MOVE(i_val16, d_xadr14)  ((uint16_t)0x0000 | ((uint16_t)(d_xadr14)&0xCFFF)), ((uint16_t)(i_val16))
+#define COP_MOVER(i_val16, d_xreg)   ((uint16_t)0x0000 | ((uint16_t)(XR_##d_xreg) & 0xCFFF)), ((uint16_t)(i_val16))
+#define COP_MOVM(s_cadr12, d_xadr16) ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(d_xadr16))
+#define COP_LDI(i_val16)             ((uint16_t)0xC000 | ((uint16_t)(COP_RA)&0x0FFF)), ((uint16_t)(i_val16))
+#define COP_LDM(s_cadr12)            ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(COP_RA))
+#define COP_STM(d_xadr16)            ((uint16_t)0xD000 | ((uint16_t)(COP_RA)&0x0FFF)), ((uint16_t)(d_xadr16))
+#define COP_CLRB()                   ((uint16_t)0xD000 | ((uint16_t)(COP_RA)&0x0FFF)), ((uint16_t)(COP_RA))
+#define COP_SUBI(i_val16)            ((uint16_t)0xC000 | ((uint16_t)(COP_RA_SUB)&0x0FFF)), ((uint16_t)(i_val16))
+#define COP_ADDI(i_val16)            ((uint16_t)0xC000 | ((uint16_t)(COP_RA_SUB)&0x0FFF)), ((uint16_t)(-(int16_t)i_val16))
+#define COP_SUBM(s_cadr12)           ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(COP_RA_SUB))
+#define COP_CMPI(i_val16)            ((uint16_t)0xC000 | ((uint16_t)(COP_RA_CMP)&0x0FFF)), ((uint16_t)(i_val16))
+#define COP_CMPM(s_cadr12)           ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(COP_RA_CMP))
+#define COP_END()                    ((uint16_t)0x2800 | ((uint16_t)(COP_V_EOF)&0x07FF))
 
 #endif        // XOSERA_M68K_DEFS_H

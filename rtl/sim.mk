@@ -61,10 +61,13 @@ PF_B?=true
 
 # copper assembly
 COPASM=$(XOSERA_M68K_API)/bin/copasm
+RESET_COP=default_copper.casm
 ifeq ($(findstring 640x,$(VIDEO_MODE)),)
 RESET_COPMEM=default_copper_848.mem
+COPASMOPT=-d MODE_640x480=0 -d MODE_848x480=1
 else
 RESET_COPMEM=default_copper_640.mem
+COPASMOPT=-d MODE_640x480=1 -d MODE_848x480=0
 endif
 
 VERILOG_DEFS := -D$(VIDEO_MODE)
@@ -208,18 +211,18 @@ $(VLT_CONFIG):
 $(COPASM):
 	@echo === Building copper assembler...
 	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE)
-	@mkdir	-p $(XOSERA_M68K_API)/bin
+	@mkdir -p $(@D)
 	cp -v $(XOSERA_M68K_API)/../copper/CopAsm/bin/copasm $(COPASM)
 
 # assemble casm into mem file
-%.mem : %.casm $(COPASM)
+$(RESET_COPMEM):  $(COPASM) $(RESET_COP)
 	@mkdir -p $(@D)
-	$(COPASM) -l -o $@ $<
+	$(COPASM) $(COPASMOPT) -l -i $(XOSERA_M68K_API) -o $@ $(RESET_COP)
 
 # assembler copper file
-%.vsim.h : %.casm $(COPASM)
+%.vsim.h : %.casm
 	@mkdir -p $(@D)
-	$(COPASM) -l -o $@ $<
+	$(COPASM) $(COPASMOPT) -l -i $(XOSERA_M68K_API) -o $@ $<
 
 # use Verilator to build native simulation executable
 sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) $(RESET_COPMEM) $(COPSRC) sim.mk

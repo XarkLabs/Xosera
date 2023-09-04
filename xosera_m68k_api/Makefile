@@ -14,7 +14,11 @@ include $(XOSERA_M68K_API)/common_xosera_m68k.mk
 LIBRARY=lib$(PROGRAM_BASENAME).a
 LINKOBJECTS=$(filter-out api_test.o,$(OBJECTS))
 
-all: $(COPASM) $(XOSERA_M68K_API)/$(LIBRARY) $(BINARY) $(DISASM)
+all: prereq $(COPASM) $(XOSERA_M68K_API)/$(LIBRARY) $(BINARY) $(DISASM)
+
+prereq:
+	rm -f $(COPASM)
+	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE) clean
 
 $(COPASM): $(XOSERA_M68K_API)/../copper/CopAsm/bin/copasm
 	@mkdir	-p $(XOSERA_M68K_API)/bin

@@ -70,16 +70,18 @@ struct xlasm
 
     struct opts_t
     {
-        int32_t  verbose;        // 0, 1, 2 or 3
-        uint32_t listing_bytes;
-        uint64_t load_address;
-        bool     listing;
-        bool     xref;
-        bool     no_error_kill;
-        bool     suppress_false_conditionals;
-        bool     suppress_macro_expansion;
-        bool     suppress_macro_name;
-        bool     suppress_line_numbers;
+        int32_t                  verbose;        // 0, 1, 2 or 3
+        std::vector<std::string> include_path;
+        std::vector<std::string> define_sym;        // unmolested original line (with no newline)
+        uint32_t                 listing_bytes;
+        uint64_t                 load_address;
+        bool                     listing;
+        bool                     xref;
+        bool                     no_error_kill;
+        bool                     suppress_false_conditionals;
+        bool                     suppress_macro_expansion;
+        bool                     suppress_macro_name;
+        bool                     suppress_line_numbers;
 
         opts_t() noexcept
                 : verbose(1)
@@ -109,7 +111,7 @@ struct xlasm
                 , line_start(1)
         {
         }
-        int32_t read_file(xlasm *, const std::string & n);
+        int32_t read_file(xlasm *, const std::string & n, const std::string & fn);
     };
     typedef std::unordered_map<std::string, source_t> source_map_t;
 

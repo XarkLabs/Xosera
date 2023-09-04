@@ -6,27 +6,36 @@
 
 
                 .list    false
-                .include "../xosera_m68k_api/xosera_m68k_defs.inc"
+                .include "xosera_m68k_defs.inc"
                 .macname false
                 .listcond false
                 .list    true
 
-H_RES           =       848
+                .if     MODE_640x480
+H_START         =       160
+H_END           =       799
+H_VIS           =       640
+                .elseif MODE_848x480
+H_START         =       240
+H_END           =       1087
+H_VIS           =       848
+                .endif
 
 entry
                 HPOS    #0                              ; no-op
 ; set regs that aren't friendly when defaulted to zero
                 MOVE    #$0008,XR_VID_CTRL              ; grey border color
-                MOVE    #H_RES,XR_VID_RIGHT             ; set right border
+                MOVE    #H_VIS,XR_VID_RIGHT             ; set right border
 
                 MOVE    #$0080,XR_PA_GFX_CTRL           ; blank pa
                 MOVE    #$000F,XR_PA_TILE_CTRL          ; set to 8x16 tiles @ tilemem 0x0000
-                MOVE    #H_RES/8,XR_PA_LINE_LEN         ; set default line len
+                MOVE    #H_VIS/8,XR_PA_LINE_LEN         ; set default line len
 
                 MOVE    #$0080,XR_PB_GFX_CTRL           ; blank pb
                 MOVE    #$000F,XR_PB_TILE_CTRL          ; set to 8x16 tiles @ tilemem 0x0000
-                MOVE    #H_RES/8,XR_PB_LINE_LEN         ; set default line len
-.if 1
+                MOVE    #H_VIS/8,XR_PB_LINE_LEN         ; set default line len
+
+                VPOS    #V_WAITBLIT                     ; wait until blitter ready
                 MOVE    #$0001,XR_BLIT_CTRL             ; no transp, constS
                 MOVE    #$0000,XR_BLIT_ANDC             ; ANDC constant
                 MOVE    #$0000,XR_BLIT_XOR              ; XOR constant
@@ -37,9 +46,9 @@ entry
                 MOVE    #$FF00,XR_BLIT_SHIFT            ; no edge masking or shifting
                 MOVE    #$0000,XR_BLIT_LINES            ; 1-D blit (no repeat count)
                 MOVE    #$10000-1,XR_BLIT_WORDS         ; all VRAM
-.endif
-                MOVE    #(VPOS|V_EOF),entry             ; prevent running init twice
 
+                MOVE    #(VPOS|V_EOF),entry             ; prevent running init twice
+                VPOS    #V_WAITBLIT                     ; wait until blitter ready
                 MOVE    #$0000,XR_COPP_CTRL             ; disable copper execution
                 VPOS    #V_EOF                          ; wait for SOF (should not execute)
 

@@ -40,8 +40,8 @@ upd:
 # Build combo Xosera UPduino 3.x FPGA VGA bitstream for rosco_m6k board with all supported features
 xosera_vga:
 	$(MAKE) -f upduino.mk clean
-	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_640x480 PF_B=true AUDIO=4 FPGA_CONFIG=0 $(MAKE) -f upduino.mk
-	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_848x480 PF_B=true AUDIO=4 FPGA_CONFIG=1 $(MAKE) -f upduino.mk
+	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_640x480 PF_B=true AUDIO=4 FPGA_CONFIG_NUM=0 $(MAKE) -f upduino.mk
+	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_848x480 PF_B=true AUDIO=4 FPGA_CONFIG_NUM=1 $(MAKE) -f upduino.mk
 	mv xosera_upd.bin xosera_board_vga.bin
 
 # Build combo Xosera UPduino 3.x FPGA VGA bitstream for rosco_m6k board (640x480 resolution only)
@@ -52,27 +52,27 @@ xosera_vga_640:
 
 xosera_muse_vga:
 	$(MAKE) -f upduino.mk clean
-	VIDEO_OUTPUT=PMOD_MUSE_VGA VIDEO_MODE=MODE_640x480 AUDIO=4 PF_B=true FPGA_CONFIG=0 $(MAKE) -f upduino.mk
-	VIDEO_OUTPUT=PMOD_MUSE_VGA VIDEO_MODE=MODE_848x480 AUDIO=4 PF_B=true FPGA_CONFIG=1 $(MAKE) -f upduino.mk
+	VIDEO_OUTPUT=PMOD_MUSE_VGA VIDEO_MODE=MODE_640x480 AUDIO=4 PF_B=true FPGA_CONFIG_NUM=0 $(MAKE) -f upduino.mk
+	VIDEO_OUTPUT=PMOD_MUSE_VGA VIDEO_MODE=MODE_848x480 AUDIO=4 PF_B=true FPGA_CONFIG_NUM=1 $(MAKE) -f upduino.mk
 	mv xosera_upd.bin xosera_board_muse_vga.bin
 
 # Build combo Xosera UPduino 3.x FPGA DVI bitstream for rosco_m6k board
 xosera_dvi:
 	$(MAKE) -f upduino.mk clean
-	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_640x480 AUDIO=4 FPGA_CONFIG=0 $(MAKE) -f upduino.mk
-	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_848x480 AUDIO=4 FPGA_CONFIG=1 $(MAKE) -f upduino.mk
+	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_640x480 AUDIO=4 FPGA_CONFIG_NUM=0 $(MAKE) -f upduino.mk
+	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_848x480 AUDIO=4 FPGA_CONFIG_NUM=1 $(MAKE) -f upduino.mk
 	mv xosera_upd.bin xosera_board_dvi.bin
 
 # Build Xosera iCEBreaker FPGA bitstream
 iceb_dvi:
-	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_640x480 AUDIO=4 PF_B=true FPGA_CONFIG=0 $(MAKE) -f icebreaker.mk
-	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_848x480 AUDIO=4 PF_B=true FPGA_CONFIG=1 $(MAKE) -f icebreaker.mk
+	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_640x480 AUDIO=4 PF_B=true FPGA_CONFIG_NUM=0 $(MAKE) -f icebreaker.mk
+	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_848x480 AUDIO=4 PF_B=true FPGA_CONFIG_NUM=1 $(MAKE) -f icebreaker.mk
 	@echo Type \"make iceb_prog\" to program the iCEBreaker via USB
 
 # Build Xosera iCEBreaker FPGA bitstream
 iceb_vga:
-	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_640x480 AUDIO=4 PF_B=true FPGA_CONFIG=0 $(MAKE) -f icebreaker.mk
-	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_848x480 AUDIO=4 PF_B=true FPGA_CONFIG=1 $(MAKE) -f icebreaker.mk
+	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_640x480 AUDIO=4 PF_B=true FPGA_CONFIG_NUM=0 $(MAKE) -f icebreaker.mk
+	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_848x480 AUDIO=4 PF_B=true FPGA_CONFIG_NUM=1 $(MAKE) -f icebreaker.mk
 	@echo Type \"make iceb_prog\" to program the iCEBreaker via USB
 
 # Build and program Xosera UPduino 3.x FPGA bitstream (one config, for development)

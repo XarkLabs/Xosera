@@ -39,7 +39,7 @@ endif
 XOSERA_M68K_API?=../xosera_m68k_api
 
 # Set default FPGA config number (if not set)
-FPGA_CONFIG ?= 0
+FPGA_CONFIG_NUM ?= 0
 
 # Maximum number of CPU cores to use before waiting with FMAX_TEST
 MAX_CPUS ?= 8
@@ -67,10 +67,13 @@ VIDEO_OUTPUT ?= PMOD_1B2_DVI12
 
 # copper assembly
 COPASM=$(XOSERA_M68K_API)/bin/copasm
+RESET_COP=default_copper.casm
 ifeq ($(findstring 640x,$(VIDEO_MODE)),)
-RESET_COPMEM=default_copper_848
+RESET_COPMEM=default_copper_848.mem
+COPASMOPT=-d MODE_640x480=0 -d MODE_848x480=1
 else
-RESET_COPMEM=default_copper_640
+RESET_COPMEM=default_copper_640.mem
+COPASMOPT=-d MODE_640x480=1 -d MODE_848x480=0
 endif
 
 VERILOG_DEFS := -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT)
@@ -144,7 +147,7 @@ YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc9 -dff -top $(TOP)
 #FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) -DFPGA_CONFIG=$(FPGA_CONFIG) $(VERILOG_DEFS) -DICE40UP5K -DICEBREAKER
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) -DFPGA_CONFIG_NUM=$(FPGA_CONFIG_NUM) $(VERILOG_DEFS) -DICE40UP5K -DICEBREAKER
 ifneq ($(strip $(SPI_INTERFACE)),)
 DEFINES += -DSPI_INTERFACE
 endif
@@ -179,18 +182,18 @@ timing: icebreaker/$(OUTNAME).rpt $(MAKEFILE_LIST)
 .PHONY: timing
 
 # run Yosys to generate a "dot" graphical representation of each design file
-show: $(RESET_COPMEM).mem $(DOT) $(MAKEFILE_LIST)
+show: $(RESET_COPMEM) $(DOT) $(MAKEFILE_LIST)
 .PHONY: show
 
 # run Yosys with "noflatten", which will produce a resource count per module
-count: $(RESET_COPMEM).mem $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
-	@mkdir -p $(LOGS)
+count: $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+	@mkdir -p $(LOGS) $(@D)
 	@-cp $(LOGS)/$(OUTNAME)_yosys_count.log $(LOGS)/$(OUTNAME)_yosys_count_last.log
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 .PHONY: count
 
 # run Verilator to check for Verilog issues
-lint: $(VLT_CONFIG) $(RESET_COPMEM).mem $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+lint: $(VLT_CONFIG) $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC)
 .PHONY: lint
 
@@ -199,7 +202,7 @@ $(DOT): %.dot: %.sv $(MAKEFILE_LIST)
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
-%.json: $(VLT_CONFIG) $(RESET_COPMEM).mem $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+%.json: $(VLT_CONFIG) $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	@echo === Building iCEBreaker Xosera ===
 	@rm -f $@
 	@mkdir -p $(LOGS) $(@D)
@@ -299,10 +302,13 @@ $(VLT_CONFIG):
 $(COPASM):
 	@echo === Building copper assembler...
 	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE)
+	@mkdir -p $(@D)
+	cp -v $(XOSERA_M68K_API)/../copper/CopAsm/bin/copasm $(COPASM)
 
 # assemble casm into mem file
-%.mem : %.casm $(COPASM)
-	$(COPASM) -l -o $@ $<
+$(RESET_COPMEM):  $(COPASM) $(RESET_COP)
+	@mkdir -p $(@D)
+	$(COPASM) $(COPASMOPT) -l -i $(XOSERA_M68K_API) -o $@ $(RESET_COP)
 
 # delete all targets that will be re-generated
 clean:

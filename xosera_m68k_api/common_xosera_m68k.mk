@@ -126,11 +126,11 @@ $(DISASM) : $(ELF)
 $(OBJECTS): $(HEADERS) $(MAKEFILE_LIST)
 
 %.h : %.casm
-	$(COPASM) -l -o $@ $<
+	$(COPASM) -v -l -i $(XOSERA_M68K_API) -o $@ $<
 
 %.h : %.cpasm
 	$(CPP) $< -o $(basename $<).casm.ii
-	$(COPASM) -v -l -o $@ $(basename $<).casm.ii
+	$(COPASM) -v -l -i $(XOSERA_M68K_API) -o $@ $(basename $<).casm.ii
 
 %.o : %.c
 	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) -o $@ $<

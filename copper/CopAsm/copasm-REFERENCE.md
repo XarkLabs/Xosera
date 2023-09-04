@@ -11,6 +11,8 @@ Usage:  copasm [options] <input files ...> [-o output.fmt]
 
 -b      maximum bytes hex per listing line (8-64, default 8)
 -c      suppress listing inside false conditional (.LISTCOND false)
+-d sym  define <sym>[=expression]
+-i      add default include search path (tried if include fails)
 -k      no error-kill, continue assembly despite errors
 -l      request listing file (uses output name with .lst)
 -m      suppress macro expansion listing (.LISTMAC false)

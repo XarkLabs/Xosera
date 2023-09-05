@@ -64,22 +64,36 @@ Words at the start of a line are assumed to be label definitions (otherwise appe
 
 ## Copper Instructions
 
-| Instruction               | Opcodes       | Words | Description                                                       |
-|---------------------------|---------------|-------|-------------------------------------------------------------------|
-| `SETI` *xaddr14*,#*imm16* | `$Xooo $iiii` | 2     | Set XR dest *xaddr14* to value *imm16* (`X`=`0`/`4`/`8`/`C`)      |
-| `SETM` *xaddr16*,*caddr*  | `$Dccc $xooo` | 2     | Set XR dest *xaddr16* to contents of memory *caddr*               |
-| `HPOS` #*horiz-pos*       | `$2hhh`       | 1     | Halt until H >= *horiz-pos* (`hhh`=`0`-`$7FF`)                    |
-| `VPOS` #*vert-pos*        | `$2vvv`       | 1     | Halt until V >= *vert-pos* (`vvv`=`$800\|0-$3FF`,`[10]=`waitblit) |
-| `BRGE` *caddr*            | `$3ccc`       | 1     | Branch if `B`=`0` (`RA` - write-val >= `0`, `ccc`=`0-$7FF` )      |
-| `BRLT` *caddr*            | `$3ccc`       | 1     | Branch if `B`=`1` (`RA` - write-val < `0`, `ccc`=`$800\|0-$7FF`)  |
+| Copper Assembly             | Opcode Bits                 | B | # | ~  | Description                               |
+|-----------------------------|-----------------------------|---|---|----|-------------------------------------------|
+| `SETI`   *xadr14*,`#`*im16* | `rr00` `oooo` `oooo` `oooo` | B | 2 | 4  | sets [xadr14] &larr; to #val16            |
+| + *im16* *value*            | `iiii` `iiii` `iiii` `iiii` | - | - | -  | *(im16, 2<sup>nd</sup> word of `SETI`)*   |
+| `SETM`  *xadr16*,*cadr12*   | `--01` `rccc` `cccc` `cccc` | B | 2 | 4  | sets [xadr16] &larr; to [cadr12]          |
+| + *xadr16* *address*        | `rroo` `oooo` `oooo` `oooo` | - | - | -  | *(xadr16, 2<sup>nd</sup> word of `SETM`)* |
+| `HPOS`   `#`*im11*          | `--10` `0iii` `iiii` `iiii` |   | 1 | 4+ | wait until video `HPOS` >= *im11*         |
+| `VPOS`   `#`*im11*          | `--10` `1iii` `iiii` `iiii` |   | 1 | 4+ | wait until video `VPOS` >= *im11*         |
+| `BRGE`   *cadd11*           | `--11` `0ccc` `cccc` `cccc` |   | 1 | 4  | if (`B`==0) `PC` &larr; *cadd11*          |
+| `BRLT`   *cadd11*           | `--11` `1ccc` `cccc` `cccc` |   | 1 | 4  | if (`B`==1) `PC` &larr; *cadd11*          |
+
+| Legend   | Description                                                                                    |
+|----------|------------------------------------------------------------------------------------------------|
+| `B`      | borrow flag set, true when `RA` < *val16* written (borrow after unsigned subtract)             |
+| `#`      | number 16-bit words for opcodes                                                                |
+| `~`      | number of copper cycles (each cycle is the time for one native pixel)                          |
+| *xadr14* | 2-bit XR region + 12-bit offset (1<sup>st</sup> word of `SETI`, destination address)           |
+| *im16*   | 16-bit immediate word (2<sup>nd</sup> word of `SETI`, source address)                          |
+| *cadr12* | 11-bit copper address or register with bit [11] (1<sup>st</sup> word of `SETM`, source adress) |
+| *xadr16* | XR region + 14-bit offset (2<sup>nd</sup> word of `SETM`, destination address)                 |
+| *im11*   | 11-bit immediate value (used with `HPOS`, `VPOS` wait opcodes)                                 |
+| *cadd11* | 11-bit copper address (used with `BRGE`, `BRLT` branch opcodes)                                |
 
 ## Pseudo Copper Instructions
 
 | Instruction                | Alias  | Words | Description                                                              |
 |----------------------------|--------|-------|--------------------------------------------------------------------------|
-| `MOVE` `#`*imm16*,*xadr14* | `SETI` | 2     | m68k style `MOVE` immediate, copy `#`*imm16* &rarr; *xadr16*             |
-| `MOVE` *cadr12*,*xadr16*   | `SETM` | 2     | m68k style `MOVE` memory, copy *source* &rarr; *dest*                    |
-| `MOVI` `#`*imm16*,*xadr14* | `SETI` | 2     | m68k order `SETI`, copy `#`*imm16* &rarr; *cadr12*                       |
+| `MOVE` `#`*imm16*,*xadr14* | `SETI` | 2     | m68k style `MOVE` immediate, copies `#`*imm16* &rarr; *xadr16*           |
+| `MOVE` *cadr12*,*xadr16*   | `SETM` | 2     | m68k style `MOVE` memory, copies *source* &rarr; *dest*                  |
+| `MOVI` `#`*imm16*,*xadr14* | `SETI` | 2     | m68k order `SETI`, copies `#`*imm16* &rarr; *cadr12*                     |
 | `MOVM` *cadr12*,*xadr16*   | `SETM` | 2     | m68k order`SETM`, copy *cadr12* &rarr; *xadr16*                          |
 | `LDI` `#`*imm16*           | `SETI` | 2     | Load `RA` register with value *imm16*, set `B`=`0`                       |
 | `LDM` *cadr12*             | `SETM` | 2     | Load `RA` register with contents of memory *cadr12*, set `B`=`0`         |
@@ -91,6 +105,8 @@ Words at the start of a line are assumed to be label definitions (otherwise appe
 | `CMPI` `#`*imm16*          | `SETI` | 2     | test if `RA` < *imm16*, `B` flag updated (`RA` not altered)              |
 | `CMPM` *cadr12*            | `SETM` | 2     | test it `RA` < contents of *cadr12*, `B` flag updated (`RA` not altered) |
 
+> :mag: **Source and destination operand order:** The `SETI/SETM` assembler instructions always use *destination* &larr; *source*, and the `MOVI/MOVM` (and `MOVE`) instructions always use m68k style *source* &rarr; *destination*. However, note that in the machine code, the source and destination operand words are in *reversed* order between `SETI/MOVI` and `SETM/MOVM` opecodes.  With `SETI/MOVI`, the first opcode word is the *destination* 14-bit XR address, with opcode bits `[13:12]` set to `00` (which are usually already zero in XR addresses, except for the last 1KW of TILEMEM). With `SETM/MOVM`, the first opcode word is the copper memory *source* address with opcode bits `[13:12]` set to `01` (and bits `[15:14]` technically ignored, but usually set to `11`  copper region for consistency).  When self-modifying a `SETM/MOVM` typically you would OR or add predefined `SETM` or `MOVM` symbol to set the opcode bit `[12]`.
+
 ## Copper Predefined Symbols
 
 | Symbol       | Value   | Description                                                         |
@@ -100,21 +116,17 @@ Words at the start of a line are assumed to be label definitions (otherwise appe
 | `RA`         | `$800`  | (addr read/write) RA accumulator register                           |
 | `RA_SUB`     | `$801`  | (addr write) RA = RA - value written, update B flag                 |
 | `RA_CMP`     | `$7FF`  | (addr write) compute RA - value written, update B flag (RA not set) |
-| `H_EOL`      | `$7FF`  | Horizontal End-of-Line pos (waits until `HPOS #0` on next line)     |
-| `V_EOF`      | `$3FF`  | Vertical End-of-Frame pos (waits until reset at end of frame)       |
-| `V_WAITBLIT` | `$7FF`  | Vertical wait for blitter pos (wait until blit ready or EOF)        |
-| `SETI`       | `$0000` | SETI opcode bits (for self-modifying code)                          |
-| `MOVEI`      | `$0000` | MOVEI alias for SETI opcode bits (for self-modifying code)          |
+| `SETI`       | `$0000` | SETI opcode bits (zero, but kept for consistency)                   |
+| `MOVI`       | `$0000` | MOVI alias for SETI opcode bits (zero, but kept for consistency)    |
 | `SETM`       | `$1000` | SETM opcode bits (for self-modifying code)                          |
-| `MOVE`       | `$1000` | MOVE alias for SETM opcode bits (for self-modifying code)           |
+| `MOVM`       | `$1000` | MOVM alias for SETM opcode bits (for self-modifying code)           |
 | `HPOS`       | `$2000` | HPOS opcode bits (for self-modifying code)                          |
 | `VPOS`       | `$2800` | VPOS opcode bits (for self-modifying code)                          |
 | `BRGE`       | `$3000` | BRGE opcode bits (for self-modifying code)                          |
 | `BRLT`       | `$3800` | BRLT opcode bits (for self-modifying code)                          |
-
-    xl->add_sym("H_EOL", xlasm::symbol_t::LABEL, 0x7FF);
-    xl->add_sym("V_EOF", xlasm::symbol_t::LABEL, 0x3FF);
-    xl->add_sym("V_WAITBLIT", xlasm::symbol_t::LABEL, 0x7FF);
+| `H_EOL`      | `$07FF` | HPOS End-of-Line position (waits until `HPOS #0` on next line)      |
+| `V_EOF`      | `$03FF` | VPOS End-of-Frame position (waits until reset at end of frame)      |
+| `V_WAITBLIT` | `$07FF` | VPOS blitter wait position (wait until blit idle or end of frame)   |
 
 ## Assembler Expressions
 
@@ -150,3 +162,9 @@ The following C style operators are supported:
 | `\`                          | Division                                            |
 | `%`                          | Modulo                                              |
 | `(` *expression* `)`         | Parenthesis can be used to control evaluation order |
+
+> :mag: **Assembler Defintion File** Adding `.include "xosera_m68k_defs.inc"` will include a file defining Xosera registers and constants for use in copper programs.
+
+> :mag: **C Include Compatibility** When using the `C` compiler preprocessor, CopAsm is also generally compatible with the C include headers and that only define macros with expressions.  The default Xosera Makefile will invoke the C preprocessor (with `-D__COPASM__=1` defined) before assembly on `.cpasm` files (vs normal `.casm` files that are only assembled).  This can be useful to define constants shared between C/C++ and copper code (an exmaple of this is in the `xosera_boing_m68k` sample).  
+
+See [Xosera Reference](../../REFERENCE.md) for more details about Xosera copper operation.

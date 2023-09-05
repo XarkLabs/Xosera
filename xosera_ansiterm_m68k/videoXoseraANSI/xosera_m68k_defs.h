@@ -24,18 +24,16 @@
 #if !defined(XOSERA_M68K_DEFS_H)
 #define XOSERA_M68K_DEFS_H
 
-#define XM_BASEADDR 0xf80060        // Xosera rosco_m68k 68010 register base address
-
 // Xosera XR Memory Regions (size in 16-bit words)
 #define XR_CONFIG_REGS  0x0000        // 0x0000-0x000F 16 config/ctrl registers
 #define XR_PA_REGS      0x0010        // 0x0010-0x0017 8 playfield A video registers
 #define XR_PB_REGS      0x0018        // 0x0018-0x001F 8 playfield B video registers
-#define XR_AUDIO_REGS   0x0020        // 0x0020-0x002F 16 audio playback registers      // TODO: audio
+#define XR_AUDIO_REGS   0x0020        // 0x0020-0x002F 16 audio playback registers
 #define XR_BLIT_REGS    0x0040        // 0x0040-0x004B 10 blitter registers
 #define XR_TILE_ADDR    0x4000        // (R/W) 0x4000-0x53FF tile glyph/tile map memory
 #define XR_TILE_SIZE    0x1400        //                     5120 x 16-bit tile glyph/tile map memory
 #define XR_COLOR_ADDR   0x8000        // (R/W) 0x8000-0x81FF 2 x A & B color lookup memory
-#define XR_COLOR_SIZE   0x0200        //                     2 x 256 x 16-bit words  (0xARGB)
+#define XR_COLOR_SIZE   0x0200        //                     2 x 256 x 16-bit words (0xARGB)
 #define XR_COLOR_A_ADDR 0x8000        // (R/W) 0x8000-0x80FF A 256 entry color lookup memory
 #define XR_COLOR_A_SIZE 0x0100        //                     256 x 16-bit words (0xARGB)
 #define XR_COLOR_B_ADDR 0x8100        // (R/W) 0x8100-0x81FF B 256 entry color lookup memory
@@ -50,15 +48,12 @@
 #define XV_INFO_WORDS 128        // 128 16-bit words (last 128 words in copper memory)
 #define XV_INFO_ADDR  (XR_COPPER_ADDR + XR_COPPER_SIZE - XV_INFO_WORDS)
 
-// Macros to make bit-fields easier (works similar to Verilog "+:" operator, e.g., word[RIGHTMOST_BIT +: BIT_WIDTH])
-// encode value into bit-field for register
-#define XB_(v, right_bit, bit_width) ((((uint16_t)(v)) & ((1 << (bit_width)) - 1)) << (right_bit))
-// decode bit-field from register into value
-#define XV_(v, right_bit, bit_width) ((((uint16_t)(v)) >> (right_bit)) & ((1 << (bit_width)) - 1))
-
-// Xosera Main Registers (XM Registers, directly CPU accessable)
+// Xosera Main 16-bit Registers (directly CPU accessable XM Registers)
+#if defined(ROSCO_M68K)        // setup for rosco_m68k using Xosera board
 // NOTE: Main register numbers are multiplied by 4 for rosco_m68k, because of even byte 6800 8-bit addressing plus
 // 16-bit registers
+#define XM_BASEADDR 0xf80060        // rosco_m68k Xosera register base address (upper byte [15:8] of 16-bit bus)
+
 #define XM_SYS_CTRL 0x00        // (R /W+) [15:8] status bits, write setup PIXEL_X/Y & options, [7:0] write masking
 #define XM_INT_CTRL 0x04        // (R /W+) FPGA config, interrupt status/control
 #define XM_TIMER    0x08        // (R /W+) read 1/10th millisecond timer, write 8-bit interval timer count
@@ -75,7 +70,25 @@
 #define XM_PIXEL_Y  0x34        // (- /W+) pixel Y coordinate / setup pixel line width
 #define XM_UART     0x38        // (R+/W+) optional debug USB UART communication
 #define XM_FEATURE  0x3C        // (R /W+) Xosera feature flags, write sets pixel base, width to X, Y and mask mode
-
+#else
+// Xosera Main 16-bit Registers (directly accessable XM Registers)
+#define XM_SYS_CTRL 0x0        // (R /W+) [15:8] status bits, write setup PIXEL_X/Y & options, [7:0] write masking
+#define XM_INT_CTRL 0x1        // (R /W+) FPGA config, interrupt status/control
+#define XM_TIMER    0x2        // (R /W+) read 1/10th millisecond timer, write 8-bit interval timer count
+#define XM_RD_XADDR 0x3        // (R /W+) XR register/address for XM_XDATA read access
+#define XM_WR_XADDR 0x4        // (R /W ) XR register/address for XM_XDATA write access
+#define XM_XDATA    0x5        // (R /W+) read/write XR register/memory at XM_RD_XADDR/XM_WR_XADDR
+#define XM_RD_INCR  0x6        // (R /W ) increment value for XM_RD_ADDR read from XM_DATA/XM_DATA_2
+#define XM_RD_ADDR  0x7        // (R /W+) VRAM address for reading from VRAM when XM_DATA/XM_DATA_2 is read
+#define XM_WR_INCR  0x8        // (R /W ) increment value for XM_WR_ADDR on write to XM_DATA/XM_DATA_2
+#define XM_WR_ADDR  0x9        // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
+#define XM_DATA     0xA        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
+#define XM_DATA_2   0xB        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
+#define XM_PIXEL_X  0xC        // (- /W+) pixel X coordinate / setup pixel base address
+#define XM_PIXEL_Y  0xD        // (- /W+) pixel Y coordinate / setup pixel line width
+#define XM_UART     0xE        // (R+/W+) optional debug USB UART communication
+#define XM_FEATURE  0xF        // (R /W+) Xosera feature flags, write sets pixel base, width to X, Y and mask mode
+#endif
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 //  Video Config and Copper XR Registers
 #define XR_VID_CTRL  0x00        // (R /W) display control and border color index
@@ -246,10 +259,6 @@
 #define AUD_CTRL_AUD_EN_B 0             // bit number to enable/disable audio
 #define AUD_CTRL_AUD_EN_W 1             // 1 bit
 #define AUD_CTRL_AUD_EN_F 0x0001        // flag to enable/disable audio
-// XR_VID_CTRL constants
-#define VID_CTRL_SWAP_AB_B 15        // bit number to colormap used (pf A uses colormap B and vice versa)
-#define VID_CTRL_BORDCOL_B 0         // rightmost bit number of pf A color index
-#define VID_CTRL_BORDCOL_W 8         // bit width for pf A color index
 // XR_Px_GFX_CTRL BPP mode constants
 #define GFX_BPP_1 0        // 1-bpp (2 colors + selected via fore/back color attribute byte)
 #define GFX_BPP_4 1        // 4-bpp (16 colors)
@@ -319,22 +328,29 @@
 #define BLIT_SHIFT_CNT_W  2
 #define BLIT_SHIFT_CNT_F  0x0003
 
+#if !defined(__COPASM__)
+#include <stdint.h>
+// Macros to make bit-fields easier (works similar to Verilog "+:" operator, e.g., word[RIGHTMOST_BIT +: BIT_WIDTH])
+// encode value into bit-field for register
+#define XB_(v, right_bit, bit_width) ((((uint16_t)(v)) & ((1 << (bit_width)) - 1)) << (right_bit))
+// decode bit-field from register into value
+#define XV_(v, right_bit, bit_width) ((((uint16_t)(v)) >> (right_bit)) & ((1 << (bit_width)) - 1))
+
 #define MAKE_GFX_CTRL(colbase, blank, bpp, bm, hx, vx)                                                                 \
     (XB_(colbase, 8, 8) | XB_(blank, 7, 1) | XB_(bm, 6, 1) | XB_(bpp, 4, 2) | XB_(hx, 2, 2) | XB_(vx, 0, 2))
 #define MAKE_TILE_CTRL(tilebase, map_in_tile, glyph_in_vram, tileheight)                                               \
     (((tilebase)&0xFC00) | XB_(map_in_tile, 9, 1) | XB_(glyph_in_vram, 8, 1) | XB_(((tileheight)-1), 0, 4))
-#define MAKE_HV_SCROLL(h_scrl, v_scrl) (XB_(h_scrl, 8, 8) | XB_(v_scrl, 0, 8))
-
-#define MAKE_VID_CTRL(borcol, intmask) (XB_(borcol, 8, 0) | XB_(intmask, 0, 4))
+#define MAKE_HV_SCROLL(h_scrl, v_scrl)  (XB_(h_scrl, 8, 8) | XB_(v_scrl, 0, 8))
+#define MAKE_VID_CTRL(swap_ab, bordcol) (XB_(swap_ab, 15, 1) | XB_(bordcol, 0, 8))
 
 // copper constants for HPOS/VPOS
 #define COP_H_EOL      0x7FF        // copper HPOS value for wait end of line
 #define COP_V_EOF      0x3FF        // copper VPOS value for wait end of frame
 #define COP_V_WAITBLIT 0x7FF        // copper VPOS value for wait blit ready or end of frame
 // copper special memory addresses
-#define COP_RA     0xC800        // copper address for RA register
-#define COP_RA_SUB 0xC801        // copper address for RA = RA - writeval
-#define COP_RA_CMP 0xC7FF        // copper address for set B if RA < writeval
+#define COP_RA     0x800        // copper address for RA register
+#define COP_RA_SUB 0x801        // copper address for RA = RA - writeval
+#define COP_RA_CMP 0x7FF        // copper address for set B if RA < writeval
 // copper instructions
 #define COP_SETI(d_xadr14, i_val16)  ((uint16_t)0x0000 | ((uint16_t)(d_xadr14)&0xCFFF)), ((uint16_t)(i_val16))
 #define COP_SETM(d_xadr16, s_cadr12) ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(d_xadr16))
@@ -343,9 +359,9 @@
 #define COP_BRGE(cadr11)             ((uint16_t)0x3000 | ((uint16_t)(cadr11)&0x07FF))
 #define COP_BRLT(cadr11)             ((uint16_t)0x3800 | ((uint16_t)(cadr11)&0x07FF))
 // copper pseudo instructions
-#define COP_MOVE(i_val16, d_xadr14)  ((uint16_t)0x0000 | ((uint16_t)(d_xadr14)&0xCFFF)), ((uint16_t)(i_val16))
-#define COP_MOVER(i_val16, d_xreg)   ((uint16_t)0x0000 | ((uint16_t)(XR_##d_xreg) & 0xCFFF)), ((uint16_t)(i_val16))
+#define COP_MOVI(i_val16, d_xadr14)  ((uint16_t)0x0000 | ((uint16_t)(d_xadr14)&0xCFFF)), ((uint16_t)(i_val16))
 #define COP_MOVM(s_cadr12, d_xadr16) ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(d_xadr16))
+#define COP_MOVER(i_val16, d_xreg)   ((uint16_t)0x0000 | ((uint16_t)(XR_##d_xreg) & 0xCFFF)), ((uint16_t)(i_val16))
 #define COP_LDI(i_val16)             ((uint16_t)0xC000 | ((uint16_t)(COP_RA)&0x0FFF)), ((uint16_t)(i_val16))
 #define COP_LDM(s_cadr12)            ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(COP_RA))
 #define COP_STM(d_xadr16)            ((uint16_t)0xD000 | ((uint16_t)(COP_RA)&0x0FFF)), ((uint16_t)(d_xadr16))
@@ -357,4 +373,5 @@
 #define COP_CMPM(s_cadr12)           ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(COP_RA_CMP))
 #define COP_END()                    ((uint16_t)0x2800 | ((uint16_t)(COP_V_EOF)&0x07FF))
 
-#endif        // XOSERA_M68K_DEFS_H
+#endif        // !defined(__COPASM__)
+#endif        // !defined(XOSERA_M68K_DEFS_H)

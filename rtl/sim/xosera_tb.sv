@@ -543,17 +543,17 @@ always @(posedge clk) begin
             for (i = 0; i < 2**xv::AUDIO_W; i += 16) begin
                 $fwrite(f, "%04x: ", i[15:0]);
                 for (j = 0; j < 16; j++) begin
-                    $fwrite(f, "%04x ", xosera.video_gen.audio_mixer_slim.audio_mem.bram[i+j][15:0]);
+                    $fwrite(f, "%04x ", xosera.video_gen.audio_mixer.audio_mem.bram[i+j][15:0]);
                 end
                 $fwrite(f, "  ");
                 for (j = 0; j < 16; j++) begin
-                    if (xosera.video_gen.audio_mixer_slim.audio_mem.bram[i+j][15:8] >= 32 && xosera.video_gen.audio_mixer_slim.audio_mem.bram[i+j][15:8] < 127) begin
+                    if (xosera.video_gen.audio_mixer.audio_mem.bram[i+j][15:8] >= 32 && xosera.video_gen.audio_mixer.audio_mem.bram[i+j][15:8] < 127) begin
                         $fwrite(f, "%c", xosera.xrmem_arb.coppermem.bram[i+j][15:8]);
                     end else
                     begin
                         $fwrite(f, ".");
                     end
-                    if (xosera.video_gen.audio_mixer_slim.audio_mem.bram[i+j][7:0] >= 32 && xosera.video_gen.audio_mixer_slim.audio_mem.bram[i+j][7:0] < 127) begin
+                    if (xosera.video_gen.audio_mixer.audio_mem.bram[i+j][7:0] >= 32 && xosera.video_gen.audio_mixer.audio_mem.bram[i+j][7:0] < 127) begin
                         $fwrite(f, "%c", xosera.xrmem_arb.coppermem.bram[i+j][7:0]);
                     end else
                     begin

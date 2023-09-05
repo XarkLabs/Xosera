@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "xosera_defs.h"
+#include "../../xosera_m68k_api/xosera_m68k_defs.h"
 #include "video_mode_defs.h"
 
 #include "verilated.h"

@@ -16,7 +16,7 @@
 #include <unistd.h>
 
 #include "ftdi_spi.h"
-#include "xosera_defs.h"
+#include "../xosera_m68k_api/xosera_m68k_defs.h"
 
 static void hexdump(size_t num, uint8_t * mem)
 {

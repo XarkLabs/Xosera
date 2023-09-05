@@ -27,17 +27,17 @@ XM_BASEADDR             equ     $f80060     ; Xosera rosco_m68k 68010 register b
 XR_CONFIG_REGS          equ     $0000       ; $0000-$000F 16 config/ctrl registers
 XR_PA_REGS              equ     $0010       ; $0010-$0017 8 playfield A video registers
 XR_PB_REGS              equ     $0018       ; $0018-$001F 8 playfield B video registers
-XR_AUDIO_REGS           equ     $0020       ; $0020-$002F 16 audio playback registers      ; TODO: audio
+XR_AUDIO_REGS           equ     $0020       ; $0020-$002F 16 audio playback registers
 XR_BLIT_REGS            equ     $0040       ; $0040-$004B 10 blitter registers
 XR_TILE_ADDR            equ     $4000       ; (R/W) $4000-$53FF tile glyph/tile map memory
 XR_TILE_SIZE            equ     $1400       ;                     5120 x 16-bit tile glyph/tile map memory
 XR_COLOR_ADDR           equ     $8000       ; (R/W) $8000-$81FF 2 x A & B color lookup memory
-XR_COLOR_SIZE           equ     $0200       ;                     2 x 256 x 16-bit words  ($ARGB)
+XR_COLOR_SIZE           equ     $0200       ;                     2 x 256 x 16-bit words ($ARGB)
 XR_COLOR_A_ADDR         equ     $8000       ; (R/W) $8000-$80FF A 256 entry color lookup memory
 XR_COLOR_A_SIZE         equ     $0100       ;                     256 x 16-bit words ($ARGB)
 XR_COLOR_B_ADDR         equ     $8100       ; (R/W) $8100-$81FF B 256 entry color lookup memory
 XR_COLOR_B_SIZE         equ     $0100       ;                     256 x 16-bit words ($ARGB)
-XR_POINTER_ADDR         equ     $8200       ; (-/W) 0x8200-0x82FF 256 word 32x32 4-bpp pointer image
+XR_POINTER_ADDR         equ     $8200       ; (-/W) $8200-$82FF 256 word 32x32 4-bpp pointer image
 XR_POINTER_SIZE         equ     $0100       ;                     256 x 16-bit words (4-bit pixels)
 XR_COPPER_ADDR          equ     $C000       ; (R/W) $C000-$C5FF copper memory (16-bit instructions)
 XR_COPPER_SIZE          equ     $0600       ;                     1024+512 x 16-bit copper memory words
@@ -50,9 +50,9 @@ XV_INFO_ADDR            equ     (XR_COPPER_ADDR+XR_COPPER_SIZE-XV_INFO_WORDS)
 ; Xosera Main Registers (XM Registers, directly CPU accessable)
 ; NOTE: Main register numbers are multiplied by 4 for rosco_m68k, because of even byte 6800 8-bit addressing plus
 ; 16-bit registers
-XM_SYS_CTRL             equ     $00         ; (R /W+) status bits, FPGA config, write masking
-XM_INT_CTRL             equ     $04         ; (R /W ) interrupt status/control
-XM_TIMER                equ     $08         ;  (R /- ) read 1/10th millisecond timer
+XM_SYS_CTRL             equ     $00         ; (R /W+) [15:8] status bits, write setup PIXEL_X/Y & options, [7:0] write masking
+XM_INT_CTRL             equ     $04         ; (R /W+) FPGA config, interrupt status/control
+XM_TIMER                equ     $08         ; (R /W+) read 1/10th millisecond timer, write 8-bit interval timer count
 XM_RD_XADDR             equ     $0C         ; (R /W+) XR register/address for XM_XDATA read access
 XM_WR_XADDR             equ     $10         ; (R /W ) XR register/address for XM_XDATA write access
 XM_XDATA                equ     $14         ; (R /W+) read/write XR register/memory at XM_RD_XADDR/XM_WR_XADDR
@@ -62,32 +62,105 @@ XM_WR_INCR              equ     $20         ; (R /W ) increment value for XM_WR_
 XM_WR_ADDR              equ     $24         ; (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
 XM_DATA                 equ     $28         ; (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
 XM_DATA_2               equ     $2C         ; (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
-XM_PIXEL_X              equ     $30         ; (   W+) pixel X coordinate / pixel base address
-XM_PIXEL_Y              equ     $34         ; (   W+) pixel Y coordinate / pixel line width
+XM_PIXEL_X              equ     $30         ; (- /W+) pixel X coordinate / setup pixel base address
+XM_PIXEL_Y              equ     $34         ; (- /W+) pixel Y coordinate / setup pixel line width
 XM_UART                 equ     $38         ; (R+/W+) optional debug USB UART communication
-XM_FEATURE              equ     $3C         ; (R+/W+) Xosera feature flags, odd byte UART
+XM_FEATURE              equ     $3C         ; (R /W+) Xosera feature flags, write sets pixel base, width to X, Y and mask mode
+
+; XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
+;  Video Config and Copper XR Registers
+XR_VID_CTRL             equ     $00         ; (R /W) display control and border color index
+XR_COPP_CTRL            equ     $01         ; (R /W) display synchronized coprocessor control
+XR_AUD_CTRL             equ     $02         ; (- /-) TODO: audio channel control
+XR_SCANLINE             equ     $03         ; (R /W) read scanline (incl. offscreen), write signal video interrupt
+XR_VID_LEFT             equ     $04         ; (R /W) left edge of active display window (typically 0)
+XR_VID_RIGHT            equ     $05         ; (R /W) right edge of active display window +1 (typically 640 or 848)
+XR_POINTER_H            equ     $06         ; (- /W) pointer sprite raw H position
+XR_POINTER_V            equ     $07         ; (- /W) pointer sprite raw V position / pointer color select
+XR_UNUSED_08            equ     $08         ; (- /-) unused XR 08
+XR_UNUSED_09            equ     $09         ; (- /-) unused XR 09
+XR_UNUSED_0A            equ     $0A         ; (- /-) unused XR 0A
+XR_UNUSED_0B            equ     $0B         ; (- /-) unused XR 0B
+XR_UNUSED_0C            equ     $0C         ; (- /-) unused XR 0C
+XR_UNUSED_0D            equ     $0D         ; (- /-) unused XR 0D
+XR_UNUSED_0E            equ     $0E         ; (- /-) unused XR 0E
+XR_UNUSED_0F            equ     $0F         ; (- /-) unused XR 0F
+; Playfield A Control XR Registers
+XR_PA_GFX_CTRL          equ     $10         ; (R /W) playfield A graphics control
+XR_PA_TILE_CTRL         equ     $11         ; (R /W) playfield A tile control
+XR_PA_DISP_ADDR         equ     $12         ; (R /W) playfield A display VRAM start address
+XR_PA_LINE_LEN          equ     $13         ; (R /W) playfield A display line width in words
+XR_PA_HV_FSCALE         equ     $14         ; (R /W) playfield A horizontal and vertical fractional scale
+XR_PA_HV_SCROLL         equ     $15         ; (R /W) playfield A horizontal and vertical fine scroll
+XR_PA_LINE_ADDR         equ     $16         ; (- /W) playfield A scanline start address (loaded at start of line)
+XR_PA_UNUSED_17         equ     $17         ; (- /-)
+; Playfield B Control XR Registers
+XR_PB_GFX_CTRL          equ     $18         ; (R /W) playfield B graphics control
+XR_PB_TILE_CTRL         equ     $19         ; (R /W) playfield B tile control
+XR_PB_DISP_ADDR         equ     $1A         ; (R /W) playfield B display VRAM start address
+XR_PB_LINE_LEN          equ     $1B         ; (R /W) playfield B display line width in words
+XR_PB_HV_FSCALE         equ     $1C         ; (R /W) playfield B horizontal and vertical fractional scale
+XR_PB_HV_SCROLL         equ     $1D         ; (R /W) playfield B horizontal and vertical fine scroll
+XR_PB_LINE_ADDR         equ     $1E         ; (- /W) playfield B scanline start address (loaded at start of line)
+XR_PB_UNUSED_1F         equ     $1F         ; (- /-)
+; Audio Registers
+XR_AUD0_VOL             equ     $20         ; (- /W ) audio channel 0 8-bit L+R volume ($80 = 100%)
+XR_AUD0_PERIOD          equ     $21         ; (- /W+) audio channel 0 15-bit period, bit [15] force restart
+XR_AUD0_LENGTH          equ     $22         ; (- /W ) audio channel 0 15-bit sample word length-1, bit [15] tile mem
+XR_AUD0_START           equ     $23         ; (- /W+) audio channel 0 sample start address (vram/tilemem), clear reload
+XR_AUD1_VOL             equ     $24         ; (- /W ) audio channel 1 8-bit L+R volume ($80 = 100%)
+XR_AUD1_PERIOD          equ     $25         ; (- /W+) audio channel 1 15-bit period, bit [15] force restart
+XR_AUD1_LENGTH          equ     $26         ; (- /W ) audio channel 1 15-bit sample word length-1, bit [15] tile mem
+XR_AUD1_START           equ     $27         ; (- /W+) audio channel 1 sample start address (vram/tilemem), clear reload
+XR_AUD2_VOL             equ     $28         ; (- /W ) audio channel 2 8-bit L+R volume ($80 = 100%)
+XR_AUD2_PERIOD          equ     $29         ; (- /W+) audio channel 2 15-bit period, bit [15] force restart
+XR_AUD2_LENGTH          equ     $2A         ; (- /W ) audio channel 2 15-bit sample word length-1, bit [15] tile mem
+XR_AUD2_START           equ     $2B         ; (- /W+) audio channel 2 sample start address (vram/tilemem), clear reload
+XR_AUD3_VOL             equ     $2C         ; (- /W ) audio channel 3 8-bit L+R volume ($80 = 100%)
+XR_AUD3_PERIOD          equ     $2D         ; (- /W+) audio channel 3 15-bit period, bit [15] force restart
+XR_AUD3_LENGTH          equ     $2E         ; (- /W ) audio channel 3 15-bit sample word length-1, bit [15] tile mem
+XR_AUD3_START           equ     $2F         ; (- /W+) audio channel 3 sample start address (vram/tilemem), clear reload
+; (Registers $30-$3F reserved)
+; Blitter Registers
+XR_BLIT_CTRL            equ     $40         ; (- /W ) blit control ([15:8]=transp value, [5]=8 bpp, [4]=transp on, [0]=S constant)
+XR_BLIT_ANDC            equ     $41         ; (- /W ) blit AND-COMPLEMENT constant value
+XR_BLIT_XOR             equ     $42         ; (- /W ) blit XOR constant value
+XR_BLIT_MOD_S           equ     $43         ; (- /W ) blit modulo added to S source after each line
+XR_BLIT_SRC_S           equ     $44         ; (- /W ) blit S source VRAM read address / constant value
+XR_BLIT_MOD_D           equ     $45         ; (- /W ) blit modulo added to D destination after each line
+XR_BLIT_DST_D           equ     $46         ; (- /W ) blit D destination VRAM write address
+XR_BLIT_SHIFT           equ     $47         ; (- /W ) blit first and last word nibble masks and nibble right shift (0-3)
+XR_BLIT_LINES           equ     $48         ; (- /W ) blit number of lines minus 1, (repeats blit word count after modulo calc)
+XR_BLIT_WORDS           equ     $49         ; (- /W+) blit word count minus 1 per line (write starts blit operation)
+XR_UNUSED_4A            equ     $4A         ; (- /- ) unused XR reg
+XR_UNUSED_4B            equ     $4B         ; (- /- ) unused XR reg
+XR_UNUSED_4C            equ     $4C         ; (- /- ) unused XR reg
+XR_UNUSED_4D            equ     $4D         ; (- /- ) unused XR reg
+XR_UNUSED_4E            equ     $4E         ; (- /- ) unused XR reg
+XR_UNUSED_4F            equ     $4F         ; (- /- ) unused XR reg
+
+; Xosera register bits and constants
 
 ; SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
 ; indirect with no offset)
-SYS_CTRL_MEM_WAIT_B     equ     7           ;  (R /- )  memory read/write operation pending (with contended memory)
-SYS_CTRL_BLIT_FULL_B    equ     6           ;  (R /- )  blitter queue is full, do not write new operation to blitter registers
-SYS_CTRL_BLIT_BUSY_B    equ     5           ;  (R /- )  blitter is still busy performing an operation (not done)
-SYS_CTRL_UNUSED_12_B    equ     4           ;  (R /- )  unused (reads 0)
-SYS_CTRL_HBLANK_B       equ     3           ;  (R /- )  video signal is in horizontal blank period
-SYS_CTRL_VBLANK_B       equ     2           ;  (R /- )  video signal is in vertical blank period
-SYS_CTRL_UNUSED_9_B     equ     1           ;  (R /- )  unused (reads 0)
-SYS_CTRL_UNUSED_8_B     equ     0           ; (- /- )
+SYS_CTRL_MEM_WAIT_B     equ     7           ; (R /- )  memory read/write operation pending (with contended memory)
+SYS_CTRL_BLIT_FULL_B    equ     6           ; (R /- )  blitter queue is full, do not write new operation to blitter registers
+SYS_CTRL_BLIT_BUSY_B    equ     5           ; (R /- )  blitter is still busy performing an operation (not done)
+SYS_CTRL_UNUSED_12_B    equ     4           ; (R /- )  unused (reads 0)
+SYS_CTRL_HBLANK_B       equ     3           ; (R /- )  video signal is in horizontal blank period
+SYS_CTRL_VBLANK_B       equ     2           ; (R /- )  video signal is in vertical blank period
+SYS_CTRL_PIX_NO_MASK_B  equ     1           ; (R /W )  PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
+SYS_CTRL_PIX_8B_MASK_B  equ     0           ; (R /W )  PIXEL_X/Y 8-bit pixel mask for WR_MASK
 ; SYS_CTRL bit flags
-SYS_CTRL_MEM_WAIT_F     equ     $80         ;  (R /- )  memory read/write operation pending (with contended memory)
-SYS_CTRL_BLIT_FULL_F    equ     $40         ;  (R /- )  blitter queue is full (do not write to blitter registers)
-SYS_CTRL_BLIT_BUSY_F    equ     $20         ;  (R /- )  blitter is still busy performing an operation (not done)
-SYS_CTRL_UNUSED_12_F    equ     $10         ;  (R /- )  unused (reads 0)
-SYS_CTRL_HBLANK_F       equ     $08         ;  (R /- )  video signal is in horizontal blank period
-SYS_CTRL_VBLANK_F       equ     $04         ;  (R /- )  video signal is in vertical blank period
-SYS_CTRL_UNUSED_9_F     equ     $02         ;  (R /- )  unused (reads 0)
-SYS_CTRL_UNUSED_8_F     equ     $01         ; (- /- )
-
-; INT_CTRL bit numbers NOTE: These are word bits for INT_CTRL word
+SYS_CTRL_MEM_WAIT_F     equ     $80         ; (R /- )  memory read/write operation pending (with contended memory)
+SYS_CTRL_BLIT_FULL_F    equ     $40         ; (R /- )  blitter queue is full (do not write to blitter registers)
+SYS_CTRL_BLIT_BUSY_F    equ     $20         ; (R /- )  blitter is still busy performing an operation (not done)
+SYS_CTRL_UNUSED_12_F    equ     $10         ; (R /- )  unused (reads 0)
+SYS_CTRL_HBLANK_F       equ     $08         ; (R /- )  video signal is in horizontal blank period
+SYS_CTRL_VBLANK_F       equ     $04         ; (R /- )  video signal is in vertical blank period
+SYS_CTRL_PIX_NO_MASK_F  equ     $02         ; (R /W )  PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
+SYS_CTRL_PIX_8B_MASK_F  equ     $01         ; (R /W )  PIXEL_X/Y 8-bit pixel mask for WR_MASK
+; INT_CTRL bit numbers within word
 INT_CTRL_RECONFIG_B     equ     15          ; reconfigure FPGA to config # in bits [9:8] of INT_CTRL
 INT_CTRL_BLIT_EN_B      equ     14          ; blitter ready interrupt mask
 INT_CTRL_TIMER_EN_B     equ     13          ; timer match interrupt mask
@@ -104,7 +177,7 @@ INT_CTRL_AUD3_INTR_B    equ     3           ; audio channel ready interrupt (rea
 INT_CTRL_AUD2_INTR_B    equ     2           ; audio channel ready interrupt (read status, write acknowledge)
 INT_CTRL_AUD1_INTR_B    equ     1           ; audio channel ready interrupt (read status, write acknowledge)
 INT_CTRL_AUD0_INTR_B    equ     0           ; audio channel ready interrupt (read status, write acknowledge)
-; INT_CTRL bit flags
+; INT_CTRL bit flag/mask
 INT_CTRL_RECONFIG_F     equ     $8000       ; reconfigure FPGA to config # in bits [9:8] of INT_CTRL
 INT_CTRL_BLIT_EN_F      equ     $4000       ; blitter ready interrupt enable
 INT_CTRL_TIMER_EN_F     equ     $2000       ; timer match interrupt enable
@@ -125,158 +198,110 @@ INT_CTRL_AUD1_INTR_F    equ     $0002       ; audio channel ready interrupt (rea
 INT_CTRL_AUD0_INTR_F    equ     $0001       ; audio channel ready interrupt (read status, write acknowledge)
 INT_CTRL_AUD_ALL_F      equ     $000F       ; all audio channels status/acknowledge
 INT_CTRL_CLEAR_ALL_F    equ     $007F       ; clear all interrupts
-; FEATURE bit numbers within high byte, low byte UART data
-FEATURE_UART_RXF_B       equ     7           ; UART receive buffer full (data waiting)
-FEATURE_UART_TXF_B       equ     6           ; UART transmit buffer full (busy transmitting data)
-FEATURE_UART_B          equ     5           ; UART present flag (debug feature)
-FEATURE_AUDIO_B         equ     4           ; audio present
-FEATURE_BLIT_B          equ     3           ; blitter present
-FEATURE_COPP_B          equ     2           ; copper present
-FEATURE_PF_B_B          equ     1           ; playfield B present
-FEATURE_PF_WIDE_B       equ     0           ; 0 = 640x480 4:3, 1 = 848x480 16:9 widescreen
-; FEATURE flag/mask within high byte, low byte UART data
-FEATURE_RX_F            equ     $80        ; UART receive buffer full (data waiting)
-FEATURE_TX_F            equ     $40        ; UART transmit buffer full (busy transmitting data)
-FEATURE_UART_F          equ     $20        ; UART present flag (debug feature)
-FEATURE_AUDIO_F         equ     $10        ; audio present
-FEATURE_BLIT_F          equ     $08        ; blitter present
-FEATURE_COPP_F          equ     $04        ; copper present
-FEATURE_PF_B_F          equ     $02        ; playfield B present
-FEATURE_PF_WIDE_F       equ     $01        ; 0 = 640x480 4:3, 1 = 848x480 16:9 widescreen
-
-; XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
-
-;  Video Config and Copper XR Registers
-XR_VID_CTRL             equ     $00         ; (R /W) display control and border color index
-XR_COPP_CTRL            equ     $01         ; (R /W) display synchronized coprocessor control
-XR_AUD_CTRL             equ     $02         ; (- /-) TODO: audio channel control
-XR_SCANLINE             equ     $03         ; (R /W) read scanline (incl. offscreen), write signal video interrupt
-XR_VID_LEFT             equ     $04         ; (R /W) left edge of active display window (typically 0)
-XR_VID_RIGHT            equ     $05         ; (R /W) right edge of active display window +1 (typically 640 or 848)
-XR_POINTER_H            equ     $06         ; (- /W) pointer sprite raw H position
-XR_POINTER_V            equ     $07         ; (- /W) pointer sprite raw V position / pointer color select
-XR_UNUSED_08            equ     $08         ; (- /-) unused XR 08
-XR_UNUSED_09            equ     $09         ; (- /-) unused XR 09
-XR_UNUSED_0A            equ     $0A         ; (- /-) unused XR 0A
-XR_UNUSED_0B            equ     $0B         ; (- /-) unused XR 0B
-XR_UNUSED_0C            equ     $0C         ; (- /-) unused XR 0C
-XR_UNUSED_0D            equ     $0D         ; (- /-) unused XR 0D
-XR_UNUSED_0E            equ     $0E         ; (- /-) unused XR 0E
-XR_UNUSED_0F            equ     $0F         ; (- /-) unused XR 0F
-; XR_VID_CTRL bit numbers within word)
-VID_CTRL_SWAP_AB_B   equ     15          ; bit number to colormap used (pf A uses colormap B and vice versa)
-VID_CTRL_BORDCOL_B   equ     0           ; rightmost bit number of pf A color index
-VID_CTRL_BORDCOL_W   equ     8           ; bit width for pf A color index
-; XR_VID_CTRL flag/mask
-VID_CTRL_SWAP_AB_F   equ     $8000       ; flag to swap colormap used (pf A uses colormap B and vice versa)
-VID_CTRL_BORDCOL_F   equ     $00FF       ; mask for pf A color index
-
-; XR_COPP_CTRL bit numbers within word)
-COPP_CTRL_COPP_EN_B      equ     15      ; bit number to enable/disable copper
-; XR_COPP_CTRL bit flag/mask
-COPP_CTRL_COPP_EN_F      equ     $8000    ; flag to enable/disable copper
-
-; XR_AUD_CTRL bit numbers within word)
-AUD_CTRL_AUD_EN_B        equ     0           ; bit number to enable/disable audio
-; XR_AUD_CTRL bit flag/mask
-AUD_CTRL_AUD_EN_F        equ     $0001       ; flag to enable/disable audio
-
-
-; Playfield A Control XR Registers
-XR_PA_GFX_CTRL          equ     $10         ; (R /W) playfield A graphics control
-XR_PA_TILE_CTRL         equ     $11         ; (R /W) playfield A tile control
-XR_PA_DISP_ADDR         equ     $12         ; (R /W) playfield A display VRAM start address
-XR_PA_LINE_LEN          equ     $13         ; (R /W) playfield A display line width in words
-XR_PA_HV_FSCALE         equ     $14         ; (R /W) playfield A horizontal and vertical fractional scale
-XR_PA_HV_SCROLL         equ     $15         ; (R /W) playfield A horizontal and vertical fine scroll
-XR_PA_LINE_ADDR         equ     $16         ; (- /W) playfield A scanline start address (loaded at start of line)
-XR_PA_UNUSED_17         equ     $17         ; (- /-)
-
-; Playfield B Control XR Registers
-XR_PB_GFX_CTRL          equ     $18         ; (R /W) playfield B graphics control
-XR_PB_TILE_CTRL         equ     $19         ; (R /W) playfield B tile control
-XR_PB_DISP_ADDR         equ     $1A         ; (R /W) playfield B display VRAM start address
-XR_PB_LINE_LEN          equ     $1B         ; (R /W) playfield B display line width in words
-XR_PB_HV_FSCALE         equ     $1C         ; (R /W) playfield B horizontal and vertical fractional scale
-XR_PB_HV_SCROLL         equ     $1D         ; (R /W) playfield B horizontal and vertical fine scroll
-XR_PB_LINE_ADDR         equ     $1E         ; (- /W) playfield B scanline start address (loaded at start of line)
-XR_PB_UNUSED_1F         equ     $1F         ; (- /-)
-
-; Playfield GFX BPP constants
-GFX_BPP_1            equ     0           ; Px_GFX_CTRL.bpp (1-bpp + fore/back attribute color)
-GFX_BPP_4            equ     1           ; Px_GFX_CTRL.bpp (4-bpp, 16 color)
-GFX_BPP_8            equ     2           ; Px_GFX_CTRL.bpp (8-bpp 256 color)
-GFX_BPP_X            equ     3           ; Px_GFX_CTRL.bpp (reserved)
-
-; XR_AUD_CTRL bit numbers within word)
-GFX_CTRL_V_REPEAT_B  equ     0
-GFX_CTRL_V_REPEAT_W  equ     2
-GFX_CTRL_H_REPEAT_B  equ     2
-GFX_CTRL_H_REPEAT_W  equ     2
-GFX_CTRL_BPP_B       equ     4
-GFX_CTRL_BPP_W       equ     2
-GFX_CTRL_BITMAP_B    equ     6
-GFX_CTRL_BLANK_B     equ     7
-GFX_CTRL_COLORBASE_B equ     8
-GFX_CTRL_COLORBASE_W equ     8
-; XR_AUD_CTRL bit flag/mask
-GFX_CTRL_V_REPEAT_F  equ     $0003
-GFX_CTRL_H_REPEAT_F  equ     $000C
-GFX_CTRL_BPP_F       equ     $0030
-GFX_CTRL_BITMAP_F    equ     $0040
-GFX_CTRL_BLANK_F     equ     $0080
-GFX_CTRL_COLORBASE_F equ     $FF00
-
+; UART status bit number within even byte of XM_UART
+UART_RXF_B              equ     7           ; UART receive buffer full (data waiting)
+UART_TXF_B              equ     6           ; UART transmit buffer full (busy transmitting data)
+UART_RXF_F              equ     $80         ; UART receive buffer full (data waiting)
+UART_TXF_F              equ     $40         ; UART transmit buffer full (busy transmitting data)
+; FEATURE bit numbers within word (for fields wider than 1 bit, XB_(xxx_B, xxx_W) macro can be used)
+FEATURE_MONRES_B        equ     0           ; rightmost bit number for 4-bit monitor mode field
+FEATURE_MONRES_W        equ     4           ; bit width for 4-bit monitor mode field
+FEATURE_COPP_B          equ     4           ; bit number indicating presence of COPPER
+FEATURE_BLIT_B          equ     5           ; bit number indicating presence of BLITTER
+FEATURE_PF_B_B          equ     6           ; bit number indicating presence of playfield B (2nd playfield)
+FEATURE_UART_B          equ     7           ; bit number indicating presence of debug UART
+FEATURE_AUDCHAN_B       equ     8           ; rightmost bit number for 4-bit audio channels field
+FEATURE_AUDCHAN_W       equ     4           ; bit width for 4-bit audio channels field
+FEATURE_CONFIG_B        equ     12          ; rightmost bit number for 4-bit FPGA config field
+FEATURE_CONFIG_W        equ     4           ; bit width for 4-bit FPGA config field
+; FEATURE flag/mask
+FEATURE_MONRES_F        equ     $000F       ; bit-mask for 4-bit monitor mode field
+FEATURE_COPP_F          equ     $0010       ; bit flag indicating presence of COPPER
+FEATURE_BLIT_F          equ     $0020       ; bit flag indicating presence of BLITTER
+FEATURE_PF_B_F          equ     $0040       ; bit flag indicating presence of playfield B (2nd playfield)
+FEATURE_UART_F          equ     $0080       ; bit flag indicating presence of debug UART
+FEATURE_AUDCHAN_F       equ     $0F00       ; bit-mask for 4-bit audio channels field
+FEATURE_CONFIG_F        equ     $F000       ; bit-mask for 4-bit config field
+; XR_VID_CTRL constants
+VID_CTRL_SWAP_AB_B      equ     15          ; flag to swap colormap used (pf A uses colormap B and vice versa)
+VID_CTRL_SWAP_AB_W      equ     1           ; 1 bit
+VID_CTRL_SWAP_AB_F      equ     $8000       ; flag to swap colormap used (pf A uses colormap B and vice versa)
+VID_CTRL_BORDCOL_B      equ     0           ; mask for pf A color index
+VID_CTRL_BORDCOL_W      equ     8           ; 8 bit field
+VID_CTRL_BORDCOL_F      equ     $00FF       ; mask for pf A color index
+; XR_COPP_CTRL constants
+COPP_CTRL_COPP_EN_B     equ     15          ; bit number to enable/disable copper
+COPP_CTRL_COPP_EN_W     equ     1           ; 1 bit
+COPP_CTRL_COPP_EN_F     equ     $8000       ; flag to enable/disable copper
+; XR_AUD_CTRL constants
+AUD_CTRL_AUD_EN_B       equ     0           ; bit number to enable/disable audio
+AUD_CTRL_AUD_EN_W       equ     1           ; 1 bit
+AUD_CTRL_AUD_EN_F       equ     $0001       ; flag to enable/disable audio
+; XR_Px_GFX_CTRL BPP mode constants
+GFX_BPP_1               equ     0           ; 1-bpp (2 colors + selected via fore/back color attribute byte)
+GFX_BPP_4               equ     1           ; 4-bpp (16 colors)
+GFX_BPP_8               equ     2           ; 8-bpp (256 colors)
+GFX_BPP_X               equ     3           ; (reserved)
+; XR_Px_GFX_CTRL bit numbers within word)
+GFX_CTRL_V_REPEAT_B     equ     0
+GFX_CTRL_V_REPEAT_W     equ     2
+GFX_CTRL_V_REPEAT_F     equ     $0003
+GFX_CTRL_H_REPEAT_B     equ     2
+GFX_CTRL_H_REPEAT_W     equ     2
+GFX_CTRL_H_REPEAT_F     equ     $000C
+GFX_CTRL_BPP_B          equ     4
+GFX_CTRL_BPP_W          equ     2
+GFX_CTRL_BPP_F          equ     $0030
+GFX_CTRL_BITMAP_B       equ     6
+GFX_CTRL_BITMAP_W       equ     1
+GFX_CTRL_BITMAP_F       equ     $0040
+GFX_CTRL_BLANK_B        equ     7
+GFX_CTRL_BLANK_W        equ     1
+GFX_CTRL_BLANK_F        equ     $0080
+GFX_CTRL_COLORBASE_B    equ     8
+GFX_CTRL_COLORBASE_W    equ     8
+GFX_CTRL_COLORBASE_F    equ     $FF00
 ; XR_Px_TILE_CTRL bit numbers within word)
-TILE_CTRL_TILE_H_B       equ 0
-TILE_CTRL_TILE_H_W       equ 4
-TILE_CTRL_TILE_VRAM_B    equ 8
-TILE_CTRL_DISP_TILEMEM_B equ 9
-TILE_CTRL_TILEBASE_B     equ 10
-TILE_CTRL_TILEBASE_W     equ 6
-; XR_Px_TILE_CTRL bit flag/mask
-TILE_CTRL_TILE_H_F       equ $000F
-TILE_CTRL_TILE_VRAM_F    equ $0100
-TILE_CTRL_DISP_TILEMEM_F equ $0200
-TILE_CTRL_TILEBASE_F     equ $FC00
-
-; Audio Registers
-XR_AUD0_VOL             equ     $20         ; (WO/-) ; TODO: WIP
-XR_AUD0_PERIOD          equ     $21         ; (WO/-) ; TODO: WIP
-XR_AUD0_LENGTH          equ     $22         ; (WO/-) ; TODO: WIP
-XR_AUD0_START           equ     $23         ; (WO/-) ; TODO: WIP
-XR_AUD1_VOL             equ     $24         ; (WO/-) ; TODO: WIP
-XR_AUD1_PERIOD          equ     $25         ; (WO/-) ; TODO: WIP
-XR_AUD1_LENGTH          equ     $26         ; (WO/-) ; TODO: WIP
-XR_AUD1_START           equ     $27         ; (WO/-) ; TODO: WIP
-XR_AUD2_VOL             equ     $28         ; (WO/-) ; TODO: WIP
-XR_AUD2_PERIOD          equ     $29         ; (WO/-) ; TODO: WIP
-XR_AUD2_LENGTH          equ     $2A         ; (WO/-) ; TODO: WIP
-XR_AUD2_START           equ     $2B         ; (WO/-) ; TODO: WIP
-XR_AUD3_VOL             equ     $2C         ; (WO/-) ; TODO: WIP
-XR_AUD3_PERIOD          equ     $2D         ; (WO/-) ; TODO: WIP
-XR_AUD3_LENGTH          equ     $2E         ; (WO/-) ; TODO: WIP
-XR_AUD3_START           equ     $2F         ; (WO/-) ; TODO: WIP
-; Audio flags
+TILE_CTRL_TILE_H_B      equ     0
+TILE_CTRL_TILE_H_W      equ     4
+TILE_CTRL_TILE_H_F      equ     $000F
+TILE_CTRL_TILE_VRAM_B   equ     8
+TILE_CTRL_TILE_VRAM_W   equ     1
+TILE_CTRL_TILE_VRAM_F   equ     $0100
+TILE_CTRL_DISP_TILEMEM_B equ    9
+TILE_CTRL_DISP_TILEMEM_W equ    1
+TILE_CTRL_DISP_TILEMEM_F equ    $0200
+TILE_CTRL_TILEBASE_B    equ     10
+TILE_CTRL_TILEBASE_W    equ     6
+TILE_CTRL_TILEBASE_F    equ     $FC00
+; XR_AUDx_PERIOD flag
 AUD_PER_RESTART_B       equ     15          ; AUDx_PERIOD bit 15 is force channel restart
+AUD_PER_RESTART_W       equ     1
 AUD_PER_RESTART_F       equ     $8000
+; XR_AUDx_LENGTH flag
 AUD_LEN_TILEMEM_B       equ     15          ; AUDx_LENGTH bit 15 is TILEMEM flag
+AUD_LEN_TILEMEM_W       equ     1
 AUD_LEN_TILEMEM_F       equ     $8000
-
-; "Slim" blitter
-XR_BLIT_CTRL            equ     $40         ; (WO) blit control ([15:8]=transp value, [5]=8 bpp, [4]=transp on, [0]=S constant)
-XR_BLIT_ANDC            equ     $41         ; (WO) blit AND-COMPLEMENT constant value
-XR_BLIT_XOR             equ     $42         ; (WO) blit XOR constant value
-XR_BLIT_MOD_S           equ     $43         ; (WO) blit modulo added to S source after each line
-XR_BLIT_SRC_S           equ     $44         ; (WO) blit S source VRAM read address / constant value
-XR_BLIT_MOD_D           equ     $45         ; (WO) blit modulo added to D destination after each line
-XR_BLIT_DST_D           equ     $46         ; (WO) blit D destination VRAM write address
-XR_BLIT_SHIFT           equ     $47         ; (WO) blit first and last word nibble masks and nibble right shift (0-3)
-XR_BLIT_LINES           equ     $48         ; (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
-XR_BLIT_WORDS           equ     $49         ; (WO+) blit word count minus 1 per line (write starts blit operation)
-XR_UNUSED_4A            equ     $4A         ; unused XR reg
-XR_UNUSED_4B            equ     $4B         ; unused XR reg
-XR_UNUSED_4C            equ     $4C         ; unused XR reg
-XR_UNUSED_4D            equ     $4D         ; unused XR reg
-XR_UNUSED_4E            equ     $4E         ; unused XR reg
-XR_UNUSED_4F            equ     $4F         ; unused XR reg
+; XR_BLIT_CTRL
+BLIT_CTRL_TRANSPVAL_B   equ     8
+BLIT_CTRL_TRANSPVAL_W   equ     8
+BLIT_CTRL_TRANSPVAL_G   equ     $FF00
+BLIT_CTRL_8B_B          equ     5
+BLIT_CTRL_8B_W          equ     1
+BLIT_CTRL_8B_F          equ     $0020
+BLIT_CTRL_TRANSP_B      equ     4
+BLIT_CTRL_TRANSP_W      equ     1
+BLIT_CTRL_TRANSP_F      equ     $0010
+BLIT_CTRL_SCONST_B      equ     0
+BLIT_CTRL_SCONST_W      equ     1
+BLIT_CTRL_SCONST_F      equ     $0001
+; XR_BLIT_SHIFT
+BLIT_SHIFT_LMSK_B       equ     12
+BLIT_SHIFT_LMSK_W       equ     4
+BLIT_SHIFT_LMSK_G       equ     $F000
+BLIT_SHIFT_RMSK_B       equ     8
+BLIT_SHIFT_RMSK_W       equ     4
+BLIT_SHIFT_RMSK_G       equ     $0F00
+BLIT_SHIFT_CNT_B        equ     0
+BLIT_SHIFT_CNT_W        equ     2
+BLIT_SHIFT_CNT_F        equ     $0003

@@ -129,7 +129,7 @@ $(OBJECTS): $(HEADERS) $(MAKEFILE_LIST)
 	$(COPASM) -v -l -i $(XOSERA_M68K_API) -o $@ $<
 
 %.h : %.cpasm
-	$(CPP) $< -o $(basename $<).casm.ii
+	$(CPP) -D__COPASM__=1 $< -o $(basename $<).casm.ii
 	$(COPASM) -v -l -i $(XOSERA_M68K_API) -o $@ $(basename $<).casm.ii
 
 %.o : %.c

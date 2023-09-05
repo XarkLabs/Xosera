@@ -97,7 +97,7 @@ ___
 | 0x8   | **`XM_WR_INCR`**  | R /W   | increment value for `XM_WR_ADDR` on write to `XM_DATA`/`XM_DATA_2`                    |
 | 0x9   | **`XM_WR_ADDR`**  | R /W   | VRAM address for writing to VRAM when `XM_DATA`/`XM_DATA_2` is written                |
 | 0xA   | **`XM_DATA`**     | R+/W+  | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
-| 0xB   | **`XM_DATA_2`**   | R+/W+  | 2<sup>nd</sup> `XM_DATA`(to allow for 32-bit read/write access)                                  |
+| 0xB   | **`XM_DATA_2`**   | R+/W+  | 2<sup>nd</sup> `XM_DATA`(to allow for 32-bit read/write access)                       |
 | 0xC   | **`PIXEL_X`**     | - /W+  | X pixel sets `WR_ADDR` and nibble mask (also `PIXEL_BASE` for `XM_SYS_CTRL` write)    |
 | 0xD   | **`PIXEL_Y`**     | - /W+  | Y pixel sets `WR_ADDR` and nibble mask (also `PIXEL_WIDTH` for `XM_SYS_CTRL` write)   |
 | 0xE   | **`XM_UART`**     | R+/W+  | USB UART using FTDI chip in UPduino for additional 1 Mbps USB connection to PC *[1]*  |
@@ -304,15 +304,15 @@ Basic UART allowing send/receive communication with host PC at 230,400 bps (aka 
 <img src="./pics/wd_XM_FEATURE.svg">
 
 **Xosera configured features (when reading)**
-| Name      | Bits      | R/W | Description                                                     |
-|-----------|-----------|-----|-----------------------------------------------------------------|
-| `CONFIG`  | `[15:12]` | R/- | Current configuration number for Xosera FPGA (0-3 on iCE40UP5K) |
-| `AUDCHAN` | `[11:8]`  | R/- | Number of audio output channels (normally 4)                    |
-| `UART`    | `[7]`     | R/- | Debug UART is present                                           |
-| `PF_B`    | `[6]`     | R/- | Playfield B enabled (2<sup>nd</sup> playfield to blend over playfield A)   |
-| `BLIT`    | `[5]`     | R/- | 2D "blitter engine" enabled                                     |
-| `COPP`    | `[4]`     | R/- | Screen synchronized co-processor enabled                        |
-| `MONRES`  | `[3:0]`   | R/- | Monitor resolution (0=640x480 4:3, 1=848x480 16:9 on iCE40UP5K) |
+| Name      | Bits      | R/W | Description                                                              |
+|-----------|-----------|-----|--------------------------------------------------------------------------|
+| `CONFIG`  | `[15:12]` | R/- | Current configuration number for Xosera FPGA (0-3 on iCE40UP5K)          |
+| `AUDCHAN` | `[11:8]`  | R/- | Number of audio output channels (normally 4)                             |
+| `UART`    | `[7]`     | R/- | Debug UART is present                                                    |
+| `PF_B`    | `[6]`     | R/- | Playfield B enabled (2<sup>nd</sup> playfield to blend over playfield A) |
+| `BLIT`    | `[5]`     | R/- | 2D "blitter engine" enabled                                              |
+| `COPP`    | `[4]`     | R/- | Screen synchronized co-processor enabled                                 |
+| `MONRES`  | `[3:0]`   | R/- | Monitor resolution (0=640x480 4:3, 1=848x480 16:9 on iCE40UP5K)          |
 
 > :mag: These can be used to (e.g.) quickly check for presence of a feature, or to detect the current monitor mode.  There is more detailed Xosera configuration information (including feature string, version code, build date and git hash) stored in the last 128 words of copper memory (`XR_COPPER_ADDR+0x580`) after initialization or reconfig.
 
@@ -846,7 +846,7 @@ The copper is a *very* limited CPU, with 1.5K 16-bit words of program and data m
 
 Each copper cycle is a "native pixel" of time on the screen as the "beam" scans lines from top to bottom and each line from left to right with 800 or 1088 cycles per line (depending on 640x480 or 848x480 resolution) with off-screen cycles then visible pixels to the end of each line. Copper instructions all execute in 4 cycles (minimum, the `HPOS` and `VPOS` can take much longer waiting for a horizontal or vertical video beam scan position).  When waiting for a horizontal position (using `HPOS`), the position is cycle-exact allowing for native pixel exact register changes (but then 4+ cycles per instruction after waiting). Branches (either `BRLT` or `BRGE`) are also 4 cycles regardless of whether taken or not (making "stable" screen register manipulation when looping or branching easier).
 
-As far as the copper is concerned, all coordinates are always in absolute native pixel resolution, including any off-screen (non-visible) pixels. The coordinates used by the copper are absolute per video mode (640 or 848 widescren) and are not affected by pixel doubling, blanking, scrolling or other video mode settings.  All off-screen pixels are on the left (before) visible pixels on each line (and include front porch, sync and back porch time).  
+As far as the copper is concerned, all coordinates are always in absolute native pixel resolution, including off-screen (non-visible) pixels. The coordinates used by the copper are absolute per video mode (640 or 848 widescren) and are not affected by pixel doubling, blanking, scrolling or other video mode settings.  Pixels to the left oAll off-screen pixels are on the left (before) visible pixels on each line (and include horizontal front porch, sync and back porch time).  Line 0 is also the first visible line, and lines greater than 480 are the vertical horizontal front porch, sync and back porch time)
 
 | Video Mode | Aspect | Full res.  | H off-left | H visible   | V visible | V off-bottom |
 |------------|--------|------------|------------|-------------|-----------|--------------|
@@ -855,26 +855,28 @@ As far as the copper is concerned, all coordinates are always in absolute native
 
 ### Copper Instruction Set
 
-| Copper Opcode Bits          | Assembly                    | Flag | Words | Cycles | Description                              |
-|-----------------------------|-----------------------------|------|-------|--------|------------------------------------------|
-| `rr00` `oooo` `oooo` `oooo` | `SETI`   *xadr14*,`#`*im16* | `B`  | 2     | 4      | dest [xadr14] &larr; source #val16       |
-| `iiii` `iiii` `iiii` `iiii` | + *im16* *value*            | -    | -     | -      | *(2<sup>nd</sup> word of `SETI` opcode)* |
-| `--01` `rccc` `cccc` `cccc` | `SETM`  *xadr16*,*cadr12*   | `B`  | 2     | 4      | dest [xadr16] &larr; source [cadr12]     |
-| `rroo` `oooo` `oooo` `oooo` | + *xadr16* *address*        | -    | -     | -      | *(2<sup>nd</sup> word of `SETM` opcode)* |
-| `--10` `0iii` `iiii` `iiii` | `HPOS`   `#`*im11*          | -    | 1     | 4+     | wait until video `HPOS` >= *im11*        |
-| `--10` `1iii` `iiii` `iiii` | `VPOS`   `#`*im11*          | -    | 1     | 4+     | wait until video `VPOS` >= *im11*        |
-| `--11` `0ccc` `cccc` `cccc` | `BRGE`   *cadd11*           | -    | 1     | 4      | if (`B`==0) `PC` &larr; *cadd11*         |
-| `--11` `1ccc` `cccc` `cccc` | `BRLT`   *cadd11*           | -    | 1     | 4      | if (`B`==1) `PC` &larr; *cadd11*         |
+| Copper Assembly             | Opcode Bits                 | B | # | ~  | Description                               |
+|-----------------------------|-----------------------------|---|---|----|-------------------------------------------|
+| `SETI`   *xadr14*,`#`*im16* | `rr00` `oooo` `oooo` `oooo` | B | 2 | 4  | sets [xadr14] &larr; to #val16            |
+| + *im16* *value*            | `iiii` `iiii` `iiii` `iiii` | - | - | -  | *(im16, 2<sup>nd</sup> word of `SETI`)*   |
+| `SETM`  *xadr16*,*cadr12*   | `--01` `rccc` `cccc` `cccc` | B | 2 | 4  | sets [xadr16] &larr; to [cadr12]          |
+| + *xadr16* *address*        | `rroo` `oooo` `oooo` `oooo` | - | - | -  | *(xadr16, 2<sup>nd</sup> word of `SETM`)* |
+| `HPOS`   `#`*im11*          | `--10` `0iii` `iiii` `iiii` |   | 1 | 4+ | wait until video `HPOS` >= *im11*         |
+| `VPOS`   `#`*im11*          | `--10` `1iii` `iiii` `iiii` |   | 1 | 4+ | wait until video `VPOS` >= *im11*         |
+| `BRGE`   *cadd11*           | `--11` `0ccc` `cccc` `cccc` |   | 1 | 4  | if (`B`==0) `PC` &larr; *cadd11*          |
+| `BRLT`   *cadd11*           | `--11` `1ccc` `cccc` `cccc` |   | 1 | 4  | if (`B`==1) `PC` &larr; *cadd11*          |
 
-**Legend:**
-
-- *xadr14*   =   2-bit XR region + 12-bit offset (1<sup>st</sup> word of `SETI`, destination address)
-- *im16*     =   16-bit immediate word (2<sup>nd</sup> word of `SETI`, source address)
-- *cadr12*   =   11-bit copper address or register with bit [11] (1<sup>st</sup> word of `SETM`, source adress)
-- *xadr16*   =   XR region + 14-bit offset (2<sup>nd</sup> word of `SETM`, destination address)
-- *im11*     =   11-bit immediate value (used with `HPOS`, `VPOS` wait opcodes)
-- *cadd11*   =   11-bit copper address (used with `BRGE`, `BRLT` branch opcodes)
-- `B`        =   borrow flag set when `RA` < *val16* written (borrow after unsigned subtract)
+| Legend   | Description                                                                                    |
+|----------|------------------------------------------------------------------------------------------------|
+| `B`      | borrow flag set, true when `RA` < *val16* written (borrow after unsigned subtract)             |
+| `#`      | number 16-bit words for opcodes                                                                |
+| `~`      | number of copper cycles (each cycle is the time for one native pixel)                          |
+| *xadr14* | 2-bit XR region + 12-bit offset (1<sup>st</sup> word of `SETI`, destination address)           |
+| *im16*   | 16-bit immediate word (2<sup>nd</sup> word of `SETI`, source address)                          |
+| *cadr12* | 11-bit copper address or register with bit [11] (1<sup>st</sup> word of `SETM`, source adress) |
+| *xadr16* | XR region + 14-bit offset (2<sup>nd</sup> word of `SETM`, destination address)                 |
+| *im11*   | 11-bit immediate value (used with `HPOS`, `VPOS` wait opcodes)                                 |
+| *cadd11* | 11-bit copper address (used with `BRGE`, `BRLT` branch opcodes)                                |
 
 > :mag: **copper addresses** *cadr12*/*cadd11* bits`[15:14]` are ignored and copper memory is always used when reading or branching. When writing *xadr14*/*xadr16* bits `[15:14]` can be set to `11` (`XR_COPPER_ADDR` region) to write to copper memory. To help reduce confusion the CopAsm assembler sets `11`region bits in addresses for both reading and writing copper memory (even though these bits are ignored reading).
 
@@ -883,10 +885,10 @@ As far as the copper is concerned, all coordinates are always in absolute native
 **Copper special addresses for memory mapped registers:**
 | Pseudo reg       | Copper Addr | Operation                                 | Description                                 |
 |------------------|-------------|-------------------------------------------|---------------------------------------------|
-| `RA` (read)      | `0x0800`    | read value in `RA`, `B` unaltered         | return current value in `RA` register       |
-| `RA` (write)     | `0x0800`    | `RA` = *val16*, `B` =`0`                  | set `RA` to *val16*, clear `B` flag         |
-| `RA_SUB` (write) | `0x0801`    | `RA` = `RA` - *val16*, `B`=`RA` < *val16* | set `RA` to `RA` - *val16*, update `B` flag |
-| `RA_CMP` (write) | `0x07FF`    | `B` = `RA` < *val16*                      | update B flag only (`RA` unaltered)         |
+| `RA` (read)      | `0x800`     | read value in `RA`, `B` unaltered         | return current value in `RA` register       |
+| `RA` (write)     | `0x800`     | `RA` = *val16*, `B` =`0`                  | set `RA` to *val16*, clear `B` flag         |
+| `RA_SUB` (write) | `0x801`     | `RA` = `RA` - *val16*, `B`=`RA` < *val16* | set `RA` to `RA` - *val16*, update `B` flag |
+| `RA_CMP` (write) | `0x7FF`     | `B` = `RA` < *val16*                      | update B flag only (`RA` unaltered)         |
 
 - `RA`read 16-bit accumulator (`B` flag unaltered)
 - `RA`write 16-bit accumulator (`B` flag cleared, since`RA`will equal value written)

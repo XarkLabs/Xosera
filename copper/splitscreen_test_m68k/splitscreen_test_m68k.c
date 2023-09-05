@@ -38,11 +38,11 @@ bool              use_sd;
 // Copper list
 uint16_t copper_list[] = {
     COP_MOVER(0x0055, PA_GFX_CTRL),               //  0: First half of screen in 4-bpp + Hx2 + Vx2 //
-    COP_MOVE(0x0ec6, XR_COLOR_ADDR + 0xf),        //  2: Palette entry 0xf from tut bitmap
+    COP_MOVER(0x0ec6, COLOR_ADDR + 0xf),        //  2: Palette entry 0xf from tut bitmap
     COP_VPOS(240),                                //  4: Wait for 640-8, 240
     COP_MOVER(0x0040, PA_GFX_CTRL),               //  5: 1-bpp + Hx1 + Vx1
     COP_MOVER(0x3e80, PA_LINE_ADDR),              //  7: Line start now at 16000
-    COP_MOVE(0x0fff, XR_COLOR_ADDR + 0xf),        //  9: Palette entry 0xf to white for 1bpp bitmap
+    COP_MOVER(0x0fff, COLOR_ADDR + 0xf),        //  9: Palette entry 0xf to white for 1bpp bitmap
     COP_END()                                     // 11:Wait for next frame
 };
 

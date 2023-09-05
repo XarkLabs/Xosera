@@ -137,7 +137,7 @@ uint16_t copper_320x200[] = {
     COP_MOVER(0x0065, PB_GFX_CTRL),        // Set to 8-bpp + Hx2 + Vx2
     COP_VPOS(440),                         // Wait for line 440
     COP_MOVER(0x00E5, PA_GFX_CTRL),        // Set to Blank + 8-bpp + Hx2 + Vx2
-    //    COP_MOVER(0x00E5, PB_GFX_CTRL),         // Set to Blank + 8-bpp + Hx2 + Vx2
+    //    COP_MOVI(0x00E5, PB_GFX_CTRL),         // Set to Blank + 8-bpp + Hx2 + Vx2
     COP_MOVER(XR_TILE_ADDR + 0x1000, PB_LINE_ADDR),        // Set PB line address to tilemem address
     COP_MOVER(0xF009, PB_GFX_CTRL),                        // Set to Blank + 8-bpp + Hx2 + Vx2
     COP_MOVER(0x0E07, PB_TILE_CTRL),                       // Set to Blank + 8-bpp + Hx2 + Vx2

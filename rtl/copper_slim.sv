@@ -185,7 +185,7 @@ always_comb begin
         3'b000: op_name = "SETI";
         3'b001: op_name = "SETI";
         3'b010: op_name = "SETM";
-        3'b011: op_name = "LDM ";
+        3'b011: op_name = "SETM";
         3'b100: op_name = "HPOS";
         3'b101: op_name = "VPOS";
         3'b110: op_name = "BRGE";

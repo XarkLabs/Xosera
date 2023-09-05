@@ -50,6 +50,9 @@ integer x;
 initial begin
     // is this the 2nd memory block (with xosera_info)?
     if (ADDINFO == "Y") begin
+        for (integer i = 0; i < (2**AWIDTH)-128; i = i + 1) begin
+            bram[i]    = 16'h2BFF;          // wait EOF
+        end
         // Xosera init info stored in last 256 bytes of default copper memory (see xosera_pkg.sv)
         x = 0;
         for (integer i = (2**AWIDTH)-128; i < (2**AWIDTH)-4; i = i + 1) begin
@@ -74,9 +77,11 @@ initial begin
         $readmemh("default_copper_848.mem", bram, 0);
 `endif
 `else
-    for (integer i = 0; i < (2**AWIDTH); i = i + 1) begin
-        bram[i]    = 16'h2FFF;
-    end
+        bram[0] = 16'(xv::XR_COPP_CTRL);        // turn off copper
+        bram[1] = 16'h0000;
+        for (integer i = 2; i < (2**AWIDTH); i = i + 1) begin
+            bram[i]    = 16'h2BFF;              // wait EOF
+        end
 `endif
     end
 end

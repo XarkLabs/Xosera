@@ -466,8 +466,8 @@ int          BusInterface::test_data_len    = 32767;
 uint16_t     BusInterface::test_data[32768] = {
     // test data
 
-
     REG_WAITHSYNC(),
+    REG_W(SYS_CTRL, 0x000F),
     XREG_SETW(POINTER_H, OFFSCREEN_WIDTH + 390),
     XREG_SETW(POINTER_V, 0xF000 | 100),
 
@@ -917,6 +917,60 @@ uint16_t     BusInterface::test_data[32768] = {
 #endif
 
 #if 1
+    // copper bar sample
+    XREG_SETW(POINTER_V, 0xF000 | 480),
+    XREG_SETW(PA_GFX_CTRL, 0x0000),        // blank screen
+    XREG_SETW(PB_GFX_CTRL, 0x0080),        // blank screen
+    XREG_SETW(VID_CTRL, 0x0000),           // border color #0
+
+#include "color_bar_table.vsim.h"
+
+    REG_W(WR_INCR, 0x0001),
+    REG_W(WR_ADDR, 0x0000),
+    REG_W(DATA, 0x0F00 | 'X'),
+    REG_BL(DATA, 'o'),
+    REG_BL(DATA, 's'),
+    REG_BL(DATA, 'e'),
+    REG_BL(DATA, 'r'),
+    REG_BL(DATA, 'a'),
+    REG_BL(DATA, ' '),
+    REG_BL(DATA, 'c'),
+    REG_BL(DATA, 'o'),
+    REG_BL(DATA, 'p'),
+    REG_BL(DATA, 'p'),
+    REG_BL(DATA, 'e'),
+    REG_BL(DATA, 'r'),
+    REG_BL(DATA, ' '),
+    REG_BL(DATA, 'r'),
+    REG_BL(DATA, 'a'),
+    REG_BL(DATA, 's'),
+    REG_BL(DATA, 't'),
+    REG_BL(DATA, 'e'),
+    REG_BL(DATA, 'r'),
+    REG_BL(DATA, ' '),
+    REG_BL(DATA, 'b'),
+    REG_BL(DATA, 'a'),
+    REG_BL(DATA, 'r'),
+    REG_BL(DATA, ' '),
+    REG_BL(DATA, 'e'),
+    REG_BL(DATA, 'x'),
+    REG_BL(DATA, 'a'),
+    REG_BL(DATA, 'm'),
+    REG_BL(DATA, 'p'),
+    REG_BL(DATA, 'l'),
+    REG_BL(DATA, 'e'),
+
+    XREG_SETW(COPP_CTRL, 0x8000),        // enable copper
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+    REG_WAITVTOP(),
+    REG_WAITVSYNC(),
+#endif
+
+
+#if 1
     // slim copper wait test
     XREG_SETW(PA_GFX_CTRL, 0x0080),        // blank screen
     XREG_SETW(PB_GFX_CTRL, 0x0080),        // blank screen
@@ -946,7 +1000,6 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
 #endif
-
 
 
 #if 0

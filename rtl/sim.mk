@@ -165,7 +165,7 @@ VERILATOR_ARGS := --sv --language 1800-2012 --timing -I$(SRCDIR) -v $(TECH_LIB) 
 CSRC := sim/xosera_sim.cpp
 
 # copper asm source
-COPSRC := sim/cop_blend_test.vsim.h sim/cop_audio_evil.vsim.h sim/cop_wait_test.vsim.h
+COPSRC := $(addsuffix .vsim.h,$(basename $(wildcard sim/*.casm)))
 
 # default build native simulation executable
 all: $(RESET_COPMEM) $(COPASM) vsim isim

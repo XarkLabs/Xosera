@@ -224,7 +224,7 @@ int32_t xlasm::assemble(const std::vector<std::string> & in_files, const std::st
         {
             label           = it->substr(0, epos);
             std::string arg = it->substr(epos + 1);
-            expression expr;
+            expression  expr;
 
             if (arg.size() && !expr.evaluate(this, arg.c_str(), &result))
             {
@@ -2387,8 +2387,10 @@ int32_t xlasm::process_directive(uint32_t                         idx,
             {
                 if ((static_cast<uint64_t>(count) * pot) > MAXFILL_BYTES)
                 {
-                    error("%s exceeded output size safety check of 0x%x/%d bytes",
+                    error("%s of 0x" PR_X64 "/" PR_D64 " exceeded output size safety check of 0x%x/%d bytes",
                           directive.c_str(),
+                          static_cast<uint64_t>(count) * pot,
+                          static_cast<uint64_t>(count) * pot,
                           MAXFILL_BYTES,
                           MAXFILL_BYTES);
                     break;
@@ -2462,8 +2464,10 @@ int32_t xlasm::process_directive(uint32_t                         idx,
             {
                 if ((static_cast<uint64_t>(count) * pot) > MAXFILL_BYTES)
                 {
-                    error("%s exceeded output size safety check of 0x%x/%d bytes",
+                    error("%s of " PR_X64 "/" PR_D64 " exceeded output size safety check of 0x%x/%d bytes",
                           directive.c_str(),
+                          static_cast<uint64_t>(count) * pot,
+                          static_cast<int64_t>(count) * pot,
                           MAXFILL_BYTES,
                           MAXFILL_BYTES);
                     break;

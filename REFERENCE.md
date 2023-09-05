@@ -4,7 +4,7 @@ Xosera is a Verilog design that implements an audio/video controller (aka Embedd
 
 The design was originally for iCE40UltraPlus5K FPGAs, but has been ported to other FPGAs (with enough internal memory, like larger ECP5).
 
-It was designed primarily for the rosco_m68K series of 68K based retro computers, but adaptable for other systems (to interface it requires 6 register address signals, an 8-bit bidirectional bus and a couple of control signals). It provides 12-bit RGB color video with text and bitmap modes with dual layers and 4 voice 8-bit digital audio (similar-ish to 80s era 68K home computers).
+It was designed primarily for the rosco_m68K series of 68K based retro computers, but adaptable for other systems (to interface it requires 6 register address signals, an 8-bit bidirectional bus and a couple of control signals). It provides 12-bit RGB color video with text and bitmap modes with dual layers with alpha blending and 4 voice 8-bit digital audio (similar-ish to 80s era 68K home computers).
 
 This document is meant to provide the low-level reference register information to operate it (and should match the Verilog implementation). Please mention it if you spot any discrepency.
 
@@ -66,7 +66,7 @@ This document is meant to provide the low-level reference register information t
   - [Video Synchronized Co-Processor "Copper" Details](#video-synchronized-co-processor-copper-details)
     - [Programming the Copper](#programming-the-copper)
     - [Copper Instruction Set](#copper-instruction-set)
-      - [Copper Pseudo Instructions (when using CopAsm)](#copper-pseudo-instructions-when-using-copasm)
+      - [Copper Pseudo Instructions (when using CopAsm, or C macros)](#copper-pseudo-instructions-when-using-copasm-or-c-macros)
       - [Notes on Copper Memory Access](#notes-on-copper-memory-access)
     - [Copper Assembler CopAsm](#copper-assembler-copasm)
       - [Copper Assembler Examples](#copper-assembler-examples)
@@ -549,8 +549,7 @@ Horizontal fine scroll is typically constrained to the scaled width of 8 pixels 
 | 2 (3x)     | 0-23 pixels  |
 | 3 (4x)     | 0-31 pixels  |
 
-Vertical fine scroll is typically constrained to the scaled height of a pixel or tile (or one less than the line/tile height times
-`V_REPEAT`).  Similar to `H_REPEAT` table above, but pixels scroll can be doubled with 8x16 tile size set.
+Vertical fine scroll is typically constrained to the scaled height of a pixel or tile (or one less than the line/tile height times `V_REPEAT`).  Similar to `H_REPEAT` table above, but pixels scroll can be doubled with 8x16 tile size set.
 
 **0x15 `XR_PA_LINE_ADDR` (WO)** - playfield A (base) display VRAM next line address  
 **0x1D `XR_PB_LINE_ADDR` (WO)** - playfield B (overlay) display VRAM next line address
@@ -560,17 +559,14 @@ Vertical fine scroll is typically constrained to the scaled height of a pixel or
 **playfield A/B display line address**  
 Address in VRAM for start of the next scanline (bitmap or tile indices map). Normally this is updated internally, starting with `XR_Px_DISP_ADDR` and with `XR_Px_LINE_LEN` added at the end of each mode line (which can be every display line, or less depending on tile mode, `V_REPEAT` and `XR_Px_HV_FSCALE` vertical scaling).  This register can be used to change the internal address used for subsequent display lines (usually done via the COPPER). This register is write-only.
 
-> :mag: **`XR_Px_LINE_ADDR`** will still have `XR_Px_LINE_LEN` added at the end of each display mode line (when not repeating the
-> line), so you may need to subtract `XR_Px_LINE_LEN` words from the value written to `XR_Px_LINE_ADDR` to account for this.
+> :mag: **`XR_Px_LINE_ADDR`** will still have `XR_Px_LINE_LEN` added at the end of each display mode line (when not repeating the > line), so you may need to subtract `XR_Px_LINE_LEN` words from the value written to `XR_Px_LINE_ADDR` to account for this.
 
 **0x16 `XR_PA_HV_FSCALE` (R/W)** - playfield A (base) horizontal and vertical fractional scale  
 **0x1E `XR_PB_HV_FSCALE` (R/W)** - playfield B (overlay) horizontal and vertical fractional scale
 
 <img src="./pics/wd_XR_Px_HV_FSCALE.svg">
 
-Will repeat the color of a pixel or scan-line every N+1<sup>th</sup> column or line.  This repeat scaling is applied in addition
-to the integer pixel repeat (so a repeat value of 3x and fractional scale of 1 [repeat every line], would make 6x effective
-scale).  
+Will repeat the color of a pixel or scan-line every N+1<sup>th</sup> column or line.  This repeat scaling is applied in addition to the integer pixel repeat (so a repeat value of 3x and fractional scale of 1 [repeat every line], would make 6x effective scale).  
 
 | Frac. Repeat | Horiz. 640 Scaled | Horiz. 848 Scaled | Vert. 480 Scaled |
 |--------------|-------------------|-------------------|------------------|
@@ -605,8 +601,7 @@ In 8 BPP bitmap mode, there are 2 pixels per word, each one of 256 colors.
 
 #### Tile Display Formats
 
-Tile indices and attribute map display data starts at `XR_Px_DISP_ADDR` in either VRAM or TILEMEM (TILEMEM selected with
-`DISP_TILEMEM` bit in `XR_Px_TILE_CTRL`).  There are no alignement requirements for a tile
+Tile indices and attribute map display data starts at `XR_Px_DISP_ADDR` in either VRAM or TILEMEM (TILEMEM selected with `DISP_TILEMEM` bit in `XR_Px_TILE_CTRL`).  There are no alignement requirements for a tile
 
 The tile bitmap definitions start at the aligned address specified in `TILEBASE` bits set in `XR_Px_TILE_CTRL` in TILEMEM or VRAM (VRAM selected with `TILE_VRAM` in `XR_Pßx_TILE_CTRL`).  The tileset address should be aligned based on the power of two greater than the size of the maximum glyph index used. When using all possible glyphs in a tileset, alignment would be as follows:
 
@@ -708,10 +703,7 @@ The biltter will also generate an Xosera interrupt with interrupt source #1 each
 | 0x4E  | `XR_BLIT_2E`    | -/-  | RESERVED                                                             |
 | 0x4F  | `XR_BLIT_2F`    | -/-  | RESERVED                                                             |
 
-**NOTE:** None of the blitter registers are readable (reads will return unpredictable values). However, registers will
-not be altered between blitter operations so only registers that need new values need be written before writing
-`XR_BLIT_WORDS` to start a blit operation. This necessitates careful consideration/coordination when using the blitter
-from both interrupts and mainline code.
+**NOTE:** None of the blitter registers are readable (reads will return unpredictable values). However, registers will not be altered between blitter operations so only registers that need new values need be written before writing `XR_BLIT_WORDS` to start a blit operation. This necessitates careful consideration/coordination when using the blitter from both interrupts and mainline code.
 
 #### 2D Blitter Engine XR Registers Details
 
@@ -726,15 +718,11 @@ The operation has four options that can be independently specified in `XR_BLIT_C
 - `S_CONST` specifies `S` term is a constant (`XR_BLIT_SRC_S` used as constant instead of VRAM address to read)
   - NOTE: When `S` is a constant the value of `XR_BLIT_MOD_S` will still be added to it at the end of each line.
 
-Additionally, a transparency testing can be to the source data: `4-bit mask M = (S != T)` (testing either per nibble
-or byte, for 4-bit or 8-bit modes).  When a nibble/byte is masked, the existing pixel in VRAM will not be modified.
+Additionally, a transparency testing can be to the source data: `4-bit mask M = (S != T)` (testing either per nibble or byte, for 4-bit or 8-bit modes).  When a nibble/byte is masked, the existing pixel in VRAM will not be modified.
 
-- `TRANSP` will enable transparency testing when set (when zero, no pixel values will be masked, but start and end of
-   line masking will still apply)
-- `TRANSP8` can be set so 8-bit transparency test (vs 4-bit).  Pixels are tested for transparency and masked only when
-   the both nibbles in a byte match the transparency value
-- `T` value is set in with the upper 8 bits of `XR_BLIT_CTRL` register and is the transparent value for even and odd
-   4-bit pixels or a single 8-bit pixel value (when `TRANSP8` set).
+- `TRANSP` will enable transparency testing when set (when zero, no pixel values will be masked, but start and end of line masking will still apply)
+- `TRANSP8` can be set so 8-bit transparency test (vs 4-bit).  Pixels are tested for transparency and masked only when the both nibbles in a byte match the transparency value
+- `T` value is set in with the upper 8 bits of `XR_BLIT_CTRL` register and is the transparent value for even and odd 4-bit pixels or a single 8-bit pixel value (when `TRANSP8` set).
 
 **0x21 `XR_BLIT_ANDC`** (-/W) - source term ANDC value constant
 
@@ -755,16 +743,14 @@ Arbitrary value for used for `XOR` exclusive-OR with source term `S`, in equatio
 <img src="./pics/wd_XR_BLIT_MOD_S.svg">
 
 **modulo added to `BLIT_SRC_S` address at end of a line**  
-Arbitrary twos complement value added to `S` address/constant at the end of each line. Typically zero when `BLIT_SRC_S`
-image data is contiguous, or -1 when shift amount is non-zero.
+Arbitrary twos complement value added to `S` address/constant at the end of each line. Typically zero when `BLIT_SRC_S` image data is contiguous, or -1 when shift amount is non-zero.
 
 **0x24 `XR_BLIT_SRC_S`** (-/W) - source `S` term (read from VRAM address or constant value)
 
 <img src="./pics/wd_XR_BLIT_SRC_S.svg">
 
 **source term `S` VRAM address (with term read from VRAM) or a constant value if `S_CONST` set**  
-Address of source VRAM image data or arbitrary constant if `S_CONST` set in `XR_BLIT_CTRL`. This value will be
-shifted by `XR_BLIT_SHIFT` nibble shift amount (when not a constant with `S_CONST` set).
+Address of source VRAM image data or arbitrary constant if `S_CONST` set in `XR_BLIT_CTRL`. This value will be shifted by `XR_BLIT_SHIFT` nibble shift amount (when not a constant with `S_CONST` set).
 
 **0x25 `XR_BLIT_MOD_D`** (-/W) - modulo added to `BLIT_DST_D` address at end of line
 
@@ -780,43 +766,27 @@ rectangular image line.
 <img src="./pics/wd_XR_BLIT_DST_D.svg">
 
 **destination D VRAM write address**  
-Destination VRAM address.  Set to the first word of the destination address for the blit operation (or the last
-word of the destination, if in `DECR` mode).
+Destination VRAM address.  Set to the first word of the destination address for the blit operation (or the last word of the destination, if in `DECR` mode).
 
 **0x27 `XR_BLIT_SHIFT`** (-/W) - first and last word nibble masks and nibble shift
 
 <img src="./pics/wd_XR_BLIT_SHIFT.svg">
 
 **first and last word nibble masks and nibble shift**  
-The first word nibble mask will unconditionally mask out (make transparent) any zero nibbles on the first
-word of each line (left edge). Similarly, the last word nibble mask will unconditionally mask out (make
-transparent) any zero nibbles on the last word of each line (the right edge). The nibble shift specifies
-a 0 to 3 nibble right shift on all words drawn. Nibbles shifted out the right of a word will be shifted
-into the the next word (to provide a seamless pixel shift with word aligned writes). In "normal" use,
-when the nibble shift is non-zero, the left and right nibble mask would typically contain the value `0xF0`
-nibble shifted (e.g., `0xF0 >> nibble_shift`). The right edge mask hides "garbage" pixels wrapping from
-left edge, and right edge mask hides excess pixels when image is not a exact word width. When shifting,
-typically also you need to add an extra word to `BLIT_WORDS` and subtract one from `BLIT_MOD_S` (to avoid
-skewing the image). When not shifting (nibble shift of zero) and your source image width is word aligned,
-you typically want the complete last word so both left and right mask `0xFF` (no edge masking). If your
-source image is not an exact multiple word width, you would typically want to trim the excess pixels from
-the right edge (e.g., for a 7 nibble wide image, `0xFE`). For images 1 word wide, both left and right edge
-masks will be AND'd together. Also this masking is AND'd with the normal transparency control (so if a
-pixel is masked by either the left mask, right mask or is considered transparent it will not be modified).
+The first word nibble mask will unconditionally mask out (make transparent) any zero nibbles on the first word of each line (left edge). Similarly, the last word nibble mask will unconditionally mask out (make transparent) any zero nibbles on the last word of each line (the right edge). The nibble shift specifies a 0 to 3 nibble right shift on all words drawn. Nibbles shifted out the right of a word will be shifted into the the next word (to provide a seamless pixel shift with word aligned writes). In "normal" use, when the nibble shift is non-zero, the left and right nibble mask would typically contain the value `0xF0` nibble shifted (e.g., `0xF0 >> nibble_shift`). The right edge mask hides "garbage" pixels wrapping from left edge, and right edge mask hides excess pixels when image is not a exact word width. When shifting, typically also you need to add an extra word to `BLIT_WORDS` and subtract one from `BLIT_MOD_S` (to avoid skewing the image). When not shifting (nibble shift of zero) and your source image width is word aligned, you typically want the complete last word so both left and right mask `0xFF` (no edge masking). If your source image is not an exact multiple word width, you would typically want to trim the excess pixels from the right edge (e.g., for a 7 nibble wide image, `0xFE`). For images 1 word wide, both left and right edge masks will be AND'd together. Also this masking is AND'd with the normal transparency control (so if a pixel is masked by either the left mask, right mask or is considered transparent it will not be modified).
 
 **0x28 `XR_BLIT_LINES`** (-/W) - 15-bit number of lines heigh - 1 (1 to 32768)
 
 <img src="./pics/wd_XR_BLIT_LINES.svg">
 
-**15-bit number of lines high - 1 (or 0 to 32767 representing 1 to 32768)**  
-Number of times to repeat blit operation minus one. Typically source image height with modulo values advancing addresses
-for the next line of source and destination).  If `XR_BLIT_LINES` is zero (representing 1 line), then the blitter will effectively do a "1-D" linear operation on `XR_BLIT_WORDS` of data (useful to copy or fill contiguous VRAM words).
+**15-bit number of lines high - 1 (repeat operation 1 to 32768 times)**  
+Number of times to repeat blit operation minus one. Typically this would be the source image height with modulo values advancing addresses for the next line of source and destination).  If `XR_BLIT_LINES` is zero (representing 1 line/repeat), then the blitter will effectively do a linear operation on `XR_BLIT_WORDS` of data (useful to copy or fill contiguous VRAM words).  After each repeated `XR_BLIT_WORDS` operation, the value in `BLIT_MOD_S` is added to `BLIT_SRC_S` and `BLIT_MOD_D` added to `BLIT_DST_D`.  These can be used to adjust the source and destination pointer for the start of each line (e.g., in the case of a smaller rectangle drawn into a larger rectangluar buffer, this can skip the "gap" between image lines in the destination due to the differing width).
 
 **0x29 `XR_BLIT_WORDS`** (-/W) - write queues operation, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times)
 
 <img src="./pics/wd_XR_BLIT_WORDS.svg">
 
-**write queues blit, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times))**  
+**write queues blit, word width - 1 (1 to 65536, repeats `XR_BLIT_LINES` times with modulo)**  
 Write to `XR_BLIT_WORDS` queues blit operation which either starts immediately (if blitter not busy), or will start when current operation completes. Before writing to any blitter registers, check `BLIT_FULL` bit in `XM_SYS_CTRL` to make sure the blitter is ready to accept a new operation.  The blitter supports one operation currently in progress and one operation queued up to start.  Once it has an operation queued  it reports `BLIT_FULL` (which means to wait before altering any BLIT registers). To check if all blit operation has completely finished (and no operations queued), you can check the `BLIT_BUSY` bit in `XM_SYS_CTRL` which will read true until the blit operation has come to a complete stop (e.g., when you want to use the result of a blitter operation and need to be sure it has completed).
 
 ___
@@ -825,26 +795,33 @@ ___
 
 Xosera provides a dedicated video co-processor, synchronized to the display pixel clock called the "copper" (in homage to the similar unit in the Amiga). The copper can be programmed to manipulate XR registers and memory in sync with the video beam. With careful programming this enables many advanced effects to be achieved, such as multi-resolution displays and simultaneous display of more colors than would otherwise be possible.
 
-> :mag: **A note about the copper:** Originally Xosera used a copper designed and programmed by Ross Bamford (roscopeco, creator of the Rosco m68K system and the Xosera PCB design for it).  It was a very solid design, similar conceptually to the one in the Amiga (much more than the current design).  It was especially impressive as it was pretty much his first Verilog design and it worked great.  The original copper design was in use for months, but eventually due to resource limitations in the FPGA some hard choices were made in order to implement all the audio features planned.  To free up these FPGA resources, the current "copper slim" design was created (only after squeezing everything else in the design).  The new copper design is indeed a bit "slimmer" in logic than the original, but the main feature is since it is more flexibile it is easier to make more efficient use of limited copper memory.  That made it reasonable to "steal back" a some copper memory blocks to complete the audio design with (and add a pointer sprite).  I was happy to get all the audio and other features implemented and fitting, but still a bit sad that Ross's fine copper design was replaced to make it happen.
+> :mag: **A note about the copper design:** Originally Xosera used a copper designed and programmed by Ross Bamford (creator of the [rosco_m68K](https://rosco-m68k.com/) computer and the Xosera PCB designed for it).  It was a very solid design, similar conceptually to the one in the Amiga (much more than the current design).  It was especially impressive as it was pretty much his first Verilog design and it worked great.  The original copper design was in use for a long time, but eventually due to resource limitations in the FPGA some hard choices were made in order to implement all the audio features planned.  To free up FPGA resources, the current "copper slim" design was created (only after squeezing everything else in the design).  The new copper design is indeed a bit "slimmer" in logic than the original, but the mainly because it is more flexible it can make more efficient use of limited copper memory.  That made it seem reasonable to "steal back" a some copper memory blocks to complete the audio design (and also add a pointer sprite).  I was happy to get all the audio and other features implemented and fitting, but a bit sad that Ross's fine copper design was replaced in order to make it happen.
 
 CPU Interaction with the copper happens via:
 
-- **`XR_COPP_CTRL`** XR register (`0x0001`) to enable or disable copper program execution.
-- **`XR_COPPER_ADDR`** 1.5K words of XR memory for copper program and data storage (XR memory `0xC000-0xC5FF`, or `0x000-0x5FF` when read by copper).  The copper can write to all other XR register/memory areas, but can only read from this area (for instructions or data).
+- **XR Control register** `XR_COPP_CTRL` (`0x0001`) to enable or disable copper program execution with bit `[15]`.  Copper program execution always starts at the beginning of copper memory (if needed, a `BRGE` can be stored there to allow selecting a different effective start address at the start of each frame).
+- **Copper memory** Which is a 1.5K word region of XR memory at `XR_COPPER_ADDR` (`0xC000-0xC5FF`) used for copper program and data storage.  The copper can write to all other XR register/memory areas, but to allow the copper to operate fully independently (and never "stall" or get interrupted), it can only read from the copper memory area reserved for it (for instructions and data) and the `RA` memory mapped register.
 
-In general, programming the copper comprises loading a copper program (aka 'copper list') into the `XR_COPPER_ADDR` area, and then enabling copper execution with the `XR_COPP_CTRL` register.
+In general, programming the copper comprises loading a copper program (aka 'copper list') into the `XR_COPPER_ADDR` area, and then enabling copper execution with bit `[15]` of the `XR_COPP_CTRL` register.
 
-When the copper is enabled, at the beginning of each frame (offscreen VPos `0`, HPos `4`) the copper state is reset and execution will begin at the start of copper memory (`XR_COPPER_ADDR` or copper address `0x000`), with `RA` set to `0x0000` with the `B` flag cleared.  
+When the copper is enabled, at the beginning of each frame (offscreen VPos `0`, HPos `4`) the copper state is reset and execution will begin at the start of copper memory (`XR_COPPER_ADDR` or copper address `0x000`), with `RA`=`0x0000` and `B`=`0` (allowing one instruction `BRGE` to jump elsewhere if needed).  
 
-You should make sure a valid copper program is present in copper memory *before* you enable it (although there is a default program present after reset, you should not rely on details of that program).
+You should make sure a valid copper program is present in copper memory *before* you enable it.  Although there is a default copper program after reset or reconfiguration (used to clear VRAM and initialize some Xosera registers), do not make any assumptions about the initial contents of copper memory (it will generally not be cleared and Xosera configuration informaton is placed in the last 128 words).
 
-> :mag: **Copper execution:** When enabled, copper execution won't begin until the start of the next video frame (off-screen off the left edge of scan line 0 at the top of the screen).  It will also be reset and restarted the same way at the start of each subsequent video frame to keep copper execution in sync with the display.  When copper restarted on each frame it will be at VPos `0`, HPos `4` with `PC`=`0x000`, `RA`=`0x0000` and `B`=`0` (copper memory unaltered).
+> :mag: **Copper execution:** When enabled, copper execution won't begin until the start of the next video frame (off-screen off the left edge of scan line 0 at the top of the screen).  It will also be reset and restarted the same way at the start of each subsequent video frame to keep copper execution in sync with the display.  When the copper is restarted on each frame it will be at VPos `0`, HPos `4` with `PC`=`0x000`, `RA`=`0x0000` and `B`=`0` (and copper memory unaltered).
 
 ### Programming the Copper
 
-The copper is a *very* limited CPU, with 1.5K 16-bit words of program and data memory (XR memory `0xC000-0xC5FF`), a 16-bit memory mapped accumulator (called `RA` at copper address `0x800`), a single memory mapped arithmetic operation (subtract via `RA_SUB` at `0x801`) and a "borrow" flag (`B` set true if `RA <`*value-written* after every write). The CPU only has six actual instructions (with some helpful "pseudo instructions" provided by the CopAsm assembler).
+The copper is a *very* limited CPU, its limited features include:
 
-Each copper cycle is a "native pixel" of time on the screen as the "beam" scans lines from top to bottom and each line from left to right with 800 or 1088 cycles per line (depending on 640x480 or 848x480 resolution) with off-screen cycles then visible pixels to the end of each line. Copper instructions all execute in 4 cycles (minimum, the `HPOS` and `VPOS` can take much longer waiting for a horizontal or vertical video beam scan position).  When waiting for a horizontal position (using `HPOS`), the position is cycle-exact allowing for native pixel exact register changes (but then 4+ cycles per instruction after waiting). Branches (either `BRLT` or `BRGE`) are also 4 cycles regardless of whether taken or not (making "stable" screen register manipulation when looping or branching easier).
+- 1536 16-bit words (1.5KW) of program and data memory storage (XR memory `0xC000-0xC5FF`)
+- One 16-bit accumulator `RA` (memory mapped at copper address `0x800`)
+- One ALU operation, `RA_SUB` which computes `RA` = `RA` - 16-bit value writen (memory mapped at `0x801`)
+- One condition flag `B` (borrow),  which is set to true/false result of comparison `RA` < *value-written* (after *every* write)
+- Only six actual instructions (but also some helpful "pseudo instruction" aliases provided by assembler and C macros)
+- All instructions take exactly 4 cycles to complete (excepting ones that wait), including branches both taken and not taken
+
+Each copper cycle is a "native pixel" of time on the screen as the pixel data scans out in lines from the top to bottom and each line from left to right with 800 or 1088 cycles per line (depending on 640x480 or 848x480 resolution) with off-screen cycles before visible pixels which continue to the end of each line (on visible lines, lines >= 480 are fully off-screen). Copper instructions all execute in 4 cycles (minimum, the `HPOS` and `VPOS` can take much longer waiting for a horizontal or vertical video beam scan position).  When waiting for a horizontal position (using `HPOS`), the position is cycle-exact allowing for native pixel exact register changes (but then 4+ cycles per instruction after waiting). Branches (either `BRLT` or `BRGE`) are also 4 cycles regardless of whether taken or not (making "stable" screen register manipulation when looping or branching easier).
 
 As far as the copper is concerned, all coordinates are always in absolute native pixel resolution, including off-screen (non-visible) pixels. The coordinates used by the copper are absolute per video mode (640 or 848 widescren) and are not affected by pixel doubling, blanking, scrolling or other video mode settings.  Pixels to the left oAll off-screen pixels are on the left (before) visible pixels on each line (and include horizontal front porch, sync and back porch time).  Line 0 is also the first visible line, and lines greater than 480 are the vertical horizontal front porch, sync and back porch time)
 
@@ -855,34 +832,34 @@ As far as the copper is concerned, all coordinates are always in absolute native
 
 ### Copper Instruction Set
 
-| Copper Assembly             | Opcode Bits                 | B | # | ~  | Description                               |
-|-----------------------------|-----------------------------|---|---|----|-------------------------------------------|
-| `SETI`   *xadr14*,`#`*im16* | `rr00` `oooo` `oooo` `oooo` | B | 2 | 4  | sets [xadr14] &larr; to #val16            |
-| + *im16* *value*            | `iiii` `iiii` `iiii` `iiii` | - | - | -  | *(im16, 2<sup>nd</sup> word of `SETI`)*   |
-| `SETM`  *xadr16*,*cadr12*   | `--01` `rccc` `cccc` `cccc` | B | 2 | 4  | sets [xadr16] &larr; to [cadr12]          |
-| + *xadr16* *address*        | `rroo` `oooo` `oooo` `oooo` | - | - | -  | *(xadr16, 2<sup>nd</sup> word of `SETM`)* |
-| `HPOS`   `#`*im11*          | `--10` `0iii` `iiii` `iiii` |   | 1 | 4+ | wait until video `HPOS` >= *im11*         |
-| `VPOS`   `#`*im11*          | `--10` `1iii` `iiii` `iiii` |   | 1 | 4+ | wait until video `VPOS` >= *im11*         |
-| `BRGE`   *cadd11*           | `--11` `0ccc` `cccc` `cccc` |   | 1 | 4  | if (`B`==0) `PC` &larr; *cadd11*          |
-| `BRLT`   *cadd11*           | `--11` `1ccc` `cccc` `cccc` |   | 1 | 4  | if (`B`==1) `PC` &larr; *cadd11*          |
+| Copper Assembly             | Opcode Bits                 | B | # | ~  | Description                                         |
+|-----------------------------|-----------------------------|---|---|----|-----------------------------------------------------|
+| `SETI`   *xadr14*,`#`*im16* | `rr00` `oooo` `oooo` `oooo` | B | 2 | 4  | sets [xadr14] &larr; to #val16                      |
+| + *im16* *value*            | `iiii` `iiii` `iiii` `iiii` | - | - | -  | *(im16, 2<sup>nd</sup> word of `SETI`)*             |
+| `SETM`  *xadr16*,*cadr12*   | `--01` `rccc` `cccc` `cccc` | B | 2 | 4  | sets [xadr16] &larr; to [cadr12]                    |
+| + *xadr16* *address*        | `rroo` `oooo` `oooo` `oooo` | - | - | -  | *(xadr16, 2<sup>nd</sup> word of `SETM`)*           |
+| `HPOS`   `#`*im11*          | `--10` `0iii` `iiii` `iiii` |   | 1 | 4+ | wait until video H pos. >= *im11* or EOL            |
+| `VPOS`   `#`*im11*          | `--10` `1bii` `iiii` `iiii` |   | 1 | 4+ | wait until video V pos. >= *im11[9:0]*,`b`=blitbusy |
+| `BRGE`   *cadd11*           | `--11` `0ccc` `cccc` `cccc` |   | 1 | 4  | if (`B`==0) `PC` &larr; *cadd11*                    |
+| `BRLT`   *cadd11*           | `--11` `1ccc` `cccc` `cccc` |   | 1 | 4  | if (`B`==1) `PC` &larr; *cadd11*                    |
 
-| Legend   | Description                                                                                    |
-|----------|------------------------------------------------------------------------------------------------|
-| `B`      | borrow flag set, true when `RA` < *val16* written (borrow after unsigned subtract)             |
-| `#`      | number 16-bit words for opcodes                                                                |
-| `~`      | number of copper cycles (each cycle is the time for one native pixel)                          |
-| *xadr14* | 2-bit XR region + 12-bit offset (1<sup>st</sup> word of `SETI`, destination address)           |
-| *im16*   | 16-bit immediate word (2<sup>nd</sup> word of `SETI`, source address)                          |
-| *cadr12* | 11-bit copper address or register with bit [11] (1<sup>st</sup> word of `SETM`, source adress) |
-| *xadr16* | XR region + 14-bit offset (2<sup>nd</sup> word of `SETM`, destination address)                 |
-| *im11*   | 11-bit immediate value (used with `HPOS`, `VPOS` wait opcodes)                                 |
-| *cadd11* | 11-bit copper address (used with `BRGE`, `BRLT` branch opcodes)                                |
+| Legend   | Description                                                                                              |
+|----------|----------------------------------------------------------------------------------------------------------|
+| `B`      | borrow flag, set true when `RA` < *val16* written (borrow after unsigned subtract)                       |
+| `#`      | number of 16-bit words needed for instruction (1 or 2)                                                   |
+| `~`      | number of copper cycles, always 4 unless a wait (each cycle is the time for one native pixel to output)  |
+| *xadr14* | 2-bit XR region + 12-bit offset (1<sup>st</sup> word of `SETI`, destination XR address)                  |
+| *im16*   | 16-bit immediate word (2<sup>nd</sup> word of `SETI`, the source value)                                  |
+| *cadr12* | 11-bit copper address or register with bit [11] (1<sup>st</sup> word of `SETM`, source copper adress)    |
+| *xadr16* | 16-bit XR addreass (2<sup>nd</sup> word of `SETM`, destination XR address)                               |
+| *im11*   | 11-bit value for `HPOS`, `VPOS` wait. With `VPOS` bit `[10]` indicates also stop waiting if blitter idle |
+| *cadd11* | 11-bit copper program address for `BRGE`, `BRLT` branch opcodes                                          |
 
 > :mag: **copper addresses** *cadr12*/*cadd11* bits`[15:14]` are ignored and copper memory is always used when reading or branching. When writing *xadr14*/*xadr16* bits `[15:14]` can be set to `11` (`XR_COPPER_ADDR` region) to write to copper memory. To help reduce confusion the CopAsm assembler sets `11`region bits in addresses for both reading and writing copper memory (even though these bits are ignored reading).
 
 > :mag: **tilemem high addresses**  Note *xadr14* offset`[11:0]`is 12-bits and that is not enough to write to the last`0x400` words of the`XR_TILE_ADDR` area (`0x4000-0x53FF`) with`SETI`.  However, this area can be written to using a 16-bit word read from copper memory and `SETM` (which uses a full 16-bit *xadr16* destination).
 
-**Copper special addresses for memory mapped registers:**
+**Copper addresses for memory mapped registers and operations:**
 | Pseudo reg       | Copper Addr | Operation                                 | Description                                 |
 |------------------|-------------|-------------------------------------------|---------------------------------------------|
 | `RA` (read)      | `0x800`     | read value in `RA`, `B` unaltered         | return current value in `RA` register       |
@@ -890,23 +867,27 @@ As far as the copper is concerned, all coordinates are always in absolute native
 | `RA_SUB` (write) | `0x801`     | `RA` = `RA` - *val16*, `B`=`RA` < *val16* | set `RA` to `RA` - *val16*, update `B` flag |
 | `RA_CMP` (write) | `0x7FF`     | `B` = `RA` < *val16*                      | update B flag only (`RA` unaltered)         |
 
-- `RA`read 16-bit accumulator (`B` flag unaltered)
-- `RA`write 16-bit accumulator (`B` flag cleared, since`RA`will equal value written)
-- `RA_SUB`write performs subtract operation, `RA` set to `RA` minus value written and updating `B` borrow flag (set if `RA` was less than value written)
-- `RA_CMP`write performs compare operation, setting `B` borrow flag if `RA` is less than value written (`RA` not altered)
+- `RA` read value in 16-bit accumulator, `B` flag unaltered
+  - E.g., `SETM XR_ADDR,RA` to store `RA` contents into `XR_ADDR`
+- `RA` write value from 16-bit accumulator,`B` flag cleared (since `RA` will be equal to value written)
+  - E.g., `SETI RA,#123` to load `RA` with `123`
+- `RA_SUB`write performs subtract operation, `RA` = `RA` minus the value written, `B` is set if `RA` is less than value written
+  - E.g. `SETI RA_SUB,#1` to subtract `1` from `RA`
+- `RA_CMP`write performs compare operation, setting `B` borrow flag if `RA` is less than the value written (`RA` not altered)
+  - E.g., `SETI RA_CMP,#10` to set `B` if contents of `RA` is less than `10`
 
-> :mag: **Copper registers** Special copper addresses appear "as if" they are in XR copper memory, but can only be accessed by the copper.
+> :mag: **Copper registers** Special copper addresses appear "as if" they are in XR register space, but can only be accessed by the copper.
 
-#### Copper Pseudo Instructions (when using CopAsm)
+#### Copper Pseudo Instructions (when using CopAsm, or C macros)
 
 In addition to above instructions, these synthetic instructions can help make code more clear (all map to a single copper instruction):
 
 | Instruction                | Alias  | Words | Description                                                              |
 |----------------------------|--------|-------|--------------------------------------------------------------------------|
-| `MOVE` `#`*imm16*,*xadr14* | `SETI` | 2     | m68k style `MOVE` immediate, copy `#`*imm16* &rarr; *xadr16*             |
-| `MOVE` *cadr12*,*xadr16*   | `SETM` | 2     | m68k style `MOVE` memory, copy *source* &rarr; *dest*                    |
 | `MOVI` `#`*imm16*,*xadr14* | `SETI` | 2     | m68k order `SETI`, copy `#`*imm16* &rarr; *cadr12*                       |
 | `MOVM` *cadr12*,*xadr16*   | `SETM` | 2     | m68k order`SETM`, copy *cadr12* &rarr; *xadr16*                          |
+| `MOVE` `#`*imm16*,*xadr14* | `SETI` | 2     | m68k style `MOVE #` immediate copy `#`*imm16* &rarr; *xadr16*            |
+| `MOVE` *cadr12*,*xadr16*   | `SETM` | 2     | m68k style `MOVE` memory copy *source* &rarr; *dest*                     |
 | `LDI` `#`*imm16*           | `SETI` | 2     | Load `RA` register with value *imm16*, set `B`=`0`                       |
 | `LDM` *cadr12*             | `SETM` | 2     | Load `RA` register with contents of memory *cadr12*, set `B`=`0`         |
 | `STM` *xadr16*             | `SETM` | 2     | Store `RA` register contents into memory *xadr16*, set `B`=`0`           |
@@ -917,7 +898,7 @@ In addition to above instructions, these synthetic instructions can help make co
 | `CMPI` `#`*imm16*          | `SETI` | 2     | test if `RA` < *imm16*, `B` flag updated (`RA` not altered)              |
 | `CMPM` *cadr12*            | `SETM` | 2     | test it `RA` < contents of *cadr12*, `B` flag updated (`RA` not altered) |
 
-Copper programs reside in XR memory at `0xC000-0xC5FF` (`XR_COPPER_ADDR`). This memory segment is 1.5K 16-bit words in size and can contain an arbitrary mix of copper program instructions or data.  From the perspective of the copper program, this memory area is `0x000` to `0x5FF`, but the copper address space extends to `0xFFF` (including some special addresses shown below).
+Copper programs reside in XR memory at `0xC000-0xC5FF` (`XR_COPPER_ADDR`). This memory segment is 1.5K 16-bit words in size and can contain an arbitrary mix of copper program instructions or data.  From the perspective of the copper program, this memory area is `0x000` to `0x5FF`, but the copper address space extends to `0xFFF` (including some special addresses shown above).
 
 #### Notes on Copper Memory Access
 
@@ -927,26 +908,47 @@ The copper can directly access the following Xosera resources:
   - `0x0000-0x004F` registers for video and control, playfield A/B, audio and blitter
   - `0x4000-0x53FF` tilemap, tile (font) or audio memory
   - `0x8000-0x81FF` colormap A/B memory
-  - `0x8200-0x82FF` pointer sprite (32x32x4) memory
+  - `0x8200-0x82FF` pointer sprite memory (32x32x4-BPP)
   - `0xC000-0xC5FF` copper program/data memory
 
 - Read from XR copper program/data memory `0xC000-0xC5FF`:
-  - Executing copper opcodes (fetched from copper `PC`)
-  - Reading data words (via copper opodes `SETM` or `MOVE` with non-immediate source)
+  - Reading and executing copper opcodes and operands fetched from copper `PC`
+  - Reading data words from copper memory using `SETM` opcode
 
 The copper *cannot* directly read or write the following (by design):
 
 - Xosera main registers (XM registers, these are for the host CPU)
 - Video RAM (it can however, setup a blitter operaton to alter VRAM)
 
-It is also possible to change the copper program dynamically, both with copper code and the host CPU writing to copper XR memory (via XM registers).  Timing may need to be taken into account when modifying multiple words of a running copper program from the main CPU, however writing each word is atomic (so e.g., modifying a "branch opcode" at the start of copper memory can allow selecting between multiple programs sharing copper memory per frame).
+Since the copper can both read and write its program memory, it is quite possible (and useful) to change the copper program dynamically, both with self-modfying copper code and the host CPU modifying copper XR memory (via XM registers).  Timing may need to be taken into account when modifying a running copper program from the main CPU, however writing each word is atomic (so e.g., modifying a "branch opcode" at the start of copper memory can allow selecting between multiple programs sharing copper memory per frame).
+
+Copper programs self-modifying themselves during execution can be very useful to overcome limitations of the instruction set on the copper. Notably the copper code can safely "self-modify" program instructions, even including writing over the very next instruction (where it will execute using the new value written).  The following code fragment shows one way to read indirect via a "pointer" (note `SETM` opcode high bits built into pointer address value):
+
+```code
+                ...
+                SETM  mod_load,data_ptr     ; self-modify next SETM source address (and opcode)
+mod_load        SETM  XR_ADDR,$0000         ; $0000 is dummy and will be modified
+                LDM   data_ptr              ; load data_ptr
+                ADDI  #1                    ; increment by 1
+                STM   data_ptr              ; store data_ptr
+                ...
+data_ptr        WORD  SETM|data_table
+                ...
+data_table      WORD  0x0123,0x4567,0x89AB,0xCDEF
+
+```
+
+> :mag: **Source/Destination Operand Order**: Be careful when self-modifying `SETI`/`MOVI` or `SETM`/`MOVM` opcodes as the order of source and destination is reversed between them (which can be confusing).  The first opcode word (source copper address) of `SETM`/`MOVM` needs opcode bits set, usually with an OR or add operation (e.g., `SETM|` or `MOVN|`). The `SETI`/`MOVI` opcode also needs opcode bits, but since they are zero they usually default correctly (the exception being the last 1KW of TILE memory that exceeds 12-bits).
+>
+> - For `SETI`/`MOVI`:
+>   - 1<sup>st</sup> word is the *destinaton* XR register/memory address (with opcode bits `[13:12]`=`00`)
+>   - 2<sup>nd</sup> word is the *source* 16-bit immediate value
+> - For `SETM`/`MOVM`:
+>   - 1<sup>st</sup> word is the *source* copper memory address (with opcode bits `[13:12]`=`01`, i.e, OR'd with `0x1000`/`SETM`)
+>   - 2<sup>nd</sup> word is the *destination* 16-bit XR register/memory address
 
 > :mag: **Host CPU program modifications**: When modifying copper code from the host CPU, depending on the nature of your modifications you may need to sync with hblank or vblank (or take other precautions) to avoid visible display artifacts.
 
-Copper programs self-modifying themselves during execution can be very useful to overcome limitations of the instruction set on the copper (e.g., to simulate indirect addressing, by modifying a subsequent opcode). Notably it is "safe" for the copper code to "self-modify" program instructions (including writing over the very next opcode or operand, where it will use the newly written value).
-
-> :mag: **Source/Destination Operand Order**: Be careful when self-modifying `SETI`/`MOVI` or `SETM`/`MOVM` opcodes as the order of source and destination is reversed between them (which can be confusing).  The first opcode word of `SETM`|`MOVM` also needs the opcode bits set, generally with an OR operation (e.g., `SETM|` or `MOVN|`). The `SETI`/`MOVI` opcode also need opcode bits, but since they are zero they generally default correctly.  Remember that in the case of `SETI`/`MOVI` the first operand is the *destinaton* XR address (and 2<sup>nd</sup> is 16-bit immediate), and with `SETM`/`MOVM` the first operand is the *source* copper address (and 2<sup>nd</sup> is 16-bit XR address).
->
 ### Copper Assembler CopAsm
 
 Co-processor instructions can be written programatically (and there are some C macros to help with that). However, you may also  find it useful to write copper programs in a slightly higher-level assembler language, and have these translated automatically into binary, hex or program source code fragments.  The assembler can also produce "export" information to make it easier to modify the copper program from the host CPU (for dynamic copper program or data modification at run-time).
@@ -961,13 +963,15 @@ Here are a some example copper programs to illustrate how to get around some cop
 
 **Set background color to "raster bars" colors read from a table**
 
-This shows a basic example of self-modifying a MOVM to read from a table:
+This shows a basic example of self-modifying a MOVM instruction to read from a table in copper memory:
 
 ```code
 ; starts off left edge of line 0
 entry
                 MOVI    #MOVM|colors,copy_color         ; reset MOVM source addr to table start (OR'd with opcode)
 copy_color      MOVM    colors,XR_COLOR_A_ADDR+$00      ; move current table color to COLOR_A #0
+                HPOS    #H_EOL                          ; wait until end of line
+                HPOS    #H_EOL                          ; wait until end of line
                 HPOS    #H_EOL                          ; wait until end of line
                 LDM     copy_color                      ; load MOVM source address into RA
                 ADDI    #1                              ; increment source address in RA
@@ -982,12 +986,15 @@ colors          WORD    $0111,$0222,$0333,$0444,$0555   ; table with color per s
 end_colors
 ```
 
+The result of the above can look something like this:
+![Xosera raster bar copper example screenshot](pics/raster_bar_example.png)  
+
 ___
 
 ### Default TILE, COLOR and COPPER Memory Contents
 
-When Xosera is reconfigured (or on power up), the VRAM contents are undefined (garbage), but TILE
-memory, COLOR memory and COPPER memory will be restored to default contents as follows:
+When Xosera is reconfigured (or on power up), the VRAM contents are undefined (garbage) and a copper progream is run once that will clear VRAM and initialize Xosera registers (ones that aren't fine defaulting to zeros) and then disable itself.
+memory follows:
 
 | TILE address    | Description                                             |
 |-----------------|---------------------------------------------------------|

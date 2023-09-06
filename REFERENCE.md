@@ -140,26 +140,26 @@ When bits `[15:8]` (even/upper byte) of `SYS_CTRL` is written, besides setting`P
 
 **FPGA reconfigure, interrupt masking and interrupt status.**
 
-| Name         | Bits   | R/W  | Description                                                             |
-|--------------|--------|------|-------------------------------------------------------------------------|
-| `RECONFIG`   | `[15]` | -/W+ | Reconfigure FPGA with `SYS_CTRL` `WR_MASK` `[1:0]` as new configuration |
-| `BLIT_EN`    | `[14]` | R/W  | enable interrupt for blitter queue empty                                |
-| `TIMER_EN`   | `[13]` | R/W  | enable interrupt for countdown timer                                    |
-| `VIDEO_EN`   | `[12]` | R/W  | enable interrupt for video (vblank/COPPER)                              |
-| `AUD3_EN`    | `[11]` | R/W  | enable interrupt for audio channel 3 ready                              |
-| `AUD2_EN`    | `[10]` | R/W  | enable interrupt for audio channel 2 ready                              |
-| `AUD1_EN`    | `[9]`  | R/W  | enable interrupt for audio channel 1 ready                              |
-| `AUD0_EN`    | `[8]`  | R/W  | enable interrupt for audio channel 0 ready                              |
-|              | `[7]`  | -/-  |                                                                         |
-| `BLIT_INTR`  | `[6]`  | R/W  | interrupt pending for blitter queue empty                               |
-| `TIMER_INTR` | `[5]`  | R/W  | interrupt pending for countdown timer                                   |
-| `VIDEO_INTR` | `[4]`  | R/W  | interrupt pending for video (vblank/COPPER)                             |
-| `AUD3_INTR`  | `[3]`  | R/W  | interrupt pending for audio channel 3 ready                             |
-| `AUD2_INTR`  | `[2]`  | R/W  | interrupt pending for audio channel 2 ready                             |
-| `AUD1_INTR`  | `[1]`  | R/W  | interrupt pending for audio channel 1 ready                             |
-| `AUD0_INTR`  | `[0]`  | R/W  | interrupt pending for audio channel 0 ready                             |
+| Name         | Bits   | R/W  | Description                                                       |
+|--------------|--------|------|-------------------------------------------------------------------|
+| `RECONFIG`   | `[15]` | -/W+ | Reconfigure FPGA with `INT_CTRL[9:8]` as new configuration number |
+| `BLIT_EN`    | `[14]` | R/W  | enable interrupt for blitter queue empty                          |
+| `TIMER_EN`   | `[13]` | R/W  | enable interrupt for countdown timer                              |
+| `VIDEO_EN`   | `[12]` | R/W  | enable interrupt for video (vblank/COPPER)                        |
+| `AUD3_EN`    | `[11]` | R/W  | enable interrupt for audio channel 3 ready                        |
+| `AUD2_EN`    | `[10]` | R/W  | enable interrupt for audio channel 2 ready                        |
+| `AUD1_EN`    | `[9]`  | R/W  | enable interrupt for audio channel 1 ready                        |
+| `AUD0_EN`    | `[8]`  | R/W  | enable interrupt for audio channel 0 ready                        |
+|              | `[7]`  | -/-  |                                                                   |
+| `BLIT_INTR`  | `[6]`  | R/W  | interrupt pending for blitter queue empty                         |
+| `TIMER_INTR` | `[5]`  | R/W  | interrupt pending for countdown timer                             |
+| `VIDEO_INTR` | `[4]`  | R/W  | interrupt pending for video (vblank/COPPER)                       |
+| `AUD3_INTR`  | `[3]`  | R/W  | interrupt pending for audio channel 3 ready                       |
+| `AUD2_INTR`  | `[2]`  | R/W  | interrupt pending for audio channel 2 ready                       |
+| `AUD1_INTR`  | `[1]`  | R/W  | interrupt pending for audio channel 1 ready                       |
+| `AUD0_INTR`  | `[0]`  | R/W  | interrupt pending for audio channel 0 ready                       |
 
-> :mag: **Xosera Reconfig:** Writing a 1 to bit `[15]` will immediately reset and reconfigure the Xosera FPGA into one of four FPGA configurations stored in flash memory.  Normally, default config #0 is standard VGA 640x480 and config #1 is 848x480 wide-screen 16:9 (the other configurations are user defined and it will fall back to config #0 on missing or invalid configurations).  The new configuration is selected with bits `[1:0]` in `XM_SYS_CTRL` (low two VRAM mask bits) prior to setting the `RECONFIG` bit. Reconfiguration can take up to 100ms and during this period Xosera will be unresponsive (and no display will be generated, so monitor will blank).  All register settings, VRAM, TILEMEM and other memory on Xosera will be reset and restored to defaults.
+> :mag: **Xosera Reconfig:** Writing a 1 to bit `[15]` will immediately reset and reconfigure the Xosera FPGA into one of four FPGA configurations stored in flash memory.  Normally, default config #0 is standard VGA 640x480 and config #1 is 848x480 wide-screen 16:9 (the other configurations are user defined and it will fall back to config #0 on missing or invalid configurations).  The new configuration is selected with bits `INT_CTRL[9:8]` (in same byte as reconfigure bit). Reconfiguration can take up to 100ms and during this period Xosera will be unresponsive (and no display will be generated, so monitor will blank).  All register settings, VRAM, TILEMEM and other memory on Xosera will be reset and restored to defaults.
 
 #### 0x2 **`XM_TIMER`** (R/W) - Timer Functions
 
@@ -630,7 +630,7 @@ Each 4-BPP tile is 16 words and 8-bpp tile is 32 words (a total of 32KiB or 64Ki
 
 #### Final Color Index Selection
 
-In *all* of the above bitmap or tile modes for every native pixel (even border or blanked pixels), a color index is formed and used to look-up the final 16-bit ARGB color blended with the other playfield to form the color on the screen.  The final index for each playfield to look-up in its colormap is first exclusive-OR'd with the playfields respective `XR_Px_GFX_CTRL[15:8]` 8-bit "colorbase" value.  This allows utilization of the the entire colormap, even on formats that have less than 8-BPP and no "color index" offset attribute (and also useful as an additional color index modifier, even with an 8-BPP index).
+In *all* of the above bitmap or tile modes for every native pixel (even border or blanked pixels), a color index is formed and used to look-up the final 16-bit ARGB color blended with the other playfield to form the color on the screen.  Before the index generated by each playfield is used, it is first exclusive-OR'd with the playfields respective `XR_Px_GFX_CTRL[15:8]` 8-bit "colorbase" value.  This allows utilization of the the entire colormap, even on formats that have less than 8-BPP and no "color index" offset attribute (and also useful as an additional color index modifier, even with an 8-BPP index).
 
 E.g., if a playfield mode produced a color index of `0x07`, and the playfield `XR_Px_GFX_CTRL[15:8]` colorbase had a value `0x51`, a final index of `0x07` XOR `0x51` = `0x56` would be used for the colormap look-up.
 
@@ -806,7 +806,7 @@ In general, programming the copper comprises loading a copper program (aka 'copp
 
 When the copper is enabled, at the beginning of each frame (offscreen VPos `0`, HPos `4`) the copper state is reset and execution will begin at the start of copper memory (`XR_COPPER_ADDR` or copper address `0x000`), with `RA`=`0x0000` and `B`=`0` (allowing one instruction `BRGE` to jump elsewhere if needed).  
 
-You should make sure a valid copper program is present in copper memory *before* you enable it.  Although there is a default copper program after reset or reconfiguration (used to clear VRAM and initialize some Xosera registers), do not make any assumptions about the initial contents of copper memory (it will generally not be cleared and Xosera configuration informaton is placed in the last 128 words).
+You should make sure a valid copper program is present in copper memory *before* you enable it.  Although there is a default no-op copper program after reset or reconfiguration, do not make any assumptions about the initial contents of copper memory (it will generally not be cleared and Xosera configuration informaton is placed in the last 128 words).
 
 > :mag: **Copper execution:** When enabled, copper execution won't begin until the start of the next video frame (off-screen off the left edge of scan line 0 at the top of the screen).  It will also be reset and restarted the same way at the start of each subsequent video frame to keep copper execution in sync with the display.  When the copper is restarted on each frame it will be at VPos `0`, HPos `4` with `PC`=`0x000`, `RA`=`0x0000` and `B`=`0` (and copper memory unaltered).
 

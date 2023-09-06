@@ -467,9 +467,29 @@ uint16_t     BusInterface::test_data[32768] = {
     // test data
 
     REG_WAITHSYNC(),
-    REG_W(SYS_CTRL, 0x000F),
-    XREG_SETW(POINTER_H, OFFSCREEN_WIDTH + 390),
-    XREG_SETW(POINTER_V, 0xF000 | 100),
+    // initialize non-zero Xosera registers
+    XREG_SETW(VID_CTRL, 0x0008),
+    XREG_SETW(VID_RIGHT, VISIBLE_WIDTH),
+    XREG_SETW(PA_GFX_CTRL, 0x0080),
+    XREG_SETW(PA_TILE_CTRL, 0x000F),
+    XREG_SETW(PA_LINE_LEN, VISIBLE_WIDTH / 8),
+    XREG_SETW(PB_GFX_CTRL, 0x0080),
+    XREG_SETW(PB_TILE_CTRL, 0x000F),
+    XREG_SETW(PB_LINE_LEN, VISIBLE_WIDTH / 8),
+
+#if 0   // this clears all VRAM
+    REG_WAIT_BLIT_READY(),
+    XREG_SETW(BLIT_ANDC, 0x0000),              // no ANDC
+    XREG_SETW(BLIT_XOR, 0x0000),               // no XOR
+    XREG_SETW(BLIT_MOD_S, 0x0000),             // no S modulo
+    XREG_SETW(BLIT_SRC_S, 0x0000),             // fill const
+    XREG_SETW(BLIT_MOD_D, 0x0000),             // no B modulo (contiguous output)
+    XREG_SETW(BLIT_DST_D, 0x0000),             // VRAM display start address line 0
+    XREG_SETW(BLIT_SHIFT, 0xFF00),             // no edge masking or shifting
+    XREG_SETW(BLIT_LINES, 0x0000),             // repeat 1 time
+    XREG_SETW(BLIT_WORDS, 0x10000 - 1),        // size of VRAM
+    REG_WAIT_BLIT_DONE(),
+#endif
 
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
@@ -477,6 +497,8 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITVSYNC(),
     REG_WAITVTOP(),
     REG_WAITVSYNC(),
+    XREG_SETW(POINTER_H, OFFSCREEN_WIDTH + 390),
+    XREG_SETW(POINTER_V, 0xF000 | 100),
     XREG_SETW(PA_GFX_CTRL, 0x0000),        // pf a blank
 
 #if 0

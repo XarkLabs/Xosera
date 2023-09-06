@@ -28,8 +28,7 @@
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
 
 `ifndef SYNTHESIS
-//`define NO_COPPER_INIT                     // initialize VRAM with test pattern and fonts, also no init copper
-//`define NO_TESTPATTERN                     // initialize VRAM with test pattern and fonts, also no init copper
+//`define NO_TESTPATTERN                     // don't init VRAM with test pattern and fonts in simulation
 `endif
 
 // features that can be optionally disabled (comment out to disable)
@@ -52,9 +51,12 @@
   `ifdef EN_BLIT
     `define EN_COPP_VBLITWAIT              // VPOS #$XXX > $3FF waits for blitter
   `endif
+  `define EN_COPPER_INIT                // enable copper init program at reset (optional)
 `endif
 //`define EN_UART                         // enable USB UART
+`ifdef EN_UART
 //`define EN_UART_TX                      // TX only UART (no RX if EN_UART defined)
+`endif
 
 `define VERSION 0_40                    // Xosera BCD version code (x.xx)
 

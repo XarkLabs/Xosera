@@ -1,15 +1,26 @@
 {
     "reg": [
         {
-            "bits": 6,
-            "name": "vertical fine scroll",
-            "type": 4,
+            "bits": 2,
+            "name": "vert fine scroll",
+            "type": 6,
             "attr": [
-                "(0-63 scanlines clipped from top edge)"
+                "0-3 native lines",
+                "(v repeat scroll)"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "vertical tile scroll",
+            "type": 5,
+            "attr": [
+                "0-15 vertical tile start line",
+                "(lines skipped before top edge)"
             ]
         },
         {
             "bits": 2,
+            "name": "0",
             "type": 1
         },
         {
@@ -17,11 +28,13 @@
             "name": "horizontal fine scroll",
             "type": 4,
             "attr": [
-                "(0-31 native pixels clipped from left edge)"
+                "0-31 native pixels horizontal scroll",
+                "(pixels skipped before left edge)"
             ]
         },
         {
             "bits": 3,
+            "name": "0",
             "type": 1
         }
     ],

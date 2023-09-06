@@ -536,20 +536,17 @@ Word length added to line start address for each new line.  The first line will 
 <img src="./pics/wd_XR_Px_HV_SCROLL.svg">
 
 **playfield A/B  horizontal and vertical fine scroll**  
-| Name       | Bits     | R/W | Description                                |
-|------------|----------|-----|--------------------------------------------|
-| `H_SCROLL` | `[12:8]` | R/W | Horizontal fine pixel scroll (0-31 pixels) |
-| `V_SCROLL` | `[5:0]`  | R/W | Vertical fine pixel scroll (0-63 pixels)   |
+| Name            | Bits     | R/W | Description                                              |
+|-----------------|----------|-----|----------------------------------------------------------|
+| `H_SCROLL`      | `[12:8]` | R/W | Horizontal fine pixel scroll offset (0-31 native pixels) |
+| `V_TILE_SCROLL` | `[5:2]`  | R/W | Vertical tile line scroll offset (0-15 tile lines)       |
+| `V_SCROLL`      | `[1:0]`  | R/W | Vertical fine line scroll offset (0-3 native lines)             |
 
-Horizontal fine scroll is typically constrained to the scaled width of 8 pixels (1 tile):
-| `H_REPEAT` | scroll range |
-|------------|--------------|
-| 0 (1x)     | 0-7 pixels   |
-| 1 (2x)     | 0-15 pixels  |
-| 2 (3x)     | 0-23 pixels  |
-| 3 (4x)     | 0-31 pixels  |
+Horizontal fine scroll `H_SCROLL` will clip (or skip) 0-31 native pixels from the left edge. This horizontal scroll offset is applied to all tile or bitmap modes.
 
-Vertical fine scroll is typically constrained to the scaled height of a pixel or tile (or one less than the line/tile height times `V_REPEAT`).  Similar to `H_REPEAT` table above, but pixels scroll can be doubled with 8x16 tile size set.
+ Vertical tile scroll `V_TILE_SCROLL` is typically constrained to be less than the height of the current tile height of 1-16 (set in `Px_TILE_CTRL`).  This tile line scroll is only useful in tiled modes to start with a partial tile (in bitmap modes, change `Px_DISP_ADDR` to scroll vertically).
+
+Vertical fine scroll `V_SCROLL` is typically constrained to be less than the `V_REPEAT` line height of 1-4 (set in `Px_GFX_CTRL`) . This vertical fine scroll allows you to fine scroll with native resolution, even with repeated lines. This offset is applied to all tile or bitmap modes (with `V_REPEAT` set).
 
 **0x15 `XR_PA_LINE_ADDR` (WO)** - playfield A (base) display VRAM next line address  
 **0x1D `XR_PB_LINE_ADDR` (WO)** - playfield B (overlay) display VRAM next line address

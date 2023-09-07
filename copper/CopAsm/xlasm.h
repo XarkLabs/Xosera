@@ -268,7 +268,7 @@ struct xlasm
         MAXINCLUDE_STACK     = 64,            // include nest depth
         MAXMACRO_STACK       = 1024,          // nested macro depth
         MAXMACROREPS_WARNING = 255,           // max parameters replacement iterations per line
-        MAXFILL_BYTES        = 0x800L,        // max size output by space or fill directive (safety check)
+        MAXFILL_BYTES        = 0xC00L,        // max size output by space or fill directive (safety check)
         MAX_PASSES           = 10             // maximum number of assembler passes before optimization short-circuited
     };
 

@@ -2437,9 +2437,8 @@ int32_t xlasm::process_directive(uint32_t                         idx,
         // fill type (fill swith value) =====
         case DIR_FILL_16: {
             std::string exprstr;
-            int64_t     v64 = 0;
 
-            eval_tokens(directive, exprstr, cur_token, tokens, 2, 0);
+            int64_t     v64 = eval_tokens(directive, exprstr, cur_token, tokens, 2, 0);
 
             exprstr.clear();
             int64_t count = eval_tokens(directive, exprstr, cur_token, tokens, 1, 0);

@@ -25,9 +25,11 @@ extern void              remove_intr(void);
 extern volatile uint16_t NukeColor;
 extern volatile uint32_t XFrameCount;
 
+#define USE_ASM_LONG 1
+
 #define DELAY_TIME 100
 
-uint32_t elapsed_tenthms;        // alternate timer since interrupts not reliable
+uint32_t elapsed_tenthms;        // Xosera elapsed timer
 uint16_t last_timer_val;
 
 bool     has_PF_B;
@@ -535,11 +537,54 @@ static void read_vram_buffer(int speed)
             xm_setw(RD_ADDR, 0x0000);
 
             uint32_t * lp = (uint32_t *)&vram_buffer[0];
+#if USE_ASM_LONG
+            uint32_t tmp_u32;
+            uint16_t cnt = 0x800 - 1;
+            __asm__ __volatile__(
+                    "0:    movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      move.l  %[tmp],(%[dptr])+\n"
+                    "      dbf     %[cnt],0b"
+                    : [tmp] "=&d"(tmp_u32)
+                    : [xptr] "a"(xosera_ptr), [dptr] "a"(lp), [cnt] "d"(cnt)
+                    :);
+#else
+
             for (int addr = 0; addr < 0x10000; addr += 2)
             {
                 uint32_t data = xm_getl(DATA);
                 *lp++         = data;
             }
+#endif
             break;
 
         default:
@@ -627,10 +672,52 @@ int test_vram(bool LFSR, int mode, int speed)
             xm_setw(WR_ADDR, 0x0000);
 
             uint32_t * lp = (uint32_t *)&pattern_buffer[0];
+#if USE_ASM_LONG
+            uint32_t tmp_u32;
+            uint16_t cnt = 0x800 - 1;
+            __asm__ __volatile__(
+                    "0:     move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       move.l  (%[dptr])+,%[tmp]\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       dbf     %[cnt],0b"
+                    : [tmp] "=&d"(tmp_u32)
+                    : [xptr] "a"(xosera_ptr), [dptr] "a"(lp), [cnt] "d"(cnt)
+                    :);
+#else
             for (int addr = 0; addr < 0x10000; addr += 2)
             {
                 xm_setl(DATA, *lp++);
             }
+#endif
             break;
 
         default:

@@ -30,3 +30,7 @@ val_tbl         .word   0x000, 0x111, 0x222, 0x333
                 .word   0xccc, 0xddd, 0xeee, 0xfff
 end_tbl
 
+                fill    $2bff,($C400-.)
+the_end         = .
+
+

@@ -20,8 +20,6 @@ H_START         =       240
 H_END           =       1087
 H_VIS           =       848
                 .endif
-V               =       VPOS|V_EOF
-
 entry
                 HPOS    #0                              ; no-op
 ; set regs that aren't friendly when defaulted to zero
@@ -47,83 +45,14 @@ entry
                 MOVE    #$FF00,XR_BLIT_SHIFT            ; no edge masking or shifting
                 MOVE    #$0000,XR_BLIT_LINES            ; 1-D blit (no repeat count)
                 MOVE    #$10000-1,XR_BLIT_WORDS         ; all VRAM
-                VPOS    #V_WAITBLIT                     ; wait until blitter ready
-                BRLT    clear_copp
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-
-
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V
-                WORD    V,V,V,V,V,V,V
-
 clear_copp      MOVI    #VPOS|V_EOF,entry               ; prevent running init twice
                 LDM     clear_copp
                 ADDI    #1
-clear_stm       STM     clear_copp
-                CMPI    #clear_copp
+                STM     clear_copp
+                CMPI    #clear_copp+1
                 BRLT    clear_copp
-                MOVI    #VPOS|V_EOF,clear_stm
-                MOVI    #VPOS|V_EOF,clear_stm+1
+                VPOS    #V_WAITBLIT                     ; wait until blitter ready
                 MOVI    #$0000,XR_COPP_CTRL
+                fill    (VPOS|V_EOF),($C400-.)
 clear_end
                 .end

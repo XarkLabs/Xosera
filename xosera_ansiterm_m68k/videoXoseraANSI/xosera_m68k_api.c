@@ -138,9 +138,7 @@ bool xosera_init(int reconfig_num)
                 do
                 {
                     cpu_delay(1);
-                } while (
-                    ((xreg_getw(COPP_CTRL) & COPP_CTRL_COPP_EN_F) || (xm_getbh(SYS_CTRL) & SYS_CTRL_BLIT_BUSY_F)) &&
-                    --timeout);
+                } while ((xreg_getw(COPP_CTRL) & COPP_CTRL_COPP_EN_F) && --timeout);
             }
         }
     }

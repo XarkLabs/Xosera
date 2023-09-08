@@ -84,3 +84,4 @@ xosera_boing_m68k/*.ii
 xosera_boing_m68k/boing_copper.h
 xosera_m68k_api/bin/copasm
 copper/copper_test_m68k/color_bar_table.h
+xosera_test_m68k/cop_wavey.h

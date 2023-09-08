@@ -24,6 +24,13 @@
 #if !defined(XOSERA_M68K_DEFS_H)
 #define XOSERA_M68K_DEFS_H
 
+#if !defined(__COPASM__)
+#include <stdint.h>
+#define X_CASTU16 (uint16_t)
+#else
+#define X_CASTU16
+#endif
+
 // Xosera XR Memory Regions (size in 16-bit words)
 #define XR_CONFIG_REGS  0x0000        // 0x0000-0x000F 16 config/ctrl registers
 #define XR_PA_REGS      0x0010        // 0x0010-0x0017 8 playfield A video registers
@@ -163,108 +170,159 @@
 
 // Xosera register bits and constants
 
-// SYS_CTRL bit numbers NOTE: These are bits in high byte of SYS_CTRL word (for access with fast address register
-// indirect with no offset)
-#define SYS_CTRL_MEM_WAIT_B    7        // (R /- )  memory read/write operation pending (with contended memory)
-#define SYS_CTRL_BLIT_FULL_B   6        // (R /- )  blitter queue is full, do not write new operation to blitter registers
-#define SYS_CTRL_BLIT_BUSY_B   5        // (R /- )  blitter is still busy performing an operation (not done)
-#define SYS_CTRL_UNUSED_12_B   4        // (R /- )  unused (reads 0)
-#define SYS_CTRL_HBLANK_B      3        // (R /- )  video signal is in horizontal blank period
-#define SYS_CTRL_VBLANK_B      2        // (R /- )  video signal is in vertical blank period
-#define SYS_CTRL_PIX_NO_MASK_B 1        // (R /W )  PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
-#define SYS_CTRL_PIX_8B_MASK_B 0        // (R /W )  PIXEL_X/Y 8-bit pixel mask for WR_MASK
-// SYS_CTRL bit flags
+// SYS_CTRL bit definitions (NOTE: in high/even byte of SYS_CTRL word for faster access with without an offset)
+#define SYS_CTRL_MEM_WAIT_B    7           // (R /- )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_MEM_WAIT_W    1           // (R /- )  memory read/write operation pending (with contended memory)
 #define SYS_CTRL_MEM_WAIT_F    0x80        // (R /- )  memory read/write operation pending (with contended memory)
+#define SYS_CTRL_BLIT_FULL_B   6        // (R /- )  blitter queue is full, do not write new operation to blitter registers
+#define SYS_CTRL_BLIT_FULL_W   1        // (R /- )  blitter queue is full, do not write new operation to blitter registers
 #define SYS_CTRL_BLIT_FULL_F   0x40        // (R /- )  blitter queue is full (do not write to blitter registers)
+#define SYS_CTRL_BLIT_BUSY_B   5           // (R /- )  blitter is still busy performing an operation (not done)
+#define SYS_CTRL_BLIT_BUSY_W   1           // (R /- )  blitter is still busy performing an operation (not done)
 #define SYS_CTRL_BLIT_BUSY_F   0x20        // (R /- )  blitter is still busy performing an operation (not done)
+#define SYS_CTRL_UNUSED_12_B   4           // (R /- )  unused (reads 0)
+#define SYS_CTRL_UNUSED_12_W   1           // (R /- )  unused (reads 0)
 #define SYS_CTRL_UNUSED_12_F   0x10        // (R /- )  unused (reads 0)
+#define SYS_CTRL_HBLANK_B      3           // (R /- )  video signal is in horizontal blank period
+#define SYS_CTRL_HBLANK_W      1           // (R /- )  video signal is in horizontal blank period
 #define SYS_CTRL_HBLANK_F      0x08        // (R /- )  video signal is in horizontal blank period
+#define SYS_CTRL_VBLANK_B      2           // (R /- )  video signal is in vertical blank period
+#define SYS_CTRL_VBLANK_W      1           // (R /- )  video signal is in vertical blank period
 #define SYS_CTRL_VBLANK_F      0x04        // (R /- )  video signal is in vertical blank period
+#define SYS_CTRL_PIX_NO_MASK_B 1           // (R /W )  PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
+#define SYS_CTRL_PIX_NO_MASK_W 1           // (R /W )  PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
 #define SYS_CTRL_PIX_NO_MASK_F 0x02        // (R /W )  PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
+#define SYS_CTRL_PIX_8B_MASK_B 0           // (R /W )  PIXEL_X/Y 8-bit pixel mask for WR_MASK
+#define SYS_CTRL_PIX_8B_MASK_W 1           // (R /W )  PIXEL_X/Y 8-bit pixel mask for WR_MASK
 #define SYS_CTRL_PIX_8B_MASK_F 0x01        // (R /W )  PIXEL_X/Y 8-bit pixel mask for WR_MASK
-// INT_CTRL bit numbers within word
-#define INT_CTRL_RECONFIG_B   15        // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
-#define INT_CTRL_BLIT_EN_B    14        // blitter ready interrupt mask
-#define INT_CTRL_TIMER_EN_B   13        // timer match interrupt mask
-#define INT_CTRL_VIDEO_EN_B   12        // v-blank or copper interrupt mask
-#define INT_CTRL_AUD3_EN_B    11        // audio channel 3 ready (START addr was loaded)
-#define INT_CTRL_AUD2_EN_B    10        // audio channel 2 ready (START addr was loaded)
-#define INT_CTRL_AUD1_EN_B    9         // audio channel 1 ready (START addr was loaded)
-#define INT_CTRL_AUD0_EN_B    8         // audio channel 0 ready (START addr was loaded)
-#define INT_CTRL_UNUSED_7_B   7         // timer match read interrupt (status, write acknowledge)
-#define INT_CTRL_BLIT_INTR_B  6         // blitter ready interrupt (read status, write acknowledge)
-#define INT_CTRL_TIMER_INTR_B 5         // timer match read interrupt (status, write acknowledge)
-#define INT_CTRL_VIDEO_INTR_B 4         // v-blank or copper interrupt (read status, write acknowledge)
-#define INT_CTRL_AUD3_INTR_B  3         // audio channel ready interrupt (read status, write acknowledge)
-#define INT_CTRL_AUD2_INTR_B  2         // audio channel ready interrupt (read status, write acknowledge)
-#define INT_CTRL_AUD1_INTR_B  1         // audio channel ready interrupt (read status, write acknowledge)
-#define INT_CTRL_AUD0_INTR_B  0         // audio channel ready interrupt (read status, write acknowledge)
-// INT_CTRL bit flag/mask
+// SYS_CTRL WR_MASK bit definitions (NOTE: in low/odd byte of SYS_CTRL word)
+#define SYS_CTRL_WR_MASK_B 0
+#define SYS_CTRL_WR_MASK_W 4
+#define SYS_CTRL_WR_MASK_F 0x0F
+// INT_CTRL bit definitions
+#define INT_CTRL_RECONFIG_B   15            // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
+#define INT_CTRL_RECONFIG_W   1             // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
 #define INT_CTRL_RECONFIG_F   0x8000        // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
+#define INT_CTRL_BLIT_EN_B    14            // blitter ready interrupt mask
+#define INT_CTRL_BLIT_EN_W    1             // blitter ready interrupt mask
 #define INT_CTRL_BLIT_EN_F    0x4000        // blitter ready interrupt enable
+#define INT_CTRL_TIMER_EN_B   13            // timer match interrupt mask
+#define INT_CTRL_TIMER_EN_W   1             // timer match interrupt mask
 #define INT_CTRL_TIMER_EN_F   0x2000        // timer match interrupt enable
+#define INT_CTRL_VIDEO_EN_B   12            // v-blank or copper interrupt mask
+#define INT_CTRL_VIDEO_EN_W   1             // v-blank or copper interrupt mask
 #define INT_CTRL_VIDEO_EN_F   0x1000        // v-blank or copper interrupt enable
+#define INT_CTRL_AUD3_EN_B    11            // audio channel 3 ready (START addr was loaded)
+#define INT_CTRL_AUD3_EN_W    1             // audio channel 3 ready (START addr was loaded)
 #define INT_CTRL_AUD3_EN_F    0x0800        // audio channel 3 interrupt enable
+#define INT_CTRL_AUD2_EN_B    10            // audio channel 2 ready (START addr was loaded)
+#define INT_CTRL_AUD2_EN_W    1             // audio channel 2 ready (START addr was loaded)
 #define INT_CTRL_AUD2_EN_F    0x0400        // audio channel 2 interrupt enable
+#define INT_CTRL_AUD1_EN_B    9             // audio channel 1 ready (START addr was loaded)
+#define INT_CTRL_AUD1_EN_W    1             // audio channel 1 ready (START addr was loaded)
 #define INT_CTRL_AUD1_EN_F    0x0200        // audio channel 1 interrupt enable
+#define INT_CTRL_AUD0_EN_B    8             // audio channel 0 ready (START addr was loaded)
+#define INT_CTRL_AUD0_EN_W    1             // audio channel 0 ready (START addr was loaded)
 #define INT_CTRL_AUD0_EN_F    0x0100        // audio channel 0 interrupt enable
-#define INT_CTRL_AUD_ALL_EN_F 0x0F00        // all audio channel interrupts enable
-#define INT_CTRL_EN_ALL_F     0x7F00        // enable all interrupts
+#define INT_CTRL_UNUSED_7_B   7             // timer match read interrupt (status, write acknowledge)
+#define INT_CTRL_UNUSED_7_W   1             // timer match read interrupt (status, write acknowledge)
 #define INT_CTRL_UNUSED_7_F   0x0080        // timer match read interrupt (status, write acknowledge)
+#define INT_CTRL_BLIT_INTR_B  6             // blitter ready interrupt (read status, write acknowledge)
+#define INT_CTRL_BLIT_INTR_W  1             // blitter ready interrupt (read status, write acknowledge)
 #define INT_CTRL_BLIT_INTR_F  0x0040        // blitter ready interrupt (read status, write acknowledge)
+#define INT_CTRL_TIMER_INTR_B 5             // timer match read interrupt (status, write acknowledge)
+#define INT_CTRL_TIMER_INTR_W 1             // timer match read interrupt (status, write acknowledge)
 #define INT_CTRL_TIMER_INTR_F 0x0020        // timer match read interrupt (status, write acknowledge)
+#define INT_CTRL_VIDEO_INTR_B 4             // v-blank or copper interrupt (read status, write acknowledge)
+#define INT_CTRL_VIDEO_INTR_W 1             // v-blank or copper interrupt (read status, write acknowledge)
 #define INT_CTRL_VIDEO_INTR_F 0x0010        // v-blank or copper interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD3_INTR_B  3             // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD3_INTR_W  1             // audio channel ready interrupt (read status, write acknowledge)
 #define INT_CTRL_AUD3_INTR_F  0x0008        // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD2_INTR_B  2             // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD2_INTR_W  1             // audio channel ready interrupt (read status, write acknowledge)
 #define INT_CTRL_AUD2_INTR_F  0x0004        // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD1_INTR_B  1             // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD1_INTR_W  1             // audio channel ready interrupt (read status, write acknowledge)
 #define INT_CTRL_AUD1_INTR_F  0x0002        // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD0_INTR_B  0             // audio channel ready interrupt (read status, write acknowledge)
+#define INT_CTRL_AUD0_INTR_W  1             // audio channel ready interrupt (read status, write acknowledge)
 #define INT_CTRL_AUD0_INTR_F  0x0001        // audio channel ready interrupt (read status, write acknowledge)
 #define INT_CTRL_AUD_ALL_F    0x000F        // all audio channels status/acknowledge
 #define INT_CTRL_CLEAR_ALL_F  0x007F        // clear all interrupts
-// UART status bit number within even byte of XM_UART
+// UART status bit definitions (NOTE: high/even byte of XM_UART)
 #define UART_RXF_B 7           // UART receive buffer full (data waiting)
-#define UART_TXF_B 6           // UART transmit buffer full (busy transmitting data)
+#define UART_RXF_W 1           // UART receive buffer full (data waiting)
 #define UART_RXF_F 0x80        // UART receive buffer full (data waiting)
+#define UART_TXF_B 6           // UART transmit buffer full (busy transmitting data)
+#define UART_TXF_W 1           // UART transmit buffer full (busy transmitting data)
 #define UART_TXF_F 0x40        // UART transmit buffer full (busy transmitting data)
-// FEATURE bit numbers within word (for fields wider than 1 bit, XB_(xxx_B, xxx_W) macro can be used)
-#define FEATURE_MONRES_B  0         // rightmost bit number for 4-bit monitor mode field
-#define FEATURE_MONRES_W  4         // bit width for 4-bit monitor mode field
-#define FEATURE_COPP_B    4         // bit number indicating presence of COPPER
-#define FEATURE_BLIT_B    5         // bit number indicating presence of BLITTER
-#define FEATURE_PF_B_B    6         // bit number indicating presence of playfield B (2nd playfield)
-#define FEATURE_UART_B    7         // bit number indicating presence of debug UART
-#define FEATURE_AUDCHAN_B 8         // rightmost bit number for 4-bit audio channels field
-#define FEATURE_AUDCHAN_W 4         // bit width for 4-bit audio channels field
-#define FEATURE_CONFIG_B  12        // rightmost bit number for 4-bit FPGA config field
-#define FEATURE_CONFIG_W  4         // bit width for 4-bit FPGA config field
-// FEATURE flag/mask
+// FEATURE bit definitions
+#define FEATURE_MONRES_B  0             // rightmost bit number for 4-bit monitor mode field
+#define FEATURE_MONRES_W  4             // bit width for 4-bit monitor mode field
 #define FEATURE_MONRES_F  0x000F        // bit-mask for 4-bit monitor mode field
+#define FEATURE_COPP_B    4             // bit number indicating presence of COPPER
+#define FEATURE_COPP_W    1             // bit flag indicating presence of COPPER
 #define FEATURE_COPP_F    0x0010        // bit flag indicating presence of COPPER
+#define FEATURE_BLIT_B    5             // bit number indicating presence of BLITTER
+#define FEATURE_BLIT_W    1             // bit number indicating presence of BLITTER
 #define FEATURE_BLIT_F    0x0020        // bit flag indicating presence of BLITTER
+#define FEATURE_PF_B_B    6             // bit number indicating presence of playfield B (2nd playfield)
+#define FEATURE_PF_B_W    1             // bit number indicating presence of playfield B (2nd playfield)
 #define FEATURE_PF_B_F    0x0040        // bit flag indicating presence of playfield B (2nd playfield)
+#define FEATURE_UART_B    7             // bit number indicating presence of debug UART
+#define FEATURE_UART_W    1             // bit number indicating presence of debug UART
 #define FEATURE_UART_F    0x0080        // bit flag indicating presence of debug UART
+#define FEATURE_AUDCHAN_B 8             // rightmost bit number for 4-bit audio channels field
+#define FEATURE_AUDCHAN_W 4             // bit width for 4-bit audio channels field
 #define FEATURE_AUDCHAN_F 0x0F00        // bit-mask for 4-bit audio channels field
+#define FEATURE_CONFIG_B  12            // rightmost bit number for 4-bit FPGA config field
+#define FEATURE_CONFIG_W  4             // bit width for 4-bit FPGA config field
 #define FEATURE_CONFIG_F  0xF000        // bit-mask for 4-bit config field
-// XR_VID_CTRL flag/mask
+// XR_VID_CTRL bit definitions
 #define VID_CTRL_SWAP_AB_B 15            // flag to swap colormap used (pf A uses colormap B and vice versa)
 #define VID_CTRL_SWAP_AB_W 1             // 1 bit
 #define VID_CTRL_SWAP_AB_F 0x8000        // flag to swap colormap used (pf A uses colormap B and vice versa)
 #define VID_CTRL_BORDCOL_B 0             // mask for pf A color index
 #define VID_CTRL_BORDCOL_W 8             // 8 bit field
 #define VID_CTRL_BORDCOL_F 0x00FF        // mask for pf A color index
-// XR_COPP_CTRL constants
+// XR_COPP_CTRL bit definitions
 #define COPP_CTRL_COPP_EN_B 15            // bit number to enable/disable copper
 #define COPP_CTRL_COPP_EN_W 1             // 1 bit
 #define COPP_CTRL_COPP_EN_F 0x8000        // flag to enable/disable copper
-// XR_AUD_CTRL constants
+// XR_AUD_CTRL bit definitions
 #define AUD_CTRL_AUD_EN_B 0             // bit number to enable/disable audio
 #define AUD_CTRL_AUD_EN_W 1             // 1 bit
 #define AUD_CTRL_AUD_EN_F 0x0001        // flag to enable/disable audio
-// XR_Px_GFX_CTRL BPP mode constants
+// XR_POINTER_H/XR_POINTER_V
+#define POINTER_H_B          0             // pointer sprite raw H position
+#define POINTER_H_W          12            // pointer sprite raw H position
+#define POINTER_H_F          0x0FFF        // pointer sprite raw H position
+#define POINTER_V_COLORSEL_B 12            // pointer sprite upper 4-bit for color index
+#define POINTER_V_COLORSEL_W 4             // pointer sprite upper 4-bit for color index
+#define POINTER_V_COLORSEL_F 0xF000        // pointer sprite upper 4-bit for color index
+#define POINTER_V_B          0             // pointer raw V position
+#define POINTER_V_W          12            // pointer raw V position
+#define POINTER_V_F          0x0FFF        // pointer raw V position
+// XR_Px_GFX_CTRL constants
 #define GFX_BPP_1 0        // 1-bpp (2 colors + selected via fore/back color attribute byte)
 #define GFX_BPP_4 1        // 4-bpp (16 colors)
 #define GFX_BPP_8 2        // 8-bpp (256 colors)
 #define GFX_BPP_X 3        // (reserved)
-// XR_Px_GFX_CTRL bit numbers within word)
+#define GFX_1X    0        // H/V repeat x1
+#define GFX_2X    1        // H/V repeat x2
+#define GFX_3X    2        // H/V repeat x3
+#define GFX_4X    3        // H/V repeat x4
+// XR_Px_HV_FSCALE constants    16:9   4:3
+#define HV_FSCALE_OFF  0x0        // H 848 / 640,  V 480
+#define HV_FSCALE_1OF2 0x1        // H 424 / 320,  V 240
+#define HV_FSCALE_1OF3 0x2        // H 565+/ 426+, V 320
+#define HV_FSCALE_1OF4 0x3        // H 636 / 480,  V 360
+#define HV_FSCALE_1OF5 0x4        // H 678+/ 512,  V 384
+#define HV_FSCALE_1OF6 0x5        // H 706+/ 533+, V 400
+#define HV_FSCALE_1OF7 0x6        // H 726+/ 548+, V 411+
+#define HV_FSCALE_1OF8 0x7        // H 742 / 560,  V 420
+// XR_Px_GFX_CTRL bit definitions
 #define GFX_CTRL_V_REPEAT_B  0
 #define GFX_CTRL_V_REPEAT_W  2
 #define GFX_CTRL_V_REPEAT_F  0x0003
@@ -283,7 +341,7 @@
 #define GFX_CTRL_COLORBASE_B 8
 #define GFX_CTRL_COLORBASE_W 8
 #define GFX_CTRL_COLORBASE_F 0xFF00
-// XR_Px_TILE_CTRL bit numbers within word)
+// XR_Px_TILE_CTRL bit definitions
 #define TILE_CTRL_TILE_H_B       0
 #define TILE_CTRL_TILE_H_W       4
 #define TILE_CTRL_TILE_H_F       0x000F
@@ -296,15 +354,38 @@
 #define TILE_CTRL_TILEBASE_B     10
 #define TILE_CTRL_TILEBASE_W     6
 #define TILE_CTRL_TILEBASE_F     0xFC00
-// XR_AUDx_PERIOD flag
-#define AUD_PER_RESTART_B 15        // AUDx_PERIOD bit 15 is force channel restart
-#define AUD_PER_RESTART_W 1
-#define AUD_PER_RESTART_F 0x8000
-// XR_AUDx_LENGTH flag
-#define AUD_LEN_TILEMEM_B 15        // AUDx_LENGTH bit 15 is TILEMEM flag
-#define AUD_LEN_TILEMEM_W 1
-#define AUD_LEN_TILEMEM_F 0x8000
-// XR_BLIT_CTRL
+// XR_Px_HV_SCROLL bit definitions
+#define HV_SCROLL_H_FINE_B 8
+#define HV_SCROLL_H_FINE_W 5
+#define HV_SCROLL_H_FINE_F 0x1F00
+#define HV_SCROLL_V_TILE_B 2
+#define HV_SCROLL_V_TILE_W 4
+#define HV_SCROLL_V_TILE_F 0x003C
+#define HV_SCROLL_V_FINE_B 0
+#define HV_SCROLL_V_FINE_W 2
+#define HV_SCROLL_V_FINE_F 0x0003
+// XR_Px_HV_FSCALE bit definitions
+#define HV_FSCALE_H_FRAC_B 8
+#define HV_FSCALE_H_FRAC_W 3
+#define HV_FSCALE_H_FRAC_F 0x0700
+#define HV_FSCALE_V_FRAC_B 0
+#define HV_FSCALE_V_FRAC_W 3
+#define HV_FSCALE_V_FRAC_F 0x0700
+// XR_AUDx_PERIOD bit definitions
+#define AUD_PERIOD_RESTART_B 15        // AUDx_PERIOD bit 15 is force channel restart
+#define AUD_PERIOD_RESTART_W 1
+#define AUD_PERIOD_RESTART_F 0x8000
+#define AUD_PERIOD_B         0
+#define AUD_PERIOD_W         15
+#define AUD_PERIOD_F         0x7FFF
+// XR_AUDx_LENGTH bit definitions
+#define AUD_LENGTH_TILEMEM_B 15        // AUDx_LENGTH bit 15 is TILEMEM flag
+#define AUD_LENGTH_TILEMEM_W 1
+#define AUD_LENGTH_TILEMEM_F 0x8000
+#define AUD_LENGTH_B         0
+#define AUD_LENGTH_W         15
+#define AUD_LENGTH_F         0x7FFF
+// XR_BLIT_CTRL bit definitions
 #define BLIT_CTRL_TRANSPVAL_B 8
 #define BLIT_CTRL_TRANSPVAL_W 8
 #define BLIT_CTRL_TRANSPVAL_G 0xFF00
@@ -317,7 +398,7 @@
 #define BLIT_CTRL_SCONST_B    0
 #define BLIT_CTRL_SCONST_W    1
 #define BLIT_CTRL_SCONST_F    0x0001
-// XR_BLIT_SHIFT
+// XR_BLIT_SHIFT bit definitions
 #define BLIT_SHIFT_LMSK_B 12
 #define BLIT_SHIFT_LMSK_W 4
 #define BLIT_SHIFT_LMSK_G 0xF000
@@ -328,21 +409,36 @@
 #define BLIT_SHIFT_CNT_W  2
 #define BLIT_SHIFT_CNT_F  0x0003
 
-#if !defined(__COPASM__)
-#include <stdint.h>
-// Macros to make bit-fields easier (works similar to Verilog "+:" operator, e.g., word[RIGHTMOST_BIT +: BIT_WIDTH])
+// Macros for bit-fields: right_bit, bit_width, E.g., XB_(V,8,4) would put V into bits [11:8] (excess bits truncated)
 // encode value into bit-field for register
-#define XB_(v, right_bit, bit_width) ((((uint16_t)(v)) & ((1 << (bit_width)) - 1)) << (right_bit))
+#define XB_(v, right_bit, bit_width) (((X_CASTU16(v)) & ((1 << (bit_width)) - 1)) << (right_bit))
 // decode bit-field from register into value
-#define XV_(v, right_bit, bit_width) ((((uint16_t)(v)) >> (right_bit)) & ((1 << (bit_width)) - 1))
+#define XV_(v, right_bit, bit_width) (((X_CASTU16(v)) >> (right_bit)) & ((1 << (bit_width)) - 1))
 
+// macros to create values for registers with bit fields
 #define MAKE_GFX_CTRL(colbase, blank, bpp, bm, hx, vx)                                                                 \
-    (XB_(colbase, 8, 8) | XB_(blank, 7, 1) | XB_(bm, 6, 1) | XB_(bpp, 4, 2) | XB_(hx, 2, 2) | XB_(vx, 0, 2))
-#define MAKE_TILE_CTRL(tilebase, map_in_tile, glyph_in_vram, tileheight)                                               \
-    (((tilebase)&0xFC00) | XB_(map_in_tile, 9, 1) | XB_(glyph_in_vram, 8, 1) | XB_(((tileheight)-1), 0, 4))
-#define MAKE_HV_SCROLL(h_scrl, v_scrl)  (XB_(h_scrl, 8, 8) | XB_(v_scrl, 0, 8))
-#define MAKE_VID_CTRL(swap_ab, bordcol) (XB_(swap_ab, 15, 1) | XB_(bordcol, 0, 8))
+    (XB_(colbase, GFX_CTRL_COLORBASE_B, GFX_CTRL_COLORBASE_W) | XB_(blank, GFX_CTRL_BLANK_B, GFX_CTRL_BLANK_W) |       \
+     XB_(bm, GFX_CTRL_BITMAP_B, GFX_CTRL_BITMAP_W) | XB_(bpp, GFX_CTRL_BPP_B, GFX_CTRL_BPP_W) |                        \
+     XB_(hx, GFX_CTRL_H_REPEAT_B, GFX_CTRL_H_REPEAT_W) | XB_(vx, GFX_CTRL_V_REPEAT_B, GFX_CTRL_V_REPEAT_W))
+#define MAKE_TILE_CTRL(tile_addr, map_in_tilemem, tile_in_vram, tile_height)                                           \
+    (((tile_addr)&TILE_CTRL_TILEBASE_F) | XB_(map_in_tilemem, TILE_CTRL_DISP_TILEMEM_B, TILE_CTRL_DISP_TILEMEM_W) |    \
+     XB_(tile_in_vram, TILE_CTRL_TILE_VRAM_B, TILE_CTRL_TILE_VRAM_W) |                                                 \
+     XB_(((tile_height)-1), TILE_CTRL_TILE_H_B, TILE_CTRL_TILE_H_W))
+#define MAKE_HV_SCROLL(h_scrl, tile_scrl, v_scrl)                                                                      \
+    (XB_(h_scrl, HV_SCROLL_H_FINE_B, HV_SCROLL_H_FINE_W) | XB_(tile_scrl, HV_SCROLL_V_TILE_B, HV_SCROLL_V_TILE_W) |    \
+     XB_(v_scrl, HV_SCROLL_V_FINE_B, HV_SCROLL_V_FINE_W))
+#define MAKE_VID_CTRL(swap_ab, bordcol)                                                                                \
+    (XB_(swap_ab, VID_CTRL_SWAP_AB_B, VID_CTRL_SWAP_AB_W) | XB_(bordcol, VID_CTRL_BORDCOL_B, VID_CTRL_BORDCOL_W))
+#define MAKE_AUD_PERIOD(restart, period)                                                                               \
+    (XB_(restart, AUD_PERIOD_RESTART_B, AUD_PERIOD_RESTART_W) | ((period)&AUD_PERIOD_F))
+#define MAKE_AUD_LENGTH(tilemem, length)                                                                               \
+    (XB_(tilemem, AUD_LENGTH_TILEMEM_B, AUD_LENGTH_TILEMEM_W) | ((length)&AUD_LENGTH_F))
+#define MAKE_POINTER_H(h_pos)           ((h_pos)&POINTER_H_F)
+#define MAKE_POINTER_V(colorsel, v_pos) (XB_(tilemem, POINTER_V_COLORSEL_B, POINTER_V_COLORSEL_W) | (v_pos)&POINTER_V_F)
+#define MAKE_HV_FSCALE(h_frac, v_frac)                                                                                 \
+    (XB_(h_frac, HV_FSCALE_H_FRAC_B, HV_FSCALE_H_FRAC_W) | XB_(v_frac, HV_FSCALE_V_FRAC_B, HV_FSCALE_V_FRAC_W))
 
+#if !defined(__COPASM__)        // redundant from copper assembler
 // copper constants for HPOS/VPOS
 #define COP_H_EOL      0x7FF        // copper HPOS value for wait end of line
 #define COP_V_EOF      0x3FF        // copper VPOS value for wait end of frame
@@ -352,26 +448,26 @@
 #define COP_RA_SUB 0x801        // copper address for RA = RA - writeval
 #define COP_RA_CMP 0x7FF        // copper address for set B if RA < writeval
 // copper instructions
-#define COP_SETI(d_xadr14, i_val16)  ((uint16_t)0x0000 | ((uint16_t)(d_xadr14)&0xCFFF)), ((uint16_t)(i_val16))
-#define COP_SETM(d_xadr16, s_cadr12) ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(d_xadr16))
-#define COP_HPOS(h_wait)             ((uint16_t)0x2000 | ((uint16_t)(h_wait)&0x07FF))
-#define COP_VPOS(v_wait)             ((uint16_t)0x2800 | ((uint16_t)(v_wait)&0x07FF))
-#define COP_BRGE(cadr11)             ((uint16_t)0x3000 | ((uint16_t)(cadr11)&0x07FF))
-#define COP_BRLT(cadr11)             ((uint16_t)0x3800 | ((uint16_t)(cadr11)&0x07FF))
+#define COP_SETI(d_xadr14, i_val16)  (X_CASTU16 0x0000 | (X_CASTU16(d_xadr14) & 0xCFFF)), (X_CASTU16(i_val16))
+#define COP_SETM(d_xadr16, s_cadr12) (X_CASTU16 0xD000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(d_xadr16))
+#define COP_HPOS(h_wait)             (X_CASTU16 0x2000 | (X_CASTU16(h_wait) & 0x07FF))
+#define COP_VPOS(v_wait)             (X_CASTU16 0x2800 | (X_CASTU16(v_wait) & 0x07FF))
+#define COP_BRGE(cadr11)             (X_CASTU16 0x3000 | (X_CASTU16(cadr11) & 0x07FF))
+#define COP_BRLT(cadr11)             (X_CASTU16 0x3800 | (X_CASTU16(cadr11) & 0x07FF))
 // copper pseudo instructions
-#define COP_MOVI(i_val16, d_xadr14)  ((uint16_t)0x0000 | ((uint16_t)(d_xadr14)&0xCFFF)), ((uint16_t)(i_val16))
-#define COP_MOVM(s_cadr12, d_xadr16) ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(d_xadr16))
-#define COP_MOVER(i_val16, d_xreg)   ((uint16_t)0x0000 | ((uint16_t)(XR_##d_xreg) & 0xCFFF)), ((uint16_t)(i_val16))
-#define COP_LDI(i_val16)             ((uint16_t)0xC000 | ((uint16_t)(COP_RA)&0x0FFF)), ((uint16_t)(i_val16))
-#define COP_LDM(s_cadr12)            ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(COP_RA))
-#define COP_STM(d_xadr16)            ((uint16_t)0xD000 | ((uint16_t)(COP_RA)&0x0FFF)), ((uint16_t)(d_xadr16))
-#define COP_CLRB()                   ((uint16_t)0xD000 | ((uint16_t)(COP_RA)&0x0FFF)), ((uint16_t)(COP_RA))
-#define COP_SUBI(i_val16)            ((uint16_t)0xC000 | ((uint16_t)(COP_RA_SUB)&0x0FFF)), ((uint16_t)(i_val16))
-#define COP_ADDI(i_val16)            ((uint16_t)0xC000 | ((uint16_t)(COP_RA_SUB)&0x0FFF)), ((uint16_t)(-(int16_t)i_val16))
-#define COP_SUBM(s_cadr12)           ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(COP_RA_SUB))
-#define COP_CMPI(i_val16)            ((uint16_t)0xC000 | ((uint16_t)(COP_RA_CMP)&0x0FFF)), ((uint16_t)(i_val16))
-#define COP_CMPM(s_cadr12)           ((uint16_t)0xD000 | ((uint16_t)(s_cadr12)&0x0FFF)), ((uint16_t)(COP_RA_CMP))
-#define COP_END()                    ((uint16_t)0x2800 | ((uint16_t)(COP_V_EOF)&0x07FF))
-
+#define COP_MOVI(i_val16, d_xadr14)  (X_CASTU16 0x0000 | (X_CASTU16(d_xadr14) & 0xCFFF)), (X_CASTU16(i_val16))
+#define COP_MOVM(s_cadr12, d_xadr16) (X_CASTU16 0xD000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(d_xadr16))
+#define COP_MOVER(i_val16, d_xreg)   (X_CASTU16 0x0000 | (X_CASTU16(XR_##d_xreg) & 0xCFFF)), (X_CASTU16(i_val16))
+#define COP_LDI(i_val16)             (X_CASTU16 0xC000 | (X_CASTU16(COP_RA) & 0x0FFF)), (X_CASTU16(i_val16))
+#define COP_LDM(s_cadr12)            (X_CASTU16 0xD000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(COP_RA))
+#define COP_STM(d_xadr16)            (X_CASTU16 0xD000 | (X_CASTU16(COP_RA) & 0x0FFF)), (X_CASTU16(d_xadr16))
+#define COP_CLRB()                   (X_CASTU16 0xD000 | (X_CASTU16(COP_RA) & 0x0FFF)), (X_CASTU16(COP_RA))
+#define COP_SUBI(i_val16)            (X_CASTU16 0xC000 | (X_CASTU16(COP_RA_SUB) & 0x0FFF)), (X_CASTU16(i_val16))
+#define COP_ADDI(i_val16)            (X_CASTU16 0xC000 | (X_CASTU16(COP_RA_SUB) & 0x0FFF)), (X_CASTU16(-(int16_t)i_val16))
+#define COP_SUBM(s_cadr12)           (X_CASTU16 0xD000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(COP_RA_SUB))
+#define COP_CMPI(i_val16)            (X_CASTU16 0xC000 | (X_CASTU16(COP_RA_CMP) & 0x0FFF)), (X_CASTU16(i_val16))
+#define COP_CMPM(s_cadr12)           (X_CASTU16 0xD000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(COP_RA_CMP))
+#define COP_END()                    (X_CASTU16 0x2800 | (X_CASTU16(COP_V_EOF) & 0x07FF))
 #endif        // !defined(__COPASM__)
+
 #endif        // !defined(XOSERA_M68K_DEFS_H)

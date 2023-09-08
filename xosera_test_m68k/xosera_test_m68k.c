@@ -125,9 +125,13 @@ const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
 
 #include "cop_blend_test.h"
 
+#include "cop_wavey.h"
+
 #endif
 
-static_assert(NUM_ELEMENTS(cop_diagonal_bin) < 1024, "copper list too long");
+static_assert(NUM_ELEMENTS(cop_diagonal_bin) < XR_COPPER_SIZE, "copper list too long");
+static_assert(NUM_ELEMENTS(cop_blend_test_bin) < XR_COPPER_SIZE, "copper list too long");
+static_assert(NUM_ELEMENTS(cop_wavey_bin) < XR_COPPER_SIZE, "copper list too long");
 
 // 320x200 copper
 // Copper list
@@ -641,9 +645,8 @@ static void install_copper()
 {
     wait_vblank_start();
     xmem_setw_next_addr(XR_COPPER_ADDR);
-
 #if 0        // copper torture test
-    for (uint16_t i = 0; i < 1024; i++)
+    for (uint16_t i = 0; i < XR_COPPER_SIZE; i++)
     {
         xmem_setw_next(0xA000);
         xmem_setw_next(i << 2);
@@ -658,16 +661,34 @@ static void install_copper()
     }
 #else
 
-#if 1
+#if 0
     // modify HPOS wait SOL to be left edge horizontal position in 640x480 or 848x480 modes (including overscan)
     cop_diagonal_bin[cop_diagonal__hpos_sol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 848 - 8 : 800 - 640 - 8);
     // modify HPOS wait EOL to be right edge horizontal position in 640x480 or 848x480 modes (including overscan)
     cop_diagonal_bin[cop_diagonal__hpos_eol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 1 : 800 - 1);
     for (uint16_t i = 0; i < cop_diagonal_size; i++)
     {
-        uint16_t op = cop_diagonal_bin[i];
-        xmem_setw_next(op);
+        xmem_setw_next(cop_diagonal_bin[i]);
     }
+#elif 1
+
+
+    uint16_t h = 0;
+    int16_t d = 1;
+    for (uint16_t i = 0; i < 480; i++)
+    {
+        uint16_t v = MAKE_HV_SCROLL(h, 0, 0);
+        cop_wavey_bin[cop_wavey__wavetable+i] = v;
+        h += d;
+        if (h >= 31 || h == 0)
+            d = -d;
+    }
+
+    for (uint16_t i = 0; i < cop_wavey_size; i++)
+    {
+        xmem_setw_next(cop_wavey_bin[i]);
+    }
+
 #else
     for (uint16_t i = 50; i < 100; i++)
     {
@@ -2409,12 +2430,12 @@ static int8_t sinData[256] = {
 #endif
 
 #define SILENCE_ADDR (XR_TILE_ADDR + XR_TILE_SIZE - 1)        // last word of TILE memory
-#define SILENCE_LEN  (AUD_LEN_TILEMEM_F | (1 - 1))            // tilemem flag, | length -1
+#define SILENCE_LEN  (AUD_LENGTH_TILEMEM_F | (1 - 1))            // tilemem flag, | length -1
 
 static void play_silence()
 {
     // upload word of silence (in TILE memory or VRAM)
-    if (SILENCE_LEN & AUD_LEN_TILEMEM_F)
+    if (SILENCE_LEN & AUD_LENGTH_TILEMEM_F)
     {
         xm_setw(WR_XADDR, SILENCE_ADDR);
         xm_setw(XDATA, 0);
@@ -2432,7 +2453,7 @@ static void play_silence()
         xreg_setw(AUD0_VOL + vo, 0x0000);
         xreg_setw(AUD0_LENGTH + vo, SILENCE_LEN);
         xreg_setw(AUD0_START + vo, SILENCE_ADDR);
-        xreg_setw(AUD0_PERIOD + vo, AUD_PER_RESTART_F | 0x7FFF);
+        xreg_setw(AUD0_PERIOD + vo, AUD_PERIOD_RESTART_F | 0x7FFF);
     }
 }
 
@@ -2531,7 +2552,7 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
 
     xreg_setw(AUD0_LENGTH + chanoff, (bytesize / 2) - 1);           // sample length in words -1 (and VRAM/TILE flag)
     xreg_setw(AUD0_START + chanoff, test_vaddr);                    // sample address in VRAM
-    xreg_setw(AUD0_PERIOD + chanoff, p | AUD_PER_RESTART_F);        // set period and restart sample
+    xreg_setw(AUD0_PERIOD + chanoff, p | AUD_PERIOD_RESTART_F);        // set period and restart sample
     xreg_setw(AUD0_VOL + chanoff, lv << 8 | rv);                    // set left and right volume
 
     bool done = false;

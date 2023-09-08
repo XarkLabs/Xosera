@@ -5,11 +5,11 @@
 ;
 
                 .list    false
-                .include "xosera_m68k_defs.inc"
+//                .include "xosera_m68k_defs.inc"
                 .macname false
                 .listcond false
                 .list    true
-
+#include "xosera_m68k_defs.h"
 #include "xosera_boing_defs.h"
 
                 export  ball_dst
@@ -53,6 +53,7 @@ draw_ball
                 MOVI    #BALL_TILES_WIDTH-1,XR_BLIT_WORDS               ; go!
 
                 ; update playfield B XR registers
+                MOVI    #MAKE_GFX_CTRL(0x00,0,GFX_BPP_4,0,1,1),XR_PB_GFX_CTRL
                 MOVM    ball_gfx_ctrl,XR_PB_GFX_CTRL
                 MOVM    ball_hv_scroll,XR_PB_HV_SCROLL
 

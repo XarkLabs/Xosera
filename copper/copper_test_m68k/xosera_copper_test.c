@@ -94,8 +94,8 @@ void xosera_copper_test()
     dprintf("Xosera_copper_test\n");
 
 #if SHOW_BARS
-    xmem_setw_next_addr(XR_COPPER_ADDR);
-    for (uint8_t i = 0; i < sizeof (color_bar_table_bin)/sizeof (color_bar_table_bin[0]); i++)
+    xmem_setw_next_addr(color_bar_table_start);
+    for (uint8_t i = 0; i < color_bar_table_size; i++)
     {
         xmem_setw_next(color_bar_table_bin[i]);
     }

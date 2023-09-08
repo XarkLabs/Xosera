@@ -37,7 +37,7 @@ This document is meant to provide the low-level reference register information t
       - [0x00 **`XR_VID_CTRL`** (R/W) - Border Color / Playfield Color-Swap](#0x00-xr_vid_ctrl-rw---border-color--playfield-color-swap)
       - [0x01 **`XR_COPP_CTRL`** (R/W) - Copper Enable](#0x01-xr_copp_ctrl-rw---copper-enable)
       - [0x02 **`XR_AUD_CTRL`** (R/W) - Audio Control](#0x02-xr_aud_ctrl-rw---audio-control)
-      - [0x03 **`XR_SCANLINE`** (R/W) - current video scan line/trigger Xosera host CPU video interrupt](#0x03-xr_scanline-rw---current-video-scan-linetrigger-xosera-host-cpu-video-interrupt)
+      - [0x03 **`XR_SCANLINE`** (R/W+) - current video scan line/trigger Xosera host CPU video interrupt](#0x03-xr_scanline-rw---current-video-scan-linetrigger-xosera-host-cpu-video-interrupt)
       - [0x04 **`XR_VID_LEFT`** (R/W) - video display window left edge](#0x04-xr_vid_left-rw---video-display-window-left-edge)
       - [0x05 **`XR_VID_RIGHT`** (R/W) - video display window right edge](#0x05-xr_vid_right-rw---video-display-window-right-edge)
       - [0x06 **`XR_POINTER_H`** (-/W+) - pointer sprite H position](#0x06-xr_pointer_h--w---pointer-sprite-h-position)
@@ -150,7 +150,7 @@ When bits `[15:8]` (even/upper byte) of `SYS_CTRL` is written, besides setting`P
 | `AUD2_EN`    | `[10]` | R/W  | enable interrupt for audio channel 2 ready                        |
 | `AUD1_EN`    | `[9]`  | R/W  | enable interrupt for audio channel 1 ready                        |
 | `AUD0_EN`    | `[8]`  | R/W  | enable interrupt for audio channel 0 ready                        |
-|              | `[7]`  | -/-  |                                                                   |
+|              | `[7]`  | R/-  | unused (reads as 0)                                               |
 | `BLIT_INTR`  | `[6]`  | R/W  | interrupt pending for blitter queue empty                         |
 | `TIMER_INTR` | `[5]`  | R/W  | interrupt pending for countdown timer                             |
 | `VIDEO_INTR` | `[4]`  | R/W  | interrupt pending for video (vblank/COPPER)                       |
@@ -159,7 +159,7 @@ When bits `[15:8]` (even/upper byte) of `SYS_CTRL` is written, besides setting`P
 | `AUD1_INTR`  | `[1]`  | R/W  | interrupt pending for audio channel 1 ready                       |
 | `AUD0_INTR`  | `[0]`  | R/W  | interrupt pending for audio channel 0 ready                       |
 
-> :mag: **Xosera Reconfig:** Writing a 1 to bit `[15]` will immediately reset and reconfigure the Xosera FPGA into one of four FPGA configurations stored in flash memory.  Normally, default config #0 is standard VGA 640x480 and config #1 is 848x480 wide-screen 16:9 (the other configurations are user defined and it will fall back to config #0 on missing or invalid configurations).  The new configuration is selected with bits `INT_CTRL[9:8]` (in same byte as reconfigure bit). Reconfiguration can take up to 100ms and during this period Xosera will be unresponsive (and no display will be generated, so monitor will blank).  All register settings, VRAM, TILEMEM and other memory on Xosera will be reset and restored to defaults.
+> :mag: **Xosera Reconfig:** Writing a 1 to bit `INT_CTRL[15]` will immediately reset and reconfigure the Xosera FPGA into one of four FPGA configurations stored in flash memory selected with bits `INT_CTRL[9:8]` (in same byte).  Normally, default config #0 is standard VGA 640x480 and config #1 is wide-screen 848x480  (the other configurations are user defined and it will fall back to config #0 on missing or invalid configurations). Reconfiguration can take up to 100ms and during this period Xosera will be unresponsive (and no display will be generated, so monitor will blank).  All register settings, VRAM, TILEMEM and other memory on Xosera will be reset and restored to defaults.
 
 #### 0x2 **`XM_TIMER`** (R/W) - Timer Functions
 
@@ -347,13 +347,13 @@ To write to these XR registers, write an XR address to `XM_WR_XADDR` then write 
 | Reg # | Reg Name           | R /W  | Description                                                               |
 |-------|--------------------|-------|---------------------------------------------------------------------------|
 | 0x00  | **`XR_VID_CTRL`**  | R /W  | Border color index and playfield color swap                               |
-| 0x01  | **`XR_COPP_CTRL`** | R /W  | Display synchronized coprocessor control                                  |
-| 0x02  | **`XR_AUD_CTRL`**  | R /W  | Audio channel and DMA processing control                                  |
+| 0x01  | **`XR_COPP_CTRL`** | R /W  | Display synchronized coprocessor ("copper") control                       |
+| 0x02  | **`XR_AUD_CTRL`**  | R /W  | Audio channel DMA control                                                 |
 | 0x03  | **`XR_SCANLINE`**  | R /W+ | Current display scanline / Trigger video interrupt                        |
 | 0x04  | **`XR_VID_LEFT`**  | R /W  | Left edge start of active display window (normally 0)                     |
 | 0x05  | **`XR_VID_RIGHT`** | R /W  | Right edge + 1 end of active display window (normally 640 or 848)         |
-| 0x06  | **`XR_POINTER_H`** | - /W+ | pointer sprite H position (in native sceeen coordinates)                  |
-| 0x07  | **`XR_POINTER_V`** | - /W+ | pointer sprite V position (in native sceeen coordinates) and color select |
+| 0x06  | **`XR_POINTER_H`** | - /W  | pointer sprite H position (in native screen coordinates)                  |
+| 0x07  | **`XR_POINTER_V`** | - /W  | pointer sprite V position (in native screen coordinates) and color select |
 | 0x08  | **`XR_UNUSED_08`** | - /-  |                                                                           |
 | 0x09  | **`XR_UNUSED_09`** | - /-  |                                                                           |
 | 0x0A  | **`XR_UNUSED_0A`** | - /-  |                                                                           |
@@ -405,7 +405,7 @@ Setting `COPP_EN` allows control of the copper co-processor.  When disabled, cop
 |----------|-------|-----|------------------------------------------|
 | `AUD_EN` | `[0]` | R/W | Enable audio DMA and channel procerssing |
 
-#### 0x03 **`XR_SCANLINE`** (R/W) - current video scan line/trigger Xosera host CPU video interrupt
+#### 0x03 **`XR_SCANLINE`** (R/W+) - current video scan line/trigger Xosera host CPU video interrupt
 
 <img src="./pics/wd_XR_SCANLINE.svg">
 
@@ -540,7 +540,7 @@ Word length added to line start address for each new line.  The first line will 
 |-----------------|----------|-----|----------------------------------------------------------|
 | `H_SCROLL`      | `[12:8]` | R/W | Horizontal fine pixel scroll offset (0-31 native pixels) |
 | `V_TILE_SCROLL` | `[5:2]`  | R/W | Vertical tile line scroll offset (0-15 tile lines)       |
-| `V_SCROLL`      | `[1:0]`  | R/W | Vertical fine line scroll offset (0-3 native lines)             |
+| `V_SCROLL`      | `[1:0]`  | R/W | Vertical fine line scroll offset (0-3 native lines)      |
 
 Horizontal fine scroll `H_SCROLL` will clip (or skip) 0-31 native pixels from the left edge. This horizontal scroll offset is applied to all tile or bitmap modes.
 

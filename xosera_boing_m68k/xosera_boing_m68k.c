@@ -512,10 +512,10 @@ void draw_ball_at(int width_words, int height_words, int x, int y)
 
 #if USE_COPASM
     xmem_setw(XR_COPPER_ADDR + boing_copper__ball_dst, dst);
-    xmem_setw(XR_COPPER_ADDR + boing_copper__ball_hv_scroll, MAKE_HV_SCROLL(scroll_x, scroll_y << 2));
+    xmem_setw(XR_COPPER_ADDR + boing_copper__ball_hv_scroll, MAKE_HV_SCROLL(scroll_x, scroll_y, 0));
 #elif USE_COPMACROS
     xmem_setw(XR_COPPER_ADDR + cop_ball_dst, dst);
-    xmem_setw(XR_COPPER_ADDR + cop_ball_hv_scroll, MAKE_HV_SCROLL(scroll_x, scroll_y << 2));
+    xmem_setw(XR_COPPER_ADDR + cop_ball_hv_scroll, MAKE_HV_SCROLL(scroll_x, scroll_y, 0));
 #else
     static uint16_t prev_dst;
     while (xreg_getw(SCANLINE) < 480)
@@ -549,7 +549,7 @@ void draw_ball_at(int width_words, int height_words, int x, int y)
     xreg_setw(BLIT_LINES, BALL_TILES_HEIGHT - 1);
     xreg_setw(BLIT_WORDS, BALL_TILES_WIDTH - 1);        // Starts operation
 
-    xreg_setw(PB_HV_SCROLL, MAKE_HV_SCROLL(scroll_x, scroll_y << 2));
+    xreg_setw(PB_HV_SCROLL, MAKE_HV_SCROLL(scroll_x, scroll_y, 0));
 #endif
 }
 

@@ -298,21 +298,17 @@ $(VLT_CONFIG):
 	@echo >>$(VLT_CONFIG) lint_off -rule WIDTH      -file \"$(TECH_LIB)\"
 	@echo >>$(VLT_CONFIG) lint_off -rule GENUNNAMED -file \"$(TECH_LIB)\"
 
-# build copper assembler
-$(COPASM):
-	@echo === Building copper assembler...
-	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE)
-	@mkdir -p $(@D)
-	cp -v $(XOSERA_M68K_API)/../copper/CopAsm/bin/copasm $(COPASM)
-
 # assemble casm into mem file
-$(RESET_COPMEM):  $(COPASM) $(RESET_COP)
+cop_init:  $(COPASM) $(RESET_COP)
 	@mkdir -p $(@D)
-	$(COPASM) $(COPASMOPT) -l -i $(XOSERA_M68K_API) -o $@ $(RESET_COP)
+	$(COPASM) -b 4096 $(COPASMOPT) -l -i $(XOSERA_M68K_API) -o $(addsuffix .mem,$(basename $(RESET_COP))) $(RESET_COP)
+
+cop_clean:
+	rm -f $(addsuffix .lst,$(basename $(RESET_COP))) $(addsuffix .mem,$(basename $(RESET_COP)))
 
 # delete all targets that will be re-generated
 clean:
-	rm -f $(VLT_CONFIG) $(wildcard default_copper_*.mem) $(wildcard default_copper_*.lst) xosera_iceb.bin $(wildcard icebreaker/*.json) $(wildcard icebreaker/*.asc) $(wildcard icebreaker/*.rpt) $(wildcard icebreaker/*.bin)
+	rm -f $(VLT_CONFIG) xosera_iceb.bin $(wildcard icebreaker/*.json) $(wildcard icebreaker/*.asc) $(wildcard icebreaker/*.rpt) $(wildcard icebreaker/*.bin)
 .PHONY: clean
 
 # prevent make from deleting any intermediate files

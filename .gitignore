@@ -78,8 +78,6 @@ utils/image_pal
 utils/true_color_hack
 xosera_test_m68k/cop_diagonal.h
 xosera_test_m68k/cop_blend_test.h
-rtl/default_copper_640.mem
-rtl/default_copper_848.mem
 xosera_boing_m68k/*.ii
 xosera_boing_m68k/boing_copper.h
 xosera_m68k_api/bin/copasm

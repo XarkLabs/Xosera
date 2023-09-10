@@ -49,7 +49,7 @@ clear_copp      MOVI    #VPOS|V_EOF,entry               ; prevent running init t
                 LDM     clear_copp
                 ADDI    #1
                 STM     clear_copp
-                CMPI    #clear_copp+1
+                CMPI    #clear_copp
                 BRLT    clear_copp
                 VPOS    #V_WAITBLIT                     ; wait until blitter ready
                 MOVI    #$0000,XR_COPP_CTRL

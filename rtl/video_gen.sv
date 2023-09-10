@@ -412,10 +412,18 @@ video_playfield video_pf_b(
 always_ff @(posedge clk) begin
     if (reset_i) begin
         video_intr_o        <= 1'b0;
+`ifdef EN_COPPER_INIT
         border_color        <= '0;
+`else
+        border_color        <= 8h'08;           // w/o copper init, default grey
+`endif
         vid_colorswap       <= 1'b0;
         vid_left            <= '0;
+`ifdef EN_COPPER_INIT
         vid_right           <= '0;
+`else
+        vid_right           <= xv::VISIBLE_WIDTH; // w/o copper init, default full width
+`endif
 
 `ifdef EN_POINTER
         vid_pointer_h        <= '0;
@@ -423,7 +431,11 @@ always_ff @(posedge clk) begin
         vid_pointer_col      <= '0;
 `endif
 
+`ifdef EN_COPPER_INIT
         pa_blank            <= 1'b0;
+`else
+        pa_blank            <= 1'b1;            // w/o copper init, come out of reset blanked
+`endif
         pa_start_addr       <= 16'h0000;
         pa_line_len         <= '0;
         pa_fine_hscroll     <= 5'b0;
@@ -443,7 +455,11 @@ always_ff @(posedge clk) begin
         pa_gfx_ctrl_set     <= 1'b0;
 
 `ifdef EN_PF_B
+`ifdef EN_COPPER_INIT
         pb_blank            <= 1'b0;
+`else
+        pb_blank            <= 1'b1;            // w/o copper init, come out of reset blanked
+`endif
         pb_start_addr       <= 16'h0000;
         pb_line_len         <= '0;
         pb_fine_hscroll     <= 5'b0;

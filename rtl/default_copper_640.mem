@@ -1,0 +1,290 @@
+                     //  1       	;
+                     //  2       	; copper - default boot program
+                     //  3       	;
+                     //  4       	; vim: set et ts=8 sw=8
+                     //  5       	;
+                     //  6
+                     //  7
+                     // 12       	                .list    true
+                     // 13
+                     // 14       	                .if     MODE_640x480
+                     // 15 00a0= 	H_START         =       160
+                     // 16 031f= 	H_END           =       799
+                     // 17 0280= 	H_VIS           =       640
+                     // 23 c000= 	entry
+2000                 // 24 c000: 	                HPOS    #0                              ; no-op
+                     // 25       	; set regs that aren't friendly when defaulted to zero
+0000 0008            // 26 c001: 	                MOVE    #$0008,XR_VID_CTRL              ; grey border color
+0005 0280            // 27 c003: 	                MOVE    #H_VIS,XR_VID_RIGHT             ; set right border
+                     // 28
+0010 0080            // 29 c005: 	                MOVE    #$0080,XR_PA_GFX_CTRL           ; blank pa
+0011 000F            // 30 c007: 	                MOVE    #$000F,XR_PA_TILE_CTRL          ; set to 8x16 tiles @ tilemem 0x0000
+0013 0050            // 31 c009: 	                MOVE    #H_VIS/8,XR_PA_LINE_LEN         ; set default line len
+                     // 32
+0018 0080            // 33 c00b: 	                MOVE    #$0080,XR_PB_GFX_CTRL           ; blank pb
+0019 000F            // 34 c00d: 	                MOVE    #$000F,XR_PB_TILE_CTRL          ; set to 8x16 tiles @ tilemem 0x0000
+001B 0050            // 35 c00f: 	                MOVE    #H_VIS/8,XR_PB_LINE_LEN         ; set default line len
+                     // 36
+2FFF                 // 37 c011: 	                VPOS    #V_WAITBLIT                     ; wait until blitter ready
+0040 0001            // 38 c012: 	                MOVE    #$0001,XR_BLIT_CTRL             ; no transp, constS
+0041 0000            // 39 c014: 	                MOVE    #$0000,XR_BLIT_ANDC             ; ANDC constant
+0042 0000            // 40 c016: 	                MOVE    #$0000,XR_BLIT_XOR              ; XOR constant
+0043 0000            // 41 c018: 	                MOVE    #$0000,XR_BLIT_MOD_S            ; no modulo S
+0044 0000            // 42 c01a: 	                MOVE    #$0000,XR_BLIT_SRC_S            ; fill value 0x0000
+0045 0000            // 43 c01c: 	                MOVE    #$0000,XR_BLIT_MOD_D            ; no modulo D
+0046 0000            // 44 c01e: 	                MOVE    #$0000,XR_BLIT_DST_D            ; start of VRAM
+0047 FF00            // 45 c020: 	                MOVE    #$FF00,XR_BLIT_SHIFT            ; no edge masking or shifting
+0048 0000            // 46 c022: 	                MOVE    #$0000,XR_BLIT_LINES            ; 1-D blit (no repeat count)
+0049 FFFF            // 47 c024: 	                MOVE    #$10000-1,XR_BLIT_WORDS         ; all VRAM
+C000 2BFF            // 48 c026: 	clear_copp      MOVI    #VPOS|V_EOF,entry               ; prevent running init twice
+D026 0800            // 49 c028: 	                LDM     clear_copp
+0801 FFFF            // 50 c02a: 	                ADDI    #1
+1800 C026            // 51 c02c: 	                STM     clear_copp
+07FF C026            // 52 c02e: 	                CMPI    #clear_copp
+F826                 // 53 c030: 	                BRLT    clear_copp
+2FFF                 // 54 c031: 	                VPOS    #V_WAITBLIT                     ; wait until blitter ready
+0001 0000            // 55 c032: 	                MOVI    #$0000,XR_COPP_CTRL
+2BFF 2BFF 2BFF 2BFF  // 56 c034: 	                fill    (VPOS|V_EOF),($C400-.)
+2BFF 2BFF 2BFF 2BFF  //    c070:
+2BFF 2BFF 2BFF 2BFF  //    c078:
+2BFF 2BFF 2BFF 2BFF  //    c080:
+2BFF 2BFF 2BFF 2BFF  //    c088:
+2BFF 2BFF 2BFF 2BFF  //    c090:
+2BFF 2BFF 2BFF 2BFF  //    c098:
+2BFF 2BFF 2BFF 2BFF  //    c0a0:
+2BFF 2BFF 2BFF 2BFF  //    c0a8:
+2BFF 2BFF 2BFF 2BFF  //    c0b0:
+2BFF 2BFF 2BFF 2BFF  //    c0b8:
+2BFF 2BFF 2BFF 2BFF  //    c0c0:
+2BFF 2BFF 2BFF 2BFF  //    c0c8:
+2BFF 2BFF 2BFF 2BFF  //    c0d0:
+2BFF 2BFF 2BFF 2BFF  //    c0d8:
+2BFF 2BFF 2BFF 2BFF  //    c0e0:
+2BFF 2BFF 2BFF 2BFF  //    c0e8:
+2BFF 2BFF 2BFF 2BFF  //    c0f0:
+2BFF 2BFF 2BFF 2BFF  //    c0f8:
+2BFF 2BFF 2BFF 2BFF  //    c100:
+2BFF 2BFF 2BFF 2BFF  //    c108:
+2BFF 2BFF 2BFF 2BFF  //    c110:
+2BFF 2BFF 2BFF 2BFF  //    c118:
+2BFF 2BFF 2BFF 2BFF  //    c120:
+2BFF 2BFF 2BFF 2BFF  //    c128:
+2BFF 2BFF 2BFF 2BFF  //    c130:
+2BFF 2BFF 2BFF 2BFF  //    c138:
+2BFF 2BFF 2BFF 2BFF  //    c140:
+2BFF 2BFF 2BFF 2BFF  //    c148:
+2BFF 2BFF 2BFF 2BFF  //    c150:
+2BFF 2BFF 2BFF 2BFF  //    c158:
+2BFF 2BFF 2BFF 2BFF  //    c160:
+2BFF 2BFF 2BFF 2BFF  //    c168:
+2BFF 2BFF 2BFF 2BFF  //    c170:
+2BFF 2BFF 2BFF 2BFF  //    c178:
+2BFF 2BFF 2BFF 2BFF  //    c180:
+2BFF 2BFF 2BFF 2BFF  //    c188:
+2BFF 2BFF 2BFF 2BFF  //    c190:
+2BFF 2BFF 2BFF 2BFF  //    c198:
+2BFF 2BFF 2BFF 2BFF  //    c1a0:
+2BFF 2BFF 2BFF 2BFF  //    c1a8:
+2BFF 2BFF 2BFF 2BFF  //    c1b0:
+2BFF 2BFF 2BFF 2BFF  //    c1b8:
+2BFF 2BFF 2BFF 2BFF  //    c1c0:
+2BFF 2BFF 2BFF 2BFF  //    c1c8:
+2BFF 2BFF 2BFF 2BFF  //    c1d0:
+2BFF 2BFF 2BFF 2BFF  //    c1d8:
+2BFF 2BFF 2BFF 2BFF  //    c1e0:
+2BFF 2BFF 2BFF 2BFF  //    c1e8:
+2BFF 2BFF 2BFF 2BFF  //    c1f0:
+2BFF 2BFF 2BFF 2BFF  //    c1f8:
+2BFF 2BFF 2BFF 2BFF  //    c200:
+2BFF 2BFF 2BFF 2BFF  //    c208:
+2BFF 2BFF 2BFF 2BFF  //    c210:
+2BFF 2BFF 2BFF 2BFF  //    c218:
+2BFF 2BFF 2BFF 2BFF  //    c220:
+2BFF 2BFF 2BFF 2BFF  //    c228:
+2BFF 2BFF 2BFF 2BFF  //    c230:
+2BFF 2BFF 2BFF 2BFF  //    c238:
+2BFF 2BFF 2BFF 2BFF  //    c240:
+2BFF 2BFF 2BFF 2BFF  //    c248:
+2BFF 2BFF 2BFF 2BFF  //    c250:
+2BFF 2BFF 2BFF 2BFF  //    c258:
+2BFF 2BFF 2BFF 2BFF  //    c260:
+2BFF 2BFF 2BFF 2BFF  //    c268:
+2BFF 2BFF 2BFF 2BFF  //    c270:
+2BFF 2BFF 2BFF 2BFF  //    c278:
+2BFF 2BFF 2BFF 2BFF  //    c280:
+2BFF 2BFF 2BFF 2BFF  //    c288:
+2BFF 2BFF 2BFF 2BFF  //    c290:
+2BFF 2BFF 2BFF 2BFF  //    c298:
+2BFF 2BFF 2BFF 2BFF  //    c2a0:
+2BFF 2BFF 2BFF 2BFF  //    c2a8:
+2BFF 2BFF 2BFF 2BFF  //    c2b0:
+2BFF 2BFF 2BFF 2BFF  //    c2b8:
+2BFF 2BFF 2BFF 2BFF  //    c2c0:
+2BFF 2BFF 2BFF 2BFF  //    c2c8:
+2BFF 2BFF 2BFF 2BFF  //    c2d0:
+2BFF 2BFF 2BFF 2BFF  //    c2d8:
+2BFF 2BFF 2BFF 2BFF  //    c2e0:
+2BFF 2BFF 2BFF 2BFF  //    c2e8:
+2BFF 2BFF 2BFF 2BFF  //    c2f0:
+2BFF 2BFF 2BFF 2BFF  //    c2f8:
+2BFF 2BFF 2BFF 2BFF  //    c300:
+2BFF 2BFF 2BFF 2BFF  //    c308:
+2BFF 2BFF 2BFF 2BFF  //    c310:
+2BFF 2BFF 2BFF 2BFF  //    c318:
+2BFF 2BFF 2BFF 2BFF  //    c320:
+2BFF 2BFF 2BFF 2BFF  //    c328:
+2BFF 2BFF 2BFF 2BFF  //    c330:
+2BFF 2BFF 2BFF 2BFF  //    c338:
+2BFF 2BFF 2BFF 2BFF  //    c340:
+2BFF 2BFF 2BFF 2BFF  //    c348:
+2BFF 2BFF 2BFF 2BFF  //    c350:
+2BFF 2BFF 2BFF 2BFF  //    c358:
+2BFF 2BFF 2BFF 2BFF  //    c360:
+2BFF 2BFF 2BFF 2BFF  //    c368:
+2BFF 2BFF 2BFF 2BFF  //    c370:
+2BFF 2BFF 2BFF 2BFF  //    c378:
+2BFF 2BFF 2BFF 2BFF  //    c380:
+2BFF 2BFF 2BFF 2BFF  //    c388:
+2BFF 2BFF 2BFF 2BFF  //    c390:
+2BFF 2BFF 2BFF 2BFF  //    c398:
+2BFF 2BFF 2BFF 2BFF  //    c3a0:
+2BFF 2BFF 2BFF 2BFF  //    c3a8:
+2BFF 2BFF 2BFF 2BFF  //    c3b0:
+2BFF 2BFF 2BFF 2BFF  //    c3b8:
+2BFF 2BFF 2BFF 2BFF  //    c3c0:
+2BFF 2BFF 2BFF 2BFF  //    c3c8:
+2BFF 2BFF 2BFF 2BFF  //    c3d0:
+2BFF 2BFF 2BFF 2BFF  //    c3d8:
+2BFF 2BFF 2BFF 2BFF  //    c3e0:
+2BFF 2BFF 2BFF 2BFF  //    c3e8:
+2BFF 2BFF 2BFF 2BFF  //    c3f0:
+2BFF 2BFF 2BFF 2BFF  //    c3f8:
+2BFF 2BFF 2BFF 2BFF  //    c400:
+2BFF 2BFF 2BFF 2BFF  //    c408:
+2BFF 2BFF 2BFF 2BFF  //    c410:
+2BFF 2BFF 2BFF 2BFF  //    c418:
+2BFF 2BFF 2BFF 2BFF  //    c420:
+2BFF 2BFF 2BFF 2BFF  //    c428:
+2BFF 2BFF 2BFF 2BFF  //    c430:
+2BFF 2BFF 2BFF 2BFF  //    c438:
+2BFF 2BFF 2BFF 2BFF  //    c440:
+2BFF 2BFF 2BFF 2BFF  //    c448:
+2BFF 2BFF 2BFF 2BFF  //    c450:
+2BFF 2BFF 2BFF 2BFF  //    c458:
+2BFF 2BFF 2BFF 2BFF  //    c460:
+2BFF 2BFF 2BFF 2BFF  //    c468:
+2BFF 2BFF 2BFF 2BFF  //    c470:
+2BFF 2BFF 2BFF 2BFF  //    c478:
+2BFF 2BFF 2BFF 2BFF  //    c480:
+2BFF 2BFF 2BFF 2BFF  //    c488:
+2BFF 2BFF 2BFF 2BFF  //    c490:
+2BFF 2BFF 2BFF 2BFF  //    c498:
+2BFF 2BFF 2BFF 2BFF  //    c4a0:
+2BFF 2BFF 2BFF 2BFF  //    c4a8:
+2BFF 2BFF 2BFF 2BFF  //    c4b0:
+2BFF 2BFF 2BFF 2BFF  //    c4b8:
+2BFF 2BFF 2BFF 2BFF  //    c4c0:
+2BFF 2BFF 2BFF 2BFF  //    c4c8:
+2BFF 2BFF 2BFF 2BFF  //    c4d0:
+2BFF 2BFF 2BFF 2BFF  //    c4d8:
+2BFF 2BFF 2BFF 2BFF  //    c4e0:
+2BFF 2BFF 2BFF 2BFF  //    c4e8:
+2BFF 2BFF 2BFF 2BFF  //    c4f0:
+2BFF 2BFF 2BFF 2BFF  //    c4f8:
+2BFF 2BFF 2BFF 2BFF  //    c500:
+2BFF 2BFF 2BFF 2BFF  //    c508:
+2BFF 2BFF 2BFF 2BFF  //    c510:
+2BFF 2BFF 2BFF 2BFF  //    c518:
+2BFF 2BFF 2BFF 2BFF  //    c520:
+2BFF 2BFF 2BFF 2BFF  //    c528:
+2BFF 2BFF 2BFF 2BFF  //    c530:
+2BFF 2BFF 2BFF 2BFF  //    c538:
+2BFF 2BFF 2BFF 2BFF  //    c540:
+2BFF 2BFF 2BFF 2BFF  //    c548:
+2BFF 2BFF 2BFF 2BFF  //    c550:
+2BFF 2BFF 2BFF 2BFF  //    c558:
+2BFF 2BFF 2BFF 2BFF  //    c560:
+2BFF 2BFF 2BFF 2BFF  //    c568:
+2BFF 2BFF 2BFF 2BFF  //    c570:
+2BFF 2BFF 2BFF 2BFF  //    c578:
+2BFF 2BFF 2BFF 2BFF  //    c580:
+2BFF 2BFF 2BFF 2BFF  //    c588:
+2BFF 2BFF 2BFF 2BFF  //    c590:
+2BFF 2BFF 2BFF 2BFF  //    c598:
+2BFF 2BFF 2BFF 2BFF  //    c5a0:
+2BFF 2BFF 2BFF 2BFF  //    c5a8:
+2BFF 2BFF 2BFF 2BFF  //    c5b0:
+2BFF 2BFF 2BFF 2BFF  //    c5b8:
+2BFF 2BFF 2BFF 2BFF  //    c5c0:
+2BFF 2BFF 2BFF 2BFF  //    c5c8:
+2BFF 2BFF 2BFF 2BFF  //    c5d0:
+2BFF 2BFF 2BFF 2BFF  //    c5d8:
+2BFF 2BFF 2BFF 2BFF  //    c5e0:
+2BFF 2BFF 2BFF 2BFF  //    c5e8:
+2BFF 2BFF 2BFF 2BFF  //    c5f0:
+2BFF 2BFF 2BFF 2BFF  //    c5f8:
+2BFF 2BFF 2BFF 2BFF  //    c600:
+2BFF 2BFF 2BFF 2BFF  //    c608:
+2BFF 2BFF 2BFF 2BFF  //    c610:
+2BFF 2BFF 2BFF 2BFF  //    c618:
+2BFF 2BFF 2BFF 2BFF  //    c620:
+2BFF 2BFF 2BFF 2BFF  //    c628:
+2BFF 2BFF 2BFF 2BFF  //    c630:
+2BFF 2BFF 2BFF 2BFF  //    c638:
+2BFF 2BFF 2BFF 2BFF  //    c640:
+2BFF 2BFF 2BFF 2BFF  //    c648:
+2BFF 2BFF 2BFF 2BFF  //    c650:
+2BFF 2BFF 2BFF 2BFF  //    c658:
+2BFF 2BFF 2BFF 2BFF  //    c660:
+2BFF 2BFF 2BFF 2BFF  //    c668:
+2BFF 2BFF 2BFF 2BFF  //    c670:
+2BFF 2BFF 2BFF 2BFF  //    c678:
+2BFF 2BFF 2BFF 2BFF  //    c680:
+2BFF 2BFF 2BFF 2BFF  //    c688:
+2BFF 2BFF 2BFF 2BFF  //    c690:
+2BFF 2BFF 2BFF 2BFF  //    c698:
+2BFF 2BFF 2BFF 2BFF  //    c6a0:
+2BFF 2BFF 2BFF 2BFF  //    c6a8:
+2BFF 2BFF 2BFF 2BFF  //    c6b0:
+2BFF 2BFF 2BFF 2BFF  //    c6b8:
+2BFF 2BFF 2BFF 2BFF  //    c6c0:
+2BFF 2BFF 2BFF 2BFF  //    c6c8:
+2BFF 2BFF 2BFF 2BFF  //    c6d0:
+2BFF 2BFF 2BFF 2BFF  //    c6d8:
+2BFF 2BFF 2BFF 2BFF  //    c6e0:
+2BFF 2BFF 2BFF 2BFF  //    c6e8:
+2BFF 2BFF 2BFF 2BFF  //    c6f0:
+2BFF 2BFF 2BFF 2BFF  //    c6f8:
+2BFF 2BFF 2BFF 2BFF  //    c700:
+2BFF 2BFF 2BFF 2BFF  //    c708:
+2BFF 2BFF 2BFF 2BFF  //    c710:
+2BFF 2BFF 2BFF 2BFF  //    c718:
+2BFF 2BFF 2BFF 2BFF  //    c720:
+2BFF 2BFF 2BFF 2BFF  //    c728:
+2BFF 2BFF 2BFF 2BFF  //    c730:
+2BFF 2BFF 2BFF 2BFF  //    c738:
+2BFF 2BFF 2BFF 2BFF  //    c740:
+2BFF 2BFF 2BFF 2BFF  //    c748:
+2BFF 2BFF 2BFF 2BFF  //    c750:
+2BFF 2BFF 2BFF 2BFF  //    c758:
+2BFF 2BFF 2BFF 2BFF  //    c760:
+2BFF 2BFF 2BFF 2BFF  //    c768:
+2BFF 2BFF 2BFF 2BFF  //    c770:
+2BFF 2BFF 2BFF 2BFF  //    c778:
+2BFF 2BFF 2BFF 2BFF  //    c780:
+2BFF 2BFF 2BFF 2BFF  //    c788:
+2BFF 2BFF 2BFF 2BFF  //    c790:
+2BFF 2BFF 2BFF 2BFF  //    c798:
+2BFF 2BFF 2BFF 2BFF  //    c7a0:
+2BFF 2BFF 2BFF 2BFF  //    c7a8:
+2BFF 2BFF 2BFF 2BFF  //    c7b0:
+2BFF 2BFF 2BFF 2BFF  //    c7b8:
+2BFF 2BFF 2BFF 2BFF  //    c7c0:
+2BFF 2BFF 2BFF 2BFF  //    c7c8:
+2BFF 2BFF 2BFF 2BFF  //    c7d0:
+2BFF 2BFF 2BFF 2BFF  //    c7d8:
+2BFF 2BFF 2BFF 2BFF  //    c7e0:
+2BFF 2BFF 2BFF 2BFF  //    c7e8:
+2BFF 2BFF 2BFF 2BFF  //    c7f0:
+2BFF 2BFF 2BFF 2BFF  //    c7f8:
+                     // 57 c400= 	clear_end

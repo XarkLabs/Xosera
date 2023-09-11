@@ -19,10 +19,10 @@
  |                                                                            |
  \----------------------------------------------------------------------------/
 
- Yosys 0.32+74 (git sha1 b739213d9, aarch64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
+ Yosys 0.33+6 (git sha1 41b34a193, aarch64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
 
 
--- Running command `verilog_defines -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=966c97c -DBUILDDATE=20230905 -DFPGA_CONFIG_NUM=1 -DMODE_848x480 -DPMOD_DIGILENT_VGA -DEN_PF_B -DEN_AUDIO=4 -DICE40UP5K -DUPDUINO ; read_verilog -I. -sv upduino/xosera_upd.sv ./acia.sv ./acia_rx.sv ./acia_tx.sv ./audio_dac.sv ./audio_mem.sv ./audio_mixer_slim.sv ./blitter_slim.sv ./bus_interface.sv ./colormem.sv ./copper_slim.sv ./coppermem.sv ./pointermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend_2bit.sv ./video_blend_4bit.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv  ; synth_ice40 -device u -no-rw-check -abc9 -dff -top xosera_upd -json upduino/xosera_upd_aud4_vga_848x480.json' --
+-- Running command `verilog_defines -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=1 -DGITHASH=59ff86b -DBUILDDATE=20230910 -DFPGA_CONFIG_NUM=1 -DMODE_848x480 -DPMOD_DIGILENT_VGA -DEN_PF_B -DEN_AUDIO=4 -DICE40UP5K -DUPDUINO ; read_verilog -I. -sv upduino/xosera_upd.sv ./acia.sv ./acia_rx.sv ./acia_tx.sv ./audio_dac.sv ./audio_mem.sv ./audio_mixer_slim.sv ./blitter_slim.sv ./bus_interface.sv ./colormem.sv ./copper_slim.sv ./coppermem.sv ./pointermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend_2bit.sv ./video_blend_4bit.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv  ; synth_ice40 -device u -no-rw-check -abc9 -dff -top xosera_upd -json upduino/xosera_upd_aud4_vga_848x480.json' --
 
 1. Executing Verilog-2005 frontend: upduino/xosera_upd.sv
 Parsing SystemVerilog input from `upduino/xosera_upd.sv' to AST representation.
@@ -138,7 +138,7 @@ Successfully finished Verilog frontend.
 24. Executing Verilog-2005 frontend: ./xosera_main.sv
 Parsing SystemVerilog input from `./xosera_main.sv' to AST representation.
 Generating RTLIL representation for module `\xosera_main'.
-   XOSERA xosera_info:    Xosera v0.40 20230905 =#0966C97C iCE40UP5K 128KB PF_B BLND COPP BLIT PIXA PNTR AUD4
+   XOSERA xosera_info:    Xosera v0.40 20230910 =#059FF86B iCE40UP5K 128KB PF_B BLND COPP BLIT PIXA PNTR AUD4
    XOSERA configuration:  MODE_848x480@60 PF_B BLND COPP BLIT PIXA PNTR AUD4 
 Successfully finished Verilog frontend.
 
@@ -428,9 +428,9 @@ Removed 1 dead cases from process $proc$./video_timing.sv:0$1413 in module video
 Marked 2 switch rules as full_case in process $proc$./video_timing.sv:0$1406 in module video_timing.
 Marked 10 switch rules as full_case in process $proc$./video_playfield.sv:326$1339 in module video_playfield.
 Marked 16 switch rules as full_case in process $proc$./video_playfield.sv:0$1288 in module video_playfield.
-Marked 1 switch rules as full_case in process $proc$./video_gen.sv:804$1277 in module video_gen.
-Marked 1 switch rules as full_case in process $proc$./video_gen.sv:754$1270 in module video_gen.
-Marked 1 switch rules as full_case in process $proc$./video_gen.sv:713$1254 in module video_gen.
+Marked 1 switch rules as full_case in process $proc$./video_gen.sv:820$1277 in module video_gen.
+Marked 1 switch rules as full_case in process $proc$./video_gen.sv:770$1270 in module video_gen.
+Marked 1 switch rules as full_case in process $proc$./video_gen.sv:729$1254 in module video_gen.
 Marked 1 switch rules as full_case in process $proc$./video_gen.sv:0$1245 in module video_gen.
 Marked 1 switch rules as full_case in process $proc$./video_gen.sv:0$1244 in module video_gen.
 Marked 1 switch rules as full_case in process $proc$./video_gen.sv:412$1241 in module video_gen.
@@ -449,8 +449,8 @@ Marked 19 switch rules as full_case in process $proc$./audio_mixer_slim.sv:138$2
 Marked 1 switch rules as full_case in process $proc$./pointermem.sv:37$1122 in module pointermem.
 Marked 124 switch rules as full_case in process $proc$./coppermem.sv:0$4214 in module $paramod$585f1e63feba1605bd43608638eedf1c4292d618\coppermem.
 Marked 1 switch rules as full_case in process $proc$./coppermem.sv:90$3569 in module $paramod$585f1e63feba1605bd43608638eedf1c4292d618\coppermem.
-Marked 7 switch rules as full_case in process $proc$./copper_slim.sv:243$1084 in module copper_slim.
-Marked 2 switch rules as full_case in process $proc$./copper_slim.sv:227$1082 in module copper_slim.
+Marked 7 switch rules as full_case in process $proc$./copper_slim.sv:249$1084 in module copper_slim.
+Marked 2 switch rules as full_case in process $proc$./copper_slim.sv:233$1082 in module copper_slim.
 Marked 2 switch rules as full_case in process $proc$./copper_slim.sv:202$1077 in module copper_slim.
 Marked 3 switch rules as full_case in process $proc$./video_blend_4bit.sv:74$2924 in module video_blend_4bit.
 Marked 2 switch rules as full_case in process $proc$./bus_interface.sv:81$1058 in module bus_interface.
@@ -770,7 +770,7 @@ Creating decoders for process `\video_playfield.$proc$./video_playfield.sv:0$128
     57/57: $1\calc_tile_addr$func$./video_playfield.sv:171$1281.$result[15:0]$1296
 Creating decoders for process `\video_playfield.$proc$./video_playfield.sv:0$1285'.
 Creating decoders for process `\video_playfield.$proc$./video_playfield.sv:0$1282'.
-Creating decoders for process `\video_gen.$proc$./video_gen.sv:804$1277'.
+Creating decoders for process `\video_gen.$proc$./video_gen.sv:820$1277'.
      1/22: $0\audio_restart_nchan[3:0] [3]
      2/22: $0\audio_intr_o[3:0] [2]
      3/22: $0\audio_restart_nchan[3:0] [2]
@@ -793,14 +793,14 @@ Creating decoders for process `\video_gen.$proc$./video_gen.sv:804$1277'.
     20/22: $0\audio_period_nchan[59:0] [59:45]
     21/22: $0\audio_vol_r_nchan[27:0] [27:21]
     22/22: $0\audio_vol_l_nchan[27:0] [27:21]
-Creating decoders for process `\video_gen.$proc$./video_gen.sv:754$1270'.
+Creating decoders for process `\video_gen.$proc$./video_gen.sv:770$1270'.
      1/3: $0\mem_fetch[0:0]
      2/3: $0\colorB_index_o[7:0]
      3/3: $0\colorA_index_o[7:0]
 Creating decoders for process `\video_gen.$proc$./video_gen.sv:0$1265'.
 Creating decoders for process `\video_gen.$proc$./video_gen.sv:0$1263'.
 Creating decoders for process `\video_gen.$proc$./video_gen.sv:0$1261'.
-Creating decoders for process `\video_gen.$proc$./video_gen.sv:713$1254'.
+Creating decoders for process `\video_gen.$proc$./video_gen.sv:729$1254'.
      1/3: $0\pointer_word[15:0]
      2/3: $0\pointer_h_cnt[5:0]
      3/3: $0\pointer_v_cnt[5:0]
@@ -808,7 +808,7 @@ Creating decoders for process `\video_gen.$proc$./video_gen.sv:0$1245'.
      1/1: $1\rd_pf_regs[15:0]
 Creating decoders for process `\video_gen.$proc$./video_gen.sv:0$1244'.
      1/1: $1\rd_vid_regs[15:0]
-Creating decoders for process `\video_gen.$proc$./video_gen.sv:638$1242'.
+Creating decoders for process `\video_gen.$proc$./video_gen.sv:654$1242'.
 Creating decoders for process `\video_gen.$proc$./video_gen.sv:412$1241'.
      1/48: $0\copp_reg_wr_o[0:0]
      2/48: $0\pb_gfx_ctrl_set[0:0]
@@ -1438,7 +1438,7 @@ Creating decoders for process `$paramod$585f1e63feba1605bd43608638eedf1c4292d618
      1/3: $1$memwr$\bram$./coppermem.sv:92$3568_EN[15:0]$3575
      2/3: $1$memwr$\bram$./coppermem.sv:92$3568_DATA[15:0]$3574
      3/3: $1$memwr$\bram$./coppermem.sv:92$3568_ADDR[8:0]$3573
-Creating decoders for process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating decoders for process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
      1/13: $0\rd_pipeline[0:0]
      2/13: $0\reg_wr_en[0:0]
      3/13: $0\ram_rd_addr[10:0]
@@ -1452,7 +1452,7 @@ Creating decoders for process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
     11/13: $0\wait_hv_flag[0:0]
     12/13: $0\cop_IR[15:0]
     13/13: $0\cop_PC[10:0]
-Creating decoders for process `\copper_slim.$proc$./copper_slim.sv:227$1082'.
+Creating decoders for process `\copper_slim.$proc$./copper_slim.sv:233$1082'.
      1/1: $0\cop_RA[15:0]
 Creating decoders for process `\copper_slim.$proc$./copper_slim.sv:202$1077'.
      1/3: $0\cop_reset[0:0]
@@ -2848,33 +2848,33 @@ Creating register for signal `\video_playfield.\pf_pixels_buf' using process `\v
   created $dff cell `$procdff$14237' with positive edge clock.
 Creating register for signal `\video_playfield.\pf_pixels' using process `\video_playfield.$proc$./video_playfield.sv:326$1339'.
   created $dff cell `$procdff$14238' with positive edge clock.
-Creating register for signal `\video_gen.\audio_reg_wr' using process `\video_gen.$proc$./video_gen.sv:804$1277'.
+Creating register for signal `\video_gen.\audio_reg_wr' using process `\video_gen.$proc$./video_gen.sv:820$1277'.
   created $dff cell `$procdff$14239' with positive edge clock.
-Creating register for signal `\video_gen.\audio_intr_o' using process `\video_gen.$proc$./video_gen.sv:804$1277'.
+Creating register for signal `\video_gen.\audio_intr_o' using process `\video_gen.$proc$./video_gen.sv:820$1277'.
   created $dff cell `$procdff$14240' with positive edge clock.
-Creating register for signal `\video_gen.\audio_vol_l_nchan' using process `\video_gen.$proc$./video_gen.sv:804$1277'.
+Creating register for signal `\video_gen.\audio_vol_l_nchan' using process `\video_gen.$proc$./video_gen.sv:820$1277'.
   created $dff cell `$procdff$14241' with positive edge clock.
-Creating register for signal `\video_gen.\audio_vol_r_nchan' using process `\video_gen.$proc$./video_gen.sv:804$1277'.
+Creating register for signal `\video_gen.\audio_vol_r_nchan' using process `\video_gen.$proc$./video_gen.sv:820$1277'.
   created $dff cell `$procdff$14242' with positive edge clock.
-Creating register for signal `\video_gen.\audio_period_nchan' using process `\video_gen.$proc$./video_gen.sv:804$1277'.
+Creating register for signal `\video_gen.\audio_period_nchan' using process `\video_gen.$proc$./video_gen.sv:820$1277'.
   created $dff cell `$procdff$14243' with positive edge clock.
-Creating register for signal `\video_gen.\audio_restart_nchan' using process `\video_gen.$proc$./video_gen.sv:804$1277'.
+Creating register for signal `\video_gen.\audio_restart_nchan' using process `\video_gen.$proc$./video_gen.sv:820$1277'.
   created $dff cell `$procdff$14244' with positive edge clock.
-Creating register for signal `\video_gen.$fordecl_block$1214.i' using process `\video_gen.$proc$./video_gen.sv:804$1277'.
+Creating register for signal `\video_gen.$fordecl_block$1214.i' using process `\video_gen.$proc$./video_gen.sv:820$1277'.
   created $dff cell `$procdff$14245' with positive edge clock.
-Creating register for signal `\video_gen.\colorA_index_o' using process `\video_gen.$proc$./video_gen.sv:754$1270'.
+Creating register for signal `\video_gen.\colorA_index_o' using process `\video_gen.$proc$./video_gen.sv:770$1270'.
   created $dff cell `$procdff$14246' with positive edge clock.
-Creating register for signal `\video_gen.\colorB_index_o' using process `\video_gen.$proc$./video_gen.sv:754$1270'.
+Creating register for signal `\video_gen.\colorB_index_o' using process `\video_gen.$proc$./video_gen.sv:770$1270'.
   created $dff cell `$procdff$14247' with positive edge clock.
-Creating register for signal `\video_gen.\mem_fetch' using process `\video_gen.$proc$./video_gen.sv:754$1270'.
+Creating register for signal `\video_gen.\mem_fetch' using process `\video_gen.$proc$./video_gen.sv:770$1270'.
   created $dff cell `$procdff$14248' with positive edge clock.
-Creating register for signal `\video_gen.\pointer_word' using process `\video_gen.$proc$./video_gen.sv:713$1254'.
+Creating register for signal `\video_gen.\pointer_word' using process `\video_gen.$proc$./video_gen.sv:729$1254'.
   created $dff cell `$procdff$14249' with positive edge clock.
-Creating register for signal `\video_gen.\pointer_h_cnt' using process `\video_gen.$proc$./video_gen.sv:713$1254'.
+Creating register for signal `\video_gen.\pointer_h_cnt' using process `\video_gen.$proc$./video_gen.sv:729$1254'.
   created $dff cell `$procdff$14250' with positive edge clock.
-Creating register for signal `\video_gen.\pointer_v_cnt' using process `\video_gen.$proc$./video_gen.sv:713$1254'.
+Creating register for signal `\video_gen.\pointer_v_cnt' using process `\video_gen.$proc$./video_gen.sv:729$1254'.
   created $dff cell `$procdff$14251' with positive edge clock.
-Creating register for signal `\video_gen.\vgen_reg_data_o' using process `\video_gen.$proc$./video_gen.sv:638$1242'.
+Creating register for signal `\video_gen.\vgen_reg_data_o' using process `\video_gen.$proc$./video_gen.sv:654$1242'.
   created $dff cell `$procdff$14252' with positive edge clock.
 Creating register for signal `\video_gen.\video_intr_o' using process `\video_gen.$proc$./video_gen.sv:412$1241'.
   created $dff cell `$procdff$14253' with positive edge clock.
@@ -3178,33 +3178,33 @@ Creating register for signal `$paramod$585f1e63feba1605bd43608638eedf1c4292d618\
   created $dff cell `$procdff$14402' with positive edge clock.
 Creating register for signal `$paramod$585f1e63feba1605bd43608638eedf1c4292d618\coppermem.$memwr$\bram$./coppermem.sv:92$3568_EN' using process `$paramod$585f1e63feba1605bd43608638eedf1c4292d618\coppermem.$proc$./coppermem.sv:90$3569'.
   created $dff cell `$procdff$14403' with positive edge clock.
-Creating register for signal `\copper_slim.\cop_PC' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\cop_PC' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14404' with positive edge clock.
-Creating register for signal `\copper_slim.\cop_IR' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\cop_IR' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14405' with positive edge clock.
-Creating register for signal `\copper_slim.\wait_hv_flag' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\wait_hv_flag' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14406' with positive edge clock.
-Creating register for signal `\copper_slim.\wait_for_v' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\wait_for_v' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14407' with positive edge clock.
-Creating register for signal `\copper_slim.\ram_rd_en' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\ram_rd_en' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14408' with positive edge clock.
-Creating register for signal `\copper_slim.\rd_reg_save' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\rd_reg_save' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14409' with positive edge clock.
-Creating register for signal `\copper_slim.\ram_rd_addr' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\ram_rd_addr' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14410' with positive edge clock.
-Creating register for signal `\copper_slim.\reg_wr_en' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\reg_wr_en' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14411' with positive edge clock.
-Creating register for signal `\copper_slim.\xr_wr_en' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\xr_wr_en' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14412' with positive edge clock.
-Creating register for signal `\copper_slim.\write_addr' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\write_addr' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14413' with positive edge clock.
-Creating register for signal `\copper_slim.\write_data' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\write_data' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14414' with positive edge clock.
-Creating register for signal `\copper_slim.\cop_ex_state' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\cop_ex_state' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14415' with positive edge clock.
-Creating register for signal `\copper_slim.\rd_pipeline' using process `\copper_slim.$proc$./copper_slim.sv:243$1084'.
+Creating register for signal `\copper_slim.\rd_pipeline' using process `\copper_slim.$proc$./copper_slim.sv:249$1084'.
   created $dff cell `$procdff$14416' with positive edge clock.
-Creating register for signal `\copper_slim.\cop_RA' using process `\copper_slim.$proc$./copper_slim.sv:227$1082'.
+Creating register for signal `\copper_slim.\cop_RA' using process `\copper_slim.$proc$./copper_slim.sv:233$1082'.
   created $dff cell `$procdff$14417' with positive edge clock.
 Creating register for signal `\copper_slim.\cop_en' using process `\copper_slim.$proc$./copper_slim.sv:202$1077'.
   created $dff cell `$procdff$14418' with positive edge clock.
@@ -3503,20 +3503,20 @@ Found and cleaned up 16 empty switches in `\video_playfield.$proc$./video_playfi
 Removing empty process `video_playfield.$proc$./video_playfield.sv:0$1288'.
 Removing empty process `video_playfield.$proc$./video_playfield.sv:0$1285'.
 Removing empty process `video_playfield.$proc$./video_playfield.sv:0$1282'.
-Found and cleaned up 9 empty switches in `\video_gen.$proc$./video_gen.sv:804$1277'.
-Removing empty process `video_gen.$proc$./video_gen.sv:804$1277'.
-Found and cleaned up 2 empty switches in `\video_gen.$proc$./video_gen.sv:754$1270'.
-Removing empty process `video_gen.$proc$./video_gen.sv:754$1270'.
+Found and cleaned up 9 empty switches in `\video_gen.$proc$./video_gen.sv:820$1277'.
+Removing empty process `video_gen.$proc$./video_gen.sv:820$1277'.
+Found and cleaned up 2 empty switches in `\video_gen.$proc$./video_gen.sv:770$1270'.
+Removing empty process `video_gen.$proc$./video_gen.sv:770$1270'.
 Removing empty process `video_gen.$proc$./video_gen.sv:0$1265'.
 Removing empty process `video_gen.$proc$./video_gen.sv:0$1263'.
 Removing empty process `video_gen.$proc$./video_gen.sv:0$1261'.
-Found and cleaned up 5 empty switches in `\video_gen.$proc$./video_gen.sv:713$1254'.
-Removing empty process `video_gen.$proc$./video_gen.sv:713$1254'.
+Found and cleaned up 5 empty switches in `\video_gen.$proc$./video_gen.sv:729$1254'.
+Removing empty process `video_gen.$proc$./video_gen.sv:729$1254'.
 Found and cleaned up 1 empty switch in `\video_gen.$proc$./video_gen.sv:0$1245'.
 Removing empty process `video_gen.$proc$./video_gen.sv:0$1245'.
 Found and cleaned up 1 empty switch in `\video_gen.$proc$./video_gen.sv:0$1244'.
 Removing empty process `video_gen.$proc$./video_gen.sv:0$1244'.
-Removing empty process `video_gen.$proc$./video_gen.sv:638$1242'.
+Removing empty process `video_gen.$proc$./video_gen.sv:654$1242'.
 Found and cleaned up 3 empty switches in `\video_gen.$proc$./video_gen.sv:412$1241'.
 Removing empty process `video_gen.$proc$./video_gen.sv:412$1241'.
 Found and cleaned up 4 empty switches in `\video_gen.$proc$./video_gen.sv:346$1230'.
@@ -3557,10 +3557,10 @@ Removing empty process `$paramod$585f1e63feba1605bd43608638eedf1c4292d618\copper
 Removing empty process `$paramod$585f1e63feba1605bd43608638eedf1c4292d618\coppermem.$proc$./coppermem.sv:96$3576'.
 Found and cleaned up 1 empty switch in `$paramod$585f1e63feba1605bd43608638eedf1c4292d618\coppermem.$proc$./coppermem.sv:90$3569'.
 Removing empty process `$paramod$585f1e63feba1605bd43608638eedf1c4292d618\coppermem.$proc$./coppermem.sv:90$3569'.
-Found and cleaned up 16 empty switches in `\copper_slim.$proc$./copper_slim.sv:243$1084'.
-Removing empty process `copper_slim.$proc$./copper_slim.sv:243$1084'.
-Found and cleaned up 3 empty switches in `\copper_slim.$proc$./copper_slim.sv:227$1082'.
-Removing empty process `copper_slim.$proc$./copper_slim.sv:227$1082'.
+Found and cleaned up 16 empty switches in `\copper_slim.$proc$./copper_slim.sv:249$1084'.
+Removing empty process `copper_slim.$proc$./copper_slim.sv:249$1084'.
+Found and cleaned up 3 empty switches in `\copper_slim.$proc$./copper_slim.sv:233$1082'.
+Removing empty process `copper_slim.$proc$./copper_slim.sv:233$1082'.
 Found and cleaned up 4 empty switches in `\copper_slim.$proc$./copper_slim.sv:202$1077'.
 Removing empty process `copper_slim.$proc$./copper_slim.sv:202$1077'.
 Removing empty process `video_blend_4bit.$proc$./video_blend_4bit.sv:61$2930'.
@@ -3687,7 +3687,7 @@ Removed a total of 492 cells.
 Running muxtree optimizer on module \xosera_upd..
   Creating internal representation of mux trees.
   Evaluating internal representation of mux trees.
-      Replacing known input bits on port B of cell $flatten\xosera_main.\video_gen.$ternary$./video_gen.sv:708$1253: \xosera_main.video_gen.pointer_v_cnt -> { 1'1 \xosera_main.video_gen.pointer_v_cnt [4:0] }
+      Replacing known input bits on port B of cell $flatten\xosera_main.\video_gen.$ternary$./video_gen.sv:724$1253: \xosera_main.video_gen.pointer_v_cnt -> { 1'1 \xosera_main.video_gen.pointer_v_cnt [4:0] }
       Replacing known input bits on port A of cell $flatten\xosera_main.\video_gen.\audio_mixer.$procmux$11475: \xosera_main.video_gen.audio_mixer.audio_reg_wr -> 1'0
   Analyzing evaluation results.
     dead port 2/2 on $mux $flatten\xosera_main.\blitter.$procmux$13589.
@@ -5225,11 +5225,11 @@ Adding SRST signal on $flatten\xosera_main.\video_gen.$procdff$14251 ($dff) from
 Adding EN signal on $auto$ff.cc:266:slice$15660 ($sdff) from module xosera_upd (D = $flatten\xosera_main.\video_gen.$procmux$9626_Y [5], Q = \xosera_main.video_gen.pointer_v_cnt [5]).
 Adding EN signal on $auto$ff.cc:266:slice$15660 ($sdff) from module xosera_upd (D = $flatten\xosera_main.\video_gen.$procmux$9626_Y [4:0], Q = \xosera_main.video_gen.pointer_v_cnt [4:0]).
 Adding SRST signal on $flatten\xosera_main.\video_gen.$procdff$14250 ($dff) from module xosera_upd (D = \xosera_main.video_gen.vid_pointer_h_next, Q = \xosera_main.video_gen.pointer_h_cnt, rval = 6'000000).
-Adding EN signal on $auto$ff.cc:266:slice$15667 ($sdff) from module xosera_upd (D = $flatten\xosera_main.\video_gen.$add$./video_gen.sv:706$1250_Y, Q = \xosera_main.video_gen.pointer_h_cnt).
+Adding EN signal on $auto$ff.cc:266:slice$15667 ($sdff) from module xosera_upd (D = $flatten\xosera_main.\video_gen.$add$./video_gen.sv:722$1250_Y, Q = \xosera_main.video_gen.pointer_h_cnt).
 Adding SRST signal on $flatten\xosera_main.\video_gen.$procdff$14249 ($dff) from module xosera_upd (D = \xosera_main.xrmem_arb.pointermem.rd_data_o [3:0], Q = \xosera_main.video_gen.pointer_word [3:0], rval = 4'0000).
 Adding SRST signal on $flatten\xosera_main.\video_gen.$procdff$14249 ($dff) from module xosera_upd (D = $flatten\xosera_main.\video_gen.$procmux$9614_Y [15:4], Q = \xosera_main.video_gen.pointer_word [15:4], rval = 12'000000000000).
 Adding SRST signal on $flatten\xosera_main.\video_gen.$procdff$14248 ($dff) from module xosera_upd (D = \xosera_main.video_gen.mem_fetch_next, Q = \xosera_main.video_gen.mem_fetch, rval = 1'0).
-Adding SRST signal on $flatten\xosera_main.\video_gen.$procdff$14247 ($dff) from module xosera_upd (D = $flatten\xosera_main.\video_gen.$ternary$./video_gen.sv:765$1274_Y, Q = \xosera_main.video_gen.colorB_index_o, rval = 8'00000000).
+Adding SRST signal on $flatten\xosera_main.\video_gen.$procdff$14247 ($dff) from module xosera_upd (D = $flatten\xosera_main.\video_gen.$ternary$./video_gen.sv:781$1274_Y, Q = \xosera_main.video_gen.colorB_index_o, rval = 8'00000000).
 Adding SRST signal on $flatten\xosera_main.\video_gen.$procdff$14246 ($dff) from module xosera_upd (D = $flatten\xosera_main.\video_gen.$procmux$9609_Y, Q = \xosera_main.video_gen.colorA_index_o, rval = 8'00000000).
 Adding SRST signal on $flatten\xosera_main.\video_gen.$procdff$14244 ($dff) from module xosera_upd (D = \xosera_main.blitter.xreg_data_i [15], Q = \xosera_main.video_gen.audio_restart_nchan [3], rval = 1'0).
 Adding SRST signal on $flatten\xosera_main.\video_gen.$procdff$14244 ($dff) from module xosera_upd (D = \xosera_main.blitter.xreg_data_i [15], Q = \xosera_main.video_gen.audio_restart_nchan [2], rval = 1'0).
@@ -5331,7 +5331,7 @@ Adding SRST signal on $flatten\xosera_main.\reg_interface.$procdff$14309 ($dff) 
 Adding SRST signal on $flatten\xosera_main.\reg_interface.$procdff$14308 ($dff) from module xosera_upd (D = $flatten\xosera_main.\reg_interface.$procmux$11347_Y, Q = \xosera_main.reg_interface.reconfig_o, rval = 1'0).
 Adding EN signal on $auto$ff.cc:266:slice$15927 ($sdff) from module xosera_upd (D = \xosera_main.reg_interface.bus.bytedata_o [7], Q = \xosera_main.reg_interface.reconfig_o).
 Adding SRST signal on $flatten\xosera_main.\copper.$procdff$14420 ($dff) from module xosera_upd (D = $flatten\xosera_main.\copper.$procmux$13504_Y, Q = \xosera_main.copper.cop_run, rval = 1'1).
-Adding SRST signal on $flatten\xosera_main.\copper.$procdff$14419 ($dff) from module xosera_upd (D = $flatten\xosera_main.\copper.$logic_not$./copper_slim.sv:213$1080_Y, Q = \xosera_main.copper.cop_reset, rval = 1'1).
+Adding SRST signal on $flatten\xosera_main.\copper.$procdff$14419 ($dff) from module xosera_upd (D = $flatten\xosera_main.\copper.$logic_not$./copper_slim.sv:219$1080_Y, Q = \xosera_main.copper.cop_reset, rval = 1'1).
 Adding SRST signal on $flatten\xosera_main.\copper.$procdff$14418 ($dff) from module xosera_upd (D = $flatten\xosera_main.\copper.$procmux$13509_Y, Q = \xosera_main.copper.cop_en, rval = 1'1).
 Adding EN signal on $auto$ff.cc:266:slice$15937 ($sdff) from module xosera_upd (D = \xosera_main.video_gen.copp_reg_enable_o, Q = \xosera_main.copper.cop_en).
 Adding SRST signal on $flatten\xosera_main.\copper.$procdff$14417 ($dff) from module xosera_upd (D = $flatten\xosera_main.\copper.$procmux$13488_Y, Q = \xosera_main.copper.cop_RA, rval = 16'0000000000000000).
@@ -6533,8 +6533,8 @@ Removed top 2 bits (of 4) from port B of cell xosera_upd.$flatten\xosera_main.\b
 Removed top 1 bits (of 4) from port B of cell xosera_upd.$flatten\xosera_main.\blitter.$procmux$14048_CMP0 ($eq).
 Removed top 1 bits (of 2) from port B of cell xosera_upd.$flatten\xosera_main.\copper.$procmux$13323_CMP0 ($eq).
 Removed top 1 bits (of 4) from port B of cell xosera_upd.$auto$fsm_map.cc:77:implement_pattern_cache$14787 ($eq).
-Removed top 26 bits (of 32) from port B of cell xosera_upd.$flatten\xosera_main.\video_gen.$lt$./video_gen.sv:697$1246 ($lt).
-Removed top 3 bits (of 11) from port A of cell xosera_upd.$flatten\xosera_main.\video_gen.$eq$./video_gen.sv:749$1262 ($eq).
+Removed top 26 bits (of 32) from port B of cell xosera_upd.$flatten\xosera_main.\video_gen.$lt$./video_gen.sv:713$1246 ($lt).
+Removed top 3 bits (of 11) from port A of cell xosera_upd.$flatten\xosera_main.\video_gen.$eq$./video_gen.sv:765$1262 ($eq).
 Removed top 1 bits (of 16) from port A of cell xosera_upd.$flatten\xosera_main.\video_gen.\audio_mixer.$sub$./audio_mixer_slim.sv:135$2694 ($sub).
 Removed top 1 bits (of 3) from port B of cell xosera_upd.$flatten\xosera_main.\video_gen.$procmux$9652_CMP0 ($eq).
 Removed top 1 bits (of 3) from port B of cell xosera_upd.$flatten\xosera_main.\video_gen.$procmux$9653_CMP0 ($eq).
@@ -6702,8 +6702,8 @@ Extracting $alu and $macc cells in module xosera_upd:
   creating $macc model for $flatten\xosera_main.\video_blend.$add$./video_blend_4bit.sv:68$2921 ($add).
   creating $macc model for $flatten\xosera_main.\video_blend.$add$./video_blend_4bit.sv:69$2922 ($add).
   creating $macc model for $flatten\xosera_main.\video_blend.$add$./video_blend_4bit.sv:70$2923 ($add).
-  creating $macc model for $flatten\xosera_main.\video_gen.$add$./video_gen.sv:706$1250 ($add).
-  creating $macc model for $flatten\xosera_main.\video_gen.$add$./video_gen.sv:708$1252 ($add).
+  creating $macc model for $flatten\xosera_main.\video_gen.$add$./video_gen.sv:722$1250 ($add).
+  creating $macc model for $flatten\xosera_main.\video_gen.$add$./video_gen.sv:724$1252 ($add).
   creating $macc model for $flatten\xosera_main.\video_gen.\audio_mixer.$add$./audio_mixer_slim.sv:284$2826 ($add).
   creating $macc model for $flatten\xosera_main.\video_gen.\audio_mixer.$add$./audio_mixer_slim.sv:397$2868 ($add).
   creating $macc model for $flatten\xosera_main.\video_gen.\audio_mixer.$neg$./audio_mixer_slim.sv:0$2803 ($neg).
@@ -6778,8 +6778,8 @@ Extracting $alu and $macc cells in module xosera_upd:
   creating $alu model for $macc $flatten\xosera_main.\video_gen.\audio_mixer.$neg$./audio_mixer_slim.sv:0$2803.
   creating $alu model for $macc $flatten\xosera_main.\video_gen.\audio_mixer.$add$./audio_mixer_slim.sv:397$2868.
   creating $alu model for $macc $flatten\xosera_main.\video_gen.\audio_mixer.$add$./audio_mixer_slim.sv:284$2826.
-  creating $alu model for $macc $flatten\xosera_main.\video_gen.$add$./video_gen.sv:708$1252.
-  creating $alu model for $macc $flatten\xosera_main.\video_gen.$add$./video_gen.sv:706$1250.
+  creating $alu model for $macc $flatten\xosera_main.\video_gen.$add$./video_gen.sv:724$1252.
+  creating $alu model for $macc $flatten\xosera_main.\video_gen.$add$./video_gen.sv:722$1250.
   creating $alu model for $macc $flatten\xosera_main.\video_blend.$add$./video_blend_4bit.sv:70$2923.
   creating $alu model for $macc $flatten\xosera_main.\video_blend.$add$./video_blend_4bit.sv:69$2922.
   creating $alu model for $macc $flatten\xosera_main.\video_blend.$add$./video_blend_4bit.sv:68$2921.
@@ -6798,9 +6798,9 @@ Extracting $alu and $macc cells in module xosera_upd:
   creating $alu model for $macc $flatten\xosera_main.\blitter.$add$./blitter_slim.sv:391$1056.
   creating $alu model for $macc $flatten\xosera_main.\blitter.$add$./blitter_slim.sv:390$1055.
   creating $alu model for $macc $flatten\xosera_main.\blitter.$add$./blitter_slim.sv:356$1050.
-  creating $alu model for $flatten\xosera_main.\copper.$ge$./copper_slim.sv:399$1096 ($ge): new $alu
-  creating $alu model for $flatten\xosera_main.\copper.$ge$./copper_slim.sv:403$1097 ($ge): new $alu
-  creating $alu model for $flatten\xosera_main.\video_gen.$lt$./video_gen.sv:697$1246 ($lt): new $alu
+  creating $alu model for $flatten\xosera_main.\copper.$ge$./copper_slim.sv:405$1096 ($ge): new $alu
+  creating $alu model for $flatten\xosera_main.\copper.$ge$./copper_slim.sv:409$1097 ($ge): new $alu
+  creating $alu model for $flatten\xosera_main.\video_gen.$lt$./video_gen.sv:713$1246 ($lt): new $alu
   creating $alu model for $flatten\xosera_main.\video_gen.\audio_mixer.$gt$./audio_mixer_slim.sv:384$2863 ($gt): new $alu
   creating $alu model for $flatten\xosera_main.\video_gen.\audio_mixer.$gt$./audio_mixer_slim.sv:391$2866 ($gt): new $alu
   creating $alu model for $flatten\xosera_main.\video_gen.\audio_mixer.$lt$./audio_mixer_slim.sv:382$2862 ($lt): new $alu
@@ -6815,9 +6815,9 @@ Extracting $alu and $macc cells in module xosera_upd:
   creating $alu cell for $flatten\xosera_main.\video_gen.\audio_mixer.$lt$./audio_mixer_slim.sv:382$2862: $auto$alumacc.cc:485:replace_alu$16419
   creating $alu cell for $flatten\xosera_main.\video_gen.\audio_mixer.$gt$./audio_mixer_slim.sv:391$2866: $auto$alumacc.cc:485:replace_alu$16432
   creating $alu cell for $flatten\xosera_main.\video_gen.\audio_mixer.$gt$./audio_mixer_slim.sv:384$2863: $auto$alumacc.cc:485:replace_alu$16439
-  creating $alu cell for $flatten\xosera_main.\video_gen.$lt$./video_gen.sv:697$1246: $auto$alumacc.cc:485:replace_alu$16446
-  creating $alu cell for $flatten\xosera_main.\copper.$ge$./copper_slim.sv:403$1097: $auto$alumacc.cc:485:replace_alu$16457
-  creating $alu cell for $flatten\xosera_main.\copper.$ge$./copper_slim.sv:399$1096: $auto$alumacc.cc:485:replace_alu$16470
+  creating $alu cell for $flatten\xosera_main.\video_gen.$lt$./video_gen.sv:713$1246: $auto$alumacc.cc:485:replace_alu$16446
+  creating $alu cell for $flatten\xosera_main.\copper.$ge$./copper_slim.sv:409$1097: $auto$alumacc.cc:485:replace_alu$16457
+  creating $alu cell for $flatten\xosera_main.\copper.$ge$./copper_slim.sv:405$1096: $auto$alumacc.cc:485:replace_alu$16470
   creating $alu cell for $flatten\xosera_main.\blitter.$add$./blitter_slim.sv:356$1050: $auto$alumacc.cc:485:replace_alu$16483
   creating $alu cell for $flatten\xosera_main.\blitter.$add$./blitter_slim.sv:390$1055: $auto$alumacc.cc:485:replace_alu$16486
   creating $alu cell for $flatten\xosera_main.\blitter.$add$./blitter_slim.sv:391$1056: $auto$alumacc.cc:485:replace_alu$16489
@@ -6836,8 +6836,8 @@ Extracting $alu and $macc cells in module xosera_upd:
   creating $alu cell for $flatten\xosera_main.\video_blend.$add$./video_blend_4bit.sv:68$2921: $auto$alumacc.cc:485:replace_alu$16528
   creating $alu cell for $flatten\xosera_main.\video_blend.$add$./video_blend_4bit.sv:69$2922: $auto$alumacc.cc:485:replace_alu$16531
   creating $alu cell for $flatten\xosera_main.\video_blend.$add$./video_blend_4bit.sv:70$2923: $auto$alumacc.cc:485:replace_alu$16534
-  creating $alu cell for $flatten\xosera_main.\video_gen.$add$./video_gen.sv:706$1250: $auto$alumacc.cc:485:replace_alu$16537
-  creating $alu cell for $flatten\xosera_main.\video_gen.$add$./video_gen.sv:708$1252: $auto$alumacc.cc:485:replace_alu$16540
+  creating $alu cell for $flatten\xosera_main.\video_gen.$add$./video_gen.sv:722$1250: $auto$alumacc.cc:485:replace_alu$16537
+  creating $alu cell for $flatten\xosera_main.\video_gen.$add$./video_gen.sv:724$1252: $auto$alumacc.cc:485:replace_alu$16540
   creating $alu cell for $flatten\xosera_main.\video_gen.\audio_mixer.$add$./audio_mixer_slim.sv:284$2826: $auto$alumacc.cc:485:replace_alu$16543
   creating $alu cell for $flatten\xosera_main.\video_gen.\audio_mixer.$add$./audio_mixer_slim.sv:397$2868: $auto$alumacc.cc:485:replace_alu$16546
   creating $alu cell for $flatten\xosera_main.\video_gen.\audio_mixer.$neg$./audio_mixer_slim.sv:0$2803: $auto$alumacc.cc:485:replace_alu$16549
@@ -6892,8 +6892,8 @@ Running muxtree optimizer on module \xosera_upd..
   Creating internal representation of mux trees.
   Evaluating internal representation of mux trees.
   Analyzing evaluation results.
-    dead port 1/2 on $mux $flatten\xosera_main.\video_gen.$ternary$./video_gen.sv:697$1247.
-    dead port 2/2 on $mux $flatten\xosera_main.\video_gen.$ternary$./video_gen.sv:697$1247.
+    dead port 1/2 on $mux $flatten\xosera_main.\video_gen.$ternary$./video_gen.sv:713$1247.
+    dead port 2/2 on $mux $flatten\xosera_main.\video_gen.$ternary$./video_gen.sv:713$1247.
 Removed 2 multiplexer ports.
 <suppressed ~275 debug messages>
 
@@ -7026,12 +7026,12 @@ Successfully finished Verilog frontend.
 Using template $paramod$64b287bf341a4b95b999ae4f679280786509630f\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$dd9f7a419b36c11e7c388a13668e8593696fe7e8\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$d16029c9605ea7ff2b75264b9952a17be19a1435\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$84327a6766ed6ba84c09961208decaa8979fa098\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$4f1fc8b6753b593f5406d5bb5027c04725a9f173\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$f32c7e45e2be829644db17c59ea0139664937494\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$30fee0f6b91713e6b8dcf7f6ecf1717541310ac3\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$1b3254cfd46a5e54f3e2dcb144019f2b645b1db5\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$8637367f0068f8a6b5781cfaa882ef63c4d6fccb\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$8e11762a9c3181c508a53337e39bde0733407f59\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$a8011a10251d3238e991e9b572f77afbb4f5ca56\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$31a91fbd411f5e26dd15394eb1b9f2f525d50759\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$fe2eb9c7ee648de783dde8912684c176cbc2b494\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$dbaf37f3c4f12fda5c3cc409df17009b4726fe4d\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$a8f7ebc4421f03ee42a035b0bdbb183b7e0083f5\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$7823027dbf684d40c5eedeea82cc0a317c1ee338\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$385303267beae408c8105c97b6bc1d50a76abbc6\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$ac334883a942b3b1461157364f08e545ab8ada8b\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
@@ -8064,37 +8064,37 @@ Finding unused cells or wires in module \SB_DFFSS..
 
 27.41.9.2. Continuing SUBMOD pass.
 Creating submodule $abc9_flop (\SB_DFF_$abc9_flop) of module \SB_DFF.
-  signal $auto$abc9_ops.cc:506:prep_dff_submod$47396: output \n1
-  signal \C: input \C
   signal \Q: input \Q
   signal \D: input \D
+  signal \C: input \C
+  signal $auto$abc9_ops.cc:506:prep_dff_submod$47396: output \n1
   cell $specify$1529 ($specify3)
   cell $specify$1528 ($specrule)
   cell $auto$abc9_ops.cc:507:prep_dff_submod$47397 ($_MUX_)
 Creating submodule $abc9_flop (\SB_DFFE_$abc9_flop) of module \SB_DFFE.
+  signal \E: input \E
+  signal $0\Q[0:0]: internal
   signal $auto$abc9_ops.cc:506:prep_dff_submod$47398: output \n1
+  signal \Q: input \Q
   signal \D: input \D
   signal \C: input \C
-  signal $0\Q[0:0]: internal
-  signal \E: input \E
-  signal \Q: input \Q
   cell $specify$1532 ($specify3)
   cell $specify$1531 ($specrule)
   cell $specify$1530 ($specrule)
   cell $auto$simplemap.cc:267:simplemap_mux$47393 ($_MUX_)
   cell $auto$abc9_ops.cc:507:prep_dff_submod$47399 ($_MUX_)
 Creating submodule $abc9_flop (\SB_DFFESR_$abc9_flop) of module \SB_DFFESR.
-  signal $auto$abc9_ops.cc:506:prep_dff_submod$47400: output \n1
-  signal \Q: input \Q
-  signal \R: input \R
-  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:646$1713_Y: internal
+  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:647$1715_Y: internal
   signal $0\Q[0:0]: internal
+  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:646$1713_Y: internal
   signal $procmux$8080_Y: internal
   signal $logic_not$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:647$1714_Y: internal
-  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:647$1715_Y: internal
   signal \C: input \C
-  signal \D: input \D
+  signal \Q: input \Q
+  signal \R: input \R
   signal \E: input \E
+  signal \D: input \D
+  signal $auto$abc9_ops.cc:506:prep_dff_submod$47400: output \n1
   cell $specify$1553 ($specify3)
   cell $specify$1552 ($specify3)
   cell $specify$1551 ($specrule)
@@ -8107,17 +8107,17 @@ Creating submodule $abc9_flop (\SB_DFFESR_$abc9_flop) of module \SB_DFFESR.
   cell $auto$simplemap.cc:196:simplemap_lognot$47390 ($_NOT_)
   cell $auto$abc9_ops.cc:507:prep_dff_submod$47401 ($_MUX_)
 Creating submodule $abc9_flop (\SB_DFFESS_$abc9_flop) of module \SB_DFFESS.
-  signal $auto$abc9_ops.cc:506:prep_dff_submod$47402: output \n1
-  signal \S: input \S
-  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:788$1724_Y: internal
-  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:787$1722_Y: internal
-  signal $0\Q[0:0]: internal
-  signal \D: input \D
-  signal \Q: input \Q
-  signal $procmux$8073_Y: internal
-  signal \E: input \E
   signal $logic_not$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:788$1723_Y: internal
+  signal \S: input \S
+  signal \D: input \D
+  signal \E: input \E
+  signal \Q: input \Q
+  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:787$1722_Y: internal
+  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:788$1724_Y: internal
+  signal $procmux$8073_Y: internal
   signal \C: input \C
+  signal $0\Q[0:0]: internal
+  signal $auto$abc9_ops.cc:506:prep_dff_submod$47402: output \n1
   cell $specify$1563 ($specify3)
   cell $specify$1562 ($specify3)
   cell $specify$1561 ($specrule)
@@ -8131,12 +8131,12 @@ Creating submodule $abc9_flop (\SB_DFFESS_$abc9_flop) of module \SB_DFFESS.
   cell $auto$abc9_ops.cc:507:prep_dff_submod$47403 ($_MUX_)
 Creating submodule $abc9_flop (\SB_DFFSR_$abc9_flop) of module \SB_DFFSR.
   signal $auto$abc9_ops.cc:506:prep_dff_submod$47404: output \n1
-  signal \R: input \R
+  signal \C: input \C
+  signal $0\Q[0:0]: internal
+  signal $logic_not$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:394$1701_Y: internal
   signal \Q: input \Q
   signal \D: input \D
-  signal $0\Q[0:0]: internal
-  signal \C: input \C
-  signal $logic_not$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:394$1701_Y: internal
+  signal \R: input \R
   cell $specify$1536 ($specify3)
   cell $specify$1535 ($specify3)
   cell $specify$1534 ($specrule)
@@ -8146,10 +8146,10 @@ Creating submodule $abc9_flop (\SB_DFFSR_$abc9_flop) of module \SB_DFFSR.
   cell $auto$abc9_ops.cc:507:prep_dff_submod$47405 ($_MUX_)
 Creating submodule $abc9_flop (\SB_DFFSS_$abc9_flop) of module \SB_DFFSS.
   signal $auto$abc9_ops.cc:506:prep_dff_submod$47406: output \n1
-  signal \S: input \S
-  signal \D: input \D
   signal $0\Q[0:0]: internal
+  signal \S: input \S
   signal $logic_not$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:515$1707_Y: internal
+  signal \D: input \D
   signal \C: input \C
   signal \Q: input \Q
   cell $specify$1544 ($specify3)
@@ -8375,15 +8375,15 @@ Module xosera_upd: replaced 5090 cells with 30226 new cells, skipped 9454 cells.
        1 $paramod$9afc244c5f6012269448954e8a55e7f7bbd372c4\SB_RAM40_4K
        1 $paramod$b0ef1672242ca073e27257a125b4452e30f99550\SB_RAM40_4K
        1 $paramod$97332f4c007628366508637405e6a5cafabf9c5b\SB_RAM40_4K
-       1 $paramod$c5f965227f96512cf56fa87adad2b08086f3279f\SB_RAM40_4K
-       1 $paramod$173bf3ac3ffaf58a065f981973cfab88cdcc58e7\SB_RAM40_4K
-       1 $paramod$1b849609a25986312f159bc131a3c660889f0855\SB_RAM40_4K
-       1 $paramod$a9a9e91452772440f9c1dd79cbfda0a6fb77136e\SB_RAM40_4K
-       1 $paramod$006a10aabc2f82e91d497b72ffc35848af43e082\SB_RAM40_4K
+       1 $paramod$73c2bcf69c3c0f0b4db0b895fe9537ebb42df641\SB_RAM40_4K
+       1 $paramod$3028ce8f1e3ea28f557465437d42eedb820fc4c7\SB_RAM40_4K
+       1 $paramod$ed1a0d6167a4970dbe7432990b359373660f878b\SB_RAM40_4K
+       1 $paramod$6cf4d5a3a4742318281687f2fffc61e688979f7c\SB_RAM40_4K
+       1 $paramod$dc8578cbee804ffe00a74b4624cdfcbd87ced3ae\SB_RAM40_4K
        1 $paramod$bead1acc41e125c0d4dc1234ed19de291bed98ca\SB_RAM40_4K
        1 $paramod$34ba7207513b5c910645bd8c56509e5f6b0a9320\SB_RAM40_4K
        1 $paramod$020a420f57a69adb2ca5c4cf7f8a4ac1346e862c\SB_RAM40_4K
-       1 $paramod$07baaee9a5aded64f363039bc3a19dce2bfe89e5\SB_RAM40_4K
+       1 $paramod$e6da8f6a632d9f5917762da1faec5f1165a2a10e\SB_RAM40_4K
        1 $paramod$8a6c78f32887384822bc76ea2c613edf64941ddf\SB_RAM40_4K
       56 $paramod$__ABC9_DELAY\DELAY=32'00000000000000000000000100001100
        4 $paramod$__ABC9_DELAY\DELAY=32'00000000000000000000000110010100
@@ -8438,7 +8438,7 @@ ABC: P:  Del = 12459.00.  Ar =    3533.0.  Edge =    12369.  Cut =    76135.  T 
 ABC: F:  Del = 12235.00.  Ar =    3451.0.  Edge =    12174.  Cut =    69673.  T =     0.01 sec
 ABC: A:  Del = 12235.00.  Ar =    3406.0.  Edge =    11553.  Cut =    66704.  T =     0.01 sec
 ABC: A:  Del = 12235.00.  Ar =    3396.0.  Edge =    11534.  Cut =    67949.  T =     0.01 sec
-ABC: Total time =     0.06 sec
+ABC: Total time =     0.05 sec
 ABC: + &write -n <abc-temp-dir>/output.aig 
 ABC: + &mfs 
 ABC: + &ps -l 
@@ -8447,7 +8447,7 @@ ABC: Mapping (K=4)  :  lut =   3348  edge =   11202  lev =    6 (0.67)  levB =  
 ABC: LUT = 3348 : 2=305 9.1 %  3=1580 47.2 %  4=1463 43.7 %  Ave = 3.35
 ABC: + &write -n <abc-temp-dir>/output.aig 
 ABC: + time 
-ABC: elapse: 1.12 seconds, total: 1.12 seconds
+ABC: elapse: 1.08 seconds, total: 1.08 seconds
 
 27.41.19.6. Executing AIGER frontend.
 <suppressed ~4951 debug messages>
@@ -8486,12 +8486,12 @@ Using template $paramod$97332f4c007628366508637405e6a5cafabf9c5b\SB_RAM40_4K for
 Using template SB_DFFESS_$abc9_flop for cells of type SB_DFFESS_$abc9_flop.
 Using template SB_DFFE_$abc9_flop for cells of type SB_DFFE_$abc9_flop.
 Using template $paramod$34ba7207513b5c910645bd8c56509e5f6b0a9320\SB_RAM40_4K for cells of type $paramod$34ba7207513b5c910645bd8c56509e5f6b0a9320\SB_RAM40_4K.
-Using template $paramod$006a10aabc2f82e91d497b72ffc35848af43e082\SB_RAM40_4K for cells of type $paramod$006a10aabc2f82e91d497b72ffc35848af43e082\SB_RAM40_4K.
-Using template $paramod$a9a9e91452772440f9c1dd79cbfda0a6fb77136e\SB_RAM40_4K for cells of type $paramod$a9a9e91452772440f9c1dd79cbfda0a6fb77136e\SB_RAM40_4K.
-Using template $paramod$1b849609a25986312f159bc131a3c660889f0855\SB_RAM40_4K for cells of type $paramod$1b849609a25986312f159bc131a3c660889f0855\SB_RAM40_4K.
-Using template $paramod$07baaee9a5aded64f363039bc3a19dce2bfe89e5\SB_RAM40_4K for cells of type $paramod$07baaee9a5aded64f363039bc3a19dce2bfe89e5\SB_RAM40_4K.
-Using template $paramod$173bf3ac3ffaf58a065f981973cfab88cdcc58e7\SB_RAM40_4K for cells of type $paramod$173bf3ac3ffaf58a065f981973cfab88cdcc58e7\SB_RAM40_4K.
-Using template $paramod$c5f965227f96512cf56fa87adad2b08086f3279f\SB_RAM40_4K for cells of type $paramod$c5f965227f96512cf56fa87adad2b08086f3279f\SB_RAM40_4K.
+Using template $paramod$dc8578cbee804ffe00a74b4624cdfcbd87ced3ae\SB_RAM40_4K for cells of type $paramod$dc8578cbee804ffe00a74b4624cdfcbd87ced3ae\SB_RAM40_4K.
+Using template $paramod$6cf4d5a3a4742318281687f2fffc61e688979f7c\SB_RAM40_4K for cells of type $paramod$6cf4d5a3a4742318281687f2fffc61e688979f7c\SB_RAM40_4K.
+Using template $paramod$ed1a0d6167a4970dbe7432990b359373660f878b\SB_RAM40_4K for cells of type $paramod$ed1a0d6167a4970dbe7432990b359373660f878b\SB_RAM40_4K.
+Using template $paramod$e6da8f6a632d9f5917762da1faec5f1165a2a10e\SB_RAM40_4K for cells of type $paramod$e6da8f6a632d9f5917762da1faec5f1165a2a10e\SB_RAM40_4K.
+Using template $paramod$3028ce8f1e3ea28f557465437d42eedb820fc4c7\SB_RAM40_4K for cells of type $paramod$3028ce8f1e3ea28f557465437d42eedb820fc4c7\SB_RAM40_4K.
+Using template $paramod$73c2bcf69c3c0f0b4db0b895fe9537ebb42df641\SB_RAM40_4K for cells of type $paramod$73c2bcf69c3c0f0b4db0b895fe9537ebb42df641\SB_RAM40_4K.
 Using template $paramod$935cdf74fbbd2275daa33632b74de5af5882b288\SB_RAM40_4K for cells of type $paramod$935cdf74fbbd2275daa33632b74de5af5882b288\SB_RAM40_4K.
 Using template $paramod$b0ef1672242ca073e27257a125b4452e30f99550\SB_RAM40_4K for cells of type $paramod$b0ef1672242ca073e27257a125b4452e30f99550\SB_RAM40_4K.
 Using template $paramod$a626dfcaf228f61baa267b495235e0b32421b741\SB_RAM40_4K for cells of type $paramod$a626dfcaf228f61baa267b495235e0b32421b741\SB_RAM40_4K.
@@ -9019,6 +9019,6 @@ Found and reported 0 problems.
 
 27.50. Executing JSON backend.
 
-End of script. Logfile hash: f56f24b07e, CPU: user 21.04s system 0.16s
-Yosys 0.32+74 (git sha1 b739213d9, aarch64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
-Time spent: 51% 11x techmap (11 sec), 9% 52x opt_expr (2 sec), ...
+End of script. Logfile hash: 0a34580a93, CPU: user 20.12s system 0.15s
+Yosys 0.33+6 (git sha1 41b34a193, aarch64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
+Time spent: 51% 11x techmap (11 sec), 8% 52x opt_expr (1 sec), ...

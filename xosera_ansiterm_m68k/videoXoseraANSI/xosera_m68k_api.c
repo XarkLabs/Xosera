@@ -24,6 +24,9 @@
 
 #include <machine.h>
 
+#if !defined(ROSCO_M68K)
+#define ROSCO_M68K
+#endif
 #define XV_PREP_REQUIRED
 #include "xosera_m68k_api.h"
 

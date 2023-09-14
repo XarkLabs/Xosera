@@ -436,20 +436,35 @@ extern xosera_ptr_t xosera_ptr;
                          : [ptr] "a"(xosera_ptr)                                                                       \
                          : "cc")
 
+// return non-zero if memory read/write is completed
+#define xis_mem_ready() (!(xm_getbh(SYS_CTRL) & SYS_CTRL_MEM_WAIT_F))
+
 // wait for memory read/write to be completed
 #define xwait_mem_ready() __asm__ __volatile__("0: tst.b (%[ptr]); bmi.s 0b" : : [ptr] "a"(xosera_ptr) : "cc")
+
+// return non-zero if blitter ready for a new operation (queue not full)
+#define xis_blit_ready() (!(xm_getbh(SYS_CTRL) & SYS_CTRL_BLIT_FULL_F))
 
 // wait for blit unit is available for a new operation (queue not full)
 #define xwait_blit_ready() xwait_ctrl_bit_clear(BLIT_FULL)
 
+// return non-zero if blitter currenty busy
+#define xis_blit_done() (!(xm_getbh(SYS_CTRL) & SYS_CTRL_BLIT_BUSY_F))
+
 // wait until blit unit has completed all queued operations (not busy)
 #define xwait_blit_done() xwait_ctrl_bit_clear(BLIT_BUSY)
+
+// return non-zero if scanout is in non-visible horizontal pixel
+#define xis_hblank() (xm_getbh(SYS_CTRL) & SYS_CTRL_HBLANK_F)
 
 // wait until scanout is in horizontal blank (off left/right edge of display line)
 #define xwait_hblank() xwait_ctrl_bit_set(HBLANK)
 
 // wait until scanout is not in horizontal blank (center visible  of display line)
 #define xwait_not_hblank() xwait_ctrl_bit_clear(HBLANK)
+
+// return non-zero if scanout is in non-visible horizontal pixel
+#define xis_vblank() (xm_getbh(SYS_CTRL) & SYS_CTRL_VBLANK_F)
 
 // wait until scanout is in vertical blank (line off top/bottom edge of display)
 #define xwait_vblank() xwait_ctrl_bit_set(VBLANK)
@@ -458,15 +473,15 @@ extern xosera_ptr_t xosera_ptr;
 #define xwait_not_vblank() xwait_ctrl_bit_clear(VBLANK)
 
 // return true if ready to transmit character
-#define uart_send_ready() (!(xm_getbh(UART) & UART_TXF_B))
+#define xuart_is_send_ready() (!(xm_getbh(UART) & UART_TXF_B))
 
 // transmit UART character (call when uart_send_ready() returns true)
-#define uart_send_byte(byte) (xosera_ptr[(XM_UART) >> 2].b.l = (byte))
+#define xuart_send_byte(byte) (xosera_ptr[(XM_UART) >> 2].b.l = (byte))
 
 // return true if RX character waiting
-#define uart_get_ready() (xm_getbh(UART) & UART_RXF_B)
+#define xuart_is_get_ready() (xm_getbh(UART) & UART_RXF_B)
 
 // return UART received character (call when uart_get_ready() returns true)
-#define uart_get_byte() (xosera_ptr[XM_UART >> 2].b.l)
+#define xuart_get_byte() (xosera_ptr[XM_UART >> 2].b.l)
 
 #endif        // XOSERA_M68K_API_H

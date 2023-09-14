@@ -76,8 +76,11 @@ void copper::reset(xlasm * xl)
 
     xl->add_sym("SETI", xlasm::symbol_t::LABEL, 0x0000);
     xl->add_sym("MOVI", xlasm::symbol_t::LABEL, 0x0000);
+    xl->add_sym("LDI", xlasm::symbol_t::LABEL, 0x0000);
     xl->add_sym("SETM", xlasm::symbol_t::LABEL, 0x1000);
     xl->add_sym("MOVM", xlasm::symbol_t::LABEL, 0x1000);
+    xl->add_sym("LDM", xlasm::symbol_t::LABEL, 0x1000);
+    xl->add_sym("STM", xlasm::symbol_t::LABEL, 0x1000);
     xl->add_sym("HPOS", xlasm::symbol_t::LABEL, 0x2000);
     xl->add_sym("VPOS", xlasm::symbol_t::LABEL, 0x2800);
     xl->add_sym("BRGE", xlasm::symbol_t::LABEL, 0x3000);

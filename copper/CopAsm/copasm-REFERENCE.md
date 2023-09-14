@@ -89,21 +89,21 @@ Words at the start of a line are assumed to be label definitions (otherwise appe
 
 ## Pseudo Copper Instructions
 
-| Instruction                | Alias  | Words | Description                                                              |
-|----------------------------|--------|-------|--------------------------------------------------------------------------|
-| `MOVE` `#`*imm16*,*xadr14* | `SETI` | 2     | m68k style `MOVE` immediate, copies `#`*imm16* &rarr; *xadr16*           |
-| `MOVE` *cadr12*,*xadr16*   | `SETM` | 2     | m68k style `MOVE` memory, copies *source* &rarr; *dest*                  |
-| `MOVI` `#`*imm16*,*xadr14* | `SETI` | 2     | m68k order `SETI`, copies `#`*imm16* &rarr; *cadr12*                     |
-| `MOVM` *cadr12*,*xadr16*   | `SETM` | 2     | m68k order`SETM`, copy *cadr12* &rarr; *xadr16*                          |
-| `LDI` `#`*imm16*           | `SETI` | 2     | Load `RA` register with value *imm16*, set `B`=`0`                       |
-| `LDM` *cadr12*             | `SETM` | 2     | Load `RA` register with contents of memory *cadr12*, set `B`=`0`         |
-| `STM` *xadr16*             | `SETM` | 2     | Store `RA` register contents into memory *xadr16*, set `B`=`0`           |
-| `CLRB`                     | `SETM` | 2     | Store `RA` register into `RA`, set `B`=`0`                               |
-| `SUBI` `#`*imm16*          | `SETI` | 2     | `RA` = `RA` - *imm16*, `B` flag updated                                  |
-| `ADDI` `#`*imm16*          | `SETI` | 2     | `RA` = `RA` + *imm16*, `B` flag updated (for subtract of -*imm16*)       |
-| `SUBM` *cadr12*            | `SETM` | 2     | `RA` = `RA` - contents of *cadr12*, `B` flag updated                     |
-| `CMPI` `#`*imm16*          | `SETI` | 2     | test if `RA` < *imm16*, `B` flag updated (`RA` not altered)              |
-| `CMPM` *cadr12*            | `SETM` | 2     | test it `RA` < contents of *cadr12*, `B` flag updated (`RA` not altered) |
+| Pseudo Instruction         | Aliased Instruction         | Description                                                        |
+|----------------------------|-----------------------------|--------------------------------------------------------------------|
+| `MOVE` `#`*imm16*,*xadr14* | `SETI` *xadr14*,`#`*imm16*  | m68k order `SETI`, `#`*imm16* &rarr; [*xadr14*]                    |
+| `MOVE` *cadr12*,*xadr16*   | `SETM` *xadr16*,*cadr12*    | m68k order `SETM`, *xadr16* &rarr; [*cadr12*]                      |
+| `MOVI` `#`*imm16*,*xadr14* | `SETI` *xadr14*,`#`*imm16*  | m68k order `SETI`, `#`*imm16* &rarr; [*xadr14*]                    |
+| `MOVM` *cadr12*,*xadr16*   | `SETM` *xadr16*,*cadr12*    | m68k order `SETM`, *cadr12* &rarr; [*xadr16*]                      |
+| `LDI` `#`*imm16*           | `SETI` `RA`,`#`*imm16*      | Load register `RA` &larr; `#`*imm16*, clear `B` flag               |
+| `LDM` *cadr12*             | `SETM` `RA`,*cadr12*        | Load register `RA` &larr; [*cadr12*], clear `B` flag               |
+| `STM` *xadr16*             | `SETM` *xadr16*,`RA`        | Store register `RA` &rarr; [*xadr16*], clear `B` flag              |
+| `CLRB`                     | `SETM` `RA`,`RA`            | Store register `RA` &rarr; `RA`, clear `B` flag                    |
+| `SUBI` `#`*imm16*          | `SETI` `RA_SUB`,`#`*imm16*  | `RA` &larr; `RA` - *imm16*, update `B` flag                        |
+| `ADDI` `#`*imm16*          | `SETI` `RA_SUB`,`#-`*imm16* | `RA` &larr; `RA` + *imm16*, update `B` flag (subtract of -*imm16*) |
+| `SUBM` *cadr12*            | `SETM` `RA_SUB`,*cadr12*    | `RA` &larr; `RA` - [*cadr12*], `B` flag updated                    |
+| `CMPI` `#`*imm16*          | `SETI` `RA_CMP`,`#`*imm16*  | test if `RA` < *imm16*, update `B` flag only                       |
+| `CMPM` *cadr12*            | `SETM` `RA_CMP`,*cadr12*    | test it `RA` < [*cadr12*], update `B` flag only                    |
 
 > :mag: **Source and destination operand order:** The `SETI/SETM` assembler instructions always use *destination* &larr; *source*, and the `MOVI/MOVM` (and `MOVE`) instructions always use m68k style *source* &rarr; *destination*. However, note that in the machine code, the source and destination operand words are in *reversed* order between `SETI/MOVI` and `SETM/MOVM` opecodes.  With `SETI/MOVI`, the first opcode word is the *destination* 14-bit XR address, with opcode bits `[13:12]` set to `00` (which are usually already zero in XR addresses, except for the last 1KW of TILEMEM). With `SETM/MOVM`, the first opcode word is the copper memory *source* address with opcode bits `[13:12]` set to `01` (and bits `[15:14]` technically ignored, but usually set to `11`  copper region for consistency).  When self-modifying a `SETM/MOVM` typically you would OR or add predefined `SETM` or `MOVM` symbol to set the opcode bit `[12]`.
 

@@ -29,8 +29,8 @@
 
 // #define DELAY_TIME 15000        // slow human speed
 // #define DELAY_TIME 5000        // human speed
-// #define DELAY_TIME 1000        // impatient human speed
-#define DELAY_TIME 500        // machine speed
+#define DELAY_TIME 1000        // impatient human speed
+//#define DELAY_TIME 500        // machine speed
 
 #define COPPER_TEST            1
 #define AUDIO_CHAINING_TEST    0
@@ -96,74 +96,354 @@ uint8_t moto_m[] = {
     0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xF3, 0x33, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x33};
 
+static int8_t sinData[256] = {
+    0,           // 0
+    3,           // 1
+    6,           // 2
+    9,           // 3
+    12,          // 4
+    15,          // 5
+    18,          // 6
+    21,          // 7
+    24,          // 8
+    27,          // 9
+    30,          // 10
+    33,          // 11
+    36,          // 12
+    39,          // 13
+    42,          // 14
+    45,          // 15
+    48,          // 16
+    51,          // 17
+    54,          // 18
+    57,          // 19
+    59,          // 20
+    62,          // 21
+    65,          // 22
+    67,          // 23
+    70,          // 24
+    73,          // 25
+    75,          // 26
+    78,          // 27
+    80,          // 28
+    82,          // 29
+    85,          // 30
+    87,          // 31
+    89,          // 32
+    91,          // 33
+    94,          // 34
+    96,          // 35
+    98,          // 36
+    100,         // 37
+    102,         // 38
+    103,         // 39
+    105,         // 40
+    107,         // 41
+    108,         // 42
+    110,         // 43
+    112,         // 44
+    113,         // 45
+    114,         // 46
+    116,         // 47
+    117,         // 48
+    118,         // 49
+    119,         // 50
+    120,         // 51
+    121,         // 52
+    122,         // 53
+    123,         // 54
+    123,         // 55
+    124,         // 56
+    125,         // 57
+    125,         // 58
+    126,         // 59
+    126,         // 60
+    126,         // 61
+    126,         // 62
+    126,         // 63
+    127,         // 64
+    126,         // 65
+    126,         // 66
+    126,         // 67
+    126,         // 68
+    126,         // 69
+    125,         // 70
+    125,         // 71
+    124,         // 72
+    123,         // 73
+    123,         // 74
+    122,         // 75
+    121,         // 76
+    120,         // 77
+    119,         // 78
+    118,         // 79
+    117,         // 80
+    116,         // 81
+    114,         // 82
+    113,         // 83
+    112,         // 84
+    110,         // 85
+    108,         // 86
+    107,         // 87
+    105,         // 88
+    103,         // 89
+    102,         // 90
+    100,         // 91
+    98,          // 92
+    96,          // 93
+    94,          // 94
+    91,          // 95
+    89,          // 96
+    87,          // 97
+    85,          // 98
+    82,          // 99
+    80,          // 100
+    78,          // 101
+    75,          // 102
+    73,          // 103
+    70,          // 104
+    67,          // 105
+    65,          // 106
+    62,          // 107
+    59,          // 108
+    57,          // 109
+    54,          // 110
+    51,          // 111
+    48,          // 112
+    45,          // 113
+    42,          // 114
+    39,          // 115
+    36,          // 116
+    33,          // 117
+    30,          // 118
+    27,          // 119
+    24,          // 120
+    21,          // 121
+    18,          // 122
+    15,          // 123
+    12,          // 124
+    9,           // 125
+    6,           // 126
+    3,           // 127
+    0,           // 128
+    -3,          // 129
+    -6,          // 130
+    -9,          // 131
+    -12,         // 132
+    -15,         // 133
+    -18,         // 134
+    -21,         // 135
+    -24,         // 136
+    -27,         // 137
+    -30,         // 138
+    -33,         // 139
+    -36,         // 140
+    -39,         // 141
+    -42,         // 142
+    -45,         // 143
+    -48,         // 144
+    -51,         // 145
+    -54,         // 146
+    -57,         // 147
+    -59,         // 148
+    -62,         // 149
+    -65,         // 150
+    -67,         // 151
+    -70,         // 152
+    -73,         // 153
+    -75,         // 154
+    -78,         // 155
+    -80,         // 156
+    -82,         // 157
+    -85,         // 158
+    -87,         // 159
+    -89,         // 160
+    -91,         // 161
+    -94,         // 162
+    -96,         // 163
+    -98,         // 164
+    -100,        // 165
+    -102,        // 166
+    -103,        // 167
+    -105,        // 168
+    -107,        // 169
+    -108,        // 170
+    -110,        // 171
+    -112,        // 172
+    -113,        // 173
+    -114,        // 174
+    -116,        // 175
+    -117,        // 176
+    -118,        // 177
+    -119,        // 178
+    -120,        // 179
+    -121,        // 180
+    -122,        // 181
+    -123,        // 182
+    -123,        // 183
+    -124,        // 184
+    -125,        // 185
+    -125,        // 186
+    -126,        // 187
+    -126,        // 188
+    -126,        // 189
+    -126,        // 190
+    -126,        // 191
+    -127,        // 192
+    -126,        // 193
+    -126,        // 194
+    -126,        // 195
+    -126,        // 196
+    -126,        // 197
+    -125,        // 198
+    -125,        // 199
+    -124,        // 200
+    -123,        // 201
+    -123,        // 202
+    -122,        // 203
+    -121,        // 204
+    -120,        // 205
+    -119,        // 206
+    -118,        // 207
+    -117,        // 208
+    -116,        // 209
+    -114,        // 210
+    -113,        // 211
+    -112,        // 212
+    -110,        // 213
+    -108,        // 214
+    -107,        // 215
+    -105,        // 216
+    -103,        // 217
+    -102,        // 218
+    -100,        // 219
+    -98,         // 220
+    -96,         // 221
+    -94,         // 222
+    -91,         // 223
+    -89,         // 224
+    -87,         // 225
+    -85,         // 226
+    -82,         // 227
+    -80,         // 228
+    -78,         // 229
+    -75,         // 230
+    -73,         // 231
+    -70,         // 232
+    -67,         // 233
+    -65,         // 234
+    -62,         // 235
+    -59,         // 236
+    -57,         // 237
+    -54,         // 238
+    -51,         // 239
+    -48,         // 240
+    -45,         // 241
+    -42,         // 242
+    -39,         // 243
+    -36,         // 244
+    -33,         // 245
+    -30,         // 246
+    -27,         // 247
+    -24,         // 248
+    -21,         // 249
+    -18,         // 250
+    -15,         // 251
+    -12,         // 252
+    -9,          // 253
+    -6,          // 254
+    -4,          // 255
+};
+
 
 #if COPPER_TEST
 // Copper list
-#if 0
-const uint32_t copper_list[] = {COP_WAIT_V(30 * 0),  COP_MOVEP(0x000, 0),
-                                COP_WAIT_V(30 * 1),  COP_MOVEP(0x111, 0),
-                                COP_WAIT_V(30 * 2),  COP_MOVEP(0x222, 0),
-                                COP_WAIT_V(30 * 3),  COP_MOVEP(0x333, 0),
-                                COP_WAIT_V(30 * 4),  COP_MOVEP(0x444, 0),
-                                COP_WAIT_V(30 * 5),  COP_MOVEP(0x555, 0),
-                                COP_WAIT_V(30 * 6),  COP_MOVEP(0x666, 0),
-                                COP_WAIT_V(30 * 7),  COP_MOVEP(0x777, 0),
-                                COP_WAIT_V(30 * 8),  COP_MOVEP(0x888, 0),
-                                COP_WAIT_V(30 * 9),  COP_MOVEP(0x999, 0),
-                                COP_WAIT_V(30 * 10), COP_MOVEP(0xaaa, 0),
-                                COP_WAIT_V(30 * 11), COP_MOVEP(0xbbb, 0),
-                                COP_WAIT_V(30 * 12), COP_MOVEP(0xccc, 0),
-                                COP_WAIT_V(30 * 13), COP_MOVEP(0xddd, 0),
-                                COP_WAIT_V(30 * 14), COP_MOVEP(0xeee, 0),
-                                COP_WAIT_V(30 * 15), COP_MOVEP(0xfff, 0),
-                                COP_WAIT_V(30 * 16), COP_END()};
 
-const uint16_t copper_list_len = NUM_ELEMENTS(copper_list);
-#else
+uint16_t       cop_none_bin[] = {COP_VPOS(COP_V_EOF)};
+const uint16_t cop_none_size  = NUM_ELEMENTS(cop_none_bin);
 
-#include "cop_diagonal.h"
-
-#include "cop_blend_test.h"
-
-#include "cop_wavey.h"
-
-#endif
-
-static_assert(NUM_ELEMENTS(cop_diagonal_bin) < XR_COPPER_SIZE, "copper list too long");
-static_assert(NUM_ELEMENTS(cop_blend_test_bin) < XR_COPPER_SIZE, "copper list too long");
-static_assert(NUM_ELEMENTS(cop_wavey_bin) < XR_COPPER_SIZE, "copper list too long");
+uint16_t       cop_gray_bin[] = {COP_VPOS(30 * 0),  COP_MOVER(0x000, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 1),  COP_MOVER(0x111, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 2),  COP_MOVER(0x222, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 3),  COP_MOVER(0x333, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 4),  COP_MOVER(0x444, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 5),  COP_MOVER(0x555, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 6),  COP_MOVER(0x666, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 7),  COP_MOVER(0x777, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 8),  COP_MOVER(0x888, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 9),  COP_MOVER(0x999, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 10), COP_MOVER(0xaaa, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 11), COP_MOVER(0xbbb, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 12), COP_MOVER(0xccc, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 13), COP_MOVER(0xddd, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 14), COP_MOVER(0xeee, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 15), COP_MOVER(0xfff, COLOR_A_ADDR + 0),
+                                 COP_VPOS(30 * 16), COP_END()};
+const uint16_t cop_gray_size  = NUM_ELEMENTS(cop_gray_bin);
 
 // 320x200 copper
 // Copper list
-uint16_t copper_320x200[] = {
-    COP_VPOS(40),                          // Wait for line 40
-    COP_MOVER(0x0065, PA_GFX_CTRL),        // Set to 8-bpp + Hx2 + Vx2
-    COP_MOVER(0x0065, PB_GFX_CTRL),        // Set to 8-bpp + Hx2 + Vx2
-    COP_VPOS(440),                         // Wait for line 440
-    COP_MOVER(0x00E5, PA_GFX_CTRL),        // Set to Blank + 8-bpp + Hx2 + Vx2
-    //    COP_MOVI(0x00E5, PB_GFX_CTRL),         // Set to Blank + 8-bpp + Hx2 + Vx2
+uint16_t cop_320x200_bin[] = {
+    COP_VPOS(40),                                          // Wait for line 40
+    COP_MOVER(0x0065, PA_GFX_CTRL),                        // Set to 8-bpp + Hx2 + Vx2
+    COP_MOVER(0x0065, PB_GFX_CTRL),                        // Set to 8-bpp + Hx2 + Vx2
+    COP_VPOS(40 + 400),                                    // Wait for line 440
+    COP_MOVER(0x00E5, PA_GFX_CTRL),                        // Set to Blank + 8-bpp + Hx2 + Vx2
     COP_MOVER(XR_TILE_ADDR + 0x1000, PB_LINE_ADDR),        // Set PB line address to tilemem address
     COP_MOVER(0xF009, PB_GFX_CTRL),                        // Set to Blank + 8-bpp + Hx2 + Vx2
     COP_MOVER(0x0E07, PB_TILE_CTRL),                       // Set to Blank + 8-bpp + Hx2 + Vx2
     COP_MOVER(28, PB_LINE_LEN),                            // Set PB line length
-    COP_VPOS(480),                                         // Wait for line 440
-    COP_MOVER(160, PB_LINE_LEN),                           // Set PB line length
+    COP_VPOS(480),                                         // Wait for offscreen
+    COP_MOVER(320 / 2, PB_LINE_LEN),                       // Set PB line length
     COP_MOVER(0x000F, PB_TILE_CTRL),                       // set back to 8x16 tiles
     COP_MOVER(0x00E5, PA_GFX_CTRL),                        // Set to Blank + 8-bpp + Hx2 + Vx2
     COP_MOVER(0x00E5, PB_GFX_CTRL),                        // Set to Blank + 8-bpp + Hx2 + Vx2
     COP_END()                                              // wait until next frame
 };
+const uint16_t cop_320x200_size = NUM_ELEMENTS(cop_320x200_bin);
 
+#include "cop_diagonal.h"
+static_assert(NUM_ELEMENTS(cop_diagonal_bin) < XR_COPPER_SIZE, "copper list too long");
+
+#include "cop_wavey.h"
+static_assert(NUM_ELEMENTS(cop_wavey_bin) < XR_COPPER_SIZE, "copper list too long");
+
+#include "cop_blend_test.h"
+static_assert(NUM_ELEMENTS(cop_blend_test_bin) < XR_COPPER_SIZE, "copper list too long");
+
+#define COP_FLAG_HPOS (1 << 0)
+#define COP_FLAG_SINE (1 << 1)
+
+struct copper_fx
+{
+    const char * name;
+    uint16_t *   cop_data;
+    uint16_t     cop_length;
+    uint16_t     flags;
+};
+struct copper_fx cop_fx[] = {{"Wavey", cop_wavey_bin, cop_wavey_size, COP_FLAG_SINE},
+                             {"None", cop_none_bin, cop_none_size, 0},
+                             {"gray", cop_gray_bin, cop_gray_size, 0},
+                             {"Diagonal", cop_diagonal_bin, cop_diagonal_size, COP_FLAG_HPOS},
+                             {NULL, NULL, 0, 0}};
+
+uint16_t           cur_cop_fx;
+struct copper_fx * cop_fx_ptr;
 #endif
 
 // dummy global variable
 uint32_t global;        // this is used to prevent the compiler from optimizing out tests
 
-uint16_t      cop_buffer[XR_COPPER_SIZE];
-xosera_info_t initinfo;
+uint16_t cop_buffer[XR_COPPER_SIZE];
 
-uint32_t mem_buffer32[128 * 1024];
-uint16_t mem_buffer[128 * 1024];
+union
+{
+    uint8_t  u8[128 * 1024];
+    uint16_t u16[64 * 1024];
+    uint32_t u32[32 * 1024];
+} buffer;
+
+xosera_info_t initinfo;
 
 // timer helpers
 static uint32_t start_tick;
@@ -209,7 +489,7 @@ static void disable_sd_boot()
     resident_init();                    // install no SD hook next next warm-start
 }
 
-static void wait_vblank_start()
+static inline void wait_vblank_start()
 {
     xwait_not_vblank();
     xwait_vblank();
@@ -301,6 +581,7 @@ static void dprint(const char * str)
 }
 
 static char dprint_buff[4096];
+static void dprintf(const char * fmt, ...) __attribute__((__format__(__printf__, 1, 2)));
 static void dprintf(const char * fmt, ...)
 {
     va_list args;
@@ -328,7 +609,7 @@ static void hexdump(void * ptr, size_t bytes)
                 }
                 dprintf("\n");
             }
-            dprintf("%04x: ", i);
+            dprintf("%04lx: ", i);
         }
         else
         {
@@ -379,7 +660,7 @@ void dump_xosera_regs(void)
     dprintf("Initial Xosera state after init:\n");
     dprintf("DESCRIPTION : \"%s\"\n", initinfo.description_str);
     dprintf("VERSION BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
-    dprintf("GIT HASH    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
+    dprintf("GIT HASH    : #%08lx %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
     dprintf("FEATURE     : 0x%04x\n", feature);
     dprintf("MONITOR RES : %dx%d\n", monwidth, monheight);
     dprintf("\nConfig:\n");
@@ -641,70 +922,64 @@ static void xr_printfxy(int x, int y, const char * fmt, ...)
     va_end(args);
 }
 
+#if COPPER_TEST
+static void setup_copper_fx()
+{
+    cop_fx_ptr = &cop_fx[cur_cop_fx];
+    if (cop_fx[++cur_cop_fx].name == NULL)
+    {
+        cur_cop_fx = 0;
+    }
+}
+
+static uint16_t margin_offset;
+static void     setup_margins(void)
+{
+    if (xosera_vid_width() > 640)
+    {
+        xreg_setw(VID_LEFT, ((xosera_vid_width() - 640) / 2) + 0);
+        xreg_setw(VID_RIGHT, ((xosera_vid_width() - 640) / 2) + 640);
+    }
+    else
+    {
+        xreg_setw(VID_LEFT, 0 + margin_offset);
+        xreg_setw(VID_RIGHT, 640 + margin_offset);
+    }
+}
+
 static void install_copper()
 {
     wait_vblank_start();
+    margin_offset = 0;
+    xreg_setw(PA_HV_SCROLL, 0);
+    xreg_setw(PB_HV_SCROLL, 0);
+
+    if (cop_fx_ptr->flags & COP_FLAG_HPOS)
+    {
+        // modify HPOS wait SOL to be left edge horizontal position in 640x480 or 848x480 modes (including overscan)
+        cop_diagonal_bin[cop_diagonal__hpos_sol] =
+            COP_HPOS((xosera_vid_width() > 640 ? 1088 - 848 - 8 : 800 - 640 - 8));
+        // modify HPOS wait EOL to be right edge horizontal position in 640x480 or 848x480 modes (including overscan)
+        cop_diagonal_bin[cop_diagonal__hpos_eol] = COP_HPOS((xosera_vid_width() > 640 ? 1088 - 1 : 800 - 1));
+    }
+    if (cop_fx_ptr->flags & COP_FLAG_SINE)
+    {
+        uint8_t ti = 0;
+        for (uint16_t i = 0; i < 512; i++)
+        {
+            uint16_t v                              = MAKE_HV_SCROLL((sinData[ti++] >> 3) + 16, 0, 0);
+            cop_wavey_bin[cop_wavey__wavetable + i] = v;
+        }
+        margin_offset = 16;
+    }
+
     xmem_setw_next_addr(XR_COPPER_ADDR);
-#if 0        // copper torture test
-    for (uint16_t i = 0; i < XR_COPPER_SIZE; i++)
+    for (uint16_t i = 0; i < cop_fx_ptr->cop_length; i++)
     {
-        xmem_setw_next(0xA000);
-        xmem_setw_next(i << 2);
+        xmem_setw_next(cop_fx_ptr->cop_data[i]);
     }
-#else
-#if 0
-    for (uint16_t i = 0; i < copper_list_len; i++)
-    {
-        uint32_t op = copper_list[i];
-        xmem_setw_next(op >> 16);
-        xmem_setw_next(op & 0xffff);
-    }
-#else
-
-#if 0
-    // modify HPOS wait SOL to be left edge horizontal position in 640x480 or 848x480 modes (including overscan)
-    cop_diagonal_bin[cop_diagonal__hpos_sol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 848 - 8 : 800 - 640 - 8);
-    // modify HPOS wait EOL to be right edge horizontal position in 640x480 or 848x480 modes (including overscan)
-    cop_diagonal_bin[cop_diagonal__hpos_eol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 1 : 800 - 1);
-    for (uint16_t i = 0; i < cop_diagonal_size; i++)
-    {
-        xmem_setw_next(cop_diagonal_bin[i]);
-    }
-#elif 1
-
-
-    uint16_t h = 0;
-    int16_t d = 1;
-    for (uint16_t i = 0; i < 480; i++)
-    {
-        uint16_t v = MAKE_HV_SCROLL(h, 0, 0);
-        cop_wavey_bin[cop_wavey__wavetable+i] = v;
-        h += d;
-        if (h >= 31 || h == 0)
-            d = -d;
-    }
-
-    for (uint16_t i = 0; i < cop_wavey_size; i++)
-    {
-        xmem_setw_next(cop_wavey_bin[i]);
-    }
-
-#else
-    for (uint16_t i = 50; i < 100; i++)
-    {
-        xmem_setw_next(0x8000);
-        xmem_setw_next(0x0fff);
-        xmem_setw_next(0x2000 | i);
-        xmem_setw_next(0x8000);
-        xmem_setw_next(0x0000);
-        xmem_setw_next(0x2800);
-    }
-    xmem_setw_next(0x3000);
-#endif
-
-#endif
-#endif
 }
+#endif
 
 enum TEST_MODE
 {
@@ -735,7 +1010,7 @@ static long filesize(void * f)
 {
     if (f == NULL)
     {
-        dprintf("%s(%d): NULL fileptr\n");
+        dprintf("%s(%d): NULL fileptr\n", __FILE__, __LINE__);
         return -1;
     }
 
@@ -776,7 +1051,7 @@ static bool load_test_audio(const char * filename, void ** out, int * size)
     uint8_t * data = malloc(fsize);
     if (data == NULL)
     {
-        dprintf("Allocating %ld for \"%s\" failed\n", fsize, filename);
+        dprintf("Allocating %d for \"%s\" failed\n", fsize, filename);
         return false;
     }
     *out = (int8_t *)data;
@@ -809,7 +1084,7 @@ static bool load_test_audio(const char * filename, void ** out, int * size)
 
     if (rsize != fsize)
     {
-        dprintf("\nSize mismatch: ftell %ld vs read %ld\n", fsize, rsize);
+        dprintf("\nSize mismatch: ftell %d vs read %d\n", fsize, rsize);
     }
     *size = fsize;
 
@@ -830,14 +1105,14 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
 
     if (fsize <= 0 || fsize > (128 * 1024))
     {
-        dprintf("Bad size %ld for \"%s\"\n", fsize, filename);
+        dprintf("Bad size %d for \"%s\"\n", fsize, filename);
         return false;
     }
 
     uint8_t * data = malloc(fsize);
     if (data == NULL)
     {
-        dprintf("Allocating %ld for \"%s\" failed\n", fsize, filename);
+        dprintf("Allocating %d for \"%s\" failed\n", fsize, filename);
         return false;
     }
 
@@ -866,7 +1141,7 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
 
     if (rsize != fsize)
     {
-        dprintf("\nSize mismatch: ftell %ld vs read %ld\n", fsize, rsize);
+        dprintf("\nSize mismatch: ftell %d vs read %d\n", fsize, rsize);
     }
     ti->size = fsize >> 1;
 
@@ -884,14 +1159,14 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
         int csize = (int)filesize(file);
         if (csize <= 0 || csize > (512 * 2))
         {
-            dprintf("Bad size %ld for \"%s\"\n", csize, colorname);
+            dprintf("Bad size %d for \"%s\"\n", csize, colorname);
             break;
         }
 
         uint16_t * cdata = malloc(csize);
         if (cdata == NULL)
         {
-            dprintf("Allocating %ld for \"%s\" failed\n", csize, colorname);
+            dprintf("Allocating %d for \"%s\" failed\n", csize, colorname);
             break;
         }
 
@@ -975,9 +1250,7 @@ void show_test_pic(int pic_num, uint16_t addr)
     xreg_setw(PB_GFX_CTRL, 0x0080);
     xreg_setw(VID_CTRL, 0x0000);        // set border
     xmem_setw(XR_COLOR_A_ADDR, 0x0000);
-    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
-
+    setup_margins();
     xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, addr);
     uint16_t * wp = (uint16_t *)ti->data;
@@ -999,7 +1272,6 @@ void show_test_pic(int pic_num, uint16_t addr)
     {
         restore_colors();
     }
-
 
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PA_DISP_ADDR, addr);
@@ -1036,14 +1308,14 @@ static void load_sd_bitmap(const char * filename, int vaddr)
     {
         int cnt = 0;
 
-        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
+        while ((cnt = fl_fread(buffer.u8, 1, 512, file)) > 0)
         {
             if ((vaddr & 0xFFF) == 0)
             {
                 dprintf(".");
             }
 
-            uint16_t * maddr = (uint16_t *)mem_buffer;
+            uint16_t * maddr = (uint16_t *)buffer.u16;
             xm_setw(WR_INCR, 1);
             xm_setw(WR_ADDR, vaddr);
             for (int i = 0; i < (cnt >> 1); i++)
@@ -1073,14 +1345,14 @@ static void load_sd_colors(const char * filename)
         int cnt   = 0;
         int vaddr = 0;
 
-        while ((cnt = fl_fread(mem_buffer, 1, 256 * 2 * 2, file)) > 0)
+        while ((cnt = fl_fread(buffer.u8, 1, 256 * 2 * 2, file)) > 0)
         {
             if ((vaddr & 0x7) == 0)
             {
                 dprintf(".");
             }
 
-            uint16_t * maddr = (uint16_t *)mem_buffer;
+            uint16_t * maddr = (uint16_t *)buffer.u16;
             xwait_vblank();
             xmem_setw_next_addr(XR_COLOR_ADDR);
             for (int i = 0; i < (cnt >> 1); i++)
@@ -1344,7 +1616,6 @@ void print_digit(uint16_t off, uint16_t ll, uint16_t dig, uint16_t color)
 
 void test_colormap()
 {
-
     xwait_not_vblank();
     xwait_vblank();
 
@@ -1368,8 +1639,7 @@ void test_colormap()
     uint16_t h       = 14;
 
     xreg_setw(VID_CTRL, 0x0000);
-    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
+    setup_margins();
     xreg_setw(PA_GFX_CTRL, 0x0065);
     xreg_setw(PA_TILE_CTRL, 0x0C07);
     xreg_setw(PA_DISP_ADDR, 0x0000);
@@ -1475,7 +1745,7 @@ void test_blend()
     }
     xreg_setw(COPP_CTRL, 0x8000);
 
-    delay_check(DELAY_TIME * 5);
+    delay_check(DELAY_TIME);
 
     xreg_setw(COPP_CTRL, 0x0000);
     install_copper();
@@ -1504,7 +1774,7 @@ void test_blit()
 
     // crop left and right 2 pixels
     xr_textmode_pb();
-    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640 - 4);
+    xreg_setw(VID_RIGHT, xreg_getw(VID_RIGHT) - 4);
     xreg_setw(VID_CTRL, 0x00FF);
 
     do
@@ -1547,7 +1817,7 @@ void test_blit()
 
         uint16_t paddr = 0x9b00;
         show_test_pic(0, paddr);
-        xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640 - 4);
+        xreg_setw(VID_RIGHT, xreg_getw(VID_RIGHT) - 4);
         xreg_setw(VID_CTRL, 0x00FF);
         xmem_setw(XR_COLOR_A_ADDR + 255, 0x0000);        // set write address
 
@@ -1697,8 +1967,7 @@ void test_blit()
     xreg_setw(PA_LINE_LEN, 320 / 4);
     xreg_setw(PA_DISP_ADDR, 0x0000);
 
-    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
+    setup_margins();
 }
 
 void test_true_color()
@@ -1783,9 +2052,9 @@ void test_dual_8bpp()
         xreg_setw(PB_GFX_CTRL, 0x0080);
         // install 320x200 "crop" copper list
         xmem_setw_next_addr(XR_COPPER_ADDR);
-        for (uint16_t i = 0; i < NUM_ELEMENTS(copper_320x200); i++)
+        for (uint16_t i = 0; i < cop_320x200_size; i++)
         {
-            xmem_setw_next(copper_320x200[i]);
+            xmem_setw_next(cop_320x200_bin[i]);
         }
         xreg_setw(COPP_CTRL, 0x8000);
         // set pf A 320x240 8bpp (cropped to 320x200)
@@ -1896,6 +2165,7 @@ void test_dual_8bpp()
     restore_colors3();        // colormem B normal colors (alpha 0%)
     xwait_vblank();
     xreg_setw(COPP_CTRL, 0x0000);
+
 #if COPPER_TEST
     install_copper();
 #endif
@@ -1998,7 +2268,7 @@ void test_vram_speed()
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
-        uint32_t * ptr   = mem_buffer32;
+        uint32_t * ptr   = buffer.u32;
         uint16_t   count = 0x8000;        // VRAM long count
         do
         {
@@ -2038,7 +2308,7 @@ void test_vram_speed()
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
-        uint32_t * ptr   = mem_buffer32;
+        uint32_t * ptr   = buffer.u32;
         uint16_t   count = 0x8000;        // VRAM long count
         do
         {
@@ -2089,16 +2359,18 @@ void test_vram_speed()
     }
     dprintf("done\n");
 
-    dprintf("MOVEP.L VRAM write      128KB x 16 (2MB)    %d ms (%d KB/sec)\n",
+    dprintf("MOVEP.L VRAM write      128KB x 16 (2MB)    %lu ms (%lu KB/sec)\n",
             vram_write,
             (1000U * 128 * reps) / vram_write);
-    dprintf(
-        "MOVEP.L VRAM read       128KB x 16 (2MB)    %u ms (%u KB/sec)\n", vram_read, (1000U * 128 * reps) / vram_read);
-    dprintf("MOVE.L  main RAM write  128KB x 16 (2MB)    %u ms (%u KB/sec)\n",
+    dprintf("MOVEP.L VRAM read       128KB x 16 (2MB)    %lu ms (%lu KB/sec)\n",
+            vram_read,
+            (1000U * 128 * reps) / vram_read);
+    dprintf("MOVE.L  main RAM write  128KB x 16 (2MB)    %lu ms (%lu KB/sec)\n",
             main_write,
             (1000U * 128 * reps) / main_write);
-    dprintf(
-        "MOVE.L  main RAM read   128KB x 16 (2MB)    %u ms (%u KB/sec)\n", main_read, (1000U * 128 * reps) / main_read);
+    dprintf("MOVE.L  main RAM read   128KB x 16 (2MB)    %lu ms (%lu KB/sec)\n",
+            main_read,
+            (1000U * 128 * reps) / main_read);
 }
 
 
@@ -2168,269 +2440,9 @@ uint16_t rosco_m68k_CPUMHz()
 }
 #endif
 
-#if 1
-static int8_t sinData[256] = {
-    0,           // 0
-    3,           // 1
-    6,           // 2
-    9,           // 3
-    12,          // 4
-    15,          // 5
-    18,          // 6
-    21,          // 7
-    24,          // 8
-    27,          // 9
-    30,          // 10
-    33,          // 11
-    36,          // 12
-    39,          // 13
-    42,          // 14
-    45,          // 15
-    48,          // 16
-    51,          // 17
-    54,          // 18
-    57,          // 19
-    59,          // 20
-    62,          // 21
-    65,          // 22
-    67,          // 23
-    70,          // 24
-    73,          // 25
-    75,          // 26
-    78,          // 27
-    80,          // 28
-    82,          // 29
-    85,          // 30
-    87,          // 31
-    89,          // 32
-    91,          // 33
-    94,          // 34
-    96,          // 35
-    98,          // 36
-    100,         // 37
-    102,         // 38
-    103,         // 39
-    105,         // 40
-    107,         // 41
-    108,         // 42
-    110,         // 43
-    112,         // 44
-    113,         // 45
-    114,         // 46
-    116,         // 47
-    117,         // 48
-    118,         // 49
-    119,         // 50
-    120,         // 51
-    121,         // 52
-    122,         // 53
-    123,         // 54
-    123,         // 55
-    124,         // 56
-    125,         // 57
-    125,         // 58
-    126,         // 59
-    126,         // 60
-    126,         // 61
-    126,         // 62
-    126,         // 63
-    127,         // 64
-    126,         // 65
-    126,         // 66
-    126,         // 67
-    126,         // 68
-    126,         // 69
-    125,         // 70
-    125,         // 71
-    124,         // 72
-    123,         // 73
-    123,         // 74
-    122,         // 75
-    121,         // 76
-    120,         // 77
-    119,         // 78
-    118,         // 79
-    117,         // 80
-    116,         // 81
-    114,         // 82
-    113,         // 83
-    112,         // 84
-    110,         // 85
-    108,         // 86
-    107,         // 87
-    105,         // 88
-    103,         // 89
-    102,         // 90
-    100,         // 91
-    98,          // 92
-    96,          // 93
-    94,          // 94
-    91,          // 95
-    89,          // 96
-    87,          // 97
-    85,          // 98
-    82,          // 99
-    80,          // 100
-    78,          // 101
-    75,          // 102
-    73,          // 103
-    70,          // 104
-    67,          // 105
-    65,          // 106
-    62,          // 107
-    59,          // 108
-    57,          // 109
-    54,          // 110
-    51,          // 111
-    48,          // 112
-    45,          // 113
-    42,          // 114
-    39,          // 115
-    36,          // 116
-    33,          // 117
-    30,          // 118
-    27,          // 119
-    24,          // 120
-    21,          // 121
-    18,          // 122
-    15,          // 123
-    12,          // 124
-    9,           // 125
-    6,           // 126
-    3,           // 127
-    0,           // 128
-    -3,          // 129
-    -6,          // 130
-    -9,          // 131
-    -12,         // 132
-    -15,         // 133
-    -18,         // 134
-    -21,         // 135
-    -24,         // 136
-    -27,         // 137
-    -30,         // 138
-    -33,         // 139
-    -36,         // 140
-    -39,         // 141
-    -42,         // 142
-    -45,         // 143
-    -48,         // 144
-    -51,         // 145
-    -54,         // 146
-    -57,         // 147
-    -59,         // 148
-    -62,         // 149
-    -65,         // 150
-    -67,         // 151
-    -70,         // 152
-    -73,         // 153
-    -75,         // 154
-    -78,         // 155
-    -80,         // 156
-    -82,         // 157
-    -85,         // 158
-    -87,         // 159
-    -89,         // 160
-    -91,         // 161
-    -94,         // 162
-    -96,         // 163
-    -98,         // 164
-    -100,        // 165
-    -102,        // 166
-    -103,        // 167
-    -105,        // 168
-    -107,        // 169
-    -108,        // 170
-    -110,        // 171
-    -112,        // 172
-    -113,        // 173
-    -114,        // 174
-    -116,        // 175
-    -117,        // 176
-    -118,        // 177
-    -119,        // 178
-    -120,        // 179
-    -121,        // 180
-    -122,        // 181
-    -123,        // 182
-    -123,        // 183
-    -124,        // 184
-    -125,        // 185
-    -125,        // 186
-    -126,        // 187
-    -126,        // 188
-    -126,        // 189
-    -126,        // 190
-    -126,        // 191
-    -127,        // 192
-    -126,        // 193
-    -126,        // 194
-    -126,        // 195
-    -126,        // 196
-    -126,        // 197
-    -125,        // 198
-    -125,        // 199
-    -124,        // 200
-    -123,        // 201
-    -123,        // 202
-    -122,        // 203
-    -121,        // 204
-    -120,        // 205
-    -119,        // 206
-    -118,        // 207
-    -117,        // 208
-    -116,        // 209
-    -114,        // 210
-    -113,        // 211
-    -112,        // 212
-    -110,        // 213
-    -108,        // 214
-    -107,        // 215
-    -105,        // 216
-    -103,        // 217
-    -102,        // 218
-    -100,        // 219
-    -98,         // 220
-    -96,         // 221
-    -94,         // 222
-    -91,         // 223
-    -89,         // 224
-    -87,         // 225
-    -85,         // 226
-    -82,         // 227
-    -80,         // 228
-    -78,         // 229
-    -75,         // 230
-    -73,         // 231
-    -70,         // 232
-    -67,         // 233
-    -65,         // 234
-    -62,         // 235
-    -59,         // 236
-    -57,         // 237
-    -54,         // 238
-    -51,         // 239
-    -48,         // 240
-    -45,         // 241
-    -42,         // 242
-    -39,         // 243
-    -36,         // 244
-    -33,         // 245
-    -30,         // 246
-    -27,         // 247
-    -24,         // 248
-    -21,         // 249
-    -18,         // 250
-    -15,         // 251
-    -12,         // 252
-    -9,          // 253
-    -6,          // 254
-    -4,          // 255
-};
-#endif
 
 #define SILENCE_ADDR (XR_TILE_ADDR + XR_TILE_SIZE - 1)        // last word of TILE memory
-#define SILENCE_LEN  (AUD_LENGTH_TILEMEM_F | (1 - 1))            // tilemem flag, | length -1
+#define SILENCE_LEN  (AUD_LENGTH_TILEMEM_F | (1 - 1))         // tilemem flag, | length -1
 
 static void play_silence()
 {
@@ -2550,10 +2562,10 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
 
     dprintf("%d: Volume (128=1.0): L:%3d/R:%3d    Period (1/pclk): %5d", chan, lv, rv, p);
 
-    xreg_setw(AUD0_LENGTH + chanoff, (bytesize / 2) - 1);           // sample length in words -1 (and VRAM/TILE flag)
-    xreg_setw(AUD0_START + chanoff, test_vaddr);                    // sample address in VRAM
+    xreg_setw(AUD0_LENGTH + chanoff, (bytesize / 2) - 1);              // sample length in words -1 (and VRAM/TILE flag)
+    xreg_setw(AUD0_START + chanoff, test_vaddr);                       // sample address in VRAM
     xreg_setw(AUD0_PERIOD + chanoff, p | AUD_PERIOD_RESTART_F);        // set period and restart sample
-    xreg_setw(AUD0_VOL + chanoff, lv << 8 | rv);                    // set left and right volume
+    xreg_setw(AUD0_VOL + chanoff, lv << 8 | rv);                       // set left and right volume
 
     bool done = false;
 
@@ -3106,18 +3118,14 @@ void     xosera_test()
     dprintf("NOT Installing interrupt handler\n");
 #endif
 
-#if COPPER_TEST
-    install_copper();
-#endif
-
     uint8_t config_num = 0;
 
     while (true)
     {
         uint32_t t = XFrameCount;
-        uint32_t h = t / (60 * 60 * 60);
-        uint32_t m = t / (60 * 60) % 60;
-        uint32_t s = (t / 60) % 60;
+        uint16_t h = t / (60 * 60 * 60);
+        uint16_t m = t / (60 * 60) % 60;
+        uint16_t s = (t / 60) % 60;
 
         if (test_count && (test_count & 3) == 0)
         {
@@ -3126,9 +3134,6 @@ void     xosera_test()
             bool success = xosera_init(config_num % 3);
             dprintf("%s (%dx%d) ]\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
             init_audio();
-#if COPPER_TEST
-            install_copper();
-#endif
 #if 1
             uint16_t ic = xm_getw(INT_CTRL);
             dprintf("Installing interrupt handler.  INT_CTRL=0x%04x\n", ic);
@@ -3141,21 +3146,21 @@ void     xosera_test()
 #endif
             cpu_delay(1000);        // give monitor time to adjust with grey screen (vs black)
         }
-        dprintf("\n*** xosera_test_m68k iteration: %u, running %u:%02u:%02u\n", test_count++, h, m, s);
+        dprintf("\n*** xosera_test_m68k iteration: %lu, running %u:%02u:%02u\n", test_count++, h, m, s);
 
-        xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-        xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
-
+        setup_margins();
 
 #if COPPER_TEST
         if (test_count & 1)
         {
-            dprintf("Copper test enabled for this interation.\n");
+            setup_copper_fx();
+            dprintf("Copper effect \"%s\" enabled for this interation.\n", cop_fx_ptr->name);
+            install_copper();
             xreg_setw(COPP_CTRL, 0x8000);
         }
         else
         {
-            dprintf("Copper test disabled for this iteration.\n");
+            dprintf("Copper disabled for this iteration.\n");
             xreg_setw(COPP_CTRL, 0x0000);
         }
 #endif

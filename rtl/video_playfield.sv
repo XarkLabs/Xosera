@@ -473,7 +473,7 @@ always_ff @(posedge clk) begin
             pf_initial_buf          <= 1'b1;
             pf_pixels_buf_full      <= 1'b0;
             scanout_start_hcount    <= scanout_start_hcount - $bits(scanout_start_hcount)'(pf_fine_hscroll_i);
-            scanout_end_hcount      <= $bits(scanout_end_hcount)'(H_SCANOUT_BEGIN) + vid_right_i;
+            scanout_end_hcount      <= scanout_end_hcount - $bits(scanout_end_hcount)'(pf_fine_hscroll_i);
 
             pf_addr                 <= pf_line_start;       // set start address for this line
 
@@ -537,6 +537,7 @@ always_ff @(posedge clk) begin
             end
 
             scanout_start_hcount    <= $bits(scanout_start_hcount)'(H_SCANOUT_BEGIN) + vid_left_i;
+            scanout_end_hcount      <= $bits(scanout_start_hcount)'(H_SCANOUT_BEGIN) + vid_right_i;
         end
 
         // end of frame or blanked, prepare for next frame

@@ -133,22 +133,22 @@
 #define XR_PB_LINE_ADDR 0x1E        // (- /W ) playfield B scanline start address (loaded at start of line)
 #define XR_PB_UNUSED_1F 0x1F        // (- /- )
 // Audio Registers
-#define XR_AUD0_VOL    0x20        // (- /W ) audio channel 0 8-bit L+R volume (0x80 = 100%)
+#define XR_AUD0_VOL    0x20        // (- /W ) audio channel 0 8-bit L[15:8]+R[7:0] volume (0x80 = 100%)
 #define XR_AUD0_PERIOD 0x21        // (- /W+) audio channel 0 15-bit period, bit [15] force restart
 #define XR_AUD0_LENGTH 0x22        // (- /W ) audio channel 0 15-bit sample word length-1, bit [15] tile mem
-#define XR_AUD0_START  0x23        // (- /W+) audio channel 0 sample start address (vram/tilemem), clear reload
-#define XR_AUD1_VOL    0x24        // (- /W ) audio channel 1 8-bit L+R volume (0x80 = 100%)
+#define XR_AUD0_START  0x23        // (- /W+) audio channel 0 sample start add (vram/tilemem), writes next pending
+#define XR_AUD1_VOL    0x24        // (- /W ) audio channel 1 8-bit L[15:8]+R[7:0] volume (0x80 = 100%)
 #define XR_AUD1_PERIOD 0x25        // (- /W+) audio channel 1 15-bit period, bit [15] force restart
 #define XR_AUD1_LENGTH 0x26        // (- /W ) audio channel 1 15-bit sample word length-1, bit [15] tile mem
-#define XR_AUD1_START  0x27        // (- /W+) audio channel 1 sample start address (vram/tilemem), clear reload
-#define XR_AUD2_VOL    0x28        // (- /W ) audio channel 2 8-bit L+R volume (0x80 = 100%)
+#define XR_AUD1_START  0x27        // (- /W+) audio channel 1 sample start add (vram/tilemem), writes next pending
+#define XR_AUD2_VOL    0x28        // (- /W ) audio channel 2 8-bit L[15:8]+R[7:0] volume (0x80 = 100%)
 #define XR_AUD2_PERIOD 0x29        // (- /W+) audio channel 2 15-bit period, bit [15] force restart
 #define XR_AUD2_LENGTH 0x2A        // (- /W ) audio channel 2 15-bit sample word length-1, bit [15] tile mem
-#define XR_AUD2_START  0x2B        // (- /W+) audio channel 2 sample start address (vram/tilemem), clear reload
-#define XR_AUD3_VOL    0x2C        // (- /W ) audio channel 3 8-bit L+R volume (0x80 = 100%)
+#define XR_AUD2_START  0x2B        // (- /W+) audio channel 2 sample start add (vram/tilemem), writes next pending
+#define XR_AUD3_VOL    0x2C        // (- /W ) audio channel 3 8-bit L[15:8]+R[7:0] volume (0x80 = 100%)
 #define XR_AUD3_PERIOD 0x2D        // (- /W+) audio channel 3 15-bit period, bit [15] force restart
 #define XR_AUD3_LENGTH 0x2E        // (- /W ) audio channel 3 15-bit sample word length-1, bit [15] tile mem
-#define XR_AUD3_START  0x2F        // (- /W+) audio channel 3 sample start address (vram/tilemem), clear reload
+#define XR_AUD3_START  0x2F        // (- /W+) audio channel 3 sample start add (vram/tilemem), writes next pending
 // (Registers 0x30-0x3F reserved)
 // Blitter Registers
 #define XR_BLIT_CTRL  0x40        // (- /W ) blit control ([15:8]=transp value, [5]=8 bpp, [4]=transp on, [0]=S constant)

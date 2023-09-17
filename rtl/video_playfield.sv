@@ -176,12 +176,10 @@ always_comb begin
 
     case (pf_fetch)
         FETCH_IDLE: begin
-            if (mem_fetch_i) begin                          // delay scanline until mem_fetch_active
-                if (pf_bitmap_i) begin
-                    pf_fetch_next   = FETCH_ADDR_BITMAP;
-                end else begin
-                    pf_fetch_next   = FETCH_ADDR_TILEMAP;
-                end
+            if (pf_bitmap_i) begin
+                pf_fetch_next   = FETCH_ADDR_BITMAP;
+            end else begin
+                pf_fetch_next   = FETCH_ADDR_TILEMAP;
             end
         end
         // bitmap mode
@@ -486,7 +484,6 @@ always_ff @(posedge clk) begin
             pf_pixels               <= 64'he3e3e3e3e3e3e3e3;
             pf_pixels_buf           <= 64'he3e3e3e3e3e3e3e3;
 `endif
-            pf_pixels[63:56]        <= border_color_i;        // set border_color_i (in case blanked)
         end
 
         // when "scrolled" scanline starts outputting (before display if scrolled)
@@ -501,7 +498,6 @@ always_ff @(posedge clk) begin
         // when scanline stops outputting
         if (scanout_end) begin
             scanout             <= 1'b0;
-            pf_fetch            <= FETCH_IDLE;          // reset fetch state
             pf_pixels[63:56]    <= border_color_i;
         end
 
@@ -536,6 +532,7 @@ always_ff @(posedge clk) begin
                 end
             end
 
+            pf_pixels[63:56]        <= border_color_i;        // set border_color_i (in case blanked)
             scanout_start_hcount    <= $bits(scanout_start_hcount)'(H_SCANOUT_BEGIN) + vid_left_i;
             scanout_end_hcount      <= $bits(scanout_start_hcount)'(H_SCANOUT_BEGIN) + vid_right_i;
         end

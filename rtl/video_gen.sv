@@ -415,7 +415,7 @@ always_ff @(posedge clk) begin
 `ifdef EN_COPPER_INIT
         border_color        <= '0;
 `else
-        border_color        <= 8h'08;           // w/o copper init, default grey
+        border_color        <= 8'h08;           // w/o copper init, default grey
 `endif
         vid_colorswap       <= 1'b0;
         vid_left            <= '0;

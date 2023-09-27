@@ -29,8 +29,8 @@
 
 // #define DELAY_TIME 15000        // slow human speed
 // #define DELAY_TIME 5000        // human speed
-#define DELAY_TIME 1000        // impatient human speed
-//#define DELAY_TIME 500        // machine speed
+#define DELAY_TIME 10000        // impatient human speed
+// #define DELAY_TIME 500        // machine speed
 
 #define COPPER_TEST            1
 #define AUDIO_CHAINING_TEST    0
@@ -746,8 +746,13 @@ static void reset_vid(void)
 
     xreg_setw(VID_CTRL, 0x0008);
     xreg_setw(COPP_CTRL, 0x0000);        // disable copper
+#if 0
     xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
     xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
+#else
+    xosera_set_left((xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xosera_set_right((xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
+#endif
     xreg_setw(PA_GFX_CTRL, 0x0000);
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PA_DISP_ADDR, 0x0000);
@@ -937,13 +942,23 @@ static void     setup_margins(void)
 {
     if (xosera_vid_width() > 640)
     {
+#if 0
         xreg_setw(VID_LEFT, ((xosera_vid_width() - 640) / 2) + 0);
         xreg_setw(VID_RIGHT, ((xosera_vid_width() - 640) / 2) + 640);
+#else
+        xosera_set_left(((xosera_vid_width() - 640) / 2) + margin_offset);
+        xosera_set_right(((xosera_vid_width() - 640) / 2) + 640);
+#endif
     }
     else
     {
+#if 0
         xreg_setw(VID_LEFT, 0 + margin_offset);
         xreg_setw(VID_RIGHT, 640 + margin_offset);
+#else
+        xosera_set_left(0 + margin_offset);
+        xosera_set_right(640);
+#endif
     }
 }
 
@@ -964,11 +979,14 @@ static void install_copper()
     }
     if (cop_fx_ptr->flags & COP_FLAG_SINE)
     {
-        uint8_t ti = 0;
-        for (uint16_t i = 0; i < 512; i++)
+        uint8_t  ti  = 0;
+        uint16_t eol = (xosera_vid_width() > 640 ? 1088 - 2 : 800 - 2) - 18;
+        for (uint16_t i = 0; i < 512; i += 2)
         {
-            uint16_t v                              = MAKE_HV_SCROLL((sinData[ti++] >> 3) + 16, 0, 0);
-            cop_wavey_bin[cop_wavey__wavetable + i] = v;
+            uint16_t v                                  = MAKE_HV_SCROLL((sinData[ti] >> 3) + 16, 0, 0);
+            cop_wavey_bin[cop_wavey__wavetable + i]     = v;
+            uint16_t r                                  = eol - (sinData[ti++] >> 3);
+            cop_wavey_bin[cop_wavey__wavetable + 1 + i] = r;
         }
         margin_offset = 16;
     }
@@ -2789,21 +2807,21 @@ const char blurb[] =
     "  \xf9  VGA output at 640x480 or 848x480 16:9 wide-screen (both @ 60Hz)\n"
     "  \xf9  Register based interface using 16 direct 16-bit registers\n"
     "  \xf9  Additional indirect read/write registers for easy use and programming\n"
+    "  \xf9  Fast 8-bit bus interface (using MOVEP) for rosco_m68k (by Ross Bamford)\n"
     "  \xf9  Read/write VRAM with programmable read/write address increment\n"
     "  \xf9  Optional easy pixel X,Y bitmap address and write-mask calculation\n"
-    "  \xf9  Fast 8-bit bus interface (using MOVEP) for rosco_m68k (by Ross Bamford)\n"
     "  \xf9  Dual video planes (playfields) with alpha color blending and priority\n"
     "  \xf9  Dual 256 color palettes with 12-bit RGB (4096 colors) and 4-bit \"alpha\"\n"
     "  \xf9  Read/write tile memory for an additional 10KB of tiles or tilemap\n"
-    "  \xf9  Text mode with up to 8x16 glyphs and 16 forground & background colors\n"
-    "  \xf9  Graphic tile modes with 1024 8x8 glyphs, 16/256 colors and H/V tile mirror\n"
+    "  \xf9  Text mode with up to 8x16 glyphs and 16 foreground & background colors\n"
+    "  \xf9  Graphic tiled modes with 1024 glyphs, 16/256 colors and H/V tile mirror\n"
     "  \xf9  Bitmap modes with 1 (plus attribute colors), 4 or 8 bits per pixel\n"
     "  \xf9  32x32 16 color native resolution pointer \"sprite\" overlay\n"
-    "  \xf9  Fast 2-D \"blitter\" unit with transparency, masking, shifting and logic ops\n"
-    "  \xf9  Screen synchronized \"copper\" CPU to change colors and registers mid-screen\n"
+    "  \xf9  Fast 2-D \"blitter\" with transparency, masking, shifting and logic ops\n"
+    "  \xf9  Screen synchronized \"copper\" to change colors and registers mid-screen\n"
     "  \xf9  Wavetable DMA 8-bit audio with 4 independent stereo channels\n"
     "  \xf9  Pixel H/V repeat of 1x, 2x, 3x or 4x (e.g. for 424x240 or 320x240)\n"
-    "  \xf9  Fractional H/V repeat scaling (e.g. for 320x200 or 512x384 retro modes)\n"
+    "  \xf9  Fractional H/V repeat scaling (for 320x200 or 512x384 retro modes)\n"
     "\n"
     "\n";
 

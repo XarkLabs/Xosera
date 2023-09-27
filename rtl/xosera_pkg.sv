@@ -721,7 +721,4 @@ typedef logic [xv::POINTER_W-1:0]               pointer_t;      // pointer image
 typedef logic [$clog2(xv::TOTAL_WIDTH)-1:0]     hres_t;         // horizontal coordinate types
 typedef logic [$clog2(xv::TOTAL_HEIGHT)-1:0]    vres_t;         // vertical coordinate types
 
-typedef logic [$clog2(xv::VISIBLE_WIDTH)-1:0]   hres_vis_t;     // horizontal visible coordinate types
-typedef logic [$clog2(xv::VISIBLE_HEIGHT)-1:0]  vres_vis_t;     // vertical visible coordinate types
-
 `endif

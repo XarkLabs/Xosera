@@ -68,8 +68,8 @@ module video_gen (
 // video generation signals
 color_t             border_color;
 logic               vid_colorswap;                      // COLORMEM A/B swap
-hres_vis_t          vid_left;                           // left video border
-hres_vis_t          vid_right;                          // right video border
+hres_t              vid_left;                           // left video border
+hres_t              vid_right;                          // right video border
 addr_t              line_set_addr;                      // address for on-the-fly addr set
 
 `ifdef EN_POINTER
@@ -135,7 +135,7 @@ logic               pb_tile_sel;                        // tile mem read select
 tile_addr_t         pb_tile_addr;                       // tile mem word address out (16x5K)
 `endif
 
-localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;   // memory prefetch starts early
+localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-48;   // memory prefetch starts early
 localparam H_MEM_END        = xv::TOTAL_WIDTH-8;        // memory fetch can end a bit early
 
 // debug signals

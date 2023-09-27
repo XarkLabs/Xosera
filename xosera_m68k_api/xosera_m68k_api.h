@@ -119,6 +119,8 @@ int  xosera_max_vpos();
 void xosera_set_pointer(int16_t  x_pos,                  // native pixel X for pointer upper left
                         int16_t  y_pos,                  // native pixel Y for pointer upper left
                         uint16_t colormap_index);        // colormap_index = 0xS000 (upper 4-bits colorA index)
+void xosera_set_left(uint16_t left);                     // left border edge (0 to visible width-1)
+void xosera_set_right(uint16_t right);                   // right border edge (1 to visible width)
 int  xosera_aud_channels();
 bool xosera_get_info(xosera_info_t * info);              // retrieve init xosera_info_t (valid after xosera reconfig)
 bool xosera_sync();                                      // true if Xosera present and responding

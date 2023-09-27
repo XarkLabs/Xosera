@@ -24,7 +24,8 @@ entry
                 HPOS    #0                              ; no-op
 ; set regs that aren't friendly when defaulted to zero
                 MOVE    #$0008,XR_VID_CTRL              ; grey border color
-                MOVE    #H_VIS,XR_VID_RIGHT             ; set right border
+                MOVE    #H_START-2,XR_VID_LEFT          ; set left border (start 2 pixel latency)
+                MOVE    #H_END,XR_VID_RIGHT             ; set right border
 
                 MOVE    #$0080,XR_PA_GFX_CTRL           ; blank pa
                 MOVE    #$000F,XR_PA_TILE_CTRL          ; set to 8x16 tiles @ tilemem 0x0000
@@ -35,6 +36,7 @@ entry
                 MOVE    #H_VIS/8,XR_PB_LINE_LEN         ; set default line len
 
                 VPOS    #V_WAITBLIT                     ; wait until blitter ready
+                MOVI    #(VPOS|V_EOF),entry             ; prevent running init twice
                 MOVE    #$0001,XR_BLIT_CTRL             ; no transp, constS
                 MOVE    #$0000,XR_BLIT_ANDC             ; ANDC constant
                 MOVE    #$0000,XR_BLIT_XOR              ; XOR constant
@@ -45,14 +47,7 @@ entry
                 MOVE    #$FF00,XR_BLIT_SHIFT            ; no edge masking or shifting
                 MOVE    #$0000,XR_BLIT_LINES            ; 1-D blit (no repeat count)
                 MOVE    #$10000-1,XR_BLIT_WORDS         ; all VRAM
-clear_copp      MOVI    #VPOS|V_EOF,entry               ; prevent running init twice
-                LDM     clear_copp
-                ADDI    #1
-                STM     clear_copp
-                CMPI    #clear_copp
-                BRLT    clear_copp
                 VPOS    #V_WAITBLIT                     ; wait until blitter ready
-                MOVI    #$0000,XR_COPP_CTRL
-                fill    (VPOS|V_EOF),($C400-.)
-clear_end
+                MOVI    #$0000,XR_COPP_CTRL             ; disable copper
+                fill    (VPOS|V_EOF),($C400-.)          ; fill with VPOS #V_EOF
                 .end

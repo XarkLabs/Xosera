@@ -469,7 +469,8 @@ uint16_t     BusInterface::test_data[32768] = {
     REG_WAITHSYNC(),
     // initialize non-zero Xosera registers
     XREG_SETW(VID_CTRL, 0x0008),
-    XREG_SETW(VID_RIGHT, VISIBLE_WIDTH),
+    XREG_SETW(VID_LEFT, OFFSCREEN_WIDTH-2),
+    XREG_SETW(VID_RIGHT, TOTAL_WIDTH-1),
     XREG_SETW(PA_GFX_CTRL, 0x0080),
     XREG_SETW(PA_TILE_CTRL, 0x000F),
     XREG_SETW(PA_LINE_LEN, VISIBLE_WIDTH / 8),

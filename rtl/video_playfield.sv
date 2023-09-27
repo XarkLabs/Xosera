@@ -532,19 +532,19 @@ always_ff @(posedge clk) begin
                 end
             end
 
-            pf_pixels[63:56]        <= border_color_i;        // set border_color_i (in case blanked)
             scanout_start_hcount    <= $bits(scanout_start_hcount)'(H_SCANOUT_BEGIN) + vid_left_i;
             scanout_end_hcount      <= $bits(scanout_start_hcount)'(H_SCANOUT_BEGIN) + vid_right_i;
         end
 
         // end of frame or blanked, prepare for next frame
         if (pf_blank_i || end_of_frame_i) begin         // is last pixel of frame?
-            pf_addr         <= pf_start_addr_i;             // set start of display data
-            pf_line_start   <= pf_start_addr_i;             // set line to start of display data
+            pf_addr             <= pf_start_addr_i;             // set start of display data
+            pf_line_start       <= pf_start_addr_i;             // set line to start of display data
 
-            pf_v_count      <= pf_v_repeat_i - pf_fine_vscroll_i[1:0];  // fine scroll within scaled line (v repeat)
-            pf_tile_y       <= pf_fine_vscroll_i[5:2];      // fine scroll tile line
-            pf_v_frac_count <= '0;
+            pf_v_count          <= pf_v_repeat_i - pf_fine_vscroll_i[1:0];  // fine scroll within scaled line (v repeat)
+            pf_tile_y           <= pf_fine_vscroll_i[5:2];      // fine scroll tile line
+            pf_v_frac_count     <= '0;
+            pf_pixels[63:56]    <= border_color_i;        // set border_color_i (in case blanked)
         end
     end
 end

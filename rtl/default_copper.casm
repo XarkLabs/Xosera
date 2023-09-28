@@ -24,8 +24,8 @@ entry
                 HPOS    #0                              ; no-op
 ; set regs that aren't friendly when defaulted to zero
                 MOVE    #$0008,XR_VID_CTRL              ; grey border color
-                MOVE    #H_START-2,XR_VID_LEFT          ; set left border (start 2 pixel latency)
-                MOVE    #H_END,XR_VID_RIGHT             ; set right border
+                MOVE    #0,XR_VID_LEFT                  ; set left border
+                MOVE    #H_VIS,XR_VID_RIGHT             ; set right border
 
                 MOVE    #$0080,XR_PA_GFX_CTRL           ; blank pa
                 MOVE    #$000F,XR_PA_TILE_CTRL          ; set to 8x16 tiles @ tilemem 0x0000

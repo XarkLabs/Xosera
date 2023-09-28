@@ -468,8 +468,8 @@ always_ff @(posedge clk) begin
         if (mem_fetch_start_i) begin       // on line fetch start signal
             pf_initial_buf          <= 1'b1;
             pf_pixels_buf_full      <= 1'b0;
-            scanout_start_hcount    <= vid_left_i - $bits(scanout_start_hcount)'(pf_fine_hscroll_i);
-            scanout_end_hcount      <= vid_right_i;
+            scanout_start_hcount    <= (xv::OFFSCREEN_WIDTH-2 + vid_left_i) - $bits(scanout_start_hcount)'(pf_fine_hscroll_i);
+            scanout_end_hcount      <= xv::OFFSCREEN_WIDTH-1 + vid_right_i;
 
             pf_addr                 <= pf_line_start;       // set start address for this line
 

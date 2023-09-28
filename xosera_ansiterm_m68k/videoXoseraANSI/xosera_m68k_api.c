@@ -209,22 +209,6 @@ void xosera_set_pointer(int16_t x, int16_t y, uint16_t colormap_index)
     xreg_setw(POINTER_V, colormap_index | y);
 }
 
-void xosera_set_left(uint16_t left)
-{
-    xv_prep();
-
-    uint16_t left_edge = (xm_getbl(FEATURE) & FEATURE_MONRES_F) ? MODE_848_LEFT_H - 2 : MODE_640_LEFT_H - 2;    // 2 pixel start latency
-    xreg_setw(VID_LEFT, left_edge + left);
-}
-
-void xosera_set_right(uint16_t right)
-{
-    xv_prep();
-
-    uint16_t right_edge = (xm_getbl(FEATURE) & FEATURE_MONRES_F) ? MODE_848_LEFT_H - 1 : MODE_640_LEFT_H - 1;   // inclusive end pixel
-    xreg_setw(VID_RIGHT, right_edge + right);
-}
-
 int xosera_aud_channels()
 {
     xv_prep();

@@ -16,8 +16,8 @@
 2000                 //   24 c000: 	                HPOS    #0                              ; no-op
                      //   25       	; set regs that aren't friendly when defaulted to zero
 0000 0008            //   26 c001: 	                MOVE    #$0008,XR_VID_CTRL              ; grey border color
-0004 00EE            //   27 c003: 	                MOVE    #H_START-2,XR_VID_LEFT          ; set left border (start 2 pixel latency)
-0005 043F            //   28 c005: 	                MOVE    #H_END,XR_VID_RIGHT             ; set right border
+0004 00EE            //   27 c003: 	                MOVE    #0,XR_VID_LEFT                  ; set left border
+0005 0350            //   28 c005: 	                MOVE    #H_VIS,XR_VID_RIGHT             ; set right border
                      //   29
 0010 0080            //   30 c007: 	                MOVE    #$0080,XR_PA_GFX_CTRL           ; blank pa
 0011 000F            //   31 c009: 	                MOVE    #$000F,XR_PA_TILE_CTRL          ; set to 8x16 tiles @ tilemem 0x0000

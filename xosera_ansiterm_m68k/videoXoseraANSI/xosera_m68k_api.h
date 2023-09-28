@@ -486,4 +486,10 @@ extern xosera_ptr_t xosera_ptr;
 // return UART received character (call when uart_get_ready() returns true)
 #define xuart_get_byte() (xosera_ptr[XM_UART >> 2].b.l)
 
+// set left border (normally 0, up to right border)
+#define xosera_set_left(left)   xreg_setw(VID_LEFT, left)
+
+// set right border (normally width, down to left border)
+#define xosera_set_right(right) xreg_setw(VID_RIGHT, right)
+
 #endif        // XOSERA_M68K_API_H

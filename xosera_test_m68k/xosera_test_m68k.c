@@ -746,13 +746,8 @@ static void reset_vid(void)
 
     xreg_setw(VID_CTRL, 0x0008);
     xreg_setw(COPP_CTRL, 0x0000);        // disable copper
-#if 0
     xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
     xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
-#else
-    xosera_set_left((xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-    xosera_set_right((xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
-#endif
     xreg_setw(PA_GFX_CTRL, 0x0000);
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PA_DISP_ADDR, 0x0000);
@@ -942,23 +937,13 @@ static void     setup_margins(void)
 {
     if (xosera_vid_width() > 640)
     {
-#if 0
-        xreg_setw(VID_LEFT, ((xosera_vid_width() - 640) / 2) + 0);
-        xreg_setw(VID_RIGHT, ((xosera_vid_width() - 640) / 2) + 640);
-#else
-        xosera_set_left(((xosera_vid_width() - 640) / 2) + margin_offset);
+        xosera_set_left(((xosera_vid_width() - 640) / 2));
         xosera_set_right(((xosera_vid_width() - 640) / 2) + 640);
-#endif
     }
     else
     {
-#if 0
-        xreg_setw(VID_LEFT, 0 + margin_offset);
-        xreg_setw(VID_RIGHT, 640 + margin_offset);
-#else
-        xosera_set_left(0 + margin_offset);
-        xosera_set_right(640);
-#endif
+        xosera_set_left(0);
+        xosera_set_right(xosera_vid_width());
     }
 }
 
@@ -980,7 +965,7 @@ static void install_copper()
     if (cop_fx_ptr->flags & COP_FLAG_SINE)
     {
         uint8_t  ti  = 0;
-        uint16_t eol = (xosera_vid_width() > 640 ? 1088 - 2 : 800 - 2) - 18;
+        uint16_t eol = (xosera_vid_width() > 640 ? 848-1 : 640-1) - 17;
         for (uint16_t i = 0; i < 512; i += 2)
         {
             uint16_t v                                  = MAKE_HV_SCROLL((sinData[ti] >> 3) + 16, 0, 0);

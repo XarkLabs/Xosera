@@ -22,7 +22,7 @@
  Yosys 0.33+67 (git sha1 076c5ceb7, aarch64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
 
 
--- Running command `verilog_defines -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=0 -DGITHASH=3ad2c7b -DBUILDDATE=20230928 -DFPGA_CONFIG_NUM=0 -DMODE_640x480 -DPMOD_DIGILENT_VGA -DEN_PF_B -DEN_AUDIO=4 -DICE40UP5K -DUPDUINO ; read_verilog -I. -sv upduino/xosera_upd.sv ./acia.sv ./acia_rx.sv ./acia_tx.sv ./audio_dac.sv ./audio_mem.sv ./audio_mixer_slim.sv ./blitter_slim.sv ./bus_interface.sv ./colormem.sv ./copper_slim.sv ./coppermem.sv ./pointermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend_2bit.sv ./video_blend_4bit.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv  ; synth_ice40 -device u -no-rw-check -abc9 -dff -top xosera_upd -json upduino/xosera_upd_aud4_vga_640x480.json' --
+-- Running command `verilog_defines -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=0 -DGITHASH=d6c871c -DBUILDDATE=20230929 -DFPGA_CONFIG_NUM=0 -DMODE_640x480 -DPMOD_DIGILENT_VGA -DEN_PF_B -DEN_AUDIO=4 -DICE40UP5K -DUPDUINO ; read_verilog -I. -sv upduino/xosera_upd.sv ./acia.sv ./acia_rx.sv ./acia_tx.sv ./audio_dac.sv ./audio_mem.sv ./audio_mixer_slim.sv ./blitter_slim.sv ./bus_interface.sv ./colormem.sv ./copper_slim.sv ./coppermem.sv ./pointermem.sv ./reg_interface.sv ./spi_target.sv ./tilemem.sv ./video_blend_2bit.sv ./video_blend_4bit.sv ./video_gen.sv ./video_playfield.sv ./video_timing.sv ./vram.sv ./vram_arb.sv ./xosera_main.sv ./xosera_pkg.sv ./xrmem_arb.sv  ; synth_ice40 -device u -no-rw-check -abc9 -dff -top xosera_upd -json upduino/xosera_upd_aud4_vga_640x480.json' --
 
 1. Executing Verilog-2005 frontend: upduino/xosera_upd.sv
 Parsing SystemVerilog input from `upduino/xosera_upd.sv' to AST representation.
@@ -138,7 +138,7 @@ Successfully finished Verilog frontend.
 24. Executing Verilog-2005 frontend: ./xosera_main.sv
 Parsing SystemVerilog input from `./xosera_main.sv' to AST representation.
 Generating RTLIL representation for module `\xosera_main'.
-   XOSERA xosera_info:    Xosera v0.40 20230928 >#03AD2C7B iCE40UP5K 128KB PF_B BLND COPP BLIT PIXA PNTR AUD4
+   XOSERA xosera_info:    Xosera v0.40 20230929 >#0D6C871C iCE40UP5K 128KB PF_B BLND COPP BLIT PIXA PNTR AUD4
    XOSERA configuration:  MODE_640x480@60 PF_B BLND COPP BLIT PIXA PNTR AUD4 
 Successfully finished Verilog frontend.
 
@@ -6953,8 +6953,8 @@ Using template $paramod$0851ad6cec06b8ea5b26143a084b735996872cab\$__ICE40_RAM4K_
 Using template $paramod$17caa9303e468e73d2953c73943f07572b480489\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$7adc4723456aefe467a20eff220565b6e6248de1\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$0252c4b0b7e048b05077e9fb5d2249120778bb23\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$ce8d8ddd557920a763efb99c9c04e36c27e160d6\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
-Using template $paramod$cb3ddc7a4eff9f71111a57214baba6bf07cb2ab7\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$f2cbc7683dfbb0e942080e287263f69a5eb9b95a\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
+Using template $paramod$a32c9471068c0cafab87c4342a2334574d224b89\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$7823027dbf684d40c5eedeea82cc0a317c1ee338\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$385303267beae408c8105c97b6bc1d50a76abbc6\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
 Using template $paramod$ac334883a942b3b1461157364f08e545ab8ada8b\$__ICE40_RAM4K_ for cells of type $__ICE40_RAM4K_.
@@ -7983,19 +7983,19 @@ Finding unused cells or wires in module \SB_DFFSS..
 
 27.41.9.2. Continuing SUBMOD pass.
 Creating submodule $abc9_flop (\SB_DFF_$abc9_flop) of module \SB_DFF.
+  signal $auto$abc9_ops.cc:506:prep_dff_submod$47204: output \n1
+  signal \C: input \C
   signal \D: input \D
   signal \Q: input \Q
-  signal \C: input \C
-  signal $auto$abc9_ops.cc:506:prep_dff_submod$47204: output \n1
   cell $specify$1529 ($specify3)
   cell $specify$1528 ($specrule)
   cell $auto$abc9_ops.cc:507:prep_dff_submod$47205 ($_MUX_)
 Creating submodule $abc9_flop (\SB_DFFE_$abc9_flop) of module \SB_DFFE.
   signal $auto$abc9_ops.cc:506:prep_dff_submod$47206: output \n1
   signal \Q: input \Q
-  signal \E: input \E
-  signal \D: input \D
   signal \C: input \C
+  signal \D: input \D
+  signal \E: input \E
   signal $0\Q[0:0]: internal
   cell $specify$1532 ($specify3)
   cell $specify$1531 ($specrule)
@@ -8004,16 +8004,16 @@ Creating submodule $abc9_flop (\SB_DFFE_$abc9_flop) of module \SB_DFFE.
   cell $auto$abc9_ops.cc:507:prep_dff_submod$47207 ($_MUX_)
 Creating submodule $abc9_flop (\SB_DFFESR_$abc9_flop) of module \SB_DFFESR.
   signal $auto$abc9_ops.cc:506:prep_dff_submod$47208: output \n1
+  signal \D: input \D
+  signal \E: input \E
+  signal \C: input \C
+  signal $logic_not$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:647$1714_Y: internal
+  signal $procmux$8080_Y: internal
+  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:646$1713_Y: internal
+  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:647$1715_Y: internal
   signal \Q: input \Q
   signal \R: input \R
-  signal \E: input \E
-  signal \D: input \D
-  signal \C: input \C
   signal $0\Q[0:0]: internal
-  signal $procmux$8080_Y: internal
-  signal $logic_not$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:647$1714_Y: internal
-  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:647$1715_Y: internal
-  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:646$1713_Y: internal
   cell $specify$1553 ($specify3)
   cell $specify$1552 ($specify3)
   cell $specify$1551 ($specrule)
@@ -8026,17 +8026,17 @@ Creating submodule $abc9_flop (\SB_DFFESR_$abc9_flop) of module \SB_DFFESR.
   cell $auto$simplemap.cc:196:simplemap_lognot$47198 ($_NOT_)
   cell $auto$abc9_ops.cc:507:prep_dff_submod$47209 ($_MUX_)
 Creating submodule $abc9_flop (\SB_DFFESS_$abc9_flop) of module \SB_DFFESS.
-  signal \S: input \S
+  signal $auto$abc9_ops.cc:506:prep_dff_submod$47210: output \n1
   signal \Q: input \Q
-  signal \E: input \E
+  signal \S: input \S
+  signal $0\Q[0:0]: internal
   signal \D: input \D
   signal \C: input \C
-  signal $0\Q[0:0]: internal
   signal $procmux$8073_Y: internal
+  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:787$1722_Y: internal
   signal $logic_not$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:788$1723_Y: internal
   signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:788$1724_Y: internal
-  signal $logic_and$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:787$1722_Y: internal
-  signal $auto$abc9_ops.cc:506:prep_dff_submod$47210: output \n1
+  signal \E: input \E
   cell $specify$1563 ($specify3)
   cell $specify$1562 ($specify3)
   cell $specify$1561 ($specrule)
@@ -8049,12 +8049,12 @@ Creating submodule $abc9_flop (\SB_DFFESS_$abc9_flop) of module \SB_DFFESS.
   cell $auto$simplemap.cc:196:simplemap_lognot$47192 ($_NOT_)
   cell $auto$abc9_ops.cc:507:prep_dff_submod$47211 ($_MUX_)
 Creating submodule $abc9_flop (\SB_DFFSR_$abc9_flop) of module \SB_DFFSR.
-  signal $logic_not$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:394$1701_Y: internal
-  signal $0\Q[0:0]: internal
   signal \R: input \R
-  signal \Q: input \Q
-  signal \C: input \C
   signal \D: input \D
+  signal \C: input \C
+  signal $0\Q[0:0]: internal
+  signal $logic_not$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:394$1701_Y: internal
+  signal \Q: input \Q
   signal $auto$abc9_ops.cc:506:prep_dff_submod$47212: output \n1
   cell $specify$1536 ($specify3)
   cell $specify$1535 ($specify3)
@@ -8064,13 +8064,13 @@ Creating submodule $abc9_flop (\SB_DFFSR_$abc9_flop) of module \SB_DFFSR.
   cell $auto$simplemap.cc:196:simplemap_lognot$47187 ($_NOT_)
   cell $auto$abc9_ops.cc:507:prep_dff_submod$47213 ($_MUX_)
 Creating submodule $abc9_flop (\SB_DFFSS_$abc9_flop) of module \SB_DFFSS.
-  signal \S: input \S
-  signal $auto$abc9_ops.cc:506:prep_dff_submod$47214: output \n1
-  signal \D: input \D
-  signal $0\Q[0:0]: internal
   signal $logic_not$/Users/kenj/Dev/oss-cad-suite/libexec/../share/yosys/ice40/cells_sim.v:515$1707_Y: internal
   signal \C: input \C
+  signal \D: input \D
+  signal \S: input \S
+  signal $0\Q[0:0]: internal
   signal \Q: input \Q
+  signal $auto$abc9_ops.cc:506:prep_dff_submod$47214: output \n1
   cell $specify$1544 ($specify3)
   cell $specify$1543 ($specify3)
   cell $specify$1542 ($specrule)
@@ -8294,8 +8294,8 @@ Module xosera_upd: replaced 5038 cells with 29994 new cells, skipped 9431 cells.
        1 $paramod$9afc244c5f6012269448954e8a55e7f7bbd372c4\SB_RAM40_4K
        1 $paramod$b0ef1672242ca073e27257a125b4452e30f99550\SB_RAM40_4K
        1 $paramod$97332f4c007628366508637405e6a5cafabf9c5b\SB_RAM40_4K
-       1 $paramod$5048e361924225208a1f35e533af6c20a5d7353c\SB_RAM40_4K
-       1 $paramod$3344d68952ee500e36be2aa627b1b3464b47fd72\SB_RAM40_4K
+       1 $paramod$e3bd7bb2d6cbc11ad961deed8762465c94a591a8\SB_RAM40_4K
+       1 $paramod$d37d44e921248253f729ae44d24718c2eed0a75f\SB_RAM40_4K
        1 $paramod$657985048ffeeaedd53a22dd138dd2f018e05523\SB_RAM40_4K
        1 $paramod$ba6ee07d187f33000fcb26b659582e20090dc2e1\SB_RAM40_4K
        1 $paramod$c08cd53d85e6de859b8d31c20254b03358574bff\SB_RAM40_4K
@@ -8366,7 +8366,7 @@ ABC: Mapping (K=4)  :  lut =   3366  edge =   11157  lev =    6 (0.64)  levB =  
 ABC: LUT = 3366 : 2=388 11.5 %  3=1531 45.5 %  4=1447 43.0 %  Ave = 3.31
 ABC: + &write -n <abc-temp-dir>/output.aig 
 ABC: + time 
-ABC: elapse: 1.38 seconds, total: 1.38 seconds
+ABC: elapse: 1.35 seconds, total: 1.35 seconds
 
 27.41.19.6. Executing AIGER frontend.
 <suppressed ~4952 debug messages>
@@ -8409,8 +8409,8 @@ Using template $paramod$c08cd53d85e6de859b8d31c20254b03358574bff\SB_RAM40_4K for
 Using template $paramod$ba6ee07d187f33000fcb26b659582e20090dc2e1\SB_RAM40_4K for cells of type $paramod$ba6ee07d187f33000fcb26b659582e20090dc2e1\SB_RAM40_4K.
 Using template $paramod$657985048ffeeaedd53a22dd138dd2f018e05523\SB_RAM40_4K for cells of type $paramod$657985048ffeeaedd53a22dd138dd2f018e05523\SB_RAM40_4K.
 Using template $paramod$9bdf46ea26b7268846d701571c181f13db440fe5\SB_RAM40_4K for cells of type $paramod$9bdf46ea26b7268846d701571c181f13db440fe5\SB_RAM40_4K.
-Using template $paramod$3344d68952ee500e36be2aa627b1b3464b47fd72\SB_RAM40_4K for cells of type $paramod$3344d68952ee500e36be2aa627b1b3464b47fd72\SB_RAM40_4K.
-Using template $paramod$5048e361924225208a1f35e533af6c20a5d7353c\SB_RAM40_4K for cells of type $paramod$5048e361924225208a1f35e533af6c20a5d7353c\SB_RAM40_4K.
+Using template $paramod$d37d44e921248253f729ae44d24718c2eed0a75f\SB_RAM40_4K for cells of type $paramod$d37d44e921248253f729ae44d24718c2eed0a75f\SB_RAM40_4K.
+Using template $paramod$e3bd7bb2d6cbc11ad961deed8762465c94a591a8\SB_RAM40_4K for cells of type $paramod$e3bd7bb2d6cbc11ad961deed8762465c94a591a8\SB_RAM40_4K.
 Using template $paramod$935cdf74fbbd2275daa33632b74de5af5882b288\SB_RAM40_4K for cells of type $paramod$935cdf74fbbd2275daa33632b74de5af5882b288\SB_RAM40_4K.
 Using template $paramod$b0ef1672242ca073e27257a125b4452e30f99550\SB_RAM40_4K for cells of type $paramod$b0ef1672242ca073e27257a125b4452e30f99550\SB_RAM40_4K.
 Using template $paramod$a626dfcaf228f61baa267b495235e0b32421b741\SB_RAM40_4K for cells of type $paramod$a626dfcaf228f61baa267b495235e0b32421b741\SB_RAM40_4K.
@@ -8961,6 +8961,6 @@ Found and reported 0 problems.
 
 27.50. Executing JSON backend.
 
-End of script. Logfile hash: 0abab0f6cb, CPU: user 20.48s system 0.20s
+End of script. Logfile hash: 4d396b9d42, CPU: user 20.11s system 0.31s
 Yosys 0.33+67 (git sha1 076c5ceb7, aarch64-apple-darwin20.2-clang 10.0.0-4ubuntu1 -fPIC -Os)
-Time spent: 50% 11x techmap (11 sec), 8% 52x opt_expr (1 sec), ...
+Time spent: 51% 11x techmap (11 sec), 8% 52x opt_expr (1 sec), ...

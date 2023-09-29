@@ -471,17 +471,17 @@ ___
 | 0x12  | `XR_PA_DISP_ADDR` | R/W | playfield A display VRAM start address (start of frame) |
 | 0x13  | `XR_PA_LINE_LEN`  | R/W | playfield A display line width in words                 |
 | 0x14  | `XR_PA_HV_FSCALE` | R/W | playfield A horizontal and vertical fractional scaling  |
-| 0x15  | `XR_PA_HV_SCROLL` | R/W | playfield A horizontal and vertical fine scroll         |
-| 0x16  | `XR_PA_LINE_ADDR` | -/W | playfield A scanline start address (start of next line) |
-| 0x17  | `XR_PA_UNUSED_17` | -/- |                                                         |
+| 0x15  | `XR_PA_H_SCROLL`  | R/W | playfield A horizontal fine scroll                      |
+| 0x16  | `XR_PA_V_SCROLL`  | R/W | playfield A vertical repeat and tile fine scroll        |
+| 0x17  | `XR_PA_LINE_ADDR` | -/W | playfield A scanline start address (start of next line) |
 | 0x18  | `XR_PB_GFX_CTRL`  | R/W | playfield B graphics control                            |
 | 0x19  | `XR_PB_TILE_CTRL` | R/W | playfield B tile control                                |
 | 0x1A  | `XR_PB_DISP_ADDR` | R/W | playfield B display VRAM start address (start of frame) |
 | 0x1B  | `XR_PB_LINE_LEN`  | R/W | playfield B display line width in words                 |
 | 0x1C  | `XR_PB_HV_FSCALE` | R/W | playfield B horizontal and vertical fractional scaling  |
-| 0x1D  | `XR_PB_HV_SCROLL` | R/W | playfield B horizontal and vertical fine scroll         |
-| 0x1E  | `XR_PB_LINE_ADDR` | -/W | playfield B scanline start address (start of next line) |
-| 0x1F  | `XR_PB_UNUSED_1F` | -/- |                                                         |
+| 0x1D  | `XR_PB_H_SCROLL`  | R/W | playfield B horizontal fine scroll                      |
+| 0x1E  | `XR_PB_V_SCROLL`  | R/W | playfield B horizontal repeat and tile fine scroll      |
+| 0x1F  | `XR_PB_LINE_ADDR` | -/W | playfield B scanline start address (start of next line) |
 ___
 
 ### Playfield A & B Control XR Registers Details
@@ -530,36 +530,8 @@ Address in VRAM for start of playfield display (either bitmap or tile indices/at
 **playfield A/B display line word length**  
 Word length added to line start address for each new line.  The first line will use `XR_Px_DISP_ADDR` and this value will be added at the end of each subsequent line.  It is not the length of of the displayed line (however it is typically at least as long or data will be shown multiple times).  Twos complement, so negative values are okay (for reverse scan line order in memory).
 
-**0x14 `XR_PA_HV_SCROLL` (R/W)** - playfield A (base) horizontal and vertical fine scroll  
-**0x1C `XR_PB_HV_SCROLL` (R/W)** - playfield B (overlay) horizontal and vertical fine scroll
-
-<img src="./pics/wd_XR_Px_HV_SCROLL.svg">
-
-**playfield A/B  horizontal and vertical fine scroll**  
-| Name            | Bits     | R/W | Description                                              |
-|-----------------|----------|-----|----------------------------------------------------------|
-| `H_SCROLL`      | `[12:8]` | R/W | Horizontal fine pixel scroll offset (0-31 native pixels) |
-| `V_TILE_SCROLL` | `[5:2]`  | R/W | Vertical tile line scroll offset (0-15 tile lines)       |
-| `V_SCROLL`      | `[1:0]`  | R/W | Vertical fine line scroll offset (0-3 native lines)      |
-
-Horizontal fine scroll `H_SCROLL` will clip (or skip) 0-31 native pixels from the left edge. This horizontal scroll offset is applied to all tile or bitmap modes.
-
- Vertical tile scroll `V_TILE_SCROLL` is typically constrained to be less than the height of the current tile height of 1-16 (set in `Px_TILE_CTRL`).  This tile line scroll is only useful in tiled modes to start with a partial tile (in bitmap modes, change `Px_DISP_ADDR` to scroll vertically).
-
-Vertical fine scroll `V_SCROLL` is typically constrained to be less than the `V_REPEAT` line height of 1-4 (set in `Px_GFX_CTRL`) . This vertical fine scroll allows you to fine scroll with native resolution, even with repeated lines. This offset is applied to all tile or bitmap modes (with `V_REPEAT` set).
-
-**0x15 `XR_PA_LINE_ADDR` (WO)** - playfield A (base) display VRAM next line address  
-**0x1D `XR_PB_LINE_ADDR` (WO)** - playfield B (overlay) display VRAM next line address
-
-<img src="./pics/wd_XR_Px_LINE_ADDR.svg">
-
-**playfield A/B display line address**  
-Address in VRAM for start of the next scanline (bitmap or tile indices map). Normally this is updated internally, starting with `XR_Px_DISP_ADDR` and with `XR_Px_LINE_LEN` added at the end of each mode line (which can be every display line, or less depending on tile mode, `V_REPEAT` and `XR_Px_HV_FSCALE` vertical scaling).  This register can be used to change the internal address used for subsequent display lines (usually done via the COPPER). This register is write-only.
-
-> :mag: **`XR_Px_LINE_ADDR`** will still have `XR_Px_LINE_LEN` added at the end of each display mode line (when not repeating the > line), so you may need to subtract `XR_Px_LINE_LEN` words from the value written to `XR_Px_LINE_ADDR` to account for this.
-
-**0x16 `XR_PA_HV_FSCALE` (R/W)** - playfield A (base) horizontal and vertical fractional scale  
-**0x1E `XR_PB_HV_FSCALE` (R/W)** - playfield B (overlay) horizontal and vertical fractional scale
+**0x14 `XR_PA_HV_FSCALE` (R/W)** - playfield A (base) horizontal and vertical fractional scale  
+**0x1C `XR_PB_HV_FSCALE` (R/W)** - playfield B (overlay) horizontal and vertical fractional scale
 
 <img src="./pics/wd_XR_Px_HV_FSCALE.svg">
 
@@ -576,9 +548,42 @@ Will repeat the color of a pixel or scan-line every N+1<sup>th</sup> column or l
 | 6 (1 of 7)   | 548.57 pixels     | 726.85 pixels     | 411.42 lines     |
 | 7 (1 of 8)   | 560 pixels        | 742 pixels        | 420 lines        |
 
-**0x17 `XR_PA_UNUSED_17` (-/-) - unused XR PA register 0x17**  
-**0x1F `XR_PB_UNUSED_1F` (-/-) - unused XR PB register 0x1F**  
-Unused XR playfield registers 0x17, 0x1F
+**0x15 `XR_PA_H_SCROLL` (R/W)** - playfield A (base) horizontal fine scroll  
+**0x1D `XR_PB_H_SCROLL` (R/W)** - playfield B (overlay) horizontal fine scroll
+
+<img src="./pics/wd_XR_Px_H_SCROLL.svg">
+
+**playfield A/B  horizontal and vertical fine scroll**  
+| Name       | Bits    | R/W | Description                                              |
+|------------|---------|-----|----------------------------------------------------------|
+| `H_SCROLL` | `[4:0]` | R/W | Horizontal fine pixel scroll offset (0-31 native pixels) |
+
+Horizontal fine scroll `H_SCROLL` will clip (or skip) 0-31 native pixels from the left border edge. This horizontal scroll offset is applied to all tile or bitmap modes.
+
+**0x16 `XR_PA_V_SCROLL` (R/W)** - playfield A (base) vertical repeat and tile fine scroll  
+**0x1E `XR_PB_V_SCROLL` (R/W)** - playfield B (overlay) vertical repeat and tile fine scroll  
+
+<img src="./pics/wd_XR_Px_V_SCROLL.svg">
+
+**playfield A/B  horizontal and vertical fine scroll**  
+| Name            | Bits    | R/W | Description                                           |
+|-----------------|---------|-----|-------------------------------------------------------|
+| `V_REP_SCROLL`  | `[9:8]` | R/W | Vertical repeat fine scroll offset (0-3 native lines) |
+| `V_TILE_SCROLL` | `[5:2]` | R/W | Vertical tile line scroll offset (0-15 tile lines)    |
+
+ Vertical tile scroll `V_TILE_SCROLL` is typically constrained to be less than the height of the current tile height of 1-16 (set in `Px_TILE_CTRL`).  This tile line scroll is only useful in tiled modes to start with a partial tile (in bitmap modes, change `Px_DISP_ADDR` to scroll vertically).
+
+Vertical fine scroll `V_REP_SCROLL` is typically constrained to be less than the `V_REPEAT` line height of 1-4 (set in `Px_GFX_CTRL`) . This vertical fine scroll allows you to fine scroll with native resolution, even with repeated lines. This offset is applied to all tile or bitmap modes (with `V_REPEAT` set).
+
+**0x17 `XR_PA_LINE_ADDR` (WO)** - playfield A (base) display VRAM next line address  
+**0x1F `XR_PB_LINE_ADDR` (WO)** - playfield B (overlay) display VRAM next line address
+
+<img src="./pics/wd_XR_Px_LINE_ADDR.svg">
+
+**playfield A/B display line address**  
+Address in VRAM for start of the next scanline (bitmap or tile indices map). Normally this is updated internally, starting with `XR_Px_DISP_ADDR` and with `XR_Px_LINE_LEN` added at the end of each mode line (which can be every display line, or less depending on tile mode, `V_REPEAT` and `XR_Px_HV_FSCALE` vertical scaling).  This register can be used to change the internal address used for subsequent display lines (usually done via the COPPER). This register is write-only.
+
+> :mag: **`XR_Px_LINE_ADDR`** will still have `XR_Px_LINE_LEN` added at the end of each display mode line (when not repeating the > line), so you may need to subtract `XR_Px_LINE_LEN` words from the value written to `XR_Px_LINE_ADDR` to account for this.
 
 #### Bitmap Display Formats
 

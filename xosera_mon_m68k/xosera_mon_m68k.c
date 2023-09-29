@@ -133,7 +133,8 @@ void reset_vid(void)
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_LINE_LEN, 80);        // line len
     xreg_setw(PA_HV_FSCALE, 0x0000);
-    xreg_setw(PA_HV_SCROLL, 0x0000);
+    xreg_setw(PA_H_SCROLL, 0x0000);
+    xreg_setw(PA_V_SCROLL, 0x0000);
     xreg_setw(PB_GFX_CTRL, 0x0080);
 
     restore_colors();
@@ -350,8 +351,6 @@ void print_xr_regs()
     for (int r = 0; r < 0x20; r++)
     {
         if (r >= XR_UNUSED_08 && r <= XR_UNUSED_0F)
-            continue;
-        if (r == XR_PA_UNUSED_17 || r == XR_PB_UNUSED_1F)
             continue;
         print_xr_reg(r);
         dprintf("\n");

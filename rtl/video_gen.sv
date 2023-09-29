@@ -592,15 +592,16 @@ always_ff @(posedge clk) begin
                     pa_h_frac_repeat <= vgen_reg_data_i[6:4];
                     pa_v_frac_repeat <= vgen_reg_data_i[2:0];
                 end
-                6'(xv::XR_PA_HV_SCROLL): begin
-                    pa_fine_hscroll <= vgen_reg_data_i[12:8];
-                    pa_fine_vscroll <= vgen_reg_data_i[5:0];
+                6'(xv::XR_PA_H_SCROLL): begin
+                    pa_fine_hscroll <= vgen_reg_data_i[4:0];
+                end
+                6'(xv::XR_PA_V_SCROLL): begin
+                    pa_fine_vscroll[1:0] <= vgen_reg_data_i[9:8];
+                    pa_fine_vscroll[5:2] <= vgen_reg_data_i[3:0];
                 end
                 6'(xv::XR_PA_LINE_ADDR): begin
                     pa_line_start_set <= 1'b1;               // PA_LINE_ADDR changed strobe
                     line_set_addr   <= vgen_reg_data_i;
-                end
-                6'(xv::XR_PA_UNUSED_17): begin
                 end
 `ifdef EN_PF_B
                 // playfield B
@@ -629,15 +630,16 @@ always_ff @(posedge clk) begin
                     pb_h_frac_repeat <= vgen_reg_data_i[6:4];
                     pb_v_frac_repeat <= vgen_reg_data_i[2:0];
                 end
-                6'(xv::XR_PB_HV_SCROLL): begin
-                    pb_fine_hscroll <= vgen_reg_data_i[12:8];
-                    pb_fine_vscroll <= vgen_reg_data_i[5:0];
+                6'(xv::XR_PB_H_SCROLL): begin
+                    pb_fine_hscroll <= vgen_reg_data_i[4:0];
+                end
+                6'(xv::XR_PB_V_SCROLL): begin
+                    pb_fine_vscroll[1:0] <= vgen_reg_data_i[9:8];
+                    pb_fine_vscroll[5:2] <= vgen_reg_data_i[3:0];
                 end
                 6'(xv::XR_PB_LINE_ADDR): begin
                     pb_line_start_set <= 1'b1;               // PB_LINE_ADDR changed strobe
                     line_set_addr   <= vgen_reg_data_i;
-                end
-                6'(xv::XR_PB_UNUSED_1F): begin
                 end
 `endif
                 default: begin
@@ -684,7 +686,8 @@ always_comb begin
         4'(xv::XR_PA_DISP_ADDR):    rd_pf_regs = pa_start_addr;
         4'(xv::XR_PA_LINE_LEN):     rd_pf_regs = pa_line_len;
         4'(xv::XR_PA_HV_FSCALE):    rd_pf_regs = { 8'h00, 4'(pa_h_frac_repeat), 4'(pa_v_frac_repeat) };
-        4'(xv::XR_PA_HV_SCROLL):    rd_pf_regs = { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
+        4'(xv::XR_PA_H_SCROLL):     rd_pf_regs = { 8'h00, 8'(pa_fine_hscroll) };
+        4'(xv::XR_PA_V_SCROLL):     rd_pf_regs = { 6'b000000, pa_fine_vscroll[1:0], 4'b0000, pa_fine_vscroll[5:2] };
         4'(xv::XR_PA_LINE_ADDR):    rd_pf_regs = 16'h0000;
 `ifdef EN_PF_B
         4'(xv::XR_PB_GFX_CTRL):     rd_pf_regs = { pb_colorbase, pb_blank, pb_bitmap, pb_bpp, pb_h_repeat, pb_v_repeat };
@@ -692,7 +695,8 @@ always_comb begin
         4'(xv::XR_PB_DISP_ADDR):    rd_pf_regs = pb_start_addr;
         4'(xv::XR_PB_LINE_LEN):     rd_pf_regs = pb_line_len;
         4'(xv::XR_PB_HV_FSCALE):    rd_pf_regs = { 8'h00, 4'(pb_h_frac_repeat), 4'(pb_v_frac_repeat) };
-        4'(xv::XR_PB_HV_SCROLL):    rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
+        4'(xv::XR_PB_H_SCROLL):     rd_pf_regs = { 8'h00, 8'(pb_fine_hscroll) };
+        4'(xv::XR_PB_V_SCROLL):     rd_pf_regs = { 6'b000000, pb_fine_vscroll[1:0], 4'b0000, pb_fine_vscroll[5:2] };
         4'(xv::XR_PB_LINE_ADDR):    rd_pf_regs = 16'h0000;
 `endif
         default:                    ;

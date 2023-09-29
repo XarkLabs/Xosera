@@ -1,15 +1,6 @@
 {
     "reg": [
         {
-            "bits": 2,
-            "name": "vert fine scroll",
-            "type": 6,
-            "attr": [
-                "0-3 native lines",
-                "(v repeat scroll)"
-            ]
-        },
-        {
             "bits": 4,
             "name": "vertical tile scroll",
             "type": 5,
@@ -19,21 +10,21 @@
             ]
         },
         {
-            "bits": 2,
+            "bits": 4,
             "name": "0",
             "type": 1
         },
         {
-            "bits": 5,
-            "name": "horizontal fine scroll",
-            "type": 4,
+            "bits": 2,
+            "name": "vert rep scroll",
+            "type": 6,
             "attr": [
-                "0-31 native pixels horizontal scroll",
-                "(pixels skipped before left edge)"
+                "0-3 native lines",
+                "(v repeat scroll)"
             ]
         },
         {
-            "bits": 3,
+            "bits": 10,
             "name": "0",
             "type": 1
         }

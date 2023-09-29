@@ -118,7 +118,8 @@ void xosera_copper_test()
     uint16_t tilectrl = xreg_getw(PA_TILE_CTRL);
     uint16_t dispaddr = xreg_getw(PA_DISP_ADDR);
     uint16_t linelen  = xreg_getw(PA_LINE_LEN);
-    uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
+    uint16_t hscroll = xreg_getw(PA_H_SCROLL);
+    uint16_t vscroll = xreg_getw(PA_V_SCROLL);
     uint16_t hvfscale = xreg_getw(PA_HV_FSCALE);
 
     dprintf("Xosera - Features: 0x%02x\n", feature);
@@ -126,5 +127,6 @@ void xosera_copper_test()
     dprintf("\nPlayfield A:\n");
     dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
     dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
-    dprintf("PA_HV_SCROLL: 0x%04x  PA_HV_FSCALE: 0x%04x\n", hvscroll, hvfscale);
+    dprintf("PA_H_SCROLL : 0x%04x  PA_V_SCROLL : 0x%04x\n", hscroll, vscroll);
+    dprintf("PA_HV_FSCALE: 0x%04x\n", hvfscale);
 }

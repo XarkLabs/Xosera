@@ -1,0 +1,21 @@
+{
+    "reg": [
+        {
+            "bits": 5,
+            "name": "horizontal fine scroll",
+            "type": 4,
+            "attr": [
+                "0-31 native pixels horizontal scroll",
+                "(pixels skipped before left edge)"
+            ]
+        },
+        {
+            "bits": 11,
+            "name": "0",
+            "type": 1
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

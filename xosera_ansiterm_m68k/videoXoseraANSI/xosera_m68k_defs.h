@@ -120,18 +120,18 @@
 #define XR_PA_DISP_ADDR 0x12        // (R /W ) playfield A display VRAM start address
 #define XR_PA_LINE_LEN  0x13        // (R /W ) playfield A display line width in words
 #define XR_PA_HV_FSCALE 0x14        // (R /W ) playfield A horizontal and vertical fractional scale
-#define XR_PA_HV_SCROLL 0x15        // (R /W ) playfield A horizontal and vertical fine scroll
-#define XR_PA_LINE_ADDR 0x16        // (- /W ) playfield A scanline start address (loaded at start of line)
-#define XR_PA_UNUSED_17 0x17        // (- /- )
+#define XR_PA_H_SCROLL  0x15        // (R /W ) playfield A horizontal and vertical fine scroll
+#define XR_PA_V_SCROLL  0x16        // (R /W ) playfield A horizontal and vertical fine scroll
+#define XR_PA_LINE_ADDR 0x17        // (- /W ) playfield A scanline start address (loaded at start of line)
 // Playfield B Control XR Registers
 #define XR_PB_GFX_CTRL  0x18        // (R /W ) playfield B graphics control
 #define XR_PB_TILE_CTRL 0x19        // (R /W ) playfield B tile control
 #define XR_PB_DISP_ADDR 0x1A        // (R /W ) playfield B display VRAM start address
 #define XR_PB_LINE_LEN  0x1B        // (R /W ) playfield B display line width in words
 #define XR_PB_HV_FSCALE 0x1C        // (R /W ) playfield B horizontal and vertical fractional scale
-#define XR_PB_HV_SCROLL 0x1D        // (R /W ) playfield B horizontal and vertical fine scroll
-#define XR_PB_LINE_ADDR 0x1E        // (- /W ) playfield B scanline start address (loaded at start of line)
-#define XR_PB_UNUSED_1F 0x1F        // (- /- )
+#define XR_PB_H_SCROLL  0x1D        // (R /W ) playfield B horizontal and vertical fine scroll
+#define XR_PB_V_SCROLL  0x1E        // (R /W ) playfield B horizontal and vertical fine scroll
+#define XR_PB_LINE_ADDR 0x1F        // (- /W ) playfield B scanline start address (loaded at start of line)
 // Audio Registers
 #define XR_AUD0_VOL    0x20        // (- /W ) audio channel 0 8-bit L[15:8]+R[7:0] volume (0x80 = 100%)
 #define XR_AUD0_PERIOD 0x21        // (- /W+) audio channel 0 15-bit period, bit [15] force restart
@@ -354,16 +354,17 @@
 #define TILE_CTRL_TILEBASE_B     10
 #define TILE_CTRL_TILEBASE_W     6
 #define TILE_CTRL_TILEBASE_F     0xFC00
-// XR_Px_HV_SCROLL bit definitions
-#define HV_SCROLL_H_FINE_B 8
-#define HV_SCROLL_H_FINE_W 5
-#define HV_SCROLL_H_FINE_F 0x1F00
-#define HV_SCROLL_V_TILE_B 2
-#define HV_SCROLL_V_TILE_W 4
-#define HV_SCROLL_V_TILE_F 0x003C
-#define HV_SCROLL_V_FINE_B 0
-#define HV_SCROLL_V_FINE_W 2
-#define HV_SCROLL_V_FINE_F 0x0003
+// XR_Px_H_SCROLL bit definitions
+#define H_SCROLL_FINE_B 0
+#define H_SCROLL_FINE_W 5
+#define H_SCROLL_FINE_F 0x001F
+// XR_Px_V_SCROLL bit definitions
+#define V_SCROLL_FINE_B 8
+#define V_SCROLL_FINE_W 2
+#define V_SCROLL_FINE_F 0x0300
+#define V_SCROLL_TILE_B 0
+#define V_SCROLL_TILE_W 4
+#define V_SCROLL_TILE_F 0x000F
 // XR_Px_HV_FSCALE bit definitions
 #define HV_FSCALE_H_FRAC_B 8
 #define HV_FSCALE_H_FRAC_W 3
@@ -421,20 +422,21 @@
      XB_(bm, GFX_CTRL_BITMAP_B, GFX_CTRL_BITMAP_W) | XB_(bpp, GFX_CTRL_BPP_B, GFX_CTRL_BPP_W) |                        \
      XB_(hx, GFX_CTRL_H_REPEAT_B, GFX_CTRL_H_REPEAT_W) | XB_(vx, GFX_CTRL_V_REPEAT_B, GFX_CTRL_V_REPEAT_W))
 #define MAKE_TILE_CTRL(tile_addr, map_in_tilemem, tile_in_vram, tile_height)                                           \
-    (((tile_addr)&TILE_CTRL_TILEBASE_F) | XB_(map_in_tilemem, TILE_CTRL_DISP_TILEMEM_B, TILE_CTRL_DISP_TILEMEM_W) |    \
+    (((tile_addr) & TILE_CTRL_TILEBASE_F) | XB_(map_in_tilemem, TILE_CTRL_DISP_TILEMEM_B, TILE_CTRL_DISP_TILEMEM_W) |  \
      XB_(tile_in_vram, TILE_CTRL_TILE_VRAM_B, TILE_CTRL_TILE_VRAM_W) |                                                 \
      XB_(((tile_height)-1), TILE_CTRL_TILE_H_B, TILE_CTRL_TILE_H_W))
-#define MAKE_HV_SCROLL(h_scrl, tile_scrl, v_scrl)                                                                      \
-    (XB_(h_scrl, HV_SCROLL_H_FINE_B, HV_SCROLL_H_FINE_W) | XB_(tile_scrl, HV_SCROLL_V_TILE_B, HV_SCROLL_V_TILE_W) |    \
-     XB_(v_scrl, HV_SCROLL_V_FINE_B, HV_SCROLL_V_FINE_W))
+#define MAKE_H_SCROLL(h_scrl) (XB_(h_scrl, H_SCROLL_FINE_B, H_SCROLL_FINE_W))
+#define MAKE_V_SCROLL(rep_scrl, tile_scrl)                                                                             \
+    (XB_(rep_scrl, V_SCROLL_FINE_B, V_SCROLL_FINE_W) | XB_(tile_scrl, V_SCROLL_TILE_B, V_SCROLL_TILE_W))
 #define MAKE_VID_CTRL(swap_ab, bordcol)                                                                                \
     (XB_(swap_ab, VID_CTRL_SWAP_AB_B, VID_CTRL_SWAP_AB_W) | XB_(bordcol, VID_CTRL_BORDCOL_B, VID_CTRL_BORDCOL_W))
 #define MAKE_AUD_PERIOD(restart, period)                                                                               \
-    (XB_(restart, AUD_PERIOD_RESTART_B, AUD_PERIOD_RESTART_W) | ((period)&AUD_PERIOD_F))
+    (XB_(restart, AUD_PERIOD_RESTART_B, AUD_PERIOD_RESTART_W) | ((period) & AUD_PERIOD_F))
 #define MAKE_AUD_LENGTH(tilemem, length)                                                                               \
-    (XB_(tilemem, AUD_LENGTH_TILEMEM_B, AUD_LENGTH_TILEMEM_W) | ((length)&AUD_LENGTH_F))
-#define MAKE_POINTER_H(h_pos)           ((h_pos)&POINTER_H_F)
-#define MAKE_POINTER_V(colorsel, v_pos) (XB_(tilemem, POINTER_V_COLORSEL_B, POINTER_V_COLORSEL_W) | (v_pos)&POINTER_V_F)
+    (XB_(tilemem, AUD_LENGTH_TILEMEM_B, AUD_LENGTH_TILEMEM_W) | ((length) & AUD_LENGTH_F))
+#define MAKE_POINTER_H(h_pos) ((h_pos) & POINTER_H_F)
+#define MAKE_POINTER_V(colorsel, v_pos)                                                                                \
+    (XB_(tilemem, POINTER_V_COLORSEL_B, POINTER_V_COLORSEL_W) | (v_pos) & POINTER_V_F)
 #define MAKE_HV_FSCALE(h_frac, v_frac)                                                                                 \
     (XB_(h_frac, HV_FSCALE_H_FRAC_B, HV_FSCALE_H_FRAC_W) | XB_(v_frac, HV_FSCALE_V_FRAC_B, HV_FSCALE_V_FRAC_W))
 

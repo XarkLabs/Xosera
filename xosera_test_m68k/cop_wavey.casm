@@ -14,8 +14,8 @@ entry
                 MOVI    #480+1,count
 start_color     MOVI    #MOVM|wavetable,copy_color      ; set initial table index
 copy_color      LDM     wavetable
-                STM     XR_PA_HV_SCROLL                 ; set A scroll
-                STM     XR_PB_HV_SCROLL                 ; set B scroll
+                STM     XR_PA_H_SCROLL                  ; set A scroll
+                STM     XR_PB_H_SCROLL                  ; set B scroll
                 LDM     copy_color
                 ADDI    #1
                 STM     .+2

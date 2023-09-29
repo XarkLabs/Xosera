@@ -508,7 +508,7 @@ void show_blurb()
         xvid_setw(XM_XDATA, r * columns);               // to one line down
         for (int8_t f = 0; f < 16; f++)
         {
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // v fine scroll
+            xvid_setw(XM_WR_XADDR, XR_PA_V_SCROLL);        // v fine scroll
             xvid_setw(XM_XDATA, f);
 
             wait_vsync(1);
@@ -520,7 +520,7 @@ void show_blurb()
     }
     xvid_setw(XM_WR_XADDR, XR_PA_DISP_ADDR);        // reset text start addr
     xvid_setw(XM_XDATA, 0x0000);
-    xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // reset text start addr
+    xvid_setw(XM_WR_XADDR, XR_PA_V_SCROLL);        // reset text start addr
     xvid_setw(XM_XDATA, 0x0000);
     delay(500);
 
@@ -534,14 +534,14 @@ void show_blurb()
     printf("Horizontal fine scroll\n");
     for (int x = 0; x < 8; x++)
     {
-        xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // scroll
+        xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // scroll
         // set font height and switch to 8x8 font when < 8
         xvid_setw(XM_XDATA, x);
         delay(100);
     }
     for (int x = 7; x > 0; x--)
     {
-        xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // scroll
+        xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // scroll
         // set font height and switch to 8x8 font when < 8
         xvid_setw(XM_XDATA, x);
         delay(100);
@@ -550,14 +550,14 @@ void show_blurb()
     printf("Vertical fine scroll\n");
     for (int x = 0; x < 16; x++)
     {
-        xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // scroll
+        xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // scroll
         // set font height and switch to 8x8 font when < 8
         xvid_setw(XM_XDATA, x << 8);
         delay(100);
     }
     for (int x = 15; x > 0; x--)
     {
-        xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // scroll
+        xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // scroll
         // set font height and switch to 8x8 font when < 8
         xvid_setw(XM_XDATA, x << 8);
         delay(100);
@@ -803,15 +803,15 @@ void test_smoothscroll()
         for (int x = 0; x < 8; x++)
         {
             wait_vsync();
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
-            xvid_setw(XM_XDATA, x << 8);
+            xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
+            xvid_setw(XM_XDATA, x);
             delay_ms(150);
         }
         for (int x = 7; x >= 0; x--)
         {
             wait_vsync();
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
-            xvid_setw(XM_XDATA, x << 8);
+            xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
+            xvid_setw(XM_XDATA, x);
             delay_ms(150);
         }
     }
@@ -821,20 +821,20 @@ void test_smoothscroll()
         for (int x = 0; x < 8; x++)
         {
             wait_vsync(2);
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
-            xvid_setw(XM_XDATA, x << 8);
+            xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
+            xvid_setw(XM_XDATA, x);
         }
         for (int x = 7; x >= 0; x--)
         {
             wait_vsync(2);
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
-            xvid_setw(XM_XDATA, x << 8);
+            xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
+            xvid_setw(XM_XDATA, x);
         }
     }
 
     xvid_setw(XM_WR_XADDR, XR_PA_LINE_LEN);        // set width
     xvid_setw(XM_XDATA, columns * 2);
-    xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // zero fine scroll
+    xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // zero fine scroll
     xvid_setw(XM_XDATA, 0);
 
     for (int r = 0; r < 2; r++)
@@ -843,7 +843,7 @@ void test_smoothscroll()
         {
             xvid_setw(XM_WR_XADDR, XR_PA_DISP_ADDR);        // start addr
             xvid_setw(XM_XDATA, x >> 3);
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
+            xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
             xvid_setw(XM_XDATA, (x & 0x7) << 8);
             wait_vsync(1);
         }
@@ -851,7 +851,7 @@ void test_smoothscroll()
         {
             xvid_setw(XM_WR_XADDR, XR_PA_DISP_ADDR);        // start addr
             xvid_setw(XM_XDATA, x >> 3);
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
+            xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
             xvid_setw(XM_XDATA, (x & 0x7) << 8);
             wait_vsync(1);
         }
@@ -863,16 +863,18 @@ void test_smoothscroll()
         {
             xvid_setw(XM_WR_XADDR, XR_PA_DISP_ADDR);        // start addr
             xvid_setw(XM_XDATA, ((x >> 4) * (columns * 2)) + (x >> 3));
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
-            xvid_setw(XM_XDATA, (x & 0x7) << 8 | (x & 0xf));
+            xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
+            xvid_setw(XM_XDATA, (x & 0x7));
+            xvid_setw(XM_XDATA, (x & 0xf));
             wait_vsync(1);
         }
         for (int x = 100; x >= 0; x--)
         {
             xvid_setw(XM_WR_XADDR, XR_PA_DISP_ADDR);        // start addr
             xvid_setw(XM_XDATA, ((x >> 4) * (columns * 2)) + (x >> 3));
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
-            xvid_setw(XM_XDATA, (x & 0x7) << 8 | (x & 0xf));
+            xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
+            xvid_setw(XM_XDATA, (x & 0x7));
+            xvid_setw(XM_XDATA, (x & 0xf));
             wait_vsync(1);
         }
     }
@@ -886,16 +888,18 @@ void test_smoothscroll()
         {
             xvid_setw(XM_WR_XADDR, XR_PA_DISP_ADDR);        // start addr
             xvid_setw(XM_XDATA, ((x >> 4) * (columns * 2)) + (x >> 4));
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
-            xvid_setw(XM_XDATA, (x & 0xf) << 8 | (x & 0xf));
+            xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
+            xvid_setw(XM_XDATA, (x & 0x7));
+            xvid_setw(XM_XDATA, (x & 0xf));
             wait_vsync(1);
         }
         for (int x = 100; x >= 0; x--)
         {
             xvid_setw(XM_WR_XADDR, XR_PA_DISP_ADDR);        // start addr
             xvid_setw(XM_XDATA, ((x >> 4) * (columns * 2)) + (x >> 4));
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
-            xvid_setw(XM_XDATA, (x & 0xf) << 8 | (x & 0xf));
+            xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
+            xvid_setw(XM_XDATA, (x & 0x7));
+            xvid_setw(XM_XDATA, (x & 0xf));
             wait_vsync(1);
         }
     }
@@ -909,23 +913,26 @@ void test_smoothscroll()
         {
             xvid_setw(XM_WR_XADDR, XR_PA_DISP_ADDR);        // start addr
             xvid_setw(XM_XDATA, ((x >> 5) * (columns * 2)) + (x >> 4));
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
-            xvid_setw(XM_XDATA, (x & 0xf) << 8 | (x & 0x1f));
+            xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
+            xvid_setw(XM_XDATA, (x & 0xf));
+            xvid_setw(XM_XDATA, (x & 0x1f));
             wait_vsync(1);
         }
         for (int x = 100; x >= 0; x--)
         {
             xvid_setw(XM_WR_XADDR, XR_PA_DISP_ADDR);        // start addr
             xvid_setw(XM_XDATA, ((x >> 5) * (columns * 2)) + (x >> 4));
-            xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
-            xvid_setw(XM_XDATA, (x & 0xf) << 8 | (x & 0x1f));
+            xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
+            xvid_setw(XM_XDATA, (x & 0xf));
+            xvid_setw(XM_XDATA, (x & 0x1f));
             wait_vsync(1);
         }
     }
 
     xvid_setw(XM_WR_XADDR, XR_PA_DISP_ADDR);        // start addr
     xvid_setw(XM_XDATA, 0x0000);                    // set palette data
-    xvid_setw(XM_WR_XADDR, XR_PA_HV_SCROLL);        // fine scroll
+    xvid_setw(XM_WR_XADDR, XR_PA_H_SCROLL);        // fine scroll
+    xvid_setw(XM_XDATA, 0x0000);                    // set palette data
     xvid_setw(XM_XDATA, 0x0000);                    // set palette data
     xvid_setw(XM_WR_XADDR, XR_PA_LINE_LEN);         // set width
     xvid_setw(XM_XDATA, columns);

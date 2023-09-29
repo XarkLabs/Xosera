@@ -127,6 +127,8 @@ m68k:
 	cd xosera_m68k_api/ && $(MAKE)
 	cd xosera_ansiterm_m68k/ && $(MAKE)
 	cd xosera_boing_m68k/ && $(MAKE)
+	cd xosera_mon_m68k/ && $(MAKE)
+	cd xosera_pointer_m68k/ && $(MAKE)
 	cd xosera_vramtest_m68k && $(MAKE)
 	cd xosera_test_m68k && $(MAKE)
 	cd uart_test_m68k && $(MAKE)
@@ -169,6 +171,8 @@ m68kclean:
 	cd xosera_m68k_api/ && $(MAKE) clean
 	cd xosera_ansiterm_m68k/ && $(MAKE) clean
 	cd xosera_boing_m68k/ && $(MAKE) clean
+	cd xosera_mon_m68k/ && $(MAKE) clean
+	cd xosera_pointer_m68k/ && $(MAKE) clean
 	cd xosera_vramtest_m68k && $(MAKE) clean
 	cd xosera_test_m68k && $(MAKE) clean
 	cd uart_test_m68k && $(MAKE) clean

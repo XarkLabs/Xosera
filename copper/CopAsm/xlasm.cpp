@@ -666,8 +666,8 @@ int32_t xlasm::process_output()
         return 0;
     }
 
-    if (listing_file)
-        fprintf(listing_file, "\nOutput sections:\n");
+//    if (listing_file)
+//        fprintf(listing_file, "\nOutput sections:\n");
 
     int64_t pad           = 0;
     int64_t total_size    = 0;
@@ -679,7 +679,7 @@ int32_t xlasm::process_output()
         {
             if (it->load_addr > cur_load_addr)
                 pad += it->load_addr - cur_load_addr;
-
+#if 0
             if (!object_filename.size())
             {
                 std::string secline;
@@ -700,7 +700,7 @@ int32_t xlasm::process_output()
                 if (listing_file)
                     fprintf(listing_file, "%s", secline.c_str());
             }
-
+#endif
             cur_load_addr = it->load_addr + static_cast<int64_t>(it->data.size());
 
             total_size = pad + static_cast<int64_t>(it->data.size());
@@ -1268,7 +1268,7 @@ int32_t xlasm::process_line_listing()
 
         if (!line_last_file || line_last_file->name != ctxt.file->name)
         {
-            strprintf(outline, "File: %s\n", ctxt.file->name.c_str());
+            strprintf(outline, "                    // File: %s\n", ctxt.file->name.c_str());
             line_last_file = ctxt.file;
         }
 
@@ -1283,7 +1283,7 @@ int32_t xlasm::process_line_listing()
 
         if (line_sec_start != ctxt.section)
             show_section_name = true;
-
+#if 0   // mem friendly list
         if (!opt.suppress_line_numbers)
         {
             if (suppress_line_listsource)
@@ -1317,7 +1317,7 @@ int32_t xlasm::process_line_listing()
         {
             strprintf(outline, "      ");
         }
-
+#endif
         if (show_section_name)
         {
             std::string secname;
@@ -1353,7 +1353,7 @@ int32_t xlasm::process_line_listing()
                     else
                     {
                         strprintf(outline,
-                                  "%02X%02X%02X%02X",
+                                  "%02X%02X %02X%02X ",
                                   ctxt.section->data[line_sec_size + i],
                                   ctxt.section->data[line_sec_size + i + 1],
                                   ctxt.section->data[line_sec_size + i + 2],
@@ -1369,7 +1369,7 @@ int32_t xlasm::process_line_listing()
                     else
                     {
                         strprintf(outline,
-                                  "%02X%02X",
+                                  "%02X%02X ",
                                   ctxt.section->data[line_sec_size + i],
                                   ctxt.section->data[line_sec_size + i + 1]);
                     }
@@ -1377,6 +1377,7 @@ int32_t xlasm::process_line_listing()
                 }
                 else if (line_sec_start == ctxt.section && line_sec_size + i < ctxt.section->data.size())
                 {
+                    assert(false);
                     if (ctxt.section->flags & section_t::NOLOAD_FLAG)
                         strprintf(outline, "..");
                     else
@@ -1386,12 +1387,45 @@ int32_t xlasm::process_line_listing()
                 }
                 else
                 {
-                    strprintf(outline, "  ");
+                    strprintf(outline, "  %s", (i & 1) ? " " : "");
                     i += 1;
                 }
             }
 #endif
         }
+
+#if 1   // mem friendly list
+        if (suppress_line_listsource)
+            strprintf(outline, "//       ");
+        else
+            strprintf(outline, "// %6d ", ctxt.line + ctxt.file->line_start);
+
+        int64_t v = 0;
+        if (sym_defined != nullptr && sym_defined->type != symbol_t::UNDEFINED && sym_defined->type != symbol_t::STRING)
+        {
+            v          = sym_defined->value;
+            show_value = true;
+        }
+        else if (line_sec_start != ctxt.section || line_sec_addr != ctxt.section->addr || line_sec_org)
+        {
+            v          = ctxt.section->addr + static_cast<int64_t>(ctxt.section->data.size() >> 1);
+            show_value = true;
+        }
+
+        if (line_sec_start == ctxt.section && line_sec_addr == ctxt.section->addr &&
+            line_sec_size != ctxt.section->data.size())
+        {
+            strprintf(outline, PR_X64_04 ": ", line_sec_addr + static_cast<int64_t>(line_sec_size >> 1));
+        }
+        else if (show_value || line_sec_start != ctxt.section || line_sec_addr != ctxt.section->addr)
+        {
+            strprintf(outline, PR_X64_04 "= ", static_cast<uint64_t>(v));
+        }
+        else
+        {
+            strprintf(outline, "      ");
+        }
+#endif
 
         if (!suppress_line_listsource)
         {
@@ -1402,19 +1436,26 @@ int32_t xlasm::process_line_listing()
 
         if (opt.listing_bytes > 8 && line_sec_start == ctxt.section && line_sec_size + 8 < ctxt.section->data.size())
         {
+            uint64_t line_beg_addr = 0;
             for (uint32_t i = 8; i < opt.listing_bytes; i++)
             {
                 if (((i - 8) & 0x7) == 0 && line_sec_size + i < ctxt.section->data.size())
                 {
-                    strprintf(outline, "\n       ");
-                    strprintf(outline, PR_X64_04 ": ", line_sec_addr + static_cast<int64_t>(line_sec_size + i));
+                    strprintf(outline, "\n");
+                    line_beg_addr = line_sec_addr + (static_cast<int64_t>(line_sec_size + i) >> 1);
                 }
                 if (line_sec_size + i < ctxt.section->data.size())
                 {
                     if (ctxt.section->flags & section_t::NOLOAD_FLAG)
                         strprintf(outline, "..");
                     else
-                        strprintf(outline, "%02X", ctxt.section->data[line_sec_size + i]);
+                    {
+                        strprintf(outline, "%02X%s", ctxt.section->data[line_sec_size + i], (i & 1) ? " " : "");
+                    }
+                }
+                if (((i - 8) & 0x7) == 7 && line_sec_size + i < ctxt.section->data.size())
+                {
+                    strprintf(outline, "//        " PR_X64_04 ": ", line_beg_addr);
                 }
             }
 

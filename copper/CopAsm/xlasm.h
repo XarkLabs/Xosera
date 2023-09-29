@@ -85,7 +85,7 @@ struct xlasm
 
         opts_t() noexcept
                 : verbose(1)
-                , listing_bytes(32)
+                , listing_bytes(0x600)
                 , load_address(0)
                 , listing(false)
                 , xref(false)

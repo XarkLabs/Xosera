@@ -305,10 +305,11 @@ $(COPASM):
 # assemble casm into mem file
 cop_init:  $(COPASM) $(RESET_COP)
 	@mkdir -p $(@D)
-	$(COPASM) -b 4096 $(COPASMOPT) -l -i $(XOSERA_M68K_API) -o $(addsuffix .mem,$(basename $(RESET_COP))) $(RESET_COP)
+	$(COPASM) -b 4096 $(COPASMOPT) -l -i $(XOSERA_M68K_API) $(RESET_COP)
+	mv -f $(addsuffix .lst,$(basename $(RESET_COP))) $(RESET_COPMEM)
 
 cop_clean:
-	rm -f $(addsuffix .lst,$(basename $(RESET_COP))) $(addsuffix .mem,$(basename $(RESET_COP)))
+	rm -f $(addsuffix .lst,$(basename $(RESET_COP))) $(RESET_COPMEM)
 
 # delete all targets that will be re-generated
 clean:

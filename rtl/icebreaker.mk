@@ -298,13 +298,21 @@ $(VLT_CONFIG):
 	@echo >>$(VLT_CONFIG) lint_off -rule WIDTH      -file \"$(TECH_LIB)\"
 	@echo >>$(VLT_CONFIG) lint_off -rule GENUNNAMED -file \"$(TECH_LIB)\"
 
+# build copper assembler
+$(COPASM):
+	@echo === Building copper assembler...
+	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE)
+	@mkdir -p $(@D)
+	cp -v $(XOSERA_M68K_API)/../copper/CopAsm/bin/copasm $(COPASM)
+
 # assemble casm into mem file
 cop_init:  $(COPASM) $(RESET_COP)
 	@mkdir -p $(@D)
-	$(COPASM) -b 4096 $(COPASMOPT) -l -i $(XOSERA_M68K_API) -o $(addsuffix .mem,$(basename $(RESET_COP))) $(RESET_COP)
+	$(COPASM) -b 4096 $(COPASMOPT) -l -i $(XOSERA_M68K_API) $(RESET_COP)
+	mv -f $(addsuffix .lst,$(basename $(RESET_COP))) $(RESET_COPMEM)
 
 cop_clean:
-	rm -f $(addsuffix .lst,$(basename $(RESET_COP))) $(addsuffix .mem,$(basename $(RESET_COP)))
+	rm -f $(addsuffix .lst,$(basename $(RESET_COP))) $(RESET_COPMEM)
 
 # delete all targets that will be re-generated
 clean:

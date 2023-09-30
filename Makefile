@@ -54,6 +54,11 @@ xosera_dvi:
 	cd rtl && $(MAKE) xosera_dvi
 	@echo Type \"make xosera_dvi_prog\" to program the UPduino via USB
 
+# Build UPduino combined bitstream for DVI Xosera rosco_m68k board
+xosera_dvi_640:
+	cd rtl && $(MAKE) xosera_dvi_640
+	@echo Type \"make xosera_dvi_640_prog\" to program the UPduino via USB
+
 # Build and program combo Xosera UPduino 3.x VGA FPGA bitstream for rosco_m6k board
 xosera_vga_prog: xosera_vga
 	@echo === Programming Xosera board UPduino VGA firmware ===
@@ -69,6 +74,10 @@ xosera_dvi_prog: xosera_dvi
 	@echo === Programming Xosera board UPduino DVI firmware ===
 	$(ICEPROG) -d i:0x0403:0x6014 rtl/xosera_board_dvi.bin
 
+# Build and program combo Xosera UPduino 3.x DVI FPGA bitstream for rosco_m6k board
+xosera_dvi_640_prog: xosera_dvi
+	@echo === Programming Xosera board UPduino DVI firmware for 640x480 only ===
+	$(ICEPROG) -d i:0x0403:0x6014 rtl/xosera_board_dvi.bin
 
 # Build UPduino bitstream
 upduino:

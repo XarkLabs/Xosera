@@ -168,6 +168,23 @@ golden:
 		cp -v rtl/xosera_board_vga.bin ./xosera_gateware ; \
 	fi
 	@echo === Done
+
+golden_dvi:
+	@echo === Last 640x480 dvi bitstream stats:
+	@cat rtl/xosera_upd_*dvi_640x480_stats.txt
+	@echo === Last 848x480 dvi bitstream stats:
+	@cat rtl/xosera_upd_*dvi_848x480_stats.txt
+	@echo Enshrine these bitstreams [y/N]?
+	@read ans && if [ $${ans:-'N'} = 'y' ] ; then \
+		echo === Copying xosera dvi bitstreams to xosera_gateware... ; \
+		cp -v rtl/xosera_upd_*_dvi_*_stats.txt ./xosera_gateware && \
+		cp -v rtl/upduino/logs/xosera_upd_*_dvi_*_yosys.log ./xosera_gateware && \
+		cp -v rtl/upduino/logs/xosera_upd_*_dvi_*_nextpnr.log ./xosera_gateware && \
+		cp -v rtl/upduino/xosera_upd_*_dvi_*.json ./xosera_gateware && \
+		cp -v rtl/xosera_board_dvi.bin ./xosera_gateware ; \
+	fi
+	@echo === Done
+
 # Clean all project targets
 clean: m68kclean
 	cd copper/CopAsm/ && $(MAKE) clean

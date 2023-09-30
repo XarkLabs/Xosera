@@ -446,23 +446,35 @@ union
 xosera_info_t initinfo;
 
 // timer helpers
-static uint32_t start_tick;
+uint32_t elapsed_tenthms;        // Xosera elapsed timer
+uint16_t last_timer_val;
+uint32_t start_time;
+
+static void update_elapsed()
+{
+    xv_prep();
+    uint16_t new_timer_val = xm_getw(TIMER);
+    uint16_t delta         = (uint16_t)(new_timer_val - last_timer_val);
+    last_timer_val         = new_timer_val;
+    elapsed_tenthms += delta;
+}
 
 void timer_start()
 {
-    uint32_t ts = XFrameCount;
-    uint32_t t;
-    // this waits for a "fresh tick" to reduce timing jitter
-    while ((t = XFrameCount) == ts)
-        ;
-    start_tick = t;
+    update_elapsed();
+    uint32_t check_time = elapsed_tenthms;
+    do
+    {
+        update_elapsed();
+        start_time = elapsed_tenthms;
+    } while (start_time == check_time);
 }
 
 uint32_t timer_stop()
 {
-    uint32_t stop_tick = XFrameCount;
-
-    return ((stop_tick - start_tick) * 1667) / 100;
+    update_elapsed();
+    uint32_t elapsed_time = elapsed_tenthms - start_time;
+    return elapsed_time;
 }
 
 #if !defined(checkchar)        // newer rosco_m68k library addition, this is in case not present
@@ -969,8 +981,8 @@ static void install_copper()
     }
     if (cop_fx_ptr->flags & COP_FLAG_SINE)
     {
-        uint8_t ti = 0;
-        uint16_t eol = xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2): 0;
+        uint8_t  ti  = 0;
+        uint16_t eol = xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0;
         for (uint16_t i = 0; i < 256; i += 1)
         {
             uint16_t v                              = eol + (((sinData[ti++] >> 3) - 16) & 0x1f);
@@ -1255,10 +1267,10 @@ void show_test_pic(int pic_num, uint16_t addr)
     wait_vblank_start();
     xreg_setw(PA_GFX_CTRL, 0x0080);        // blank screen
     xreg_setw(PB_GFX_CTRL, 0x0080);
-//    xreg_setw(PA_H_SCROLL, 0x0000);        // blank screen
-//    xreg_setw(PA_V_SCROLL, 0x0000);
-//    xreg_setw(PB_H_SCROLL, 0x0000);        // blank screen
-//    xreg_setw(PB_V_SCROLL, 0x0000);
+    //    xreg_setw(PA_H_SCROLL, 0x0000);        // blank screen
+    //    xreg_setw(PA_V_SCROLL, 0x0000);
+    //    xreg_setw(PB_H_SCROLL, 0x0000);        // blank screen
+    //    xreg_setw(PB_V_SCROLL, 0x0000);
     xreg_setw(VID_CTRL, 0x0000);               // set border to color #0
     xmem_setw(XR_COLOR_A_ADDR, 0x0000);        // set color #0 to black
     setup_margins();
@@ -1655,8 +1667,8 @@ void test_colormap()
     xreg_setw(PA_TILE_CTRL, 0x0C07);
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_LINE_LEN, linelen);        // line len
-//    xreg_setw(PA_H_SCROLL, 0x0000);
-//    xreg_setw(PA_V_SCROLL, 0x0000);
+                                            //    xreg_setw(PA_H_SCROLL, 0x0000);
+                                            //    xreg_setw(PA_V_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
     xreg_setw(PB_GFX_CTRL, 0x0080);
 
@@ -2077,16 +2089,16 @@ void test_dual_8bpp()
         xreg_setw(PA_TILE_CTRL, 0x000F);
         xreg_setw(PA_DISP_ADDR, addrA);
         xreg_setw(PA_LINE_LEN, DRAW_WORDS);
-//        xreg_setw(PA_H_SCROLL, 0x0000);
-//        xreg_setw(PA_V_SCROLL, 0x0000);
+        //        xreg_setw(PA_H_SCROLL, 0x0000);
+        //        xreg_setw(PA_V_SCROLL, 0x0000);
 
         // set pf B 320x240 8bpp (cropped to 320x200)
         xreg_setw(PB_GFX_CTRL, 0x0065);
         xreg_setw(PB_TILE_CTRL, 0x000F);
         xreg_setw(PB_DISP_ADDR, addrB);
         xreg_setw(PB_LINE_LEN, DRAW_WORDS);
-//        xreg_setw(PB_H_SCROLL, 0x0000);
-//        xreg_setw(PB_V_SCROLL, 0x0000);
+        //        xreg_setw(PB_H_SCROLL, 0x0000);
+        //        xreg_setw(PB_V_SCROLL, 0x0000);
 
         // enable copper
         xwait_vblank();
@@ -2258,18 +2270,35 @@ void test_vram_speed()
     uint32_t main_write = 0;
     uint32_t main_read  = 0;
 
-    uint16_t reps = 16;        // just a few flashes for write test
+    uint16_t reps = 2;        // just a few flashes for write test
     xmsg(0, 0, 0x02, "VRAM write     ");
     dprintf("VRAM write x %d\n", reps);
-    uint32_t v = ((0x0f00 | 'G') << 16) | (0xf000 | 'o');
     timer_start();
+    uint32_t v = ((0x0f00 | 'G') << 16) | (0xf000 | 'o');
     for (int loop = 0; loop < reps; loop++)
     {
-        uint16_t count = 0x8000;        // VRAM long count
-        do
-        {
-            xm_setl(DATA, v);
-        } while (--count);
+        uint16_t count = 0x800;        // VRAM long count
+        __asm__ __volatile__(
+                    "0:     movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       movep.l  %[tmp]," XM_STR(XM_DATA) "(%[xptr])\n"
+                    "       dbf     %[cnt],0b"
+                    : [cnt] "=&d"(count)
+                    : [xptr] "a"(xosera_ptr), [tmp] "d"(v)
+                    : );
         v ^= 0xff00ff00;
     }
     vram_write = timer_stop();
@@ -2278,20 +2307,35 @@ void test_vram_speed()
     {
         return;
     }
-    reps = 16;        // main ram test (NOTE: I am not even incrementing pointer below - like "fake
-                      // register" write)
+    // register" write)
     xmsg(0, 0, 0x02, "main RAM write ");
     dprintf("main RAM write x %d\n", reps);
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
+        uint16_t   count = 0x800;        // VRAM long count
         uint32_t * ptr   = buffer.u32;
-        uint16_t   count = 0x8000;        // VRAM long count
-        do
-        {
-            //            *ptr++ = loop;    // GCC keeps trying to be clever, we want a fair test
-            __asm__ __volatile__("move.l %[loop],(%[ptr])" : : [loop] "d"(loop), [ptr] "a"(ptr) :);
-        } while (--count);
+        __asm__ __volatile__(
+            "0:     move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       move.l  %[tmp],(%[dptr])\n"
+            "       dbf     %[cnt],0b"
+            : [cnt] "=&d"(count)
+            : [dptr] "a"(ptr), [tmp] "d"(v)
+            :);
         v ^= 0xff00ff00;
     }
     main_write = timer_stop();
@@ -2300,17 +2344,33 @@ void test_vram_speed()
     {
         return;
     }
-    reps = 16;        // a bit longer read test (to show stable during read)
     xmsg(0, 0, 0x02, "VRAM read      ");
     dprintf("VRAM read x %d\n", reps);
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
-        uint16_t count = 0x8000;        // VRAM long count
-        do
-        {
-            v = xm_getl(DATA);
-        } while (--count);
+        uint16_t count = 0x800;        // VRAM long count
+        __asm__ __volatile__(
+                    "0:    movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      movep.l  " XM_STR(XM_DATA) "(%[xptr]),%[tmp]\n"
+                    "      dbf     %[cnt],0b"
+                    : [tmp] "=&d"(v), [cnt] "=&d"(count)
+                    : [xptr] "a"(xosera_ptr)
+                    :);
     }
     vram_read = timer_stop();
     global    = v;        // save v so GCC doesn't optimize away test
@@ -2318,78 +2378,70 @@ void test_vram_speed()
     {
         return;
     }
-    reps = 16;        // main ram test (NOTE: I am not even incrementing pointer below - like "fake
-                      // register" read)
     xmsg(0, 0, 0x02, "main RAM read  ");
     dprintf("main RAM read x %d\n", reps);
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
+        uint16_t   count = 0x800;        // VRAM long count
         uint32_t * ptr   = buffer.u32;
-        uint16_t   count = 0x8000;        // VRAM long count
-        do
-        {
-            //            v += *ptr++;    // GCC keeps trying to be clever, we want a fair test
-            __asm__ __volatile__("move.l (%[ptr]),%[v]" : [v] "+d"(v) : [ptr] "a"(ptr) :);
-        } while (--count);
+        __asm__ __volatile__(
+            "0:    move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      move.l  (%[sptr]),%[tmp]\n"
+            "      dbf     %[cnt],0b"
+            : [tmp] "=&d"(v), [cnt] "=&d"(count)
+            : [sptr] "a"(ptr)
+            :);
         v ^= 0xff00ff00;
     }
     main_read = timer_stop();
-    global    = v;         // save v so GCC doesn't optimize away test
-    reps      = 32;        // a bit longer read test (to show stable during read)
-    xmsg(0, 0, 0x02, "VRAM slow read ");
-    dprintf("VRAM slow read x %d\n", reps);
-    timer_start();
-    for (int loop = 0; loop < reps; loop++)
-    {
-        uint16_t count = 0x8000;        // VRAM long count
-        do
-        {
-            xm_setw(RD_ADDR, 0);
-            v = xm_getbl(DATA);
-        } while (--count);
-    }
-    vram_read = timer_stop();
-    global    = v;        // save v so GCC doesn't optimize away test
     if (checkchar())
     {
         return;
     }
-    reps = 16;        // a bit longer read test (to show stable during read)
-    xmsg(0, 0, 0x02, "VRAM slow read2");
-    dprintf("VRAM slow read2 x %d\n", reps);
-    timer_start();
-    for (int loop = 0; loop < reps; loop++)
-    {
-        uint16_t count = 0x8000;        // VRAM long count
-        do
-        {
-            xm_setw(RD_ADDR, count & 0xff);
-            v = xm_getbl(DATA);
-        } while (--count);
-    }
-    vram_read = timer_stop();
-    global    = v;        // save v so GCC doesn't optimize away test
-    if (checkchar())
-    {
-        return;
-    }
+#if 0
     dprintf("done\n");
 
-    dprintf("MOVEP.L VRAM write      128KB x 16 (2MB)    %lu ms (%lu KB/sec)\n",
-            vram_write,
-            (1000U * 128 * reps) / vram_write);
-    dprintf("MOVEP.L VRAM read       128KB x 16 (2MB)    %lu ms (%lu KB/sec)\n",
-            vram_read,
-            (1000U * 128 * reps) / vram_read);
-    dprintf("MOVE.L  main RAM write  128KB x 16 (2MB)    %lu ms (%lu KB/sec)\n",
-            main_write,
-            (1000U * 128 * reps) / main_write);
-    dprintf("MOVE.L  main RAM read   128KB x 16 (2MB)    %lu ms (%lu KB/sec)\n",
-            main_read,
-            (1000U * 128 * reps) / main_read);
+    dprintf("MOVEP.L VRAM write      128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",
+            reps,
+            128 * reps,
+            vram_write / 10000U,
+            vram_write % 10000U,
+            (10000U * 128 * reps) / vram_write);
+    dprintf("MOVEP.L VRAM read       128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",
+            reps,
+            128 * reps,
+            vram_read / 10000U,
+            vram_read % 10000U,
+            (10000U * 128 * reps) / vram_read);
+    dprintf("MOVE.L  main RAM write  128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",
+            reps,
+            128 * reps,
+            main_write / 10000U,
+            main_write % 10000U,
+            (10000U * 128 * reps) / main_write);
+    dprintf("MOVE.L  main RAM read   128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",
+            reps,
+            128 * reps,
+            main_read / 10000U,
+            main_read % 10000U,
+            (10000U * 128 * reps) / main_read);
+#endif
 }
-
 
 void test_8bpp_tiled()
 {
@@ -3005,6 +3057,7 @@ void     xosera_test()
         dprintf("Exiting without Xosera init.\n");
         exit(1);
     }
+    last_timer_val = xm_getw(TIMER);
 
     xosera_get_info(&initinfo);
     dump_xosera_regs();
@@ -3150,6 +3203,7 @@ void     xosera_test()
             dprintf("\n [ xosera_init(%u)...", config_num % 3);
             bool success = xosera_init(config_num % 3);
             dprintf("%s (%dx%d) ]\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
+            last_timer_val = xm_getw(TIMER);
             init_audio();
 #if 1
             uint16_t ic = xm_getw(INT_CTRL);
@@ -3207,8 +3261,8 @@ void     xosera_test()
         xreg_setw(PA_TILE_CTRL, 0x000F);
         xreg_setw(PA_LINE_LEN, xosera_vid_width() >> 3);
         xreg_setw(PA_DISP_ADDR, 0x0000);
-//        xreg_setw(PA_H_SCROLL, 0x0000);
-//        xreg_setw(PA_V_SCROLL, 0x0000);
+        //        xreg_setw(PA_H_SCROLL, 0x0000);
+        //        xreg_setw(PA_V_SCROLL, 0x0000);
         xreg_setw(PA_HV_FSCALE, 0x0000);
 
 
@@ -3248,6 +3302,8 @@ void     xosera_test()
         delay_check(DELAY_TIME * 3);
 
         restore_colors();
+
+        test_vram_speed();
 
         test_colormap();
 

@@ -91,18 +91,18 @@ XR_PA_TILE_CTRL         equ     $11         ; (R /W) playfield A tile control
 XR_PA_DISP_ADDR         equ     $12         ; (R /W) playfield A display VRAM start address
 XR_PA_LINE_LEN          equ     $13         ; (R /W) playfield A display line width in words
 XR_PA_HV_FSCALE         equ     $14         ; (R /W) playfield A horizontal and vertical fractional scale
-XR_PA_HV_SCROLL         equ     $15         ; (R /W) playfield A horizontal and vertical fine scroll
-XR_PA_LINE_ADDR         equ     $16         ; (- /W) playfield A scanline start address (loaded at start of line)
-XR_PA_UNUSED_17         equ     $17         ; (- /-)
+XR_PA_H_SCROLL          equ     $15         ; (R /W) playfield A horizontal and vertical fine scroll
+XR_PA_V_SCROLL          equ     $16         ; (R /W) playfield A horizontal and vertical fine scroll
+XR_PA_LINE_ADDR         equ     $17         ; (- /W) playfield A scanline start address (loaded at start of line)
 ; Playfield B Control XR Registers
 XR_PB_GFX_CTRL          equ     $18         ; (R /W) playfield B graphics control
 XR_PB_TILE_CTRL         equ     $19         ; (R /W) playfield B tile control
 XR_PB_DISP_ADDR         equ     $1A         ; (R /W) playfield B display VRAM start address
 XR_PB_LINE_LEN          equ     $1B         ; (R /W) playfield B display line width in words
 XR_PB_HV_FSCALE         equ     $1C         ; (R /W) playfield B horizontal and vertical fractional scale
-XR_PB_HV_SCROLL         equ     $1D         ; (R /W) playfield B horizontal and vertical fine scroll
-XR_PB_LINE_ADDR         equ     $1E         ; (- /W) playfield B scanline start address (loaded at start of line)
-XR_PB_UNUSED_1F         equ     $1F         ; (- /-)
+XR_PB_H_SCROLL          equ     $1D         ; (R /W) playfield B horizontal and vertical fine scroll
+XR_PB_V_SCROLL          equ     $1E         ; (R /W) playfield B horizontal and vertical fine scroll
+XR_PB_LINE_ADDR         equ     $1F         ; (- /W) playfield B scanline start address (loaded at start of line)
 ; Audio Registers
 XR_AUD0_VOL             equ     $20         ; (- /W ) audio channel 0 8-bit L+R volume ($80 = 100%)
 XR_AUD0_PERIOD          equ     $21         ; (- /W+) audio channel 0 15-bit period, bit [15] force restart

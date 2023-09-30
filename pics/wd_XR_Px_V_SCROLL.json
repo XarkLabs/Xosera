@@ -1,0 +1,35 @@
+{
+    "reg": [
+        {
+            "bits": 4,
+            "name": "vertical tile scroll",
+            "type": 5,
+            "attr": [
+                "0-15 vertical tile start line",
+                "(lines skipped before top edge)"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "0",
+            "type": 1
+        },
+        {
+            "bits": 2,
+            "name": "vert rep scroll",
+            "type": 6,
+            "attr": [
+                "0-3 native lines",
+                "(v repeat scroll)"
+            ]
+        },
+        {
+            "bits": 10,
+            "name": "0",
+            "type": 1
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

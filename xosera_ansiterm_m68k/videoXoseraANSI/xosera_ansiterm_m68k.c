@@ -588,7 +588,8 @@ static void xansi_reset(bool reset_colormap)
     xreg_setw(PA_TILE_CTRL, tile_ctrl_val);
     xreg_setw(PA_DISP_ADDR, td->vram_base);
     xreg_setw(PA_LINE_LEN, cols);
-    xreg_setw(PA_HV_SCROLL, 0x0000);
+    xreg_setw(PA_H_SCROLL, 0x0000);
+    xreg_setw(PA_V_SCROLL, 0x0000);
     xm_setbl(SYS_CTRL, 0x0F);
 
     if (reset_colormap)

@@ -144,14 +144,16 @@ void dump_xosera_regs(void)
     uint16_t pa_tilectrl = xreg_getw(PA_TILE_CTRL);
     uint16_t pa_dispaddr = xreg_getw(PA_DISP_ADDR);
     uint16_t pa_linelen  = xreg_getw(PA_LINE_LEN);
-    uint16_t pa_hvscroll = xreg_getw(PA_HV_SCROLL);
+    uint16_t pa_hscroll = xreg_getw(PA_H_SCROLL);
+    uint16_t pa_vscroll = xreg_getw(PA_V_SCROLL);
     uint16_t pa_hvfscale = xreg_getw(PA_HV_FSCALE);
 
     uint16_t pb_gfxctrl  = xreg_getw(PB_GFX_CTRL);
     uint16_t pb_tilectrl = xreg_getw(PB_TILE_CTRL);
     uint16_t pb_dispaddr = xreg_getw(PB_DISP_ADDR);
     uint16_t pb_linelen  = xreg_getw(PB_LINE_LEN);
-    uint16_t pb_hvscroll = xreg_getw(PB_HV_SCROLL);
+    uint16_t pb_hscroll = xreg_getw(PB_H_SCROLL);
+    uint16_t pb_vscroll = xreg_getw(PB_V_SCROLL);
     uint16_t pb_hvfscale = xreg_getw(PB_HV_FSCALE);
 
     dprintf("Xosera state:\n");
@@ -176,10 +178,13 @@ void dump_xosera_regs(void)
             pa_linelen,
             pb_dispaddr,
             pb_linelen);
-    dprintf("PA_HV_SCROLL: 0x%04x  PA_HV_FSCALE: 0x%04x  PB_HV_SCROLL: 0x%04x  PB_HV_FSCALE: 0x%04x\n",
-            pa_hvscroll,
+    dprintf("PA_H_SCROLL: 0x%04x   PA_V_FSCALE: 0x%04x   PB_H_SCROLL: 0x%04x   PB_V_FSCALE: 0x%04x\n",
+            pa_hscroll,
+            pa_vscroll,
+            pb_hscroll,
+            pb_vscroll);
+    dprintf("PA_HV_FSCALE: 0x%04x                        PB_HV_FSCALE: 0x%04x\n",
             pa_hvfscale,
-            pb_hvscroll,
             pb_hvfscale);
     dprintf("\n\n");
 }

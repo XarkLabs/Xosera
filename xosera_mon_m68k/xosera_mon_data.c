@@ -39,8 +39,9 @@ const addr_range_t xr_mem[] = {
     {"PA_TILE_CTRL", XR_PA_TILE_CTRL, 0x1},        // pf A tile control
     {"PA_DISP_ADDR", XR_PA_DISP_ADDR, 0x1},        // pf A display VRAM start address
     {"PA_LINE_LEN", XR_PA_LINE_LEN, 0x1},          // pf A display line width in words
-    {"PA_HV_FSCALE", XR_PA_HV_FSCALE, 0x1},        // pf A horizontal and vertical fractional scale
-    {"PA_HV_SCROLL", XR_PA_HV_SCROLL, 0x1},        // pf A horizontal and vertical fine scroll
+    {"PA_V_FSCALE", XR_PA_HV_FSCALE, 0x1},         // pf A horizontal and vertical fractional scale
+    {"PA_H_SCROLL", XR_PA_H_SCROLL, 0x1},          // pf A horizontal fine scroll
+    {"PA_V_SCROLL", XR_PA_V_SCROLL, 0x1},          // pf A vertical fine scroll
     {"PA_LINE_ADDR", XR_PA_LINE_ADDR, 0x1},        // pf A scanline start address (loaded at start of line)
 
     // Playfield B Control XR Registers
@@ -49,7 +50,8 @@ const addr_range_t xr_mem[] = {
     {"PB_DISP_ADDR", XR_PB_DISP_ADDR, 0x1},        // pf B display VRAM start address
     {"PB_LINE_LEN", XR_PB_LINE_LEN, 0x1},          // pf B display line width in words
     {"PB_HV_FSCALE", XR_PB_HV_FSCALE, 0x1},        // pf B horizontal and vertical fractional scale
-    {"PB_HV_SCROLL", XR_PB_HV_SCROLL, 0x1},        // pf B horizontal and vertical fine scroll
+    {"PB_H_SCROLL", XR_PB_H_SCROLL, 0x1},          // pf B horizontal fine scroll
+    {"PB_V_SCROLL", XR_PB_V_SCROLL, 0x1},          // pf B vertical fine scroll
     {"PB_LINE_ADDR", XR_PB_LINE_ADDR, 0x1},        // pf B scanline start address (loaded at start of line)
 
     // Audio Registers

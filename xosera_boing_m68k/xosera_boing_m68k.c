@@ -30,9 +30,9 @@
 #define WALL_BOTTOM (WALL_DIST)
 #define WALL_TOP    (240 - WALL_DIST)
 
-#define WIDESCREEN    false
-#define PAINT_BALL    true
-#define USE_AUDIO     true
+#define WIDESCREEN false
+#define PAINT_BALL true
+#define USE_AUDIO  true
 
 // blit method, if both these are false then uses CPU initiated blit
 #define USE_COPASM    true
@@ -57,16 +57,18 @@ uint16_t ball_tiles[BALL_TILES_HEIGHT][BALL_TILES_WIDTH][TILE_HEIGHT_B][TILE_WID
 #elif USE_COPMACROS
 
 // parameters words in copper memory
-#define cop_ball_dst       0x050
-#define cop_ball_prev      0x051
-#define cop_ball_gfx_ctrl  0x052
-#define cop_ball_hv_scroll 0x053
+#define cop_ball_dst      0x050
+#define cop_ball_prev     0x051
+#define cop_ball_gfx_ctrl 0x052
+#define cop_ball_h_scroll 0x053
+#define cop_ball_v_scroll 0x054
 
 uint16_t copper_list[] = {
     // 0x000 = entry
     [0x000] = COP_VPOS(480),                                          // wait for offscreen
     COP_MOVM(cop_ball_gfx_ctrl, XR_PB_GFX_CTRL),                      // colorbase to rotate colors
-    COP_MOVM(cop_ball_hv_scroll, XR_PB_HV_SCROLL),                    // hv scroll for fine scroll
+    COP_MOVM(cop_ball_h_scroll, XR_PB_H_SCROLL),                      // h scroll for fine scroll
+    COP_MOVM(cop_ball_v_scroll, XR_PB_V_SCROLL),                      // v scroll for fine scroll
     COP_VPOS(COP_V_WAITBLIT),                                         // wait until blitter not in use
     COP_CMPM(cop_ball_prev),                                          // check for zero ball_prev
     COP_BRGE(0x020),                                                  // skip erase before 1st draw
@@ -97,10 +99,11 @@ uint16_t copper_list[] = {
     COP_MOVI(BALL_TILES_WIDTH - 1, XR_BLIT_WORDS),                    // go!
     COP_VPOS(COP_V_EOF),                                              // wait for next frame
     // data words
-    [cop_ball_dst]       = 0,
-    [cop_ball_prev]      = 0,
-    [cop_ball_gfx_ctrl]  = 0,
-    [cop_ball_hv_scroll] = 0,
+    [cop_ball_dst]      = 0,
+    [cop_ball_prev]     = 0,
+    [cop_ball_gfx_ctrl] = 0,
+    [cop_ball_h_scroll] = 0,
+    [cop_ball_v_scroll] = 0,
 };
 #endif
 
@@ -512,10 +515,12 @@ void draw_ball_at(int width_words, int height_words, int x, int y)
 
 #if USE_COPASM
     xmem_setw(XR_COPPER_ADDR + boing_copper__ball_dst, dst);
-    xmem_setw(XR_COPPER_ADDR + boing_copper__ball_hv_scroll, MAKE_HV_SCROLL(scroll_x, scroll_y, 0));
+    xmem_setw(XR_COPPER_ADDR + boing_copper__ball_h_scroll, MAKE_H_SCROLL(scroll_x));
+    xmem_setw(XR_COPPER_ADDR + boing_copper__ball_v_scroll, MAKE_V_SCROLL(0, scroll_y));
 #elif USE_COPMACROS
     xmem_setw(XR_COPPER_ADDR + cop_ball_dst, dst);
-    xmem_setw(XR_COPPER_ADDR + cop_ball_hv_scroll, MAKE_HV_SCROLL(scroll_x, scroll_y, 0));
+    xmem_setw(XR_COPPER_ADDR + cop_ball_h_scroll, MAKE_H_SCROLL(scroll_x));
+    xmem_setw(XR_COPPER_ADDR + cop_ball_v_scroll, MAKE_V_SCROLL(0, scroll_y));
 #else
     static uint16_t prev_dst;
     while (xreg_getw(SCANLINE) < 480)
@@ -549,7 +554,8 @@ void draw_ball_at(int width_words, int height_words, int x, int y)
     xreg_setw(BLIT_LINES, BALL_TILES_HEIGHT - 1);
     xreg_setw(BLIT_WORDS, BALL_TILES_WIDTH - 1);        // Starts operation
 
-    xreg_setw(PB_HV_SCROLL, MAKE_HV_SCROLL(scroll_x, scroll_y, 0));
+    xreg_setw(PB_H_SCROLL, MAKE_H_SCROLL(scroll_x));
+    xreg_setw(PB_V_SCROLL, MAKE_V_SCROLL(0, scroll_x));
 #endif
 }
 
@@ -1089,7 +1095,8 @@ void xosera_boing()
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_LINE_LEN, vid_hsize / 8);
-    xreg_setw(PA_HV_SCROLL, 0x0000);
+    xreg_setw(PA_H_SCROLL, 0x0000);
+    xreg_setw(PA_V_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
     xreg_setw(PB_GFX_CTRL, 0x0080);
 

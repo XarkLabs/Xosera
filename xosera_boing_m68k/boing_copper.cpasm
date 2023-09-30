@@ -15,7 +15,8 @@
                 export  ball_dst
                 export  ball_prev
                 export  ball_gfx_ctrl
-                export  ball_hv_scroll
+                export  ball_h_scroll
+                export  ball_v_scroll
 
 entry
                 VPOS    #480                                            ; wait for offscreen
@@ -55,7 +56,8 @@ draw_ball
                 ; update playfield B XR registers
                 MOVI    #MAKE_GFX_CTRL(0x00,0,GFX_BPP_4,0,1,1),XR_PB_GFX_CTRL
                 MOVM    ball_gfx_ctrl,XR_PB_GFX_CTRL
-                MOVM    ball_hv_scroll,XR_PB_HV_SCROLL
+                MOVM    ball_h_scroll,XR_PB_H_SCROLL
+                MOVM    ball_v_scroll,XR_PB_V_SCROLL
 
                 ; wait for next frame
                 VPOS    #V_EOF
@@ -63,5 +65,6 @@ draw_ball
 ball_dst        word    0
 ball_prev       word    0
 ball_gfx_ctrl   word    0
-ball_hv_scroll  word    0
+ball_h_scroll   word    0
+ball_v_scroll   word    0
 

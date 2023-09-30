@@ -63,6 +63,12 @@ xosera_dvi:
 	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_848x480 AUDIO=4 FPGA_CONFIG_NUM=1 $(MAKE) -f upduino.mk
 	mv xosera_upd.bin xosera_board_dvi.bin
 
+# Build combo Xosera UPduino 3.x FPGA DVI bitstream for rosco_m6k board
+xosera_dvi_640:
+	$(MAKE) -f upduino.mk clean
+	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_640x480 AUDIO=4 FPGA_CONFIG_NUM=0 $(MAKE) -f upduino.mk
+	mv xosera_upd.bin xosera_board_dvi_640.bin
+
 # Build Xosera iCEBreaker FPGA bitstream
 iceb_dvi:
 	VIDEO_OUTPUT=PMOD_1B2_DVI12 VIDEO_MODE=MODE_640x480 AUDIO=4 PF_B=true FPGA_CONFIG_NUM=0 $(MAKE) -f icebreaker.mk

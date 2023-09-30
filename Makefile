@@ -54,6 +54,11 @@ xosera_dvi:
 	cd rtl && $(MAKE) xosera_dvi
 	@echo Type \"make xosera_dvi_prog\" to program the UPduino via USB
 
+# Build UPduino combined bitstream for DVI Xosera rosco_m68k board
+xosera_dvi_640:
+	cd rtl && $(MAKE) xosera_dvi_640
+	@echo Type \"make xosera_dvi_640_prog\" to program the UPduino via USB
+
 # Build and program combo Xosera UPduino 3.x VGA FPGA bitstream for rosco_m6k board
 xosera_vga_prog: xosera_vga
 	@echo === Programming Xosera board UPduino VGA firmware ===
@@ -69,6 +74,10 @@ xosera_dvi_prog: xosera_dvi
 	@echo === Programming Xosera board UPduino DVI firmware ===
 	$(ICEPROG) -d i:0x0403:0x6014 rtl/xosera_board_dvi.bin
 
+# Build and program combo Xosera UPduino 3.x DVI FPGA bitstream for rosco_m6k board
+xosera_dvi_640_prog: xosera_dvi
+	@echo === Programming Xosera board UPduino DVI firmware for 640x480 only ===
+	$(ICEPROG) -d i:0x0403:0x6014 rtl/xosera_board_dvi.bin
 
 # Build UPduino bitstream
 upduino:
@@ -127,6 +136,8 @@ m68k:
 	cd xosera_m68k_api/ && $(MAKE)
 	cd xosera_ansiterm_m68k/ && $(MAKE)
 	cd xosera_boing_m68k/ && $(MAKE)
+	cd xosera_mon_m68k/ && $(MAKE)
+	cd xosera_pointer_m68k/ && $(MAKE)
 	cd xosera_vramtest_m68k && $(MAKE)
 	cd xosera_test_m68k && $(MAKE)
 	cd uart_test_m68k && $(MAKE)
@@ -157,6 +168,23 @@ golden:
 		cp -v rtl/xosera_board_vga.bin ./xosera_gateware ; \
 	fi
 	@echo === Done
+
+golden_dvi:
+	@echo === Last 640x480 dvi bitstream stats:
+	@cat rtl/xosera_upd_*dvi_640x480_stats.txt
+	@echo === Last 848x480 dvi bitstream stats:
+	@cat rtl/xosera_upd_*dvi_848x480_stats.txt
+	@echo Enshrine these bitstreams [y/N]?
+	@read ans && if [ $${ans:-'N'} = 'y' ] ; then \
+		echo === Copying xosera dvi bitstreams to xosera_gateware... ; \
+		cp -v rtl/xosera_upd_*_dvi_*_stats.txt ./xosera_gateware && \
+		cp -v rtl/upduino/logs/xosera_upd_*_dvi_*_yosys.log ./xosera_gateware && \
+		cp -v rtl/upduino/logs/xosera_upd_*_dvi_*_nextpnr.log ./xosera_gateware && \
+		cp -v rtl/upduino/xosera_upd_*_dvi_*.json ./xosera_gateware && \
+		cp -v rtl/xosera_board_dvi.bin ./xosera_gateware ; \
+	fi
+	@echo === Done
+
 # Clean all project targets
 clean: m68kclean
 	cd copper/CopAsm/ && $(MAKE) clean
@@ -169,6 +197,8 @@ m68kclean:
 	cd xosera_m68k_api/ && $(MAKE) clean
 	cd xosera_ansiterm_m68k/ && $(MAKE) clean
 	cd xosera_boing_m68k/ && $(MAKE) clean
+	cd xosera_mon_m68k/ && $(MAKE) clean
+	cd xosera_pointer_m68k/ && $(MAKE) clean
 	cd xosera_vramtest_m68k && $(MAKE) clean
 	cd xosera_test_m68k && $(MAKE) clean
 	cd uart_test_m68k && $(MAKE) clean

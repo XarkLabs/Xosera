@@ -970,9 +970,10 @@ static void install_copper()
     if (cop_fx_ptr->flags & COP_FLAG_SINE)
     {
         uint8_t ti = 0;
+        uint16_t eol = xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2): 0;
         for (uint16_t i = 0; i < 256; i += 1)
         {
-            uint16_t v                              = ((sinData[ti++] >> 3) - 16) & 0x1f;
+            uint16_t v                              = eol + (((sinData[ti++] >> 3) - 16) & 0x1f);
             cop_wavey_bin[cop_wavey__wavetable + i] = v;
         }
         xreg_setw(PA_H_SCROLL, 16);

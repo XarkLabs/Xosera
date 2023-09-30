@@ -688,7 +688,7 @@ void dump_xosera_regs(void)
             pb_hscroll,
             pb_vscroll);
 
-    dprintf("PA_HV_FSCALE: 0x%04x                       PB_HV_FSCALE: 0x%04x\n", pa_hvfscale, pb_hvfscale);
+    dprintf("PA_HV_FSCALE: 0x%04x                        PB_HV_FSCALE: 0x%04x\n", pa_hvfscale, pb_hvfscale);
     dprintf("\n\n");
 
     // spammy...
@@ -751,7 +751,7 @@ static void reset_vid(void)
     xreg_setw(VID_CTRL, 0x0008);
     xreg_setw(COPP_CTRL, 0x0000);        // disable copper
     xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 640);
     xreg_setw(PA_GFX_CTRL, 0x0000);
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PA_DISP_ADDR, 0x0000);
@@ -937,8 +937,7 @@ static void setup_copper_fx()
     }
 }
 
-static uint16_t margin_offset;
-static void     setup_margins(void)
+static void setup_margins(void)
 {
     if (xosera_vid_width() > 640)
     {
@@ -955,8 +954,9 @@ static void     setup_margins(void)
 static void install_copper()
 {
     wait_vblank_start();
-    margin_offset = 0;
     xreg_setw(PA_H_SCROLL, 0);
+    xreg_setw(PB_H_SCROLL, 0);
+    xreg_setw(PA_V_SCROLL, 0);
     xreg_setw(PB_V_SCROLL, 0);
 
     if (cop_fx_ptr->flags & COP_FLAG_HPOS)
@@ -969,16 +969,14 @@ static void install_copper()
     }
     if (cop_fx_ptr->flags & COP_FLAG_SINE)
     {
-        uint8_t  ti  = 0;
-        uint16_t eol = (xosera_vid_width() > 640 ? 848 - 1 : 640 - 1) - 17;
-        for (uint16_t i = 0; i < 512; i += 2)
+        uint8_t ti = 0;
+        for (uint16_t i = 0; i < 256; i += 1)
         {
-            uint16_t v                                  = MAKE_H_SCROLL((sinData[ti] >> 3) + 16);
-            cop_wavey_bin[cop_wavey__wavetable + i]     = v;
-            uint16_t r                                  = eol - (sinData[ti++] >> 3);
-            cop_wavey_bin[cop_wavey__wavetable + 1 + i] = r;
+            uint16_t v                              = ((sinData[ti++] >> 3) - 16) & 0x1f;
+            cop_wavey_bin[cop_wavey__wavetable + i] = v;
         }
-        margin_offset = 16;
+        xreg_setw(PA_H_SCROLL, 16);
+        xreg_setw(PB_H_SCROLL, 16);
     }
 
     xmem_setw_next_addr(XR_COPPER_ADDR);
@@ -1256,8 +1254,12 @@ void show_test_pic(int pic_num, uint16_t addr)
     wait_vblank_start();
     xreg_setw(PA_GFX_CTRL, 0x0080);        // blank screen
     xreg_setw(PB_GFX_CTRL, 0x0080);
-    xreg_setw(VID_CTRL, 0x0000);        // set border
-    xmem_setw(XR_COLOR_A_ADDR, 0x0000);
+//    xreg_setw(PA_H_SCROLL, 0x0000);        // blank screen
+//    xreg_setw(PA_V_SCROLL, 0x0000);
+//    xreg_setw(PB_H_SCROLL, 0x0000);        // blank screen
+//    xreg_setw(PB_V_SCROLL, 0x0000);
+    xreg_setw(VID_CTRL, 0x0000);               // set border to color #0
+    xmem_setw(XR_COLOR_A_ADDR, 0x0000);        // set color #0 to black
     setup_margins();
     xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, addr);
@@ -1652,8 +1654,8 @@ void test_colormap()
     xreg_setw(PA_TILE_CTRL, 0x0C07);
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_LINE_LEN, linelen);        // line len
-    xreg_setw(PA_H_SCROLL, 0x0000);
-    xreg_setw(PA_V_SCROLL, 0x0000);
+//    xreg_setw(PA_H_SCROLL, 0x0000);
+//    xreg_setw(PA_V_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
     xreg_setw(PB_GFX_CTRL, 0x0080);
 
@@ -1736,6 +1738,7 @@ void test_colormap()
 
 void test_blend()
 {
+    uint16_t copsave = xreg_getw(COPP_CTRL);
     xreg_setw(COPP_CTRL, 0x0000);
 
     xreg_setw(PA_GFX_CTRL, 0x0080);        // bitmap + 8-bpp + Hx1 + Vx1
@@ -1756,9 +1759,11 @@ void test_blend()
 
     delay_check(DELAY_TIME);
 
+#if COPPER_TEST
     xreg_setw(COPP_CTRL, 0x0000);
     install_copper();
-    xreg_setw(COPP_CTRL, 0x8000);
+    xreg_setw(COPP_CTRL, copsave);
+#endif
 }
 
 void test_blit()
@@ -2071,16 +2076,16 @@ void test_dual_8bpp()
         xreg_setw(PA_TILE_CTRL, 0x000F);
         xreg_setw(PA_DISP_ADDR, addrA);
         xreg_setw(PA_LINE_LEN, DRAW_WORDS);
-        xreg_setw(PA_H_SCROLL, 0x0000);
-        xreg_setw(PA_V_SCROLL, 0x0000);
+//        xreg_setw(PA_H_SCROLL, 0x0000);
+//        xreg_setw(PA_V_SCROLL, 0x0000);
 
         // set pf B 320x240 8bpp (cropped to 320x200)
         xreg_setw(PB_GFX_CTRL, 0x0065);
         xreg_setw(PB_TILE_CTRL, 0x000F);
         xreg_setw(PB_DISP_ADDR, addrB);
         xreg_setw(PB_LINE_LEN, DRAW_WORDS);
-        xreg_setw(PB_H_SCROLL, 0x0000);
-        xreg_setw(PB_V_SCROLL, 0x0000);
+//        xreg_setw(PB_H_SCROLL, 0x0000);
+//        xreg_setw(PB_V_SCROLL, 0x0000);
 
         // enable copper
         xwait_vblank();
@@ -3008,7 +3013,7 @@ void     xosera_test()
     {
         readchar();
     }
-    cpu_delay(5000);
+    cpu_delay(3000);
 
     // dprintf("\nPress key to begin...\n");
     // readchar();
@@ -3173,6 +3178,8 @@ void     xosera_test()
         {
             dprintf("Copper disabled for this iteration.\n");
             xreg_setw(COPP_CTRL, 0x0000);
+            xreg_setw(PA_H_SCROLL, 0);
+            xreg_setw(PB_V_SCROLL, 0);
         }
 #endif
         if (test_count & 2)
@@ -3199,8 +3206,8 @@ void     xosera_test()
         xreg_setw(PA_TILE_CTRL, 0x000F);
         xreg_setw(PA_LINE_LEN, xosera_vid_width() >> 3);
         xreg_setw(PA_DISP_ADDR, 0x0000);
-        xreg_setw(PA_H_SCROLL, 0x0000);
-        xreg_setw(PA_V_SCROLL, 0x0000);
+//        xreg_setw(PA_H_SCROLL, 0x0000);
+//        xreg_setw(PA_V_SCROLL, 0x0000);
         xreg_setw(PA_HV_FSCALE, 0x0000);
 
 

@@ -2413,7 +2413,7 @@ void test_vram_speed()
     {
         return;
     }
-#if 0
+#if 1
     dprintf("done\n");
 
     dprintf("MOVEP.L VRAM write      128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",

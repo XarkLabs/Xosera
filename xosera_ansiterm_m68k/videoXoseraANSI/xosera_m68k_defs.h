@@ -76,25 +76,25 @@
 #define XM_PIXEL_X  0x30        // (- /W+) pixel X coordinate / setup pixel base address
 #define XM_PIXEL_Y  0x34        // (- /W+) pixel Y coordinate / setup pixel line width
 #define XM_UART     0x38        // (R+/W+) optional debug USB UART communication
-#define XM_FEATURE  0x3C        // (R /W+) Xosera feature flags, write sets pixel base, width to X, Y and mask mode
+#define XM_FEATURE  0x3C        // (R /W+) Xosera feature flags
 #else
 // Xosera Main 16-bit Registers (directly accessable XM Registers)
-#define XM_SYS_CTRL 0x0        // (R /W+) [15:8] status bits, write setup PIXEL_X/Y & options, [7:0] write masking
-#define XM_INT_CTRL 0x1        // (R /W+) FPGA config, interrupt status/control
-#define XM_TIMER    0x2        // (R /W+) read 1/10th millisecond timer, write 8-bit interval timer count
-#define XM_RD_XADDR 0x3        // (R /W+) XR register/address for XM_XDATA read access
-#define XM_WR_XADDR 0x4        // (R /W ) XR register/address for XM_XDATA write access
-#define XM_XDATA    0x5        // (R /W+) read/write XR register/memory at XM_RD_XADDR/XM_WR_XADDR
-#define XM_RD_INCR  0x6        // (R /W ) increment value for XM_RD_ADDR read from XM_DATA/XM_DATA_2
-#define XM_RD_ADDR  0x7        // (R /W+) VRAM address for reading from VRAM when XM_DATA/XM_DATA_2 is read
-#define XM_WR_INCR  0x8        // (R /W ) increment value for XM_WR_ADDR on write to XM_DATA/XM_DATA_2
-#define XM_WR_ADDR  0x9        // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
-#define XM_DATA     0xA        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
-#define XM_DATA_2   0xB        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
-#define XM_PIXEL_X  0xC        // (- /W+) pixel X coordinate / setup pixel base address
-#define XM_PIXEL_Y  0xD        // (- /W+) pixel Y coordinate / setup pixel line width
-#define XM_UART     0xE        // (R+/W+) optional debug USB UART communication
-#define XM_FEATURE  0xF        // (R /W+) Xosera feature flags, write sets pixel base, width to X, Y and mask mode
+#define XM_SYS_CTRL 0x00        // (R /W+) [15:8] status bits, write setup PIXEL_X/Y & options, [7:0] write masking
+#define XM_INT_CTRL 0x01        // (R /W+) FPGA config, interrupt status/control
+#define XM_TIMER    0x02        // (R /W+) read 1/10th millisecond timer, write 8-bit interval timer count
+#define XM_RD_XADDR 0x03        // (R /W+) XR register/address for XM_XDATA read access
+#define XM_WR_XADDR 0x04        // (R /W ) XR register/address for XM_XDATA write access
+#define XM_XDATA    0x05        // (R /W+) read/write XR register/memory at XM_RD_XADDR/XM_WR_XADDR
+#define XM_RD_INCR  0x06        // (R /W ) increment value for XM_RD_ADDR read from XM_DATA/XM_DATA_2
+#define XM_RD_ADDR  0x07        // (R /W+) VRAM address for reading from VRAM when XM_DATA/XM_DATA_2 is read
+#define XM_WR_INCR  0x08        // (R /W ) increment value for XM_WR_ADDR on write to XM_DATA/XM_DATA_2
+#define XM_WR_ADDR  0x09        // (R /W ) VRAM address for writing to VRAM when XM_DATA/XM_DATA_2 is written
+#define XM_DATA     0x0A        // (R+/W+) read/write VRAM word at XM_RD_ADDR/XM_WR_ADDR & add XM_RD_INCR/XM_WR_INCR
+#define XM_DATA_2   0x0B        // (R+/W+) 2nd XM_DATA(to allow for 32-bit read/write access)
+#define XM_PIXEL_X  0x0C        // (- /W+) pixel X coordinate / setup pixel base address
+#define XM_PIXEL_Y  0x0D        // (- /W+) pixel Y coordinate / setup pixel line width
+#define XM_UART     0x0E        // (R+/W+) optional debug USB UART communication
+#define XM_FEATURE  0x0F        // (R /W+) Xosera feature flags, write sets pixel base, width to X, Y and mask mode
 #endif
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 //  Video Config and Copper XR Registers
@@ -409,6 +409,19 @@
 #define BLIT_SHIFT_CNT_B  0
 #define BLIT_SHIFT_CNT_W  2
 #define BLIT_SHIFT_CNT_F  0x0003
+
+// Video mode 640x480 constants (4:3 aspect ratio)
+#define MODE_640x480_H        640                                            // visible width
+#define MODE_640x480_V        480                                            // visible height
+#define MODE_640x480_TOTAL_H  800                                            // total hpos width
+#define MODE_640x480_TOTAL_V  525                                            // total vpos height
+#define MODE_640x480_LEFTEDGE (MODE_640x480_TOTAL_H - MODE_640x480_H)        // offscreen hpos pixels
+// Video mode 848x480 constants (16:9 aspect ratio)
+#define MODE_848x480_H        848                                            // visible width
+#define MODE_848x480_V        480                                            // visible height
+#define MODE_848x480_TOTAL_H  1088                                           // total hpos width
+#define MODE_848x480_TOTAL_V  517                                            // total vpos height
+#define MODE_848x480_LEFTEDGE (MODE_848x480_TOTAL_H - MODE_848x480_H)        // offscreen hpos pixels
 
 // Macros for bit-fields: right_bit, bit_width, E.g., XB_(V,8,4) would put V into bits [11:8] (excess bits truncated)
 // encode value into bit-field for register

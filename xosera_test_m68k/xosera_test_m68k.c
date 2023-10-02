@@ -509,7 +509,7 @@ static inline void wait_vblank_start()
 
 static inline void check_vblank()
 {
-    if (!xm_get_sys_ctrlb(VBLANK) || xreg_getw(SCANLINE) > 520)
+    if (!xm_getb_sys_ctrl(VBLANK) || xreg_getw(SCANLINE) > 520)
     {
         wait_vblank_start();
     }
@@ -761,17 +761,28 @@ static void reset_vid(void)
     wait_vblank_start();
 
     xreg_setw(VID_CTRL, 0x0008);
-    xreg_setw(COPP_CTRL, 0x0000);        // disable copper
-    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 640);
-    xreg_setw(PA_GFX_CTRL, 0x0000);
-    xreg_setw(PA_TILE_CTRL, 0x000F);
+    xreg_setw(COPP_CTRL, 0x0000);
+    xreg_setw(AUD_CTRL, 0x0000);
+    xreg_setw(VID_LEFT, 0);
+    xreg_setw(VID_RIGHT, xosera_vid_width());
+    xreg_setw(POINTER_H, 0x0000);
+    xreg_setw(POINTER_V, 0x0000);
+
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, GFX_BPP_1, 0, 0, 0));
+    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(XR_TILE_ADDR, 0, 0, 16));
     xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_LEN, 80);        // line len
-    xreg_setw(PA_H_SCROLL, 0x0000);
-    xreg_setw(PA_V_SCROLL, 0x0000);
-    xreg_setw(PA_HV_FSCALE, 0x0000);
-    xreg_setw(PB_GFX_CTRL, 0x0080);
+    xreg_setw(PA_LINE_LEN, xosera_vid_width() / 8);
+    xreg_setw(PA_HV_FSCALE, MAKE_HV_FSCALE(0, 0));
+    xreg_setw(PA_H_SCROLL, MAKE_H_SCROLL(0));
+    xreg_setw(PA_V_SCROLL, MAKE_V_SCROLL(0, 0));
+
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 1, GFX_BPP_1, 0, 0, 0));
+    xreg_setw(PB_TILE_CTRL, MAKE_TILE_CTRL(XR_TILE_ADDR, 0, 0, 16));
+    xreg_setw(PB_DISP_ADDR, 0x0000);
+    xreg_setw(PB_LINE_LEN, xosera_vid_width() / 8);
+    xreg_setw(PB_HV_FSCALE, MAKE_HV_FSCALE(0, 0));
+    xreg_setw(PB_H_SCROLL, MAKE_H_SCROLL(0));
+    xreg_setw(PB_V_SCROLL, MAKE_V_SCROLL(0, 0));
 
     restore_colors();
 
@@ -951,16 +962,9 @@ static void setup_copper_fx()
 
 static void setup_margins(void)
 {
-    if (xosera_vid_width() > 640)
-    {
-        xosera_set_left(((xosera_vid_width() - 640) / 2));
-        xosera_set_right(((xosera_vid_width() - 640) / 2) + 640);
-    }
-    else
-    {
-        xosera_set_left(0);
-        xosera_set_right(xosera_vid_width());
-    }
+    uint16_t w = xosera_vid_width();
+    xreg_setw(VID_LEFT, ((w - 640) / 2));
+    xreg_setw(VID_RIGHT, ((w - 640) / 2) + 640);
 }
 
 static void install_copper()

@@ -30,14 +30,6 @@
 #define XV_PREP_REQUIRED
 #include "xosera_m68k_api.h"
 
-#define MODE_640_FULL_H 800
-#define MODE_640_FULL_V 525
-#define MODE_640_LEFT_H (MODE_640_FULL_H - 640)
-#define MODE_848_FULL_H 1088
-#define MODE_848_FULL_V 517
-#define MODE_848_LEFT_H (MODE_848_FULL_H - 848)
-
-
 #define SYNC_RETRIES 250        // ~1/4 second
 
 // TODO: This is less than ideal (tuned for ~10MHz)
@@ -71,7 +63,7 @@ void xosera_memclear(void * ptr, unsigned int n)
 }
 
 // delay for approx ms milliseconds
-void xv_delay(uint32_t ms)
+void xosera_delay(uint32_t ms)
 {
     if (!xosera_sync())
     {
@@ -152,32 +144,6 @@ bool xosera_init(int reconfig_num)
     return detected;
 }
 
-int xosera_vid_width()
-{
-    xv_prep();
-
-    return ((xm_getbl(FEATURE) & FEATURE_MONRES_F) == 0) ? 640 : 848;
-}
-
-int xosera_vid_height()
-{
-    return 480;
-}
-
-int xosera_max_hpos()
-{
-    xv_prep();
-
-    return ((xm_getbl(FEATURE) & FEATURE_MONRES_F) == 0) ? MODE_640_FULL_H - 1 : MODE_848_FULL_H - 1;
-}
-
-int xosera_max_vpos()
-{
-    xv_prep();
-
-    return ((xm_getbl(FEATURE) & FEATURE_MONRES_F) == 0) ? MODE_640_FULL_V - 1 : MODE_848_FULL_V - 1;
-}
-
 void xosera_set_pointer(int16_t x, int16_t y, uint16_t colormap_index)
 {
     xv_prep();
@@ -185,35 +151,29 @@ void xosera_set_pointer(int16_t x, int16_t y, uint16_t colormap_index)
     uint8_t ws = xm_getbl(FEATURE) & FEATURE_MONRES_F;        // 0 = 640x480
 
     // offscreen pixels plus 6 pixel "head start"
-    x = x + (ws ? (MODE_848_FULL_H - 848 - 6) : (MODE_640_FULL_H - 640 - 6));
+    x = x + (ws ? MODE_848x480_LEFTEDGE - 6 : MODE_640x480_LEFTEDGE - 6);
     // make sure doesn't wrap back onscreen due to limited bits in POINTER_H
-    if (x < 0 || x > MODE_848_FULL_H)
+    if (x < 0 || x > MODE_848x480_TOTAL_H)
     {
-        x = MODE_848_FULL_H;
+        x = MODE_848x480_TOTAL_H;
     }
 
     // make sure doesn't wrap back onscreen due to limited bits in POINTER_V
-    if (y < -32 || y > 480)
+    if (y < -32 || y > MODE_640x480_V)
     {
-        y = 480;
+        y = MODE_640x480_V;
     }
     else if (y < 0)
     {
         // special handling for partially off top (offset to before V wrap)
-        y = y + (ws ? MODE_848_FULL_V : MODE_640_FULL_V);
+        y = y + (ws ? MODE_848x480_TOTAL_V : MODE_640x480_TOTAL_V);
     }
 
+    // wait for either hblank or vblank
     while (!(xm_getbh(SYS_CTRL) & (SYS_CTRL_HBLANK_F | SYS_CTRL_VBLANK_F)))
         ;
     xreg_setw(POINTER_H, x);
     xreg_setw(POINTER_V, colormap_index | y);
-}
-
-int xosera_aud_channels()
-{
-    xv_prep();
-
-    return xm_getbh(FEATURE) & (FEATURE_AUDCHAN_F >> 8);
 }
 
 bool xosera_get_info(xosera_info_t * info)

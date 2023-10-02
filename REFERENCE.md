@@ -126,7 +126,7 @@ ___
 | `PIX_8B_MASK` | `[8]`   | R/W+ | `PIXEL_X/Y` 8-bit pixel mask for WR_MASK (on even 4-BPP coordinates)            |
 | `WR_MASK`     | `[3:0]` | R/W  | `XM_DATA`/`XM_DATA_2` VRAM nibble write mask (see below)                        |
 
-When bits `[15:8]` (even/upper byte) of `SYS_CTRL` is written, besides setting`PIXEL_X/Y` address generation options `PIX_NO_MASK` and `PIX_8B_MASK`, it also will initialize the internal registers `PIXEL_BASE` (base VRAM address) and `PIXEL_WIDTH` (width of line in words). `PIXEL_X` will be copied into `PIXEL_BASE` and `PIXEL_Y` into `PIXEL_WIDTH` (so generally they should be set before writing bits `[15:8]`).
+When bits `[15:8]` (even/upper byte) of `SYS_CTRL` are written, besides setting`PIXEL_X/Y` address generation options `PIX_NO_MASK` and `PIX_8B_MASK`, it also will initialize the internal registers `PIXEL_BASE` (base VRAM address) and `PIXEL_WIDTH` (width of line in words). `PIXEL_X` will be copied into `PIXEL_BASE` and `PIXEL_Y` into `PIXEL_WIDTH` (so generally they should be set before writing bits `[15:8]`).
 
 > :mag: **`PIX_8B_MASK`** The X coordinate of `PIXEL_X` assumes 4-bit pixels, but if `PIX_8B_MASK` is enabled in `SYS_CTRL`, then mask will be set for 2 nibbles (8-bits) on even coordinates for easy use with 8-bit pixels.
 
@@ -334,7 +334,7 @@ ___
 
 To access an XR register or XR memory address, write the XR register number or address to `XM_RD_XADDR` or `XM_WR_XADDR` then read or write (respectively) to `XM_XDATA`. Each word read or written to `XM_XDATA` will also automatically increment `XM_RD_XADDR` or `XM_WR_XADDR` (respectively) for contiguous reads or writes.  
 While almost all XR memory regions can be read (except `POINTER`), when there is high memory contention (e.g., it is being used for video generation or other use), there is a `mem_wait` bit in `XM_SYS_CTRL` that will indicate when the last memory operation is still pending.  Usually this is not needed when writing, but can be needed reading (e.g., this is generally needed reading from COLOR memory, since it is used for every active pixel, even when the screen is blanked or inactive for the border color).
-Also note that unlike the 16 main `XM` registers, the XR region should only be accessed as full 16-bit words (either reading or writing both bytes). The full 16-bits of the `XM_XDATA` value are pre-read when `XM_RD_XADDR` is written or incremented and a full 16-bit word is written when the odd (low-byte) of `XM_XDATA` is written (the even/upper byte is stored until the odd/lower byte).
+Also note that unlike the 16 main `XM` registers, the XR region should generally be accessed as full 16-bit words (either reading or writing both bytes). The full 16-bits of the `XM_XDATA` value are pre-read when `XM_RD_XADDR` is written or incremented and a full 16-bit word is written when the odd (low-byte) of `XM_XDATA` is written (the even/upper byte is stored until the odd/lower byte).
 ___
 
 ### Xosera Extended Registers Details (XR Registers)

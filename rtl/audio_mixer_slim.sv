@@ -367,7 +367,7 @@ always_ff @(posedge clk) begin : mix_fsm
         vol_r_temp      <= '0;
 
 `ifndef SYNTHESIS
-        output_l        <= 8'hFF;      // HACK: to force full scale display for analog signal view in GTKWave
+        output_l        <= 8'hFF;      // NOTE: to force full scale display for analog signal view in GTKWave
         output_r        <= 8'hFF;
 `else
         output_l        <= '0;

@@ -2,23 +2,23 @@
 # vim: set noet ts=8 sw=8
 
 # Using icestorm tools + yosys + nextpnr
-# Modified from examples in icestorm distribution for
-# up5k_vga by E. Brombaugh (emeb) and further extensively
-# hacked by Xark for Xosera purposes
+# Makefile modified from examples in icestorm distribution for
+# up5k_vga by E. Brombaugh (emeb)
+# further extensively hacked by Xark for Xosera purposes
 
 # Primary tools (official binaries available from https://github.com/YosysHQ/oss-cad-suite-build/releases/latest)
 #       Yosys
 #       nextpnr-ice40
 #       Verilator               (optional)
 #       Icarus Verilog          (optional)
-#       Built using macOS BigSur and GNU/Linux Ubuntu distribution
+#       Built using macOS and GNU/Linux Ubuntu distribution (but WSL/WSL2 or MSYS2 can work)
 
 # Makefile "best practices" from https://tech.davis-hansson.com/p/make/ (but not forcing gmake)
 SHELL := bash
 .SHELLFLAGS := -eu -o pipefail -c
 .ONESHELL:
 .DELETE_ON_ERROR:
-# TODO: a bit spammy MAKEFLAGS += --warn-undefined-variables
+# NOTE: too spammy MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
 # Version bookkeeping
@@ -36,7 +36,6 @@ XOSERA_HASH := $(GITSHORTHASH)
 XOSERA_CLEAN := 0
 $(info === Xosera simulation [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
-
 
 # needed for copasm
 XOSERA_M68K_API?=../xosera_m68k_api

@@ -355,7 +355,7 @@ static __attribute__((noinline)) void xansi_clear(uint16_t start, uint16_t end)
     xreg_setw_next(0x0000);                        // LINES lines (0 for 1-D blit)
     xreg_setw_next(count);                         // WORDS words to write -1
 
-    if (!xm_get_sys_ctrlb(BLIT_BUSY))
+    if (!xm_getb_sys_ctrl(BLIT_BUSY))
     {
         xm_setw(WR_INCR, 1);
         xm_setw(WR_ADDR, start);
@@ -665,7 +665,7 @@ static void xansi_scroll_up()
     xreg_setw_next(0x0000);              // LINES lines (0 for 1-D blit)
     xreg_setw_next(count - 1);           // WORDS words to write -1
 
-    if (!xm_get_sys_ctrlb(BLIT_BUSY))
+    if (!xm_getb_sys_ctrl(BLIT_BUSY))
     {
         xm_setw(WR_INCR, 1);
         xm_setw(RD_INCR, 1);
@@ -710,7 +710,7 @@ static void xansi_scroll_down(xansiterm_data * td)
     xreg_setw_next(td->rows - 1);           // LINES lines
     xreg_setw_next(td->cols - 1);           // WORDS words per line -1
 
-    if (!xm_get_sys_ctrlb(BLIT_BUSY))
+    if (!xm_getb_sys_ctrl(BLIT_BUSY))
     {
         xm_setw(WR_INCR, -1);
         xm_setw(RD_INCR, -1);
@@ -1907,7 +1907,7 @@ bool xansiterm_INIT()
     xreg_setw(PA_GFX_CTRL, td->gfx_ctrl);
     xm_setbl(SYS_CTRL, 0x0F);
 
-    // TODO: Not ideal no version code without COPPER
+    // NOTE: Not ideal no version code without COPPER
     td->ver_code[0] = '0';
     td->ver_code[1] = '0';
     td->ver_code[2] = '0';

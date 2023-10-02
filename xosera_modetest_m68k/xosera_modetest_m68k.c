@@ -130,7 +130,7 @@ static void wait_vblank_start()
 
 static inline void check_vblank()
 {
-    if (!xm_get_sys_ctrlb(VBLANK) || xreg_getw(SCANLINE) > 520)
+    if (!xm_getb_sys_ctrl(VBLANK) || xreg_getw(SCANLINE) > 520)
     {
         wait_vblank_start();
     }

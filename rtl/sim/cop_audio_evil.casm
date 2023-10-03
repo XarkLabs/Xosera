@@ -9,22 +9,22 @@
 
 entry
 
-                MOVE    #$0000,XR_PA_UNUSED_17
-                MOVE    #$1111,XR_PB_UNUSED_1F
-                MOVE    #$2222,XR_PA_UNUSED_17
-                MOVE    #$3333,XR_PB_UNUSED_1F
-                MOVE    #$4444,XR_PA_UNUSED_17
-                MOVE    #$5555,XR_PB_UNUSED_1F
-                MOVE    #$6666,XR_PA_UNUSED_17
-                MOVE    #$7777,XR_PB_UNUSED_1F
-                MOVE    #$8888,XR_PA_UNUSED_17
-                MOVE    #$9999,XR_PB_UNUSED_1F
-                MOVE    #$AAAA,XR_PA_UNUSED_17
-                MOVE    #$BBBB,XR_PB_UNUSED_1F
-                MOVE    #$CCCC,XR_PA_UNUSED_17
-                MOVE    #$DDDD,XR_PB_UNUSED_1F
-                MOVE    #$EEEE,XR_PA_UNUSED_17
-                MOVE    #$FFFF,XR_PB_UNUSED_1F
+                MOVE    #$0000,XR_UNUSED_08
+                MOVE    #$1111,XR_UNUSED_0F
+                MOVE    #$2222,XR_UNUSED_08
+                MOVE    #$3333,XR_UNUSED_0F
+                MOVE    #$4444,XR_UNUSED_08
+                MOVE    #$5555,XR_UNUSED_0F
+                MOVE    #$6666,XR_UNUSED_08
+                MOVE    #$7777,XR_UNUSED_0F
+                MOVE    #$8888,XR_UNUSED_08
+                MOVE    #$9999,XR_UNUSED_0F
+                MOVE    #$AAAA,XR_UNUSED_08
+                MOVE    #$BBBB,XR_UNUSED_0F
+                MOVE    #$CCCC,XR_UNUSED_08
+                MOVE    #$DDDD,XR_UNUSED_0F
+                MOVE    #$EEEE,XR_UNUSED_08
+                MOVE    #$FFFF,XR_UNUSED_0F
                 BRLT    entry
                 BRGE    entry
 

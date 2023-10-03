@@ -160,6 +160,8 @@ logic           blit_vram_sel, blit_vram_sel_next;  // vram select
 logic           blit_wr, blit_wr_next;              // blit write
 addr_t          blit_addr, blit_addr_next;          // VRAM address out
 
+word_t          val_SCA;
+
 // combinitorial FSM signals
 word_t          blit_src_S_next;
 word_t          blit_dst_D_next;
@@ -198,14 +200,16 @@ endfunction
 logic  [3:0]    result_T4;               // transparency result (4 bit nibble mask)
 logic  [3:0]    result_T8;               // transparency result (4 bit nibble mask)
 
-assign  result_T4       = { (val_S[12+:4] != blit_ctrl_transp_T[7:4] || !blit_ctrl_transp),
-                            (val_S[ 8+:4] != blit_ctrl_transp_T[3:0] || !blit_ctrl_transp),
-                            (val_S[ 4+:4] != blit_ctrl_transp_T[7:4] || !blit_ctrl_transp),
-                            (val_S[ 0+:4] != blit_ctrl_transp_T[3:0] || !blit_ctrl_transp)    };
-assign  result_T8       = { (val_S[8+:8] != blit_ctrl_transp_T || !blit_ctrl_transp),
-                            (val_S[8+:8] != blit_ctrl_transp_T || !blit_ctrl_transp),
-                            (val_S[0+:8] != blit_ctrl_transp_T || !blit_ctrl_transp),
-                            (val_S[0+:8] != blit_ctrl_transp_T || !blit_ctrl_transp)    };
+assign  val_SCA         = val_S & (~blit_val_CA);
+
+assign  result_T4       = { (val_SCA[12+:4] != blit_ctrl_transp_T[7:4] || !blit_ctrl_transp),
+                            (val_SCA[ 8+:4] != blit_ctrl_transp_T[3:0] || !blit_ctrl_transp),
+                            (val_SCA[ 4+:4] != blit_ctrl_transp_T[7:4] || !blit_ctrl_transp),
+                            (val_SCA[ 0+:4] != blit_ctrl_transp_T[3:0] || !blit_ctrl_transp)    };
+assign  result_T8       = { (val_SCA[8+:8] != blit_ctrl_transp_T || !blit_ctrl_transp),
+                            (val_SCA[8+:8] != blit_ctrl_transp_T || !blit_ctrl_transp),
+                            (val_SCA[0+:8] != blit_ctrl_transp_T || !blit_ctrl_transp),
+                            (val_SCA[0+:8] != blit_ctrl_transp_T || !blit_ctrl_transp)    };
 
 assign blit_vram_sel_o  = blit_vram_sel;
 assign blit_wr_o        = blit_wr;
@@ -221,7 +225,7 @@ assign blit_done_intr_o = blit_done_intr;
 // No flags:
 //   D = S AND (NOT CA) XOR CX
 //
-assign  blit_data_o = val_S & (~blit_val_CA) ^ blit_val_CX;
+assign  blit_data_o = val_SCA ^ blit_val_CX;
 
 always_ff @(posedge clk) begin
     if (reset_i) begin

@@ -97,7 +97,7 @@ addr_t          pf_line_start;                      // current line starting add
 
 // fetch fsm outputs
 // scanline generation (registered signals and "_next" combinatorally set signals)
-logic [4:0]     pf_fetch, pf_fetch_next;            // playfield A generation FSM state
+vgen_fetch_st   pf_fetch, pf_fetch_next;            // playfield A generation FSM state
 
 addr_t          pf_addr, pf_addr_next;              // address to fetch display bitmap/tilemap
 addr_t          pf_tile_addr;                       // tile start address (VRAM or TILERAM)

@@ -646,7 +646,7 @@ The Xosera "blitter" is a simple VRAM data read/write "engine" that operates on 
 
 #### Logic Operation Applied to Blitter Operations
 
-&nbsp;&nbsp;&nbsp;`D = S & ~ANDC ^ XOR`  (destination word `D` = `S` source word AND'd with NOT of `ANDC` and XOR'd with `XOR`)
+`D = S & ~ANDC ^ XOR`  (destination word `D` = `S` source word AND'd with NOT of `ANDC` word and XOR'd with `XOR` word)
 
 - `D` result word
   - written to VRAM (starting address set by `XR_BLIT_DST_D` and incrementing/decrementing)
@@ -662,14 +662,33 @@ Address values (`XR_BLIT_SRC_S`, `XR_BLIT_DST_D`) will be incremented each word 
 
 #### Transparency Testing and Masking Applied to Blitter Operations
 
-&nbsp;&nbsp;&nbsp;4-bit mask `M = (S != {T})` where `T` is even/odd transparency nibbles or an 8-bit transparent value (for 8-bit pixel mode)
+Transparency uses a 4-bit nibble write mask for VRAM (analogous to `SYS_CTRL` `WR_MASK` used by host CPU).  When transparency is enabled (`TRANSP` set in `XR_BLIT_CTRL`) then a write mask is calculated either by either comparing 4-bit pixels to even/odd 4-bit nibble transparency value in 4-bit mode, or two 8-bit pixels (with `TRANSP_8B` set in `XR_BLIT_CTRL`) compared to an 8-bit transparency value.  The transparency checks are done after the source word is ANDed with complement of the `ANDC` term allowing some control over which bits are considered for transparency (the `XOR` term is not involved in transparency, but will be applied to the value written to VRAM).
 
-- `M` transparency result is 0 for transparent nibbles (ones that will not be altered in the destination word).
-- `S` source word used in logical operation above
-  - Either read from VRAM or a constant (when `S_CONST` set in `XR_BLIT_CTRL`)
-- `T` transparency constant nibble pair/byte set in upper byte of `XR_BLIT_CTRL`
+- `DA` is 16-bit result word from logical operation `DA = S & ~ANDC` (`XOR` term is not used in transparency test)
+- `T` is 8-bit transparency value from `XR_BLIT_CTRL[15:8]`
+- `M` is 4-bit transparency test result with unaltered transparent nibbles set to `0` (other nibbles will take value from `D`)
 
-Transparency testing is enabled with `TRANSP` in `XR_BLIT_CTRL`.  When enabled a 4-bit nibble transparency mask will be set in two-bit pairs for 8-bit pixels when `TRANSP_8B` set in `XR_BLIT_CTRL` (both bits zero only when both nibbles of the transparency test are zero, otherwise both one). This allows any 4-bit or 8-bit pixel value in `S` to be considered transparent.
+**4-bit transparency test (`TRANSP` set in`XR_BLIT_CTRL`)**
+
+```verilog
+  // 4-bit pixel is written when M is 1 or transparent when 0 (VRAM unaltered)
+   M[3] set when DA[15:12] != T[7:4]; // non-transparent if pixel 0 != T upper nibble
+   M[2] set when DA[11: 8] != T[3:0]; // non-transparent if pixel 1 != T lower nibble
+   M[1] set when DA[ 7: 4] != T[7:4]; // non-transparent if pixel 2 != T upper nibble
+   M[0] set when DA[ 3: 0] != T[3:0]; // non-transparent if pixel 3 != T lower nibble
+```
+
+> :mag: **4-bit transparency** Typically for 4-bit transparency the upper and lower nibbles would be set to the same value for a single 4-bit transparent pixel value, but if desired even and odd pixels can have different transparent pixel values.
+
+**8-bit transparency test (`TRANSP` and `TRANSP_8B` set in`XR_BLIT_CTRL`)**
+
+```verilog
+  // 8-bit pixel is written when M is 11 (unaltered when 00)
+   M[3:2] set when DA[15:12] != T[7:0]; // non-transparent if pixel 0 != T
+   M[1:0] set when DA[ 7: 4] != T[7:0]; // non-transparent if pixel 1 != T
+```
+
+> :mag: **Transparency speed** Enabling either 4-bit or 8-bit transparency testing is "free" and has no additional cost.
 
 #### Nibble Shifting and First/Last Word Edge Masking
 

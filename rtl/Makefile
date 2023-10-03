@@ -47,7 +47,7 @@ xosera_vga:
 # Build combo Xosera UPduino 3.x FPGA VGA bitstream for rosco_m6k board (640x480 resolution only)
 xosera_vga_640:
 	$(MAKE) -f upduino.mk clean
-	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_640x480 AUDIO=4 PF_B=true $(MAKE) -f upduino.mk
+	VIDEO_OUTPUT=PMOD_DIGILENT_VGA VIDEO_MODE=MODE_640x480 AUDIO=4 PF_B=true FPGA_CONFIG_NUM=0 $(MAKE) -f upduino.mk
 	mv xosera_upd.bin xosera_board_vga_640.bin
 
 xosera_muse_vga:

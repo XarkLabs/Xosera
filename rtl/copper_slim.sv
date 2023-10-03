@@ -151,7 +151,7 @@ word_t          write_data;         // XR bus data out/pseudo XR register data o
 logic           cop_en;             // copper enable/reset (set via COPP_CTRL)
 logic           cop_reset;          // copper reset (set if not enabled, or line 0, pixel 0)
 logic           cop_run;            // copper running
-logic [1:0]     cop_ex_state;       // current execution state
+copp_ex_state_t cop_ex_state;       // current execution state
 logic           rd_pipeline;        // flag if memory read on last cycle
 
 // ALU :)

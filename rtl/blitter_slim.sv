@@ -152,7 +152,7 @@ word_t          blit_words;
 logic [16:0]    blit_count;             // word counter (extra underflow bit used line done flag)
 
 word_t          val_S;                  // value read from blit_src_S VRAM or const
-word_t          val_D;
+word_t          val_D_CA;
 logic [11:0]    last_S;                 // last S word save (3 nibbles)
 logic [ 3:0]    blit_f_mask;
 logic           blit_done_intr;
@@ -201,22 +201,22 @@ logic  [3:0]    result_T8;               // transparency result (4 bit nibble ma
 
 // logic op calculation
 
-assign  val_D           = val_S & (~blit_val_CA) ^ blit_val_CX; // D = S AND (NOT CA) XOR CX
+assign  val_D_CA        = val_S & (~blit_val_CA); // D = S AND (NOT CA) for transparency
 
 // compute transparency
-assign  result_T4       = { (val_D[12+:4] != blit_ctrl_transp_T[7:4] || !blit_ctrl_transp),
-                            (val_D[ 8+:4] != blit_ctrl_transp_T[3:0] || !blit_ctrl_transp),
-                            (val_D[ 4+:4] != blit_ctrl_transp_T[7:4] || !blit_ctrl_transp),
-                            (val_D[ 0+:4] != blit_ctrl_transp_T[3:0] || !blit_ctrl_transp) };
-assign  result_T8       = { (val_D[ 8+:8] != blit_ctrl_transp_T      || !blit_ctrl_transp),
-                            (val_D[ 8+:8] != blit_ctrl_transp_T      || !blit_ctrl_transp),
-                            (val_D[ 0+:8] != blit_ctrl_transp_T      || !blit_ctrl_transp),
-                            (val_D[ 0+:8] != blit_ctrl_transp_T      || !blit_ctrl_transp) };
+assign  result_T4       = { (val_D_CA[12+:4] != blit_ctrl_transp_T[7:4] || !blit_ctrl_transp),
+                            (val_D_CA[ 8+:4] != blit_ctrl_transp_T[3:0] || !blit_ctrl_transp),
+                            (val_D_CA[ 4+:4] != blit_ctrl_transp_T[7:4] || !blit_ctrl_transp),
+                            (val_D_CA[ 0+:4] != blit_ctrl_transp_T[3:0] || !blit_ctrl_transp) };
+assign  result_T8       = { (val_D_CA[ 8+:8] != blit_ctrl_transp_T      || !blit_ctrl_transp),
+                            (val_D_CA[ 8+:8] != blit_ctrl_transp_T      || !blit_ctrl_transp),
+                            (val_D_CA[ 0+:8] != blit_ctrl_transp_T      || !blit_ctrl_transp),
+                            (val_D_CA[ 0+:8] != blit_ctrl_transp_T      || !blit_ctrl_transp) };
 
-assign  blit_data_o     = val_D;                                // output result
+assign  blit_data_o     = val_D_CA ^ blit_val_CX; // output result XOR CX
 assign  blit_vram_sel_o = blit_vram_sel;
 assign  blit_wr_o       = blit_wr;
-assign  blit_wr_mask_o  = blit_f_mask &     // output VRAM write mask
+assign  blit_wr_mask_o  = blit_f_mask &         // output VRAM write mask
                           (blit_last_word  ? blit_shift_l_mask : 4'b1111) &
                           (blit_ctrl_transp_8b ? result_T8 : result_T4);
 assign blit_addr_o      = blit_addr;
@@ -291,7 +291,11 @@ always_ff @(posedge clk) begin
 end
 
 // blit state machine
-typedef enum logic [2:0] {
+`ifdef SYNTHESIS
+typedef enum {                  // smaller area
+`else
+typedef enum logic [2:0] {      // more friendly in GTKWave
+`endif
     IDLE,           // wait for blit operation (a write to xreg_blit_count)
     SETUP,          // copy xreg registers to blit registers and setup for blit
     LINE_BEG,       // copy update counters, initiate S read or D write

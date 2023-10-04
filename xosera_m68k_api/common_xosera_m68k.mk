@@ -169,7 +169,7 @@ test: $(BINARY) $(DISASM)
 
 # This is handy to test on MacOS (kills previous "screen", opens new one in shell window/tab)
 mactest: $(BINARY) $(DISASM)
-	-killall screen && sleep 1
+	-lsof -t $(SERIAL) | (read oldscreen ; [ ! -z "$$oldscreen" ] && kill -9 $$oldscreen ; sleep 1)
 	$(KERMIT) -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
 	echo "#! /bin/sh" > $(TMPDIR)/rosco_screen.sh
 	echo "/usr/bin/screen $(SERIAL) $(BAUD)" >> $(TMPDIR)/rosco_screen.sh
@@ -179,7 +179,7 @@ mactest: $(BINARY) $(DISASM)
 
 # This is handy to test on MacOS (kills previous "screen", opens new one in shell window/tab)
 macterm:
-	-killall screen && sleep 1
+	-lsof -t $(SERIAL) | (read oldscreen ; [ ! -z "$$oldscreen" ] && kill -9 $$oldscreen ; sleep 1)
 	echo "#! /bin/sh" > $(TMPDIR)/rosco_screen.sh
 	echo "/usr/bin/screen $(SERIAL) $(BAUD)" >> $(TMPDIR)/rosco_screen.sh
 	chmod +x $(TMPDIR)/rosco_screen.sh

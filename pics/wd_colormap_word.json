@@ -1,0 +1,49 @@
+{
+    "reg": [
+        {
+            "bits": 4,
+            "name": "blue value",
+            "type": 4,
+            "attr": [
+                "color blue",
+                "$0 to $F"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "green value",
+            "type": 3,
+            "attr": [
+                "color green",
+                "$0 to $F",
+                "",
+                "color black = $000 to white = $FFF (4096 total colors)"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "red value",
+            "type": 2,
+            "attr": [
+                "color red",
+                "$0 to $F"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "alpha value",
+            "type": 1,
+            "attr": [
+                "In A (using blend value in B):",
+                "00xx = blend A and B",
+                "01xx = blend A and black",
+                "10xx = additive A and B",
+                "11xx = use color A only"
+            ]
+
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

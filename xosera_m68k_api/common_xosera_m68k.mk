@@ -88,6 +88,7 @@ BINARY=$(PROGRAM_BASENAME).bin
 DISASM=$(PROGRAM_BASENAME).dis
 MAP=$(PROGRAM_BASENAME).map
 SYM=$(PROGRAM_BASENAME).sym
+SYM_SIZE=$(PROGRAM_BASENAME)_size.sym
 
 # Assume source files in Makefile directory are source files for project
 SOURCES+=$(wildcard *.c) $(wildcard *.cpp) $(wildcard *.S) $(wildcard *.asm) $(wildcard *.raw)
@@ -114,6 +115,7 @@ endif
 $(ELF) : $(OBJECTS) $(XOSERA_M68K_API)/libxosera_m68k_api.a
 	$(LD) $(LDFLAGS) $(GCC_LIBS) $^ -o $@ $(LIBS)
 	$(NM) --numeric-sort $@ >$(SYM)
+	$(NM) --size-sort $@ >$(SYM_SIZE)
 	$(SIZE) $@
 	-chmod a-x $@
 

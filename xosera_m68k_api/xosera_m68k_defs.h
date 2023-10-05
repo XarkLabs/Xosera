@@ -423,6 +423,16 @@
 #define MODE_848x480_TOTAL_V  517                                            // total vpos height
 #define MODE_848x480_LEFTEDGE (MODE_848x480_TOTAL_H - MODE_848x480_H)        // offscreen hpos pixels
 
+// Default fonts in TILE memory
+#define FONT_ST_8x16_ADDR (XR_TILE_ADDR + 0x0000)
+#define FONT_ST_8x16_SIZE 0x800
+#define FONT_ST_8x8_ADDR  (XR_TILE_ADDR + 0x0800)
+#define FONT_ST_8x8_SIZE  0x400
+#define FONT_PC_8x8_ADDR  (XR_TILE_ADDR + 0x0C00)
+#define FONT_ST_8x8_SIZE  0x400
+#define FONT_HEX_8x8_ADDR (XR_TILE_ADDR + 0x1000)
+#define FONT_HEX_8x8_SIZE 0x400
+
 // Macros for bit-fields: right_bit, bit_width, E.g., XB_(V,8,4) would put V into bits [11:8] (excess bits truncated)
 // encode value into bit-field for register
 #define XB_(v, right_bit, bit_width) (((X_CASTU16(v)) & ((1 << (bit_width)) - 1)) << (right_bit))
@@ -430,28 +440,49 @@
 #define XV_(v, right_bit, bit_width) (((X_CASTU16(v)) >> (right_bit)) & ((1 << (bit_width)) - 1))
 
 // macros to create values for registers with bit fields
-#define MAKE_GFX_CTRL(colbase, blank, bpp, bm, hx, vx)                                                                 \
-    (XB_(colbase, GFX_CTRL_COLORBASE_B, GFX_CTRL_COLORBASE_W) | XB_(blank, GFX_CTRL_BLANK_B, GFX_CTRL_BLANK_W) |       \
-     XB_(bm, GFX_CTRL_BITMAP_B, GFX_CTRL_BITMAP_W) | XB_(bpp, GFX_CTRL_BPP_B, GFX_CTRL_BPP_W) |                        \
-     XB_(hx, GFX_CTRL_H_REPEAT_B, GFX_CTRL_H_REPEAT_W) | XB_(vx, GFX_CTRL_V_REPEAT_B, GFX_CTRL_V_REPEAT_W))
+
+// MAKE_GFX_CTRL(colorbase, blank, bpp, bitmap, hx, vx) - make GFX_CTRL reg value
+#define MAKE_GFX_CTRL(colorbase, blanked, bpp, bitmap, hrepeat, vrepeat)                                               \
+    (XB_(colorbase, GFX_CTRL_COLORBASE_B, GFX_CTRL_COLORBASE_W) | XB_(blanked, GFX_CTRL_BLANK_B, GFX_CTRL_BLANK_W) |   \
+     XB_(bitmap, GFX_CTRL_BITMAP_B, GFX_CTRL_BITMAP_W) | XB_(bpp, GFX_CTRL_BPP_B, GFX_CTRL_BPP_W) |                    \
+     XB_(hrepeat, GFX_CTRL_H_REPEAT_B, GFX_CTRL_H_REPEAT_W) | XB_(vrepeat, GFX_CTRL_V_REPEAT_B, GFX_CTRL_V_REPEAT_W))
+// MAKE_TILE_CTRL(tile_addr, map_in_tilemem, tile_in_vram, tile_height)  - make TILE_CTRL reg value
 #define MAKE_TILE_CTRL(tile_addr, map_in_tilemem, tile_in_vram, tile_height)                                           \
     (((tile_addr) & TILE_CTRL_TILEBASE_F) | XB_(map_in_tilemem, TILE_CTRL_DISP_TILEMEM_B, TILE_CTRL_DISP_TILEMEM_W) |  \
      XB_(tile_in_vram, TILE_CTRL_TILE_VRAM_B, TILE_CTRL_TILE_VRAM_W) |                                                 \
      XB_(((tile_height)-1), TILE_CTRL_TILE_H_B, TILE_CTRL_TILE_H_W))
-#define MAKE_H_SCROLL(h_scrl) (XB_(h_scrl, H_SCROLL_FINE_B, H_SCROLL_FINE_W))
-#define MAKE_V_SCROLL(rep_scrl, tile_scrl)                                                                             \
-    (XB_(rep_scrl, V_SCROLL_FINE_B, V_SCROLL_FINE_W) | XB_(tile_scrl, V_SCROLL_TILE_B, V_SCROLL_TILE_W))
-#define MAKE_VID_CTRL(swap_ab, bordcol)                                                                                \
-    (XB_(swap_ab, VID_CTRL_SWAP_AB_B, VID_CTRL_SWAP_AB_W) | XB_(bordcol, VID_CTRL_BORDCOL_B, VID_CTRL_BORDCOL_W))
+// MAKE_H_SCROLL(h_scrl) (XB_(h_scrl, H_SCROLL_FINE_B, H_SCROLL_FINE_W)) - make H_SCROLL reg value
+#define MAKE_H_SCROLL(h_scroll) (XB_(h_scroll, H_SCROLL_FINE_B, H_SCROLL_FINE_W))
+// MAKE_V_SCROLL(repeat_scrl, tileline_scrl) - make V_SCROLL reg value
+#define MAKE_V_SCROLL(vrepeat_scrl, tileline_scrl)                                                                     \
+    (XB_(vrepeat_scrl, V_SCROLL_FINE_B, V_SCROLL_FINE_W) | XB_(tileline_scrl, V_SCROLL_TILE_B, V_SCROLL_TILE_W))
+// MAKE_VID_CTRL(swap_ab, bordercolor) - make VID_CTRL reg value
+#define MAKE_VID_CTRL(swap_ab, bordercolor)                                                                            \
+    (XB_(swap_ab, VID_CTRL_SWAP_AB_B, VID_CTRL_SWAP_AB_W) | XB_(bordercolor, VID_CTRL_BORDCOL_B, VID_CTRL_BORDCOL_W))
+// MAKE_AUD_PERIOD(restart, period) - make AUDn_PERIOD reg value
 #define MAKE_AUD_PERIOD(restart, period)                                                                               \
     (XB_(restart, AUD_PERIOD_RESTART_B, AUD_PERIOD_RESTART_W) | ((period) & AUD_PERIOD_F))
+// MAKE_AUD_LENGTH(tilemem, length) - make AUDn_LENGTH reg value
 #define MAKE_AUD_LENGTH(tilemem, length)                                                                               \
     (XB_(tilemem, AUD_LENGTH_TILEMEM_B, AUD_LENGTH_TILEMEM_W) | ((length) & AUD_LENGTH_F))
+// MAKE_POINTER_H(h_pos) - make POINTER_H reg value
 #define MAKE_POINTER_H(h_pos) ((h_pos) & POINTER_H_F)
+// MAKE_POINTER_V(colorsel, v_pos) - make POINTER_H reg value
 #define MAKE_POINTER_V(colorsel, v_pos)                                                                                \
     (XB_(tilemem, POINTER_V_COLORSEL_B, POINTER_V_COLORSEL_W) | (v_pos) & POINTER_V_F)
+// MAKE_HV_FSCALE(h_frac, v_frac) - make HV_FSCALE reg value
 #define MAKE_HV_FSCALE(h_frac, v_frac)                                                                                 \
     (XB_(h_frac, HV_FSCALE_H_FRAC_B, HV_FSCALE_H_FRAC_W) | XB_(v_frac, HV_FSCALE_V_FRAC_B, HV_FSCALE_V_FRAC_W))
+// MAKE_BLIT_CTRL(transp_value, transp_8bit, transp_test, s_const) - make BLIT_CTRL reg value
+#define MAKE_BLIT_CTRL(transp_value, transp_8bit, transp_test, s_const)                                                \
+    (XB_(transp_value, BLIT_CTRL_TRANSPVAL_B, BLIT_CTRL_TRANSPVAL_W) |                                                 \
+     XB_(transp_8bit, BLIT_CTRL_8B_B, BLIT_CTRL_8B_W) | XB_(transp_test, BLIT_CTRL_TRANSP_B, BLIT_CTRL_TRANSP_W) |     \
+     XB_(s_const, BLIT_CTRL_SCONST_B, BLIT_CTRL_SCONST_W))
+// MAKE_BLIT_SHIFT(left_edge_mask, right_edge_mask, right_nibble_shift) make BLIT_SHIFT reg value
+#define MAKE_BLIT_SHIFT(left_edge_mask, right_edge_mask, right_nibble_shift)                                           \
+    (XB_(left_edge_mask, BLIT_SHIFT_LMSK_B, BLIT_SHIFT_LMSK_W) |                                                       \
+     XB_(right_edge_mask, BLIT_SHIFT_RMSK_B, BLIT_SHIFT_RMSK_W) |                                                      \
+     XB_(right_nibble_shift, BLIT_SHIFT_CNT_B, BLIT_SHIFT_CNT_W))
 
 #if !defined(__COPASM__)        // redundant from copper assembler
 // copper constants for HPOS/VPOS

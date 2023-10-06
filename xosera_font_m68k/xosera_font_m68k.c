@@ -133,7 +133,11 @@ _NOINLINE void delay_check(int ms)
     }
 }
 
+// 1bpp blit code
+
 void blit_1bpp_to_4bpp(uint16_t vram_src_1bpp,
+                       uint16_t src_startx,
+                       uint16_t src_endx,
                        uint16_t src_width,
                        uint16_t src_height,
                        uint16_t vram_dst_4bpp,
@@ -148,6 +152,7 @@ void blit_1bpp_to_4bpp(uint16_t vram_src_1bpp,
         uint16_t width;        // width minus one for blit
     };
 
+    // blit convert 1bpp word -> 4bpp 4 words (per column table)
     static const struct blit_parms parms[16] = {{
                                                     // 8000
                                                     // 8--- ---- ---- ---- >> 0, +0
@@ -293,15 +298,16 @@ void blit_1bpp_to_4bpp(uint16_t vram_src_1bpp,
                                                     1 - 1,                  // width-1
                                                 }};
 
-    uint16_t src_mod             = (src_width - 1) / 16;        // source modulo -1
-    src_height                   = src_height - 1;              // adjust source height
-    dst_mod                      = dst_mod - 1;                 // adjust dest modulo
-    color                        = ~color;                      // pre-invert color
-    const struct blit_parms * bp = parms;
+    uint16_t src_mod = (src_width - 1) / 16;        // source modulo -1
+    src_height       = src_height - 1;              // adjust source height
+    dst_mod          = dst_mod - 1;                 // adjust dest modulo
+    color            = ~color;                      // pre-invert color
 
     xv_prep();
 
-    while (src_width--)
+    uint16_t                  xcol = src_startx;
+    const struct blit_parms * bp   = &parms[xcol & 0xf];
+    while (xcol++ <= src_endx)
     {
         xwait_blit_ready();
         xreg_setw(BLIT_CTRL, MAKE_BLIT_CTRL(0x00, 0, 1, 0));             // transp=0x00, 4-bpp, transp_en, no s_const
@@ -325,60 +331,59 @@ void blit_1bpp_to_4bpp(uint16_t vram_src_1bpp,
     }
 }
 
-void test_1bpp_font_blit()
+// copies and "swizzles" TILE font into a 1bpp font in VRAM (with two characters per word x font_height)
+void make_1bpp_font(uint16_t tile_addr, uint16_t font_height, uint16_t num_chars, uint16_t vram_addr)
 {
-    const uint16_t bm_width_w = (xosera_vid_width() / 2) / 4;
-    const uint16_t bm_addr    = 0x0000;
-    const uint16_t fm_addr    = 0xC000;
-    //    const uint16_t fm_height  = (15 * 8) - 1;
+    uint16_t font_words = (font_height >> 1);
 
-    uint16_t copsave = xreg_getw(COPP_CTRL);
-    xwait_not_vblank();
-    xwait_vblank();
-    xreg_setw(COPP_CTRL, 0x0000);
-
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0, 0, GFX_BPP_4, 1, GFX_2X, GFX_2X));
-    xreg_setw(PA_TILE_CTRL, 0x0007);
-    xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_LEN, bm_width_w);
-    xreg_setw(PA_H_SCROLL, 0x0000);
-    xreg_setw(PA_V_SCROLL, 0x0000);
-    xreg_setw(PA_HV_FSCALE, 0x0000);
-    xreg_setw(PB_GFX_CTRL, 0x0080);
-
-    xwait_blit_ready();
-    // fill vram with 0x0000
-    xreg_setw(BLIT_CTRL, 0x0001);              // no transp, constS
-    xreg_setw(BLIT_ANDC, 0x0000);              // ANDC constant
-    xreg_setw(BLIT_XOR, 0x0000);               // XOR constant
-    xreg_setw(BLIT_MOD_S, 0x0000);             // no modulo S
-    xreg_setw(BLIT_SRC_S, 0x8888);             // A = fill pattern
-    xreg_setw(BLIT_MOD_D, 0x0000);             // no modulo D
-    xreg_setw(BLIT_DST_D, 0x0000);             // VRAM display end address
-    xreg_setw(BLIT_SHIFT, 0xFF00);             // no edge masking or shifting
-    xreg_setw(BLIT_LINES, 0x0000);             // 1D
-    xreg_setw(BLIT_WORDS, 0x10000 - 1);        // 64KW VRAM
-    xwait_blit_done();
-
-    vram_setw_addr_incr(fm_addr, 1);
-
-    for (int c = 0; c < 256; c += 2)
+    xv_prep();
+    vram_setw_addr_incr(vram_addr, 1);
+    // all 256 chars in pairs
+    for (int c = 0; c < num_chars; c += 2)
     {
-        for (int v = 0; v < 4; v++)
+        // convert char with even/odd byte per line into two char pairs per word stored normally
+        for (int wo = 0; wo < font_words; wo++)
         {
-            uint16_t w  = xmem_getw(FONT_ST_8x8_ADDR + ((c) * 4) + v);
-            uint16_t w2 = xmem_getw(FONT_ST_8x8_ADDR + ((c + 1) * 4) + v);
-            vram_setw_next((w & 0xff00) | (w2 >> 8));
-            vram_setw_next((w << 8) | (w2 & 0x00ff));
+            uint16_t c1 = xmem_getw(tile_addr + (c * font_words) + wo);
+            uint16_t c2 = xmem_getw(tile_addr + ((c + 1) * font_words) + wo);
+            vram_setw_next((c1 & 0xff00) | (c2 >> 8));
+            vram_setw_next((c1 << 8) | (c2 & 0x00ff));
         }
     }
-    blit_1bpp_to_4bpp(fm_addr, 16, 8 * 16, bm_addr, bm_width_w, 0xffff);
+}
 
+// draw one tile from "column paired" 1-bpp font
+void draw_1bpp_tile(uint16_t font_vaddr,
+                    uint16_t font_height,
+                    uint16_t bitmap_vaddr,
+                    uint16_t bitmap_width,
+                    uint16_t c,
+                    uint16_t color)
+{
+    blit_1bpp_to_4bpp(font_vaddr + ((c >> 1) * font_height),
+                      c & 1 ? 8 : 0,
+                      c & 1 ? 15 : 7,
+                      16,
+                      font_height,
+                      bitmap_vaddr - (c & 1 ? 2 : 0),
+                      bitmap_width,
+                      color);
+}
 
-    xwait_blit_done();
-    delay_check(DELAY_TIME * 50);
-
-    xreg_setw(COPP_CTRL, copsave);
+void puts_1bpp(const char * str,
+               uint16_t     font_vaddr,
+               uint16_t     font_height,
+               uint16_t     bitmap_vaddr,
+               uint16_t     bitmap_width,
+               uint16_t     color)
+{
+    char c;
+    int  xw = 0;
+    while ((c = *str++))
+    {
+        draw_1bpp_tile(font_vaddr, font_height, bitmap_vaddr + xw, bitmap_width, c, color);
+        xw += 2;
+    }
 }
 
 void xosera_font_test()
@@ -406,9 +411,78 @@ void xosera_font_test()
         exit(1);
     }
 
+    xv_prep();
     while (true)
     {
-        test_1bpp_font_blit();
+        xwait_not_vblank();
+        xwait_vblank();
+        // center if 848x480
+        xreg_setw(VID_LEFT, (xosera_vid_width() - 640) / 2);
+        xreg_setw(VID_RIGHT, ((xosera_vid_width() - 640) / 2) + 640);
+
+        const uint16_t font_vaddr   = 0xf000;
+        const uint16_t bitmap_vaddr = 0x0000;
+        const uint16_t bitmap_width = 640 / 2 / 4;
+
+        xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0, 0, GFX_BPP_4, 1, GFX_2X, GFX_2X));
+        xreg_setw(PA_TILE_CTRL, 0x0007);
+        xreg_setw(PA_DISP_ADDR, bitmap_vaddr);
+        xreg_setw(PA_LINE_LEN, bitmap_width);
+        xreg_setw(PA_H_SCROLL, 0x0000);
+        xreg_setw(PA_V_SCROLL, 0x0000);
+        xreg_setw(PA_HV_FSCALE, 0x0000);
+        xreg_setw(PB_GFX_CTRL, 0x0080);
+
+        xwait_blit_ready();
+        // fill vram with 0x0000
+        xreg_setw(BLIT_CTRL, MAKE_BLIT_CTRL(0, 0, 0, 1));        // no transp, constS
+        xreg_setw(BLIT_ANDC, 0x0000);                            // ANDC constant
+        xreg_setw(BLIT_XOR, 0x0000);                             // XOR constant
+        xreg_setw(BLIT_MOD_S, 0x0000);                           // no modulo S
+        xreg_setw(BLIT_SRC_S, 0x0000);                           // A = grey color
+        xreg_setw(BLIT_MOD_D, 0x0000);                           // no modulo D
+        xreg_setw(BLIT_DST_D, 0x0000);                           // VRAM display end address
+        xreg_setw(BLIT_SHIFT, 0xFF00);                           // no edge masking or shifting
+        xreg_setw(BLIT_LINES, 0x0000);                           // 1D
+        xreg_setw(BLIT_WORDS, 0x10000 - 1);                      // 64KW VRAM
+        xwait_blit_done();
+
+        // copy/swizzle font from TILE to VRAM
+        make_1bpp_font(FONT_ST_8x8_ADDR, 8, 256, font_vaddr);
+
+        // draw whole font (in word columns, 16 tiles high)
+        int      col       = 0;
+        uint16_t colors[4] = {0xffff, 0x3333, 0x6666, 0xABCD};
+        for (uint16_t fc = 0; fc < 256; fc += 32)
+        {
+            blit_1bpp_to_4bpp(font_vaddr + (fc * 4),
+                              0,
+                              15,
+                              16,
+                              8 * 16,
+                              bitmap_vaddr + (col * 4) + 24 + (40 * bitmap_width),
+                              bitmap_width,
+                              colors[col & 3]);
+            col++;
+        }
+
+        // write test message
+        puts_1bpp("Hello Xosera 1-BPP to 4-BPP column blit!", font_vaddr, 8, bitmap_vaddr, bitmap_width, 0xffff);
+
+        // write test message (with y offset to "prove" bitmap mode)
+        const char * msg = "320x240x4 bitmap mode";
+        char         c;
+        int          xw = 18, yoff = 200;
+        while ((c = *msg++))
+        {
+            draw_1bpp_tile(font_vaddr, 8, bitmap_vaddr + xw + (yoff * bitmap_width), bitmap_width, c, 0x1111);
+            xw += 2;
+            yoff += 1;
+        }
+
+        xwait_blit_done();
+
+        delay_check(DELAY_TIME * 50);
     }
 
     // exit test

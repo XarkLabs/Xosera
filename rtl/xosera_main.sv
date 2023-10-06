@@ -306,6 +306,9 @@ copper_slim copper(
     .h_count_i(video_h_count),
     .v_count_i(video_v_count),
     .end_of_line_i(end_of_line),
+`ifdef EN_COPP_VBLITWAIT
+    .blit_busy_i(blit_busy),
+`endif
     .reset_i(reset_i),
     .clk(clk)
 );

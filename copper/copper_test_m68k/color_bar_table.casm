@@ -1,0 +1,27 @@
+;
+; vim: set et ts=8 sw=8
+;
+        .list false
+        .include "xosera_m68k_defs.inc"
+        .macname false
+        .listcond false
+        .list true
+
+; starts off left edge of line 0
+entry
+                MOVI    #MOVM|colors,copy_color         ; reset MOVM source addr to table start (OR'd with opcode)
+copy_color      MOVM    colors,XR_COLOR_A_ADDR+$00      ; move current table color to COLOR_A #0
+                HPOS    #H_EOL                          ; wait until end of line
+                HPOS    #H_EOL                          ; wait until end of line
+                HPOS    #H_EOL                          ; wait until end of line
+                LDM     copy_color                      ; load MOVM source address into RA
+                ADDI    #1                              ; increment source address in RA
+                STM     copy_color                      ; store RA over MOVM source address
+                CMPI    #MOVM|end_colors                ; compare RA source address with end of table address (OR'd with opcode)
+                BRLT    copy_color                      ; branch if RA source address < end_colors
+                BRGE    entry                           ; branch and reset MOVM source address to beginning of table
+                VPOS    #V_EOF                          ; wait until end of frame (not executed)
+
+colors          WORD    $0111,$0222,$0333,$0444,$0555   ; table with color per scan line
+                WORD    $0444,$0333,$0222,$0111,$0000
+end_colors

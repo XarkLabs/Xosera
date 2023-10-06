@@ -34,7 +34,6 @@ remove_intr::
                 movep.w D0,XM_INT_CTRL(A0)      ; clear and mask interrupts
                 move.l  SPURIOUS_VEC,D0         ; copy spurious int handler
                 move.l  D0,XOSERA_VEC           ; to xosera int handler
-
                 rts
 
 ; interrupt routine
@@ -43,7 +42,7 @@ Xosera_intr:
 
                 move.l  #XM_BASEADDR,A0         ; get Xosera base addr
 
-                move.b  XM_INT_CTRL+2(A0),D0    ; read pending interrupts (low byte)
+                move.b  XM_INT_CTRL+2(A0),D0    ; read pending interrupts (+2 for low byte)
                 move.b  D0,XM_INT_CTRL+2(A0)    ; acknowledge and clear interrupts
 
                 ; NOTE: could check D0 bits for
@@ -57,7 +56,7 @@ WaitXMem:       tst.b   (a0)                    ; make sure memory operation not
                 bmi.s   WaitXMem
                 movep.w XM_WR_XADDR(A0),D1      ; save xaddr write address
 
-                move.w  #XR_COLOR_ADDR,D0       ; set color entry #0
+                move.w  #XR_COLOR_ADDR+1,D0     ; set color entry #1
                 movep.w D0,XM_WR_XADDR(A0)
 
                 move.w  NukeColor,D0            ; load color

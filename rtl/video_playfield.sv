@@ -21,8 +21,8 @@ module video_playfield (
     input  wire logic           end_of_line_i,              // strobe at end of scanline
     input  wire logic           end_of_frame_i,             // strobe at end of frame
     input  wire color_t         border_color_i,             // color index for border/blanked pixels
-    input  wire hres_vis_t      vid_left_i,                 // left edge of screen (leftmost visible pixel is 0)
-    input  wire hres_vis_t      vid_right_i,                // right edge of screen +1 (aka 640/848 for full width)
+    input  wire hres_t          vid_left_i,                 // left edge of screen (leftmost visible pixel is 0)
+    input  wire hres_t          vid_right_i,                // right edge of screen +1 (aka 640/848 for full width)
     // video memories
     output      logic           vram_sel_o,                 // vram read select
     output      addr_t          vram_addr_o,                // vram word address out (16x64K)
@@ -56,8 +56,6 @@ module video_playfield (
     input  wire logic           reset_i,                    // system reset
     input  wire                 clk                         // pixel clock
 );
-
-localparam H_SCANOUT_BEGIN  = xv::OFFSCREEN_WIDTH-2;        // h count for start line scanout
 
 // display line fetch generation FSM
 typedef enum logic [4:0] {
@@ -99,7 +97,7 @@ addr_t          pf_line_start;                      // current line starting add
 
 // fetch fsm outputs
 // scanline generation (registered signals and "_next" combinatorally set signals)
-logic [4:0]     pf_fetch, pf_fetch_next;            // playfield A generation FSM state
+vgen_fetch_st   pf_fetch, pf_fetch_next;            // playfield A generation FSM state
 
 addr_t          pf_addr, pf_addr_next;              // address to fetch display bitmap/tilemap
 addr_t          pf_tile_addr;                       // tile start address (VRAM or TILERAM)
@@ -176,12 +174,10 @@ always_comb begin
 
     case (pf_fetch)
         FETCH_IDLE: begin
-            if (mem_fetch_i) begin                          // delay scanline until mem_fetch_active
-                if (pf_bitmap_i) begin
-                    pf_fetch_next   = FETCH_ADDR_BITMAP;
-                end else begin
-                    pf_fetch_next   = FETCH_ADDR_TILEMAP;
-                end
+            if (pf_bitmap_i) begin
+                pf_fetch_next   = FETCH_ADDR_BITMAP;
+            end else begin
+                pf_fetch_next   = FETCH_ADDR_TILEMAP;
             end
         end
         // bitmap mode
@@ -472,8 +468,8 @@ always_ff @(posedge clk) begin
         if (mem_fetch_start_i) begin       // on line fetch start signal
             pf_initial_buf          <= 1'b1;
             pf_pixels_buf_full      <= 1'b0;
-            scanout_start_hcount    <= scanout_start_hcount - $bits(scanout_start_hcount)'(pf_fine_hscroll_i);
-            scanout_end_hcount      <= $bits(scanout_end_hcount)'(H_SCANOUT_BEGIN) + vid_right_i;
+            scanout_start_hcount    <= (xv::OFFSCREEN_WIDTH-2 + vid_left_i) - $bits(scanout_start_hcount)'(pf_fine_hscroll_i);
+            scanout_end_hcount      <= xv::OFFSCREEN_WIDTH-2 + vid_right_i;
 
             pf_addr                 <= pf_line_start;       // set start address for this line
 
@@ -486,7 +482,6 @@ always_ff @(posedge clk) begin
             pf_pixels               <= 64'he3e3e3e3e3e3e3e3;
             pf_pixels_buf           <= 64'he3e3e3e3e3e3e3e3;
 `endif
-            pf_pixels[63:56]        <= border_color_i;        // set border_color_i (in case blanked)
         end
 
         // when "scrolled" scanline starts outputting (before display if scrolled)
@@ -501,7 +496,6 @@ always_ff @(posedge clk) begin
         // when scanline stops outputting
         if (scanout_end) begin
             scanout             <= 1'b0;
-            pf_fetch            <= FETCH_IDLE;          // reset fetch state
             pf_pixels[63:56]    <= border_color_i;
         end
 
@@ -518,6 +512,7 @@ always_ff @(posedge clk) begin
         // end of line
         if (end_of_line_i) begin
             scanout             <= 1'b0;                                        // force scanout off
+            pf_pixels[63:56]    <= border_color_i;                              // output border_color_i
             pf_fetch            <= FETCH_IDLE;                                  // reset fetch state
             pf_addr             <= pf_line_start;                               // addr back to line start (for tile lines, or v repeat)
             pf_h_frac_count     <= '0;                                          // reset horizontal fractional pixel repeat counter
@@ -535,18 +530,17 @@ always_ff @(posedge clk) begin
                     pf_tile_y       <= pf_tile_y + 1;                       // next line of tile cell
                 end
             end
-
-            scanout_start_hcount    <= $bits(scanout_start_hcount)'(H_SCANOUT_BEGIN) + vid_left_i;
         end
 
         // end of frame or blanked, prepare for next frame
         if (pf_blank_i || end_of_frame_i) begin         // is last pixel of frame?
-            pf_addr         <= pf_start_addr_i;             // set start of display data
-            pf_line_start   <= pf_start_addr_i;             // set line to start of display data
+            pf_addr             <= pf_start_addr_i;         // set start of display data
+            pf_line_start       <= pf_start_addr_i;         // set line to start of display data
 
-            pf_v_count      <= pf_v_repeat_i - pf_fine_vscroll_i[1:0];  // fine scroll within scaled line (v repeat)
-            pf_tile_y       <= pf_fine_vscroll_i[5:2];      // fine scroll tile line
-            pf_v_frac_count <= '0;
+            pf_v_count          <= pf_v_repeat_i - pf_fine_vscroll_i[1:0];  // fine scroll within scaled line (v repeat)
+            pf_tile_y           <= pf_fine_vscroll_i[5:2];  // fine scroll tile line
+            pf_v_frac_count     <= '0;
+            pf_pixels[63:56]    <= border_color_i;          // set border_color_i (in case blanked)
         end
     end
 end

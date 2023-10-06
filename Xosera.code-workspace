@@ -16,7 +16,7 @@
 			"strings": "off",
 			"other": "off"
 		},
-		"editor.formatOnSave": true,
+		"editor.formatOnSave": false,
 		"editor.dragAndDrop": false,
 		"editor.codeActionsOnSave": {
 			"source.fixAll.markdownlint": true
@@ -111,6 +111,7 @@
 			"hcount",
 			"HFOSC",
 			"HPOS",
+			"hrepeat",
 			"hres",
 			"hrev",
 			"HSCALE",
@@ -246,6 +247,7 @@
 			"vluint",
 			"VPOS",
 			"VRAM",
+			"vrepeat",
 			"vres",
 			"vrev",
 			"VSCALE",
@@ -274,6 +276,7 @@
 			"xreg",
 			"XRGB",
 			"xrmem",
+			"xuart",
 			"xvid",
 			"xwait",
 			"xxoo",
@@ -331,6 +334,8 @@
 		"files.associations": {
 			"*.sv": "systemverilog",
 			"*.asm": "vasmmot",
+			"*.casm": "vasmmot",
+			"*.cpasm": "vasmmot",
 			"array": "cpp",
 			"iterator": "cpp",
 			"string": "cpp",
@@ -355,7 +360,20 @@
 			"type_traits": "cpp",
 			"typeinfo": "cpp",
 			"version": "cpp",
-			"stdio.h": "c"
+			"stdio.h": "c",
+			"__hash_table": "cpp",
+			"__split_buffer": "cpp",
+			"__tree": "cpp",
+			"bitset": "cpp",
+			"deque": "cpp",
+			"initializer_list": "cpp",
+			"list": "cpp",
+			"map": "cpp",
+			"set": "cpp",
+			"stack": "cpp",
+			"unordered_map": "cpp",
+			"unordered_set": "cpp",
+			"cop_blend_test.h": "c"
 		},
 		"workbench.colorCustomizations": {
 			"terminal.foreground": "#08D808",

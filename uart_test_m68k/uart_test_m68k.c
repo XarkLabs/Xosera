@@ -84,14 +84,14 @@ void uart_test()
 
     while (1)
     {
-        if (uart_get_ready())
+        if (xuart_is_get_ready())
         {
-            uint8_t c = uart_get_byte();
+            uint8_t c = xuart_get_byte();
             sendchar(c);        // echo to rosco UART
         }
-        if (uart_send_ready())
+        if (xuart_is_send_ready())
         {
-            uart_send_byte(*bp++);
+            xuart_send_byte(*bp++);
             if (*bp == '\0')
             {
                 bp = blurb;

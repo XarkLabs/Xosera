@@ -1,0 +1,40 @@
+//
+// copper - wait test
+//
+                .list    false
+                .include "xosera_m68k_defs.inc"
+                .macname false
+                .listcond false
+                .list    true
+
+entry
+                MOVE    #$0000,XR_VID_CTRL
+                MOVE    #$0000,XR_COLOR_A_ADDR+0        ; colorA[0] = black
+                MOVE    #$0000,XR_COLOR_B_ADDR+0        ; colorB[0] = black
+                MOVE    #$0000,XR_COLOR_B_ADDR+0        ;
+
+                VPOS    #10
+                MOVE    #$0080,XR_COLOR_B_ADDR+0        ;
+                VPOS    #11
+                MOVE    #$008B,XR_COLOR_B_ADDR+0        ;
+                HPOS    #H_EOL
+                MOVE    #$0888,XR_COLOR_B_ADDR+0        ;
+                HPOS    #799
+                MOVE    #$0FFF,XR_COLOR_B_ADDR+0        ;
+
+                MOVE    #$0001,XR_BLIT_CTRL             ; no transp, constS
+                MOVE    #$0000,XR_BLIT_ANDC             ; ANDC constant
+                MOVE    #$0000,XR_BLIT_XOR              ; XOR constant
+                MOVE    #$0000,XR_BLIT_MOD_S            ; no modulo S
+                MOVE    #$ABCD,XR_BLIT_SRC_S            ; fill value 0xABCD
+                MOVE    #$0000,XR_BLIT_MOD_D            ; no modulo D
+                MOVE    #$0000,XR_BLIT_DST_D            ; start of VRAM
+                MOVE    #$FF00,XR_BLIT_SHIFT            ; no edge masking or shifting
+                MOVE    #$0000,XR_BLIT_LINES            ; 1-D blit (no repeat count)
+                MOVE    #$1000-1,XR_BLIT_WORDS          ; 4 KW
+                VPOS    #$7FF
+
+                VPOS    #$3FF
+                LDI     #0
+loop            BRGE    loop
+                BRLT    loop

@@ -75,13 +75,20 @@ void copper::reset(xlasm * xl)
     xl->add_sym("RA_CMP", xlasm::symbol_t::LABEL, 0x7FF);
 
     xl->add_sym("SETI", xlasm::symbol_t::LABEL, 0x0000);
-    xl->add_sym("MOVEI", xlasm::symbol_t::LABEL, 0x0000);
+    xl->add_sym("MOVI", xlasm::symbol_t::LABEL, 0x0000);
+    xl->add_sym("LDI", xlasm::symbol_t::LABEL, 0x0000);
     xl->add_sym("SETM", xlasm::symbol_t::LABEL, 0x1000);
-    xl->add_sym("MOVE", xlasm::symbol_t::LABEL, 0x1000);
+    xl->add_sym("MOVM", xlasm::symbol_t::LABEL, 0x1000);
+    xl->add_sym("LDM", xlasm::symbol_t::LABEL, 0x1000);
+    xl->add_sym("STM", xlasm::symbol_t::LABEL, 0x1000);
     xl->add_sym("HPOS", xlasm::symbol_t::LABEL, 0x2000);
     xl->add_sym("VPOS", xlasm::symbol_t::LABEL, 0x2800);
     xl->add_sym("BRGE", xlasm::symbol_t::LABEL, 0x3000);
     xl->add_sym("BRLT", xlasm::symbol_t::LABEL, 0x3800);
+
+    xl->add_sym("H_EOL", xlasm::symbol_t::LABEL, 0x7FF);
+    xl->add_sym("V_EOF", xlasm::symbol_t::LABEL, 0x3FF);
+    xl->add_sym("V_WAITBLIT", xlasm::symbol_t::LABEL, 0x7FF);
 }
 
 void copper::activate(xlasm * xl)
@@ -493,6 +500,10 @@ int32_t copper::process_opcode(xlasm *                          xl,
             break;
         case OP_STM:
             word0_val = RA;
+            break;
+        case OP_CLRB:
+            word0_val = RA;
+            word1_val = RA;
             break;
         case OP_SUBM:
             word1_val = RA_SUB;

@@ -28,8 +28,7 @@
 //`define BUS_DEBUG_SIGNALS               // use audio outputs for debug (CS strobe etc.)
 
 `ifndef SYNTHESIS
-//`define NO_COPPER_INIT                     // initialize VRAM with test pattern and fonts, also no init copper
-//`define NO_TESTPATTERN                     // initialize VRAM with test pattern and fonts, also no init copper
+//`define NO_TESTPATTERN                     // don't init VRAM with test pattern and fonts in simulation
 `endif
 
 // features that can be optionally disabled (comment out to disable)
@@ -38,19 +37,28 @@
 // set by Makefile: `define EN_AUDIO                4       // number of channels 2/4
 //`undef EN_PF_B
 //`undef EN_AUDIO
-`ifdef EN_PF_B
-`define EN_PF_B_BLND                    // enable pf B blending (otherwise overlay only)
-`define EN_BLEND_FULL                   // use full precision blending w/o FMAC (ignored with iCE40UP5K)
-`endif
-`define EN_TIMER_INTR                   // enable timer interrupt
-`define EN_COPP                         // enable copper
 `define EN_BLIT                         // enable blit unit
 `define EN_POINTER                      // enable pointer sprite
 `define EN_PIXEL_ADDR                   // pixel coordinate address generation
+`define EN_TIMER_INTR                   // enable timer interrupt
+`ifdef EN_PF_B
+  `define EN_PF_B_BLND                    // enable pf B blending (otherwise overlay only)
+  `define EN_BLEND_FULL                   // use full precision blending w/o FMAC (ignored with iCE40UP5K)
+`endif
+`define EN_COPP                         // enable copper
+`ifdef EN_COPP
+  `define EN_COPP_HWAITEOL                   // enable copper HPOS stop at EOL
+  `ifdef EN_BLIT
+    `define EN_COPP_VBLITWAIT              // VPOS #$XXX > $3FF waits for blitter
+  `endif
+  `define EN_COPPER_INIT                // enable copper init program at reset (optional)
+`endif
 //`define EN_UART                         // enable USB UART
+`ifdef EN_UART
 //`define EN_UART_TX                      // TX only UART (no RX if EN_UART defined)
+`endif
 
-`define VERSION 0_39                    // Xosera BCD version code (x.xx)
+`define VERSION 0_40                    // Xosera BCD version code (x.xx)
 
 `ifndef GITCLEAN
 `define GITCLEAN 0                      // unknown Git state (assumed dirty)
@@ -194,18 +202,18 @@ typedef enum logic [6:0] {
     XR_PA_DISP_ADDR = 7'h12,            // (R /W) playfield A display VRAM start address
     XR_PA_LINE_LEN  = 7'h13,            // (R /W) playfield A display line width in words
     XR_PA_HV_FSCALE = 7'h14,            // (R /W) playfield A horizontal and vertical fractional scale
-    XR_PA_HV_SCROLL = 7'h15,            // (R /W) playfield A horizontal and vertical fine scroll
-    XR_PA_LINE_ADDR = 7'h16,            // (R /W) playfield A scanline start address (loaded at start of line)
-    XR_PA_UNUSED_17 = 7'h17,            // TODO: unused XR PA 17
+    XR_PA_H_SCROLL  = 7'h15,            // (R /W) playfield A horizontal fine scroll
+    XR_PA_V_SCROLL  = 7'h16,            // (R /W) playfield A vertical repeat/tile scroll
+    XR_PA_LINE_ADDR = 7'h17,            // (R /W) playfield A scanline start address (loaded at start of line)
     // Playfield B Control XR Registers
     XR_PB_GFX_CTRL  = 7'h18,            // (R /W) playfield B graphics control
     XR_PB_TILE_CTRL = 7'h19,            // (R /W) playfield B tile control
     XR_PB_DISP_ADDR = 7'h1A,            // (R /W) playfield B display VRAM start address
     XR_PB_LINE_LEN  = 7'h1B,            // (R /W) playfield B display line width in words
     XR_PB_HV_FSCALE = 7'h1C,            // (R /W) playfield B horizontal and vertical fractional scale
-    XR_PB_HV_SCROLL = 7'h1D,            // (R /W) playfield B horizontal and vertical fine scroll
-    XR_PB_LINE_ADDR = 7'h1E,            // (R /W) playfield B scanline start address (loaded at start of line)
-    XR_PB_UNUSED_1F = 7'h1F,            // TODO: unused XR PB 1F
+    XR_PB_H_SCROLL  = 7'h1D,            // (R /W) playfield B horizontal fine scroll
+    XR_PB_V_SCROLL  = 7'h1E,            // (R /W) playfield B vertical repeat/tile scroll
+    XR_PB_LINE_ADDR = 7'h1F,            // (R /W) playfield B scanline start address (loaded at start of line)
     // Audio
     XR_AUD0_VOL     = 7'h20,            // (WO) left volume [15:8] / right volume [7:0] (0x80 is 1.0)
     XR_AUD0_PERIOD  = 7'h21,            // (WO) sample period in pixel clocks, high bit RESTART flag
@@ -647,17 +655,17 @@ function automatic xv::xr_register_t xr_reg_to_enum(
             7'h12:      xr_reg_to_enum = xv::XR_PA_DISP_ADDR;
             7'h13:      xr_reg_to_enum = xv::XR_PA_LINE_LEN;
             7'h14:      xr_reg_to_enum = xv::XR_PA_HV_FSCALE;
-            7'h15:      xr_reg_to_enum = xv::XR_PA_HV_SCROLL;
-            7'h16:      xr_reg_to_enum = xv::XR_PA_LINE_ADDR;
-            7'h17:      xr_reg_to_enum = xv::XR_PA_UNUSED_17;
+            7'h15:      xr_reg_to_enum = xv::XR_PA_H_SCROLL;
+            7'h16:      xr_reg_to_enum = xv::XR_PA_V_SCROLL;
+            7'h17:      xr_reg_to_enum = xv::XR_PA_LINE_ADDR;
             7'h18:      xr_reg_to_enum = xv::XR_PB_GFX_CTRL;
             7'h19:      xr_reg_to_enum = xv::XR_PB_TILE_CTRL;
             7'h1A:      xr_reg_to_enum = xv::XR_PB_DISP_ADDR;
             7'h1B:      xr_reg_to_enum = xv::XR_PB_LINE_LEN;
             7'h1C:      xr_reg_to_enum = xv::XR_PB_HV_FSCALE;
-            7'h1D:      xr_reg_to_enum = xv::XR_PB_HV_SCROLL;
-            7'h1E:      xr_reg_to_enum = xv::XR_PB_LINE_ADDR;
-            7'h1F:      xr_reg_to_enum = xv::XR_PB_UNUSED_1F;
+            7'h1D:      xr_reg_to_enum = xv::XR_PB_H_SCROLL;
+            7'h1E:      xr_reg_to_enum = xv::XR_PB_V_SCROLL;
+            7'h1F:      xr_reg_to_enum = xv::XR_PB_LINE_ADDR;
             7'h20:      xr_reg_to_enum = xv::XR_AUD0_VOL;
             7'h21:      xr_reg_to_enum = xv::XR_AUD0_PERIOD;
             7'h22:      xr_reg_to_enum = xv::XR_AUD0_LENGTH;
@@ -712,8 +720,5 @@ typedef logic [xv::POINTER_W-1:0]               pointer_t;      // pointer image
 
 typedef logic [$clog2(xv::TOTAL_WIDTH)-1:0]     hres_t;         // horizontal coordinate types
 typedef logic [$clog2(xv::TOTAL_HEIGHT)-1:0]    vres_t;         // vertical coordinate types
-
-typedef logic [$clog2(xv::VISIBLE_WIDTH)-1:0]   hres_vis_t;     // horizontal visible coordinate types
-typedef logic [$clog2(xv::VISIBLE_HEIGHT)-1:0]  vres_vis_t;     // vertical visible coordinate types
 
 `endif

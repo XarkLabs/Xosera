@@ -1,0 +1,42 @@
+;
+; vim: set et ts=8 sw=8
+;
+        .list false
+        .include "xosera_m68k_defs.inc"
+        .macname false
+        .listcond false
+        .list true
+
+                export wavetable
+
+; starts off left edge of line 0
+entry
+                MOVI    #480+1,count
+start_color     MOVI    #MOVM|wavetable,copy_color      ; set initial table index
+copy_color      LDM     wavetable
+                STM     XR_VID_LEFT
+                ADDI    #640-16
+                STM     XR_VID_RIGHT
+                LDM     copy_color                      ; load MOVM source address into RA
+                ADDI    #1                              ; increment source address in RA
+                STM     copy_color                      ; store RA over MOVM source address
+                CMPI    #MOVM|end_table                 ; compare RA source address with end of table address (OR'd with opcode)
+                BRLT    no_wrap                         ; branch if RA source address < end_colors
+                MOVI    #MOVM|wavetable,copy_color      ; reset MOVI immediate addr to table start (OR'd with opcode)
+no_wrap         LDM     count
+                SUBI    #1
+                STM     count
+                CMPI    #1
+                HPOS    #H_EOL                          ; wait until end of line
+                BRGE    copy_color
+                LDM     start_color+1                   ; load MOVI source immediate into RA
+                ADDI    #1                              ; increment source address in RA
+                CMPI    #MOVM|end_table                 ; compare RA source address with end of table address (OR'd with opcode)
+                BRLT    no_wrap2
+                LDI     #MOVM|wavetable
+no_wrap2        STM     start_color+1                   ; store RA over MOVI immediate
+                VPOS    #V_EOF
+
+count           word    0
+wavetable       fill    0,256
+end_table

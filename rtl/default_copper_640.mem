@@ -1,0 +1,289 @@
+                    // File: default_copper.casm
+                    //      1       	;
+                    //      2       	; copper - default boot program
+                    //      3       	;
+                    //      4       	; vim: set et ts=8 sw=8
+                    //      5       	;
+                    //      6       	
+                    //      7       	
+                    //     12       	                .list    true
+                    //     13       	
+                    //     14       	                .if     MODE_640x480
+                    //     15 00a0= 	H_START         =       160
+                    //     16 031f= 	H_END           =       799
+                    //     17 0280= 	H_VIS           =       640
+                    //     23 c000= 	entry
+2000                //     24 c000: 	                HPOS    #0                              ; no-op
+                    //     25       	; set regs that aren't friendly when defaulted to zero
+0000 0008           //     26 c001: 	                MOVE    #$0008,XR_VID_CTRL              ; grey border color
+0004 0000           //     27 c003: 	                MOVE    #0,XR_VID_LEFT                  ; set left border
+0005 0280           //     28 c005: 	                MOVE    #H_VIS,XR_VID_RIGHT             ; set right border
+                    //     29       	
+0010 0080           //     30 c007: 	                MOVE    #$0080,XR_PA_GFX_CTRL           ; blank pa
+0011 000F           //     31 c009: 	                MOVE    #$000F,XR_PA_TILE_CTRL          ; set to 8x16 tiles @ tilemem 0x0000
+0013 0050           //     32 c00b: 	                MOVE    #H_VIS/8,XR_PA_LINE_LEN         ; set default line len
+                    //     33       	
+0018 0080           //     34 c00d: 	                MOVE    #$0080,XR_PB_GFX_CTRL           ; blank pb
+0019 000F           //     35 c00f: 	                MOVE    #$000F,XR_PB_TILE_CTRL          ; set to 8x16 tiles @ tilemem 0x0000
+001B 0050           //     36 c011: 	                MOVE    #H_VIS/8,XR_PB_LINE_LEN         ; set default line len
+                    //     37       	
+2FFF                //     38 c013: 	                VPOS    #V_WAITBLIT                     ; wait until blitter ready
+C000 2BFF           //     39 c014: 	                MOVI    #(VPOS|V_EOF),entry             ; prevent running init twice
+0040 0001           //     40 c016: 	                MOVE    #$0001,XR_BLIT_CTRL             ; no transp, constS
+0041 0000           //     41 c018: 	                MOVE    #$0000,XR_BLIT_ANDC             ; ANDC constant
+0042 0000           //     42 c01a: 	                MOVE    #$0000,XR_BLIT_XOR              ; XOR constant
+0043 0000           //     43 c01c: 	                MOVE    #$0000,XR_BLIT_MOD_S            ; no modulo S
+0044 0000           //     44 c01e: 	                MOVE    #$0000,XR_BLIT_SRC_S            ; fill value 0x0000
+0045 0000           //     45 c020: 	                MOVE    #$0000,XR_BLIT_MOD_D            ; no modulo D
+0046 0000           //     46 c022: 	                MOVE    #$0000,XR_BLIT_DST_D            ; start of VRAM
+0047 FF00           //     47 c024: 	                MOVE    #$FF00,XR_BLIT_SHIFT            ; no edge masking or shifting
+0048 0000           //     48 c026: 	                MOVE    #$0000,XR_BLIT_LINES            ; 1-D blit (no repeat count)
+0049 FFFF           //     49 c028: 	                MOVE    #$10000-1,XR_BLIT_WORDS         ; all VRAM
+2FFF                //     50 c02a: 	                VPOS    #V_WAITBLIT                     ; wait until blitter ready
+0001 0000           //     51 c02b: 	                MOVI    #$0000,XR_COPP_CTRL             ; disable copper
+2BFF 2BFF 2BFF 2BFF //     52 c02d: 	                fill    (VPOS|V_EOF),($C400-.)          ; fill with VPOS #V_EOF
+2BFF 2BFF 2BFF 2BFF //        c031: 
+2BFF 2BFF 2BFF 2BFF //        c035: 
+2BFF 2BFF 2BFF 2BFF //        c039: 
+2BFF 2BFF 2BFF 2BFF //        c03d: 
+2BFF 2BFF 2BFF 2BFF //        c041: 
+2BFF 2BFF 2BFF 2BFF //        c045: 
+2BFF 2BFF 2BFF 2BFF //        c049: 
+2BFF 2BFF 2BFF 2BFF //        c04d: 
+2BFF 2BFF 2BFF 2BFF //        c051: 
+2BFF 2BFF 2BFF 2BFF //        c055: 
+2BFF 2BFF 2BFF 2BFF //        c059: 
+2BFF 2BFF 2BFF 2BFF //        c05d: 
+2BFF 2BFF 2BFF 2BFF //        c061: 
+2BFF 2BFF 2BFF 2BFF //        c065: 
+2BFF 2BFF 2BFF 2BFF //        c069: 
+2BFF 2BFF 2BFF 2BFF //        c06d: 
+2BFF 2BFF 2BFF 2BFF //        c071: 
+2BFF 2BFF 2BFF 2BFF //        c075: 
+2BFF 2BFF 2BFF 2BFF //        c079: 
+2BFF 2BFF 2BFF 2BFF //        c07d: 
+2BFF 2BFF 2BFF 2BFF //        c081: 
+2BFF 2BFF 2BFF 2BFF //        c085: 
+2BFF 2BFF 2BFF 2BFF //        c089: 
+2BFF 2BFF 2BFF 2BFF //        c08d: 
+2BFF 2BFF 2BFF 2BFF //        c091: 
+2BFF 2BFF 2BFF 2BFF //        c095: 
+2BFF 2BFF 2BFF 2BFF //        c099: 
+2BFF 2BFF 2BFF 2BFF //        c09d: 
+2BFF 2BFF 2BFF 2BFF //        c0a1: 
+2BFF 2BFF 2BFF 2BFF //        c0a5: 
+2BFF 2BFF 2BFF 2BFF //        c0a9: 
+2BFF 2BFF 2BFF 2BFF //        c0ad: 
+2BFF 2BFF 2BFF 2BFF //        c0b1: 
+2BFF 2BFF 2BFF 2BFF //        c0b5: 
+2BFF 2BFF 2BFF 2BFF //        c0b9: 
+2BFF 2BFF 2BFF 2BFF //        c0bd: 
+2BFF 2BFF 2BFF 2BFF //        c0c1: 
+2BFF 2BFF 2BFF 2BFF //        c0c5: 
+2BFF 2BFF 2BFF 2BFF //        c0c9: 
+2BFF 2BFF 2BFF 2BFF //        c0cd: 
+2BFF 2BFF 2BFF 2BFF //        c0d1: 
+2BFF 2BFF 2BFF 2BFF //        c0d5: 
+2BFF 2BFF 2BFF 2BFF //        c0d9: 
+2BFF 2BFF 2BFF 2BFF //        c0dd: 
+2BFF 2BFF 2BFF 2BFF //        c0e1: 
+2BFF 2BFF 2BFF 2BFF //        c0e5: 
+2BFF 2BFF 2BFF 2BFF //        c0e9: 
+2BFF 2BFF 2BFF 2BFF //        c0ed: 
+2BFF 2BFF 2BFF 2BFF //        c0f1: 
+2BFF 2BFF 2BFF 2BFF //        c0f5: 
+2BFF 2BFF 2BFF 2BFF //        c0f9: 
+2BFF 2BFF 2BFF 2BFF //        c0fd: 
+2BFF 2BFF 2BFF 2BFF //        c101: 
+2BFF 2BFF 2BFF 2BFF //        c105: 
+2BFF 2BFF 2BFF 2BFF //        c109: 
+2BFF 2BFF 2BFF 2BFF //        c10d: 
+2BFF 2BFF 2BFF 2BFF //        c111: 
+2BFF 2BFF 2BFF 2BFF //        c115: 
+2BFF 2BFF 2BFF 2BFF //        c119: 
+2BFF 2BFF 2BFF 2BFF //        c11d: 
+2BFF 2BFF 2BFF 2BFF //        c121: 
+2BFF 2BFF 2BFF 2BFF //        c125: 
+2BFF 2BFF 2BFF 2BFF //        c129: 
+2BFF 2BFF 2BFF 2BFF //        c12d: 
+2BFF 2BFF 2BFF 2BFF //        c131: 
+2BFF 2BFF 2BFF 2BFF //        c135: 
+2BFF 2BFF 2BFF 2BFF //        c139: 
+2BFF 2BFF 2BFF 2BFF //        c13d: 
+2BFF 2BFF 2BFF 2BFF //        c141: 
+2BFF 2BFF 2BFF 2BFF //        c145: 
+2BFF 2BFF 2BFF 2BFF //        c149: 
+2BFF 2BFF 2BFF 2BFF //        c14d: 
+2BFF 2BFF 2BFF 2BFF //        c151: 
+2BFF 2BFF 2BFF 2BFF //        c155: 
+2BFF 2BFF 2BFF 2BFF //        c159: 
+2BFF 2BFF 2BFF 2BFF //        c15d: 
+2BFF 2BFF 2BFF 2BFF //        c161: 
+2BFF 2BFF 2BFF 2BFF //        c165: 
+2BFF 2BFF 2BFF 2BFF //        c169: 
+2BFF 2BFF 2BFF 2BFF //        c16d: 
+2BFF 2BFF 2BFF 2BFF //        c171: 
+2BFF 2BFF 2BFF 2BFF //        c175: 
+2BFF 2BFF 2BFF 2BFF //        c179: 
+2BFF 2BFF 2BFF 2BFF //        c17d: 
+2BFF 2BFF 2BFF 2BFF //        c181: 
+2BFF 2BFF 2BFF 2BFF //        c185: 
+2BFF 2BFF 2BFF 2BFF //        c189: 
+2BFF 2BFF 2BFF 2BFF //        c18d: 
+2BFF 2BFF 2BFF 2BFF //        c191: 
+2BFF 2BFF 2BFF 2BFF //        c195: 
+2BFF 2BFF 2BFF 2BFF //        c199: 
+2BFF 2BFF 2BFF 2BFF //        c19d: 
+2BFF 2BFF 2BFF 2BFF //        c1a1: 
+2BFF 2BFF 2BFF 2BFF //        c1a5: 
+2BFF 2BFF 2BFF 2BFF //        c1a9: 
+2BFF 2BFF 2BFF 2BFF //        c1ad: 
+2BFF 2BFF 2BFF 2BFF //        c1b1: 
+2BFF 2BFF 2BFF 2BFF //        c1b5: 
+2BFF 2BFF 2BFF 2BFF //        c1b9: 
+2BFF 2BFF 2BFF 2BFF //        c1bd: 
+2BFF 2BFF 2BFF 2BFF //        c1c1: 
+2BFF 2BFF 2BFF 2BFF //        c1c5: 
+2BFF 2BFF 2BFF 2BFF //        c1c9: 
+2BFF 2BFF 2BFF 2BFF //        c1cd: 
+2BFF 2BFF 2BFF 2BFF //        c1d1: 
+2BFF 2BFF 2BFF 2BFF //        c1d5: 
+2BFF 2BFF 2BFF 2BFF //        c1d9: 
+2BFF 2BFF 2BFF 2BFF //        c1dd: 
+2BFF 2BFF 2BFF 2BFF //        c1e1: 
+2BFF 2BFF 2BFF 2BFF //        c1e5: 
+2BFF 2BFF 2BFF 2BFF //        c1e9: 
+2BFF 2BFF 2BFF 2BFF //        c1ed: 
+2BFF 2BFF 2BFF 2BFF //        c1f1: 
+2BFF 2BFF 2BFF 2BFF //        c1f5: 
+2BFF 2BFF 2BFF 2BFF //        c1f9: 
+2BFF 2BFF 2BFF 2BFF //        c1fd: 
+2BFF 2BFF 2BFF 2BFF //        c201: 
+2BFF 2BFF 2BFF 2BFF //        c205: 
+2BFF 2BFF 2BFF 2BFF //        c209: 
+2BFF 2BFF 2BFF 2BFF //        c20d: 
+2BFF 2BFF 2BFF 2BFF //        c211: 
+2BFF 2BFF 2BFF 2BFF //        c215: 
+2BFF 2BFF 2BFF 2BFF //        c219: 
+2BFF 2BFF 2BFF 2BFF //        c21d: 
+2BFF 2BFF 2BFF 2BFF //        c221: 
+2BFF 2BFF 2BFF 2BFF //        c225: 
+2BFF 2BFF 2BFF 2BFF //        c229: 
+2BFF 2BFF 2BFF 2BFF //        c22d: 
+2BFF 2BFF 2BFF 2BFF //        c231: 
+2BFF 2BFF 2BFF 2BFF //        c235: 
+2BFF 2BFF 2BFF 2BFF //        c239: 
+2BFF 2BFF 2BFF 2BFF //        c23d: 
+2BFF 2BFF 2BFF 2BFF //        c241: 
+2BFF 2BFF 2BFF 2BFF //        c245: 
+2BFF 2BFF 2BFF 2BFF //        c249: 
+2BFF 2BFF 2BFF 2BFF //        c24d: 
+2BFF 2BFF 2BFF 2BFF //        c251: 
+2BFF 2BFF 2BFF 2BFF //        c255: 
+2BFF 2BFF 2BFF 2BFF //        c259: 
+2BFF 2BFF 2BFF 2BFF //        c25d: 
+2BFF 2BFF 2BFF 2BFF //        c261: 
+2BFF 2BFF 2BFF 2BFF //        c265: 
+2BFF 2BFF 2BFF 2BFF //        c269: 
+2BFF 2BFF 2BFF 2BFF //        c26d: 
+2BFF 2BFF 2BFF 2BFF //        c271: 
+2BFF 2BFF 2BFF 2BFF //        c275: 
+2BFF 2BFF 2BFF 2BFF //        c279: 
+2BFF 2BFF 2BFF 2BFF //        c27d: 
+2BFF 2BFF 2BFF 2BFF //        c281: 
+2BFF 2BFF 2BFF 2BFF //        c285: 
+2BFF 2BFF 2BFF 2BFF //        c289: 
+2BFF 2BFF 2BFF 2BFF //        c28d: 
+2BFF 2BFF 2BFF 2BFF //        c291: 
+2BFF 2BFF 2BFF 2BFF //        c295: 
+2BFF 2BFF 2BFF 2BFF //        c299: 
+2BFF 2BFF 2BFF 2BFF //        c29d: 
+2BFF 2BFF 2BFF 2BFF //        c2a1: 
+2BFF 2BFF 2BFF 2BFF //        c2a5: 
+2BFF 2BFF 2BFF 2BFF //        c2a9: 
+2BFF 2BFF 2BFF 2BFF //        c2ad: 
+2BFF 2BFF 2BFF 2BFF //        c2b1: 
+2BFF 2BFF 2BFF 2BFF //        c2b5: 
+2BFF 2BFF 2BFF 2BFF //        c2b9: 
+2BFF 2BFF 2BFF 2BFF //        c2bd: 
+2BFF 2BFF 2BFF 2BFF //        c2c1: 
+2BFF 2BFF 2BFF 2BFF //        c2c5: 
+2BFF 2BFF 2BFF 2BFF //        c2c9: 
+2BFF 2BFF 2BFF 2BFF //        c2cd: 
+2BFF 2BFF 2BFF 2BFF //        c2d1: 
+2BFF 2BFF 2BFF 2BFF //        c2d5: 
+2BFF 2BFF 2BFF 2BFF //        c2d9: 
+2BFF 2BFF 2BFF 2BFF //        c2dd: 
+2BFF 2BFF 2BFF 2BFF //        c2e1: 
+2BFF 2BFF 2BFF 2BFF //        c2e5: 
+2BFF 2BFF 2BFF 2BFF //        c2e9: 
+2BFF 2BFF 2BFF 2BFF //        c2ed: 
+2BFF 2BFF 2BFF 2BFF //        c2f1: 
+2BFF 2BFF 2BFF 2BFF //        c2f5: 
+2BFF 2BFF 2BFF 2BFF //        c2f9: 
+2BFF 2BFF 2BFF 2BFF //        c2fd: 
+2BFF 2BFF 2BFF 2BFF //        c301: 
+2BFF 2BFF 2BFF 2BFF //        c305: 
+2BFF 2BFF 2BFF 2BFF //        c309: 
+2BFF 2BFF 2BFF 2BFF //        c30d: 
+2BFF 2BFF 2BFF 2BFF //        c311: 
+2BFF 2BFF 2BFF 2BFF //        c315: 
+2BFF 2BFF 2BFF 2BFF //        c319: 
+2BFF 2BFF 2BFF 2BFF //        c31d: 
+2BFF 2BFF 2BFF 2BFF //        c321: 
+2BFF 2BFF 2BFF 2BFF //        c325: 
+2BFF 2BFF 2BFF 2BFF //        c329: 
+2BFF 2BFF 2BFF 2BFF //        c32d: 
+2BFF 2BFF 2BFF 2BFF //        c331: 
+2BFF 2BFF 2BFF 2BFF //        c335: 
+2BFF 2BFF 2BFF 2BFF //        c339: 
+2BFF 2BFF 2BFF 2BFF //        c33d: 
+2BFF 2BFF 2BFF 2BFF //        c341: 
+2BFF 2BFF 2BFF 2BFF //        c345: 
+2BFF 2BFF 2BFF 2BFF //        c349: 
+2BFF 2BFF 2BFF 2BFF //        c34d: 
+2BFF 2BFF 2BFF 2BFF //        c351: 
+2BFF 2BFF 2BFF 2BFF //        c355: 
+2BFF 2BFF 2BFF 2BFF //        c359: 
+2BFF 2BFF 2BFF 2BFF //        c35d: 
+2BFF 2BFF 2BFF 2BFF //        c361: 
+2BFF 2BFF 2BFF 2BFF //        c365: 
+2BFF 2BFF 2BFF 2BFF //        c369: 
+2BFF 2BFF 2BFF 2BFF //        c36d: 
+2BFF 2BFF 2BFF 2BFF //        c371: 
+2BFF 2BFF 2BFF 2BFF //        c375: 
+2BFF 2BFF 2BFF 2BFF //        c379: 
+2BFF 2BFF 2BFF 2BFF //        c37d: 
+2BFF 2BFF 2BFF 2BFF //        c381: 
+2BFF 2BFF 2BFF 2BFF //        c385: 
+2BFF 2BFF 2BFF 2BFF //        c389: 
+2BFF 2BFF 2BFF 2BFF //        c38d: 
+2BFF 2BFF 2BFF 2BFF //        c391: 
+2BFF 2BFF 2BFF 2BFF //        c395: 
+2BFF 2BFF 2BFF 2BFF //        c399: 
+2BFF 2BFF 2BFF 2BFF //        c39d: 
+2BFF 2BFF 2BFF 2BFF //        c3a1: 
+2BFF 2BFF 2BFF 2BFF //        c3a5: 
+2BFF 2BFF 2BFF 2BFF //        c3a9: 
+2BFF 2BFF 2BFF 2BFF //        c3ad: 
+2BFF 2BFF 2BFF 2BFF //        c3b1: 
+2BFF 2BFF 2BFF 2BFF //        c3b5: 
+2BFF 2BFF 2BFF 2BFF //        c3b9: 
+2BFF 2BFF 2BFF 2BFF //        c3bd: 
+2BFF 2BFF 2BFF 2BFF //        c3c1: 
+2BFF 2BFF 2BFF 2BFF //        c3c5: 
+2BFF 2BFF 2BFF 2BFF //        c3c9: 
+2BFF 2BFF 2BFF 2BFF //        c3cd: 
+2BFF 2BFF 2BFF 2BFF //        c3d1: 
+2BFF 2BFF 2BFF 2BFF //        c3d5: 
+2BFF 2BFF 2BFF 2BFF //        c3d9: 
+2BFF 2BFF 2BFF 2BFF //        c3dd: 
+2BFF 2BFF 2BFF 2BFF //        c3e1: 
+2BFF 2BFF 2BFF 2BFF //        c3e5: 
+2BFF 2BFF 2BFF 2BFF //        c3e9: 
+2BFF 2BFF 2BFF 2BFF //        c3ed: 
+2BFF 2BFF 2BFF 2BFF //        c3f1: 
+2BFF 2BFF 2BFF 2BFF //        c3f5: 
+2BFF 2BFF 2BFF 2BFF //        c3f9: 
+2BFF 2BFF 2BFF 
+                    //     53       	                .end

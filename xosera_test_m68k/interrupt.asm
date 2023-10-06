@@ -53,7 +53,7 @@ Xosera_intr:
                 tst.w   NukeColor               ; test color
                 bmi.s   NoNukeColor             ; if color < 0, skip color cycle
 
-WaitXMem:       tst.b   (a0)                    ; make sure memory operation not in progress // TODO: paranoia?
+WaitXMem:       tst.b   (A0)                    ; make sure memory operation not in progress // TODO: paranoia?
                 bmi.s   WaitXMem
                 movep.w XM_WR_XADDR(A0),D1      ; save xaddr write address
 

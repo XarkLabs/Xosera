@@ -2,23 +2,23 @@
 # vim: set noet ts=8 sw=8
 
 # Using icestorm tools + yosys + nextpnr
-# Modified from examples in icestorm distribution for
-# up5k_vga by E. Brombaugh (emeb) and further extensively
-# hacked by Xark for Xosera purposes
+# Makefile modified from examples in icestorm distribution for
+# up5k_vga by E. Brombaugh (emeb)
+# further extensively hacked by Xark for Xosera purposes
 
 # Primary tools (official binaries available from https://github.com/YosysHQ/oss-cad-suite-build/releases/latest)
 #       Yosys
 #       nextpnr-ice40
 #       Verilator               (optional)
 #       Icarus Verilog          (optional)
-#       Built using macOS BigSur and GNU/Linux Ubuntu distribution
+#       Built using macOS and GNU/Linux Ubuntu distribution (but WSL/WSL2 or MSYS2 can work)
 
 # Makefile "best practices" from https://tech.davis-hansson.com/p/make/ (but not forcing gmake)
 SHELL := bash
 .SHELLFLAGS := -eu -o pipefail -c
 .ONESHELL:
 .DELETE_ON_ERROR:
-# TODO: a bit spammy MAKEFLAGS += --warn-undefined-variables
+# NOTE: too spammy MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
 # Version bookkeeping
@@ -36,7 +36,6 @@ XOSERA_HASH := $(GITSHORTHASH)
 XOSERA_CLEAN := 0
 $(info === Xosera simulation [$(XOSERA_HASH)] is DIRTY: $(DIRTYFILES))
 endif
-
 
 # needed for copasm
 XOSERA_M68K_API?=../xosera_m68k_api
@@ -60,11 +59,14 @@ AUDIO?=4
 PF_B?=true
 
 # copper assembly
-COPASM=../copper/CopAsm/bin/copasm
+COPASM=$(XOSERA_M68K_API)/bin/copasm
+RESET_COP=default_copper.casm
 ifeq ($(findstring 640x,$(VIDEO_MODE)),)
 RESET_COPMEM=default_copper_848.mem
+COPASMOPT=-d MODE_640x480=0 -d MODE_848x480=1
 else
 RESET_COPMEM=default_copper_640.mem
+COPASMOPT=-d MODE_640x480=1 -d MODE_848x480=0
 endif
 
 VERILOG_DEFS := -D$(VIDEO_MODE)
@@ -88,8 +90,8 @@ VERILOG_DEFS := -D$(VIDEO_MODE)
 #VRUN_TESTDATA ?=   -u ../testdata/raw/sintable.raw -u ../testdata/raw/ramptable.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
 #VRUN_TESTDATA ?=   -u ../testdata/raw/pacbox-320x240_pal.raw -u ../testdata/raw/pacbox-320x240.raw -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/true_color_pal.raw -u ../testdata/raw/parrot_320x240_RG8B4.raw -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
-VRUN_TESTDATA ?=   -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
-#VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/xosera_r1_pal.raw -u ../testdata/raw/xosera_r1.raw ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
+#VRUN_TESTDATA ?=   -u ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
+VRUN_TESTDATA ?=   -u ../testdata/raw/moto_m_transp_4bpp.raw -u ../testdata/raw/xosera_r1_pal.raw -u ../testdata/raw/xosera_r1.raw ../testdata/raw/ramptable.raw -u ../testdata/raw/sintable.raw
 # Xosera test bed simulation target top (for Icaraus Verilog)
 TBTOP := xosera_tb
 
@@ -162,7 +164,7 @@ VERILATOR_ARGS := --sv --language 1800-2012 --timing -I$(SRCDIR) -v $(TECH_LIB) 
 CSRC := sim/xosera_sim.cpp
 
 # copper asm source
-COPSRC := sim/cop_blend_test.vsim.h sim/cop_audio_evil.vsim.h
+COPSRC := $(addsuffix .vsim.h,$(basename $(wildcard sim/*.casm)))
 
 # default build native simulation executable
 all: $(RESET_COPMEM) $(COPASM) vsim isim
@@ -204,20 +206,18 @@ $(VLT_CONFIG):
 	@echo >>$(VLT_CONFIG) lint_off -rule UNDRIVEN   -file \"$(TECH_LIB)\"
 	@echo >>$(VLT_CONFIG) lint_off -rule GENUNNAMED -file \"$(TECH_LIB)\"
 
-# build copper assembler
-$(COPASM):
-	@echo === Building copper assembler...
-	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE)
-
 # assemble casm into mem file
-%.mem : %.casm $(COPASM)
+cop_init:  $(COPASM) $(RESET_COP)
 	@mkdir -p $(@D)
-	$(COPASM) -l -o $@ $<
+	$(COPASM) -b 4096 $(COPASMOPT) -l -i $(XOSERA_M68K_API) -o $(addsuffix .mem,$(basename $(RESET_COP))) $(RESET_COP)
+
+cop_clean:
+	rm -f $(addsuffix .lst,$(basename $(RESET_COP))) $(addsuffix .mem,$(basename $(RESET_COP)))
 
 # assembler copper file
-%.vsim.h : %.casm $(COPASM)
+%.vsim.h : %.casm
 	@mkdir -p $(@D)
-	$(COPASM) -l -o $@ $<
+	$(COPASM) $(COPASMOPT) -l -i $(XOSERA_M68K_API) -o $@ $<
 
 # use Verilator to build native simulation executable
 sim/obj_dir/V$(VTOP): $(VLT_CONFIG) $(CSRC) $(INC) $(SRC) $(RESET_COPMEM) $(COPSRC) sim.mk
@@ -233,7 +233,7 @@ sim/$(TBTOP): $(INC) sim/$(TBTOP).sv $(SRC) $(RESET_COPMEM) $(COPASM) sim.mk
 
 # delete all targets that will be re-generated
 clean:
-	rm -rf sim/obj_dir $(VLT_CONFIG) $(RESET_COPMEM) sim/$(TBTOP) sim/*.vsim.h sim/*.lst
+	rm -rf sim/obj_dir $(VLT_CONFIG) sim/$(TBTOP) sim/*.vsim.h sim/*.lst
 .PHONY: clean
 
 # prevent make from deleting any intermediate files

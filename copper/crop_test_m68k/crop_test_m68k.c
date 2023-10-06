@@ -31,12 +31,12 @@
 #include "xosera_m68k_api.h"
 
 // Copper list
-const uint32_t copper_list[] = {
-    COP_WAIT_V(40),                        // wait  0, 40                   ; Wait for line 40, H position ignored
-    COP_MOVER(0x0065, PA_GFX_CTRL),        // mover 0x0065, PA_GFX_CTRL     ; Set to 8-bpp + Hx2 + Vx2
-    COP_WAIT_V(440),                       // wait  0, 440                  ; Wait for line 440, H position ignored
-    COP_MOVER(0x00E5, PA_GFX_CTRL),        // mover 0x00E5, PA_GFX_CTRL     ; Set to Blank + 8-bpp + Hx2 + Vx2
-    COP_END()                              // nextf
+const uint16_t copper_list[] = {
+    COP_VPOS(40),                          // Wait for line 40
+    COP_MOVER(0x0065, PA_GFX_CTRL),        // Set to 8-bpp + Hx2 + Vx2
+    COP_VPOS(440),                         // Wait for line 440
+    COP_MOVER(0x00E5, PA_GFX_CTRL),        // Set to Blank + 8-bpp + Hx2 + Vx2
+    COP_END()                              // wait for next frame
 };
 
 static void msg(char * msg)
@@ -62,10 +62,9 @@ void xosera_crop_test()
     xreg_setw(VID_CTRL, 0x0000);        // set border black
 
     xmem_setw_next_addr(XR_COPPER_ADDR);
-    for (uint8_t i = 0; i < (sizeof(copper_list) / sizeof(uint32_t)); i++)
+    for (uint8_t i = 0; i < (sizeof(copper_list) / sizeof(copper_list[0])); i++)
     {
-        xmem_setw_next(copper_list[i] >> 16);
-        xmem_setw_next(copper_list[i] & 0xffff);
+        xmem_setw_next(copper_list[i]);
     }
 
     xreg_setw(PA_LINE_LEN, 160);
@@ -92,10 +91,9 @@ void xosera_crop_test()
     xreg_setw(VID_CTRL, 0x0000);        // set border black
 
     xmem_setw_next_addr(XR_COPPER_ADDR);
-    for (uint8_t i = 0; i < (sizeof(copper_list) / sizeof(uint32_t)); i++)
+    for (uint8_t i = 0; i < (sizeof(copper_list) / sizeof(copper_list[0])); i++)
     {
-        xmem_setw_next(copper_list[i] >> 16);
-        xmem_setw_next(copper_list[i] & 0xffff);
+        xmem_setw_next(copper_list[i]);
     }
 
     xreg_setw(PA_LINE_LEN, 160);

@@ -1,5 +1,5 @@
                 .list    false
-                .include "../../xosera_m68k_api/xosera_m68k_defs.inc"
+                .include "xosera_m68k_defs.inc"
                 .macname false
                 .listcond false
                 .list    true
@@ -10,23 +10,27 @@
 ; copy table of values to contiguous registers
 ; (using only simple 1:1 pseudo ops)
 set_tbl
-                MOVE    #SETM+val_tbl,set_reg+0     ; set start set_reg source (plus SETM bit)
-                MOVE    #XR_COLOR_ADDR,set_reg+1    ; set start set_reg dest
-set_reg         MOVE    $C7FF,$FFFF                 ; set color reg (self-modified)
+                MOVI    #MOVM|val_tbl,set_reg+0     ; set start set_reg source (plus MOVM bit)
+                MOVI    #XR_COLOR_ADDR,set_reg+1    ; set start set_reg dest
+set_reg         MOVM    $C7FF,$FFFF                 ; set color reg (self-modified)
                 LDM     set_reg+1                   ; load RA with set_reg dest
                 ADDI    #1                          ; increment RA
                 STM     set_reg+1                   ; store RA to set_reg dest
                 LDM     set_reg                     ; set RA with set_reg source
                 ADDI    #1                          ; increment RA
-                CMPI    #SETM+end_tbl               ; compare RA with table end (plus SETM bit)
+                CMPI    #MOVM|end_tbl               ; compare RA with table end (plus MOVM bit)
                 BRGE    set_done                    ; branch if done
                 STM     set_reg+0                   ; store RA to set_reg source
                 BRGE    set_reg                     ; branch always (ST clears B)
-set_done        VPOS    #-1                         ; halt until SOF
+set_done        VPOS    #V_EOF                       ; halt until EOF
 
 val_tbl         .word   0x000, 0x111, 0x222, 0x333
                 .word   0x444, 0x555, 0x666, 0x777
                 .word   0x888, 0x999, 0xaaa, 0xbbb
                 .word   0xccc, 0xddd, 0xeee, 0xfff
 end_tbl
+
+                fill    $2bff,($C400-.)
+the_end         = .
+
 

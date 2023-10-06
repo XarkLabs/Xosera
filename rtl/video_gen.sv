@@ -68,8 +68,8 @@ module video_gen (
 // video generation signals
 color_t             border_color;
 logic               vid_colorswap;                      // COLORMEM A/B swap
-hres_vis_t          vid_left;                           // left video border
-hres_vis_t          vid_right;                          // right video border
+hres_t              vid_left;                           // left video border
+hres_t              vid_right;                          // right video border
 addr_t              line_set_addr;                      // address for on-the-fly addr set
 
 `ifdef EN_POINTER
@@ -135,7 +135,7 @@ logic               pb_tile_sel;                        // tile mem read select
 tile_addr_t         pb_tile_addr;                       // tile mem word address out (16x5K)
 `endif
 
-localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-64;   // memory prefetch starts early
+localparam H_MEM_BEGIN      = xv::OFFSCREEN_WIDTH-48;   // memory prefetch starts early
 localparam H_MEM_END        = xv::TOTAL_WIDTH-8;        // memory fetch can end a bit early
 
 // debug signals
@@ -412,10 +412,18 @@ video_playfield video_pf_b(
 always_ff @(posedge clk) begin
     if (reset_i) begin
         video_intr_o        <= 1'b0;
+`ifdef EN_COPPER_INIT
         border_color        <= '0;
+`else
+        border_color        <= 8'h08;           // w/o copper init, default grey
+`endif
         vid_colorswap       <= 1'b0;
         vid_left            <= '0;
+`ifdef EN_COPPER_INIT
         vid_right           <= '0;
+`else
+        vid_right           <= xv::VISIBLE_WIDTH; // w/o copper init, default full width
+`endif
 
 `ifdef EN_POINTER
         vid_pointer_h        <= '0;
@@ -423,7 +431,11 @@ always_ff @(posedge clk) begin
         vid_pointer_col      <= '0;
 `endif
 
+`ifdef EN_COPPER_INIT
         pa_blank            <= 1'b0;
+`else
+        pa_blank            <= 1'b1;            // w/o copper init, come out of reset blanked
+`endif
         pa_start_addr       <= 16'h0000;
         pa_line_len         <= '0;
         pa_fine_hscroll     <= 5'b0;
@@ -443,7 +455,11 @@ always_ff @(posedge clk) begin
         pa_gfx_ctrl_set     <= 1'b0;
 
 `ifdef EN_PF_B
+`ifdef EN_COPPER_INIT
         pb_blank            <= 1'b0;
+`else
+        pb_blank            <= 1'b1;            // w/o copper init, come out of reset blanked
+`endif
         pb_start_addr       <= 16'h0000;
         pb_line_len         <= '0;
         pb_fine_hscroll     <= 5'b0;
@@ -466,8 +482,8 @@ always_ff @(posedge clk) begin
         line_set_addr       <= 16'h0000;        // user set display addr
 
 `ifdef EN_COPP
-        copp_reg_wr_o       <= 1'b1;            // start copper at boot so it can do reg init
-        copp_reg_enable_o   <= 1'b1;
+        copp_reg_wr_o       <= 1'b0;
+        copp_reg_enable_o   <= 1'b1;            // copper starts at init (and will disable itself)
 `endif
 
 `ifdef EN_AUDIO
@@ -576,15 +592,16 @@ always_ff @(posedge clk) begin
                     pa_h_frac_repeat <= vgen_reg_data_i[6:4];
                     pa_v_frac_repeat <= vgen_reg_data_i[2:0];
                 end
-                6'(xv::XR_PA_HV_SCROLL): begin
-                    pa_fine_hscroll <= vgen_reg_data_i[12:8];
-                    pa_fine_vscroll <= vgen_reg_data_i[5:0];
+                6'(xv::XR_PA_H_SCROLL): begin
+                    pa_fine_hscroll <= vgen_reg_data_i[4:0];
+                end
+                6'(xv::XR_PA_V_SCROLL): begin
+                    pa_fine_vscroll[1:0] <= vgen_reg_data_i[9:8];
+                    pa_fine_vscroll[5:2] <= vgen_reg_data_i[3:0];
                 end
                 6'(xv::XR_PA_LINE_ADDR): begin
                     pa_line_start_set <= 1'b1;               // PA_LINE_ADDR changed strobe
                     line_set_addr   <= vgen_reg_data_i;
-                end
-                6'(xv::XR_PA_UNUSED_17): begin
                 end
 `ifdef EN_PF_B
                 // playfield B
@@ -613,15 +630,16 @@ always_ff @(posedge clk) begin
                     pb_h_frac_repeat <= vgen_reg_data_i[6:4];
                     pb_v_frac_repeat <= vgen_reg_data_i[2:0];
                 end
-                6'(xv::XR_PB_HV_SCROLL): begin
-                    pb_fine_hscroll <= vgen_reg_data_i[12:8];
-                    pb_fine_vscroll <= vgen_reg_data_i[5:0];
+                6'(xv::XR_PB_H_SCROLL): begin
+                    pb_fine_hscroll <= vgen_reg_data_i[4:0];
+                end
+                6'(xv::XR_PB_V_SCROLL): begin
+                    pb_fine_vscroll[1:0] <= vgen_reg_data_i[9:8];
+                    pb_fine_vscroll[5:2] <= vgen_reg_data_i[3:0];
                 end
                 6'(xv::XR_PB_LINE_ADDR): begin
                     pb_line_start_set <= 1'b1;               // PB_LINE_ADDR changed strobe
                     line_set_addr   <= vgen_reg_data_i;
-                end
-                6'(xv::XR_PB_UNUSED_1F): begin
                 end
 `endif
                 default: begin
@@ -668,7 +686,8 @@ always_comb begin
         4'(xv::XR_PA_DISP_ADDR):    rd_pf_regs = pa_start_addr;
         4'(xv::XR_PA_LINE_LEN):     rd_pf_regs = pa_line_len;
         4'(xv::XR_PA_HV_FSCALE):    rd_pf_regs = { 8'h00, 4'(pa_h_frac_repeat), 4'(pa_v_frac_repeat) };
-        4'(xv::XR_PA_HV_SCROLL):    rd_pf_regs = { 8'(pa_fine_hscroll), 8'(pa_fine_vscroll) };
+        4'(xv::XR_PA_H_SCROLL):     rd_pf_regs = { 8'h00, 8'(pa_fine_hscroll) };
+        4'(xv::XR_PA_V_SCROLL):     rd_pf_regs = { 6'b000000, pa_fine_vscroll[1:0], 4'b0000, pa_fine_vscroll[5:2] };
         4'(xv::XR_PA_LINE_ADDR):    rd_pf_regs = 16'h0000;
 `ifdef EN_PF_B
         4'(xv::XR_PB_GFX_CTRL):     rd_pf_regs = { pb_colorbase, pb_blank, pb_bitmap, pb_bpp, pb_h_repeat, pb_v_repeat };
@@ -676,7 +695,8 @@ always_comb begin
         4'(xv::XR_PB_DISP_ADDR):    rd_pf_regs = pb_start_addr;
         4'(xv::XR_PB_LINE_LEN):     rd_pf_regs = pb_line_len;
         4'(xv::XR_PB_HV_FSCALE):    rd_pf_regs = { 8'h00, 4'(pb_h_frac_repeat), 4'(pb_v_frac_repeat) };
-        4'(xv::XR_PB_HV_SCROLL):    rd_pf_regs = { 8'(pb_fine_hscroll), 8'(pb_fine_vscroll) };
+        4'(xv::XR_PB_H_SCROLL):     rd_pf_regs = { 8'h00, 8'(pb_fine_hscroll) };
+        4'(xv::XR_PB_V_SCROLL):     rd_pf_regs = { 6'b000000, pb_fine_vscroll[1:0], 4'b0000, pb_fine_vscroll[5:2] };
         4'(xv::XR_PB_LINE_ADDR):    rd_pf_regs = 16'h0000;
 `endif
         default:                    ;

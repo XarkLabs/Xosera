@@ -32,55 +32,26 @@
 
 #include "xosera_m68k_api.h"
 
-const uint8_t  copper_list_len = 26;
+#define SHOW_BARS 1
+
+#if SHOW_BARS
+
+#include "color_bar_table.h"
+
+#else
+
 const uint16_t copper_list[]   = {
-    /*
-     * This is a convoluted way to do this, but does serve as a useful test
-     * of the copper instructions...
-     */
-
-    // copperlist:
-    0x20a0,
-    0x0002,        //     skip  0, 160, 0b00010  ; Skip next if we've hit line 160
-    0x4014,
-    0x0000,        //     jmp   .gored           ; ... else, jump to set red
-    0x2140,
-    0x0002,        //     skip  0, 320, 0b00010  ; Skip next if we've hit line 320
-    0x400e,
-    0x0000,        //     jmp   .gogreen         ; ... else jump to set green
-    0xa000,
-    0x000f,        //     movep 0x000F, 0        ; Make background blue
-    0xa00a,
-    0x0004,        //     movep 0x0004, 0xA      ; Make foreground dark blue
-    0x0000,
-    0x0003,        //     nextf                  ; and we're done for this frame
-                   // .gogreen:
-    0xa000,
-    0x00f0,        //     movep 0x00F0, 0        ; Make background green
-    0xa00a,
-    0x0040,        //     movep 0x0040, 0xA      ; Make foreground dark green
-    0x4000,
-    0x0000,        //     jmp   copperlist       ; and restart
-                   // .gored:
-    0xa000,
-    0x0f00,        //     movep 0x0F00, 0        ; Make background red
-    0xa00a,
-    0x0400,        //     movep 0x0400, 0xA      ; Make foreground dark red
-    0x4000,
-    0x0000        //     jmp   copperlist       ; and restart
-
-    /* This is a saner way to do the above!
-    0xb000, 0x0f00, // movep 0, 0x0F00            ; Make background red
-    0xb00a, 0x0400, // movep 0xA, 0x0F00          ; Make foreground dark red
-    0x00a0, 0x0002, // wait  0, 160, 0b000010     ; Wait for line 160, ignore X position
-    0xb000, 0x00f0, // movep 0, 0x00F0            ; Make background green
-    0xb00a, 0x0040, // movep 0xA, 0x007           ; Make foreground dark green
-    0x0140, 0x0002, // wait  0, 320, 0b000010     ; Wait for line 320, ignore X position
-    0xb000, 0x000f, // movep 0, 0x000F            ; Make background blue
-    0xb00a, 0x0004, // movep 0xA, 0x0007          ; Make foreground dark blue
-    0x0000, 0x0003  // nextf                      ; Wait for next frame
-    */
+    COP_MOVI(0x0F00, XR_COLOR_ADDR+0x0),
+    COP_MOVI(0x0400, XR_COLOR_ADDR+0xA),
+    COP_VPOS(160),
+    COP_MOVI(0x00F0, XR_COLOR_ADDR+0x0),
+    COP_MOVI(0x0040, XR_COLOR_ADDR+0xA),
+    COP_VPOS(320),
+    COP_MOVI(0x000F, XR_COLOR_ADDR+0x0),
+    COP_MOVI(0x0004, XR_COLOR_ADDR+0xA),
+    COP_END()
 };
+#endif
 
 static void dputc(char c)
 {
@@ -122,12 +93,19 @@ void xosera_copper_test()
 {
     dprintf("Xosera_copper_test\n");
 
+#if SHOW_BARS
+    xmem_setw_next_addr(color_bar_table_start);
+    for (uint8_t i = 0; i < color_bar_table_size; i++)
+    {
+        xmem_setw_next(color_bar_table_bin[i]);
+    }
+#else
     xmem_setw_next_addr(XR_COPPER_ADDR);
-
-    for (uint8_t i = 0; i < copper_list_len; i++)
+    for (uint8_t i = 0; i < sizeof (copper_list)/sizeof (copper_list[0]); i++)
     {
         xmem_setw_next(copper_list[i]);
     }
+#endif
 
     xreg_setw(VID_CTRL, 0x0000);        // border uses color 0
     xreg_setw(COPP_CTRL, 0x8000);
@@ -140,7 +118,8 @@ void xosera_copper_test()
     uint16_t tilectrl = xreg_getw(PA_TILE_CTRL);
     uint16_t dispaddr = xreg_getw(PA_DISP_ADDR);
     uint16_t linelen  = xreg_getw(PA_LINE_LEN);
-    uint16_t hvscroll = xreg_getw(PA_HV_SCROLL);
+    uint16_t hscroll = xreg_getw(PA_H_SCROLL);
+    uint16_t vscroll = xreg_getw(PA_V_SCROLL);
     uint16_t hvfscale = xreg_getw(PA_HV_FSCALE);
 
     dprintf("Xosera - Features: 0x%02x\n", feature);
@@ -148,5 +127,6 @@ void xosera_copper_test()
     dprintf("\nPlayfield A:\n");
     dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
     dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
-    dprintf("PA_HV_SCROLL: 0x%04x  PA_HV_FSCALE: 0x%04x\n", hvscroll, hvfscale);
+    dprintf("PA_H_SCROLL : 0x%04x  PA_V_SCROLL : 0x%04x\n", hscroll, vscroll);
+    dprintf("PA_HV_FSCALE: 0x%04x\n", hvfscale);
 }

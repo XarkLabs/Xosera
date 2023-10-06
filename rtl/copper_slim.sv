@@ -26,7 +26,10 @@ module copper_slim(
     input   wire logic          cop_xreg_enable_i,      // COPP_CTRL register enable write data
     input   wire hres_t         h_count_i,              // horizontal video position
     input   wire vres_t         v_count_i,              // vertical video position
-    input   wire logic          end_of_line_i,          // end of line signal
+    input   wire logic          end_of_line_i,          // end of line signal\
+`ifdef EN_COPP_VBLITWAIT
+    input   wire logic          blit_busy_i,            // blitter busy signal
+`endif
     input   wire logic          reset_i,
     input   wire logic          clk
 );
@@ -108,7 +111,8 @@ typedef enum logic [1:0] {
 // opcode decode bits
 localparam  B_OPCODE        = 12;   // 2-bits
 localparam  B_HV_SEL        = 11;   // HPOS/VPOS select bit
-localparam  B_HV_POS        = 10;   // 11-bit operand/HVPOS or Bcc bit
+localparam  B_HV_POS        = 10;   // 11-bit operand
+localparam  B_V_BLIT        = 10;   // VPOS wait blit busy
 localparam  B_BR_SEL        = 11;   // BRGE/BRLT select bit
 localparam  B_BR_ADR        = 10;   // 11-bit copper address
 localparam  B_COP_REG       = 11;   // cop RA register bit
@@ -147,7 +151,7 @@ word_t          write_data;         // XR bus data out/pseudo XR register data o
 logic           cop_en;             // copper enable/reset (set via COPP_CTRL)
 logic           cop_reset;          // copper reset (set if not enabled, or line 0, pixel 0)
 logic           cop_run;            // copper running
-logic [1:0]     cop_ex_state;       // current execution state
+copp_ex_state_t cop_ex_state;       // current execution state
 logic           rd_pipeline;        // flag if memory read on last cycle
 
 // ALU :)
@@ -181,7 +185,7 @@ always_comb begin
         3'b000: op_name = "SETI";
         3'b001: op_name = "SETI";
         3'b010: op_name = "SETM";
-        3'b011: op_name = "LDM ";
+        3'b011: op_name = "SETM";
         3'b100: op_name = "HPOS";
         3'b101: op_name = "VPOS";
         3'b110: op_name = "BRGE";
@@ -197,9 +201,15 @@ end
 // copper control xreg (enable/disable), also does start of frame reset
 always_ff @(posedge clk) begin
     if (reset_i) begin
-        cop_en          <= 1'b0;
+`ifdef EN_COPPER_INIT   // start with copper running so it can init Xosera
+        cop_reset       <= 1'b1;
+        cop_en          <= 1'b1;
+        cop_run         <= 1'b1;
+`else
         cop_reset       <= 1'b0;
+        cop_en          <= 1'b0;
         cop_run         <= 1'b0;
+`endif
     end else begin
         // keep in reset if not enabled and reset at SOF
         if (end_of_line_i && (v_count_i == 0)) begin
@@ -400,6 +410,20 @@ always_ff @(posedge clk) begin
                 wait_hv_flag    <= 1'b0;
             end
         end
+
+`ifdef EN_COPP_HWAITEOL
+        // Feature: stop waiting for HPOS at the start of a new line
+        if (wait_hv_flag & end_of_line_i & !wait_for_v) begin
+            wait_hv_flag    <= 1'b0;
+        end
+`endif
+
+`ifdef EN_COPP_VBLITWAIT
+        // Feature: stop waiting for VPOS #$7FF [B_V_BLIT] when blit not busy
+        if (wait_hv_flag & cop_IR[B_V_BLIT] & wait_for_v & !blit_busy_i) begin
+            wait_hv_flag    <= 1'b0;
+        end
+`endif
 
     end
 end

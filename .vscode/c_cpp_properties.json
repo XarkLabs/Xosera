@@ -60,16 +60,17 @@
             ],
             "macFrameworkPath": [],
             "compilerPath": "${env:ROSCO_M68K_CC}/m68k-elf-gcc",
-            "cStandard": "gnu11",
+            "cStandard": "gnu99",
             "cppStandard": "gnu++17",
             "intelliSenseMode": "macos-gcc-arm64",
             "compilerArgs": [
-                "-std=c11",
+                "-std=gnu99",
                 "-Wall",
                 "-Wextra",
                 "-pedantic",
                 "-Wno-unused-function",
-                "-I${env:ROSCO_M68K_DIR}/code/software/libs/build/include"
+                "-I${env:ROSCO_M68K_DIR}/code/software/libs/build/include",
+                "-I${workspaceFolder}/xosera_m68k_api"
             ],
             "configurationProvider": "ms-vscode.makefile-tools"
         }

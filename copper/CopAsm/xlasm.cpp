@@ -209,6 +209,42 @@ int32_t xlasm::assemble(const std::vector<std::string> & in_files, const std::st
         }
     }
 
+    for (auto it = opt.define_sym.begin(); it != opt.define_sym.end(); ++it)
+    {
+        std::string label  = *it;
+        int64_t     result = 1;
+
+        if (!isalpha(label[0]) && !isdigit(label[0]) && label[0] != '_')
+        {
+            fatal_error("invalid define symbol \"%s\"", label.c_str());
+        }
+
+        auto epos = it->find('=');
+        if (epos != std::string::npos && it->size() > epos + 1)
+        {
+            label           = it->substr(0, epos);
+            std::string arg = it->substr(epos + 1);
+            expression  expr;
+
+            if (arg.size() && !expr.evaluate(this, arg.c_str(), &result))
+            {
+                fatal_error("error evaluating define symbol expression \"%s\"", it->c_str());
+            }
+        }
+        notice(2, "Defined \"%s\" = 0x" PR_X64 "/" PR_D64 "\n", label.c_str(), result, result);
+
+        add_sym(label.c_str(), symbol_t::LABEL, result);
+    }
+
+    if (opt.include_path.size())
+    {
+        notice(2, "Include search paths:\n");
+        for (auto it = opt.include_path.begin(); it != opt.include_path.end(); ++it)
+        {
+            notice(2, "    \"%s\"\n", it->c_str());
+        }
+    }
+
     dprintf("Assembling " PR_DSIZET " %s file%s into output \"%s\"",
             in_files.size(),
             arch->get_variant().c_str(),
@@ -223,7 +259,7 @@ int32_t xlasm::assemble(const std::vector<std::string> & in_files, const std::st
     for (auto it = input_names.begin(); it != input_names.end(); ++it, index++)
     {
         source_t & f = source_files[*it];
-        int        e = f.read_file(this, *it);
+        int        e = f.read_file(this, *it, *it);
         if (e)
             fatal_error("reading file \"%s\" error: %s", it->c_str(), strerror(e));
 
@@ -630,8 +666,8 @@ int32_t xlasm::process_output()
         return 0;
     }
 
-    if (listing_file)
-        fprintf(listing_file, "\nOutput sections:\n");
+//    if (listing_file)
+//        fprintf(listing_file, "\nOutput sections:\n");
 
     int64_t pad           = 0;
     int64_t total_size    = 0;
@@ -643,7 +679,7 @@ int32_t xlasm::process_output()
         {
             if (it->load_addr > cur_load_addr)
                 pad += it->load_addr - cur_load_addr;
-
+#if 0
             if (!object_filename.size())
             {
                 std::string secline;
@@ -664,7 +700,7 @@ int32_t xlasm::process_output()
                 if (listing_file)
                     fprintf(listing_file, "%s", secline.c_str());
             }
-
+#endif
             cur_load_addr = it->load_addr + static_cast<int64_t>(it->data.size());
 
             total_size = pad + static_cast<int64_t>(it->data.size());
@@ -1232,7 +1268,7 @@ int32_t xlasm::process_line_listing()
 
         if (!line_last_file || line_last_file->name != ctxt.file->name)
         {
-            strprintf(outline, "File: %s\n", ctxt.file->name.c_str());
+            strprintf(outline, "                    // File: %s\n", ctxt.file->name.c_str());
             line_last_file = ctxt.file;
         }
 
@@ -1247,7 +1283,7 @@ int32_t xlasm::process_line_listing()
 
         if (line_sec_start != ctxt.section)
             show_section_name = true;
-
+#if 0   // mem friendly list
         if (!opt.suppress_line_numbers)
         {
             if (suppress_line_listsource)
@@ -1281,7 +1317,7 @@ int32_t xlasm::process_line_listing()
         {
             strprintf(outline, "      ");
         }
-
+#endif
         if (show_section_name)
         {
             std::string secname;
@@ -1317,7 +1353,7 @@ int32_t xlasm::process_line_listing()
                     else
                     {
                         strprintf(outline,
-                                  "%02X%02X%02X%02X",
+                                  "%02X%02X %02X%02X ",
                                   ctxt.section->data[line_sec_size + i],
                                   ctxt.section->data[line_sec_size + i + 1],
                                   ctxt.section->data[line_sec_size + i + 2],
@@ -1333,7 +1369,7 @@ int32_t xlasm::process_line_listing()
                     else
                     {
                         strprintf(outline,
-                                  "%02X%02X",
+                                  "%02X%02X ",
                                   ctxt.section->data[line_sec_size + i],
                                   ctxt.section->data[line_sec_size + i + 1]);
                     }
@@ -1341,6 +1377,7 @@ int32_t xlasm::process_line_listing()
                 }
                 else if (line_sec_start == ctxt.section && line_sec_size + i < ctxt.section->data.size())
                 {
+                    assert(false);
                     if (ctxt.section->flags & section_t::NOLOAD_FLAG)
                         strprintf(outline, "..");
                     else
@@ -1350,12 +1387,45 @@ int32_t xlasm::process_line_listing()
                 }
                 else
                 {
-                    strprintf(outline, "  ");
+                    strprintf(outline, "  %s", (i & 1) ? " " : "");
                     i += 1;
                 }
             }
 #endif
         }
+
+#if 1   // mem friendly list
+        if (suppress_line_listsource)
+            strprintf(outline, "//       ");
+        else
+            strprintf(outline, "// %6d ", ctxt.line + ctxt.file->line_start);
+
+        int64_t v = 0;
+        if (sym_defined != nullptr && sym_defined->type != symbol_t::UNDEFINED && sym_defined->type != symbol_t::STRING)
+        {
+            v          = sym_defined->value;
+            show_value = true;
+        }
+        else if (line_sec_start != ctxt.section || line_sec_addr != ctxt.section->addr || line_sec_org)
+        {
+            v          = ctxt.section->addr + static_cast<int64_t>(ctxt.section->data.size() >> 1);
+            show_value = true;
+        }
+
+        if (line_sec_start == ctxt.section && line_sec_addr == ctxt.section->addr &&
+            line_sec_size != ctxt.section->data.size())
+        {
+            strprintf(outline, PR_X64_04 ": ", line_sec_addr + static_cast<int64_t>(line_sec_size >> 1));
+        }
+        else if (show_value || line_sec_start != ctxt.section || line_sec_addr != ctxt.section->addr)
+        {
+            strprintf(outline, PR_X64_04 "= ", static_cast<uint64_t>(v));
+        }
+        else
+        {
+            strprintf(outline, "      ");
+        }
+#endif
 
         if (!suppress_line_listsource)
         {
@@ -1366,19 +1436,26 @@ int32_t xlasm::process_line_listing()
 
         if (opt.listing_bytes > 8 && line_sec_start == ctxt.section && line_sec_size + 8 < ctxt.section->data.size())
         {
+            uint64_t line_beg_addr = 0;
             for (uint32_t i = 8; i < opt.listing_bytes; i++)
             {
                 if (((i - 8) & 0x7) == 0 && line_sec_size + i < ctxt.section->data.size())
                 {
-                    strprintf(outline, "\n       ");
-                    strprintf(outline, PR_X64_04 ": ", line_sec_addr + static_cast<int64_t>(line_sec_size + i));
+                    strprintf(outline, "\n");
+                    line_beg_addr = line_sec_addr + (static_cast<int64_t>(line_sec_size + i) >> 1);
                 }
                 if (line_sec_size + i < ctxt.section->data.size())
                 {
                     if (ctxt.section->flags & section_t::NOLOAD_FLAG)
                         strprintf(outline, "..");
                     else
-                        strprintf(outline, "%02X", ctxt.section->data[line_sec_size + i]);
+                    {
+                        strprintf(outline, "%02X%s", ctxt.section->data[line_sec_size + i], (i & 1) ? " " : "");
+                    }
+                }
+                if (((i - 8) & 0x7) == 7 && line_sec_size + i < ctxt.section->data.size())
+                {
+                    strprintf(outline, "//        " PR_X64_04 ": ", line_beg_addr);
                 }
             }
 
@@ -1920,30 +1997,54 @@ int32_t xlasm::process_directive(uint32_t                         idx,
                             MAXINCLUDE_STACK);
             }
 
-            std::string name = removeQuotes(tokens[cur_token]);
-            source_t &  f    = source_files[name];
-            int         e    = f.read_file(this, name);
+            std::string basename = removeQuotes(tokens[cur_token]);
+            std::string filename = basename;
+
+            source_t & f = source_files[basename];
+
+            int e = f.read_file(this, basename, filename);
+            if (e)
+            {
+                for (int i = 0; i < (int)opt.include_path.size(); i++)
+                {
+                    filename = opt.include_path[i] + std::string("/") + basename;
+                    int ie   = f.read_file(this, basename, filename);
+
+                    if (!ie)
+                    {
+                        e = ie;
+                        break;
+                    }
+                }
+            }
+
             if (e)
                 fatal_error("%s:%d: Error reading %s file \"%s\": %s",
                             ctxt.file->name.c_str(),
                             ctxt.line + ctxt.file->line_start,
                             directive.c_str(),
-                            name.c_str(),
+                            filename.c_str(),
                             strerror(e));
 
             if (listing_file)
                 process_line_listing();
 
-            notice(2,
-                   "Including file \"%s\" (" PR_DSIZET " lines, " PR_D64 " bytes)",
-                   name.c_str(),
-                   f.orig_line.size(),
-                   f.file_size);
+            if (ctxt.pass == context_t::PASS_1 || opt.verbose > 2)
+            {
+                notice(2,
+                       "Including file \"%s\" (" PR_DSIZET " lines, " PR_D64 " bytes)",
+                       filename.c_str(),
+                       f.orig_line.size(),
+                       f.file_size);
+            }
             context_stack.push(ctxt);
             process_file(f);
             ctxt = context_stack.top();
             context_stack.pop();
-            notice(2, "Resuming after %s of file \"%s\"", directive.c_str(), name.c_str());
+            if (ctxt.pass == context_t::PASS_1 || opt.verbose > 2)
+            {
+                notice(2, "Resuming after %s of file \"%s\"", directive.c_str(), filename.c_str());
+            }
 
             suppress_line_list = true;
 
@@ -2327,8 +2428,10 @@ int32_t xlasm::process_directive(uint32_t                         idx,
             {
                 if ((static_cast<uint64_t>(count) * pot) > MAXFILL_BYTES)
                 {
-                    error("%s exceeded output size safety check of 0x%x/%d bytes",
+                    error("%s of 0x" PR_X64 "/" PR_D64 " exceeded output size safety check of 0x%x/%d bytes",
                           directive.c_str(),
+                          static_cast<uint64_t>(count) * pot,
+                          static_cast<uint64_t>(count) * pot,
                           MAXFILL_BYTES,
                           MAXFILL_BYTES);
                     break;
@@ -2375,9 +2478,8 @@ int32_t xlasm::process_directive(uint32_t                         idx,
         // fill type (fill swith value) =====
         case DIR_FILL_16: {
             std::string exprstr;
-            int64_t     v64 = 0;
 
-            eval_tokens(directive, exprstr, cur_token, tokens, 2, 0);
+            int64_t     v64 = eval_tokens(directive, exprstr, cur_token, tokens, 2, 0);
 
             exprstr.clear();
             int64_t count = eval_tokens(directive, exprstr, cur_token, tokens, 1, 0);
@@ -2402,8 +2504,10 @@ int32_t xlasm::process_directive(uint32_t                         idx,
             {
                 if ((static_cast<uint64_t>(count) * pot) > MAXFILL_BYTES)
                 {
-                    error("%s exceeded output size safety check of 0x%x/%d bytes",
+                    error("%s of " PR_X64 "/" PR_D64 " exceeded output size safety check of 0x%x/%d bytes",
                           directive.c_str(),
+                          static_cast<uint64_t>(count) * pot,
+                          static_cast<int64_t>(count) * pot,
                           MAXFILL_BYTES,
                           MAXFILL_BYTES);
                     break;
@@ -3693,7 +3797,7 @@ std::string xlasm::reQuote(const std::string & str)
     return newstr;
 }
 
-int32_t xlasm::source_t::read_file(xlasm * xa, const std::string & n)
+int32_t xlasm::source_t::read_file(xlasm * xa, const std::string & n, const std::string & fn)
 {
     if (file_size)
     {
@@ -3704,7 +3808,7 @@ int32_t xlasm::source_t::read_file(xlasm * xa, const std::string & n)
 
     name = n;
 
-    FILE * fp = fopen(name.c_str(), "r");
+    FILE * fp = fopen(fn.c_str(), "r");
     if (!fp)
     {
         return errno;
@@ -3718,7 +3822,10 @@ int32_t xlasm::source_t::read_file(xlasm * xa, const std::string & n)
         nline = line_buff;
         file_size += nline.size();
         rtrim(nline, " \r\n");
-        orig_line.push_back(nline);
+        if (nline.size() < 3 || nline[0] != '#' || nline[1] != ' ' || (nline[2] < '0' && nline[2] > '9'))
+        {
+            orig_line.push_back(nline);
+        }
     }
 
     if (!feof(fp))
@@ -4191,6 +4298,8 @@ static void show_help()
     printf("\n");
     printf("-b      maximum bytes hex per listing line (8-64, default 8)\n");
     printf("-c      suppress listing inside false conditional (.LISTCOND false)\n");
+    printf("-d sym  define <sym>[=expression]\n");
+    printf("-i      add default include search path (tried if include fails)\n");
     printf("-k      no error-kill, continue assembly despite errors\n");
     printf("-l      request listing file (uses output name with .lst)\n");
     printf("-m      suppress macro expansion listing (.LISTMAC false)\n");
@@ -4250,6 +4359,36 @@ int main(int argc, char ** argv)
                     opts.suppress_false_conditionals = true;
                     break;
 
+                case 'd':
+                    if (argv[i][2] != 0)
+                    {
+                        opts.define_sym.push_back(&argv[i][2]);
+                    }
+                    else if (i + 1 < argc)
+                    {
+                        opts.define_sym.push_back(argv[++i]);
+                    }
+                    else
+                    {
+                        fatal_error("Expected symbol after -d define sym option");
+                    }
+                    break;
+
+                case 'i':
+                    if (argv[i][2] != 0)
+                    {
+                        opts.include_path.push_back(&argv[i][2]);
+                    }
+                    else if (i + 1 < argc)
+                    {
+                        opts.include_path.push_back(argv[++i]);
+                    }
+                    else
+                    {
+                        fatal_error("Expected path after -i include path option");
+                    }
+                    break;
+
                 case 'h':
                 case '?': {
                     show_help();
@@ -4297,31 +4436,6 @@ int main(int argc, char ** argv)
                 case 'x':
                     opts.xref = true;
                     break;
-
-                    // case 'z':
-                    //     if (argv[i][2] != 0)
-                    //     {
-                    //         char *   ep   = nullptr;
-                    //         uint64_t addr = strtoull(&argv[i][2], &ep, 0);
-                    //         if (ep == &argv[i][2])
-                    //             fatal_error("Expected address after -x load offset option");
-
-                    //         opts.load_address = addr;
-                    //     }
-                    //     else if (i + 1 < argc)
-                    //     {
-                    //         char *   ep   = nullptr;
-                    //         uint64_t addr = strtoull(argv[++i], &ep, 0);
-                    //         if (ep == argv[++i])
-                    //             fatal_error("Expected address after -x load offset option");
-
-                    //         opts.load_address = addr;
-                    //     }
-                    //     else
-                    //     {
-                    //         fatal_error("Expected address after -x load offset option");
-                    //     }
-                    //     break;
 
                 default:
                     show_help();

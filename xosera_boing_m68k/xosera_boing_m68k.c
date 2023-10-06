@@ -9,65 +9,12 @@
 
 #include "xosera_m68k_api.h"
 
-#define USE_AUDIO 1
+#include "xosera_boing_defs.h"
 
-#if USE_AUDIO
-extern char _binary_Boing_raw_start[];
-extern char _binary_Boing_raw_end[];
-#endif
-
-const uint16_t vram_audio_base  = 0x0080;
-const uint16_t vram_silence_len = 0x0001;
-const uint16_t vram_base_a      = 0x4000;
-const uint16_t vram_base_b      = 0xA000;
-const uint16_t vram_base_blank  = 0xB800;
-const uint16_t vram_base_ball   = 0xBC00;
-const uint16_t tile_base_b      = 0xC000;
 
 #define PI  3.1415926f
 #define PAU (1.5f * PI)
 #define TAU (2.0f * PI)
-
-#define WIDTH  640
-#define HEIGHT 480
-
-#define WIDTH_A  (WIDTH / 2)
-#define HEIGHT_A (HEIGHT / 2)
-#define WIDTH_B  (WIDTH / 1)
-#define HEIGHT_B (HEIGHT / 1)
-
-#define TILE_WIDTH_B  8
-#define TILE_HEIGHT_B 8
-
-#define PIXELS_PER_WORD_A 8
-#define PIXELS_PER_WORD_B 4
-
-#define COLS_PER_WORD_A 8
-#define ROWS_PER_WORD_A 1
-#define COLS_PER_WORD_B TILE_WIDTH_B
-#define ROWS_PER_WORD_B TILE_HEIGHT_B
-
-#define WIDTH_WORDS_A  (WIDTH_A / COLS_PER_WORD_A)
-#define HEIGHT_WORDS_A (HEIGHT_A / ROWS_PER_WORD_A)
-#define WIDTH_WORDS_B  (WIDTH_B / COLS_PER_WORD_B)
-#define HEIGHT_WORDS_B (HEIGHT_B / ROWS_PER_WORD_B)
-
-#define BALL_BITMAP_WIDTH  256
-#define BALL_BITMAP_HEIGHT 256
-
-#define BALL_TILES_WIDTH  (BALL_BITMAP_WIDTH / TILE_WIDTH_B)
-#define BALL_TILES_HEIGHT (BALL_BITMAP_WIDTH / TILE_HEIGHT_B)
-
-#define SHADOW_OFFSET_X 36
-#define SHADOW_OFFSET_Y 0
-
-#define BALL_SHIFT_X (-SHADOW_OFFSET_X / 2)
-#define BALL_SHIFT_Y (-SHADOW_OFFSET_Y / 2)
-
-#define BALL_CENTER_X (BALL_BITMAP_WIDTH / 2 + BALL_SHIFT_X)
-#define BALL_CENTER_Y (BALL_BITMAP_HEIGHT / 2 + BALL_SHIFT_Y)
-
-#define BALL_RADIUS 80
 
 #define BALL_THETA_START (+PI)
 #define BALL_THETA_STOP  (0.0f)
@@ -83,9 +30,18 @@ const uint16_t tile_base_b      = 0xC000;
 #define WALL_BOTTOM (WALL_DIST)
 #define WALL_TOP    (240 - WALL_DIST)
 
-#define WIDESCREEN true
+#define WIDESCREEN false
 #define PAINT_BALL true
-#define USE_COPPER true
+#define USE_AUDIO  true
+
+// blit method, if both these are false then uses CPU initiated blit
+#define USE_COPASM    true
+#define USE_COPMACROS false
+
+#if USE_AUDIO
+extern char _binary_Boing_raw_start[];
+extern char _binary_Boing_raw_end[];
+#endif
 
 uint16_t vid_hsize;        // this is cached xosera_vid_width()
 uint32_t clk_hz;           // pixel clock Hz (25125000 at 640x480 or 33750000 at 848x480)
@@ -93,6 +49,99 @@ uint32_t clk_hz;           // pixel clock Hz (25125000 at 640x480 or 33750000 at
 uint8_t  bg_bitmap[HEIGHT_A][WIDTH_A]                                                                     = {0};
 uint8_t  ball_bitmap[BALL_BITMAP_HEIGHT][BALL_BITMAP_WIDTH]                                               = {0};
 uint16_t ball_tiles[BALL_TILES_HEIGHT][BALL_TILES_WIDTH][TILE_HEIGHT_B][TILE_WIDTH_B / PIXELS_PER_WORD_B] = {0};
+
+
+#if USE_COPASM
+#include "boing_copper.h"
+
+#elif USE_COPMACROS
+
+// parameters words in copper memory
+#define cop_ball_dst      0x050
+#define cop_ball_prev     0x051
+#define cop_ball_gfx_ctrl 0x052
+#define cop_ball_h_scroll 0x053
+#define cop_ball_v_scroll 0x054
+
+uint16_t copper_list[] = {
+    // 0x000 = entry
+    [0x000] = COP_VPOS(480),                                          // wait for offscreen
+    COP_MOVM(cop_ball_gfx_ctrl, XR_PB_GFX_CTRL),                      // colorbase to rotate colors
+    COP_MOVM(cop_ball_h_scroll, XR_PB_H_SCROLL),                      // h scroll for fine scroll
+    COP_MOVM(cop_ball_v_scroll, XR_PB_V_SCROLL),                      // v scroll for fine scroll
+    COP_VPOS(COP_V_WAITBLIT),                                         // wait until blitter not in use
+    COP_CMPM(cop_ball_prev),                                          // check for zero ball_prev
+    COP_BRGE(0x020),                                                  // skip erase before 1st draw
+    COP_MOVI(0x0001, XR_BLIT_CTRL),                                   // no transp, constS
+    COP_MOVI(0x0000, XR_BLIT_ANDC),                                   // ANDC constant
+    COP_MOVI(0x0000, XR_BLIT_XOR),                                    // XOR constant
+    COP_MOVI(0x0000, XR_BLIT_MOD_S),                                  // no modulo S
+    COP_MOVI(0x0000, XR_BLIT_SRC_S),                                  // blank ball
+    COP_MOVI(WIDTH_WORDS_B - BALL_TILES_WIDTH, XR_BLIT_MOD_D),        // modulo D
+    COP_MOVM(cop_ball_prev, XR_BLIT_DST_D),                           // previous ball position
+    COP_MOVI(0xFF00, XR_BLIT_SHIFT),                                  // no edge masking or shifting
+    COP_MOVI(BALL_TILES_HEIGHT - 1, XR_BLIT_LINES),                   // 2-D blit
+    COP_MOVI(BALL_TILES_WIDTH - 1, XR_BLIT_WORDS),                    // go!
+    COP_BRLT(0x020),                                                  // branch to draw ball
+    COP_BRGE(0x020),                                                  // branch to draw ball
+    // 0x020 = draw_ball
+    [0x020] = COP_MOVM(cop_ball_dst, cop_ball_prev),                  // update previous ball position
+    COP_VPOS(COP_V_WAITBLIT),                                         // wait until blitter not in use
+    COP_MOVI(0x0000, XR_BLIT_CTRL),                                   // no transp, no constS
+    COP_MOVI(0x0000, XR_BLIT_ANDC),                                   // ANDC constant
+    COP_MOVI(0x0000, XR_BLIT_XOR),                                    // XOR constant
+    COP_MOVI(0x0000, XR_BLIT_MOD_S),                                  // no modulo S
+    COP_MOVI(VRAM_BASE_BALL, XR_BLIT_SRC_S),                          // ball
+    COP_MOVI(WIDTH_WORDS_B - BALL_TILES_WIDTH, XR_BLIT_MOD_D),        // modulo D
+    COP_MOVM(cop_ball_dst, XR_BLIT_DST_D),                            // ball position
+    COP_MOVI(0xFF00, XR_BLIT_SHIFT),                                  // no edge masking or shifting
+    COP_MOVI(BALL_TILES_HEIGHT - 1, XR_BLIT_LINES),                   // 2-D blit
+    COP_MOVI(BALL_TILES_WIDTH - 1, XR_BLIT_WORDS),                    // go!
+    COP_VPOS(COP_V_EOF),                                              // wait for next frame
+    // data words
+    [cop_ball_dst]      = 0,
+    [cop_ball_prev]     = 0,
+    [cop_ball_gfx_ctrl] = 0,
+    [cop_ball_h_scroll] = 0,
+    [cop_ball_v_scroll] = 0,
+};
+#endif
+
+static void dputc(char c)
+{
+#ifndef __INTELLISENSE__
+    __asm__ __volatile__(
+        "move.w %[chr],%%d0\n"
+        "move.l #2,%%d1\n"        // SENDCHAR
+        "trap   #14\n"
+        :
+        : [chr] "d"(c)
+        : "d0", "d1");
+#endif
+}
+
+static void dprint(const char * str)
+{
+    register char c;
+    while ((c = *str++) != '\0')
+    {
+        if (c == '\n')
+        {
+            dputc('\r');
+        }
+        dputc(c);
+    }
+}
+
+static char dprint_buff[4096];
+static void dprintf(const char * fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
+    dprint(dprint_buff);
+    va_end(args);
+}
 
 int abs(int x)
 {
@@ -215,6 +264,7 @@ static inline void wait_vblank_start()
 
 static void clear_vram()
 {
+    xwait_blit_done();
     // use blitter to clear VRAM
     xreg_setw(BLIT_CTRL, 0x0001);        // BLIT_CTRL constS
     xreg_setw_next(0x0000);              // BLIT_ANDC
@@ -456,117 +506,70 @@ void draw_ball_at(int width_words, int height_words, int x, int y)
     int top_left_x = x - BALL_CENTER_X;
     int top_left_y = y - BALL_CENTER_Y;
 
-    int            top_left_row = (top_left_y + TILE_HEIGHT_B - 1) / TILE_WIDTH_B;
-    int            top_left_col = (top_left_x + TILE_WIDTH_B - 1) / TILE_WIDTH_B;
-    const uint16_t dst          = vram_base_b + top_left_row * width_words + top_left_col;
+    int      top_left_row = (top_left_y + TILE_HEIGHT_B - 1) / TILE_WIDTH_B;
+    int      top_left_col = (top_left_x + TILE_WIDTH_B - 1) / TILE_WIDTH_B;
+    uint16_t dst          = VRAM_BASE_B + top_left_row * width_words + top_left_col;
 
     int scroll_x = -(top_left_x - top_left_col * TILE_WIDTH_B);
     int scroll_y = -(top_left_y - top_left_row * TILE_HEIGHT_B);
 
-#if USE_COPPER
-    xmem_setw(XR_COPPER_ADDR + (0x0000 << 1 | 0x1), dst);
-    xmem_setw(XR_COPPER_ADDR + (0x0001 << 1 | 0x1), MAKE_HV_SCROLL(scroll_x, scroll_y << 2));
+#if USE_COPASM
+    xmem_setw(XR_COPPER_ADDR + boing_copper__ball_dst, dst);
+    xmem_setw(XR_COPPER_ADDR + boing_copper__ball_h_scroll, MAKE_H_SCROLL(scroll_x));
+    xmem_setw(XR_COPPER_ADDR + boing_copper__ball_v_scroll, MAKE_V_SCROLL(0, scroll_y));
+#elif USE_COPMACROS
+    xmem_setw(XR_COPPER_ADDR + cop_ball_dst, dst);
+    xmem_setw(XR_COPPER_ADDR + cop_ball_h_scroll, MAKE_H_SCROLL(scroll_x));
+    xmem_setw(XR_COPPER_ADDR + cop_ball_v_scroll, MAKE_V_SCROLL(0, scroll_y));
 #else
-    static int     prev_top_left_row;
-    static int     prev_top_left_col;
-    const uint16_t prev_dst = vram_base_b + prev_top_left_row * width_words + prev_top_left_col;
+    static uint16_t prev_dst;
+    while (xreg_getw(SCANLINE) < 480)
+        ;
 
-    xreg_setw(BLIT_CTRL,
-              XB_(0x00, 8, 8) | XB_(0, 5, 1) | XB_(0, 4, 1) | XB_(0, 3, 1) | XB_(0, 2, 1) | XB_(1, 1, 1) |
-                  XB_(0, 0, 1));
-    xreg_setw(BLIT_MOD_A, 0x0000);
-    xreg_setw(BLIT_MOD_B, 0x0000);
-    xreg_setw(BLIT_SRC_B, 0xFFFF);
-    xreg_setw(BLIT_MOD_C, 0x0000);
-    xreg_setw(BLIT_VAL_C, 0x0000);
-    xreg_setw(BLIT_MOD_D, width_words - BALL_TILES_WIDTH);
-    xreg_setw(BLIT_SHIFT, XB_(0xF, 12, 4) | XB_(0xF, 8, 4) | XB_(0, 0, 2));
-    xreg_setw(BLIT_LINES, BALL_TILES_HEIGHT - 1);
-
-    while (xm_getw(SYS_CTRL) & XB_(1, 5, 1))
+    if (prev_dst)
     {
-        // Wait while blitter queue is full
+        xwait_blit_ready();
+        xreg_setw(BLIT_CTRL, 0x0001);
+        xreg_setw(BLIT_ANDC, 0x0000);
+        xreg_setw(BLIT_XOR, 0x0000);
+        xreg_setw(BLIT_MOD_S, 0x0000);
+        xreg_setw(BLIT_SRC_S, 0x0000);
+        xreg_setw(BLIT_MOD_D, WIDTH_WORDS_B - BALL_TILES_WIDTH);
+        xreg_setw(BLIT_DST_D, prev_dst);
+        xreg_setw(BLIT_SHIFT, 0xFF00);
+        xreg_setw(BLIT_LINES, BALL_TILES_HEIGHT - 1);
+        xreg_setw(BLIT_WORDS, BALL_TILES_WIDTH - 1);        // Starts operation
     }
-    xreg_setw(BLIT_SRC_A, vram_base_blank);
-    xreg_setw(BLIT_DST_D, prev_dst);
-    xreg_setw(BLIT_WORDS, BALL_TILES_WIDTH - 1);        // Starts operation
+    prev_dst = dst;
 
-    while (xm_getw(SYS_CTRL) & XB_(1, 5, 1))
-    {
-        // Wait while blitter queue is full
-    }
-    xreg_setw(BLIT_SRC_A, vram_base_ball);
+    xwait_blit_ready();
+    xreg_setw(BLIT_CTRL, 0x0000);
+    xreg_setw(BLIT_ANDC, 0x0000);
+    xreg_setw(BLIT_XOR, 0x0000);
+    xreg_setw(BLIT_MOD_S, 0x0000);
+    xreg_setw(BLIT_SRC_S, VRAM_BASE_BALL);
+    xreg_setw(BLIT_MOD_D, WIDTH_WORDS_B - BALL_TILES_WIDTH);
     xreg_setw(BLIT_DST_D, dst);
+    xreg_setw(BLIT_SHIFT, 0xFF00);
+    xreg_setw(BLIT_LINES, BALL_TILES_HEIGHT - 1);
     xreg_setw(BLIT_WORDS, BALL_TILES_WIDTH - 1);        // Starts operation
 
-    xreg_setw(PB_HV_SCROLL, MAKE_HV_SCROLL(scroll_x, scroll_y << 2));
-
-    top_left_col = prev_top_left_col;
-    top_left_row = prev_top_left_row;
+    xreg_setw(PB_H_SCROLL, MAKE_H_SCROLL(scroll_x));
+    xreg_setw(PB_V_SCROLL, MAKE_V_SCROLL(0, scroll_x));
 #endif
 }
 
 void set_ball_colour(uint8_t colour_base)
 {
-    uint16_t gfx_ctrl = MAKE_GFX_CTRL(colour_base, 0, XR_GFX_BPP_4, 0, 0, 0);
-#if USE_COPPER
-    xmem_setw(XR_COPPER_ADDR + (0x0002 << 1 | 0x1), gfx_ctrl);
+    uint16_t gfx_ctrl = MAKE_GFX_CTRL(colour_base, 0, GFX_BPP_4, 0, 0, 0);
+#if USE_COPASM
+    xmem_setw(XR_COPPER_ADDR + boing_copper__ball_gfx_ctrl, gfx_ctrl);
+#elif USE_COPMACROS
+    xmem_setw(XR_COPPER_ADDR + cop_ball_gfx_ctrl, gfx_ctrl);
 #else
     xreg_setw(PB_GFX_CTRL, gfx_ctrl);
 #endif
 }
-
-#if USE_COPPER
-uint32_t copper_list[] = {
-    [0x0000] = COP_MOVEC(vram_base_b, 0x0041 << 1 | 0x1),        // Fill dst
-    [0x0001] = COP_MOVEC(0, 0x0106 << 1 | 0x1),                  // Fill scroll
-    [0x0002] = COP_MOVEC(MAKE_GFX_CTRL(0x00, 0, XR_GFX_BPP_4, 0, 0, 0),
-                         0x0107 << 1 | 0x1),        // Fill gfx_ctrl with colorbase
-    COP_JUMP(0x0040 << 1),
-
-    [0x0040] =
-        COP_MOVEC(COP_MOVEC(0, 0x0104 << 1 | 0x1) >> 16, 0x0041 << 1 | 0x0),        // Make following move point to dst
-    [0x0041] = COP_MOVEC(0, 0),
-    COP_MOVEC(COP_MOVEC(0, 0x0101 << 1 | 0x1) >> 16, 0x0041 << 1 | 0x0),        // Make preceding move point to prev_dst
-
-    [0x0043] = COP_JUMP(0x0080 << 1),        // Jumps either to blitter load or to wait_f
-    [0x0044] =
-        COP_MOVEC(COP_JUMP(0x0080 << 1) >> 16, 0x0043 << 1 | 0x0),        // Make branching jump go to 0x0080 << 1
-    COP_WAIT_F(),
-
-    [0x0080] =
-        COP_MOVEC(COP_JUMP(0x0044 << 1) >> 16, 0x0043 << 1 | 0x0),        // Make branching jump go to 0x0044 << 1
-    COP_JUMP(0x00C0 << 1),
-
-    // Load fixed blitter settings
-    [0x00C0] = COP_MOVER(XB_(0x00, 8, 8) | XB_(0, 5, 1) | XB_(0, 4, 1) | XB_(0, 0, 1), BLIT_CTRL),
-    COP_MOVER(0x0000, BLIT_ANDC),
-    COP_MOVER(0x0000, BLIT_XOR),
-    COP_MOVER(0x0000, BLIT_MOD_S),
-    COP_MOVER(WIDTH_WORDS_B - BALL_TILES_WIDTH, BLIT_MOD_D),
-    COP_MOVER(XB_(0xF, 12, 4) | XB_(0xF, 8, 4) | XB_(0, 0, 2), BLIT_SHIFT),
-    COP_MOVER(BALL_TILES_HEIGHT - 1, BLIT_LINES),
-
-    COP_WAIT_V(480),
-    COP_JUMP(0x0100 << 1),
-
-    // Blank existing ball
-    [0x0100] = COP_MOVER(vram_base_blank, BLIT_SRC_S),
-    [0x0101] = COP_MOVER(vram_base_b, BLIT_DST_D),        // Fill in prev_dst
-    [0x0102] = COP_MOVER(BALL_TILES_WIDTH - 1, BLIT_WORDS),
-
-    // Draw ball
-    [0x0103] = COP_MOVER(vram_base_ball, BLIT_SRC_S),
-    [0x0104] = COP_MOVER(0, BLIT_DST_D),        // Fill in dst
-    [0x0105] = COP_MOVER(BALL_TILES_WIDTH - 1, BLIT_WORDS),
-
-    [0x0106] = COP_MOVER(0, PB_HV_SCROLL),        // Fill scroll
-
-    [0x0107] = COP_MOVER(0, PB_GFX_CTRL),        // Fill gfx_ctrl with colorbase
-
-    COP_JUMP(0x0003 << 1),
-};
-#endif
 
 #if USE_AUDIO
 void upload_audio()
@@ -574,8 +577,8 @@ void upload_audio()
     xreg_setw(AUD_CTRL, 0x0000);              // disable audio
     xm_setbl(SYS_CTRL, 0x0F);                 // make sure write masks set
     xm_setw(WR_INCR, 0x0001);                 // set write increment of 1
-    xm_setw(WR_ADDR, vram_audio_base);        // VRAM address for audio sample
-    for (uint16_t i = 0; i < vram_silence_len; i++)
+    xm_setw(WR_ADDR, VRAM_AUDIO_BASE);        // VRAM address for audio sample
+    for (uint16_t i = 0; i < VRAM_SILENCE_LEN; i++)
     {
         xm_setw(DATA, 0x0000);        // zero = silence sample
     }
@@ -587,26 +590,74 @@ void upload_audio()
 
     uint16_t rate   = 8000;
     uint16_t period = (clk_hz + (rate / 2)) / rate;
-    xreg_setw(AUD0_PERIOD, period);
     // start silence sample
-    xreg_setw(AUD0_LENGTH, vram_silence_len - 1);        // 1 word length (-1)
-    xreg_setw(AUD0_START, vram_audio_base);              // sample start
+    xreg_setw(AUD0_PERIOD, period);
+    xreg_getw(SCANLINE);                                 // tiny delay
     xreg_setw(AUD0_VOL, 0x8080);                         // full volume l+r
-    xreg_setw(AUD_CTRL, 0x0001);                         // enable audio (and leave on)
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD0_LENGTH, VRAM_SILENCE_LEN - 1);        // 1 word length (-1)
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD0_START, VRAM_AUDIO_BASE);              // sample start
+    xreg_getw(SCANLINE);                                 // tiny delay
+
+    xreg_setw(AUD1_PERIOD, period);
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD1_VOL, 0x8080);                         // full volume l+r
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD1_LENGTH, VRAM_SILENCE_LEN - 1);        // 1 word length (-1)
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD1_START, VRAM_AUDIO_BASE);              // sample start
+    xreg_getw(SCANLINE);                                 // tiny delay
+
+    xreg_setw(AUD2_PERIOD, period);
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD2_VOL, 0x8080);                         // full volume l+r
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD2_LENGTH, VRAM_SILENCE_LEN - 1);        // 1 word length (-1)
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD2_START, VRAM_AUDIO_BASE);              // sample start
+    xreg_getw(SCANLINE);                                 // tiny delay
+
+    xreg_setw(AUD3_PERIOD, period);
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD3_VOL, 0x8080);                         // full volume l+r
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD3_LENGTH, VRAM_SILENCE_LEN - 1);        // 1 word length (-1)
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD3_START, VRAM_AUDIO_BASE);              // sample start
+    xreg_getw(SCANLINE);                                 // tiny delay
+
+    xreg_setw(AUD_CTRL, 0x0001);        // enable audio (and leave on)
 }
 
-void play_audio()
+void play_audio(uint16_t pos_x)
 {
     uint16_t wordsize = ((_binary_Boing_raw_end - _binary_Boing_raw_start) / 2) - 1;
     uint16_t rate     = 8000 + ((xm_getw(TIMER) & 0xfff) - 0x800);        // randomize rate a bit
     uint16_t period   = (clk_hz + (rate / 2)) / rate;
-    xreg_setw(AUD0_LENGTH, wordsize);
-    xreg_setw(AUD0_START, vram_audio_base + vram_silence_len);
-    xreg_setw(AUD0_PERIOD, period | 0x8000);        // force new sound start immediately
-    xreg_setw(AUD0_START, vram_audio_base);
-    xreg_setw(AUD0_LENGTH, vram_silence_len - 1);        // then queue silence sample
-}
+    uint8_t  rv       = pos_x / 2;
+    uint8_t  lv       = (320 - pos_x) / 2;
+    if (rv > 128)
+        rv = 128;
+    if (lv > 128)
+        lv = 128;
+    uint16_t wvol = ((64 + lv) << 8) | (64 + rv);
 
+    static uint16_t chan;
+    uint16_t        vo = (chan << 2);
+    chan               = (chan + 1) & 0x3;
+    xreg_setw(AUD0_LENGTH + vo, wordsize);
+    xreg_getw(SCANLINE);        // tiny delay
+    xreg_setw(AUD0_START + vo, VRAM_AUDIO_BASE + VRAM_SILENCE_LEN);
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD0_PERIOD + vo, period | 0x8000);        // force new sound start immediately
+    xreg_getw(SCANLINE);                                 // tiny delay
+    xreg_setw(AUD0_VOL + vo, wvol);
+    xreg_getw(SCANLINE);                                      // tiny delay
+    xreg_setw(AUD0_LENGTH + vo, VRAM_SILENCE_LEN - 1);        // then queue silence sample
+    xreg_getw(SCANLINE);                                      // tiny delay
+    xreg_setw(AUD0_START + vo, VRAM_AUDIO_BASE);
+}
 #endif
 
 #define BITS_PER_PIXEL_1BPP 1
@@ -816,20 +867,22 @@ void vram_sequence_tiled(int      width_tiles,
     }
 }
 
-void copper_load_list(uint16_t length, uint32_t list[length], uint16_t base)
+void copper_load_list(uint16_t length, uint16_t list[length], uint16_t base)
 {
+    xmem_setw_next_addr(base);
     for (uint16_t i = 0; i < length; ++i)
     {
-        xmem_setw(base + i * 2 + 0, (list[i] >> 16) & 0xFFFF);
-        xmem_setw(base + i * 2 + 1, (list[i] >> 0) & 0xFFFF);
+        xmem_setw_next_wait(list[i]);
     }
 }
 
 void xosera_boing()
 {
+    cpu_delay(1000);
+    dprintf("Xosera boing\n");
+
     // re-initialize Xosera to current config
-    xosera_init(xosera_vid_width() > 640 ? 1 : 0);
-    delay(100000);        // let monitor sync
+    xosera_init(WIDESCREEN ? 1 : 0);
     clear_vram();
 
     vid_hsize = xosera_vid_width();
@@ -847,25 +900,31 @@ void xosera_boing()
     }
 
     printf("\rXoboing: Copyright (c) 2022 Thomas Jager - Preparing assets, one moment...");
+    dprintf("Xoboing: Copyright (c) 2022 Thomas Jager - Preparing assets, one moment...\n");
 
     draw_bg();
     fill_ball();
     shadow_ball();
     do_tiles();
+
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 1, GFX_BPP_1, 1, 1, 1));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 1, GFX_BPP_1, 1, 1, 1));
+
 #if USE_AUDIO
     upload_audio();
 #endif
 
-#if USE_COPPER
+#if USE_COPASM
+    dprintf("Using CopAsm COPPER blit version\n");
+    copper_load_list(boing_copper_size, boing_copper_bin, boing_copper_start);
+#elif USE_COPMACROS
+    dprintf("Using macro COPPER blit version\n");
     copper_load_list(sizeof copper_list / sizeof copper_list[0], copper_list, XR_COPPER_ADDR);
+#else
+    dprintf("Using CPU based blit version\n");
 #endif
 
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, XR_GFX_BPP_1, 1, 1, 1));
-    xreg_setw(PA_DISP_ADDR, vram_base_a);
-
-    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, XR_GFX_BPP_4, 0, 0, 0));
-    xreg_setw(PB_TILE_CTRL, MAKE_TILE_CTRL(tile_base_b, 0, 1, TILE_HEIGHT_B));
-    xreg_setw(PB_DISP_ADDR, vram_base_b);
 
     // PA Colours:
     xmem_setw_wait(XR_COLOR_A_ADDR + 0x0, 0x0BBB);        // Grey
@@ -874,6 +933,7 @@ void xosera_boing()
     // PB Colours:
     if (PAINT_BALL)
     {
+        dprintf("Paint ball\n");
         for (uint16_t palette_index = 0; palette_index < 14; ++palette_index)
         {
             uint8_t  colour_base  = palette_index * 16;
@@ -914,10 +974,10 @@ void xosera_boing()
     xm_setw(WR_INCR, 1);
 
     // Load PA bitmap
-    vram_write_bitmap_1bpp(WIDTH_A, HEIGHT_A, bg_bitmap, WIDTH_WORDS_A, vram_base_a, 0x01);
+    vram_write_bitmap_1bpp(WIDTH_A, HEIGHT_A, bg_bitmap, WIDTH_WORDS_A, VRAM_BASE_A, 0x01);
 
     // Load PB tiles
-    xm_setw(WR_ADDR, tile_base_b);
+    xm_setw(WR_ADDR, TILE_BASE_B);
     for (uint16_t i = 0; i < 0x4000; ++i)
     {
         xm_setw(DATA, ((uint16_t *)ball_tiles)[i]);
@@ -925,13 +985,13 @@ void xosera_boing()
 
     // Load PB tilemap
     // Two extra rows needed for fine scrolling, one for the bottom row, and one for the bottom right tile
-    vram_fill_tiled(WIDTH_WORDS_B, HEIGHT_WORDS_B + 2, 0, WIDTH_WORDS_B, vram_base_b);
+    vram_fill_tiled(WIDTH_WORDS_B, HEIGHT_WORDS_B + 2, 0, WIDTH_WORDS_B, VRAM_BASE_B);
 
     // Load blank tilemap
-    vram_fill_tiled(BALL_TILES_WIDTH, BALL_TILES_HEIGHT, 0, BALL_TILES_WIDTH, vram_base_blank);
+    vram_fill_tiled(BALL_TILES_WIDTH, BALL_TILES_HEIGHT, 0, BALL_TILES_WIDTH, VRAM_BASE_BLANK);
 
     // Load ball tilemap
-    vram_sequence_tiled(BALL_TILES_WIDTH, BALL_TILES_HEIGHT, 0, 0, 1, BALL_TILES_WIDTH, vram_base_ball);
+    vram_sequence_tiled(BALL_TILES_WIDTH, BALL_TILES_HEIGHT, 0, 0, 1, BALL_TILES_WIDTH, VRAM_BASE_BALL);
 
     float pos_x   = 320.0f;
     float pos_y   = 320.0f;
@@ -942,17 +1002,29 @@ void xosera_boing()
     float pos_phi = 0.0f;
     float vel_phi = 2.0f;
 
-    xreg_setw(COPP_CTRL, XB_(1, 15, 1) | XB_(0, 0, 11));
+    xwait_vblank();
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, GFX_BPP_1, 1, 1, 1));
+    xreg_setw(PA_DISP_ADDR, VRAM_BASE_A);
 
-#if USE_AUDIO
-    bool bounced = false;
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, GFX_BPP_4, 0, 0, 0));
+    xreg_setw(PB_TILE_CTRL, MAKE_TILE_CTRL(TILE_BASE_B, 0, 1, TILE_HEIGHT_B));
+    xreg_setw(PB_DISP_ADDR, VRAM_BASE_B);
+
+#if USE_COPASM
+    xreg_setw(COPP_CTRL, COPP_CTRL_COPP_EN_F);        // enable
+#elif USE_COPMACROS
+    xreg_setw(COPP_CTRL, COPP_CTRL_COPP_EN_F);        // enable
+#else
+    xreg_setw(COPP_CTRL, 0x0000);        // disable
 #endif
+
+    static uint16_t prev_timer;
+    prev_timer = xm_getw(TIMER);
     while (!checkchar())
     {
-        static uint16_t prev_timer;
-        uint16_t        timer = xm_getw(TIMER);
-        float           dt    = (uint16_t)(timer - prev_timer) / 10000.0f;
-        prev_timer            = timer;
+        uint16_t timer = xm_getw(TIMER);
+        float    dt    = (uint16_t)(timer - prev_timer) / 10000.0f;
+        prev_timer     = timer;
 
         // Half-step position
         pos_x += vel_x / 2.0f * dt;
@@ -965,14 +1037,14 @@ void xosera_boing()
         {
             vel_x = -vel_x;
 #if USE_AUDIO
-            bounced = true;
+            play_audio(roundf(pos_x));
 #endif
         }
         if (pos_y < WALL_BOTTOM * 2 + BALL_RADIUS || pos_y >= WALL_TOP * 2 - BALL_RADIUS)
         {
             vel_y = -vel_y;
 #if USE_AUDIO
-            bounced = true;
+            play_audio(roundf(pos_x));
 #endif
         }
         // Half-step velocity
@@ -1003,33 +1075,11 @@ void xosera_boing()
         uint8_t     palatte_index      = angle_in_cycle * 14;
         uint8_t     colour_base        = palatte_index * 16;
 
-#if !USE_COPPER
-        while (!(xreg_getw(SCANLINE) & XB_(1, 15, 1)))
-        {
-            // Wait while not VBlank
-        }
-#endif
-
-        xwait_vblank();
         draw_ball_at(WIDTH_WORDS_B, HEIGHT_WORDS_B, pos_x_int, pos_y_int);
         if (PAINT_BALL)
         {
             set_ball_colour(colour_base);
         }
-#if USE_AUDIO
-        if (bounced)
-        {
-            play_audio();
-            bounced = false;
-        }
-#endif
-
-#if !USE_COPPER
-        while (xm_get_sys_ctrlb(VBLANK))
-        {
-            // Wait while VBlank
-        }
-#endif
     }
     readchar();
     xwait_not_vblank();
@@ -1045,9 +1095,11 @@ void xosera_boing()
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_LINE_LEN, vid_hsize / 8);
-    xreg_setw(PA_HV_SCROLL, 0x0000);
+    xreg_setw(PA_H_SCROLL, 0x0000);
+    xreg_setw(PA_V_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
     xreg_setw(PB_GFX_CTRL, 0x0080);
 
     printf("\033c");
+    dprintf("Exit\n");
 }

@@ -1,0 +1,53 @@
+;
+; copper - default boot program
+;
+; vim: set et ts=8 sw=8
+;
+
+
+                .list    false
+                .include "xosera_m68k_defs.inc"
+                .macname false
+                .listcond false
+                .list    true
+
+                .if     MODE_640x480
+H_START         =       160
+H_END           =       799
+H_VIS           =       640
+                .elseif MODE_848x480
+H_START         =       240
+H_END           =       1087
+H_VIS           =       848
+                .endif
+entry
+                HPOS    #0                              ; no-op
+; set regs that aren't friendly when defaulted to zero
+                MOVE    #$0008,XR_VID_CTRL              ; grey border color
+                MOVE    #0,XR_VID_LEFT                  ; set left border
+                MOVE    #H_VIS,XR_VID_RIGHT             ; set right border
+
+                MOVE    #$0080,XR_PA_GFX_CTRL           ; blank pa
+                MOVE    #$000F,XR_PA_TILE_CTRL          ; set to 8x16 tiles @ tilemem 0x0000
+                MOVE    #H_VIS/8,XR_PA_LINE_LEN         ; set default line len
+
+                MOVE    #$0080,XR_PB_GFX_CTRL           ; blank pb
+                MOVE    #$000F,XR_PB_TILE_CTRL          ; set to 8x16 tiles @ tilemem 0x0000
+                MOVE    #H_VIS/8,XR_PB_LINE_LEN         ; set default line len
+
+                VPOS    #V_WAITBLIT                     ; wait until blitter ready
+                MOVI    #(VPOS|V_EOF),entry             ; prevent running init twice
+                MOVE    #$0001,XR_BLIT_CTRL             ; no transp, constS
+                MOVE    #$0000,XR_BLIT_ANDC             ; ANDC constant
+                MOVE    #$0000,XR_BLIT_XOR              ; XOR constant
+                MOVE    #$0000,XR_BLIT_MOD_S            ; no modulo S
+                MOVE    #$0000,XR_BLIT_SRC_S            ; fill value 0x0000
+                MOVE    #$0000,XR_BLIT_MOD_D            ; no modulo D
+                MOVE    #$0000,XR_BLIT_DST_D            ; start of VRAM
+                MOVE    #$FF00,XR_BLIT_SHIFT            ; no edge masking or shifting
+                MOVE    #$0000,XR_BLIT_LINES            ; 1-D blit (no repeat count)
+                MOVE    #$10000-1,XR_BLIT_WORDS         ; all VRAM
+                VPOS    #V_WAITBLIT                     ; wait until blitter ready
+                MOVI    #$0000,XR_COPP_CTRL             ; disable copper
+                fill    (VPOS|V_EOF),($C400-.)          ; fill with VPOS #V_EOF
+                .end

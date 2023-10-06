@@ -42,7 +42,7 @@ endif
 XOSERA_M68K_API?=../xosera_m68k_api
 
 # Set default FPGA config number (if not set)
-FPGA_CONFIG ?= 0
+FPGA_CONFIG_NUM ?= 0
 
 # Maximum number of CPU cores to use before waiting with FMAX_TEST
 MAX_CPUS ?= 8
@@ -68,11 +68,14 @@ VIDEO_MODE ?= MODE_848x480
 VIDEO_OUTPUT ?= PMOD_DIGILENT_VGA
 
 # copper assembly
-COPASM=../copper/CopAsm/bin/copasm
+COPASM=$(XOSERA_M68K_API)/bin/copasm
+RESET_COP=default_copper.casm
 ifeq ($(findstring 640x,$(VIDEO_MODE)),)
-RESET_COPMEM=default_copper_848
+RESET_COPMEM=default_copper_848.mem
+COPASMOPT=-d MODE_640x480=0 -d MODE_848x480=1
 else
-RESET_COPMEM=default_copper_640
+RESET_COPMEM=default_copper_640.mem
+COPASMOPT=-d MODE_640x480=1 -d MODE_848x480=0
 endif
 
 VERILOG_DEFS := -D$(VIDEO_MODE) -D$(VIDEO_OUTPUT)
@@ -144,7 +147,7 @@ YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc9 -dff -top $(TOP)
 #FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
 
 # Verilog preprocessor definitions common to all modules
-DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) -DFPGA_CONFIG=$(FPGA_CONFIG) $(VERILOG_DEFS) -DICE40UP5K -DUPDUINO
+DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) -DFPGA_CONFIG_NUM=$(FPGA_CONFIG_NUM) $(VERILOG_DEFS) -DICE40UP5K -DUPDUINO
 
 TECH_LIB := $(shell $(YOSYS_CONFIG) --datdir/ice40/cells_sim.v)
 VLT_CONFIG := upduino/ice40_config.vlt
@@ -176,18 +179,18 @@ timing: upduino/$(OUTNAME).rpt $(MAKEFILE_LIST)
 .PHONY: timing
 
 # run Yosys to generate a "dot" graphical representation of each design file
-show: $(RESET_COPMEM).mem $(DOT) $(MAKEFILE_LIST)
+show: $(RESET_COPMEM) $(DOT) $(MAKEFILE_LIST)
 .PHONY: show
 
 # run Yosys with "noflatten", which will produce a resource count per module
-count: $(RESET_COPMEM).mem $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+count: $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	@mkdir -p $(LOGS)
 	@-cp $(LOGS)/$(OUTNAME)_yosys_count.log $(LOGS)/$(OUTNAME)_yosys_count_last.log
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 .PHONY: count
 
 # run Verilator to check for Verilog issues
-lint: $(VLT_CONFIG) $(RESET_COPMEM).mem $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+lint: $(VLT_CONFIG) $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC)
 .PHONY: lint
 
@@ -196,12 +199,13 @@ $(DOT): %.dot: %.sv $(MAKEFILE_LIST)
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) -DSHOW ; read_verilog -I$(SRCDIR) -sv $< ; show -enum -stretch -signed -width -prefix upduino/dot/$(basename $(notdir $<)) $(basename $(notdir $<))'
 
 # synthesize Verilog and create json description
-%.json: $(VLT_CONFIG) $(RESET_COPMEM).mem $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
+%.json: $(VLT_CONFIG) $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
 	@echo === Building UPduino Xosera ===
 	@rm -f $@
 	@mkdir -p $(LOGS) $(@D)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
+	@-rm abc.history
 	@-grep "XOSERA" $(LOGS)/$(OUTNAME)_yosys.log
 	@-grep "\(Number of cells\|Number of wires\)" $(LOGS)/$(OUTNAME)_yosys.log
 
@@ -263,6 +267,7 @@ endif
 	@-grep "XOSERA" $(LOGS)/$(OUTNAME)_yosys.log | tee -a $(OUTNAME)_stats.txt
 	@-tabbyadm version | grep "Package" | tee -a $(OUTNAME)_stats.txt
 	@$(YOSYS) -V 2>&1 | tee -a $(OUTNAME)_stats.txt
+	@-rm abc.history
 	@$(NEXTPNR) -V 2>&1 | tee -a $(OUTNAME)_stats.txt
 	@sed -n '/Device utilisation/,/Info: Placed/p' $(LOGS)/$(OUTNAME)_nextpnr.log | sed '$$d' | grep -v ":     0/" | tee -a $(OUTNAME)_stats.txt
 	@grep "Max frequency" $(LOGS)/$(OUTNAME)_nextpnr.log | tail -1 | tee -a $(OUTNAME)_stats.txt
@@ -296,14 +301,21 @@ $(VLT_CONFIG):
 $(COPASM):
 	@echo === Building copper assembler...
 	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE)
+	@mkdir -p $(@D)
+	cp -v $(XOSERA_M68K_API)/../copper/CopAsm/bin/copasm $(COPASM)
 
 # assemble casm into mem file
-%.mem : %.casm $(COPASM)
-	$(COPASM) -l -o $@ $<
+cop_init:  $(COPASM) $(RESET_COP)
+	@mkdir -p $(@D)
+	$(COPASM) -b 4096 $(COPASMOPT) -l -i $(XOSERA_M68K_API) $(RESET_COP)
+	mv -f $(addsuffix .lst,$(basename $(RESET_COP))) $(RESET_COPMEM)
+
+cop_clean:
+	rm -f $(addsuffix .lst,$(basename $(RESET_COP))) $(RESET_COPMEM)
 
 # delete all targets that will be re-generated
 clean:
-	rm -f $(VLT_CONFIG) $(wildcard default_copper_*.mem) $(wildcard default_copper_*.lst)  xosera_upd.bin $(wildcard upduino/*.json) $(wildcard upduino/*.asc) $(wildcard upduino/*.rpt) $(wildcard upduino/*.bin)
+	rm -f $(VLT_CONFIG) xosera_upd.bin $(wildcard upduino/*.json) $(wildcard upduino/*.asc) $(wildcard upduino/*.rpt) $(wildcard upduino/*.bin)
 .PHONY: clean
 
 # prevent make from deleting any intermediate files

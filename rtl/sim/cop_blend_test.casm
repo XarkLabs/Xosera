@@ -2,33 +2,43 @@
 // copper - blend dual playfield test
 //
                 .list    false
-                .include "../xosera_m68k_api/xosera_m68k_defs.inc"
+                .include "xosera_m68k_defs.inc"
                 .macname false
                 .listcond false
                 .list    true
 
+                .if     MODE_640x480
+H_RES           =       640
+H_START         =       160
+H_END           =       799
+                .elseif MODE_848x480
+H_START         =       240
+H_RES           =       848
+H_END           =       1087
+                .endif
+
                 export  hpos_sol,hpos_eol               ; export HPOS SOL/EOL offsets for 640/848 modes
 
 .macro          hcol    col
-                MOVE    #\col,XR_COLOR_A_ADDR+0
+                MOVI    #\col,XR_COLOR_A_ADDR+0
                 HPOS    #0
 .endm
 
 blend_start
-hpos_sol_move   MOVE    #MOVE+vcolor_tbl,color_load     ; reset color table start
+hpos_sol_move   MOVI    #MOVM|vcolor_tbl,color_load     ; reset color table start
 
-line_loop       MOVE    #$0000,XR_COLOR_A_ADDR+0        ; colorA[0] = black
-                MOVE    #$0000,XR_COLOR_B_ADDR+0        ; colorB[0] = black
-color_load      MOVE    vcolor_tbl,XR_COLOR_B_ADDR+0    ; set colorB[0] from table (self-modified)
+line_loop       MOVI    #$0000,XR_COLOR_A_ADDR+0        ; colorA[0] = black
+                MOVI    #$0000,XR_COLOR_B_ADDR+0        ; colorB[0] = black
+color_load      MOVM    vcolor_tbl,XR_COLOR_B_ADDR+0    ; set colorB[0] from table (self-modified)
 
                 LDM     color_load                      ; load SETM opcode+source addr
                 ADDI    #1                              ; increment
-                CMPI    #MOVE+vcolor_end                ; test vs table end (with SETM opcode)
+                CMPI    #MOVM|vcolor_end                ; test vs table end (with SETM opcode)
                 BRLT    not_end                         ; branch if not past end
-                LDI     #MOVE+vcolor_tbl                ; load reset SETM opcode+table start
+                LDI     #MOVM|vcolor_tbl                ; load reset SETM opcode+table start
 not_end         STM     color_load                      ; store modified SETM opcode+source
 
-hpos_sol        HPOS    #160-8
+hpos_sol        HPOS    #H_START-8
 
                 hcol    $0000
                 hcol    $0111
@@ -116,10 +126,12 @@ hpos_sol        HPOS    #160-8
 
                 hcol    $0000
 
-hpos_eol        HPOS    #799                            ; wait for last pixel of line
+hpos_eol        HPOS    #H_END                          ; wait for last pixel of line
                 BRGE    line_loop                       ; branch always (since last write was A)
 
-                VPOS    #$7FF                           ; wait for SOF (just in case)
+                VPOS    #V_EOF                          ; wait for EOF (just in case)
+
+                space   512
 
 vcolor_tbl
                 word    $0000

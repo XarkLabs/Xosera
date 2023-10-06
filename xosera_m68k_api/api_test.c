@@ -187,6 +187,16 @@ void kmain(void)
     nop();
     xwait_not_vblank();
     nop();
+    if (xuart_is_send_ready())
+    {
+        xuart_send_byte(0x55);
+    }
+    nop();
+    if (xuart_is_get_ready())
+    {
+        g8 = xuart_get_byte();
+    }
+    nop();
     g16 = xosera_vid_width();
     nop();
     g16 = xosera_vid_height();

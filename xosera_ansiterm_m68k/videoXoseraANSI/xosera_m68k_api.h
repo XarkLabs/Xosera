@@ -574,13 +574,13 @@ extern xosera_ptr_t xosera_ptr;
 #define vram_getl_next(long_val) xm_getl(DATA)
 
 // return true if ready to transmit character
-#define xuart_is_send_ready() (~xm_getbh(UART) & UART_TXF_B)
+#define xuart_is_send_ready() (!(xm_getbh(UART) & UART_TXF_F))
 
 // transmit UART character (call when uart_send_ready() returns true)
 #define xuart_send_byte(byte) (xosera_ptr[(XM_UART) >> 2].b.l = (byte))
 
 // return true if RX character waiting
-#define xuart_is_get_ready() (xm_getbh(UART) & UART_RXF_B)
+#define xuart_is_get_ready() (xm_getbh(UART) & UART_RXF_F)
 
 // return UART received character (call when uart_get_ready() returns true)
 #define xuart_get_byte() (xosera_ptr[XM_UART >> 2].b.l)

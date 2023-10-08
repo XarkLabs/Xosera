@@ -611,6 +611,13 @@ always_comb begin
     endcase
 end
 
+`ifndef ICE40UP5K
+// infer multiply for PIXEL_ADDR (vs SB_MAC16)
+always_comb begin
+    pixel_mult = pixel_xw + (reg_pixel_y * pixel_width);
+    pixel_addr = pixel_base + pixel_mult;
+end
+`else
 /* verilator lint_off PINCONNECTEMPTY */
 SB_MAC16 #(
     .NEG_TRIGGER(1'b0),                 // 0=rising/1=falling clk edge
@@ -718,7 +725,6 @@ SB_MAC16 #(
 /* verilator lint_on PINCONNECTEMPTY */
 `endif
 
-`ifdef WR_ADD_MAC
 word_t reg_wr_result;
 word_t unused_high3;
 

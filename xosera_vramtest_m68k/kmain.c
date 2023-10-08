@@ -29,7 +29,7 @@ extern void xosera_vramtest();
 
 void kmain()
 {
-    delay(15000);              // wait a bit for terminal window/serial
+    delay(1000 * 500);         // wait a bit for terminal window/serial
     while (checkchar())        // clear any queued input
     {
         readchar();

@@ -373,7 +373,8 @@
 			"stack": "cpp",
 			"unordered_map": "cpp",
 			"unordered_set": "cpp",
-			"cop_blend_test.h": "c"
+			"cop_blend_test.h": "c",
+			"cop_wavey.h": "c"
 		},
 		"workbench.colorCustomizations": {
 			"terminal.foreground": "#08D808",

@@ -150,7 +150,6 @@ bool first_failure;               // bool indicating first failure of current te
 #define VRAM_RD_DELAY() mcBusywait(1)        // delay for "SLOW" read
 
 // test display
-static uint16_t xr_fontsave[4096];
 static char     xr_dprint_buff[4096];
 static uint16_t xr_screen_addr = XR_TILE_ADDR + 0x1000;
 static uint8_t  xr_text_columns;
@@ -158,16 +157,6 @@ static uint8_t  xr_text_rows;
 static uint8_t  xr_text_color = 0x07;        // white on gray
 static uint8_t  xr_x;
 static uint8_t  xr_y;
-
-static void xr_savefont()
-{
-    xmem_getw_next_addr(XR_TILE_ADDR);
-    for (uint32_t i = 0; i < NUM_ELEMENTS(xr_fontsave); i++)
-    {
-        xr_fontsave[i] = xmem_getw_next_wait();
-    }
-    dprintf("Font XR memory area saved.\n");
-}
 
 static void xr_cls()
 {
@@ -1081,14 +1070,23 @@ xosera_info_t initinfo;
 
 void xosera_vramtest()
 {
+    dprintf("Xosera_vramtest_m68k\n");
+
+    dprintf("Checking for Xosera XANSI firmware...");
+    if (xosera_xansi_detect(true))        // check for XANSI (and disable input cursor if present)
+    {
+        dprintf("detected.\n");
+    }
+    else
+    {
+        dprintf(
+            "\n\nXosera XANSI firmware was not detected!\n"
+            "This program will likely trap without Xosera hardware.\n");
+    }
+
     xv_prep();
 
-    cpu_delay(1000);
-
-    dprintf("\033c\nXosera_vramtest_m68k\n");
-
-    xr_savefont();
-
+    uint8_t saved_config      = xosera_cur_config();
     uint8_t cur_xosera_config = ~0;
     uint8_t new_config        = 0;
 
@@ -1121,18 +1119,11 @@ void xosera_vramtest()
             colormem_size = has_PF_B ? (XR_COLOR_A_SIZE + XR_COLOR_B_SIZE) : XR_COLOR_A_SIZE;
         }
 
-#if 0        // FIXME: fixme tag test
-        uint32_t t = XFrameCount;
-        int      h = t / (60 * 60 * 60);
-        int      m = t / (60 * 60) % 60;
-        int      s = (t / 60) % 60;
-#else
         update_elapsed();
         unsigned int t = elapsed_tenthms;
         unsigned int h = t / (10000 * 60 * 60);
         unsigned int m = t / (10000 * 60) % 60;
         unsigned int s = (t / 10000) % 60;
-#endif
 
         dprintf("\n>>> xosera_vramtest_m68k iteration: %d, running %u:%02u:%02u, errors: %d\n",
                 vram_test_count++,
@@ -1225,13 +1216,7 @@ void xosera_vramtest()
     remove_intr();
 
     // reset console
-    xosera_init(cur_xosera_config);        // restore fonts, which were trashed
-    printchar('\033');
-    printchar('c');
-
-    while (checkchar())
-    {
-        readchar();
-    }
+    xosera_init(saved_config);        // restore fonts, which were trashed
+    xosera_xansi_restore();
     dprintf("\n\nExiting...\n");
 }

@@ -27,10 +27,6 @@
 #include <machine.h>
 #include <sdfat.h>
 
-#if !defined(NUM_ELEMENTS)
-#define NUM_ELEMENTS(a) (sizeof(a) / sizeof(a[0]))
-#endif
-
 #define XV_PREP_REQUIRED        // require xv_prep() before xosera API functions (for efficiency)
 #include "xosera_m68k_api.h"
 
@@ -295,9 +291,7 @@ void queue_buffer(uint16_t buf_off, uint16_t period)
 
 void audiostream_test()
 {
-    cpu_delay(3000);
-
-    printf("\033cXosera_audiostream_m68k\n\n");
+    printf("Xosera_audiostream_m68k\n\n");
 
     if (SD_check_support())
     {
@@ -349,13 +343,13 @@ void audiostream_test()
         xv_prep();
 
         uint16_t rate   = sample_rates[cur_rate];
-        uint32_t clk_hz = xreg_getw(VID_HSIZE) > 640 ? 33750000ULL : 25125000ULL;
+        uint32_t clk_hz = xosera_sample_hz();
         uint16_t period = (clk_hz + (rate / 2)) / rate;
 
         printf("        Sample rate: %u (PERIOD %u @ %s MHz)\n",
                rate,
                period,
-               xreg_getw(VID_HSIZE) > 640 ? "33.75" : "25.125");
+               xosera_sample_hz() > AUDIO_PERIOD_HZ_640 ? "33.75" : "25.125");
 
         printf("\nPlaying offset: %9u ", (unsigned int)file_bytes);
 
@@ -409,7 +403,7 @@ void audiostream_test()
                     {
                         xreg_setw(PA_DISP_ADDR, 0x0000);
                         xreg_setw(PA_GFX_CTRL, 0x0000);
-                        xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) / 8);
+                        xreg_setw(PA_LINE_LEN, xosera_vid_width() / 8);
                     }
                 }
                 else
@@ -466,15 +460,7 @@ void audiostream_test()
 
         fl_fclose(file);
 
-        xreg_setw(PA_DISP_ADDR, 0x0000);
-        xreg_setw(PA_GFX_CTRL, 0x0000);
-        xreg_setw(PA_LINE_LEN, xreg_getw(VID_HSIZE) / 8);
-
-        printf("\nClosed.\n");
-        printf("\033[?25h");        // ANSI reset, enable input cursor
-
     } while (!quit);
 
-    printf("\n\nExiting.");
-    printf("\033[?25h");
+    xosera_xansi_restore();
 }

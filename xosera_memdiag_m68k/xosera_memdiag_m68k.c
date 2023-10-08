@@ -185,7 +185,7 @@ void xosera_memdiag()
     dprintf("\nXosera_memdiag_m68k\n");
 
     dprintf("\n [Switching to Xosera config #%d...", 0);
-    bool success   = xosera_init(0);
+    bool success   = xosera_init(XINIT_CONFIG_640x480);
     last_timer_val = xm_getw(TIMER);
     dprintf("%s (%dx%d). ]\n", success ? "succeeded" : "FAILED", xreg_getw(VID_HSIZE), xreg_getw(VID_VSIZE));
     xosera_get_info(&initinfo);

@@ -39,8 +39,8 @@
 #define DEBUG 0        // must be zero (no printf in firmware)
 // thse are missing from kernel machine.h
 extern unsigned int _FIRMWARE_REV;        // rosco ROM firmware revision
-extern void (*_EFP_RECVCHAR)();
-extern void (*_EFP_CHECKCHAR)();
+extern void         (*_EFP_RECVCHAR)();
+extern void         (*_EFP_CHECKCHAR)();
 
 #endif
 
@@ -147,7 +147,7 @@ typedef struct xansiterm_data
 // get xansiterm data (data needs to be in first 32KB of memory)
 
 #if defined(TEST_FIRMWARE)                                           // building for RAM testing
-static_assert(sizeof(xansiterm_data) <= 128, "data too big");        // fit in reserved space at 0x0500
+_Static_assert(sizeof(xansiterm_data) <= 128, "data too big");        // fit in reserved space at 0x0500
 // NOTE: address must be < 32KB, attribute is a bit of a hack (causes warning about section attributes)
 xansiterm_data                                                _private_xansiterm_data;
 static inline __attribute__((always_inline)) xansiterm_data * get_xansi_data()
@@ -338,7 +338,7 @@ static __attribute__((noinline)) void xansi_clear(uint16_t start, uint16_t end)
         start      = end;
         end        = t;
     }
-    uint16_t count = end - start;
+    uint16_t count = end - start - 1;
 
     xv_prep();
     xm_setbl(SYS_CTRL, 0x0F);
@@ -363,7 +363,7 @@ static __attribute__((noinline)) void xansi_clear(uint16_t start, uint16_t end)
         do
         {
             xm_setbl(DATA, ' ');
-        } while (++start <= end);
+        } while (count--);
     }
     else
     {

@@ -33,17 +33,17 @@
 
 #include "xosera_m68k_api.h"
 
-bool              use_sd;
+bool use_sd;
 
 // Copper list
 uint16_t copper_list[] = {
-    COP_MOVER(0x0055, PA_GFX_CTRL),               //  0: First half of screen in 4-bpp + Hx2 + Vx2 //
+    COP_MOVER(0x0055, PA_GFX_CTRL),             //  0: First half of screen in 4-bpp + Hx2 + Vx2 //
     COP_MOVER(0x0ec6, COLOR_ADDR + 0xf),        //  2: Palette entry 0xf from tut bitmap
-    COP_VPOS(240),                                //  4: Wait for 640-8, 240
-    COP_MOVER(0x0040, PA_GFX_CTRL),               //  5: 1-bpp + Hx1 + Vx1
-    COP_MOVER(0x3e80, PA_LINE_ADDR),              //  7: Line start now at 16000
+    COP_VPOS(240),                              //  4: Wait for 640-8, 240
+    COP_MOVER(0x0040, PA_GFX_CTRL),             //  5: 1-bpp + Hx1 + Vx1
+    COP_MOVER(0x3e80, PA_LINE_ADDR),            //  7: Line start now at 16000
     COP_MOVER(0x0fff, COLOR_ADDR + 0xf),        //  9: Palette entry 0xf to white for 1bpp bitmap
-    COP_END()                                     // 11:Wait for next frame
+    COP_END()                                   // 11:Wait for next frame
 };
 
 uint32_t file_buffer[512];
@@ -127,9 +127,12 @@ void dump_xosera_regs(void)
 {
     xv_prep();
 
-    uint16_t feature   = xm_getw(FEATURE);
-    uint16_t monwidth  = xosera_vid_width();
-    uint16_t monheight = xosera_vid_height();
+    uint16_t feature     = xm_getw(FEATURE);
+    uint16_t monwidth    = xosera_vid_width();
+    uint16_t monheight   = xosera_vid_height();
+    uint16_t maxhpos     = xosera_max_hpos();
+    uint16_t maxvpos     = xosera_max_vpos();
+    uint16_t audchannels = xosera_aud_channels();
 
     uint16_t sysctrl = xm_getw(SYS_CTRL);
     uint16_t intctrl = xm_getw(INT_CTRL);
@@ -144,16 +147,16 @@ void dump_xosera_regs(void)
     uint16_t pa_tilectrl = xreg_getw(PA_TILE_CTRL);
     uint16_t pa_dispaddr = xreg_getw(PA_DISP_ADDR);
     uint16_t pa_linelen  = xreg_getw(PA_LINE_LEN);
-    uint16_t pa_hscroll = xreg_getw(PA_H_SCROLL);
-    uint16_t pa_vscroll = xreg_getw(PA_V_SCROLL);
+    uint16_t pa_hscroll  = xreg_getw(PA_H_SCROLL);
+    uint16_t pa_vscroll  = xreg_getw(PA_V_SCROLL);
     uint16_t pa_hvfscale = xreg_getw(PA_HV_FSCALE);
 
     uint16_t pb_gfxctrl  = xreg_getw(PB_GFX_CTRL);
     uint16_t pb_tilectrl = xreg_getw(PB_TILE_CTRL);
     uint16_t pb_dispaddr = xreg_getw(PB_DISP_ADDR);
     uint16_t pb_linelen  = xreg_getw(PB_LINE_LEN);
-    uint16_t pb_hscroll = xreg_getw(PB_H_SCROLL);
-    uint16_t pb_vscroll = xreg_getw(PB_V_SCROLL);
+    uint16_t pb_hscroll  = xreg_getw(PB_H_SCROLL);
+    uint16_t pb_vscroll  = xreg_getw(PB_V_SCROLL);
     uint16_t pb_hvfscale = xreg_getw(PB_HV_FSCALE);
 
     dprintf("Xosera state:\n");
@@ -161,7 +164,8 @@ void dump_xosera_regs(void)
     dprintf("VERSION BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
     dprintf("GIT HASH    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
     dprintf("FEATURE     : 0x%04x\n", feature);
-    dprintf("MONITOR RES : %dx%d\n", monwidth, monheight);
+    dprintf(
+        "MONITOR RES : %dx%d MAX H/V POS : %d/%d AUDIO CHANS : %d\n", monwidth, monheight, maxhpos, maxvpos, audchannels);
     dprintf("\nConfig:\n");
     dprintf("SYS_CTRL    : 0x%04x  INT_CTRL    : 0x%04x\n", sysctrl, intctrl);
     dprintf("VID_CTRL    : 0x%04x  COPP_CTRL   : 0x%04x\n", vidctrl, coppctrl);
@@ -178,14 +182,12 @@ void dump_xosera_regs(void)
             pa_linelen,
             pb_dispaddr,
             pb_linelen);
-    dprintf("PA_H_SCROLL: 0x%04x   PA_V_FSCALE: 0x%04x   PB_H_SCROLL: 0x%04x   PB_V_FSCALE: 0x%04x\n",
+    dprintf("PA_H_SCROLL : 0x%04x  PA_V_SCROLL : 0x%04x  PB_H_SCROLL : 0x%04x  PB_V_SCROLL : 0x%04x\n",
             pa_hscroll,
             pa_vscroll,
             pb_hscroll,
             pb_vscroll);
-    dprintf("PA_HV_FSCALE: 0x%04x                        PB_HV_FSCALE: 0x%04x\n",
-            pa_hvfscale,
-            pb_hvfscale);
+    dprintf("PA_HV_FSCALE: 0x%04x                        PB_HV_FSCALE: 0x%04x\n", pa_hvfscale, pb_hvfscale);
     dprintf("\n\n");
 }
 
@@ -265,15 +267,22 @@ static bool load_sd_colors(const char * filename)
     }
 }
 
-void     xosera_splitscreen_test()
+void xosera_splitscreen_test()
 {
-    printf("\033c\033[?25l");        // ANSI reset, disable input cursor
-
     dprintf("Xosera_test_m68k\n");
-
-    // wait for monitor to unblank
-    dprintf("\nxosera_init(0)...");
-    bool success = xosera_init(0);
+    dprintf("Checking for Xosera XANSI firmware...");
+    if (xosera_xansi_detect(true))
+    {
+        dprintf("detected.\n");
+    }
+    else
+    {
+        dprintf(
+            "\n\nXosera XANSI firmware was not detected!\n"
+            "This program will likely trap without Xosera hardware.\n");
+    }
+    dprintf("xosera_init(XINIT_CONFIG_640x480)...");
+    bool success = xosera_init(XINIT_CONFIG_640x480);
     dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
     xosera_get_info(&initinfo);
     dump_xosera_regs();
@@ -392,7 +401,6 @@ void     xosera_splitscreen_test()
     xreg_setw(COPP_CTRL, 0x0000);
 
     // restore text mode
-    xosera_init(0);
-    xreg_setw(PA_GFX_CTRL, 0x0000);        // un-blank screen
-    print("\033c");                        // reset & clear
+    xosera_xansi_restore();
+    dprintf("Exit\n");
 }

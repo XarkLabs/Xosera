@@ -27,7 +27,7 @@ extern void xosera_font_test();
 
 void kmain()
 {
-    delay(5000);               // wait a bit for terminal window/serial
+    delay(1000 * 500);         // wait a bit for terminal window/serial
     while (checkchar())        // clear any queued input
     {
         readchar();

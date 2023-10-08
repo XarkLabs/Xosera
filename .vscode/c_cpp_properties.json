@@ -53,7 +53,7 @@
             "includePath": [
                 "${default}",
                 "${env:ROSCO_M68K_DIR}/code/software/libs/build/include",
-                "${workspaceFolder}/xosera_m68k_api"
+                "${workspaceFolder}/**"
             ],
             "defines": [
                 "ROSCO_M68K"

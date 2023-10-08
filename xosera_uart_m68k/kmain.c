@@ -23,14 +23,14 @@
 #include <basicio.h>
 #include <machine.h>
 
-extern void uart_test();
+extern void xosera_uart_test();
 
 void kmain()
 {
-    delay(15000);              // wait a bit for terminal window/serial
+    delay(1000 * 500);         // wait a bit for terminal window/serial
     while (checkchar())        // clear any queued input
     {
         readchar();
     }
-    uart_test();
+    xosera_uart_test();
 }

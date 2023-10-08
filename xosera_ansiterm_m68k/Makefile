@@ -1,19 +1,28 @@
 # Make Xosera test program for rosco_m68k
 #
+# vim: set noet ts=8 sw=8
 # Copyright (c) 2021 Xark
 # MIT LICENSE
-# vim: set noet ts=8 sw=8
 
--include $(ROSCO_M68K_DIR)/user.mk
+# Makefile "best practices" from https://tech.davis-hansson.com/p/make/ (but not forcing gmake)
+SHELL := bash
+.SHELLFLAGS := -eu -o pipefail -c
+.ONESHELL:
+.DELETE_ON_ERROR:
+MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --no-builtin-rules
 
-ifeq (, $(shell command -v m68k-elf-gcc))
+# check for rosco_m68k toolchain
+ifeq (, $(shell m68k-elf-gcc --version))
 $(info No m68k-elf-* build tools found in path)
 else
+# check for rosco_m68k build dir
 ifndef ROSCO_M68K_DIR
 $(info Please set ROSCO_M68K_DIR to the rosco_m68k directory to use for rosco_m68k building)
 endif
 endif
 
+# include special user rosco_m68k build riles
 -include $(ROSCO_M68K_DIR)/user.mk
 
 # NOTE: Uses "private" xosera_m68k_api.h (to be self-contained in firmware)
@@ -142,23 +151,24 @@ linuxterm:
 	-killall screen && sleep 1
 	gnome-terminal --geometry=80x25 --title="rosco_m68k $(SERIAL)" -- screen $(SERIAL) $(BAUD)
 
-# macOS: Upload binary with kermit, connect with "screen" terminal
-# (NOTE: kills existing "screen", opens new screen serial in new shell window/tab)
+# This is handy to test on MacOS (kills previous "screen", opens new one in shell window/tab)
 mactest: $(BINARY) $(DISASM)
-	-killall screen && sleep 1
+	-lsof -t $(SERIAL) | (read oldscreen ; [ ! -z "$$oldscreen" ] && kill -3 $$oldscreen ; sleep 1)
 	$(KERMIT) -i -l $(SERIAL) -b $(BAUD) -s $(BINARY)
 	echo "#! /bin/sh" > $(TMPDIR)/rosco_screen.sh
 	echo "/usr/bin/screen $(SERIAL) $(BAUD)" >> $(TMPDIR)/rosco_screen.sh
-	-chmod +x $(TMPDIR)/rosco_screen.sh
+	chmod +x $(TMPDIR)/rosco_screen.sh
 	sleep 1
 	open -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
 
+# This is handy to test on MacOS (kills previous "screen", opens new one in shell window/tab)
 macterm:
+	-lsof -t $(SERIAL) | (read oldscreen ; [ ! -z "$$oldscreen" ] && kill -3 $$oldscreen ; sleep 1)
 	echo "#! /bin/sh" > $(TMPDIR)/rosco_screen.sh
 	echo "/usr/bin/screen $(SERIAL) $(BAUD)" >> $(TMPDIR)/rosco_screen.sh
-	-chmod +x $(TMPDIR)/rosco_screen.sh
+	chmod +x $(TMPDIR)/rosco_screen.sh
 	sleep 1
-	open -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
+	open -n -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
 
 # Makefile magic (for "phony" targets that are not real files)
 .PHONY: all update clean disasm dump load linuxtest linuxterm mactest macterm

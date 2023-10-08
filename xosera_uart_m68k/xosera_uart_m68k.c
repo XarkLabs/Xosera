@@ -73,7 +73,7 @@ static void msg(char * msg)
     sendchar('\n');
 }
 
-void uart_test()
+void xosera_uart_test()
 {
     printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 

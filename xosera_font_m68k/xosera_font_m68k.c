@@ -85,7 +85,7 @@ static void reset_vid(void)
     xreg_setw(POINTER_H, 0x0000);
     xreg_setw(POINTER_V, 0x0000);
 
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, GFX_BPP_1, 0, 0, 0));
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, GFX_1_BPP, 0, 0, 0));
     xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(XR_TILE_ADDR, 0, 0, 16));
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_LINE_LEN, xosera_vid_width() / 8);
@@ -93,7 +93,7 @@ static void reset_vid(void)
     xreg_setw(PA_H_SCROLL, MAKE_H_SCROLL(0));
     xreg_setw(PA_V_SCROLL, MAKE_V_SCROLL(0, 0));
 
-    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 1, GFX_BPP_1, 0, 0, 0));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 1, GFX_1_BPP, 0, 0, 0));
     xreg_setw(PB_TILE_CTRL, MAKE_TILE_CTRL(XR_TILE_ADDR, 0, 0, 16));
     xreg_setw(PB_DISP_ADDR, 0x0000);
     xreg_setw(PB_LINE_LEN, xosera_vid_width() / 8);
@@ -388,26 +388,26 @@ void puts_1bpp(const char * str,
 
 void xosera_font_test()
 {
-    printf("\033c\033[?25l");        // ANSI reset, disable input cursor
+    dprintf("xosera_font_m68k\n");
 
-    dprintf("Xosera_test_m68k\n");
-
-    cpu_delay(1000);
-
-    dprintf("Calling xosera_sync()...");
-    bool success = xosera_sync();
-    dprintf("%s\n", success ? "detected" : "not-detected");
-
-    if (success && xosera_vid_width() != 640)
+    dprintf("Checking for Xosera XANSI firmware...");
+    if (xosera_xansi_detect(true))        // check for XANSI (and disable input cursor if present)
     {
-        dprintf("Calling xosera_init(0)...");
-        success = xosera_init(0);
-        dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
+        dprintf("detected.\n");
     }
+    else
+    {
+        dprintf(
+            "\n\nXosera XANSI firmware was not detected!\n"
+            "This program will likely trap without Xosera hardware.\n");
+    }
+    dprintf("Calling xosera_init(XINIT_CONFIG_640x480)...");
+    bool success = xosera_init(XINIT_CONFIG_640x480);
+    dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
     if (!success)
     {
-        dprintf("Exiting without Xosera init.\n");
+        dprintf("Exiting.\n");
         exit(1);
     }
 
@@ -424,28 +424,10 @@ void xosera_font_test()
         const uint16_t bitmap_vaddr = 0x0000;
         const uint16_t bitmap_width = 640 / 2 / 4;
 
-        xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0, 0, GFX_BPP_4, 1, GFX_2X, GFX_2X));
-        xreg_setw(PA_TILE_CTRL, 0x0007);
-        xreg_setw(PA_DISP_ADDR, bitmap_vaddr);
-        xreg_setw(PA_LINE_LEN, bitmap_width);
-        xreg_setw(PA_H_SCROLL, 0x0000);
-        xreg_setw(PA_V_SCROLL, 0x0000);
-        xreg_setw(PA_HV_FSCALE, 0x0000);
-        xreg_setw(PB_GFX_CTRL, 0x0080);
-
-        xwait_blit_ready();
-        // fill vram with 0x0000
-        xreg_setw(BLIT_CTRL, MAKE_BLIT_CTRL(0, 0, 0, 1));        // no transp, constS
-        xreg_setw(BLIT_ANDC, 0x0000);                            // ANDC constant
-        xreg_setw(BLIT_XOR, 0x0000);                             // XOR constant
-        xreg_setw(BLIT_MOD_S, 0x0000);                           // no modulo S
-        xreg_setw(BLIT_SRC_S, 0x0000);                           // A = grey color
-        xreg_setw(BLIT_MOD_D, 0x0000);                           // no modulo D
-        xreg_setw(BLIT_DST_D, 0x0000);                           // VRAM display end address
-        xreg_setw(BLIT_SHIFT, 0xFF00);                           // no edge masking or shifting
-        xreg_setw(BLIT_LINES, 0x0000);                           // 1D
-        xreg_setw(BLIT_WORDS, 0x10000 - 1);                      // 64KW VRAM
-        xwait_blit_done();
+        xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0, 0, GFX_4_BPP, 1, GFX_2X, GFX_2X));
+        xreg_setw_next(/* PA_TILE_CTRL, */ MAKE_TILE_CTRL(0x0000, 0, 0, 8));
+        xreg_setw_next(/* PA_DISP_ADDR, */ bitmap_vaddr);
+        xreg_setw_next(/* PA_LINE_LEN,  */ bitmap_width);
 
         // copy/swizzle font from TILE to VRAM
         make_1bpp_font(FONT_ST_8x8_ADDR, 8, 256, font_vaddr);

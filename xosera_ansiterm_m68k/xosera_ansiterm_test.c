@@ -342,10 +342,9 @@ static void ansiterm_testmenu()
 
 void xosera_ansiterm_test()
 {
-    cpu_delay(5000);
-    printf("\033cxosera_ansiterm_test started.\n\n");
+    dprintf("Xosera_ansiterm_test started.\n");
 #if INSTALL_XANSI
-    printf("\033[?25l");
+    xosera_xansi_detect(true);
     if (XANSI_CON_INIT())
     {
         printf("Xosera XANSI RAM console initialized.\n");

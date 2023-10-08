@@ -557,8 +557,8 @@ void xosera_modetest(void)
     bool syncok = xosera_sync();
     dprintf("%s\n\n", syncok ? "succeeded" : "FAILED");
 
-    dprintf("\nCalling xosera_init(0)...");
-    bool success = xosera_init(0);
+    dprintf("\nCalling xosera_init(XINIT_CONFIG_640x480)...");
+    bool success = xosera_init(XINIT_CONFIG_640x480);
     dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
     cpu_delay(1000);

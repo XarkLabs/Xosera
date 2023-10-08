@@ -26,14 +26,14 @@ entry
                 BRGE    draw_ball                                       ; skip erase before 1st draw
 
                 ; blank previous ball
-                MOVI    #$0001,XR_BLIT_CTRL                             ; no transp, constS
+                MOVI    #MAKE_BLIT_CTRL(0x00,0,0,1),XR_BLIT_CTRL        ; no transp, constS
                 MOVI    #$0000,XR_BLIT_ANDC                             ; ANDC constant
                 MOVI    #$0000,XR_BLIT_XOR                              ; XOR constant
                 MOVI    #$0000,XR_BLIT_MOD_S                            ; no modulo S
                 MOVI    #$0000,XR_BLIT_SRC_S                            ; blank ball
                 MOVI    #WIDTH_WORDS_B-BALL_TILES_WIDTH,XR_BLIT_MOD_D   ; modulo D
                 MOVM    ball_prev,XR_BLIT_DST_D                         ; previous ball position
-                MOVI    #$FF00,XR_BLIT_SHIFT                            ; no edge masking or shifting
+                MOVI    #MAKE_BLIT_SHIFT(0xF, 0xF, 0),XR_BLIT_SHIFT     ; no edge masking or shifting
                 MOVI    #BALL_TILES_HEIGHT-1,XR_BLIT_LINES              ; 2-D blit
                 MOVI    #BALL_TILES_WIDTH-1,XR_BLIT_WORDS               ; go!
 
@@ -42,19 +42,19 @@ draw_ball
                 MOVE    ball_dst,ball_prev
 
                 ; draw ball bitmap
-                MOVI    #$0000,XR_BLIT_CTRL                             ; no transp, no constS
+                MOVI    #MAKE_BLIT_CTRL(0x00,0,0,0),XR_BLIT_CTRL        ; no transp, no constS
                 MOVI    #$0000,XR_BLIT_ANDC                             ; ANDC constant
                 MOVI    #$0000,XR_BLIT_XOR                              ; XOR constant
                 MOVI    #$0000,XR_BLIT_MOD_S                            ; no modulo S
                 MOVI    #VRAM_BASE_BALL,XR_BLIT_SRC_S                   ; ball
                 MOVI    #WIDTH_WORDS_B-BALL_TILES_WIDTH,XR_BLIT_MOD_D   ; modulo D
                 MOVM    ball_dst,XR_BLIT_DST_D                          ; ball position
-                MOVI    #$FF00,XR_BLIT_SHIFT                            ; no edge masking or shifting
+                MOVI    #MAKE_BLIT_SHIFT(0xF, 0xF, 0),XR_BLIT_SHIFT     ; no edge masking or shifting
                 MOVI    #BALL_TILES_HEIGHT-1,XR_BLIT_LINES              ; 2-D blit
                 MOVI    #BALL_TILES_WIDTH-1,XR_BLIT_WORDS               ; go!
 
                 ; update playfield B XR registers
-                MOVI    #MAKE_GFX_CTRL(0x00,0,GFX_BPP_4,0,1,1),XR_PB_GFX_CTRL
+                MOVI    #MAKE_GFX_CTRL(0x00,0,GFX_4_BPP,0,GFX_1X,GFX_1X),XR_PB_GFX_CTRL
                 MOVM    ball_gfx_ctrl,XR_PB_GFX_CTRL
                 MOVM    ball_h_scroll,XR_PB_H_SCROLL
                 MOVM    ball_v_scroll,XR_PB_V_SCROLL

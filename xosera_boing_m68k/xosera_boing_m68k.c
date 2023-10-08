@@ -561,7 +561,7 @@ void draw_ball_at(int width_words, int height_words, int x, int y)
 
 void set_ball_colour(uint8_t colour_base)
 {
-    uint16_t gfx_ctrl = MAKE_GFX_CTRL(colour_base, 0, GFX_BPP_4, 0, 0, 0);
+    uint16_t gfx_ctrl = MAKE_GFX_CTRL(colour_base, 0, GFX_4_BPP, 0, 0, 0);
 #if USE_COPASM
     xmem_setw(XR_COPPER_ADDR + boing_copper__ball_gfx_ctrl, gfx_ctrl);
 #elif USE_COPMACROS
@@ -878,17 +878,24 @@ void copper_load_list(uint16_t length, uint16_t list[length], uint16_t base)
 
 void xosera_boing()
 {
-    cpu_delay(1000);
     dprintf("Xosera boing\n");
 
-    // re-initialize Xosera to current config
-    xosera_init(WIDESCREEN ? 1 : 0);
-    clear_vram();
+    dprintf("Checking for Xosera XANSI firmware...");
+    if (xosera_xansi_detect(true))        // check for XANSI (and disable input cursor if present)
+    {
+        dprintf("detected.\n");
+    }
+    else
+    {
+        dprintf(
+            "\n\nXosera XANSI firmware was not detected!\n"
+            "This program will likely trap without Xosera hardware.\n");
+    }
+    // initialize Xosera
+    xosera_init(WIDESCREEN ? XINIT_CONFIG_848x480 : XINIT_CONFIG_640x480);
 
     vid_hsize = xosera_vid_width();
-    clk_hz    = (vid_hsize > 640) ? 33750000 : 25125000;
-    // print ANSI codes to reset screen and disable cursor
-    printf("\033c\033[?25l");
+    clk_hz    = xosera_sample_hz();
     // set playfield A display address to VRAM 0x0000
     xreg_setw(PA_DISP_ADDR, 0);
     // set screen width to 640 (adjusting LEFT and RIGHT margins if in 848 mode)
@@ -908,8 +915,8 @@ void xosera_boing()
     do_tiles();
 
     xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 1, GFX_BPP_1, 1, 1, 1));
-    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 1, GFX_BPP_1, 1, 1, 1));
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 1, GFX_1_BPP, 1, 1, 1));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 1, GFX_1_BPP, 1, 1, 1));
 
 #if USE_AUDIO
     upload_audio();
@@ -1003,10 +1010,10 @@ void xosera_boing()
     float vel_phi = 2.0f;
 
     xwait_vblank();
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, GFX_BPP_1, 1, 1, 1));
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, GFX_1_BPP, 1, 1, 1));
     xreg_setw(PA_DISP_ADDR, VRAM_BASE_A);
 
-    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, GFX_BPP_4, 0, 0, 0));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, GFX_4_BPP, 0, 0, 0));
     xreg_setw(PB_TILE_CTRL, MAKE_TILE_CTRL(TILE_BASE_B, 0, 1, TILE_HEIGHT_B));
     xreg_setw(PB_DISP_ADDR, VRAM_BASE_B);
 
@@ -1100,6 +1107,6 @@ void xosera_boing()
     xreg_setw(PA_HV_FSCALE, 0x0000);
     xreg_setw(PB_GFX_CTRL, 0x0080);
 
-    printf("\033c");
+    xosera_xansi_restore();
     dprintf("Exit\n");
 }

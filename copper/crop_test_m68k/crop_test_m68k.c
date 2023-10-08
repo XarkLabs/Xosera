@@ -39,27 +39,36 @@ const uint16_t copper_list[] = {
     COP_END()                              // wait for next frame
 };
 
-static void msg(char * msg)
+static void dputs(char * msg)
 {
     char * s = msg;
     char   c;
     while ((c = *s++) != '\0')
     {
+        if (c == '\n')
+        {
+            sendchar('\r');
+        }
         sendchar(c);
     }
-    sendchar('\r');
-    sendchar('\n');
 }
 
 void xosera_crop_test()
 {
-    printf("\033c\033[?25l");        // ANSI reset, disable input cursor
-
-    msg("copper crop_test - set Xosera to 640x480");
-    msg("");
-    xosera_init(0);        // 640x480
-
-    xreg_setw(VID_CTRL, 0x0000);        // set border black
+    dputs("copper crop_test - set Xosera to 640x480\n\n");
+    dputs("Checking for Xosera XANSI firmware...");
+    if (xosera_xansi_detect(true))
+    {
+        dputs("detected.\n");
+    }
+    else
+    {
+        dputs(
+            "\n\nXosera XANSI firmware was not detected!\n"
+            "This program will likely trap without Xosera hardware.\n");
+    }
+    xosera_init(XINIT_CONFIG_640x480);        // 640x480
+    xreg_setw(VID_CTRL, 0x0000);              // set border black
 
     xmem_setw_next_addr(XR_COPPER_ADDR);
     for (uint8_t i = 0; i < (sizeof(copper_list) / sizeof(copper_list[0])); i++)
@@ -79,12 +88,12 @@ void xosera_crop_test()
     // enable Copper
     xreg_setw(COPP_CTRL, 0x8000);
 
-    msg("640x480 cropped to 640x400 - press a key");
+    dputs("640x480 cropped to 640x400 - press a key\n");
 
     // wait for a key (so prints don't mess up screen)
     readchar();
 
-    xosera_init(1);        // 848x480
+    xosera_init(XINIT_CONFIG_848x480);        // 848x480
 
     uint16_t width = xosera_vid_width();        // use read hsize (in case no 848 mode in FPGA)
 
@@ -109,14 +118,14 @@ void xosera_crop_test()
     xreg_setw(COPP_CTRL, 0x8000);
 
     // wait for a key (so prints don't mess up screen)
-    msg("848x480 cropped to 848x400 (oops!) - press a key");
+    dputs("848x480 cropped to 848x400 (oops!) - press a key\n");
     readchar();
 
     xreg_setw(VID_LEFT, (width - 640) / 2);
     xreg_setw(VID_RIGHT, width - ((width - 640) / 2));
 
     // wait for a key (so prints don't mess up screen)
-    msg("848x480 cropped to 848x400 with vid_left & vid_right window (ahh!) - press a key");
+    dputs("848x480 cropped to 848x400 with vid_left & vid_right window (ahh!) - press a key\n");
     readchar();
 
     xm_setw(WR_INCR, 0x0001);
@@ -126,7 +135,7 @@ void xosera_crop_test()
         for (int x = 0; x < 320 / 2; ++x)
             xm_setw(DATA, x == 0 || y == 0 || x == (320 / 2 - 1) || y == (200 - 1) ? 0x0f0f : 0x0404);
 
-    msg("848x480 cropped to 848x400 hammering line_len reg glitch test - press a key");
+    dputs("848x480 cropped to 848x400 hammering line_len reg glitch test - press a key\n");
     while (!checkchar())
     {
         for (int i = 0; i < 32768; i++)
@@ -146,12 +155,8 @@ void xosera_crop_test()
     // disable Copper
     xreg_setw(COPP_CTRL, 0x0000);
 
-    msg("exit...");
+    dputs("exit...\n");
 
     // restore text mode
-    xreg_setw(PA_LINE_LEN, width / 8);
-    xreg_setw(VID_LEFT, 0);
-    xreg_setw(VID_RIGHT, width);
-    xreg_setw(PA_GFX_CTRL, 0x0000);        // unblank screen
-    print("\033c");                        // reset & clear
+    xosera_xansi_restore();
 }

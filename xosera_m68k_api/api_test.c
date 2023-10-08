@@ -46,7 +46,7 @@ volatile uint32_t g32;
 void kmain(void)
 {
     xosera_sync();
-    xosera_init(0);
+    xosera_init(XINIT_CONFIG_640x480);
     xosera_get_info(&info);
     nop();
     xv_prep();

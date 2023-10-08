@@ -43,10 +43,6 @@
 #define TRUECOLOR_TEST_PIC 3
 #define SELF_PIC           4
 
-#if !defined(NUM_ELEMENTS)
-#define NUM_ELEMENTS(a) (sizeof(a) / sizeof(a[0]))
-#endif
-
 #include "xosera_m68k_api.h"
 
 extern void install_intr(void);
@@ -403,13 +399,13 @@ uint16_t cop_320x200_bin[] = {
 const uint16_t cop_320x200_size = NUM_ELEMENTS(cop_320x200_bin);
 
 #include "cop_diagonal.h"
-static_assert(NUM_ELEMENTS(cop_diagonal_bin) < XR_COPPER_SIZE, "copper list too long");
+_Static_assert(NUM_ELEMENTS(cop_diagonal_bin) < (XR_COPPER_SIZE << 1), "copper list too long");
 
 #include "cop_wavey.h"
-static_assert(NUM_ELEMENTS(cop_wavey_bin) < XR_COPPER_SIZE, "copper list too long");
+_Static_assert(NUM_ELEMENTS(cop_wavey_bin) < XR_COPPER_SIZE, "copper list too long");
 
 #include "cop_blend_test.h"
-static_assert(NUM_ELEMENTS(cop_blend_test_bin) < XR_COPPER_SIZE, "copper list too long");
+_Static_assert(NUM_ELEMENTS(cop_blend_test_bin) < XR_COPPER_SIZE, "copper list too long");
 
 #define COP_FLAG_HPOS (1 << 0)
 #define COP_FLAG_SINE (1 << 1)
@@ -768,7 +764,7 @@ static void reset_vid(void)
     xreg_setw(POINTER_H, 0x0000);
     xreg_setw(POINTER_V, 0x0000);
 
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, GFX_BPP_1, 0, 0, 0));
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, GFX_1_BPP, 0, 0, 0));
     xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(XR_TILE_ADDR, 0, 0, 16));
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_LINE_LEN, xosera_vid_width() / 8);
@@ -776,7 +772,7 @@ static void reset_vid(void)
     xreg_setw(PA_H_SCROLL, MAKE_H_SCROLL(0));
     xreg_setw(PA_V_SCROLL, MAKE_V_SCROLL(0, 0));
 
-    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 1, GFX_BPP_1, 0, 0, 0));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 1, GFX_1_BPP, 0, 0, 0));
     xreg_setw(PB_TILE_CTRL, MAKE_TILE_CTRL(XR_TILE_ADDR, 0, 0, 16));
     xreg_setw(PB_DISP_ADDR, 0x0000);
     xreg_setw(PB_LINE_LEN, xosera_vid_width() / 8);
@@ -2783,13 +2779,14 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 {
     if (num_audio_channels != 0)
     {
-        uint32_t clk_hz = xosera_vid_width() > 640 ? 33750000 : 25125000;
+        uint32_t clk_hz = xosera_sample_hz();
         uint16_t period = (clk_hz + rate - 1) / rate;
 
         uint16_t ic = xm_getbl(INT_CTRL);
         xm_setbl(INT_CTRL, INT_CTRL_CLEAR_ALL_F);
         uint16_t ic2 = xm_getw(INT_CTRL);
         dprintf("INT_CTRL:0x%04x -> 0x%04x\n", ic, ic2);
+        xreg_setw(AUD_CTRL, 0x0001);
 
         for (int v = 0; v < num_audio_channels; v++)
         {
@@ -2840,6 +2837,7 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
         }
 
         play_silence();
+        xreg_setw(AUD_CTRL, 0x0000);
     }
     else
     {
@@ -3042,18 +3040,22 @@ void     xosera_test()
 {
     xv_prep();
 
-    printf("\033c\033[?25l");        // ANSI reset, disable input cursor
-
     dprintf("Xosera_test_m68k\n");
 
-    cpu_delay(1000);
+    dprintf("Checking for Xosera XANSI firmware...");
+    if (xosera_xansi_detect(true))        // check for XANSI (and disable input cursor if present)
+    {
+        dprintf("detected.\n");
+    }
+    else
+    {
+        dprintf(
+            "\n\nXosera XANSI firmware was not detected!\n"
+            "This program will likely trap without Xosera hardware.\n");
+    }
 
-    dprintf("Calling xosera_sync()...");
-    bool syncok = xosera_sync();
-    dprintf("%s\n", syncok ? "detected" : "not-detected");
-
-    dprintf("Calling xosera_init(0)...");
-    bool success = xosera_init(0);
+    dprintf("Calling xosera_init(XINIT_CONFIG_640x480)...");
+    bool success = xosera_init(XINIT_CONFIG_640x480);
     dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
     if (!success)

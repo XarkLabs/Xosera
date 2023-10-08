@@ -92,6 +92,18 @@ static void dprintf(const char * fmt, ...)
 void xosera_copper_test()
 {
     dprintf("Xosera_copper_test\n");
+    dprintf("Checking for Xosera XANSI firmware...");
+    if (xosera_xansi_detect(true))
+    {
+        dprintf("detected.\n");
+    }
+    else
+    {
+        dprintf(
+            "\n\nXosera XANSI firmware was not detected!\n"
+            "This program will likely trap without Xosera hardware.\n");
+    }
+    xv_prep();
 
 #if SHOW_BARS
     xmem_setw_next_addr(color_bar_table_start);
@@ -129,4 +141,6 @@ void xosera_copper_test()
     dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
     dprintf("PA_H_SCROLL : 0x%04x  PA_V_SCROLL : 0x%04x\n", hscroll, vscroll);
     dprintf("PA_HV_FSCALE: 0x%04x\n", hvfscale);
+
+    delay(15000);
 }

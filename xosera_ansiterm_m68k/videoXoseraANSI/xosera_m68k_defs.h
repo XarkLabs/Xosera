@@ -12,7 +12,7 @@
  *    adapter for a more civilized age."
  *
  * ------------------------------------------------------------
- * Copyright (c) 2021-2022 Xark
+ * Copyright (c) 2021-2023 Xark
  * MIT License
  *
  * Xosera rosco_m68k C register definition header file
@@ -32,13 +32,13 @@
 #endif
 
 // Xosera XR Memory Regions (size in 16-bit words)
-#define XR_CONFIG_REGS  0x0000        // 0x0000-0x000F 16 config/ctrl registers
-#define XR_PA_REGS      0x0010        // 0x0010-0x0017 8 playfield A video registers
-#define XR_PB_REGS      0x0018        // 0x0018-0x001F 8 playfield B video registers
-#define XR_AUDIO_REGS   0x0020        // 0x0020-0x002F 16 audio playback registers
-#define XR_BLIT_REGS    0x0040        // 0x0040-0x004B 10 blitter registers
+#define XR_CONFIG_REGS  0x0000        // (R/W) 0x0000-0x0007 8 config/ctrl registers
+#define XR_PA_REGS      0x0010        // (R/W) 0x0010-0x0017 8 playfield A video registers
+#define XR_PB_REGS      0x0018        // (R/W) 0x0018-0x001F 8 playfield B video registers
+#define XR_AUDIO_REGS   0x0020        // (-/W) 0x0020-0x002F 16 audio playback registers
+#define XR_BLIT_REGS    0x0040        // (-/W) 0x0040-0x0049 10 blitter registers
 #define XR_TILE_ADDR    0x4000        // (R/W) 0x4000-0x53FF tile glyph/tile map memory
-#define XR_TILE_SIZE    0x1400        //                     5120 x 16-bit tile glyph/tile map memory
+#define XR_TILE_SIZE    0x1400        //                     4096+1024 x 16-bit tile glyph/tile map memory
 #define XR_COLOR_ADDR   0x8000        // (R/W) 0x8000-0x81FF 2 x A & B color lookup memory
 #define XR_COLOR_SIZE   0x0200        //                     2 x 256 x 16-bit words (0xARGB)
 #define XR_COLOR_A_ADDR 0x8000        // (R/W) 0x8000-0x80FF A 256 entry color lookup memory
@@ -49,6 +49,16 @@
 #define XR_POINTER_SIZE 0x0100        //                     256 x 16-bit words (4-bit pixels)
 #define XR_COPPER_ADDR  0xC000        // (R/W) 0xC000-0xC5FF copper memory (16-bit words)
 #define XR_COPPER_SIZE  0x0600        //                     1024+512 x 16-bit copper memory words
+
+// Default 1-bpp font glyphs in TILE memory (total 0x1400 words)
+#define FONT_ST_8x16_ADDR (XR_TILE_ADDR + 0x0000)
+#define FONT_ST_8x16_SIZE 0x800
+#define FONT_ST_8x8_ADDR  (XR_TILE_ADDR + 0x0800)
+#define FONT_ST_8x8_SIZE  0x400
+#define FONT_PC_8x8_ADDR  (XR_TILE_ADDR + 0x0C00)
+#define FONT_PC_8x8_SIZE  0x400
+#define FONT_HEX_8x8_ADDR (XR_TILE_ADDR + 0x1000)
+#define FONT_HEX_8x8_SIZE 0x400
 
 // Xosera version info put in COPPER memory after FPGA reconfigure
 #define XV_INFO_BYTES 256        // 256 bytes total for "struct _xosera_info" (last 128 words in copper memory)
@@ -76,7 +86,7 @@
 #define XM_PIXEL_X  0x30        // (- /W+) pixel X coordinate / setup pixel base address
 #define XM_PIXEL_Y  0x34        // (- /W+) pixel Y coordinate / setup pixel line width
 #define XM_UART     0x38        // (R+/W+) optional debug USB UART communication
-#define XM_FEATURE  0x3C        // (R /W+) Xosera feature flags
+#define XM_FEATURE  0x3C        // (R /- ) Xosera feature flags
 #else
 // Xosera Main 16-bit Registers (directly accessable XM Registers)
 #define XM_SYS_CTRL 0x00        // (R /W+) [15:8] status bits, write setup PIXEL_X/Y & options, [7:0] write masking
@@ -94,7 +104,7 @@
 #define XM_PIXEL_X  0x0C        // (- /W+) pixel X coordinate / setup pixel base address
 #define XM_PIXEL_Y  0x0D        // (- /W+) pixel Y coordinate / setup pixel line width
 #define XM_UART     0x0E        // (R+/W+) optional debug USB UART communication
-#define XM_FEATURE  0x0F        // (R /W+) Xosera feature flags, write sets pixel base, width to X, Y and mask mode
+#define XM_FEATURE  0x0F        // (R /- ) Xosera feature flags, write sets pixel base, width to X, Y and mask mode
 #endif
 // XR Extended Register / Region (accessed via XM_RD_XADDR/XM_WR_XADDR and XM_XDATA)
 //  Video Config and Copper XR Registers
@@ -291,10 +301,13 @@
 #define COPP_CTRL_COPP_EN_W 1             // 1 bit
 #define COPP_CTRL_COPP_EN_F 0x8000        // flag to enable/disable copper
 // XR_AUD_CTRL bit definitions
-#define AUD_CTRL_AUD_EN_B 0             // bit number to enable/disable audio
-#define AUD_CTRL_AUD_EN_W 1             // 1 bit
-#define AUD_CTRL_AUD_EN_F 0x0001        // flag to enable/disable audio
+#define AUDIO_PERIOD_HZ_640 25125000        // sample main clock in 640x480 video mode
+#define AUDIO_PERIOD_HZ_848 33750000        // sample main clock in 848x480 video mode
+#define AUD_CTRL_AUD_EN_B   0               // bit number to enable/disable audio
+#define AUD_CTRL_AUD_EN_W   1               // 1 bit
+#define AUD_CTRL_AUD_EN_F   0x0001          // flag to enable/disable audio
 // XR_POINTER_H/XR_POINTER_V
+#define POINTER_H_OFFSET     6             // native pixel "head-start" subtracted from raw H pos
 #define POINTER_H_B          0             // pointer sprite raw H position
 #define POINTER_H_W          12            // pointer sprite raw H position
 #define POINTER_H_F          0x0FFF        // pointer sprite raw H position
@@ -304,11 +317,12 @@
 #define POINTER_V_B          0             // pointer raw V position
 #define POINTER_V_W          12            // pointer raw V position
 #define POINTER_V_F          0x0FFF        // pointer raw V position
+
 // XR_Px_GFX_CTRL constants
-#define GFX_BPP_1 0        // 1-bpp (2 colors + selected via fore/back color attribute byte)
-#define GFX_BPP_4 1        // 4-bpp (16 colors)
-#define GFX_BPP_8 2        // 8-bpp (256 colors)
-#define GFX_BPP_X 3        // (reserved)
+#define GFX_1_BPP 0        // 1-bpp (2 colors + selected via fore/back color attribute byte)
+#define GFX_4_BPP 1        // 4-bpp (16 colors)
+#define GFX_8_BPP 2        // 8-bpp (256 colors)
+#define GFX_X_BPP 3        // (reserved)
 #define GFX_1X    0        // H/V repeat x1
 #define GFX_2X    1        // H/V repeat x2
 #define GFX_3X    2        // H/V repeat x3
@@ -423,23 +437,12 @@
 #define MODE_848x480_TOTAL_V  517                                            // total vpos height
 #define MODE_848x480_LEFTEDGE (MODE_848x480_TOTAL_H - MODE_848x480_H)        // offscreen hpos pixels
 
-// Default fonts in TILE memory
-#define FONT_ST_8x16_ADDR (XR_TILE_ADDR + 0x0000)
-#define FONT_ST_8x16_SIZE 0x800
-#define FONT_ST_8x8_ADDR  (XR_TILE_ADDR + 0x0800)
-#define FONT_ST_8x8_SIZE  0x400
-#define FONT_PC_8x8_ADDR  (XR_TILE_ADDR + 0x0C00)
-#define FONT_ST_8x8_SIZE  0x400
-#define FONT_HEX_8x8_ADDR (XR_TILE_ADDR + 0x1000)
-#define FONT_HEX_8x8_SIZE 0x400
+// Macros to help create values for registers with multiple fields
 
-// Macros for bit-fields: right_bit, bit_width, E.g., XB_(V,8,4) would put V into bits [11:8] (excess bits truncated)
-// encode value into bit-field for register
-#define XB_(v, right_bit, bit_width) (((X_CASTU16(v)) & ((1 << (bit_width)) - 1)) << (right_bit))
-// decode bit-field from register into value
-#define XV_(v, right_bit, bit_width) (((X_CASTU16(v)) >> (right_bit)) & ((1 << (bit_width)) - 1))
-
-// macros to create values for registers with bit fields
+// uint16_t XB_(uint16_t val, rightmost_bit, bit_width) - encode bit-field (e.g., XB_(v,8,4) puts v in bits [11:8])
+#define XB_(val, rightmost_bit, bit_width) (((X_CASTU16(val)) & ((1 << (bit_width)) - 1)) << (rightmost_bit))
+// uint16_t XV_(uint16_t rval, rightmost_bit, bit_width) - decode bit-field (e.g., XV_(rv,8,4) extracts bits [11:8])
+#define XV_(val, rightmost_bit, bit_width) (((X_CASTU16(val)) >> (rightmost_bit)) & ((1 << (bit_width)) - 1))
 
 // MAKE_GFX_CTRL(colorbase, blank, bpp, bitmap, hx, vx) - make GFX_CTRL reg value
 #define MAKE_GFX_CTRL(colorbase, blanked, bpp, bitmap, hrepeat, vrepeat)                                               \

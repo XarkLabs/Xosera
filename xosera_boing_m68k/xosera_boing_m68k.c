@@ -627,10 +627,12 @@ void play_audio(uint16_t pos_x)
     xreg_setw(AUD0_VOL + vo, wvol);
     xreg_setw(AUD0_PERIOD + vo, period);
     xreg_setw(AUD0_LENGTH + vo, wordsize);
-    xreg_setw(AUD0_START + vo, VRAM_AUDIO_BASE + VRAM_SILENCE_LEN);
-    xreg_setw(AUD0_PERIOD + vo, period | 0x8000);             // force new sound start immediately
-    xreg_setw(AUD0_LENGTH + vo, VRAM_SILENCE_LEN - 1);        // queue silence sample to play next
     xreg_setw(AUD0_START + vo, VRAM_AUDIO_BASE);
+    xreg_setw(AUD0_LENGTH + vo, wordsize);
+    xreg_setw(AUD0_START + vo, VRAM_AUDIO_BASE);
+    xreg_setw(AUD0_PERIOD + vo, period | 0x8000);             // force new sound start immediately
+    xreg_setw(AUD0_START + vo, VRAM_AUDIO_BASE + VRAM_SILENCE_LEN);
+    xreg_setw(AUD0_LENGTH + vo, VRAM_SILENCE_LEN - 1);        // queue silence sample to play next
 }
 #endif
 

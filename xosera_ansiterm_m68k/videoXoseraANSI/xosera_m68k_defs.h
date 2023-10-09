@@ -180,35 +180,35 @@
 
 // Xosera register bits and constants
 
-// SYS_CTRL bit definitions (NOTE: in high/even byte of SYS_CTRL word for faster access with without an offset)
-#define SYS_CTRL_MEM_WAIT_B    7           // (R /- )  memory read/write operation pending (with contended memory)
-#define SYS_CTRL_MEM_WAIT_W    1           // (R /- )  memory read/write operation pending (with contended memory)
-#define SYS_CTRL_MEM_WAIT_F    0x80        // (R /- )  memory read/write operation pending (with contended memory)
-#define SYS_CTRL_BLIT_FULL_B   6        // (R /- )  blitter queue is full, do not write new operation to blitter registers
-#define SYS_CTRL_BLIT_FULL_W   1        // (R /- )  blitter queue is full, do not write new operation to blitter registers
-#define SYS_CTRL_BLIT_FULL_F   0x40        // (R /- )  blitter queue is full (do not write to blitter registers)
-#define SYS_CTRL_BLIT_BUSY_B   5           // (R /- )  blitter is still busy performing an operation (not done)
-#define SYS_CTRL_BLIT_BUSY_W   1           // (R /- )  blitter is still busy performing an operation (not done)
-#define SYS_CTRL_BLIT_BUSY_F   0x20        // (R /- )  blitter is still busy performing an operation (not done)
-#define SYS_CTRL_UNUSED_12_B   4           // (R /- )  unused (reads 0)
-#define SYS_CTRL_UNUSED_12_W   1           // (R /- )  unused (reads 0)
-#define SYS_CTRL_UNUSED_12_F   0x10        // (R /- )  unused (reads 0)
-#define SYS_CTRL_HBLANK_B      3           // (R /- )  video signal is in horizontal blank period
-#define SYS_CTRL_HBLANK_W      1           // (R /- )  video signal is in horizontal blank period
-#define SYS_CTRL_HBLANK_F      0x08        // (R /- )  video signal is in horizontal blank period
-#define SYS_CTRL_VBLANK_B      2           // (R /- )  video signal is in vertical blank period
-#define SYS_CTRL_VBLANK_W      1           // (R /- )  video signal is in vertical blank period
-#define SYS_CTRL_VBLANK_F      0x04        // (R /- )  video signal is in vertical blank period
-#define SYS_CTRL_PIX_NO_MASK_B 1           // (R /W )  PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
-#define SYS_CTRL_PIX_NO_MASK_W 1           // (R /W )  PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
-#define SYS_CTRL_PIX_NO_MASK_F 0x02        // (R /W )  PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
-#define SYS_CTRL_PIX_8B_MASK_B 0           // (R /W )  PIXEL_X/Y 8-bit pixel mask for WR_MASK
-#define SYS_CTRL_PIX_8B_MASK_W 1           // (R /W )  PIXEL_X/Y 8-bit pixel mask for WR_MASK
-#define SYS_CTRL_PIX_8B_MASK_F 0x01        // (R /W )  PIXEL_X/Y 8-bit pixel mask for WR_MASK
-// SYS_CTRL WR_MASK bit definitions (NOTE: in low/odd byte of SYS_CTRL word)
-#define SYS_CTRL_WR_MASK_B 0
-#define SYS_CTRL_WR_MASK_W 4
-#define SYS_CTRL_WR_MASK_F 0x0F
+// SYS_CTRL bit definitions (NOTE: in high/even byte, use xm_getbh(SYS_CTRL) to check)
+#define SYS_CTRL_MEM_WAIT_B    7           // (R /- ) memory read/write operation pending (with contended memory)
+#define SYS_CTRL_MEM_WAIT_W    1           // (R /- ) memory read/write operation pending (with contended memory)
+#define SYS_CTRL_MEM_WAIT_F    0x80        // (R /- ) memory read/write operation pending (with contended memory)
+#define SYS_CTRL_BLIT_FULL_B   6           // (R /- ) blitter queue is full, do not write to blitter registers
+#define SYS_CTRL_BLIT_FULL_W   1           // (R /- ) blitter queue is full, do not write to blitter registers
+#define SYS_CTRL_BLIT_FULL_F   0x40        // (R /- ) blitter queue is full (do not write to blitter registers)
+#define SYS_CTRL_BLIT_BUSY_B   5           // (R /- ) blitter is still busy performing an operation (not done)
+#define SYS_CTRL_BLIT_BUSY_W   1           // (R /- ) blitter is still busy performing an operation (not done)
+#define SYS_CTRL_BLIT_BUSY_F   0x20        // (R /- ) blitter is still busy performing an operation (not done)
+#define SYS_CTRL_UNUSED_12_B   4           // (R /- ) unused (reads 0)
+#define SYS_CTRL_UNUSED_12_W   1           // (R /- ) unused (reads 0)
+#define SYS_CTRL_UNUSED_12_F   0x10        // (R /- ) unused (reads 0)
+#define SYS_CTRL_HBLANK_B      3           // (R /- ) video signal is in horizontal blank period
+#define SYS_CTRL_HBLANK_W      1           // (R /- ) video signal is in horizontal blank period
+#define SYS_CTRL_HBLANK_F      0x08        // (R /- ) video signal is in horizontal blank period
+#define SYS_CTRL_VBLANK_B      2           // (R /- ) video signal is in vertical blank period
+#define SYS_CTRL_VBLANK_W      1           // (R /- ) video signal is in vertical blank period
+#define SYS_CTRL_VBLANK_F      0x04        // (R /- ) video signal is in vertical blank period
+#define SYS_CTRL_PIX_NO_MASK_B 1           // (R /W ) PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
+#define SYS_CTRL_PIX_NO_MASK_W 1           // (R /W ) PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
+#define SYS_CTRL_PIX_NO_MASK_F 0x02        // (R /W ) PIXEL_X/Y won't set WR_MASK (low two bits of PIXEL_X ignored)
+#define SYS_CTRL_PIX_8B_MASK_B 0           // (R /W ) PIXEL_X/Y 8-bit pixel mask for WR_MASK
+#define SYS_CTRL_PIX_8B_MASK_W 1           // (R /W ) PIXEL_X/Y 8-bit pixel mask for WR_MASK
+#define SYS_CTRL_PIX_8B_MASK_F 0x01        // (R /W ) PIXEL_X/Y 8-bit pixel mask for WR_MASK
+// SYS_CTRL WR_MASK nibble mask (NOTE: in low/odd byte, can use xm_setbl(SYS_CTRL, mask) to set as other bits unused)
+#define SYS_CTRL_WR_MASK_B 0           // (R /W ) WR_MASK nibble write enable for VRAM write from host CPU
+#define SYS_CTRL_WR_MASK_W 4           // (R /W ) WR_MASK nibble write enable for VRAM write from host CPU
+#define SYS_CTRL_WR_MASK_F 0x0F        // (R /W ) WR_MASK nibble write enable for VRAM write from host CPU
 // INT_CTRL bit definitions
 #define INT_CTRL_RECONFIG_B   15            // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
 #define INT_CTRL_RECONFIG_W   1             // reconfigure FPGA to config # in bits [9:8] of INT_CTRL
@@ -301,11 +301,9 @@
 #define COPP_CTRL_COPP_EN_W 1             // 1 bit
 #define COPP_CTRL_COPP_EN_F 0x8000        // flag to enable/disable copper
 // XR_AUD_CTRL bit definitions
-#define AUDIO_PERIOD_HZ_640 25125000        // sample main clock in 640x480 video mode
-#define AUDIO_PERIOD_HZ_848 33750000        // sample main clock in 848x480 video mode
-#define AUD_CTRL_AUD_EN_B   0               // bit number to enable/disable audio
-#define AUD_CTRL_AUD_EN_W   1               // 1 bit
-#define AUD_CTRL_AUD_EN_F   0x0001          // flag to enable/disable audio
+#define AUD_CTRL_AUD_EN_B 0             // bit number to enable/disable audio
+#define AUD_CTRL_AUD_EN_W 1             // 1 bit
+#define AUD_CTRL_AUD_EN_F 0x0001        // flag to enable/disable audio
 // XR_POINTER_H/XR_POINTER_V
 #define POINTER_H_OFFSET     6             // native pixel "head-start" subtracted from raw H pos
 #define POINTER_H_B          0             // pointer sprite raw H position
@@ -317,7 +315,6 @@
 #define POINTER_V_B          0             // pointer raw V position
 #define POINTER_V_W          12            // pointer raw V position
 #define POINTER_V_F          0x0FFF        // pointer raw V position
-
 // XR_Px_GFX_CTRL constants
 #define GFX_1_BPP 0        // 1-bpp (2 colors + selected via fore/back color attribute byte)
 #define GFX_4_BPP 1        // 4-bpp (16 colors)
@@ -430,12 +427,14 @@
 #define MODE_640x480_TOTAL_H  800                                            // total hpos width
 #define MODE_640x480_TOTAL_V  525                                            // total vpos height
 #define MODE_640x480_LEFTEDGE (MODE_640x480_TOTAL_H - MODE_640x480_H)        // offscreen hpos pixels
+#define AUDIO_PERIOD_HZ_640   25125000                                       // sample main clock in 640x480 video mode
 // Video mode 848x480 constants (16:9 aspect ratio)
 #define MODE_848x480_H        848                                            // visible width
 #define MODE_848x480_V        480                                            // visible height
 #define MODE_848x480_TOTAL_H  1088                                           // total hpos width
 #define MODE_848x480_TOTAL_V  517                                            // total vpos height
 #define MODE_848x480_LEFTEDGE (MODE_848x480_TOTAL_H - MODE_848x480_H)        // offscreen hpos pixels
+#define AUDIO_PERIOD_HZ_848   33750000                                       // sample main clock in 848x480 video mode
 
 // Macros to help create values for registers with multiple fields
 
@@ -444,6 +443,27 @@
 // uint16_t XV_(uint16_t rval, rightmost_bit, bit_width) - decode bit-field (e.g., XV_(rv,8,4) extracts bits [11:8])
 #define XV_(val, rightmost_bit, bit_width) (((X_CASTU16(val)) >> (rightmost_bit)) & ((1 << (bit_width)) - 1))
 
+// MAKE_INT_CTRL(e_bl, e_ti, e_vi, e_a3, e_a2, e_a1, e_a0, a_bl, a_ti, a_vi, a_a3, a_a2, a_a1, a_a0) - make INT_CTRL
+#define MAKE_INT_CTRL(e_bl, e_ti, e_vi, e_a3, e_a2, e_a1, e_a0, a_bl, a_ti, a_vi, a_a3, a_a2, a_a1, a_a0)              \
+    (XB_(e_bl, INT_CTRL_BLIT_EN_B, INT_CTRL_BLIT_EN_W) | XB_(e_ti, INT_CTRL_TIMER_EN_B, INT_CTRL_TIMER_EN_W) |         \
+     XB_(e_vi, INT_CTRL_VIDEO_EN_B, INT_CTRL_VIDEO_EN_W) | XB_(e_a3, INT_CTRL_AUD3_EN_B, INT_CTRL_AUD3_EN_W) |         \
+     XB_(e_a2, INT_CTRL_AUD2_EN_B, INT_CTRL_AUD2_EN_W) | XB_(e_a1, INT_CTRL_AUD1_EN_B, INT_CTRL_AUD1_EN_W) |           \
+     XB_(e_a0, INT_CTRL_AUD0_EN_B, INT_CTRL_AUD0_EN_W) | XB_(a_bl, INT_CTRL_BLIT_INTR_B, INT_CTRL_BLIT_INTR_W) |       \
+     XB_(a_ti, INT_CTRL_TIMER_INTR_B, INT_CTRL_TIMER_EN_W) | XB_(a_vi, INT_CTRL_VIDEO_INTR_B, INT_CTRL_VIDEO_INTR_W) | \
+     XB_(a_a3, INT_CTRL_AUD3_INTR_B, INT_CTRL_AUD3_EN_W) | XB_(a_a2, INT_CTRL_AUD2_INTR_B, INT_CTRL_AUD2_INTR_W) |     \
+     XB_(a_a1, INT_CTRL_AUD1_INTR_B, INT_CTRL_AUD1_EN_W) | XB_(a_a0, INT_CTRL_AUD0_INTR_B, INT_CTRL_AUD0_INTR_W))
+// MAKE_VID_CTRL(swap_ab, bordercolor) - make VID_CTRL reg value
+#define MAKE_VID_CTRL(swap_ab, bordercolor)                                                                            \
+    (XB_(swap_ab, VID_CTRL_SWAP_AB_B, VID_CTRL_SWAP_AB_W) | XB_(bordercolor, VID_CTRL_BORDCOL_B, VID_CTRL_BORDCOL_W))
+// MAKE_COPP_CTRL(copper_enable) - make COPP_CTRL reg value
+#define MAKE_COPP_CTRL(copper_enable) (XB_(copper_enable, COPP_CTRL_COPP_EN_B, COPP_CTRL_COPP_EN_W))
+// MAKE_AUD_CTRL(audio_enable) - make MAKE_AUD_CTRL reg value
+#define MAKE_AUD_CTRL(audio_enable) (XB_(audio_enable, AUD_CTRL_AUD_EN_B, AUD_CTRL_AUD_EN_W))
+// MAKE_POINTER_H(h_pos) - make POINTER_H reg value
+#define MAKE_POINTER_H(h_pos) ((h_pos) & POINTER_H_F)
+// MAKE_POINTER_V(colorsel, v_pos) - make POINTER_H reg value
+#define MAKE_POINTER_V(colorsel, v_pos)                                                                                \
+    (XB_(tilemem, POINTER_V_COLORSEL_B, POINTER_V_COLORSEL_W) | (v_pos) & POINTER_V_F)
 // MAKE_GFX_CTRL(colorbase, blank, bpp, bitmap, hx, vx) - make GFX_CTRL reg value
 #define MAKE_GFX_CTRL(colorbase, blanked, bpp, bitmap, hrepeat, vrepeat)                                               \
     (XB_(colorbase, GFX_CTRL_COLORBASE_B, GFX_CTRL_COLORBASE_W) | XB_(blanked, GFX_CTRL_BLANK_B, GFX_CTRL_BLANK_W) |   \
@@ -454,28 +474,20 @@
     (((tile_addr) & TILE_CTRL_TILEBASE_F) | XB_(map_in_tilemem, TILE_CTRL_DISP_TILEMEM_B, TILE_CTRL_DISP_TILEMEM_W) |  \
      XB_(tile_in_vram, TILE_CTRL_TILE_VRAM_B, TILE_CTRL_TILE_VRAM_W) |                                                 \
      XB_(((tile_height)-1), TILE_CTRL_TILE_H_B, TILE_CTRL_TILE_H_W))
+// MAKE_HV_FSCALE(h_frac, v_frac) - make HV_FSCALE reg value
+#define MAKE_HV_FSCALE(h_frac, v_frac)                                                                                 \
+    (XB_(h_frac, HV_FSCALE_H_FRAC_B, HV_FSCALE_H_FRAC_W) | XB_(v_frac, HV_FSCALE_V_FRAC_B, HV_FSCALE_V_FRAC_W))
 // MAKE_H_SCROLL(h_scrl) (XB_(h_scrl, H_SCROLL_FINE_B, H_SCROLL_FINE_W)) - make H_SCROLL reg value
 #define MAKE_H_SCROLL(h_scroll) (XB_(h_scroll, H_SCROLL_FINE_B, H_SCROLL_FINE_W))
 // MAKE_V_SCROLL(repeat_scrl, tileline_scrl) - make V_SCROLL reg value
 #define MAKE_V_SCROLL(vrepeat_scrl, tileline_scrl)                                                                     \
     (XB_(vrepeat_scrl, V_SCROLL_FINE_B, V_SCROLL_FINE_W) | XB_(tileline_scrl, V_SCROLL_TILE_B, V_SCROLL_TILE_W))
-// MAKE_VID_CTRL(swap_ab, bordercolor) - make VID_CTRL reg value
-#define MAKE_VID_CTRL(swap_ab, bordercolor)                                                                            \
-    (XB_(swap_ab, VID_CTRL_SWAP_AB_B, VID_CTRL_SWAP_AB_W) | XB_(bordercolor, VID_CTRL_BORDCOL_B, VID_CTRL_BORDCOL_W))
 // MAKE_AUD_PERIOD(restart, period) - make AUDn_PERIOD reg value
 #define MAKE_AUD_PERIOD(restart, period)                                                                               \
     (XB_(restart, AUD_PERIOD_RESTART_B, AUD_PERIOD_RESTART_W) | ((period) & AUD_PERIOD_F))
 // MAKE_AUD_LENGTH(tilemem, length) - make AUDn_LENGTH reg value
 #define MAKE_AUD_LENGTH(tilemem, length)                                                                               \
     (XB_(tilemem, AUD_LENGTH_TILEMEM_B, AUD_LENGTH_TILEMEM_W) | ((length) & AUD_LENGTH_F))
-// MAKE_POINTER_H(h_pos) - make POINTER_H reg value
-#define MAKE_POINTER_H(h_pos) ((h_pos) & POINTER_H_F)
-// MAKE_POINTER_V(colorsel, v_pos) - make POINTER_H reg value
-#define MAKE_POINTER_V(colorsel, v_pos)                                                                                \
-    (XB_(tilemem, POINTER_V_COLORSEL_B, POINTER_V_COLORSEL_W) | (v_pos) & POINTER_V_F)
-// MAKE_HV_FSCALE(h_frac, v_frac) - make HV_FSCALE reg value
-#define MAKE_HV_FSCALE(h_frac, v_frac)                                                                                 \
-    (XB_(h_frac, HV_FSCALE_H_FRAC_B, HV_FSCALE_H_FRAC_W) | XB_(v_frac, HV_FSCALE_V_FRAC_B, HV_FSCALE_V_FRAC_W))
 // MAKE_BLIT_CTRL(transp_value, transp_8bit, transp_test, s_const) - make BLIT_CTRL reg value
 #define MAKE_BLIT_CTRL(transp_value, transp_8bit, transp_test, s_const)                                                \
     (XB_(transp_value, BLIT_CTRL_TRANSPVAL_B, BLIT_CTRL_TRANSPVAL_W) |                                                 \
@@ -498,24 +510,23 @@
 #define COP_RA_CMP 0x7FF        // copper address for set B if RA < writeval
 // copper instructions
 #define COP_SETI(d_xadr14, i_val16)  (X_CASTU16 0x0000 | (X_CASTU16(d_xadr14) & 0xCFFF)), (X_CASTU16(i_val16))
-#define COP_SETM(d_xadr16, s_cadr12) (X_CASTU16 0xD000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(d_xadr16))
+#define COP_SETM(d_xadr16, s_cadr12) (X_CASTU16 0x1000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(d_xadr16))
+#define COP_MOVI(i_val16, d_xadr14)  (X_CASTU16 0x0000 | (X_CASTU16(d_xadr14) & 0xCFFF)), (X_CASTU16(i_val16))
+#define COP_MOVER(i_val16, d_xreg)   (X_CASTU16 0x0000 | (X_CASTU16(XR_##d_xreg) & 0xCFFF)), (X_CASTU16(i_val16))
+#define COP_MOVM(s_cadr12, d_xadr16) (X_CASTU16 0x1000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(d_xadr16))
 #define COP_HPOS(h_wait)             (X_CASTU16 0x2000 | (X_CASTU16(h_wait) & 0x07FF))
 #define COP_VPOS(v_wait)             (X_CASTU16 0x2800 | (X_CASTU16(v_wait) & 0x07FF))
-#define COP_BRGE(cadr11)             (X_CASTU16 0x3000 | (X_CASTU16(cadr11) & 0x07FF))
-#define COP_BRLT(cadr11)             (X_CASTU16 0x3800 | (X_CASTU16(cadr11) & 0x07FF))
-// copper pseudo instructions
-#define COP_MOVI(i_val16, d_xadr14)  (X_CASTU16 0x0000 | (X_CASTU16(d_xadr14) & 0xCFFF)), (X_CASTU16(i_val16))
-#define COP_MOVM(s_cadr12, d_xadr16) (X_CASTU16 0xD000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(d_xadr16))
-#define COP_MOVER(i_val16, d_xreg)   (X_CASTU16 0x0000 | (X_CASTU16(XR_##d_xreg) & 0xCFFF)), (X_CASTU16(i_val16))
-#define COP_LDI(i_val16)             (X_CASTU16 0xC000 | (X_CASTU16(COP_RA) & 0x0FFF)), (X_CASTU16(i_val16))
-#define COP_LDM(s_cadr12)            (X_CASTU16 0xD000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(COP_RA))
-#define COP_STM(d_xadr16)            (X_CASTU16 0xD000 | (X_CASTU16(COP_RA) & 0x0FFF)), (X_CASTU16(d_xadr16))
-#define COP_CLRB()                   (X_CASTU16 0xD000 | (X_CASTU16(COP_RA) & 0x0FFF)), (X_CASTU16(COP_RA))
-#define COP_SUBI(i_val16)            (X_CASTU16 0xC000 | (X_CASTU16(COP_RA_SUB) & 0x0FFF)), (X_CASTU16(i_val16))
-#define COP_ADDI(i_val16)            (X_CASTU16 0xC000 | (X_CASTU16(COP_RA_SUB) & 0x0FFF)), (X_CASTU16(-(int16_t)i_val16))
-#define COP_SUBM(s_cadr12)           (X_CASTU16 0xD000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(COP_RA_SUB))
+#define COP_BRGE(cadr11)             (X_CASTU16 0xF000 | (X_CASTU16(cadr11) & 0x07FF))
+#define COP_BRLT(cadr11)             (X_CASTU16 0xF800 | (X_CASTU16(cadr11) & 0x07FF))
+#define COP_LDI(i_val16)             (X_CASTU16 0x0000 | (X_CASTU16(COP_RA) & 0x0FFF)), (X_CASTU16(i_val16))
+#define COP_LDM(s_cadr12)            (X_CASTU16 0x1000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(COP_RA))
+#define COP_STM(d_xadr16)            (X_CASTU16 0x1000 | (X_CASTU16(COP_RA) & 0x0FFF)), (X_CASTU16(((d_xadr16) & 0x07FF) | 0xC000))
+#define COP_CLRB()                   (X_CASTU16 0x1000 | (X_CASTU16(COP_RA) & 0x0FFF)), (X_CASTU16(COP_RA))
+#define COP_SUBI(i_val16)            (X_CASTU16 0x0000 | (X_CASTU16(COP_RA_SUB) & 0x0FFF)), (X_CASTU16(i_val16))
+#define COP_ADDI(i_val16)            (X_CASTU16 0x0000 | (X_CASTU16(COP_RA_SUB) & 0x0FFF)), (X_CASTU16(-(int16_t)i_val16))
+#define COP_SUBM(s_cadr12)           (X_CASTU16 0x1000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(COP_RA_SUB))
 #define COP_CMPI(i_val16)            (X_CASTU16 0xC000 | (X_CASTU16(COP_RA_CMP) & 0x0FFF)), (X_CASTU16(i_val16))
-#define COP_CMPM(s_cadr12)           (X_CASTU16 0xD000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(COP_RA_CMP))
+#define COP_CMPM(s_cadr12)           (X_CASTU16 0x1000 | (X_CASTU16(s_cadr12) & 0x0FFF)), (X_CASTU16(COP_RA_CMP))
 #define COP_END()                    (X_CASTU16 0x2800 | (X_CASTU16(COP_V_EOF) & 0x07FF))
 #endif        // !defined(__COPASM__)
 

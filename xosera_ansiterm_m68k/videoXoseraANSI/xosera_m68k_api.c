@@ -133,6 +133,14 @@ bool xosera_xansi_detect(bool hide_cursor)
 // return to XANSI text mode
 void xosera_xansi_restore(void)
 {
+    xv_prep();
+    xreg_setw(VID_CTRL, 0x0008);        // grey border color
+    xreg_setw(VID_LEFT, 0);
+    xreg_setw(VID_RIGHT, xosera_vid_width());
+    xreg_setw_next(/* VID_POINTER_H, */ 0x0000);
+    xreg_setw(PA_GFX_CTRL, 0x0080);
+    xreg_setw(PB_GFX_CTRL, 0x0080);
+
     if (xosera_xansi_detect(false))
     {
         print("\033c");        // reset XANSI

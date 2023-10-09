@@ -21,10 +21,15 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include <machine.h>        // rosco_m68k I/O
+
+// building XANSI in firmware
+#if !defined(XOSERA_ANSI_CON)
+#include <basicio.h>
+#include <stdlib.h>
+#include <string.h>
+#endif
 
 #if !defined(ROSCO_M68K)
 #define ROSCO_M68K
@@ -83,6 +88,9 @@ void xosera_delay(uint32_t ms)
         }
     }
 }
+
+// building XANSI in firmware
+#if !defined(XOSERA_ANSI_CON)
 
 // return true if Xosera XANSI firmware detected (safe from BUS ERROR if no hardware present)
 bool xosera_xansi_detect(bool hide_cursor)
@@ -146,6 +154,7 @@ void xosera_xansi_restore(void)
         print("\033c");        // reset XANSI
     }
 }
+#endif
 
 // return true if Xosera responding
 // NOTE: May BUS ERROR if no hardware present

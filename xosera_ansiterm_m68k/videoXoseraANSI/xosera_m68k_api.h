@@ -27,7 +27,6 @@
 #if !defined(XOSERA_M68K_API_H)
 #define XOSERA_M68K_API_H
 
-#include <basicio.h>
 #include <stdbool.h>
 #include <stdint.h>
 

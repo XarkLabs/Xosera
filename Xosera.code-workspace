@@ -374,7 +374,8 @@
 			"unordered_map": "cpp",
 			"unordered_set": "cpp",
 			"cop_blend_test.h": "c",
-			"cop_wavey.h": "c"
+			"cop_wavey.h": "c",
+			"boing_copper.h": "c"
 		},
 		"workbench.colorCustomizations": {
 			"terminal.foreground": "#08D808",

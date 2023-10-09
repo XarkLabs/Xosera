@@ -232,14 +232,14 @@ bool xosera_reset_state(void)
         xm_setw(PIXEL_X, 0x0000);
         xm_setw(PIXEL_Y, 0x0000);
         xm_setbh(SYS_CTRL, 0x00);
-        xm_setbl(SYS_CTRL, 0x0F);
-        xm_setw(INT_CTRL, 0x0000);
+        xm_setbl(SYS_CTRL, SYS_CTRL_WR_MASK_F);
+        xm_setw(INT_CTRL, INT_CTRL_CLEAR_ALL_F);
         xm_setw(RD_INCR, 0x0000);
         xm_setw(RD_ADDR, 0x0000);
         xm_setw(WR_INCR, 0x0000);
         xm_setw(WR_ADDR, 0x0000);
         // restore XR defaults
-        xreg_setw(VID_CTRL, 0x0008);        // grey border color
+        xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x08));        // grey border color
         for (uint16_t xr = XR_COPP_CTRL; xr < XR_BLIT_CTRL; xr++)
         {
             xreg_setw_next(0x0000);        // zero default
@@ -248,7 +248,7 @@ bool xosera_reset_state(void)
         xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, 0, GFX_4_BPP, GFX_1X, GFX_1X));
         xreg_setw_next(/* PA_TILE_CTRL, */ MAKE_TILE_CTRL(0x0000, 0, 0, 16));
         xreg_setw(PA_LINE_LEN, width / 8);
-        xreg_setw(PB_GFX_CTRL, 0x0080);
+        xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, 1, 0, GFX_1_BPP, GFX_1X, GFX_1X));
         xreg_setw_next(/* PB_TILE_CTRL, */ MAKE_TILE_CTRL(0x0000, 0, 0, 16));
         xreg_setw(PB_LINE_LEN, width / 8);
         // clear VRAM

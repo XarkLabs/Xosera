@@ -238,10 +238,10 @@ int32_t xlasm::assemble(const std::vector<std::string> & in_files, const std::st
 
     if (opt.include_path.size())
     {
-        notice(2, "Include search paths:\n");
+        notice(2, "Include search paths:");
         for (auto it = opt.include_path.begin(); it != opt.include_path.end(); ++it)
         {
-            notice(2, "    \"%s\"\n", it->c_str());
+            notice(2, "    \"%s\"", it->c_str());
         }
     }
 

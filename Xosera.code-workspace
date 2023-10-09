@@ -375,7 +375,8 @@
 			"unordered_set": "cpp",
 			"cop_blend_test.h": "c",
 			"cop_wavey.h": "c",
-			"boing_copper.h": "c"
+			"boing_copper.h": "c",
+			"xosera_m68k_api.h": "c"
 		},
 		"workbench.colorCustomizations": {
 			"terminal.foreground": "#08D808",

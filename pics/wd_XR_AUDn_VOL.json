@@ -1,0 +1,23 @@
+{
+    "reg": [
+        {
+            "bits": 8,
+            "name": "right channel mix volume",
+            "type": 2,
+            "attr": [
+                "Volume 0x80 = 100% volume (1:1 input sample)"
+            ]
+        },
+        {
+            "bits": 8,
+            "name": "left channel mix volume",
+            "type": 6,
+            "attr": [
+                "Volume 0x80 = 100% volume (1:1 input sample)"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

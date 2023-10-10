@@ -13,7 +13,7 @@ MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
 # check for rosco_m68k toolchain
-ifeq (, $(shell m68k-elf-gcc --version))
+ifeq (,$(shell m68k-elf-gcc --version))
 $(info No m68k-elf-* build tools found in path)
 else
 # check for rosco_m68k build dir
@@ -28,9 +28,14 @@ endif
 
 -include $(ROSCO_M68K_DIR)/user.mk
 
-EXTRA_CFLAGS?=-I$(XOSERA_M68K_API)
+EXTRA_CFLAGS?=
+EXTRA_LDFLAGS?=
+EXTRA_LIBS?=
 EXTRA_VASMFLAGS?=
-EXTRA_LIBS?=-L$(XOSERA_M68K_API) -lxosera_m68k_api
+
+EXTRA_CFLAGS+=-I$(XOSERA_M68K_API)
+EXTRA_LDFLAGS+=-L$(XOSERA_M68K_API)
+EXTRA_LIBS+=-lxosera_m68k_api
 
 CPU?=68010
 ARCH?=$(CPU)
@@ -38,6 +43,11 @@ TUNE?=$(CPU)
 
 SYSINCDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/include
 SYSLIBDIR?=$(ROSCO_M68K_DIR)/code/software/libs/build/lib
+
+ifeq (,$(wildcard $(SYSLIBDIR)/librosco_m68k.a))
+$(info === Please build the rosco_m68k libraries using:    cd $(ROSCO_M68K_DIR)/code/software/libs && make clean all install && cd ~-)
+$(error Need rosco_m68k libraries)
+endif
 
 DEFINES=-DROSCO_M68K
 FLAGS=-ffreestanding -ffunction-sections -fdata-sections -fomit-frame-pointer	\
@@ -63,7 +73,7 @@ endif
 
 
 VASMFLAGS=-Felf -m$(CPU) -quiet -Lnf $(DEFINES)
-LDFLAGS=-T $(LDSCRIPT) -L $(SYSLIBDIR) -Map=$(MAP) --gc-sections --oformat=elf32-m68k
+LDFLAGS=-T $(LDSCRIPT) -L $(SYSLIBDIR) -Map=$(MAP) --gc-sections --oformat=elf32-m68k $(EXTRA_LDFLAGS)
 
 CC=m68k-elf-gcc
 CXX=m68k-elf-g++
@@ -147,15 +157,15 @@ TO_CLEAN=$(OBJECTS) $(ELF) $(BINARY) $(MAP) $(SYM) $(SYM_SIZE) $(DISASM) $(addsu
 
 all: $(BINARY) $(DISASM)
 
-BUILD_XOSERA_API?=
-ifneq ($(BUILD_XOSERA_API),true)
+BUILDING_XOSERA_API?=
+ifneq ($(BUILDING_XOSERA_API),true)
 $(XOSERA_M68K_API)/libxosera_m68k_api.a:
 	@echo === Building Xosera m68k API...
 	cd $(XOSERA_M68K_API) && $(MAKE)
 endif
-# $(XOSERA_M68K_API)/libxosera_m68k_api.a
+
 $(ELF) : $(OBJECTS)
-	$(LD) $(LDFLAGS) $(GCC_LIBS) $^ -o $@ $(LIBS)
+	$(LD) $(LDFLAGS) $(GCC_LIBS) $^ $(LIBS) -o $@
 	$(NM) --numeric-sort $@ >$(SYM)
 	$(NM) --size-sort $@ >$(SYM_SIZE)
 	$(SIZE) $@
@@ -167,15 +177,13 @@ $(BINARY) : $(ELF)
 $(DISASM) : $(ELF)
 	$(OBJDUMP) --disassemble -S $(ELF) >$(DISASM)
 
-$(OBJECTS): $(MAKEFILE_LIST)
+$(OBJECTS): $(CASMOUTPUT) $(MAKEFILE_LIST)
 
 %.o : %.c $(CINCLUDES)
-	@echo o from c CINCLUDES=$(CINCLUDES) CASMOUTPUT=$(CASMOUTPUT)
 	@$(MKDIR) -p $(@D)
 	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) -o $@ $<
 
 %.o : %.cpp
-	@echo o from cpp CINCLUDES=$(CINCLUDES) CASMOUTPUT=$(CASMOUTPUT)
 	@$(MKDIR) -p $(@D)
 	$(CXX) -c $(CXXFLAGS) $(EXTRA_CXXFLAGS) -o $@ $<
 
@@ -185,13 +193,11 @@ $(OBJECTS): $(MAKEFILE_LIST)
 
 # CopAsm copper source
 %.h : %.casm
-	@echo h from casm CINCLUDES=$(CINCLUDES) CASMOUTPUT=$(CASMOUTPUT)
 	@$(MKDIR) -p $(@D)
 	$(COPASM) -v -l -i $(XOSERA_M68K_API) -o $@ $<
 
 # preprocessed CopAsm copper source
 %.h : %.cpasm
-	@echo h from cpasm CINCLUDES=$(CINCLUDES) CASMOUTPUT=$(CASMOUTPUT)
 	@$(MKDIR) -p $(@D)
 	$(CC) -E -xc -D__COPASM__=1 -I$(XOSERA_M68K_API) $< -o $(basename $<).casm.ii
 	$(COPASM) -v -l -i $(XOSERA_M68K_API) -o $@ $(basename $<).casm.ii
@@ -235,7 +241,7 @@ mactest: $(BINARY) $(DISASM)
 	echo "/usr/bin/screen $(SERIAL) $(BAUD)" >> $(TMPDIR)/rosco_screen.sh
 	-$(CHMOD) +x $(TMPDIR)/rosco_screen.sh
 	sleep 1
-	open -n -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
+	open -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
 
 # macOS connect with screen (free SERIAL port, open screen in shell window/tab)
 macterm:
@@ -244,7 +250,7 @@ macterm:
 	echo "/usr/bin/screen $(SERIAL) $(BAUD)" >> $(TMPDIR)/rosco_screen.sh
 	-$(CHMOD) +x $(TMPDIR)/rosco_screen.sh
 	sleep 1
-	open -n -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
+	open -b com.apple.terminal $(TMPDIR)/rosco_screen.sh
 
 # Makefile magic (for "phony" targets that are not real files)
 .PHONY: all clean disasm dump load linuxtest linuxterm mactest macterm

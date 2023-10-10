@@ -2,9 +2,6 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "../../Rosco_Dev/rosco_m68k"
 		}
 	],
 	"settings": {

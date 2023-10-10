@@ -1,0 +1,26 @@
+{
+    "reg": [
+        {
+            "bits": 15,
+            "name": "channel sample period (output rate)",
+            "type": 4,
+            "attr": [
+                "samples per second = clock-frequency / PERIOD",
+                "(clock is 25,125,000 @ 640x480, or 33,750,000 @ 848x480)"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "restart",
+            "type": 2,
+            "attr": [
+                "force",
+                "channel",
+                "restart"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

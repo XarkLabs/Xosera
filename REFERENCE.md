@@ -14,52 +14,52 @@ This document is meant to provide the low-level reference register information t
   - [Xosera Reference Information](#xosera-reference-information)
     - [Xosera Main Registers (XM Registers) Summary](#xosera-main-registers-xm-registers-summary)
     - [Xosera Main Register Details (XM Registers)](#xosera-main-register-details-xm-registers)
-        - [0x0 **`XM_SYS_CTRL`** (R/W+) - System Control](#0x0-xm_sys_ctrl-rw---system-control)
-        - [0x1 **`XM_INT_CTRL`** (R/W+) - Interrupt Control](#0x1-xm_int_ctrl-rw---interrupt-control)
-        - [0x2 **`XM_TIMER`** (R/W) - Timer Functions](#0x2-xm_timer-rw---timer-functions)
-        - [0x3 **`XM_RD_XADDR`** (R/W+) - XR Read Address](#0x3-xm_rd_xaddr-rw---xr-read-address)
-        - [0x4 **`XM_WR_XADDR`** (R/W) - XR Write Address](#0x4-xm_wr_xaddr-rw---xr-write-address)
-        - [0x5 **`XM_XDATA`** (R+/W+) - XR Read/Write Data](#0x5-xm_xdata-rw---xr-readwrite-data)
-        - [0x6 **`XM_RD_INCR`** (R/W) - Increment for VRAM Read Address](#0x6-xm_rd_incr-rw---increment-for-vram-read-address)
-        - [0x7 **`XM_RD_ADDR`** (R/W+) - VRAM Read Address](#0x7-xm_rd_addr-rw---vram-read-address)
-        - [0x8 **`XM_WR_INCR`** (R/W) - Increment for VRAM Write Address](#0x8-xm_wr_incr-rw---increment-for-vram-write-address)
-        - [0x9 **`XM_WR_ADDR`** (R/W) - VRAM Write Address](#0x9-xm_wr_addr-rw---vram-write-address)
-        - [0xA **`XM_DATA`** (R+/W+) - VRAM Read/Write Data](#0xa-xm_data-rw---vram-readwrite-data)
-        - [0xB **`XM_DATA_2`** (R+/W+) - VRAM Read/Write Data (2nd)](#0xb-xm_data_2-rw---vram-readwrite-data-2nd)
-        - [0xC **`PIXEL_X`** (-/W+) - X coordinate for pixel addr/mask generation (also used to set `PIXEL_BASE`)](#0xc-pixel_x--w---x-coordinate-for-pixel-addrmask-generation-also-used-to-set-pixel_base)
-        - [0xD **`PIXEL_Y`** (-/W+) - Y coordinate for pixel addr/mask generation (also used to set `PIXEL_WIDTH`)](#0xd-pixel_y--w---y-coordinate-for-pixel-addrmask-generation-also-used-to-set-pixel_width)
-        - [0xE **`XM_UART`** (R+/W+)](#0xe-xm_uart-rw)
-        - [0xF **`XM_FEATURE`** (R/-) - Xosera feature bits](#0xf-xm_feature-r----xosera-feature-bits)
+      - [0x0 **`XM_SYS_CTRL`** (R/W+) - System Control](#0x0-xm_sys_ctrl-rw---system-control)
+      - [0x1 **`XM_INT_CTRL`** (R/W+) - Interrupt Control](#0x1-xm_int_ctrl-rw---interrupt-control)
+      - [0x2 **`XM_TIMER`** (R/W) - Timer Functions](#0x2-xm_timer-rw---timer-functions)
+      - [0x3 **`XM_RD_XADDR`** (R/W+) - XR Read Address](#0x3-xm_rd_xaddr-rw---xr-read-address)
+      - [0x4 **`XM_WR_XADDR`** (R/W) - XR Write Address](#0x4-xm_wr_xaddr-rw---xr-write-address)
+      - [0x5 **`XM_XDATA`** (R+/W+) - XR Read/Write Data](#0x5-xm_xdata-rw---xr-readwrite-data)
+      - [0x6 **`XM_RD_INCR`** (R/W) - Increment for VRAM Read Address](#0x6-xm_rd_incr-rw---increment-for-vram-read-address)
+      - [0x7 **`XM_RD_ADDR`** (R/W+) - VRAM Read Address](#0x7-xm_rd_addr-rw---vram-read-address)
+      - [0x8 **`XM_WR_INCR`** (R/W) - Increment for VRAM Write Address](#0x8-xm_wr_incr-rw---increment-for-vram-write-address)
+      - [0x9 **`XM_WR_ADDR`** (R/W) - VRAM Write Address](#0x9-xm_wr_addr-rw---vram-write-address)
+      - [0xA **`XM_DATA`** (R+/W+) - VRAM Read/Write Data](#0xa-xm_data-rw---vram-readwrite-data)
+      - [0xB **`XM_DATA_2`** (R+/W+) - VRAM Read/Write Data (2nd)](#0xb-xm_data_2-rw---vram-readwrite-data-2nd)
+      - [0xC **`PIXEL_X`** (-/W+) - X coordinate for pixel addr/mask generation (also used to set `PIXEL_BASE`)](#0xc-pixel_x--w---x-coordinate-for-pixel-addrmask-generation-also-used-to-set-pixel_base)
+      - [0xD **`PIXEL_Y`** (-/W+) - Y coordinate for pixel addr/mask generation (also used to set `PIXEL_WIDTH`)](#0xd-pixel_y--w---y-coordinate-for-pixel-addrmask-generation-also-used-to-set-pixel_width)
+      - [0xE **`XM_UART`** (R+/W+)](#0xe-xm_uart-rw)
+      - [0xF **`XM_FEATURE`** (R/-) - Xosera feature bits](#0xf-xm_feature-r----xosera-feature-bits)
   - [Xosera Extended Register / Extended Memory Region Summary](#xosera-extended-register--extended-memory-region-summary)
     - [Xosera Extended Registers Details (XR Registers)](#xosera-extended-registers-details-xr-registers)
     - [Video Config and Copper XR Registers Summary](#video-config-and-copper-xr-registers-summary)
     - [Video Config and Copper XR Registers Details](#video-config-and-copper-xr-registers-details)
-        - [0x00 **`XR_VID_CTRL`** (R/W) - Border Color / Playfield Color-Swap](#0x00-xr_vid_ctrl-rw---border-color--playfield-color-swap)
-        - [0x01 **`XR_COPP_CTRL`** (R/W) - Copper Enable](#0x01-xr_copp_ctrl-rw---copper-enable)
-        - [0x02 **`XR_AUD_CTRL`** (R/W) - Audio Control](#0x02-xr_aud_ctrl-rw---audio-control)
-        - [0x03 **`XR_SCANLINE`** (R/W+) - current video scan line/trigger Xosera host CPU video interrupt](#0x03-xr_scanline-rw---current-video-scan-linetrigger-xosera-host-cpu-video-interrupt)
-        - [0x04 **`XR_VID_LEFT`** (R/W) - video display window left edge](#0x04-xr_vid_left-rw---video-display-window-left-edge)
-        - [0x05 **`XR_VID_RIGHT`** (R/W) - video display window right edge](#0x05-xr_vid_right-rw---video-display-window-right-edge)
-        - [0x06 **`XR_POINTER_H`** (-/W+) - pointer sprite H position](#0x06-xr_pointer_h--w---pointer-sprite-h-position)
-        - [0x07 **`XR_POINTER_V`** (-/W+) - pointer sprite V position and colormap select](#0x07-xr_pointer_v--w---pointer-sprite-v-position-and-colormap-select)
+      - [0x00 **`XR_VID_CTRL`** (R/W) - Border Color / Playfield Color-Swap](#0x00-xr_vid_ctrl-rw---border-color--playfield-color-swap)
+      - [0x01 **`XR_COPP_CTRL`** (R/W) - Copper Enable](#0x01-xr_copp_ctrl-rw---copper-enable)
+      - [0x02 **`XR_AUD_CTRL`** (R/W) - Audio Control](#0x02-xr_aud_ctrl-rw---audio-control)
+      - [0x03 **`XR_SCANLINE`** (R/W+) - current video scan line/trigger Xosera host CPU video interrupt](#0x03-xr_scanline-rw---current-video-scan-linetrigger-xosera-host-cpu-video-interrupt)
+      - [0x04 **`XR_VID_LEFT`** (R/W) - video display window left edge](#0x04-xr_vid_left-rw---video-display-window-left-edge)
+      - [0x05 **`XR_VID_RIGHT`** (R/W) - video display window right edge](#0x05-xr_vid_right-rw---video-display-window-right-edge)
+      - [0x06 **`XR_POINTER_H`** (-/W+) - pointer sprite H position](#0x06-xr_pointer_h--w---pointer-sprite-h-position)
+      - [0x07 **`XR_POINTER_V`** (-/W+) - pointer sprite V position and colormap select](#0x07-xr_pointer_v--w---pointer-sprite-v-position-and-colormap-select)
     - [Playfield A \& B Control XR Registers Summary](#playfield-a--b-control-xr-registers-summary)
     - [Playfield A \& B Control XR Registers Details](#playfield-a--b-control-xr-registers-details)
-        - [0x10 **`XR_PA_GFX_CTRL` (R/W)** - playfield A (base) graphics control](#0x10-xr_pa_gfx_ctrl-rw---playfield-a-base-graphics-control)
-        - [0x18 **`XR_PB_GFX_CTRL` (R/W)** - playfield B (overlay) graphics control](#0x18-xr_pb_gfx_ctrl-rw---playfield-b-overlay-graphics-control)
-        - [0x11 **`XR_PA_TILE_CTRL` (R/W)** - playfield A (base) tile control](#0x11-xr_pa_tile_ctrl-rw---playfield-a-base-tile-control)
-        - [0x19 **`XR_PB_TILE_CTRL` (R/W)** - playfield B (overlay) tile control](#0x19-xr_pb_tile_ctrl-rw---playfield-b-overlay-tile-control)
-        - [0x12 **`XR_PA_DISP_ADDR` (R/W)** - playfield A (base) display VRAM start address](#0x12-xr_pa_disp_addr-rw---playfield-a-base-display-vram-start-address)
-        - [0x1A **`XR_PB_DISP_ADDR` (R/W)** - playfield B (overlay) display VRAM start address](#0x1a-xr_pb_disp_addr-rw---playfield-b-overlay-display-vram-start-address)
-        - [0x13 **`XR_PA_LINE_LEN` (R/W)** - playfield A (base) display line word length](#0x13-xr_pa_line_len-rw---playfield-a-base-display-line-word-length)
-        - [0x1B **`XR_PB_LINE_LEN` (R/W)** - playfield B (overlay) display line word length](#0x1b-xr_pb_line_len-rw---playfield-b-overlay-display-line-word-length)
-        - [0x14 **`XR_PA_HV_FSCALE` (R/W)** - playfield A (base) horizontal and vertical fractional scale](#0x14-xr_pa_hv_fscale-rw---playfield-a-base-horizontal-and-vertical-fractional-scale)
-        - [0x1C **`XR_PB_HV_FSCALE` (R/W)** - playfield B (overlay) horizontal and vertical fractional scale](#0x1c-xr_pb_hv_fscale-rw---playfield-b-overlay-horizontal-and-vertical-fractional-scale)
-        - [0x15 **`XR_PA_H_SCROLL` (R/W)** - playfield A (base) horizontal fine scroll](#0x15-xr_pa_h_scroll-rw---playfield-a-base-horizontal-fine-scroll)
-        - [0x1D **`XR_PB_H_SCROLL` (R/W)** - playfield B (overlay) horizontal fine scroll](#0x1d-xr_pb_h_scroll-rw---playfield-b-overlay-horizontal-fine-scroll)
-        - [0x16 **`XR_PA_V_SCROLL` (R/W)** - playfield A (base) vertical repeat and tile fine scroll](#0x16-xr_pa_v_scroll-rw---playfield-a-base-vertical-repeat-and-tile-fine-scroll)
-        - [0x1E **`XR_PB_V_SCROLL` (R/W)** - playfield B (overlay) vertical repeat and tile fine scroll](#0x1e-xr_pb_v_scroll-rw---playfield-b-overlay-vertical-repeat-and-tile-fine-scroll)
-        - [0x17 **`XR_PA_LINE_ADDR` (WO)** - playfield A (base) display VRAM next line address](#0x17-xr_pa_line_addr-wo---playfield-a-base-display-vram-next-line-address)
-        - [0x1F **`XR_PB_LINE_ADDR` (WO)** - playfield B (overlay) display VRAM next line address](#0x1f-xr_pb_line_addr-wo---playfield-b-overlay-display-vram-next-line-address)
+      - [0x10 **`XR_PA_GFX_CTRL` (R/W)** - playfield A (base) graphics control](#0x10-xr_pa_gfx_ctrl-rw---playfield-a-base-graphics-control)
+      - [0x18 **`XR_PB_GFX_CTRL` (R/W)** - playfield B (overlay) graphics control](#0x18-xr_pb_gfx_ctrl-rw---playfield-b-overlay-graphics-control)
+      - [0x11 **`XR_PA_TILE_CTRL` (R/W)** - playfield A (base) tile control](#0x11-xr_pa_tile_ctrl-rw---playfield-a-base-tile-control)
+      - [0x19 **`XR_PB_TILE_CTRL` (R/W)** - playfield B (overlay) tile control](#0x19-xr_pb_tile_ctrl-rw---playfield-b-overlay-tile-control)
+      - [0x12 **`XR_PA_DISP_ADDR` (R/W)** - playfield A (base) display VRAM start address](#0x12-xr_pa_disp_addr-rw---playfield-a-base-display-vram-start-address)
+      - [0x1A **`XR_PB_DISP_ADDR` (R/W)** - playfield B (overlay) display VRAM start address](#0x1a-xr_pb_disp_addr-rw---playfield-b-overlay-display-vram-start-address)
+      - [0x13 **`XR_PA_LINE_LEN` (R/W)** - playfield A (base) display line word length](#0x13-xr_pa_line_len-rw---playfield-a-base-display-line-word-length)
+      - [0x1B **`XR_PB_LINE_LEN` (R/W)** - playfield B (overlay) display line word length](#0x1b-xr_pb_line_len-rw---playfield-b-overlay-display-line-word-length)
+      - [0x14 **`XR_PA_HV_FSCALE` (R/W)** - playfield A (base) horizontal and vertical fractional scale](#0x14-xr_pa_hv_fscale-rw---playfield-a-base-horizontal-and-vertical-fractional-scale)
+      - [0x1C **`XR_PB_HV_FSCALE` (R/W)** - playfield B (overlay) horizontal and vertical fractional scale](#0x1c-xr_pb_hv_fscale-rw---playfield-b-overlay-horizontal-and-vertical-fractional-scale)
+      - [0x15 **`XR_PA_H_SCROLL` (R/W)** - playfield A (base) horizontal fine scroll](#0x15-xr_pa_h_scroll-rw---playfield-a-base-horizontal-fine-scroll)
+      - [0x1D **`XR_PB_H_SCROLL` (R/W)** - playfield B (overlay) horizontal fine scroll](#0x1d-xr_pb_h_scroll-rw---playfield-b-overlay-horizontal-fine-scroll)
+      - [0x16 **`XR_PA_V_SCROLL` (R/W)** - playfield A (base) vertical repeat and tile fine scroll](#0x16-xr_pa_v_scroll-rw---playfield-a-base-vertical-repeat-and-tile-fine-scroll)
+      - [0x1E **`XR_PB_V_SCROLL` (R/W)** - playfield B (overlay) vertical repeat and tile fine scroll](#0x1e-xr_pb_v_scroll-rw---playfield-b-overlay-vertical-repeat-and-tile-fine-scroll)
+      - [0x17 **`XR_PA_LINE_ADDR` (WO)** - playfield A (base) display VRAM next line address](#0x17-xr_pa_line_addr-wo---playfield-a-base-display-vram-next-line-address)
+      - [0x1F **`XR_PB_LINE_ADDR` (WO)** - playfield B (overlay) display VRAM next line address](#0x1f-xr_pb_line_addr-wo---playfield-b-overlay-display-vram-next-line-address)
     - [Bitmap Display Formats](#bitmap-display-formats)
     - [Tile Display Formats](#tile-display-formats)
     - [Final Color Index Selection](#final-color-index-selection)
@@ -72,6 +72,18 @@ This document is meant to provide the low-level reference register information t
         - [0x24 **`XR_AUD1_VOL` (-/W)** - audio channel 1 left/right mix volume](#0x24-xr_aud1_vol--w---audio-channel-1-leftright-mix-volume)
         - [0x28 **`XR_AUD2_VOL` (-/W)** - audio channel 2 left/right mix volume](#0x28-xr_aud2_vol--w---audio-channel-2-leftright-mix-volume)
         - [0x2C **`XR_AUD3_VOL` (-/W)** - audio channel 3 left/right mix volume](#0x2c-xr_aud3_vol--w---audio-channel-3-leftright-mix-volume)
+        - [0x21 **`XR_AUD0_PERIOD` (-/W)** - audio channel 0 sample period](#0x21-xr_aud0_period--w---audio-channel-0-sample-period)
+        - [0x25 **`XR_AUD1_PERIOD` (-/W)** - audio channel 1 sample period](#0x25-xr_aud1_period--w---audio-channel-1-sample-period)
+        - [0x29 **`XR_AUD2_PERIOD` (-/W)** - audio channel 2 sample period](#0x29-xr_aud2_period--w---audio-channel-2-sample-period)
+        - [0x2D **`XR_AUD3_PERIOD` (-/W)** - audio channel 3 sample period](#0x2d-xr_aud3_period--w---audio-channel-3-sample-period)
+        - [0x22 **`XR_AUD0_LENGTH` (-/W)** - audio channel 0 sample word length and VRAM/TILE memory](#0x22-xr_aud0_length--w---audio-channel-0-sample-word-length-and-vramtile-memory)
+        - [0x26 **`XR_AUD1_LENGTH` (-/W)** - audio channel 1 sample word length and VRAM/TILE memory](#0x26-xr_aud1_length--w---audio-channel-1-sample-word-length-and-vramtile-memory)
+        - [0x2A **`XR_AUD2_LENGTH` (-/W)** - audio channel 2 sample word length and VRAM/TILE memory](#0x2a-xr_aud2_length--w---audio-channel-2-sample-word-length-and-vramtile-memory)
+        - [0x2E **`XR_AUD3_LENGTH` (-/W)** - audio channel 3 sample word length and VRAM/TILE memory](#0x2e-xr_aud3_length--w---audio-channel-3-sample-word-length-and-vramtile-memory)
+        - [0x23 **`XR_AUD0_START` (-/W)** - audio channel 0 sample start address (in either VRAM/TILE)](#0x23-xr_aud0_start--w---audio-channel-0-sample-start-address-in-either-vramtile)
+        - [0x27 **`XR_AUD1_START` (-/W)** - audio channel 1 sample start address (in either VRAM/TILE)](#0x27-xr_aud1_start--w---audio-channel-1-sample-start-address-in-either-vramtile)
+        - [0x2B **`XR_AUD2_START` (-/W)** - audio channel 2 sample start address (in either VRAM/TILE)](#0x2b-xr_aud2_start--w---audio-channel-2-sample-start-address-in-either-vramtile)
+        - [0x2F **`XR_AUD3_START` (-/W)** - audio channel 3 sample start address (in either VRAM/TILE)](#0x2f-xr_aud3_start--w---audio-channel-3-sample-start-address-in-either-vramtile)
     - [2D Blitter Engine Operation](#2d-blitter-engine-operation)
       - [Logic Operation Applied to Blitter Operations](#logic-operation-applied-to-blitter-operations)
       - [Transparency Testing and Masking Applied to Blitter Operations](#transparency-testing-and-masking-applied-to-blitter-operations)
@@ -112,22 +124,22 @@ ___
 
 | Reg # | Reg Name          | Access | Description                                                                           |
 |-------|-------------------|--------|---------------------------------------------------------------------------------------|
-| `0x0` | **`XM_SYS_CTRL`** | R /W+  | Status flags, write to [15:8] inits `PIXEL_X/Y`, [3:0] VRAM write nibble mask         |
-| `0x1` | **`XM_INT_CTRL`** | R /W+  | FPGA reconfigure, interrupt masking, interrupt status                                 |
-| `0x2` | **`XM_TIMER`**    | R /W+  | Read 16-bit tenth millisecond timer (1/10,000 second), write 8-bit interval timer     |
-| `0x3` | **`XM_RD_XADDR`** | R /W+  | XR register/address used for `XM_XDATA` read access                                   |
-| `0x4` | **`XM_WR_XADDR`** | R /W   | XR register/address used for `XM_XDATA` write access                                  |
-| `0x5` | **`XM_XDATA`**    | R+/W+  | Read from `XM_RD_XADDR` or write to `XM_WR_XADDR` (and increment address by 1)        |
-| `0x6` | **`XM_RD_INCR`**  | R /W   | increment value for `XM_RD_ADDR` read from `XM_DATA`/`XM_DATA_2`                      |
-| `0x7` | **`XM_RD_ADDR`**  | R /W+  | VRAM address for reading from VRAM when `XM_DATA`/`XM_DATA_2` is read                 |
-| `0x8` | **`XM_WR_INCR`**  | R /W   | increment value for `XM_WR_ADDR` on write to `XM_DATA`/`XM_DATA_2`                    |
-| `0x9` | **`XM_WR_ADDR`**  | R /W   | VRAM address for writing to VRAM when `XM_DATA`/`XM_DATA_2` is written                |
-| `0xA` | **`XM_DATA`**     | R+/W+  | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
-| `0xB` | **`XM_DATA_2`**   | R+/W+  | 2<sup>nd</sup> `XM_DATA`(to allow for 32-bit read/write access)                       |
-| `0xC` | **`PIXEL_X`**     | - /W+  | X pixel sets `WR_ADDR` and nibble mask (also `PIXEL_BASE` for `XM_SYS_CTRL` write)    |
-| `0xD` | **`PIXEL_Y`**     | - /W+  | Y pixel sets `WR_ADDR` and nibble mask (also `PIXEL_WIDTH` for `XM_SYS_CTRL` write)   |
-| `0xE` | **`XM_UART`**     | R+/W+  | USB UART using FTDI chip in UPduino for additional 1 Mbps USB connection to PC *[1]*  |
-| `0xF` | **`XM_FEATURE`**  | R /-   | Feature bits                                                                          |
+| 0x0   | **`XM_SYS_CTRL`** | R /W+  | Status flags, write to [15:8] inits `PIXEL_X/Y`, [3:0] VRAM write nibble mask         |
+| 0x1   | **`XM_INT_CTRL`** | R /W+  | FPGA reconfigure, interrupt masking, interrupt status                                 |
+| 0x2   | **`XM_TIMER`**    | R /W+  | Read 16-bit tenth millisecond timer (1/10,000 second), write 8-bit interval timer     |
+| 0x3   | **`XM_RD_XADDR`** | R /W+  | XR register/address used for `XM_XDATA` read access                                   |
+| 0x4   | **`XM_WR_XADDR`** | R /W   | XR register/address used for `XM_XDATA` write access                                  |
+| 0x5   | **`XM_XDATA`**    | R+/W+  | Read from `XM_RD_XADDR` or write to `XM_WR_XADDR` (and increment address by 1)        |
+| 0x6   | **`XM_RD_INCR`**  | R /W   | increment value for `XM_RD_ADDR` read from `XM_DATA`/`XM_DATA_2`                      |
+| 0x7   | **`XM_RD_ADDR`**  | R /W+  | VRAM address for reading from VRAM when `XM_DATA`/`XM_DATA_2` is read                 |
+| 0x8   | **`XM_WR_INCR`**  | R /W   | increment value for `XM_WR_ADDR` on write to `XM_DATA`/`XM_DATA_2`                    |
+| 0x9   | **`XM_WR_ADDR`**  | R /W   | VRAM address for writing to VRAM when `XM_DATA`/`XM_DATA_2` is written                |
+| 0xA   | **`XM_DATA`**     | R+/W+  | read/write VRAM word at `XM_RD_ADDR`/`XM_WR_ADDR` (and add `XM_RD_INCR`/`XM_WR_INCR`) |
+| 0xB   | **`XM_DATA_2`**   | R+/W+  | 2<sup>nd</sup> `XM_DATA`(to allow for 32-bit read/write access)                       |
+| 0xC   | **`PIXEL_X`**     | - /W+  | X pixel sets `WR_ADDR` and nibble mask (also `PIXEL_BASE` for `XM_SYS_CTRL` write)    |
+| 0xD   | **`PIXEL_Y`**     | - /W+  | Y pixel sets `WR_ADDR` and nibble mask (also `PIXEL_WIDTH` for `XM_SYS_CTRL` write)   |
+| 0xE   | **`XM_UART`**     | R+/W+  | USB UART using FTDI chip in UPduino for additional 1 Mbps USB connection to PC *[1]*  |
+| 0xF   | **`XM_FEATURE`**  | R /-   | Feature bits                                                                          |
 
 (`R+` or `W+` indicates that reading or writing this register can have additional "side effects", respectively)
 *[1]* USB UART is an optional debug convenience feature, since FTDI chip was present on UPduino.  It may not always be present.
@@ -346,22 +358,23 @@ ___
 
 ## Xosera Extended Register / Extended Memory Region Summary
 
-| XR Region Name    | XR Region Range | R/W | Description                                    |
-|-------------------|-----------------|-----|------------------------------------------------|
-| XR video config   | 0x0000-0x000F   | R/W | config XR registers                            |
-| XR playfield A    | 0x0010-0x0017   | R/W | playfield A XR registers                       |
-| XR playfield B    | 0x0018-0x001F   | R/W | playfield B XR registers                       |
-| XR audio control  | 0x0020-0x002F   | -/W | audio channel XR registers                     |
-| XR blit engine    | 0x0040-0x004B   | -/W | 2D-blit engine XR registers                    |
-| `XR_TILE_ADDR`    | 0x4000-0x53FF   | R/W | 5KW 16-bit tilemap/tile storage memory         |
-| `XR_COLOR_A_ADDR` | 0x8000-0x80FF   | R/W | 1 x 256W 16-bit color A lookup memory (0xARGB) |
-| `XR_COLOR_B_ADDR` | 0x8100-0x81FF   | R/W | 1 x 256W 16-bit color B lookup memory (0xARGB) |
-| `XR_POINTER_ADDR` | 0x8200-0x82FF   | -/W | 256W 16-bit 32x32 4-BPP pointer sprite bitmap  |
-| `XR_COPPER_ADDR`  | 0xC000-0xC5FF   | R/W | 1.5KW 16-bit copper memory                     |
+| XR Region Name    | XR Region Range | R/W | Description                                   |
+|-------------------|-----------------|-----|-----------------------------------------------|
+| XR video config   | 0x0000-0x0007   | R/W | config XR registers                           |
+| XR playfield A    | 0x0010-0x0017   | R/W | playfield A XR registers                      |
+| XR playfield B    | 0x0018-0x001F   | R/W | playfield B XR registers                      |
+| XR audio control  | 0x0020-0x002F   | -/W | audio channel XR registers                    |
+| XR blit engine    | 0x0040-0x0049   | -/W | 2D-blit engine XR registers                   |
+| `XR_TILE_ADDR`    | 0x4000-0x53FF   | R/W | 5KW 16-bit tilemap/tile storage memory        |
+| `XR_COLOR_A_ADDR` | 0x8000-0x80FF   | R/W | 256W 16-bit color A lookup memory (0xARGB)    |
+| `XR_COLOR_B_ADDR` | 0x8100-0x81FF   | R/W | 256W 16-bit color B lookup memory (0xARGB)    |
+| `XR_POINTER_ADDR` | 0x8200-0x82FF   | -/W | 256W 16-bit 32x32 4-BPP pointer sprite bitmap |
+| `XR_COPPER_ADDR`  | 0xC000-0xC5FF   | R/W | 1.5KW 16-bit copper memory                    |
 
 To access an XR register or XR memory address, write the XR register number or address to `XM_RD_XADDR` or `XM_WR_XADDR` then read or write (respectively) to `XM_XDATA`. Each word read or written to `XM_XDATA` will also automatically increment `XM_RD_XADDR` or `XM_WR_XADDR` (respectively) for contiguous reads or writes.  
 While almost all XR memory regions can be read (except `POINTER`), when there is high memory contention (e.g., it is being used for video generation or other use), there is a `mem_wait` bit in `XM_SYS_CTRL` that will indicate when the last memory operation is still pending.  Usually this is not needed when writing, but can be needed reading (e.g., this is generally needed reading from COLOR memory, since it is used for every active pixel, even when the screen is blanked or inactive for the border color).
 Also note that unlike the 16 main `XM` registers, the XR region should generally be accessed as full 16-bit words (either reading or writing both bytes). The full 16-bits of the `XM_XDATA` value are pre-read when `XM_RD_XADDR` is written or incremented and a full 16-bit word is written when the odd (low-byte) of `XM_XDATA` is written (the even/upper byte is stored until the odd/lower byte).
+
 ___
 
 ### Xosera Extended Registers Details (XR Registers)
@@ -371,17 +384,17 @@ To write to these XR registers, write an XR address to `XM_WR_XADDR` then write 
 
 ### Video Config and Copper XR Registers Summary
 
-| Reg #         | Reg Name           | R /W  | Description                                                               |
-|---------------|--------------------|-------|---------------------------------------------------------------------------|
-| `0x00`        | **`XR_VID_CTRL`**  | R /W  | Border color index and playfield color swap                               |
-| `0x01`        | **`XR_COPP_CTRL`** | R /W  | Display synchronized coprocessor ("copper") control                       |
-| `0x02`        | **`XR_AUD_CTRL`**  | R /W  | Audio channel DMA control                                                 |
-| `0x03`        | **`XR_SCANLINE`**  | R /W+ | Current display scanline / Trigger video interrupt                        |
-| `0x04`        | **`XR_VID_LEFT`**  | R /W  | Left edge start of active display window (normally 0)                     |
-| `0x05`        | **`XR_VID_RIGHT`** | R /W  | Right edge + 1 end of active display window (normally 640 or 848)         |
-| `0x06`        | **`XR_POINTER_H`** | - /W  | pointer sprite H position (in native screen coordinates)                  |
-| `0x07`        | **`XR_POINTER_V`** | - /W  | pointer sprite V position (in native screen coordinates) and color select |
-| `0x08`-`0x0F` | `XR_UNUSED_0x`     | - /-  | Unused registers                                                          |
+| Reg #     | Reg Name           | R /W  | Description                                                               |
+|-----------|--------------------|-------|---------------------------------------------------------------------------|
+| 0x00      | **`XR_VID_CTRL`**  | R /W  | Border color index and playfield color swap                               |
+| 0x01      | **`XR_COPP_CTRL`** | R /W  | Display synchronized coprocessor ("copper") control                       |
+| 0x02      | **`XR_AUD_CTRL`**  | R /W  | Audio channel DMA control                                                 |
+| 0x03      | **`XR_SCANLINE`**  | R /W+ | Current display scanline / write triggers video interrupt                 |
+| 0x04      | **`XR_VID_LEFT`**  | R /W  | Left edge start of active display window (normally 0)                     |
+| 0x05      | **`XR_VID_RIGHT`** | R /W  | Right edge + 1 end of active display window (normally 640 or 848)         |
+| 0x06      | **`XR_POINTER_H`** | - /W  | pointer sprite H position (in native screen coordinates)                  |
+| 0x07      | **`XR_POINTER_V`** | - /W  | pointer sprite V position (in native screen coordinates) and color select |
+| 0x08-0x0F | `XR_UNUSED_0x`     | - /-  | Unused registers                                                          |
 
 (`R+` or `W+` indicates that reading or writing this register has additional "side effects", respectively)
 ___
@@ -470,24 +483,24 @@ ___
 
 ### Playfield A & B Control XR Registers Summary
 
-| Reg #  | Name              | R/W | Description                                             |
-|--------|-------------------|-----|---------------------------------------------------------|
-| `0x10` | `XR_PA_GFX_CTRL`  | R/W | playfield A graphics control                            |
-| `0x11` | `XR_PA_TILE_CTRL` | R/W | playfield A tile control                                |
-| `0x12` | `XR_PA_DISP_ADDR` | R/W | playfield A display VRAM start address (start of frame) |
-| `0x13` | `XR_PA_LINE_LEN`  | R/W | playfield A display line width in words                 |
-| `0x14` | `XR_PA_HV_FSCALE` | R/W | playfield A horizontal and vertical fractional scaling  |
-| `0x15` | `XR_PA_H_SCROLL`  | R/W | playfield A horizontal fine scroll                      |
-| `0x16` | `XR_PA_V_SCROLL`  | R/W | playfield A vertical repeat and tile fine scroll        |
-| `0x17` | `XR_PA_LINE_ADDR` | -/W | playfield A scanline start address (start of next line) |
-| `0x18` | `XR_PB_GFX_CTRL`  | R/W | playfield B graphics control                            |
-| `0x19` | `XR_PB_TILE_CTRL` | R/W | playfield B tile control                                |
-| `0x1A` | `XR_PB_DISP_ADDR` | R/W | playfield B display VRAM start address (start of frame) |
-| `0x1B` | `XR_PB_LINE_LEN`  | R/W | playfield B display line width in words                 |
-| `0x1C` | `XR_PB_HV_FSCALE` | R/W | playfield B horizontal and vertical fractional scaling  |
-| `0x1D` | `XR_PB_H_SCROLL`  | R/W | playfield B horizontal fine scroll                      |
-| `0x1E` | `XR_PB_V_SCROLL`  | R/W | playfield B horizontal repeat and tile fine scroll      |
-| `0x1F` | `XR_PB_LINE_ADDR` | -/W | playfield B scanline start address (start of next line) |
+| Reg # | Name              | R/W | Description                                             |
+|-------|-------------------|-----|---------------------------------------------------------|
+| 0x10  | `XR_PA_GFX_CTRL`  | R/W | playfield A graphics control                            |
+| 0x11  | `XR_PA_TILE_CTRL` | R/W | playfield A tile control                                |
+| 0x12  | `XR_PA_DISP_ADDR` | R/W | playfield A display VRAM start address (start of frame) |
+| 0x13  | `XR_PA_LINE_LEN`  | R/W | playfield A display line width in words                 |
+| 0x14  | `XR_PA_HV_FSCALE` | R/W | playfield A horizontal and vertical fractional scaling  |
+| 0x15  | `XR_PA_H_SCROLL`  | R/W | playfield A horizontal fine scroll                      |
+| 0x16  | `XR_PA_V_SCROLL`  | R/W | playfield A vertical repeat and tile fine scroll        |
+| 0x17  | `XR_PA_LINE_ADDR` | -/W | playfield A scanline start address (start of next line) |
+| 0x18  | `XR_PB_GFX_CTRL`  | R/W | playfield B graphics control                            |
+| 0x19  | `XR_PB_TILE_CTRL` | R/W | playfield B tile control                                |
+| 0x1A  | `XR_PB_DISP_ADDR` | R/W | playfield B display VRAM start address (start of frame) |
+| 0x1B  | `XR_PB_LINE_LEN`  | R/W | playfield B display line width in words                 |
+| 0x1C  | `XR_PB_HV_FSCALE` | R/W | playfield B horizontal and vertical fractional scaling  |
+| 0x1D  | `XR_PB_H_SCROLL`  | R/W | playfield B horizontal fine scroll                      |
+| 0x1E  | `XR_PB_V_SCROLL`  | R/W | playfield B horizontal repeat and tile fine scroll      |
+| 0x1F  | `XR_PB_LINE_ADDR` | -/W | playfield B scanline start address (start of next line) |
 ___
 
 ### Playfield A & B Control XR Registers Details
@@ -683,24 +696,24 @@ Xosera has an audio subsystem closely modeled on the Amiga audio hardware (with 
 
 #### Audio Generation XR Registers Summary
 
-| Reg #  | Name             | R/W | Description                                          |
-|--------|------------------|-----|------------------------------------------------------|
-| `0x20` | `XR_AUD0_VOL`    | -/W | volume L`[15:8]`+R`[7:0]` (`0x80` = 100%)            |
-| `0x21` | `XR_AUD0_PERIOD` | -/W | 15-bit period, bit `[15]` force restart              |
-| `0x22` | `XR_AUD0_LENGTH` | -/W | 15-bit sample word length-1, bit `[15]` tile mem     |
-| `0x23` | `XR_AUD0_START`  | -/W | sample start add (vram/tilemem), writes next pending |
-| `0x24` | `XR_AUD1_VOL`    | -/W | volume L`[15:8]`+R`[7:0]` (`0x80` = 100%)            |
-| `0x25` | `XR_AUD1_PERIOD` | -/W | 15-bit period, bit [15] force restart                |
-| `0x26` | `XR_AUD1_LENGTH` | -/W | 15-bit sample word length-1, bit `[15]` tile mem     |
-| `0x27` | `XR_AUD1_START`  | -/W | sample start add (vram/tilemem), writes next pending |
-| `0x28` | `XR_AUD2_VOL`    | -/W | volume L`[15:8]`+R`[7:0]` (`0x80` = 100%)            |
-| `0x29` | `XR_AUD2_PERIOD` | -/W | 15-bit period, bit `[15]` force restart              |
-| `0x2A` | `XR_AUD2_LENGTH` | -/W | 15-bit sample word length-1, bit `[15]` tile mem     |
-| `0x2B` | `XR_AUD2_START`  | -/W | sample start add (vram/tilemem), writes next pending |
-| `0x2C` | `XR_AUD3_VOL`    | -/W | volume L`[15:8]`+R`[7:0]` (`0x80` = 100%)            |
-| `0x2D` | `XR_AUD3_PERIOD` | -/W | 15-bit period, bit `[15]` force restart              |
-| `0x2E` | `XR_AUD3_LENGTH` | -/W | 15-bit sample word length-1, bit `[15]` tile mem      |
-| `0x2F` | `XR_AUD3_START`  | -/W | sample start add (vram/tilemem), writes next pending |
+| Reg # | Name             | R/W | Description                                          |
+|-------|------------------|-----|------------------------------------------------------|
+| 0x20  | `XR_AUD0_VOL`    | -/W | volume L`[15:8]`+R`[7:0]` (`0x80` = 100%)            |
+| 0x21  | `XR_AUD0_PERIOD` | -/W | 15-bit period, bit `[15]` force restart              |
+| 0x22  | `XR_AUD0_LENGTH` | -/W | 15-bit sample word length-1, bit `[15]` tile mem     |
+| 0x23  | `XR_AUD0_START`  | -/W | sample start add (vram/tilemem), writes next pending |
+| 0x24  | `XR_AUD1_VOL`    | -/W | volume L`[15:8]`+R`[7:0]` (`0x80` = 100%)            |
+| 0x25  | `XR_AUD1_PERIOD` | -/W | 15-bit period, bit [15] force restart                |
+| 0x26  | `XR_AUD1_LENGTH` | -/W | 15-bit sample word length-1, bit `[15]` tile mem     |
+| 0x27  | `XR_AUD1_START`  | -/W | sample start add (vram/tilemem), writes next pending |
+| 0x28  | `XR_AUD2_VOL`    | -/W | volume L`[15:8]`+R`[7:0]` (`0x80` = 100%)            |
+| 0x29  | `XR_AUD2_PERIOD` | -/W | 15-bit period, bit `[15]` force restart              |
+| 0x2A  | `XR_AUD2_LENGTH` | -/W | 15-bit sample word length-1, bit `[15]` tile mem     |
+| 0x2B  | `XR_AUD2_START`  | -/W | sample start add (vram/tilemem), writes next pending |
+| 0x2C  | `XR_AUD3_VOL`    | -/W | volume L`[15:8]`+R`[7:0]` (`0x80` = 100%)            |
+| 0x2D  | `XR_AUD3_PERIOD` | -/W | 15-bit period, bit `[15]` force restart              |
+| 0x2E  | `XR_AUD3_LENGTH` | -/W | 15-bit sample word length-1, bit `[15]` tile mem     |
+| 0x2F  | `XR_AUD3_START`  | -/W | sample start add (vram/tilemem), writes next pending |
 
 #### Audio Generation XR Registers Details
 
@@ -714,23 +727,87 @@ Xosera has an audio subsystem closely modeled on the Amiga audio hardware (with 
 
 <img src="./pics/wd_XR_AUDn_VOL.svg">
 
+Sets the left and right mix volume for the corresponding audio channel.  The left and right volume can be set independently allowing full flexibility with stereo panning.  The 8-bit volume `128` (`0x80`) represents 100% volume (or really zero attenuation, with the mix output being 1:1 with the sample channel output waveform). Values greater than `128` will amplify the waveform output (with some quality loss) and values smaller will linearally attenuate the output waveform (in 64-steps, the low bit is currently ignored). At value zero, only zero output will be produced.  Changes to the `AUDn_VOL` register have an immediate effect on the channel output.
+
+##### 0x21 **`XR_AUD0_PERIOD` (-/W)** - audio channel 0 sample period
+
+##### 0x25 **`XR_AUD1_PERIOD` (-/W)** - audio channel 1 sample period
+
+##### 0x29 **`XR_AUD2_PERIOD` (-/W)** - audio channel 2 sample period
+
+##### 0x2D **`XR_AUD3_PERIOD` (-/W)** - audio channel 3 sample period
+
+<img src="./pics/wd_XR_AUDn_PERIOD.svg">
+
+Sets the sample period (or sample rate) for the corresponding audio channel.  The rate is specified as the number of main clock ticks between each 8-bit sample output (with a word of audio DMA'd every two samples).   The main audio clock rate changes depending on the video mode as shown in the table below (it is the same as the pixel clock).  Sample `RESTART[15]` can be set to cause the channel to restart, as if the sample length has expired (and fetching a new sample word from `AUDn_START` and setting sample length to `AUDn_LENGTH`).  Changes to the `AUDn_PERIOD` register have an immediate effect on the channel output (both `RESTART[15]` and frequency changes).
+
+The `AUDn_PERIOD` is specified with 15-bits but typically, depending on video mode and other bandwidth use, `AUDn_PERIOD` should not go below around 400 to assure reliable audio DMA (about one DMA word per scanline, but that is more than 50 Khz).  Samples per second output rate can be calulated with:
+
+```math
+samplesPerSecond = clockFrequency / PERIOD
+```
+
+The actual frequency of any output audio is related to both the `AUDn_PERIOD` register and length of the audio sample (as well as the data in the sample).  Assuming the sample has one cycle of a waveform (e.g., sine wave, triangle wave etc.), then the frequency of the note produced would be:
+
+```math
+samplePlaybackFrequency = clockFrequency / (PERIOD * sampleLength)
+```
+
+Where sample-length is `AUDn_LENGTH` * 2 (since two 8-bit samples per 16-bit word) and using the clock-frequency from table below.
+
+| Video Res. | Main Clock Frequency |
+|------------|----------------------|
+| 640x480    | 25,125,000 Hz        |
+| 848x480    | 33,750,000 Hz        |
+
+##### 0x22 **`XR_AUD0_LENGTH` (-/W)** - audio channel 0 sample word length and VRAM/TILE memory
+
+##### 0x26 **`XR_AUD1_LENGTH` (-/W)** - audio channel 1 sample word length and VRAM/TILE memory
+
+##### 0x2A **`XR_AUD2_LENGTH` (-/W)** - audio channel 2 sample word length and VRAM/TILE memory
+
+##### 0x2E **`XR_AUD3_LENGTH` (-/W)** - audio channel 3 sample word length and VRAM/TILE memory
+
+<img src="./pics/wd_XR_AUDn_LENGTH.svg">
+
+Sets the next samples length for the corresponding audio channel.  This can be `0` to `0x7fff` (representing 2 to 65536 8-bit samples, in steps of 2).  This will be used as the length of the next sample when the current sample finshes (either when its length count has gone negative, or the channel has been restarted with the `RESTART` bit in `AUDn_PERIOD`). It also specifies the type of memory the next samples data will be fetched from with the `TILEMEM[15]` bit (0 for VRAM, 1 for TILE XR memory).
+
+##### 0x23 **`XR_AUD0_START` (-/W)** - audio channel 0 sample start address (in either VRAM/TILE)
+
+##### 0x27 **`XR_AUD1_START` (-/W)** - audio channel 1 sample start address (in either VRAM/TILE)
+
+##### 0x2B **`XR_AUD2_START` (-/W)** - audio channel 2 sample start address (in either VRAM/TILE)
+
+##### 0x2F **`XR_AUD3_START` (-/W)** - audio channel 3 sample start address (in either VRAM/TILE)
+
+<img src="./pics/wd_XR_AUDn_START.svg">
+
+Sets the next samples starting address, in either VRAM or TILE memory (depending on `TILEMEM[15]` bit in `XR_AUDn_LENGTH`). The `AUDn_START` register should be written *after* `AUDn_LENGTH` to assure the proper memory type is used when the sample is restarted (and when switching between memory types, an additional `AUDn_PERIOD` `RESTART[15]` may be needed to avoid any possible race conditions).  This register must be written to clear the interrupt condition, and then the corresponding `AUDn_INTR` bit in `INT_CTRL` can be set to clear the pending sample reload interrupt `AUDn_INTR` bit in `INT_CTRL`.
+
 ___
 
 ### 2D Blitter Engine Operation
 
-The Xosera "blitter" is a simple VRAM data read/write "engine" that operates on 16-bit words in VRAM to copy, fill and do logic operations on arbitrary two-dimensional rectangular areas of Xosera VRAM (i.e., to draw, copy and manipulate "chunky" 4/8 bit pixel bitmap images). It supports a VRAM source and destination. The source can also be set to a constant. It repeats a basic word length operation for each "line" of a rectanglar area, and at the end of each line adds arbitrary "modulo" values to source and destination addresses (to position source and destination for the start of the next line). It also has a "nibble shifter" that can shift a line of word data 0 to 3 4-bit nibbles to allow for 4-bit/8-bit pixel level positioning and drawing. There are also first and last word edge transparency masks, to remove unwanted pixels from the words at the start and end of each line allowing for arbitrary pixel sized rectangular operations. There is a fixed logic equation with ANDC and XOR terms (a combination of which can set, clear, invert or pass through any source color bits). This also works in conjunction with "transparency" testing that can mask-out specified 4-bit or 8-bit pixel values when writing. This transparency masking allows specified nibbles in a word to remain unaltered when the word is overwritten (without read-modify-write VRAM access, and no speed penalty). The combination of these features allow for many useful graphical "pixel" operations to be performed in a single pass (copying, masking, shifting and logical operations).  To minimize idle time between blitter operations (during CPU setup), there is a one deep queue for operations, so the next operation can be setup while the current one is in progress (an interrupt can also be generated when the queue becomes empty).
+The Xosera "blitter" is a simple VRAM dta read/write "engine" that operates on 16-bit words in VRAM to copy, fill and do logic operations on arbitrary two-dimensional rectangular areas of Xosera VRAM (i.e., to draw, copy and manipulate "chunky" 4/8 bit pixel bitmap images). It supports a VRAM source and destination. The source can also be set to a constant. It repeats a basic word length operation for each "line" of a rectanglar area, and at the end of each line adds arbitrary "modulo" values to source and destination addresses (to position source and destination for the start of the next line). It also has a "nibble shifter" that can shift a line of word data 0 to 3 4-bit nibbles to allow for 4-bit/8-bit pixel level positioning and drawing. There are also first and last word edge transparency masks, to remove unwanted pixels from the words at the start and end of each line allowing for arbitrary pixel sized rectangular operations. There is a fixed logic equation with ANDC and XOR terms (a combination of which can set, clear, invert or pass through any source color bits). This also works in conjunction with "transparency" testing that can mask-out specified 4-bit or 8-bit pixel values when writing. This transparency masking allows specified nibbles in a word to remain unaltered when the word is overwritten (without read-modify-write VRAM access, and no speed penalty). The combination of these features allow for many useful graphical "pixel" operations to be performed in a single pass (copying, masking, shifting and logical operations).  To minimize idle time between blitter operations (during CPU setup), there is a one deep queue for operations, so the next operation can be setup while the current one is in progress (an interrupt can also be generated when the queue becomes empty).
 
 #### Logic Operation Applied to Blitter Operations
 
-`D = S & ~ANDC ^ XOR`  (destination word `D` = `S` source word AND'd with NOT of `ANDC` word and XOR'd with `XOR` word)
+```math
+D = S \cdot \overline{ANDC} \oplus XOR
+```
+
+> *C notation:* `D = S & (~ANDC) ^ XOR`  (destination word `D` = source word `S` AND'd with NOT of constant `ANDC` and XOR'd with constant `XOR`)
 
 - `D` result word
   - written to VRAM (starting address set by `XR_BLIT_DST_D` and incrementing/decrementing)
+  - and the end of each line, `XR_BLIT_MOD_D` is added to `XR_BLIT_DST_D` (to position for next line)
 - `S` primary source word, can be one of:
   - word read from VRAM (starting VRAM address set by `XR_BLIT_SRC_A` and incrementing/decrementing)
   - word constant (set by `XR_BLIT_SRC_S` when `S_CONST` set in `XR_BLIT_CTRL`)
-- `ANC` constant AND-COMPLEMENT word
+  - when not a constant, and the end of each line, `XR_BLIT_MOD_S` is added to `XR_BLIT_SRC_A` to position for next line)
+- `ANDC` constant AND-COMPLEMENT word
   - source word is AND'd with the NOT of this word
+  - transparency test (if enabled), is done on `S & ~ANDC` term (so bits can be masked before transparency testing)
 - `XOR` constant XOR source word
   - source word is XOR'd with the this word
 

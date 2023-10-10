@@ -1,0 +1,16 @@
+{
+    "reg": [
+        {
+            "bits": 16,
+            "name": "sample starting word address",
+            "type": 4,
+            "attr": [
+                "either VRAM or XR TILE memory address",
+                "specified with TILEMEM[15] in AUDn_LENGTH"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

@@ -1,0 +1,27 @@
+{
+    "reg": [
+        {
+            "bits": 15,
+            "name": "sample length in words - 1",
+            "type": 4,
+            "attr": [
+                "(8-bit sample length / 2) - 1",
+                "upper/even byte is output first"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "TILE",
+            "type": 2,
+            "attr": [
+                "0=VRAM",
+                "1=TILE",
+                "sample",
+                "memory"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

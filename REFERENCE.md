@@ -1,6 +1,6 @@
 # Xosera - Xark's Open Source Embedded Retro Adapter
 
-Xosera is a Verilog design that implements an audio/video controller (aka Embedded Retro Adapter) providing Amiga-ish level video raphics digital audio capibilities.
+Xosera is a Verilog design that implements an audio/video controller (aka Embedded Retro Adapter) providing Amiga-ish level video graphics digital audio capabilities.
 
 The design was originally for iCE40UltraPlus5K FPGAs, but has been ported to other FPGAs (with enough internal memory, like larger ECP5).
 
@@ -14,52 +14,52 @@ This document is meant to provide the low-level reference register information t
   - [Xosera Reference Information](#xosera-reference-information)
     - [Xosera Main Registers (XM Registers) Summary](#xosera-main-registers-xm-registers-summary)
     - [Xosera Main Register Details (XM Registers)](#xosera-main-register-details-xm-registers)
-        - [0x0 **`XM_SYS_CTRL`** (R/W+) - System Control](#0x0-xm_sys_ctrl-rw---system-control)
-        - [0x1 **`XM_INT_CTRL`** (R/W+) - Interrupt Control](#0x1-xm_int_ctrl-rw---interrupt-control)
-        - [0x2 **`XM_TIMER`** (R/W) - Timer Functions](#0x2-xm_timer-rw---timer-functions)
-        - [0x3 **`XM_RD_XADDR`** (R/W+) - XR Read Address](#0x3-xm_rd_xaddr-rw---xr-read-address)
-        - [0x4 **`XM_WR_XADDR`** (R/W) - XR Write Address](#0x4-xm_wr_xaddr-rw---xr-write-address)
-        - [0x5 **`XM_XDATA`** (R+/W+) - XR Read/Write Data](#0x5-xm_xdata-rw---xr-readwrite-data)
-        - [0x6 **`XM_RD_INCR`** (R/W) - Increment for VRAM Read Address](#0x6-xm_rd_incr-rw---increment-for-vram-read-address)
-        - [0x7 **`XM_RD_ADDR`** (R/W+) - VRAM Read Address](#0x7-xm_rd_addr-rw---vram-read-address)
-        - [0x8 **`XM_WR_INCR`** (R/W) - Increment for VRAM Write Address](#0x8-xm_wr_incr-rw---increment-for-vram-write-address)
-        - [0x9 **`XM_WR_ADDR`** (R/W) - VRAM Write Address](#0x9-xm_wr_addr-rw---vram-write-address)
-        - [0xA **`XM_DATA`** (R+/W+) - VRAM Read/Write Data](#0xa-xm_data-rw---vram-readwrite-data)
-        - [0xB **`XM_DATA_2`** (R+/W+) - VRAM Read/Write Data (2nd)](#0xb-xm_data_2-rw---vram-readwrite-data-2nd)
-        - [0xC **`XM_PIXEL_X`** (-/W+) - X coordinate for pixel addr/mask generation (also used to set `PIXEL_BASE`)](#0xc-xm_pixel_x--w---x-coordinate-for-pixel-addrmask-generation-also-used-to-set-pixel_base)
-        - [0xD **`PIXEL_Y`** (-/W+) - Y coordinate for pixel addr/mask generation (also used to set `PIXEL_WIDTH`)](#0xd-pixel_y--w---y-coordinate-for-pixel-addrmask-generation-also-used-to-set-pixel_width)
-        - [0xE **`XM_UART`** (R+/W+)](#0xe-xm_uart-rw)
-        - [0xF **`XM_FEATURE`** (R/-) - Xosera feature bits](#0xf-xm_feature-r----xosera-feature-bits)
+      - [0x0 **`XM_SYS_CTRL`** (R/W+) - System Control](#0x0-xm_sys_ctrl-rw---system-control)
+      - [0x1 **`XM_INT_CTRL`** (R/W+) - Interrupt Control](#0x1-xm_int_ctrl-rw---interrupt-control)
+      - [0x2 **`XM_TIMER`** (R/W) - Timer Functions](#0x2-xm_timer-rw---timer-functions)
+      - [0x3 **`XM_RD_XADDR`** (R/W+) - XR Read Address](#0x3-xm_rd_xaddr-rw---xr-read-address)
+      - [0x4 **`XM_WR_XADDR`** (R/W) - XR Write Address](#0x4-xm_wr_xaddr-rw---xr-write-address)
+      - [0x5 **`XM_XDATA`** (R+/W+) - XR Read/Write Data](#0x5-xm_xdata-rw---xr-readwrite-data)
+      - [0x6 **`XM_RD_INCR`** (R/W) - Increment for VRAM Read Address](#0x6-xm_rd_incr-rw---increment-for-vram-read-address)
+      - [0x7 **`XM_RD_ADDR`** (R/W+) - VRAM Read Address](#0x7-xm_rd_addr-rw---vram-read-address)
+      - [0x8 **`XM_WR_INCR`** (R/W) - Increment for VRAM Write Address](#0x8-xm_wr_incr-rw---increment-for-vram-write-address)
+      - [0x9 **`XM_WR_ADDR`** (R/W) - VRAM Write Address](#0x9-xm_wr_addr-rw---vram-write-address)
+      - [0xA **`XM_DATA`** (R+/W+) - VRAM Read/Write Data](#0xa-xm_data-rw---vram-readwrite-data)
+      - [0xB **`XM_DATA_2`** (R+/W+) - VRAM Read/Write Data (2nd)](#0xb-xm_data_2-rw---vram-readwrite-data-2nd)
+      - [0xC **`XM_PIXEL_X`** (-/W+) - X coordinate for pixel addr/mask generation (also used to set `PIXEL_BASE`)](#0xc-xm_pixel_x--w---x-coordinate-for-pixel-addrmask-generation-also-used-to-set-pixel_base)
+      - [0xD **`PIXEL_Y`** (-/W+) - Y coordinate for pixel addr/mask generation (also used to set `PIXEL_WIDTH`)](#0xd-pixel_y--w---y-coordinate-for-pixel-addrmask-generation-also-used-to-set-pixel_width)
+      - [0xE **`XM_UART`** (R+/W+)](#0xe-xm_uart-rw)
+      - [0xF **`XM_FEATURE`** (R/-) - Xosera feature bits](#0xf-xm_feature-r----xosera-feature-bits)
   - [Xosera Extended Register / Extended Memory Region Summary](#xosera-extended-register--extended-memory-region-summary)
     - [Xosera Extended Registers Details (XR Registers)](#xosera-extended-registers-details-xr-registers)
     - [Video Config and Copper XR Registers Summary](#video-config-and-copper-xr-registers-summary)
     - [Video Config and Copper XR Registers Details](#video-config-and-copper-xr-registers-details)
-        - [0x00 **`XR_VID_CTRL`** (R/W) - Border Color / Playfield Color-Swap](#0x00-xr_vid_ctrl-rw---border-color--playfield-color-swap)
-        - [0x01 **`XR_COPP_CTRL`** (R/W) - Copper Enable](#0x01-xr_copp_ctrl-rw---copper-enable)
-        - [0x02 **`XR_AUD_CTRL`** (R/W) - Audio Control](#0x02-xr_aud_ctrl-rw---audio-control)
-        - [0x03 **`XR_SCANLINE`** (R/W+) - current video scan line/trigger Xosera host CPU video interrupt](#0x03-xr_scanline-rw---current-video-scan-linetrigger-xosera-host-cpu-video-interrupt)
-        - [0x04 **`XR_VID_LEFT`** (R/W) - video display window left edge](#0x04-xr_vid_left-rw---video-display-window-left-edge)
-        - [0x05 **`XR_VID_RIGHT`** (R/W) - video display window right edge](#0x05-xr_vid_right-rw---video-display-window-right-edge)
-        - [0x06 **`XR_POINTER_H`** (-/W+) - pointer sprite H position](#0x06-xr_pointer_h--w---pointer-sprite-h-position)
-        - [0x07 **`XR_POINTER_V`** (-/W+) - pointer sprite V position and colormap select](#0x07-xr_pointer_v--w---pointer-sprite-v-position-and-colormap-select)
+      - [0x00 **`XR_VID_CTRL`** (R/W) - Border Color / Playfield Color-Swap](#0x00-xr_vid_ctrl-rw---border-color--playfield-color-swap)
+      - [0x01 **`XR_COPP_CTRL`** (R/W) - Copper Enable](#0x01-xr_copp_ctrl-rw---copper-enable)
+      - [0x02 **`XR_AUD_CTRL`** (R/W) - Audio Control](#0x02-xr_aud_ctrl-rw---audio-control)
+      - [0x03 **`XR_SCANLINE`** (R/W+) - current video scan line/trigger Xosera host CPU video interrupt](#0x03-xr_scanline-rw---current-video-scan-linetrigger-xosera-host-cpu-video-interrupt)
+      - [0x04 **`XR_VID_LEFT`** (R/W) - video display window left edge](#0x04-xr_vid_left-rw---video-display-window-left-edge)
+      - [0x05 **`XR_VID_RIGHT`** (R/W) - video display window right edge](#0x05-xr_vid_right-rw---video-display-window-right-edge)
+      - [0x06 **`XR_POINTER_H`** (-/W+) - pointer sprite H position](#0x06-xr_pointer_h--w---pointer-sprite-h-position)
+      - [0x07 **`XR_POINTER_V`** (-/W+) - pointer sprite V position and colormap select](#0x07-xr_pointer_v--w---pointer-sprite-v-position-and-colormap-select)
     - [Playfield A \& B Control XR Registers Summary](#playfield-a--b-control-xr-registers-summary)
     - [Playfield A \& B Control XR Registers Details](#playfield-a--b-control-xr-registers-details)
-        - [0x10 **`XR_PA_GFX_CTRL` (R/W)** - playfield A (base) graphics control](#0x10-xr_pa_gfx_ctrl-rw---playfield-a-base-graphics-control)
-        - [0x18 **`XR_PB_GFX_CTRL` (R/W)** - playfield B (overlay) graphics control](#0x18-xr_pb_gfx_ctrl-rw---playfield-b-overlay-graphics-control)
-        - [0x11 **`XR_PA_TILE_CTRL` (R/W)** - playfield A (base) tile control](#0x11-xr_pa_tile_ctrl-rw---playfield-a-base-tile-control)
-        - [0x19 **`XR_PB_TILE_CTRL` (R/W)** - playfield B (overlay) tile control](#0x19-xr_pb_tile_ctrl-rw---playfield-b-overlay-tile-control)
-        - [0x12 **`XR_PA_DISP_ADDR` (R/W)** - playfield A (base) display VRAM start address](#0x12-xr_pa_disp_addr-rw---playfield-a-base-display-vram-start-address)
-        - [0x1A **`XR_PB_DISP_ADDR` (R/W)** - playfield B (overlay) display VRAM start address](#0x1a-xr_pb_disp_addr-rw---playfield-b-overlay-display-vram-start-address)
-        - [0x13 **`XR_PA_LINE_LEN` (R/W)** - playfield A (base) display line word length](#0x13-xr_pa_line_len-rw---playfield-a-base-display-line-word-length)
-        - [0x1B **`XR_PB_LINE_LEN` (R/W)** - playfield B (overlay) display line word length](#0x1b-xr_pb_line_len-rw---playfield-b-overlay-display-line-word-length)
-        - [0x14 **`XR_PA_HV_FSCALE` (R/W)** - playfield A (base) horizontal and vertical fractional scale](#0x14-xr_pa_hv_fscale-rw---playfield-a-base-horizontal-and-vertical-fractional-scale)
-        - [0x1C **`XR_PB_HV_FSCALE` (R/W)** - playfield B (overlay) horizontal and vertical fractional scale](#0x1c-xr_pb_hv_fscale-rw---playfield-b-overlay-horizontal-and-vertical-fractional-scale)
-        - [0x15 **`XR_PA_H_SCROLL` (R/W)** - playfield A (base) horizontal fine scroll](#0x15-xr_pa_h_scroll-rw---playfield-a-base-horizontal-fine-scroll)
-        - [0x1D **`XR_PB_H_SCROLL` (R/W)** - playfield B (overlay) horizontal fine scroll](#0x1d-xr_pb_h_scroll-rw---playfield-b-overlay-horizontal-fine-scroll)
-        - [0x16 **`XR_PA_V_SCROLL` (R/W)** - playfield A (base) vertical repeat and tile fine scroll](#0x16-xr_pa_v_scroll-rw---playfield-a-base-vertical-repeat-and-tile-fine-scroll)
-        - [0x1E **`XR_PB_V_SCROLL` (R/W)** - playfield B (overlay) vertical repeat and tile fine scroll](#0x1e-xr_pb_v_scroll-rw---playfield-b-overlay-vertical-repeat-and-tile-fine-scroll)
-        - [0x17 **`XR_PA_LINE_ADDR` (WO)** - playfield A (base) display VRAM next line address](#0x17-xr_pa_line_addr-wo---playfield-a-base-display-vram-next-line-address)
-        - [0x1F **`XR_PB_LINE_ADDR` (WO)** - playfield B (overlay) display VRAM next line address](#0x1f-xr_pb_line_addr-wo---playfield-b-overlay-display-vram-next-line-address)
+      - [0x10 **`XR_PA_GFX_CTRL` (R/W)** - playfield A (base) graphics control](#0x10-xr_pa_gfx_ctrl-rw---playfield-a-base-graphics-control)
+      - [0x18 **`XR_PB_GFX_CTRL` (R/W)** - playfield B (overlay) graphics control](#0x18-xr_pb_gfx_ctrl-rw---playfield-b-overlay-graphics-control)
+      - [0x11 **`XR_PA_TILE_CTRL` (R/W)** - playfield A (base) tile control](#0x11-xr_pa_tile_ctrl-rw---playfield-a-base-tile-control)
+      - [0x19 **`XR_PB_TILE_CTRL` (R/W)** - playfield B (overlay) tile control](#0x19-xr_pb_tile_ctrl-rw---playfield-b-overlay-tile-control)
+      - [0x12 **`XR_PA_DISP_ADDR` (R/W)** - playfield A (base) display VRAM start address](#0x12-xr_pa_disp_addr-rw---playfield-a-base-display-vram-start-address)
+      - [0x1A **`XR_PB_DISP_ADDR` (R/W)** - playfield B (overlay) display VRAM start address](#0x1a-xr_pb_disp_addr-rw---playfield-b-overlay-display-vram-start-address)
+      - [0x13 **`XR_PA_LINE_LEN` (R/W)** - playfield A (base) display line word length](#0x13-xr_pa_line_len-rw---playfield-a-base-display-line-word-length)
+      - [0x1B **`XR_PB_LINE_LEN` (R/W)** - playfield B (overlay) display line word length](#0x1b-xr_pb_line_len-rw---playfield-b-overlay-display-line-word-length)
+      - [0x14 **`XR_PA_HV_FSCALE` (R/W)** - playfield A (base) horizontal and vertical fractional scale](#0x14-xr_pa_hv_fscale-rw---playfield-a-base-horizontal-and-vertical-fractional-scale)
+      - [0x1C **`XR_PB_HV_FSCALE` (R/W)** - playfield B (overlay) horizontal and vertical fractional scale](#0x1c-xr_pb_hv_fscale-rw---playfield-b-overlay-horizontal-and-vertical-fractional-scale)
+      - [0x15 **`XR_PA_H_SCROLL` (R/W)** - playfield A (base) horizontal fine scroll](#0x15-xr_pa_h_scroll-rw---playfield-a-base-horizontal-fine-scroll)
+      - [0x1D **`XR_PB_H_SCROLL` (R/W)** - playfield B (overlay) horizontal fine scroll](#0x1d-xr_pb_h_scroll-rw---playfield-b-overlay-horizontal-fine-scroll)
+      - [0x16 **`XR_PA_V_SCROLL` (R/W)** - playfield A (base) vertical repeat and tile fine scroll](#0x16-xr_pa_v_scroll-rw---playfield-a-base-vertical-repeat-and-tile-fine-scroll)
+      - [0x1E **`XR_PB_V_SCROLL` (R/W)** - playfield B (overlay) vertical repeat and tile fine scroll](#0x1e-xr_pb_v_scroll-rw---playfield-b-overlay-vertical-repeat-and-tile-fine-scroll)
+      - [0x17 **`XR_PA_LINE_ADDR` (WO)** - playfield A (base) display VRAM next line address](#0x17-xr_pa_line_addr-wo---playfield-a-base-display-vram-next-line-address)
+      - [0x1F **`XR_PB_LINE_ADDR` (WO)** - playfield B (overlay) display VRAM next line address](#0x1f-xr_pb_line_addr-wo---playfield-b-overlay-display-vram-next-line-address)
     - [Bitmap Display Formats](#bitmap-display-formats)
     - [Tile Display Formats](#tile-display-formats)
     - [Final Color Index Selection](#final-color-index-selection)
@@ -335,7 +335,7 @@ The value in this register is also used to set `PIXEL_WIDTH` when `SYS_CTRL[15:8
 <img src="./pics/wd_XM_UART.svg">
 
 **UART communication via USB using FTDI**
-Basic UART allowing send/receive communication with host PC at 230,400 bps (aka 230.4 Kbaud) via FTDI USB, intended mainly to aid debugging.  Software polled, so this may limit effective incoming data rate.  Typically this register is read as individual bytes, reading the even status byte bits `[15:8]`then reading/writing the odd data byte bits `[7:0]` accordingly.  If `RXF` (receive buffer full) bit is set, then a data byte is waiting to be read from lower odd data byte (which will clear `RXF`). If `TXF` (transmit buffer full) is clear, then a byte can be transmitted by writing it to the lower odd data byte (which will set `TXF` until data has finished transmitting).  This UART can also be configured in the design as transmit only (to save resources).
+Basic UART allowing send/receive communication with host PC at 230,400 bps via FTDI USB, intended mainly to aid debugging.  Software polled, so this may limit effective incoming data rate.  Typically this register is read as individual bytes, reading the even status byte bits `[15:8]`then reading/writing the odd data byte bits `[7:0]` accordingly.  If `RXF` (receive buffer full) bit is set, then a data byte is waiting to be read from lower odd data byte (which will clear `RXF`). If `TXF` (transmit buffer full) is clear, then a byte can be transmitted by writing it to the lower odd data byte (which will set `TXF` until data has finished transmitting).  This UART can also be configured in the design as transmit only (to save resources).
 
 > :mag: **USB UART** This register is an optional debug feature and may not always be present (in which case this register is ignored and will read as all zero).  `XM_FEATURE[7]`/`UART` will be set if UART is present.
 
@@ -632,7 +632,7 @@ In 8 BPP bitmap mode, there are 2 pixels per word, each one of 256 colors.
 
 ### Tile Display Formats
 
-Tile indices and attribute map display data starts at `XR_Px_DISP_ADDR` in either VRAM or TILEMEM (TILEMEM selected with `DISP_TILEMEM` bit in `XR_Px_TILE_CTRL`).  There are no alignement requirements for a tile
+Tile indices and attribute map display data starts at `XR_Px_DISP_ADDR` in either VRAM or TILEMEM (TILEMEM selected with `DISP_TILEMEM` bit in `XR_Px_TILE_CTRL`).  There are no alignment requirements for a tile
 
 The tile bitmap definitions start at the aligned address specified in `TILEBASE` bits set in `XR_Px_TILE_CTRL` in TILEMEM or VRAM (VRAM selected with `TILE_VRAM` in `XR_Pßx_TILE_CTRL`).  The tileset address should be aligned based on the power of two greater than the size of the maximum glyph index used. When using all possible glyphs in a tileset, alignment would be as follows:
 
@@ -694,7 +694,7 @@ ___
 
 ### Sample Based Audio Generation
 
-Xosera has an audio subsystem closely modeled on the Amiga audio hardware (with a few minor improvements).  It was designed to be suitable for game audio as well as MOD and similar classic "tracker" music playback (but not particularly hi-fi with current DAC).  It supports 4 independent 8-bit audio channels which are mixed into stereo DAC outputs (using PDM or sigma-delta modulation, typically with an R/C filter).  Each audio channel has both a left and right audio volume for full panning control (`AUDn_VOL`).  The audio format is raw 8-bit signed sample values, with two samples per word with a length from 2 to 65536 samples (multiples of 2) and can be stored in either VRAM or TILE memory for audio DMA playback (memory type is selected via high bit of `AUDn_LENGTH`).  The audio channel managment can be either interrupt driven or polled (with audio interrupts masked), with support for seamless audio chaining.  An interrupt will be triggered as soon as a channel starts and is ready to queue the next sample (while the current sample outputs).  Then the next samples `AUDn_LENGTH` (if length is different), and `AUDn_START` address can be written to queue the sample (and if this is not done before the current sample completes, then the current sample will repeat). When the new sample starts, another interrupt will be triggered to allow continued chaning of samples (always queueing the *next* sample to be output by writing to `AUDn_START`).  The audio sample rate is a multiple of the audio main clock (either 25.125 MHz in 640x480, or 33.75 MHz in 848x480).  Additionally a sample channel can be immediately restarted by setting the high bit of `AUDn_PERIOD` without waiting for current sample to finish. This causes `AUDn_LENGTH` and `AUDn_START` to be immediately reloaded, and first word of the sample fetch begins.
+Xosera has an audio subsystem closely modeled on the Amiga audio hardware (with a few minor improvements).  It was designed to be suitable for game audio as well as MOD and similar classic "tracker" music playback (but not particularly hi-fi with current DAC).  It supports 4 independent 8-bit audio channels which are mixed into stereo DAC outputs (using PDM or sigma-delta modulation, typically with an R/C filter).  Each audio channel has both a left and right audio volume for full panning control (`AUDn_VOL`).  The audio format is raw 8-bit signed sample values, with two samples per word with a length from 2 to 65536 samples (multiples of 2) and can be stored in either VRAM or TILE memory for audio DMA playback (memory type is selected via high bit of `AUDn_LENGTH`).  The audio channel management can be either interrupt driven or polled (with audio interrupts masked), with support for seamless audio chaining.  An interrupt will be triggered as soon as a channel starts and is ready to queue the next sample (while the current sample outputs).  Then the next samples `AUDn_LENGTH` (if length is different), and `AUDn_START` address can be written to queue the sample (and if this is not done before the current sample completes, then the current sample will repeat). When the new sample starts, another interrupt will be triggered to allow continued chaning of samples (always queueing the *next* sample to be output by writing to `AUDn_START`).  The audio sample rate is a multiple of the audio main clock (either 25.125 MHz in 640x480, or 33.75 MHz in 848x480).  Additionally a sample channel can be immediately restarted by setting the high bit of `AUDn_PERIOD` without waiting for current sample to finish. This causes `AUDn_LENGTH` and `AUDn_START` to be immediately reloaded, and first word of the sample fetch begins.
 
 #### Audio Generation XR Registers Summary
 
@@ -743,7 +743,7 @@ Sets the left and right mix volume for the corresponding audio channel.  The lef
 
 Sets the sample period (or sample rate) for the corresponding audio channel.  The rate is specified as the number of main clock ticks between each 8-bit sample output (with a word of audio DMA'd every two samples).   The main audio clock rate changes depending on the video mode as shown in the table below (it is the same as the pixel clock).  Sample `RESTART[15]` can be set to cause the channel to restart, as if the sample length has expired (and fetching a new sample word from `AUDn_START` and setting sample length to `AUDn_LENGTH`).  Changes to the `AUDn_PERIOD` register have an immediate effect on the channel output (both `RESTART[15]` and frequency changes).
 
-The `AUDn_PERIOD` is specified with 15-bits but typically, depending on video mode and other bandwidth use, `AUDn_PERIOD` should not go below around 400 to assure reliable audio DMA (about one DMA word per scanline, but that is more than 50 Khz).  Samples per second output rate can be calulated with:
+The `AUDn_PERIOD` is specified with 15-bits but typically, depending on video mode and other bandwidth use, `AUDn_PERIOD` should not go below around 400 to assure reliable audio DMA (about one DMA word per scanline, but that is more than 50 Khz).  Samples per second output rate can be calculated with:
 
 ```math
 samplesPerSecond = clockFrequency / PERIOD
@@ -994,14 +994,14 @@ The copper is a *very* limited CPU, its limited features include:
 
 - 1536 16-bit words (1.5KW) of program and data memory storage (XR memory `0xC000-0xC5FF`)
 - One 16-bit accumulator `RA` (memory mapped at copper address `0x800`)
-- One ALU operation, `RA_SUB` which computes `RA` = `RA` - 16-bit value writen (memory mapped at `0x801`)
+- One ALU operation, `RA_SUB` which computes `RA` = `RA` - 16-bit value written (memory mapped at `0x801`)
 - One condition flag `B` (borrow),  which is set to true/false result of comparison `RA` < *value-written* (after *every* write)
 - Only six actual instructions (but also some helpful "pseudo instruction" aliases provided by assembler and C macros)
 - All instructions take exactly 4 cycles to complete (excepting ones that wait), including branches both taken and not taken
 
 Each copper cycle is a "native pixel" of time on the screen as the pixel data scans out in lines from the top to bottom and each line from left to right with 800 or 1088 cycles per line (depending on 640x480 or 848x480 resolution) with off-screen cycles before visible pixels which continue to the end of each line (on visible lines, lines >= 480 are fully off-screen). Copper instructions all execute in 4 cycles (minimum, the `HPOS` and `VPOS` can take much longer waiting for a horizontal or vertical video beam scan position).  When waiting for a horizontal position (using `HPOS`), the position is cycle-exact allowing for native pixel exact register changes (but then 4+ cycles per instruction after waiting). Branches (either `BRLT` or `BRGE`) are also 4 cycles regardless of whether taken or not (making "stable" screen register manipulation when looping or branching easier).
 
-As far as the copper is concerned, all coordinates are always in absolute native pixel resolution, including off-screen (non-visible) pixels. The coordinates used by the copper are absolute per video mode (640 or 848 widescren) and are not affected by pixel doubling, blanking, scrolling or other video mode settings.  Pixels to the left oAll off-screen pixels are on the left (before) visible pixels on each line (and include horizontal front porch, sync and back porch time).  Line 0 is also the first visible line, and lines greater than 480 are the vertical horizontal front porch, sync and back porch time)
+As far as the copper is concerned, all coordinates are always in absolute native pixel resolution, including off-screen (non-visible) pixels. The coordinates used by the copper are absolute per video mode (640 or 848 widescreen) and are not affected by pixel doubling, blanking, scrolling or other video mode settings.  Pixels to the left oAll off-screen pixels are on the left (before) visible pixels on each line (and include horizontal front porch, sync and back porch time).  Line 0 is also the first visible line, and lines greater than 480 are the vertical horizontal front porch, sync and back porch time)
 
 | Video Mode | Aspect | Full res.  | H off-left | H visible   | V visible | V off-bottom |
 |------------|--------|------------|------------|-------------|-----------|--------------|
@@ -1028,8 +1028,8 @@ As far as the copper is concerned, all coordinates are always in absolute native
 | `~`      | number of copper cycles, always 4 unless a wait (each cycle is the time for one native pixel to output)  |
 | *xadr14* | 2-bit XR region + 12-bit offset (1<sup>st</sup> word of `SETI`, destination XR address)                  |
 | *im16*   | 16-bit immediate word (2<sup>nd</sup> word of `SETI`, the source value)                                  |
-| *cadr12* | 11-bit copper address or register with bit [11] (1<sup>st</sup> word of `SETM`, source copper adress)    |
-| *xadr16* | 16-bit XR addreass (2<sup>nd</sup> word of `SETM`, destination XR address)                               |
+| *cadr12* | 11-bit copper address or register with bit [11] (1<sup>st</sup> word of `SETM`, source copper address)    |
+| *xadr16* | 16-bit XR address (2<sup>nd</sup> word of `SETM`, destination XR address)                               |
 | *im11*   | 11-bit value for `HPOS`, `VPOS` wait. With `VPOS` bit `[10]` indicates also stop waiting if blitter idle |
 | *cadd11* | 11-bit copper program address for `BRGE`, `BRLT` branch opcodes                                          |
 
@@ -1099,7 +1099,7 @@ The copper *cannot* directly read or write the following (by design):
 - Xosera main registers (XM registers, these are for the host CPU)
 - Video RAM (it can however, setup a blitter operaton to alter VRAM)
 
-Since the copper can both read and write its program memory, it is quite possible (and useful) to change the copper program dynamically, both with self-modfying copper code and the host CPU modifying copper XR memory (via XM registers).  Timing may need to be taken into account when modifying a running copper program from the main CPU, however writing each word is atomic (so e.g., modifying a "branch opcode" at the start of copper memory can allow selecting between multiple programs sharing copper memory per frame).
+Since the copper can both read and write its program memory, it is quite possible (and useful) to change the copper program dynamically, both with self-modifying copper code and the host CPU modifying copper XR memory (via XM registers).  Timing may need to be taken into account when modifying a running copper program from the main CPU, however writing each word is atomic (so e.g., modifying a "branch opcode" at the start of copper memory can allow selecting between multiple programs sharing copper memory per frame).
 
 Copper programs self-modifying themselves during execution can be very useful to overcome limitations of the instruction set on the copper. Notably the copper code can safely "self-modify" program instructions, even including writing over the very next instruction (where it will execute using the new value written).  The following code fragment shows one way to read indirect via a "pointer" (note `SETM` opcode high bits built into pointer address value):
 
@@ -1117,7 +1117,7 @@ data_table      WORD  0x0123,0x4567,0x89AB,0xCDEF
 
 ```
 
-> :mag: **Source/Destination Operand Order**: Be careful when self-modifying `SETI`/`MOVI` or `SETM`/`MOVM` opcodes as the order of source and destination is reversed between them (which can be confusing).  The first opcode word (source copper address) of `SETM`/`MOVM` needs opcode bits set, usually with an OR or add operation (e.g., `SETM|` or `MOVN|`). The `SETI`/`MOVI` opcode also needs opcode bits, but since they are zero they usually default correctly (the exception being the last 1KW of TILE memory that exceeds 12-bits).
+> :mag: **Source/Destination Operand Order**: Be careful when self-modifying `SETI`/`MOVI` or `SETM`/`MOVM` opcodes as the order of source and destination is reversed between them (which can be confusing).  The first opcode word (source copper address) of `SETM`/`MOVM` needs opcode bits set, usually with an OR or add operation (e.g., `SETM|` or `MOVM|`). The `SETI`/`MOVI` opcode also needs opcode bits, but since they are zero they usually default correctly (the exception being the last 1KW of TILE memory that exceeds 12-bits).
 >
 > - For `SETI`/`MOVI`:
 >   - 1<sup>st</sup> word is the *destinaton* XR register/memory address (with opcode bits `[13:12]`=`00`)

@@ -12,7 +12,7 @@
 `include "xosera_pkg.sv"
 
 `ifdef ICE40UP5K
-`define WR_ADD_MAC                  // "waste" a DSP block for 16-bit adder (saves ~20 LCs)
+`define WR_ADD_MAC                  // on iCE40UP5K "waste" a DSP as 16-bit adder (saves ~20 LCs)
 `endif
 
 module reg_interface (
@@ -723,8 +723,9 @@ SB_MAC16 #(
     .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block
 );
 /* verilator lint_on PINCONNECTEMPTY */
-`endif
+`endif  // ICE40UP5K
 
+`ifdef WR_ADD_MAC
 word_t reg_wr_result;
 word_t unused_high3;
 
@@ -780,7 +781,8 @@ SB_MAC16 #(
     .SIGNEXTOUT()                       // cascaded sign extension output to next DSP block
 );
 /* verilator lint_on PINCONNECTEMPTY */
-`endif
+`endif  // WR_ADD_MAC
+`endif  // PIXEL_ADDR
 
 endmodule
 

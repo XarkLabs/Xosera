@@ -15,7 +15,7 @@ This is currently a work in progress, but you can follow along at [Hackaday.io](
 
 During development take everything here but the Verilog code with a grain of salt (i.e., the documentation may be out of date - or not written yet).  If you see an issue, feel free to make a pull request or ask on rosco_m68k Discord if you have a question (there are Xosera development and user channels).
 
-While the FPGA design is adaptable, the current primary development focus is for rosco_m68k Xosera PCB, see [rosco_m68k Hardware Projects feature/xosera branch](https://github.com/rosco-m68k/hardware-projects/tree/feature/xosera) which is now available from [Tindie|(<https://www.tindie.com/products/rosco/xosera-fpga-video-r1/>) (thanks Ross 😃).
+While the FPGA design is adaptable, the current primary development focus is for rosco_m68k Xosera PCB, see [rosco_m68k Hardware Projects master branch](https://github.com/rosco-m68k/hardware-projects/tree/master/xosera) which is now available from [Tindie|(<https://www.tindie.com/products/rosco/xosera-fpga-video-r1/>) (thanks Ross 😃).
 
 [See this for information on building and configuring Xosera](BUILDING.md)
 

@@ -175,7 +175,7 @@ always_ff @(posedge clk) begin : chan_process
             chan_period[16*i+:16]<= chan_period[16*i+:16] - 1'b1;
 
             // if period underflowed, output next sample
-            if (chan_period[16*i+xv::AUD_PER_RESTART_B] && chan_buff_ok[i]) begin
+            if (fetch_restart[i] || (chan_period[16*i+xv::AUD_PER_RESTART_B] && chan_buff_ok[i])) begin
                 chan_buff_odd[i]         <= !chan_buff_odd[i];
                 chan_period[16*i+:16]   <= { 1'b0, audio_period_nchan_i[i*15+:15] };
                 chan_val[i*8+:8]        <= chan_buff_odd[i] ? chan_buff[16*i+:8] : chan_buff[16*i+8+:8];
@@ -197,8 +197,6 @@ always_ff @(posedge clk) begin : chan_process
 
             if (!audio_enable_i || audio_restart_nchan_i[i]) begin
                 fetch_restart[i]        <= 1'b1;    // force sample addr, tile, len reload
-                chan_period[16*i+15]    <= 1'b1;    // force sample period expire (high bit)
-                chan_period[16*i]       <= 1'b1;    // force sample period expire (low bit to survive decrement)
                 chan_buff_ok[i]         <= 1'b0;    // clear sample buffer status
                 chan_buff_odd[i]        <= 1'b0;    // output 1st sample from word
             end
@@ -263,7 +261,7 @@ always_ff @(posedge clk) begin : chan_process
                 audio_mem_rd_addr       <= AUDn_PARAM_START | (8'(fetch_chan) << 2);
                 fetch_st                <= AUD_SET_LENCNT;
             end
-            AUD_SET_LENCNT: begin    // set LENCTN from LENGTH
+            AUD_SET_LENCNT: begin    // set LENCNT from LENGTH
                 // LENGTH data ready, waiting for START
                 // write to LENCNT (with TILEMEM flag)
                 audio_wr_en             <= 1'b1;

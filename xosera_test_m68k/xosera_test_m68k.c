@@ -2530,7 +2530,7 @@ static void play_silence()
     for (int v = 0; v < 4; v++)
     {
         uint16_t vo = v << 2;
-        xreg_setw(AUD0_VOL + vo, 0x0000);
+        xreg_setw(AUD0_VOL + vo, 0x8080);
         xreg_setw_next(/* AUD0_PERIOD + vo, */ SILENCE_PER);
         xreg_setw_next(/* AUD0_LENGTH + vo, */ SILENCE_LEN);
         xreg_setw_next(/* AUD0_START + vo,  */ SILENCE_ADDR);
@@ -2794,7 +2794,6 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
         for (int v = 0; v < num_audio_channels; v++)
         {
             uint16_t vo = v << 2;
-            xm_setbl(INT_CTRL, (INT_CTRL_AUD0_INTR_F << v));        // clear voice interrupt status
             uint16_t audvol;
             switch (v)
             {
@@ -2814,8 +2813,6 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
             xreg_setw(AUD0_VOL + vo, audvol);
             xreg_setw_next(/* AUD0_PERIOD + vo, */ period);        // force instant sample start
             xreg_setw_next(/* AUD0_LENGTH + vo, */ (len / 2) - 1);
-            xreg_setw_next(/* AUD0_START + vo,  */ vaddr);
-            xreg_setw(AUD0_LENGTH + vo, (len / 2) - 1);
             xreg_setw_next(/* AUD0_START + vo,  */ vaddr);
             xreg_setw(AUD0_PERIOD + vo, period | AUD_PERIOD_RESTART_F);        // force instant sample start
             ic = xm_getw(INT_CTRL);

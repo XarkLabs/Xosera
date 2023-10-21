@@ -45,7 +45,7 @@ module reg_interface (
     output      logic           reconfig_o,        // reconfigure iCE40 from flash
     // interrupt management
 `ifdef EN_TIMER_INTR
-    output      logic           timer_intr_o,      // timer compare interrrupt
+    output      logic           timer_intr_o,      // timer compare interrupt
 `endif
     output      intr_t          intr_mask_o,       // enabled interrupts (which signal CPU interrupt)
     output      intr_t          intr_clear_o,      // pending interrupts CPU acknowledge (clear)
@@ -194,7 +194,6 @@ logic           reg_timer_zero;
 assign          reg_timer_zero  = (reg_timer_countdown == 0) ? 1'b1 : 1'b0;
 byte_t          reg_timer_next;         // 8-bit timer interrupt interval counter next cycle
 assign          reg_timer_next  = reg_timer_zero ? reg_timer_interval : reg_timer_countdown - 1'b1;
-assign          timer_intr_o    = reg_timer_zero;
 `endif
 
 always_ff @(posedge clk) begin
@@ -202,13 +201,18 @@ always_ff @(posedge clk) begin
         reg_timer           <= '0;
         reg_timer_frac      <= '0;
 `ifdef EN_TIMER_INTR
+        timer_intr_o        <= '0;
         reg_timer_countdown <= '0;
 `endif
     end else begin
+`ifdef EN_TIMER_INTR
+        timer_intr_o        <= '0;
+`endif
         if (tick) begin
             reg_timer_frac      <= reg_timer_frac + (HZ_REDUCED - CLK_REDUCED);
             reg_timer           <= reg_timer + 1'b1;
 `ifdef EN_TIMER_INTR
+            timer_intr_o        <= reg_timer_zero;
             reg_timer_countdown <= reg_timer_next;
 `endif
         end else begin

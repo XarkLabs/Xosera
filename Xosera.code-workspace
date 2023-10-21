@@ -27,6 +27,10 @@
 			"MD033": false, // no inline HTML
 			"MD036": false // use heading not bold
 		},
+		"githubPullRequests.useReviewMode": {
+			"merged": false,
+			"closed": false
+		},
 		"cSpell.words": [
 			"ADDI",
 			"addq",

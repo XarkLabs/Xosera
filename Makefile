@@ -77,7 +77,7 @@ xosera_dvi_prog: xosera_dvi
 # Build and program combo Xosera UPduino 3.x DVI FPGA bitstream for rosco_m6k board
 xosera_dvi_640_prog: xosera_dvi_640
 	@echo === Programming Xosera board UPduino DVI firmware for 640x480 only ===
-	$(ICEPROG) -d i:0x0403:0x6014 rtl/xosera_board_dvi.bin
+	$(ICEPROG) -d i:0x0403:0x6014 rtl/xosera_board_dvi_640.bin
 
 # Build UPduino bitstream
 upduino:

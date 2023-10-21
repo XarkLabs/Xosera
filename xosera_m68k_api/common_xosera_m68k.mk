@@ -33,9 +33,11 @@ EXTRA_LDFLAGS?=
 EXTRA_LIBS?=
 EXTRA_VASMFLAGS?=
 
+ifneq ($(BUILDING_XOSERA_API),true)
 EXTRA_CFLAGS+=-I$(XOSERA_M68K_API)
 EXTRA_LDFLAGS+=-L$(XOSERA_M68K_API)
 EXTRA_LIBS+=-lxosera_m68k_api
+endif
 
 CPU?=68010
 ARCH?=$(CPU)
@@ -72,7 +74,7 @@ LDSCRIPT?=$(SYSLIBDIR)/ld/serial/rosco_m68k_program.ld
 endif
 
 
-VASMFLAGS=-Felf -m$(CPU) -quiet -Lnf $(DEFINES)
+VASMFLAGS=-Felf -m$(CPU) -quiet -Lnf -I $(XOSERA_M68K_API) $(DEFINES)
 LDFLAGS=-T $(LDSCRIPT) -L $(SYSLIBDIR) -Map=$(MAP) --gc-sections --oformat=elf32-m68k $(EXTRA_LDFLAGS)
 
 CC=m68k-elf-gcc

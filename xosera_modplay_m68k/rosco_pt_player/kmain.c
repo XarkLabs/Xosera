@@ -2,14 +2,15 @@
  * Copyright (c) 2020 Ross Bamford
  */
 
-#include <stdio.h>
-#include <stdbool.h>
-#include <limits.h>
-#include <string.h>
-#include <sdfat.h>
 #include <basicio.h>
-#include "dprintf.h"
+#include <debug.h>
+#include <limits.h>
+#include <sdfat.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 #include <xosera_m68k_api.h>
+
 #include "dprintf.h"
 #include "pt_mod.h"
 #include "xosera_mod_play.h"
@@ -22,15 +23,15 @@
 
 // #define VERBOSE             // Define to see "best effort" division printout
 
-extern int main(PtMod *mod);
-extern int xosera_play(PtMod *mod);
+extern int main(PtMod * mod);
+extern int xosera_play(PtMod * mod);
 
-#define LOAD_CHUNK  (24*1024)
+#define LOAD_CHUNK (24 * 1024)
 static uint8_t buffer[640 * 1024];
 
-static int load_mod(const char *filename, uint8_t *buf, int size)
+static int load_mod(const char * filename, uint8_t * buf, int size)
 {
-    FILE *f = fl_fopen(filename, "r");
+    FILE * f = fl_fopen(filename, "r");
 
     if (!f)
     {
@@ -71,7 +72,7 @@ static int load_mod(const char *filename, uint8_t *buf, int size)
     while (size_remain > 0)
     {
         int partial_size = size_remain > LOAD_CHUNK ? LOAD_CHUNK : size_remain;
-        int result = fl_fread(buf, partial_size, 1, f);
+        int result       = fl_fread(buf, partial_size, 1, f);
         if (result != partial_size)
         {
             fl_fclose(f);
@@ -91,13 +92,13 @@ static int load_mod(const char *filename, uint8_t *buf, int size)
 extern void install_intr();
 extern void remove_intr();
 
-#define MAX_MODS 26
+#define MAX_MODS    26
 #define MAX_NAMELEN 64
 char mod_files[MAX_MODS][MAX_NAMELEN];
-int num_mods;
-int mod_size[MAX_MODS];
+int  num_mods;
+int  mod_size[MAX_MODS];
 
-const char *get_file()
+const char * get_file()
 {
     num_mods = 0;
     memset(mod_files, 0, sizeof(mod_files));
@@ -112,7 +113,7 @@ const char *get_file()
         {
             if (!dirent.is_dir && dirent.filename[0] != '.')
             {
-                const char *ext = strrchr(dirent.filename, '.');
+                const char * ext = strrchr(dirent.filename, '.');
                 if (ext)
                 {
                     if (strcmp(ext, ".mod") == 0 || strcmp(ext, ".MOD") == 0)
@@ -168,11 +169,11 @@ const char *get_file()
 void init_viz()
 {
     // setup 4-bpp 16 x 16 tiled screen showing 4 sample buffers
-    xreg_setw(PA_GFX_CTRL, 0x001E);      // colorbase = 0x00, tiled, 4-bpp, Hx4 Vx3
-    xreg_setw(PA_HV_FSCALE, 0x0044);     // set 512x384 scaling
-    xreg_setw(PA_TILE_CTRL, 0x0800 | 7); // tiledata @ 0x800, 8 high
-    xreg_setw(PA_DISP_ADDR, 0x0000);     // display VRAM @ 0x0000
-    xreg_setw(PA_LINE_LEN, 0x0010);      // 16 chars per line
+    xreg_setw(PA_GFX_CTRL, 0x001E);             // colorbase = 0x00, tiled, 4-bpp, Hx4 Vx3
+    xreg_setw(PA_HV_FSCALE, 0x0044);            // set 512x384 scaling
+    xreg_setw(PA_TILE_CTRL, 0x0800 | 7);        // tiledata @ 0x800, 8 high
+    xreg_setw(PA_DISP_ADDR, 0x0000);            // display VRAM @ 0x0000
+    xreg_setw(PA_LINE_LEN, 0x0010);             // 16 chars per line
 
     // set colormap
     for (uint16_t i = i; i < 16; i++)
@@ -191,7 +192,7 @@ void init_viz()
         for (int y = 0; y < 16; y++)
         {
             xm_setw(WR_ADDR, (y * 16) + x);
-            uint16_t color = ((x / 8) << 12) | ((y / 8) << 13); // use colorbase for channel tint
+            uint16_t color = ((x / 8) << 12) | ((y / 8) << 13);        // use colorbase for channel tint
             xm_setw(DATA, color | c);
             xm_setw(DATA, color | c);
             xm_setw(DATA, color | c);
@@ -214,8 +215,8 @@ void init_viz()
 
 void kmain()
 {
-    printf("\033c\033[?25l"); // XANSI reset, disable input cursor
-    dprintf("\033c");         // terminal reset
+    printf("\033c\033[?25l");        // XANSI reset, disable input cursor
+    dprintf("\033c");                // terminal reset
     dprintf("rosco_pt_mod - xosera_init(2) - ");
     xosera_init(2);
     dprintf("OK (%dx%d).\n", xosera_vid_width(), xosera_vid_height());
@@ -241,7 +242,7 @@ void kmain()
             dprintf("no SD card, bailing\n");
             return;
         }
-        const char *filename = get_file();
+        const char * filename = get_file();
 
         if (filename == NULL)
         {
@@ -251,11 +252,13 @@ void kmain()
 
         init_viz();
 
+        start_debugger();
+
         dprintf("Loading mod: \"%s\"", filename);
         if (load_mod(filename, buffer, sizeof(buffer)))
         {
 
-            PtMod *mod = (PtMod *)buffer;
+            PtMod * mod = (PtMod *)buffer;
 
             dprintf("\nMOD is %-20.20s\n", mod->song_name);
 
@@ -293,9 +296,21 @@ void kmain()
                 if (lastPatternPos != patternPos)
                 {
                     lastPatternPos = patternPos;
-                    dprintf("%02x[%02x]: SMPL: %02x; PD: %04d [%3s] (Xosera: %05d) CMD: %03x:%03x:%03x:%03x (SPD: %d / %d ms/10)\n",
-                            pattern, patternPos, sampleNumber, period, PtNoteName(period), xoPeriod,
-                            effect1, effect2, effect3, effect4, StepFrames, tickTenMs);
+                    dprintf(
+                        "%02x[%02x]: SMPL: %02x; PD: %04d [%3s] (Xosera: %05d) CMD: %03x:%03x:%03x:%03x (SPD: %d / %d "
+                        "ms/10)\n",
+                        pattern,
+                        patternPos,
+                        sampleNumber,
+                        period,
+                        PtNoteName(period),
+                        xoPeriod,
+                        effect1,
+                        effect2,
+                        effect3,
+                        effect4,
+                        StepFrames,
+                        tickTenMs);
                 }
 #endif
             }

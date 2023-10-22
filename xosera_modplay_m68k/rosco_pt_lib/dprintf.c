@@ -43,7 +43,7 @@ void dprint(const char * str)
 }
 
 static char dprint_buff[4096];
-void dprintf(const char * fmt, ...)
+void        dprintf(const char * fmt, ...)
 {
     va_list args;
     va_start(args, fmt);

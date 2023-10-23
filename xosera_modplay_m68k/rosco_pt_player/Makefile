@@ -14,7 +14,12 @@ $(error Please set XOSERA_M68K_API to the Xosera API directory E.g., Xosera/xose
 endif
 
 EXTRA_CFLAGS=-DPLAY_SAMPLE -I../rosco_pt_lib
-EXTRA_LIBS=../rosco_pt_lib/dprintf.o ../rosco_pt_lib/pt_mod.o -lgdb
+EXTRA_LIBS=../rosco_pt_lib/dprintf.o ../rosco_pt_lib/pt_mod.o
+
+ifeq ($(DEBUG),true)
+EXTRA_CFLAGS+=-DDEBUG
+EXTRA_LIBS+=-lgdb
+endif
 
 # use generic common make rules for Xosera + rosco_m68k build
 include $(XOSERA_M68K_API)/common_xosera_m68k.mk

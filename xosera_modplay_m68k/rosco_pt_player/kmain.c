@@ -2,14 +2,21 @@
  * Copyright (c) 2020 Ross Bamford
  */
 
+#if !defined(DEBUG)
+#define DEBUG   0
+#endif
+
 #include <basicio.h>
-#include <debug.h>
 #include <limits.h>
 #include <sdfat.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <xosera_m68k_api.h>
+
+#if DEBUG
+#include <debug.h>
+#endif
 
 #include "dprintf.h"
 #include "pt_mod.h"
@@ -252,7 +259,9 @@ void kmain()
 
         init_viz();
 
+#if DEBUG
         start_debugger();
+#endif
 
         dprintf("Loading mod: \"%s\"", filename);
         if (load_mod(filename, buffer, sizeof(buffer)))

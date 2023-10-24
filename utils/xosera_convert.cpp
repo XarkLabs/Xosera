@@ -19,23 +19,29 @@ bool write_palette = false;
 static void help()
 {
     printf("xosera_convert: PNG to various Xosera image formats\n");
-    printf("Usage:  xosera_convert [options ...] <mode> <input PNG> <output basename>\n");
+    printf("Usage:  xosera_convert [options ...] <mode> <input_file> <out_basename>\n");
     printf("Options:\n");
     printf(" -c     Number of colors (2, 16, 256 or 4096)\n");
     printf(" -d     Display input and output images\n");
     printf(" -i     Interleave RG and B with 4096 colors\n");
     printf(" -n     Add random noise to reduce 12-bit color banding\n");
     printf(" -p     Also write out colormem palette file\n");
-    printf("Conversion <mode>:\n");
+    printf(" -raw   Output raw headerless binary (*default)\n");
+    printf(" -ch    Output C source/header file\n");
+    printf(" -as    Output asm source file\n");
+    printf(" -memh  Output Verilog hex memory file (16-bit width)\n");
+    printf("Conversion mode : <mode>\n");
     printf(" font   Convert PNG to font\n");
     printf(" bitmap Convert PNG to bitmap image\n");
     printf(" cut    Convert PNG with outlined images to blit images\n");
     printf(" pal    Write out palette (use -c to specify colors)\n");
+    printf("Input file:   <input_file> (PNG format)\n");
+    printf("Output base name: <out_basename>\n");
 
     exit(EXIT_FAILURE);
 }
 
-static inline Uint32 getpixel(SDL_Surface * surface, int x, int y)
+inline Uint32 getpixel(SDL_Surface * surface, int x, int y)
 {
     int bpp = surface->format->BytesPerPixel;
     /* Here p is the address to the pixel we want to retrieve */
@@ -66,9 +72,10 @@ static inline Uint32 getpixel(SDL_Surface * surface, int x, int y)
 
 int main(int argc, char ** argv)
 {
+    bool quit = false;
     char *mode = nullptr;
     char *in_file = nullptr;
-    char *out_file = nullptr;
+    char *out_basename = nullptr;
 
     if (argc == 1)
     {
@@ -111,9 +118,9 @@ int main(int argc, char ** argv)
             {
                 in_file = argv[a];
             }
-            else if (!out_file)
+            else if (!out_basename)
             {
-                out_file = argv[a];
+                out_basename = argv[a];
             }
             else
             {
@@ -123,31 +130,28 @@ int main(int argc, char ** argv)
         }
     }
 
-    if (!in_file || !out_file)
+    if (!mode)
     {
+        printf("Error: A conversion <mode> is required.\n");
+        help();
+    }
+
+    if (!in_file)
+    {
+        printf("Error: An <input_file> is required.\n");
+        help();
+    }
+
+    if (!out_basename)
+    {
+        printf("Error: An <out_basename> is required.\n");
+        help();
     }
 
     printf("Input image file     : \"%s\"\n", in_file);
 
-    if (!interleave_mode)
-    {
-        snprintf(out_file8, sizeof(out_file8), "%s_RG8.raw", out_file);
-        snprintf(out_file4, sizeof(out_file4), "%s_B4.raw", out_file);
-
-        printf("Output 8-bpp R+G raw image: \"%s\"\n", out_file8);
-        printf("Output 4-bpp B   raw image: \"%s\"\n", out_file4);
-    }
-    else
-    {
-        snprintf(out_file8, sizeof(out_file8), "%s_RG8B4.raw", out_file);
-        printf("Output interleaved RG 8-bpp & B 4-bpp scanlines: \"%s\"\n", out_file8);
-    }
-
-    bool quit = false;
-
     SDL_Init(SDL_INIT_VIDEO);
     IMG_Init(IMG_INIT_PNG);
-
 
     SDL_Surface * image = IMG_Load(in_file);
 
@@ -164,26 +168,31 @@ int main(int argc, char ** argv)
         w = image->w;
         h = image->h;
         printf("\nInput image size        : %d x %d\n", w, h);
-        if (!interleave_mode)
-        {
-            printf("Output 8-bpp RG raw size: %6d bytes (%6.1f KB)\n", w * h, (w * h) / 1024.0f);
-            printf("Output 4-bpp B  raw size: %6d bytes (%6.1f KB)\n", (w / 2) * h, ((w / 2) * h) / 1024.0f);
-            printf("   12-bpp RGB total size: %6d bytes (%6.1f KB)\n",
-                   ((w * h) + ((w / 2) * h)),
-                   ((w * h) + ((w / 2) * h)) / 1024.0f);
-        }
-        else
-        {
-            printf("Output 12-bpp RG+B raw size: %6d bytes (%6.1f KB)\n",
-                   ((w * h) + ((w / 2) * h)),
-                   ((w * h) + ((w / 2) * h)) / 1024.0f);
-        }
+        // if (!interleave_mode)
+        // {
+        //     printf("Output 8-bpp RG raw size: %6d bytes (%6.1f KB)\n", w * h, (w * h) / 1024.0f);
+        //     printf("Output 4-bpp B  raw size: %6d bytes (%6.1f KB)\n", (w / 2) * h, ((w / 2) * h) / 1024.0f);
+        //     printf("   12-bpp RGB total size: %6d bytes (%6.1f KB)\n",
+        //            ((w * h) + ((w / 2) * h)),
+        //            ((w * h) + ((w / 2) * h)) / 1024.0f);
+        // }
+        // else
+        // {
+        //     printf("Output 12-bpp RG+B raw size: %6d bytes (%6.1f KB)\n",
+        //            ((w * h) + ((w / 2) * h)),
+        //            ((w * h) + ((w / 2) * h)) / 1024.0f);
+        // }
 
         if (((w * h) + ((w / 2) * h)) > (128 * 1024))
         {
             printf("\nWARNING: Will not fit in Xosera 128KB VRAM\n");
         }
     }
+
+    printf("WIP...\n");
+    (void)quit;
+    exit(EXIT_FAILURE);
+#if 0
 
     if (!batch_mode)
     {
@@ -413,6 +422,7 @@ int main(int argc, char ** argv)
     {
         SDL_FreeSurface(image);
     }
+#endif
 
     IMG_Quit();
     SDL_Quit();

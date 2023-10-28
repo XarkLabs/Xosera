@@ -208,7 +208,6 @@ $(DOT): %.dot: %.sv $(MAKEFILE_LIST)
 	@mkdir -p $(LOGS) $(@D)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
-	@-rm abc.history
 	@-grep "XOSERA" $(LOGS)/$(OUTNAME)_yosys.log
 	@-grep "\(Number of cells\|Number of wires\)" $(LOGS)/$(OUTNAME)_yosys.log
 

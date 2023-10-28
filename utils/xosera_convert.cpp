@@ -2,41 +2,71 @@
 // See top-level LICENSE file for license information. (Hint: MIT)
 // vim: set et ts=4 sw=4
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <time.h>
 
 #include <SDL.h>
 #include <SDL_image.h>
 
-bool display_pic = false;
-bool add_noise = false;
+bool display_pic     = false;
+bool add_noise       = false;
 bool interleave_RG_B = false;
-bool write_palette = false;
+bool write_palette   = false;
+
+enum class file_type_t
+{
+    NONE,
+    RAW,
+    PNG,
+    CH,
+    MEMH,
+    NUM_TYPES
+};
+
+enum class convert_type_t
+{
+    NONE,
+    FONT,
+    FONT2PNG,
+    PALETTE,
+    BITMAP,
+    CUT,
+    NUM_MODES
+};
+
+file_type_t in_type;
+file_type_t out_type;
+
+convert_type_t cmode;
 
 static void help()
 {
     printf("xosera_convert: PNG to various Xosera image formats\n");
-    printf("Usage:  xosera_convert [options ...] <mode> <input_file> <out_basename>\n");
+    printf("Usage:  xosera_convert [options ...] <mode> <input_name> <output_name>\n");
     printf("Options:\n");
-    printf(" -c     Number of colors (2, 16, 256 or 4096)\n");
-    printf(" -d     Display input and output images\n");
-    printf(" -i     Interleave RG and B with 4096 colors\n");
-    printf(" -n     Add random noise to reduce 12-bit color banding\n");
-    printf(" -p     Also write out colormem palette file\n");
-    printf(" -raw   Output raw headerless binary (*default)\n");
-    printf(" -ch    Output C source/header file\n");
-    printf(" -as    Output asm source file\n");
-    printf(" -memh  Output Verilog hex memory file (16-bit width)\n");
-    printf("Conversion mode : <mode>\n");
-    printf(" font   Convert PNG to font\n");
-    printf(" bitmap Convert PNG to bitmap image\n");
-    printf(" cut    Convert PNG with outlined images to blit images\n");
-    printf(" pal    Write out palette (use -c to specify colors)\n");
-    printf("Input file:   <input_file> (PNG format)\n");
-    printf("Output base name: <out_basename>\n");
+    printf(" -c             Number of colors (2, 16, 256 or 4096)\n");
+    printf(" -d             Display input and output images\n");
+    printf(" -i             Interleave RG and B with 4096 colors\n");
+    printf(" -n             Add random noise to reduce 12-bit color banding\n");
+    printf(" -p             Also write out colormem palette file\n");
+    printf(" -w <width>     Width in pixels\n");
+    printf(" -h <height>    Height in pixels\n");
+    printf(" -p <palfile>   Also read/write out palette file\n");
+    printf(" -raw           Output raw headerless binary (*default)\n");
+    printf(" -ch            Output C source/header file\n");
+    printf(" -as            Output asm source file\n");
+    printf(" -memh          Output Verilog hex memory file (16-bit width)\n");
+    printf("Convert mode:  <mode>\n");
+    printf(" font           Convert PNG to font\n");
+    printf(" font2png       Convert font binary to PNG");
+    printf(" raw2png        Convert RAW Xosera bitmap to PNG");
+    printf(" bitmap         Convert PNG to bitmap image\n");
+    printf(" cut            Convert PNG with outlined images to blit images\n");
+    printf("Input name:   <input_name>\n");
+    printf("Output name:  <output_name>\n");
 
     exit(EXIT_FAILURE);
 }
@@ -72,10 +102,10 @@ inline Uint32 getpixel(SDL_Surface * surface, int x, int y)
 
 int main(int argc, char ** argv)
 {
-    bool quit = false;
-    char *mode = nullptr;
-    char *in_file = nullptr;
-    char *out_basename = nullptr;
+    bool   quit         = false;
+    char * mode         = nullptr;
+    char * in_file      = nullptr;
+    char * out_basename = nullptr;
 
     if (argc == 1)
     {
@@ -112,9 +142,23 @@ int main(int argc, char ** argv)
         {
             if (!mode)
             {
-                mode = argv[a];
+                if (strcasecmp("raw2font", argv[a]) != 0)
+                {
+                    mode  = argv[a];
+                    cmode = convert_type_t::FONT2PNG;
+                }
+                else if (strcasecmp("font", argv[a]) != 0)
+                {
+                    mode  = argv[a];
+                    cmode = convert_type_t::FONT;
+                }
+                else
+                {
+                    printf("Unexpected mode: '%s'\n", argv[a]);
+                    exit(EXIT_FAILURE);
+                }
             }
-            if (!in_file)
+            else if (!in_file)
             {
                 in_file = argv[a];
             }

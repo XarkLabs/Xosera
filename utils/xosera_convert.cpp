@@ -3,10 +3,13 @@
 // vim: set et ts=4 sw=4
 
 #include <assert.h>
+#include <stdint.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unordered_map>
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -14,7 +17,11 @@
 bool display_pic     = false;
 bool add_noise       = false;
 bool interleave_RG_B = false;
-bool write_palette   = false;
+bool write_palette     = false;
+
+int                                   pal_index;
+std::unordered_map<uint32_t, uint8_t> palmap;
+uint16_t                              rawpal[256];
 
 enum class file_type_t
 {
@@ -233,10 +240,77 @@ int main(int argc, char ** argv)
         }
     }
 
+#if 0
     printf("WIP...\n");
     (void)quit;
     exit(EXIT_FAILURE);
-#if 0
+#elif 1
+    (void)quit;
+    {
+        const char * out_file8 = "had_sc.raw";
+        FILE *       fp8       = fopen(out_file8, "w");
+        if (fp8 != nullptr)
+        {
+            printf("Writing output file: \"%s\"...", out_file8);
+            fflush(stdout);
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    SDL_Color rgb;
+                    Uint32    data = getpixel(image, x, y);
+                    SDL_GetRGB(data, image->format, &rgb.r, &rgb.g, &rgb.b);
+
+                    int red   = ((rgb.r + 8) / 16);
+                    int green = ((rgb.g + 8) / 16);
+                    int blue  = ((rgb.b + 8) / 16);
+                    if (red < 0)
+                        red = 0;
+                    else if (red > 15)
+                        red = 15;
+                    if (green < 0)
+                        green = 0;
+                    else if (green > 15)
+                        green = 15;
+                    if (blue < 0)
+                        blue = 0;
+                    else if (blue > 15)
+                        blue = 15;
+
+
+                    uint32_t rgb32 = (red << 16) | (green << 8) | (blue);
+                    if (palmap.find(rgb32) == palmap.end())
+                        palmap[rgb32] = pal_index++;
+
+                    uint8_t ii = palmap[rgb32];
+
+                    fputc(ii, fp8);
+                    rawpal[ii] = ((red >> 4) << 8) | ((green >> 4) << 4) | (blue >> 4);
+                }
+            }
+            fclose(fp8);
+            printf("success\n");
+
+            {
+                const char * out_file8 = "had_sc_pal.raw";
+                FILE *       fp8       = fopen(out_file8, "w");
+                if (fp8 != nullptr)
+                {
+                    printf("Writing output file: \"%s\"...", out_file8);
+                    fflush(stdout);
+                }
+
+                for (int i = 0; i < pal_index; i++)
+                {
+                    fputc(rawpal[i], fp8);
+                }
+                fclose(fp8);
+            }
+        }
+    }
+
+#elif 0
 
     if (!batch_mode)
     {

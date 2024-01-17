@@ -19,7 +19,7 @@
 		"editor.formatOnSave": false,
 		"editor.dragAndDrop": false,
 		"editor.codeActionsOnSave": {
-			"source.fixAll.markdownlint": true
+			"source.fixAll.markdownlint": "explicit"
 		},
 		"markdownlint.config": {
 			"MD001": false, // Heading levels should only increment by one level at a time

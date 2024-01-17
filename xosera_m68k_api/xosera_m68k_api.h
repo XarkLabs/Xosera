@@ -144,7 +144,8 @@ bool xosera_xansi_detect(bool hide_cursor);        // detect if XANSI firmware r
 void xosera_xansi_restore(void);                   // restore XANSI text mode
 bool xosera_init(xosera_mode_t mode);              // detect Xosera, set configuration (traps if not present)
 bool xosera_reset_state(void);                     // reset to default state w/o config, clears VRAM (xrmem unaltered)
-bool xosera_sync(void);                            // quick check if Xosera responding (traps if not present)
+bool xosera_sync(void);                            // immediate check if Xosera responding (traps if not present)
+bool xosera_wait_sync(void);                       // wait a bit and see if Xosera starts responding (traps if not present)
 bool xosera_get_info(xosera_info_t * info);        // retrieve init xosera_info_t (valid after Xosera reconfig)
 void cpu_delay(int ms);                            // delay approx milliseconds with CPU busy wait
 void xosera_delay(uint32_t ms);                    // delay milliseconds using Xosera TIMER register

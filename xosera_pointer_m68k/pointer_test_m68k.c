@@ -71,12 +71,16 @@ static void dprintf(const char * fmt, ...)
 
 void wait_vblank_start()
 {
+    xv_prep();
+
     xwait_not_vblank();
     xwait_vblank();
 }
 
 static bool load_sd_bitmap(const char * filename, uint16_t base_address)
 {
+    xv_prep();
+
     dprintf("Loading bitmap: \"%s\"", filename);
     void * file = fl_fopen(filename, "r");
 
@@ -116,6 +120,8 @@ static bool load_sd_bitmap(const char * filename, uint16_t base_address)
 
 static bool load_sd_colors(const char * filename)
 {
+    xv_prep();
+
     dprintf("Loading colormap: \"%s\"", filename);
     void * file = fl_fopen(filename, "r");
 
@@ -424,6 +430,8 @@ uint16_t eks[256] = {
 uint32_t test_count;
 void     xosera_pointer_test()
 {
+    xv_prep();
+
     dprintf("pointer_test_m68k\n");
 
     dprintf("Checking for Xosera XANSI firmware...");

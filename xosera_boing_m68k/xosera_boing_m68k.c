@@ -269,6 +269,7 @@ static inline long scale_coord(long v, long scale, long v_center, long scale_cen
 
 static inline void wait_vblank_start()
 {
+    xv_prep();
     xwait_not_vblank();
     xwait_vblank();
 }
@@ -507,6 +508,7 @@ void draw_ball_at(int width_words, int height_words, int x, int y)
     int scroll_x = -(top_left_x - top_left_col * TILE_WIDTH_B);
     int scroll_y = -(top_left_y - top_left_row * TILE_HEIGHT_B);
 
+    xv_prep();
 #if USE_BLIT_METHOD == USE_COPASM
     xmem_setw(XR_COPPER_ADDR + boing_copper__ball_dst, dst);
     xmem_setw(XR_COPPER_ADDR + boing_copper__ball_h_scroll, MAKE_H_SCROLL(scroll_x));
@@ -553,6 +555,8 @@ void draw_ball_at(int width_words, int height_words, int x, int y)
 
 void set_ball_colour(uint8_t colour_base)
 {
+    xv_prep();
+
     uint16_t gfx_ctrl = MAKE_GFX_CTRL(colour_base, 0, GFX_4_BPP, 0, 0, 0);
 #if USE_BLIT_METHOD == USE_COPASM
     xmem_setw(XR_COPPER_ADDR + boing_copper__ball_gfx_ctrl, gfx_ctrl);
@@ -566,6 +570,8 @@ void set_ball_colour(uint8_t colour_base)
 #if USE_AUDIO
 void upload_audio()
 {
+    xv_prep();
+
     xreg_setw(AUD_CTRL, MAKE_AUD_CTRL(0));               // disable audio
     vram_setw_addr_incr(VRAM_AUDIO_BASE, 0x0001);        // set VRAM address, write increment of 1
     for (uint16_t i = 0; i < VRAM_SILENCE_LEN; i++)
@@ -606,6 +612,8 @@ void upload_audio()
 
 void play_audio(uint16_t pos_x)
 {
+    xv_prep();
+
     uint16_t wordsize = ((_binary_Boing_raw_end - _binary_Boing_raw_start) / 2) - 1;
     uint16_t rate     = 8000 + ((xm_getw(TIMER) & 0xfff) - 0x800);        // randomize rate a bit
     uint16_t period   = (clk_hz + (rate / 2)) / rate;
@@ -649,6 +657,8 @@ void vram_write_bitmap_1bpp(int      width,
                             uint16_t base,
                             uint8_t  colours)
 {
+    xv_prep();
+
     int width_words = width / PIXELS_PER_WORD_1BPP;
 
     for (uint16_t row = 0; row < height; ++row)
@@ -672,6 +682,8 @@ void vram_write_bitmap_1bpp(int      width,
 
 void vram_write_bitmap_4bpp(int width, int height, uint8_t bitmap[height][width], uint16_t line_len, uint16_t base)
 {
+    xv_prep();
+
     int width_words = width / PIXELS_PER_WORD_4BPP;
 
     for (uint16_t row = 0; row < height; ++row)
@@ -695,6 +707,8 @@ void vram_write_bitmap_4bpp(int width, int height, uint8_t bitmap[height][width]
 
 void vram_write_bitmap_8bpp(int width, int height, uint8_t bitmap[height][width], uint16_t line_len, uint16_t base)
 {
+    xv_prep();
+
     int width_words = width / PIXELS_PER_WORD_8BPP;
 
     for (uint16_t row = 0; row < height; ++row)
@@ -722,6 +736,8 @@ void vram_write_tiled(int      width_tiles,
                       uint16_t line_len,
                       uint16_t base)
 {
+    xv_prep();
+
     for (uint16_t row = 0; row < height_tiles; ++row)
     {
         const uint16_t row_base = base + row * line_len;
@@ -736,6 +752,8 @@ void vram_write_tiled(int      width_tiles,
 
 void vram_fill_bitmap_1bpp(int width, int height, uint8_t colour, uint16_t line_len, uint16_t base, uint8_t colours)
 {
+    xv_prep();
+
     int width_words = width / PIXELS_PER_WORD_1BPP;
 
     for (uint16_t row = 0; row < height; ++row)
@@ -759,6 +777,8 @@ void vram_fill_bitmap_1bpp(int width, int height, uint8_t colour, uint16_t line_
 
 void vram_fill_bitmap_4bpp(int width, int height, uint8_t colour, uint16_t line_len, uint16_t base)
 {
+    xv_prep();
+
     int width_words = width / PIXELS_PER_WORD_4BPP;
 
     for (uint16_t row = 0; row < height; ++row)
@@ -782,6 +802,8 @@ void vram_fill_bitmap_4bpp(int width, int height, uint8_t colour, uint16_t line_
 
 void vram_fill_bitmap_8bpp(int width, int height, uint8_t colour, uint16_t line_len, uint16_t base)
 {
+    xv_prep();
+
     int width_words = width / PIXELS_PER_WORD_8BPP;
 
     for (uint16_t row = 0; row < height; ++row)
@@ -805,6 +827,8 @@ void vram_fill_bitmap_8bpp(int width, int height, uint8_t colour, uint16_t line_
 
 void vram_fill_tiled(int width_tiles, int height_tiles, uint16_t tile, uint16_t line_len, uint16_t base)
 {
+    xv_prep();
+
     for (uint16_t row = 0; row < height_tiles; ++row)
     {
         const uint16_t row_base = base + row * line_len;
@@ -825,6 +849,8 @@ void vram_sequence_tiled(int      width_tiles,
                          uint16_t line_len,
                          uint16_t base)
 {
+    xv_prep();
+
     for (uint16_t row = 0; row < height_tiles; ++row)
     {
         const uint16_t row_base = base + row * line_len;
@@ -843,6 +869,8 @@ void vram_sequence_tiled(int      width_tiles,
 
 void copper_load_list(uint16_t length, uint16_t list[length], uint16_t base)
 {
+    xv_prep();
+
     xmem_setw_next_addr(base);
     for (uint16_t i = 0; i < length; ++i)
     {
@@ -852,6 +880,8 @@ void copper_load_list(uint16_t length, uint16_t list[length], uint16_t base)
 
 void xosera_boing()
 {
+    xv_prep();
+
     dprintf("Xosera boing\n");
 
     dprintf("Checking for Xosera XANSI firmware...");

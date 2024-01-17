@@ -55,6 +55,8 @@ static void dputs(char * msg)
 
 void xosera_crop_test()
 {
+    xv_prep();
+
     dputs("copper crop_test - set Xosera to 640x480\n\n");
     dputs("Checking for Xosera XANSI firmware...");
     if (xosera_xansi_detect(true))

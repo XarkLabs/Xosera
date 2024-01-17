@@ -193,6 +193,8 @@ void dump_xosera_regs(void)
 
 static bool load_sd_bitmap(const char * filename, uint16_t base_address)
 {
+    xv_prep();
+
     dprintf("Loading bitmap: \"%s\"", filename);
     void * file = fl_fopen(filename, "r");
 
@@ -232,6 +234,8 @@ static bool load_sd_bitmap(const char * filename, uint16_t base_address)
 
 static bool load_sd_colors(const char * filename)
 {
+    xv_prep();
+
     dprintf("Loading colormap: \"%s\"", filename);
     void * file = fl_fopen(filename, "r");
 
@@ -269,6 +273,8 @@ static bool load_sd_colors(const char * filename)
 
 void xosera_splitscreen_test()
 {
+    xv_prep();
+
     dprintf("Xosera_test_m68k\n");
     dprintf("Checking for Xosera XANSI firmware...");
     if (xosera_xansi_detect(true))

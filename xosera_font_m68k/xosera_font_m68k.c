@@ -74,6 +74,8 @@ static void dprintf(const char * fmt, ...)
 
 static void reset_vid(void)
 {
+    xv_prep();
+
     xwait_not_vblank();
     xwait_vblank();
 
@@ -120,6 +122,8 @@ static inline void checkbail()
 
 _NOINLINE void delay_check(int ms)
 {
+    xv_prep();
+
     while (ms--)
     {
         checkbail();
@@ -388,6 +392,8 @@ void puts_1bpp(const char * str,
 
 void xosera_font_test()
 {
+    xv_prep();
+
     dprintf("xosera_font_m68k\n");
 
     dprintf("Checking for Xosera XANSI firmware...");
@@ -411,7 +417,6 @@ void xosera_font_test()
         exit(1);
     }
 
-    xv_prep();
     while (true)
     {
         xwait_not_vblank();

@@ -31,7 +31,6 @@
 
 #include <machine.h>
 
-#define XV_PREP_REQUIRED
 #include "xosera_m68k_api.h"
 
 #define nop() __asm__ __volatile__("nop ; nop")

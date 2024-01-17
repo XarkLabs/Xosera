@@ -34,7 +34,6 @@
 #if !defined(ROSCO_M68K)
 #define ROSCO_M68K
 #endif
-#define XV_PREP_REQUIRED
 #include "xosera_m68k_api.h"
 
 #define SYNC_RETRIES 250        // ~1/4 second
@@ -337,11 +336,3 @@ bool xosera_get_info(xosera_info_t * info)
 
     return valid;
 }
-
-// define xosera_ptr so GCC doesn't see const value (so it tries to keep it in a register vs reloading it).
-__asm__(
-    "               .section    .rodata\n"
-    "               .align      2\n"
-    "               .globl      xosera_ptr\n"
-    "xosera_ptr:    .long       " XM_STR(XM_BASEADDR) "\n"
-    "               .size       xosera_ptr,.-xosera_ptr");

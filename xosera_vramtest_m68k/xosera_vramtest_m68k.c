@@ -60,6 +60,8 @@ static void update_elapsed()
 
 _NOINLINE static bool delay_check(int ms)
 {
+    xv_prep();
+
     while (ms--)
     {
         if (checkchar())
@@ -82,6 +84,8 @@ _NOINLINE static bool delay_check(int ms)
 
 void wait_vblank_start()
 {
+    xv_prep();
+
     xwait_not_vblank();
     xwait_vblank();
 }
@@ -224,6 +228,8 @@ static void xr_pos(int x, int y)
 
 static void xr_putc(const char c)
 {
+    xv_prep();
+
     if (!has_PF_B)
     {
         return;
@@ -339,6 +345,8 @@ static _NOINLINE void fill_LFSR()
     static uint16_t salt = 42;
     uint32_t        start_state;
     uint16_t        lfsr;
+    xv_prep();
+
     do
     {
         start_state = xm_getw(TIMER);
@@ -365,6 +373,8 @@ static _NOINLINE void fill_LFSR()
 
 static _NOINLINE void fill_ADDR()
 {
+    xv_prep();
+
     uint16_t start_value = xm_getw(TIMER);
 
     for (int addr = 0; addr < 0x10000; addr++)
@@ -377,6 +387,8 @@ static int vram_retry(uint16_t addr, uint16_t baddata, bool LFSR, int mode, int 
 {
     int retries = 0;
     int rc      = 0;
+    xv_prep();
+
     // see if slow read retry will read it correctly (if not, assume
     // it was a write error)
     uint16_t data = (uint16_t)~pattern_buffer[addr];
@@ -812,6 +824,8 @@ static int xmem_retry(uint16_t addr, uint16_t baddata, bool LFSR, int mode)
 {
     int retries = 0;
     int rc      = 0;
+    xv_prep();
+
     // see if slow read retry will read it correctly (if not, assume
     // it was a write error)
     uint16_t data = (uint16_t)~pattern_buffer[addr];

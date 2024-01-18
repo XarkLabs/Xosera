@@ -22,10 +22,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <machine.h>        // rosco_m68k I/O
-
 // building XANSI in firmware
-#if !defined(XOSERA_ANSI_CON)
+#if !defined(XOSERA_API_MINIMAL)
+#include <machine.h>        // rosco_m68k I/O
 #include <basicio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +33,6 @@
 #if !defined(ROSCO_M68K)
 #define ROSCO_M68K
 #endif
-#define XV_PREP_REQUIRED
 #include "xosera_m68k_api.h"
 
 #define SYNC_RETRIES 250        // ~1/4 second
@@ -90,7 +88,7 @@ void xosera_delay(uint32_t ms)
 }
 
 // building XANSI in firmware
-#if !defined(XOSERA_ANSI_CON)
+#if !defined(XOSERA_API_MINIMAL)
 
 // return true if Xosera XANSI firmware detected (safe from BUS ERROR if no hardware present)
 bool xosera_xansi_detect(bool hide_cursor)
@@ -337,11 +335,3 @@ bool xosera_get_info(xosera_info_t * info)
 
     return valid;
 }
-
-// define xosera_ptr so GCC doesn't see const value (so it tries to keep it in a register vs reloading it).
-__asm__(
-    "               .section    .rodata\n"
-    "               .align      2\n"
-    "               .globl      xosera_ptr\n"
-    "xosera_ptr:    .long       " XM_STR(XM_BASEADDR) "\n"
-    "               .size       xosera_ptr,.-xosera_ptr");

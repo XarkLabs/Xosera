@@ -50,7 +50,6 @@ extern void         (*_EFP_CHECKCHAR)();
 
 #include "xosera_ansiterm_m68k.h"
 
-#define XV_PREP_REQUIRED        // require Xosera xv_prep() function (for speed)
 #if !defined(ROSCO_M68K)
 #define ROSCO_M68K
 #endif

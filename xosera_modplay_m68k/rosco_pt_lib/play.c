@@ -31,6 +31,8 @@ static bool load_sample_chunk(PtMemorySample * sample,
                               uint16_t         chunk_len,
                               uint16_t *       outActualSize)
 {
+    xv_prep();
+
     xm_setw(WR_XADDR, addr);
 
     uint16_t chunk_end = chunk_start + chunk_len;
@@ -94,6 +96,8 @@ static void restart_channel(Channel * channel)
 
 static void xosera_channel_ready(Channel * channel)
 {
+    xv_prep();
+
     uint16_t actualSize;
     bool     last = load_next_chunk(channel, &actualSize);
 
@@ -118,6 +122,8 @@ static void xosera_channel_ready(Channel * channel)
 
 int xosera_play(PtMod * mod, int number, uint16_t rate)
 {
+    xv_prep();
+
     while (checkchar())
     {
         readchar();

@@ -499,12 +499,16 @@ static void disable_sd_boot()
 
 static inline void wait_vblank_start()
 {
+    xv_prep();
+
     xwait_not_vblank();
     xwait_vblank();
 }
 
 static inline void check_vblank()
 {
+    xv_prep();
+
     if (!xm_getb_sys_ctrl(VBLANK) || xreg_getw(SCANLINE) > 520)
     {
         wait_vblank_start();
@@ -513,6 +517,8 @@ static inline void check_vblank()
 
 _NOINLINE void restore_colors()
 {
+    xv_prep();
+
     wait_vblank_start();
     xmem_setw_next_addr(XR_COLOR_A_ADDR);
     for (uint16_t i = 0; i < 256; i++)
@@ -529,6 +535,8 @@ _NOINLINE void restore_colors()
 
 _NOINLINE void restore_colors2(uint8_t alpha)
 {
+    xv_prep();
+
     wait_vblank_start();
     xmem_setw_next_addr(XR_COLOR_B_ADDR);
     uint16_t sa = (alpha & 0xf) << 12;
@@ -542,6 +550,8 @@ _NOINLINE void restore_colors2(uint8_t alpha)
 // sets test blend palette
 _NOINLINE void restore_colors3()
 {
+    xv_prep();
+
     wait_vblank_start();
     xmem_setw_next_addr(XR_COLOR_B_ADDR);
     for (uint16_t i = 0; i < 256; i++)
@@ -553,6 +563,8 @@ _NOINLINE void restore_colors3()
 
 _NOINLINE void dupe_colors(int alpha)
 {
+    xv_prep();
+
     wait_vblank_start();
     uint16_t sa = (alpha & 0xf) << 12;
     for (uint16_t i = 0; i < 256; i++)
@@ -712,6 +724,8 @@ static uint8_t  text_color = 0x02;        // dark green on black
 
 static void get_textmode_settings()
 {
+    xv_prep();
+
     uint16_t vx          = (xreg_getw(PA_GFX_CTRL) & 3) + 1;
     uint16_t tile_height = (xreg_getw(PA_TILE_CTRL) & 0xf) + 1;
     screen_addr          = xreg_getw(PA_DISP_ADDR);
@@ -721,6 +735,8 @@ static void get_textmode_settings()
 
 static void xcls()
 {
+    xv_prep();
+
     get_textmode_settings();
     xm_setw(WR_INCR, 1);
     xm_setw(WR_ADDR, screen_addr);
@@ -734,6 +750,8 @@ static void xcls()
 
 static const char * xmsg(int x, int y, int color, const char * msg)
 {
+    xv_prep();
+
     xm_setw(WR_ADDR, (y * text_columns) + x);
     xm_setbh(DATA, color);
     char c;
@@ -752,6 +770,8 @@ static const char * xmsg(int x, int y, int color, const char * msg)
 
 static void reset_vid(void)
 {
+    xv_prep();
+
     remove_intr();
 
     wait_vblank_start();
@@ -792,6 +812,8 @@ static void reset_vid(void)
 
 static void reset_vid_nosd(void)
 {
+    xv_prep();
+
     reset_vid();
 #if 1        // handy for development to force Kermit upload
     dprintf("Disabling SD on next boot...\n");
@@ -812,6 +834,8 @@ static inline void checkbail()
 
 _NOINLINE void delay_check(int ms)
 {
+    xv_prep();
+
     while (ms--)
     {
         checkbail();
@@ -891,6 +915,8 @@ static void xr_pos(int x, int y)
 
 static void xr_putc(const char c)
 {
+    xv_prep();
+
     xmem_setw_next_addr(xr_screen_addr + (xr_y * xr_text_columns) + xr_x);
     if (c == '\n')
     {
@@ -958,6 +984,8 @@ static void setup_copper_fx()
 
 static void setup_margins(void)
 {
+    xv_prep();
+
     uint16_t w = xosera_vid_width();
     xreg_setw(VID_LEFT, ((w - 640) / 2));
     xreg_setw(VID_RIGHT, ((w - 640) / 2) + 640);
@@ -965,6 +993,8 @@ static void setup_margins(void)
 
 static void install_copper()
 {
+    xv_prep();
+
     wait_vblank_start();
     xreg_setw(PA_H_SCROLL, 0);
     xreg_setw(PB_H_SCROLL, 0);
@@ -1217,6 +1247,8 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
 
 void show_test_pic(int pic_num, uint16_t addr)
 {
+    xv_prep();
+
     if (pic_num >= num_images)
     {
         return;
@@ -1324,6 +1356,8 @@ void show_test_pic(int pic_num, uint16_t addr)
 
 static void load_sd_bitmap(const char * filename, int vaddr)
 {
+    xv_prep();
+
     dprintf("Loading bitmap: \"%s\"", filename);
     void * file = fl_fopen(filename, "r");
 
@@ -1360,6 +1394,8 @@ static void load_sd_bitmap(const char * filename, int vaddr)
 
 static void load_sd_colors(const char * filename)
 {
+    xv_prep();
+
     dprintf("Loading colormap: \"%s\"", filename);
     void * file = fl_fopen(filename, "r");
 
@@ -1402,6 +1438,8 @@ static void load_sd_colors(const char * filename)
 
 void draw8bpp_h_line(unsigned int base, uint8_t color, int x, int y, int len)
 {
+    xv_prep();
+
     if (len < 1)
     {
         return;
@@ -1432,6 +1470,8 @@ void draw8bpp_h_line(unsigned int base, uint8_t color, int x, int y, int len)
 
 void draw8bpp_v_line(uint16_t base, uint8_t color, int x, int y, int len)
 {
+    xv_prep();
+
     if (len < 1)
     {
         return;
@@ -1468,6 +1508,8 @@ static uint16_t blit_shift[4] = {0xF000, 0x7801, 0x3C02, 0x1E03};
 
 static uint16_t get_lfsr()
 {
+    xv_prep();
+
     static uint16_t lfsr = 42;
     uint32_t        msb  = (int16_t)lfsr < 0; /* Get MSB (i.e., the output bit). */
     lfsr <<= 1;                               /* Shift register */
@@ -1616,6 +1658,8 @@ uint32_t font[16 * 7] = {
 
 void print_digit(uint16_t off, uint16_t ll, uint16_t dig, uint16_t color)
 {
+    xv_prep();
+
     union lw
     {
         uint32_t l;
@@ -1639,6 +1683,8 @@ void print_digit(uint16_t off, uint16_t ll, uint16_t dig, uint16_t color)
 
 void test_colormap()
 {
+    xv_prep();
+
     xwait_not_vblank();
     xwait_vblank();
 
@@ -1751,6 +1797,8 @@ void test_colormap()
 
 void test_blend()
 {
+    xv_prep();
+
     uint16_t copsave = xreg_getw(COPP_CTRL);
     xreg_setw(COPP_CTRL, 0x0000);
 
@@ -1786,6 +1834,8 @@ void test_blit()
 
     static const int W_LOGO = 32 / 4;
     static const int H_LOGO = 16;
+
+    xv_prep();
 
     dprintf("test_blit\n");
 
@@ -2014,6 +2064,8 @@ void test_true_color()
 // this tests a problem switching modes
 void test_mode_glitch()
 {
+    xv_prep();
+
     int width = xosera_vid_width();
     xm_setw(WR_ADDR, 0);
     xm_setw(WR_INCR, 1);
@@ -2045,6 +2097,8 @@ void test_mode_glitch()
 
 void test_dual_8bpp()
 {
+    xv_prep();
+
     const uint16_t width  = DRAW_WIDTH;
     const uint16_t height = 200;
     // /    uint16_t       old_copp = xreg_getw(COPP_CTRL);
@@ -2206,6 +2260,8 @@ void test_hello()
 {
     static const char test_string[] = "Xosera is mostly running happily on rosco_m68k";
     static uint16_t   test_read[sizeof(test_string)];
+
+    xv_prep();
 
     xcls();
     xmsg(0, 0, 0xa, "WROTE:");
@@ -2445,6 +2501,8 @@ void test_vram_speed()
 
 void test_8bpp_tiled()
 {
+    xv_prep();
+
     // setup 4-bpp 16 x 16 tiled screen showing 4 sample buffers
     xreg_setw(PA_GFX_CTRL, 0x0020);             // colorbase = 0x00, tiled, 8-bpp, Hx2 Vx2
                                                 //    xreg_setw(PA_HV_FSCALE, 0x0044);            // set 512x384 scaling
@@ -2516,6 +2574,8 @@ uint16_t rosco_m68k_CPUMHz()
 
 static void play_silence()
 {
+    xv_prep();
+
     // upload word of silence (in TILE memory or VRAM)
     if (SILENCE_LEN & AUD_LENGTH_TILEMEM_F)
     {
@@ -2543,6 +2603,8 @@ uint8_t audio_channel_mask;
 
 static int init_audio()
 {
+    xv_prep();
+
     xreg_setw(AUD_CTRL, 0x0000);        // disable audio
 
     play_silence();
@@ -2591,6 +2653,8 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
     uint16_t test_vaddr = 0x8000;
     uint16_t chan       = 0;
     uint16_t coff       = chan << 2;
+
+    xv_prep();
 
     xm_setw(SYS_CTRL, 0x000F);        // make sure no nibbles masked
     xm_setw(WR_INCR, 0x0001);         // set write increment
@@ -2750,6 +2814,8 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
 static void wait_scanline()
 {
     uint16_t l;
+    xv_prep();
+
     do
     {
         l = xreg_getw(SCANLINE);
@@ -2762,6 +2828,8 @@ static void wait_scanline()
 
 static void upload_audio(void * memdata, uint16_t vaddr, int len)
 {
+    xv_prep();
+
     xm_setbl(SYS_CTRL, 0x0F);        // vram mask
     xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, vaddr);
@@ -2774,6 +2842,8 @@ static void upload_audio(void * memdata, uint16_t vaddr, int len)
 
 static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
 {
+    xv_prep();
+
     if (num_audio_channels != 0)
     {
         uint32_t clk_hz = xosera_sample_hz();
@@ -2892,6 +2962,8 @@ static void test_audio_ping_pong()
 
     uint8_t chan_ping = rand() & 0xF;
 
+    xv_prep();
+
     xr_cls();
     xr_printf(" Audio chaining test\n\n");
     xr_printf("\xAF Loading ping sample ");
@@ -2956,6 +3028,8 @@ static void test_audio_ping_pong()
 
 static void test_xr_read()
 {
+    xv_prep();
+
     dprintf("test_xr\n");
 
     xcls();
@@ -3018,6 +3092,8 @@ static void test_xr_read()
 
 void set_alpha_slow(int alpha)
 {
+    xv_prep();
+
     uint16_t a = (alpha & 0xf) << 12;
     for (int i = XR_COLOR_ADDR; i < XR_COLOR_ADDR + 256; i++)
     {
@@ -3028,6 +3104,8 @@ void set_alpha_slow(int alpha)
 
 static void set_alpha(int alpha)
 {
+    xv_prep();
+
     uint16_t a = (alpha & 0xf) << 12;
     for (int i = XR_COLOR_ADDR; i < XR_COLOR_ADDR + 256; i++)
     {

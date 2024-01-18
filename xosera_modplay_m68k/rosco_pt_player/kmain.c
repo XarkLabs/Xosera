@@ -175,6 +175,8 @@ const char * get_file()
 
 void init_viz()
 {
+    xv_prep();
+
     // setup 4-bpp 16 x 16 tiled screen showing 4 sample buffers
     xreg_setw(PA_GFX_CTRL, 0x001E);             // colorbase = 0x00, tiled, 4-bpp, Hx4 Vx3
     xreg_setw(PA_HV_FSCALE, 0x0044);            // set 512x384 scaling
@@ -222,6 +224,8 @@ void init_viz()
 
 void kmain()
 {
+    xv_prep();
+
     printf("\033c\033[?25l");        // XANSI reset, disable input cursor
     dprintf("\033c");                // terminal reset
     dprintf("rosco_pt_mod - xosera_init(2) - ");

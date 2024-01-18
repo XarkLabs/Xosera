@@ -88,12 +88,16 @@ uint32_t timer_stop()
 
 static inline void wait_vblank_start()
 {
+    xv_prep();
+
     xwait_not_vblank();
     xwait_vblank();
 }
 
 static inline void check_vblank()
 {
+    xv_prep();
+
     if (!xm_getb_sys_ctrl(VBLANK) || xreg_getw(SCANLINE) > 520)
     {
         wait_vblank_start();
@@ -102,6 +106,8 @@ static inline void check_vblank()
 
 void restore_colors()
 {
+    xv_prep();
+
     wait_vblank_start();
     xmem_setw_next_addr(XR_COLOR_ADDR);
     uint16_t * cp = def_colors;
@@ -120,6 +126,8 @@ void restore_colors()
 
 void reset_vid(void)
 {
+    xv_prep();
+
     remove_intr();
 
     wait_vblank_start();

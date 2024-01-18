@@ -27,7 +27,6 @@
 #include <machine.h>
 #include <sdfat.h>
 
-#define XV_PREP_REQUIRED        // require xv_prep() before xosera API functions (for efficiency)
 #include "xosera_m68k_api.h"
 
 bool use_sd;        // true if SD card was detected

@@ -38,7 +38,6 @@
 #include "rosco_m68k_support.h"
 #include "videoXoseraANSI/xosera_ansiterm_m68k.h"
 
-#define XV_PREP_REQUIRED        // require Xosera xv_prep() function (for speed)
 #include "xosera_m68k_api.h"
 
 #include "us-fishoe.h"

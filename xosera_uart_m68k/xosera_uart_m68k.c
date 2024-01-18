@@ -75,6 +75,8 @@ static void msg(char * msg)
 
 void xosera_uart_test()
 {
+    xv_prep();
+
     printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
     msg("copper crop_test - set Xosera to 640x480");

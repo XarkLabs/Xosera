@@ -494,6 +494,8 @@ static inline uint16_t load_sample_chunk(uint8_t          xosera_channel,
                                          uint16_t         chunk_start,
                                          uint16_t         chunk_len)
 {
+    xv_prep();
+
     uint16_t sample_len = sample->length;
 
     if (chunk_start > sample_len)
@@ -614,6 +616,8 @@ static inline uint16_t makeStereoVolume(uint8_t volume)
 
 static inline void xosera_set_start_length(uint8_t xosera_channel, uint16_t start, uint16_t len)
 {
+    xv_prep();
+
     switch (xosera_channel)
     {
         case 0:
@@ -637,6 +641,8 @@ static inline void xosera_set_start_length(uint8_t xosera_channel, uint16_t star
 
 static inline void xosera_set_period_start_length(uint8_t xosera_channel, uint16_t period, uint16_t start, uint16_t len)
 {
+    xv_prep();
+
     switch (xosera_channel)
     {
         case 0:
@@ -668,6 +674,8 @@ static inline void xosera_set_period_vol_start_length(uint8_t  xosera_channel,
                                                       uint16_t start,
                                                       uint16_t len)
 {
+    xv_prep();
+
     switch (xosera_channel)
     {
         case 0:
@@ -699,6 +707,8 @@ static inline void xosera_set_period_vol_start_length(uint8_t  xosera_channel,
 
 static inline void xosera_set_vol(uint8_t xosera_channel, uint16_t vol)
 {
+    xv_prep();
+
     switch (xosera_channel)
     {
         case 0:

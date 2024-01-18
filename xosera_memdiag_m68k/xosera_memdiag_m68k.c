@@ -18,7 +18,6 @@
 
 #include "rosco_m68k_support.h"
 
-#define XV_PREP_REQUIRED
 #include "xosera_m68k_api.h"
 
 #define DELAY_TIME 100

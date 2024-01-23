@@ -18,7 +18,7 @@ $(info No m68k-elf-* build tools found in path)
 else
 # check for rosco_m68k build dir
 ifndef ROSCO_M68K_DIR
-$(info Please set ROSCO_M68K_DIR to the rosco_m68k root directory to use for rosco_m68k building)
+$(info Please set ROSCO_M68K_DIR to the top-level rosco_m68k directory to use for rosco_m68k building, e.g. ~/rosco_m68k)
 endif
 endif
 

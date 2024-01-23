@@ -3,6 +3,11 @@
 #
 ICEPROG := iceprog
 
+# if XOSERA_M68K_API not set, assume it is from this tree
+ifndef XOSERA_M68K_API
+XOSERA_M68K_API:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))/xosera_m68k_api
+endif
+
 # Build all project targets
 # NOTE: Xosera DVI PMOD not officially supported yet (image stability issues)
 info:
@@ -132,21 +137,21 @@ utils:
 
 # Build m68k tests and demos
 m68k:
-	cd copper/CopAsm/ && $(MAKE)
-	cd xosera_m68k_api/ && $(MAKE)
-	cd xosera_ansiterm_m68k/ && $(MAKE)
-	cd xosera_audiostream_m68k/ && $(MAKE)
-	cd xosera_boing_m68k/ && $(MAKE)
-	cd xosera_font_m68k/ && $(MAKE)
-	cd xosera_modplay_m68k/ && $(MAKE)
-	cd xosera_mon_m68k/ && $(MAKE)
-	cd xosera_pointer_m68k/ && $(MAKE)
+	cd copper/CopAsm && $(MAKE)
+	cd xosera_m68k_api && $(MAKE)
+	cd xosera_ansiterm_m68k && $(MAKE)
+	cd xosera_audiostream_m68k && $(MAKE)
+	cd xosera_boing_m68k && $(MAKE)
+	cd xosera_font_m68k && $(MAKE)
+	cd xosera_mon_m68k && $(MAKE)
+	cd xosera_pointer_m68k && $(MAKE)
 	cd xosera_test_m68k && $(MAKE)
 	cd xosera_uart_m68k && $(MAKE)
 	cd xosera_vramtest_m68k && $(MAKE)
-	cd copper/copper_test_m68k && $(MAKE)
-	cd copper/crop_test_m68k && $(MAKE)
-	cd copper/splitscreen_test_m68k && $(MAKE)
+	cd xosera_modplay_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE)
+	cd copper/copper_test_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE)
+	cd copper/crop_test_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE)
+	cd copper/splitscreen_test_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE)
 
 # Build host SPI test utility
 host_spi:
@@ -198,19 +203,19 @@ clean: m68kclean
 
 # Clean m68k tests and demos
 m68kclean:
-	cd xosera_m68k_api/ && $(MAKE) clean
+	cd xosera_m68k_api && $(MAKE) clean
 	cd xosera_ansiterm_m68k/ && $(MAKE) clean
-	cd xosera_audiostream_m68k/ && $(MAKE) clean
-	cd xosera_boing_m68k/ && $(MAKE) clean
-	cd xosera_font_m68k/ && $(MAKE) clean
-	cd xosera_mon_m68k/ && $(MAKE) clean
-	cd xosera_modplay_m68k/ && $(MAKE) clean
-	cd xosera_pointer_m68k/ && $(MAKE) clean
+	cd xosera_audiostream_m68k && $(MAKE) clean
+	cd xosera_boing_m68k && $(MAKE) clean
+	cd xosera_font_m68k && $(MAKE) clean
+	cd xosera_mon_m68k && $(MAKE) clean
 	cd xosera_test_m68k && $(MAKE) clean
 	cd xosera_uart_m68k && $(MAKE) clean
 	cd xosera_vramtest_m68k && $(MAKE) clean
-	cd copper/copper_test_m68k && $(MAKE) clean
-	cd copper/crop_test_m68k && $(MAKE) clean
-	cd copper/splitscreen_test_m68k && $(MAKE) clean
+	cd xosera_pointer_m68k $(MAKE) clean
+	cd xosera_modplay_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE) clean
+	cd copper/copper_test_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE) clean
+	cd copper/crop_test_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE) clean
+	cd copper/splitscreen_test_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE) clean
 
 .PHONY: all upduino upd upd_prog icebreaker iceb iceb_prog rtl sim isim irun vsim vrun utils m68k host_spi xvid_spi clean m68kclean

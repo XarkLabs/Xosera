@@ -6,11 +6,13 @@
 # vim: set noet ts=8 sw=8
 
 ifndef ROSCO_M68K_DIR
-$(error Please set ROSCO_M68K_DIR to the top-level rosco_m68k directory to use for rosco_m68k building)
+$(info Please set ROSCO_M68K_DIR to the top-level rosco_m68k directory to use for rosco_m68k building, e.g. ~/rosco_m68k)
 endif
 
 ifndef XOSERA_M68K_API
-$(error Please set XOSERA_M68K_API to the Xosera API directory E.g., Xosera/xosera_m68k_api)
+XOSERA_M68K_API:=../xosera_m68k_api
+$(info Please set XOSERA_M68K_API to the xosera_m68k_api directory of Xosera m68k API, e.g. ~/xosera/xosera_m68k_api)
+$(info Assuming XOSERA_M68K_API=$(XOSERA_M68K_API))
 endif
 
 EXTRA_CFLAGS=-DPLAY_SAMPLE

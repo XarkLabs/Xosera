@@ -18,12 +18,13 @@ $(info No m68k-elf-* build tools found in path)
 else
 # check for rosco_m68k build dir
 ifndef ROSCO_M68K_DIR
-$(info Please set ROSCO_M68K_DIR to the rosco_m68k root directory to use for rosco_m68k building)
+$(info Please set ROSCO_M68K_DIR to the top-level rosco_m68k directory to use for rosco_m68k building, e.g. ~/rosco_m68k)
 endif
 endif
-# check for xosera_m68k_api build dir
+# check for xosera_m68k_api build dir (e.g., ~/xosera/xosera_m68k_api)
 ifndef XOSERA_M68K_API
-$(info Please set XOSERA_M68K_API to the xosera_m68k_api directory to use for Xosera m68k building)
+$(info NOTE: XOSERA_M68K_API was not set, using "xosera_m68k_api" from this tree.)
+XOSERA_M68K_API:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 endif
 
 -include $(ROSCO_M68K_DIR)/user.mk

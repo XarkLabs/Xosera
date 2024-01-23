@@ -9,37 +9,37 @@ $(info No m68k-elf-* build tools found in path)
 else
 # check for rosco_m68k build dir
 ifndef ROSCO_M68K_DIR
-$(info Please set ROSCO_M68K_DIR to the rosco_m68k root directory to use for rosco_m68k building)
+$(info Please set ROSCO_M68K_DIR to the top-level rosco_m68k directory to use for rosco_m68k building, e.g. ~/rosco_m68k)
 endif
 endif
-
-# location of xosera_m68k_api
-XOSERA_M68K_API?=../xosera_m68k_api
 
 BUILDING_XOSERA_API=true
 
 # use generic common make rules for Xosera + rosco_m68k build
-include $(XOSERA_M68K_API)/common_xosera_m68k.mk
+include common_xosera_m68k.mk
+
+$(info Using ROSCO_M68K_DIR=$(ROSCO_M68K_DIR))
+$(info Using XOSERA_M68K_API=$(XOSERA_M68K_API))
 
 LIBRARY=lib$(PROGRAM_BASENAME).a
 LINKOBJECTS=$(filter-out api_test.o,$(OBJECTS))
 
-all: prereq $(COPASM) $(XOSERA_M68K_API)/$(LIBRARY) $(BINARY) $(DISASM)
+all: prereq $(COPASM) $(LIBRARY) $(BINARY) $(DISASM)
 
 prereq:
 	rm -f $(COPASM)
-	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE) clean
+	cd ../copper/CopAsm/ && $(MAKE) clean
 
-$(COPASM): $(XOSERA_M68K_API)/../copper/CopAsm/bin/copasm
-	@mkdir -p $(XOSERA_M68K_API)/bin
-	cp -v $(XOSERA_M68K_API)/../copper/CopAsm/bin/copasm $(COPASM)
+$(COPASM): ../copper/CopAsm/bin/copasm
+	@mkdir -p bin
+	cp -v ../copper/CopAsm/bin/copasm $(COPASM)
 	@echo === Installed CopAsm to "$(COPASM)"
 
-$(XOSERA_M68K_API)/../copper/CopAsm/bin/copasm:
+../copper/CopAsm/bin/copasm:
 	@echo === Building CopASm COPPER assembler...
-	cd $(XOSERA_M68K_API)/../copper/CopAsm/ && $(MAKE)
+	cd ../copper/CopAsm/ && $(MAKE)
 
-$(XOSERA_M68K_API)/$(LIBRARY) : $(LINKOBJECTS)
+$(LIBRARY) : $(LINKOBJECTS)
 	$(AR) $(ARFLAGS) $@ $^
 	$(RANLIB) $@
 

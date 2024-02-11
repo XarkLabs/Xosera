@@ -145,8 +145,7 @@ FLOW3 :=
 #YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc2 -top $(TOP)
 #YOSYS_SYNTH_ARGS := -device u -no-rw-check -abc9 -dff -top $(TOP)
 #FLOW3 := ; scratchpad -copy abc9.script.flow3 abc9.script
-# NOTE: This has workaround for $print cell "leaking" into nextpnr (should be addressed is oss-cad-suite soon)
-YOSYS_SYNTH_ARGS := -device u -no-rw-check -dff -top $(TOP); delete t:$$print;;; write_json
+YOSYS_SYNTH_ARGS := -device u -no-rw-check -dff -top $(TOP)
 
 # Verilog preprocessor definitions common to all modules
 DEFINES := -DNO_ICE40_DEFAULT_ASSIGNMENTS -DGITCLEAN=$(XOSERA_CLEAN) -DGITHASH=$(XOSERA_HASH) -DBUILDDATE=$(BUILDDATE) -DFPGA_CONFIG_NUM=$(FPGA_CONFIG_NUM) $(VERILOG_DEFS) -DICE40UP5K -DUPDUINO
@@ -186,7 +185,7 @@ show: $(RESET_COPMEM) $(DOT) $(MAKEFILE_LIST)
 
 # run Yosys with "noflatten", which will produce a resource count per module
 count: $(RESET_COPMEM) $(SRC) $(INC) $(FONTFILES) $(MAKEFILE_LIST)
-	@mkdir -p $(LOGS)
+	@mkdir -p $(LOGS) $(@D)
 	@-cp $(LOGS)/$(OUTNAME)_yosys_count.log $(LOGS)/$(OUTNAME)_yosys_count_last.log
 	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys_count.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -noflatten'
 .PHONY: count
@@ -206,7 +205,7 @@ $(DOT): %.dot: %.sv $(MAKEFILE_LIST)
 	@rm -f $@
 	@mkdir -p $(LOGS) $(@D)
 	$(VERILATOR) $(VERILATOR_ARGS) --lint-only $(DEFINES) --top-module $(TOP) $(SRC) 2>&1 | tee $(LOGS)/$(OUTNAME)_verilator.log
-	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) $@'
+	$(YOSYS) $(YOSYS_ARGS) -l $(LOGS)/$(OUTNAME)_yosys.log -q -p 'verilog_defines $(DEFINES) ; read_verilog -I$(SRCDIR) -sv $(SRC) $(FLOW3) ; synth_ice40 $(YOSYS_SYNTH_ARGS) -json $@'
 	@-grep "XOSERA" $(LOGS)/$(OUTNAME)_yosys.log
 	@-grep "\(Number of cells\|Number of wires\)" $(LOGS)/$(OUTNAME)_yosys.log
 

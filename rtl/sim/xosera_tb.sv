@@ -261,20 +261,6 @@ always begin
 
     # 8ms;
 
-    // // TODO hacked in copper enable
-    // #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_COPP_CTRL));
-    // #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h8000);
-    // // TODO end
-
-    // // TODO hacked in blit test
-    // #(M68K_PERIOD * 2)  xvid_setw(XM_WR_XADDR, 16'(XR_BLIT_WORDS));
-    // #(M68K_PERIOD * 2)  xvid_setw(XM_XDATA, 16'h0007);
-    // // TODO end
-
-    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_FEATURE, readword[15:8]);
-    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_FEATURE, readword[7:0]);
-    $fdisplay(logfile, "%0t REG READ %s[%x] => %04x", $realtime, regname(xosera.reg_interface.bus_reg_num), xosera.reg_interface.bus_reg_num, readword);
-
 // audio test
 
     #(M68K_PERIOD * 2)  xvid_setw(XM_WR_INCR, 16'h0001);

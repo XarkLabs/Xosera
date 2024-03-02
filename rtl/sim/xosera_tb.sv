@@ -42,6 +42,8 @@ logic reconfig;
 logic [1:0] boot_select;
 
 // bus interface
+logic           m68k_clk;
+
 logic           bus_intr;
 logic           bus_cs_n;
 logic           bus_rd_nwr;
@@ -49,6 +51,7 @@ logic           bus_bytesel;
 logic [3: 0]    bus_reg_num;
 logic [7: 0]    bus_data_in;
 logic [7: 0]    bus_data_out;
+logic           bus_dtack;
 
 // tb vars
 integer     i, j, f;
@@ -78,10 +81,15 @@ xosera_main xosera(
                 .bus_bytesel_i(bus_bytesel),    // 0 = high-byte, 1 = low-byte
                 .bus_data_i(bus_data_in),       // 8-bit data bus input
                 .bus_data_o(bus_data_out),      // 8-bit data bus output
+`ifdef EN_DTACK
+                .bus_dtack_o(bus_dtack),
+`endif
                 .bus_intr_o(bus_intr),          // interrupt signal
                 .audio_l_o(audio_l),            // left audio PWM channel
                 .audio_r_o(audio_r),            // right audio PWM channel
+`ifndef EN_DTACK
                 .serial_txd_o(txd),             // UART transmit
+`endif
                 .serial_rxd_i(rxd),             // UART receive
                 .reconfig_o(reconfig),          // reconfigure FPGA
                 .boot_select_o(boot_select),    // reconfigure selection
@@ -89,7 +97,7 @@ xosera_main xosera(
             );
 
 parameter CLK_PERIOD    = (1000000000.0 / PIXEL_FREQ);
-parameter M68K_PERIOD   = 80;
+parameter M68K_PERIOD   = (1000000000.0 / 10_000_000);  // 10 MHz fake m68k clock
 
 /* verilator lint_off UNUSED */
 word_t       readword;
@@ -119,6 +127,7 @@ initial begin
     test_data2 = 'hD272;
     test_data3 = 'hD373;
     clk = 1'b0;
+    m68k_clk = 1'b0;
 
     bus_cs_n = 1'b1;
     bus_rd_nwr = 1'b1;
@@ -154,8 +163,7 @@ endtask
 
 task read_reg(
     input  logic         b_sel,
-    input  logic [3:0]   r_num,
-    output logic [7:0]   data
+    input  logic [3:0]   r_num
     );
 
     bus_cs_n <= 1'b1;
@@ -164,7 +172,11 @@ task read_reg(
     bus_reg_num <= r_num;
 
     # 10ns bus_cs_n <= 1'b0;    // strobe
-    #(M68K_PERIOD) data <= xosera.bus_data_o;
+    if (b_sel) begin
+        #(M68K_PERIOD) readword[7:0] <= xosera.bus_data_o;
+    end else begin
+        #(M68K_PERIOD) readword[15:8] <= xosera.bus_data_o;
+    end
     #(M68K_PERIOD) bus_cs_n <= 1'b1;
     bus_rd_nwr <= 1'bX;
     bus_bytesel <= 1'bX;
@@ -263,8 +275,14 @@ always begin
 
 // audio test
 
-    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_INCR, 16'h0001);
-    #(M68K_PERIOD * 2)  xvid_setw(XM_WR_ADDR, 16'h0100);
+    #(M68K_PERIOD * 4)  read_reg(1'b0, XM_FEATURE);
+    #(M68K_PERIOD * 4)  read_reg(1'b1, XM_FEATURE);
+    $fdisplay(logfile, "%0t REG READ R[%x] => %04x", $realtime, xosera.reg_interface.bus_reg_num, readword);
+
+    #(M68K_PERIOD * 4)  xvid_setw(XM_WR_INCR, 16'h0123);
+
+    #(M68K_PERIOD * 4)  xvid_setw(XM_WR_INCR, 16'h0001);
+    #(M68K_PERIOD * 4)  xvid_setw(XM_WR_ADDR, 16'h0100);
 
     inject_file("../testdata/raw/ramptable.raw", XM_DATA);
 
@@ -444,6 +462,11 @@ end
 // toggle clock source at pixel clock frequency+
 always begin
     #(CLK_PERIOD/2) clk <= ~clk;
+end
+
+// toggle clock source at pixel clock frequency+
+always begin
+    #(M68K_PERIOD/2) m68k_clk <= ~m68k_clk;
 end
 
 always @(posedge clk) begin

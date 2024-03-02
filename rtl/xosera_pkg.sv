@@ -53,9 +53,12 @@
   `endif
   `define EN_COPPER_INIT                // enable copper init program at reset (optional)
 `endif
+`define EN_DTACK                        // enable FPGA DTACK signal
+`ifndef EN_DTACK                        // only enable UART if no DTACK (uses TX signal)
 //`define EN_UART                         // enable USB UART
 `ifdef EN_UART
 //`define EN_UART_TX                      // TX only UART (no RX if EN_UART defined)
+`endif
 `endif
 
 `define VERSION 0_40                    // Xosera BCD version code (x.xx)
@@ -294,7 +297,7 @@ localparam [31:0]   githash     = 32'H`GITHASH;             // git short hash
 
 localparam [16*8-1:0] hex_str = "FEDCBA9876543210";
 /* verilator lint_off LITENDIAN */  // NOTE: This keeps the letters in forward order for humans
-localparam [0:89*8-1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]),
+localparam [0:99*8-1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0" + 8'(version[7:4]), "0" + 8'(version[3:0]),
                                 " ",
                                 hex_str[((builddate[31:28])*8)+:8], hex_str[((builddate[27:24])*8)+:8],
                                 hex_str[((builddate[23:20])*8)+:8], hex_str[((builddate[19:16])*8)+:8],
@@ -332,6 +335,9 @@ localparam [0:89*8-1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0"
 `ifdef EN_UART
                                 " UART",
 `endif
+`ifdef EN_DTACK
+                                " DTAK",
+`endif
 `ifdef EN_AUDIO
                                 " AUD", hex_str[((`EN_AUDIO)*8)+:8],
 `endif
@@ -355,6 +361,9 @@ localparam [0:89*8-1] info_str = { "Xosera v", "0" + 8'(version[11:8]), ".", "0"
                                 8'd0,8'd0,8'd0,8'd0,8'd0,
 `endif
 `ifndef EN_UART
+                                8'd0,8'd0,8'd0,8'd0,8'd0,
+`endif
+`ifdef EN_DTACK
                                 8'd0,8'd0,8'd0,8'd0,8'd0,
 `endif
 `ifndef EN_AUDIO
@@ -566,6 +575,8 @@ localparam RnW_WRITE         = 1'b0;
 localparam RnW_READ          = 1'b1;
 localparam CS_ENABLED        = 1'b0;
 localparam CS_DISABLED       = 1'b1;
+localparam DTACK_NAK         = 1'b1;
+localparam DTACK_ACK         = 1'b0;
 
 `ifdef ICE40UP5K    // iCE40UltraPlus5K specific
 // Lattice/SiliconBlue PLL "magic numbers" to derive pixel clock from 12Mhz oscillator (from "icepll" utility)

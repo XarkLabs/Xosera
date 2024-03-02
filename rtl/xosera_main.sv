@@ -44,6 +44,9 @@ module xosera_main(
     input  wire logic           bus_bytesel_i,      // 0 = even byte, 1 = odd byte
     input  wire logic [7:0]     bus_data_i,         // 8-bit data bus input
     output logic      [7:0]     bus_data_o,         // 8-bit data bus output
+`ifdef EN_DTACK
+    output logic                bus_dtack_o,        // strobe for 68k DTACK signal
+`endif
     output logic                bus_intr_o,         // Xosera CPU interrupt strobe
     output logic      [3:0]     red_o,              // red color gun output
     output logic      [3:0]     green_o,            // green color gun output
@@ -52,7 +55,9 @@ module xosera_main(
     output logic                dv_de_o,            // pixel visible (aka display enable)
     output logic                audio_l_o,          // left channel audio PWM output
     output logic                audio_r_o,          // right channel audio PWM output
+`ifndef EN_DTACK
     output logic                serial_txd_o,       // UART transmit
+`endif
     input  wire logic           serial_rxd_i,       // UART receive
     output logic                reconfig_o,         // reconfigure iCE40 from flash
     output logic      [1:0]     boot_select_o,      // reconfigure configuration number (0-3)
@@ -165,7 +170,9 @@ assign                  intr_trigger[xv::AUD3_INTR:xv::AUD0_INTR]    = 4'b0000;
 assign                  intr_trigger[xv::BLIT_INTR]     = 1'b0;
 `endif
 `ifndef EN_UART
+`ifndef EN_DTACK
 assign serial_txd_o = 1'b0;
+`endif
 logic unused_uart   = serial_rxd_i;
 `elsif EN_UART_TX
 logic unused_uart_tx   = serial_rxd_i;
@@ -202,6 +209,9 @@ reg_interface reg_interface(
     .bus_bytesel_i(bus_bytesel_i),      // 0=even byte, 1=odd byte
     .bus_data_i(bus_data_i),            // 8-bit data bus input
     .bus_data_o(bus_data_o),            // 8-bit data bus output
+`ifdef EN_DTACK
+    .bus_dtack_o(bus_dtack_o),            // strobe for 68k DTACK signal
+`endif
     // VRAM/XR
     .vram_ack_i(regs_vram_ack),         // register interface ack (after reg read/write cycle)
     .xr_ack_i(regs_xr_ack),             // register interface ack (after reg read/write cycle)
@@ -230,7 +240,9 @@ reg_interface reg_interface(
     .intr_clear_o(intr_clear),          // strobe clears pending INT_CTRL interrupt
     .intr_status_i(intr_status),        // status read from pending INT_CTRL interrupt
 `ifdef EN_UART
+`ifndef EN_DTACK
     .uart_txd_o(serial_txd_o),          // UART transmit pin hookup
+`endif
 `ifndef EN_UART_TX
     .uart_rxd_i(serial_rxd_i),          // UART receive pin hookup
 `endif

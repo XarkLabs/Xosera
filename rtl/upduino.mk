@@ -86,8 +86,8 @@ else
 VMODENAME := vga
 endif
 
-PF_B ?= true
-ifneq ($(strip $(PF_B)),)
+PF_B ?= false
+ifneq ($(strip $(PF_B)),false)
 VERILOG_DEFS += -DEN_PF_B
 endif
 

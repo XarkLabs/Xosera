@@ -23,6 +23,9 @@ module reg_interface (
     input  wire logic           bus_bytesel_i,     // 0=even byte, 1=odd byte
     input  wire logic  [7:0]    bus_data_i,        // 8-bit data bus input
     output      logic  [7:0]    bus_data_o,        // 8-bit data bus output
+`ifdef EN_DTACK
+    output      logic           bus_dtack_o,       // strobe for 68k DTACK signal
+`endif
     // VRAM/XR access signals
     input  wire logic           vram_ack_i,        // VRAM access ack (true when data read/written)
     input  wire logic           xr_ack_i,          // XR bus access ack (true when data read/written)
@@ -129,6 +132,9 @@ bus_interface bus(
     .bus_reg_num_i(bus_reg_num_i),        // register number
     .bus_bytesel_i(bus_bytesel_i),        // 0=even byte, 1=odd byte
     .bus_data_i(bus_data_i),              // 8-bit data bus input
+`ifdef EN_DTACK
+    .bus_dtack_o(bus_dtack_o),            // strobe for 68k DTACK signal
+`endif
     .write_strobe_o(bus_write_strobe),    // strobe for bus byte write
     .read_strobe_o(bus_read_strobe),      // strobe for bus byte read
     .reg_num_o(bus_reg_num),              // register number from bus

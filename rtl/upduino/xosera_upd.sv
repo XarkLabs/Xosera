@@ -125,7 +125,12 @@ assign bus_reg_num  = { gpio_27, gpio_26, gpio_25, gpio_23 };   // gpio for regi
 assign bus_data     = { gpio_28, gpio_38, gpio_42, gpio_36, gpio_43, gpio_34, gpio_37, gpio_31 };   // gpio for data bus
 
 // assign audio output signals to gpio
+`ifndef EN_DTACK
 assign gpio_32      = audio_l;          // left audio channel gpio
+`else
+logic unused_audio;
+assign unused_audio = &{1'b0, audio_l};
+`endif
 assign gpio_35      = audio_r;          // right audio channel gpio
 
 assign gpio_10      = bus_intr_r;         // interrupt signal
@@ -162,27 +167,7 @@ assign bus_data_in  = bus_data;
 `endif
 
 `ifdef EN_DTACK
-logic dtack_out_ena;
-assign dtack_out_ena = (bus_cs_n == xv::CS_ENABLED);
-`ifdef SYNTHESIS
-// NOTE: Use iCE40 SB_IO primitive to control tri-state properly here
-/* verilator lint_off PINMISSING */
-SB_IO #(
-    .PULLUP(1'b1),          //PULL_UP
-    .PIN_TYPE(6'b101001)    //PIN_OUTPUT_TRISTATE|PIN_INPUT
-) bus_dtack_pin (
-    .PACKAGE_PIN(serial_txd),
-    .INPUT_CLK(pclk),
-    .OUTPUT_CLK(pclk),
-    //        .CLOCK_ENABLE(1'b1),    // ICE Technology Library recommends leaving unconnected when always enabled to save a LUT
-    .OUTPUT_ENABLE(dtack_out_ena),
-    .D_OUT_0(bus_dtack),
-    .D_IN_0()
-);
-/* verilator lint_on PINMISSING */
-`else
-assign serial_txd    = dtack_out_ena ? bus_dtack : 1'bZ;
-`endif
+assign gpio_32    = bus_dtack;
 `endif
 
 // update registered signals each clock

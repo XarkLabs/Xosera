@@ -86,12 +86,12 @@ else
 VMODENAME := vga
 endif
 
-PF_B ?= false
+PF_B ?= true
 ifneq ($(strip $(PF_B)),false)
 VERILOG_DEFS += -DEN_PF_B
 endif
 
-AUDIO ?= 0
+AUDIO ?= 4
 
 ifeq ($(strip $(AUDIO)),0)
 OUTSUFFIX := $(VMODENAME)_$(subst MODE_,,$(VIDEO_MODE))

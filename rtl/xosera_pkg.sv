@@ -575,8 +575,8 @@ localparam RnW_WRITE         = 1'b0;
 localparam RnW_READ          = 1'b1;
 localparam CS_ENABLED        = 1'b0;
 localparam CS_DISABLED       = 1'b1;
-localparam DTACK_NAK         = 1'b1;
-localparam DTACK_ACK         = 1'b0;
+localparam DTACK_NAK         = 1'b0;
+localparam DTACK_ACK         = 1'b1;
 
 `ifdef ICE40UP5K    // iCE40UltraPlus5K specific
 // Lattice/SiliconBlue PLL "magic numbers" to derive pixel clock from 12Mhz oscillator (from "icepll" utility)

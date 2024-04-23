@@ -135,7 +135,7 @@ ICEPROG := iceprog
 ICEMULTI := icemulti
 
 # Yosys generic arguments
-YOSYS_ARGS := -e "no driver" -w "tri-state" -w "list of registers"
+YOSYS_ARGS := -e "no driver"
 
 # Yosys synthesis arguments
 FLOW3 :=

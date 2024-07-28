@@ -135,10 +135,11 @@ _NOINLINE bool delay_check(int ms)
 
 // Xosera rectangle test code
 
-#define SCREEN_ADDR    0x0000        // VRAM address of start of bitmap
-#define SCREEN_WIDTH   320           // pixel width of bitmap
-#define SCREEN_HEIGHT  240           // pixel height of bitmap
-#define PIXEL_PER_WORD 2             // pixels per word (4=4-bpp, 2=8-bpp)
+#define SCREEN_ADDR   0x0000        // VRAM address of start of bitmap
+#define SCREEN_WIDTH  320           // pixel width of bitmap
+#define SCREEN_HEIGHT 240           // pixel height of bitmap
+#define PIXELS_8_BPP  2             // pixels per word 8-bpp
+#define PIXELS_4_BPP  4             // pixels per word 4-bpp
 
 void fill_rect_8bpp(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c)
 {
@@ -146,12 +147,12 @@ void fill_rect_8bpp(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c)
     if (w < 1 || h < 1)
         return;
 
-    uint16_t va = SCREEN_ADDR + (y * (SCREEN_WIDTH / PIXEL_PER_WORD)) + (x / PIXEL_PER_WORD);        // vram address
-    uint16_t ww =
-        ((w + 1) + ((x + w) & 1)) / PIXEL_PER_WORD;             // width in words (round up, and also if right edge odd)
-    uint16_t mod = (SCREEN_WIDTH / PIXEL_PER_WORD) - ww;        // destination bitmap modulo
+    uint16_t va  = SCREEN_ADDR + (y * (SCREEN_WIDTH / PIXELS_8_BPP)) + (x / PIXELS_8_BPP);        // vram address
+    uint16_t ww  = ((w + 1) + (x & 1)) / PIXELS_8_BPP;        // width in words (round up, and also if right edge odd)
+    uint16_t mod = (SCREEN_WIDTH / PIXELS_8_BPP) - ww;        // destination bitmap modulo
     uint16_t mask =
         ((x & 1) ? 0x3000 : 0xF000) | (((x + w) & 1) ? 0x0C00 : 0x0F00);        // fw mask even/odd | lw mask even/odd
+    dprintf(">> va=0x%04x, ww=%d, fw[%d] lw[%d] mask=%04x\n", va, ww, x & 1, (x + w) & 1, mask);
 
     xv_prep();
     xreg_setw(BLIT_CTRL, MAKE_BLIT_CTRL(0, 0, 0, 1));        // tr_val=NA, tr_8bit=NA, tr_enable=FALSE, const_S=TRUE
@@ -165,6 +166,52 @@ void fill_rect_8bpp(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c)
     xreg_setw(BLIT_LINES, h - 1);                            // lines = height-1
     xwait_blit_ready();                                      // wait until blit queue empty
     xreg_setw(BLIT_WORDS, ww - 1);                           // width = blit width -1 (and go!)
+}
+
+void fill_rect_4bpp(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c)
+{
+    static uint8_t fw_mask[4] = {0xF0, 0x70, 0x30, 0x10};        // XXXX .XXX ..XX ...X
+    static uint8_t lw_mask[4] = {0x0F, 0x08, 0x0C, 0x0E};        // XXXX X... XX.. XXX.
+
+    // zero w or h ignored
+    h -= 1;        // adjust height-1
+    if (w < 1 || h < 0)
+        return;
+
+    uint16_t va = SCREEN_ADDR + (y * (SCREEN_WIDTH / PIXELS_4_BPP)) + (x / PIXELS_4_BPP);        // vram address
+    uint16_t ww = ((w + (x & 3) + 3)) / PIXELS_4_BPP;              // round up width to words, +1 if not word aligned
+    uint16_t mod  = (SCREEN_WIDTH / PIXELS_4_BPP) - ww;        // destination bitmap modulo
+    uint16_t mask = (fw_mask[x & 3] | lw_mask[(x + w) & 3]) << 8;        // fw mask & lw mask
+    dprintf(">> va=0x%04x, ww=%d, fw[%d] lw[%d] mask=%04x\n", va, ww, x & 3, (x + w) & 3, mask);
+
+    xv_prep();
+    xreg_setw(BLIT_CTRL, MAKE_BLIT_CTRL(0, 0, 0, 1));        // tr_val=NA, tr_8bit=NA, tr_enable=FALSE, const_S=TRUE
+    xreg_setw(BLIT_ANDC, 0x0000);                            // ANDC constant (0=no effect)
+    xreg_setw(BLIT_XOR, 0x0000);                             // XOR constant (0=no effect)
+    xreg_setw(BLIT_MOD_S, 0x0000);                           // source modulo (constant, so not used)
+    xreg_setw(BLIT_SRC_S, c);                                // word pattern (color byte repeated in word)
+    xreg_setw(BLIT_MOD_D, mod);                              // dest modulo (screen width - blit width)
+    xreg_setw(BLIT_DST_D, va);                               // VRAM address of upper left word
+    xreg_setw(BLIT_SHIFT, mask);                             // first/last word masking (no shifting)
+    xreg_setw(BLIT_LINES, h);                                // lines = height-1
+    xwait_blit_ready();                                      // wait until blit queue empty
+    xreg_setw(BLIT_WORDS, ww - 1);                           // width = blit width -1 (and go!)
+}
+
+void blit_fill(uint16_t vaddr, uint16_t words, uint16_t val)
+{
+    xv_prep();
+    xreg_setw(BLIT_CTRL, MAKE_BLIT_CTRL(0, 0, 0, 1));        // tr_val=NA, tr_8bit=NA, tr_enable=FALSE, const_S=TRUE
+    xreg_setw(BLIT_ANDC, 0x0000);                            // ANDC constant (0=no effect)
+    xreg_setw(BLIT_XOR, 0x0000);                             // XOR constant (0=no effect)
+    xreg_setw(BLIT_MOD_S, 0x0000);                           // source modulo (constant, so not used)
+    xreg_setw(BLIT_SRC_S, val);                              // word pattern (color byte repeated in word)
+    xreg_setw(BLIT_MOD_D, 0x000);                            // dest modulo (screen width - blit width)
+    xreg_setw(BLIT_DST_D, vaddr);                            // VRAM address of upper left word
+    xreg_setw(BLIT_SHIFT, 0xFF00);                           // first/last word masking (no shifting)
+    xreg_setw(BLIT_LINES, 0);                                // 1-D
+    xwait_blit_ready();                                      // wait until blit queue empty
+    xreg_setw(BLIT_WORDS, words - 1);                        // width = blit width -1 (and go!)
 }
 
 void xosera_rectangle()
@@ -200,30 +247,62 @@ void xosera_rectangle()
     xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
     xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x0C00, 0, 0, 8));
     xreg_setw(PA_DISP_ADDR, SCREEN_ADDR);
-    xreg_setw(PA_LINE_LEN, SCREEN_WIDTH / PIXEL_PER_WORD);        // line len
+    xreg_setw(PA_LINE_LEN, SCREEN_WIDTH / PIXELS_8_BPP);
     xreg_setw(PA_H_SCROLL, MAKE_H_SCROLL(0));
     xreg_setw(PA_V_SCROLL, MAKE_V_SCROLL(0, 0));
     xreg_setw(PA_HV_FSCALE, MAKE_HV_FSCALE(HV_FSCALE_OFF, HV_FSCALE_OFF));
 
     xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
 
+    blit_fill(SCREEN_ADDR, SCREEN_WIDTH * SCREEN_HEIGHT / PIXELS_8_BPP, 0x0000);
 
-    uint16_t c = 1;
+    uint16_t c = 0;
     int      y = 0;
-    for (int s = 1; s < 60; s++)
+    for (int s = 0; s < 16; s++)
     {
         int x = s;
-        int w = s >> 1;
-
-        //        dprintf("> fill_rect_8bpp(%d, %d, %d, %d, %04x)\n", x, y, w, 3, c);
-        fill_rect_8bpp(x, y, w, 3, (c << 8) | c);
-        c = (c + 1) & 0xf;
+        int w = (s >> 1) + 1;
         if (c == 0)
             c = 1;
+
+        dprintf("> fill_rect_8bpp(%d, %d, %d, %d, %d)\n", x, y, w, 3, c);
+        fill_rect_8bpp(x, y, w, 3, (c << 8) | c);
+        c = (c + 1) & 0xf;
         y += 4;
+        dprintf("(Press key for next)\n");
+        readchar();
     }
 
-    dprintf("(Done, Press a key)\n");
+    dprintf("(Done with 8 bpp, Press a key)\n");
+    readchar();
+
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_4_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
+    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x0C00, 0, 0, 8));
+    xreg_setw(PA_DISP_ADDR, SCREEN_ADDR);
+    xreg_setw(PA_LINE_LEN, SCREEN_WIDTH / PIXELS_4_BPP);
+    xreg_setw(PA_H_SCROLL, MAKE_H_SCROLL(0));
+    xreg_setw(PA_V_SCROLL, MAKE_V_SCROLL(0, 0));
+    xreg_setw(PA_HV_FSCALE, MAKE_HV_FSCALE(HV_FSCALE_OFF, HV_FSCALE_OFF));
+
+    blit_fill(SCREEN_ADDR, SCREEN_WIDTH * SCREEN_HEIGHT / PIXELS_4_BPP, 0x0000);
+
+    c = 0;
+    y = 0;
+    for (int s = 0; s < 16; s++)
+    {
+        int x = s;
+        int w = (s >> 1) + 1;
+        if (c == 0)
+            c = 1;
+        dprintf("> fill_rect_4bpp(%d, %d, %d, %d, %d)\n", x, y, w, 3, c);
+        fill_rect_4bpp(x, y, w, 3, (c << 12) | (c << 8) | (c << 4) | c);
+        c = (c + 1) & 0xf;
+        y += 4;
+        dprintf("(Press key for next)\n");
+        readchar();
+    }
+
+    dprintf("(Done with 4 bpp, Press a key)\n");
     readchar();
 
     dprintf("Exiting normally.\n");

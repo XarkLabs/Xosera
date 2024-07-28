@@ -140,8 +140,8 @@ _NOINLINE bool delay_check(int ms)
 #define SCREEN_HEIGHT  240           // pixel height of bitmap
 #define PIXEL_PER_WORD 2             // pixels per word (4=4-bpp, 2=8-bpp)
 
-static const uint16_t fw_mask[2] = {0xF0, 0x30};        // first word 8-bit pixel mask: XX .X
-static const uint16_t lw_mask[2] = {0x0F, 0x0C};        // last word 8-bit pixel mask : XX X.
+static const uint8_t fw_mask[2] = {0xF0, 0x30};        // first word 8-bit pixel mask: XX .X
+static const uint8_t lw_mask[2] = {0x0F, 0x0C};        // last word 8-bit pixel mask : XX X.
 
 void fill_rect_8bpp(int x, int y, int w, int h, uint8_t c)
 {
@@ -153,9 +153,6 @@ void fill_rect_8bpp(int x, int y, int w, int h, uint8_t c)
     uint16_t ww    = ((w + 1) + ((x + w) & 1)) / PIXEL_PER_WORD;          // width in words
     uint16_t mod   = (SCREEN_WIDTH / PIXEL_PER_WORD) - ww;                // destination modulo
     uint16_t shift = (fw_mask[x & 1] | lw_mask[(x + w) & 1]) << 8;        // fw mask | lw mask
-
-    dprintf("fw=0x%02x lw=0x%02x\n", fw_mask[x & 1], lw_mask[(x + w) & 1]);
-    dprintf("x=%d y=%d w=%d va=0x%04x ww=0x%04x mod=0x%04x, shift=0x%04x\n", x, y, w, va, ww, mod, shift);
 
     xv_prep();
     xreg_setw(BLIT_CTRL, MAKE_BLIT_CTRL(0, 0, 0, 1));        // tr_val=NA, tr_8bit=NA, tr_enable=FALSE, const_S=TRUE
@@ -203,7 +200,7 @@ void xosera_rectangle()
 
     xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
     xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x0C00, 0, 0, 8));
-    xreg_setw(PA_DISP_ADDR, 0x0000);
+    xreg_setw(PA_DISP_ADDR, SCREEN_ADDR);
     xreg_setw(PA_LINE_LEN, SCREEN_WIDTH / PIXEL_PER_WORD);        // line len
     xreg_setw(PA_H_SCROLL, MAKE_H_SCROLL(0));
     xreg_setw(PA_V_SCROLL, MAKE_V_SCROLL(0, 0));
@@ -212,18 +209,19 @@ void xosera_rectangle()
     xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
 
 
-    int c = 0;
-    for (int y = 0; y < 240; y++)
+    int c = 1;
+    int y = 0;
+    for (int s = 1; s < 60; s++)
     {
-        int w = (y >> 1) + 1;
-        int x = y;
-        c     = (c + 1) & 0xf;
+        int x = s;
+        int w = s >> 1;
+
+        dprintf("> fill_rect_8bpp(%d, %d, %d, %d, %04x)\n", x, y, w, 5, c);
+        fill_rect_8bpp(x, y, w, 3, c);
+        c = (c + 1) & 0xf;
         if (c == 0)
             c = 1;
-
-        dprintf("> fill_rect_8bpp(%d, %d, %d, %d, %04x)\n", x, y, w, 1, c);
-        fill_rect_8bpp(x, y, w, 1, c);
-        readchar();
+        y += 4;
     }
 
     dprintf("(Done, Press a key)\n");

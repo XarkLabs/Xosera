@@ -141,7 +141,7 @@ _NOINLINE bool delay_check(int ms)
 #define PIXEL_PER_WORD 2             // pixels per word (4=4-bpp, 2=8-bpp)
 
 static const uint16_t fw_mask[2] = {0xF0, 0x30};        // first word 8-bit pixel mask: XX .X
-static const uint16_t lw_mask[2] = {0x0F, 0x0C};        // last word 8-bit pixel mask : X. ..
+static const uint16_t lw_mask[2] = {0x0F, 0x0C};        // last word 8-bit pixel mask : XX X.
 
 void fill_rect_8bpp(int x, int y, int w, int h, uint8_t c)
 {

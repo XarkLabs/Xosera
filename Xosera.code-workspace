@@ -297,7 +297,7 @@
 		],
 		"cSpell.allowCompoundWords": true,
 		"cSpell.diagnosticLevel": "Information",
-		"terminal.integrated.fontSize": 11,
+		"terminal.integrated.fontSize": 12,
 		"workbench.editor.enablePreview": false,
 		"verilog.linting.verilator.arguments": "--sv --language 1800-2012 -Irtl -I.. -Wall -Wno-DECLFILENAME -Wno-STMTDLY  -DICE40UP5K /Users/kenj/Dev/oss-cad-suite/share/yosys/ice40/cells_sim.v", //  -Wno-UNUSED -Wno-VARHIDDEN -Wno-PINCONNECTEMPTY
 		"verilog.linting.linter": "verilator",

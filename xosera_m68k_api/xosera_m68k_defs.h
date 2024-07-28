@@ -317,14 +317,18 @@
 #define POINTER_V_W          12            // pointer raw V position
 #define POINTER_V_F          0x0FFF        // pointer raw V position
 // XR_Px_GFX_CTRL constants
-#define GFX_1_BPP 0        // 1-bpp (2 colors + selected via fore/back color attribute byte)
-#define GFX_4_BPP 1        // 4-bpp (16 colors)
-#define GFX_8_BPP 2        // 8-bpp (256 colors)
-#define GFX_X_BPP 3        // (reserved)
-#define GFX_1X    0        // H/V repeat x1
-#define GFX_2X    1        // H/V repeat x2
-#define GFX_3X    2        // H/V repeat x3
-#define GFX_4X    3        // H/V repeat x4
+#define GFX_VISIBLE 0        // playfield visible
+#define GFX_BLANKED 1        // playfield blanked
+#define GFX_1_BPP   0        // 1-bpp (2 colors + selected via fore/back color attribute byte)
+#define GFX_4_BPP   1        // 4-bpp (16 colors)
+#define GFX_8_BPP   2        // 8-bpp (256 colors)
+#define GFX_X_BPP   3        // (reserved)
+#define GFX_TILEMAP 0        // tilemap (bitmap disabled)
+#define GFX_BITMAP  1        // bitmap (bitmap enabled)
+#define GFX_1X      0        // H/V repeat x1
+#define GFX_2X      1        // H/V repeat x2
+#define GFX_3X      2        // H/V repeat x3
+#define GFX_4X      3        // H/V repeat x4
 // XR_Px_HV_FSCALE constants    16:9   4:3
 #define HV_FSCALE_OFF  0x0        // H 848 / 640,  V 480
 #define HV_FSCALE_1OF2 0x1        // H 424 / 320,  V 240
@@ -483,7 +487,7 @@
 #define MAKE_TILE_CTRL(tile_addr, map_in_tilemem, tile_in_vram, tile_height)                                           \
     (((tile_addr) & TILE_CTRL_TILEBASE_F) | XB_(map_in_tilemem, TILE_CTRL_DISP_TILEMEM_B, TILE_CTRL_DISP_TILEMEM_W) |  \
      XB_(tile_in_vram, TILE_CTRL_TILE_VRAM_B, TILE_CTRL_TILE_VRAM_W) |                                                 \
-     XB_(((tile_height)-1), TILE_CTRL_TILE_H_B, TILE_CTRL_TILE_H_W))
+     XB_(((tile_height) - 1), TILE_CTRL_TILE_H_B, TILE_CTRL_TILE_H_W))
 // MAKE_HV_FSCALE(h_frac, v_frac) - make HV_FSCALE reg value
 #define MAKE_HV_FSCALE(h_frac, v_frac)                                                                                 \
     (XB_(h_frac, HV_FSCALE_H_FRAC_B, HV_FSCALE_H_FRAC_W) | XB_(v_frac, HV_FSCALE_V_FRAC_B, HV_FSCALE_V_FRAC_W))

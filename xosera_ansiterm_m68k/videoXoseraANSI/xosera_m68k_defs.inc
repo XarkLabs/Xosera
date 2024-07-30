@@ -287,10 +287,14 @@ POINTER_V_B             equ     0           ; pointer raw V position
 POINTER_V_W             equ     12          ; pointer raw V position
 POINTER_V_F             equ     $0FFF       ; pointer raw V position
 ; XR_Px_GFX_CTRL constants
+GFX_VISIBLE             equ     0           ; playfield visible
+GFX_BLANKED             equ     1           ; playfield blanked
 GFX_1_BPP               equ     0           ; 1-bpp (2 colors + selected via fore/back color attribute byte)
 GFX_4_BPP               equ     1           ; 4-bpp (16 colors)
 GFX_8_BPP               equ     2           ; 8-bpp (256 colors)
 GFX_X_BPP               equ     3           ; (reserved)
+GFX_TILEMAP             equ     0           ; tilemap (bitmap disabled)
+GFX_BITMAP              equ     1           ; bitmap (bitmap enabled)
 GFX_1X                  equ     0           ; H/V repeat x1
 GFX_2X                  equ     1           ; H/V repeat x2
 GFX_3X                  equ     2           ; H/V repeat x3

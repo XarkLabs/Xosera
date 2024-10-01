@@ -59,7 +59,11 @@ AUDIO?=4
 PF_B?=true
 
 # copper assembly
-COPASM=$(XOSERA_M68K_API)/bin/copasm
+ifeq (,$(shell xosera-copasm -h >/dev/null 2>&1))
+COPASM?=$(XOSERA_M68K_API)/bin/xosera-copasm
+else
+COPASM?=xosera-copasm
+endif
 RESET_COP=default_copper.casm
 ifeq ($(findstring 640x,$(VIDEO_MODE)),)
 RESET_COPMEM=default_copper_848.mem

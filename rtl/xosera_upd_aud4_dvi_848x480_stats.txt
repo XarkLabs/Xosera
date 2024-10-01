@@ -1,17 +1,17 @@
 === UPduino Xosera: PMOD_1B2_DVI12 MODE_848x480
-   XOSERA xosera_info:    Xosera v0.40 20240215 =#0088ECA8 iCE40UP5K 128KB PF_B BLND COPP BLIT PIXA PNTR AUD4
+   XOSERA xosera_info:    Xosera v0.40 20240925 =#0B17E793 iCE40UP5K 128KB PF_B BLND COPP BLIT PIXA PNTR AUD4
    XOSERA configuration:  MODE_848x480@60 PF_B BLND COPP BLIT PIXA PNTR AUD4 
-Package: oss-cad-suite-darwin-arm64-20240214
-Yosys 0.38+41 (git sha1 91685355a, aarch64-apple-darwin21.4-clang++ 14.0.0-1ubuntu1.1 -fPIC -Os)
-"nextpnr-ice40" -- Next Generation Place and Route (Version nextpnr-0.7-9-g255633c9)
+Package: oss-cad-suite-darwin-arm64-20240921
+Yosys 0.45+139 (git sha1 4d581a97d, aarch64-apple-darwin21.4-clang++ 14.0.0-1ubuntu1.1 -fPIC -O3)
+"nextpnr-ice40" -- Next Generation Place and Route (Version nextpnr-0.7-71-g4b63b111)
 Info: Device utilisation:
-Info: 	         ICESTORM_LC:  5016/ 5280    95%
-Info: 	        ICESTORM_RAM:    30/   30   100%
-Info: 	               SB_IO:    38/   96    39%
-Info: 	               SB_GB:     8/    8   100%
-Info: 	        ICESTORM_PLL:     1/    1   100%
-Info: 	         SB_WARMBOOT:     1/    1   100%
-Info: 	        ICESTORM_DSP:     8/    8   100%
-Info: 	      ICESTORM_SPRAM:     4/    4   100%
+Info: 	         ICESTORM_LC:    5008/   5280    94%
+Info: 	        ICESTORM_RAM:      30/     30   100%
+Info: 	               SB_IO:      38/     96    39%
+Info: 	               SB_GB:       8/      8   100%
+Info: 	        ICESTORM_PLL:       1/      1   100%
+Info: 	         SB_WARMBOOT:       1/      1   100%
+Info: 	        ICESTORM_DSP:       8/      8   100%
+Info: 	      ICESTORM_SPRAM:       4/      4   100%
 
-Info: Max frequency for clock 'pclk': 37.05 MHz (PASS at 33.77 MHz)
+Info: Max frequency for clock 'pclk': 36.18 MHz (PASS at 33.77 MHz)

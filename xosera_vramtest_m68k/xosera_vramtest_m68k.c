@@ -15,9 +15,14 @@
  */
 
 #include <assert.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
 
 #include "rosco_m68k_support.h"
-#include "xosera_m68k_api.h"
 
 // from interrupt.asm
 extern void              install_intr(void);
@@ -46,14 +51,14 @@ static void update_elapsed()
 
 #define RETURN_ON_KEYPRESS()                                                                                           \
     update_elapsed();                                                                                                  \
-    if (checkchar())                                                                                                   \
+    if (mcCheckInput())                                                                                                \
         return -1;                                                                                                     \
     else                                                                                                               \
         (void)0
 
 #define BREAK_ON_KEYPRESS()                                                                                            \
     update_elapsed();                                                                                                  \
-    if (checkchar())                                                                                                   \
+    if (mcCheckInput())                                                                                                \
         break;                                                                                                         \
     else                                                                                                               \
         (void)0
@@ -64,7 +69,7 @@ _NOINLINE static bool delay_check(int ms)
 
     while (ms--)
     {
-        if (checkchar())
+        if (mcCheckInput())
         {
             return true;
         }
@@ -150,8 +155,10 @@ int  vram_test_count;             // total number of test iterations
 int  vram_test_fail_count;        // number of failed tests
 bool first_failure;               // bool indicating first failure of current test (formatting)
 
-#define VRAM_WR_DELAY() mcBusywait(1)        // delay for "SLOW" write
-#define VRAM_RD_DELAY() mcBusywait(1)        // delay for "SLOW" read
+#define VRAM_WR_DELAY() mcBusywait(1)        // mcBusywait for "SLOW" write
+#define VRAM_RD_DELAY() mcBusywait(1)        // mcBusywait for "SLOW" read
+
+#if 0
 
 // test display
 static char     xr_dprint_buff[4096];
@@ -292,6 +299,7 @@ static void xr_printfxy(int x, int y, const char * fmt, ...)
     xr_print(xr_dprint_buff);
     va_end(args);
 }
+#endif
 
 static void add_fail(int addr, int data, int expected, int flags)
 {
@@ -452,20 +460,20 @@ static int vram_retry(uint16_t addr, uint16_t baddata, bool LFSR, int mode, int 
     vram_test_fail_count++;
     if (first_failure)
     {
-        dprintf("FAILED!\n");
+        debug_printf("FAILED!\n");
         first_failure = false;
     }
-    dprintf("*** MISMATCH %s %s %s: VRAM[0x%04x]=0x%04x vs data[0x%04x]=0x%04x [Error #%d]\n",
-            LFSR ? "LFSR" : "ADDR",
-            speed_names[speed],
-            rc < 0   ? "BAD! "
-            : rc > 0 ? "WRITE"
-                     : "READ ",
-            addr,
-            baddata,
-            addr,
-            pattern_buffer[addr],
-            vram_test_fail_count);
+    debug_printf("*** MISMATCH %s %s %s: VRAM[0x%04x]=0x%04x vs data[0x%04x]=0x%04x [Error #%d]\n",
+                 LFSR ? "LFSR" : "ADDR",
+                 speed_names[speed],
+                 rc < 0   ? "BAD! "
+                 : rc > 0 ? "WRITE"
+                          : "READ ",
+                 addr,
+                 baddata,
+                 addr,
+                 pattern_buffer[addr],
+                 vram_test_fail_count);
 
     return rc;
 }
@@ -601,13 +609,14 @@ int test_vram(bool LFSR, int mode, int speed)
 
     // set funky mode to show VRAM
     wait_vblank_start();
-    xreg_setw(VID_CTRL, 0x0000);
-    xreg_setw(PA_LINE_LEN, 136);        // ~65536/480 words per line
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // border color #0x00
+    xreg_setw(PA_LINE_LEN, 136);                        // ~65536/480 words per line
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_TILE_CTRL, 0x000F);                 // text mode
     xreg_setw(PA_GFX_CTRL, vram_modes[mode]);        // bitmap + 8-bpp Hx2 Vx1
 
-    dprintf("  > VRAM test=%s speed=%s mode=%s : ", LFSR ? "LFSR" : "ADDR", speed_names[speed], vram_mode_names[mode]);
+    debug_printf(
+        "  > VRAM test=%s speed=%s mode=%s : ", LFSR ? "LFSR" : "ADDR", speed_names[speed], vram_mode_names[mode]);
 
     // generate pattern_buffer data
     if (LFSR)
@@ -733,7 +742,7 @@ int test_vram(bool LFSR, int mode, int speed)
     vram_errs += verify_vram(LFSR, mode, speed);
     if (vram_errs >= 16)
     {
-        dprintf("TEST CANCELLED (too many errors)!\n");
+        debug_printf("TEST CANCELLED (too many errors)!\n");
     }
 
     // scroll pattern_buffer and vram
@@ -810,7 +819,7 @@ int test_vram(bool LFSR, int mode, int speed)
     {
         update_elapsed();
         unsigned int elapsed_time = elapsed_tenthms - start_time;
-        dprintf("PASSED  (%3u.%1ums)\n", elapsed_time / 10, elapsed_time % 10);
+        debug_printf("PASSED  (%3u.%1ums)\n", elapsed_time / 10, elapsed_time % 10);
     }
 
     return vram_errs;
@@ -881,20 +890,20 @@ static int xmem_retry(uint16_t addr, uint16_t baddata, bool LFSR, int mode)
     vram_test_fail_count++;
     if (first_failure)
     {
-        dprintf("FAILED!\n");
+        debug_printf("FAILED!\n");
         first_failure = false;
     }
-    dprintf("*** MISMATCH %s %s %s: XMEM[0x%04x]=0x%04x vs data[0x%04x]=0x%04x [Error #%d]\n",
-            LFSR ? "LFSR" : "ADDR",
-            speed_names[4],
-            rc < 0   ? "BAD! "
-            : rc > 0 ? "WRITE"
-                     : "READ ",
-            addr,
-            baddata,
-            addr,
-            pattern_buffer[addr],
-            vram_test_fail_count);
+    debug_printf("*** MISMATCH %s %s %s: XMEM[0x%04x]=0x%04x vs data[0x%04x]=0x%04x [Error #%d]\n",
+                 LFSR ? "LFSR" : "ADDR",
+                 speed_names[4],
+                 rc < 0   ? "BAD! "
+                 : rc > 0 ? "WRITE"
+                          : "READ ",
+                 addr,
+                 baddata,
+                 addr,
+                 pattern_buffer[addr],
+                 vram_test_fail_count);
 
     return rc;
 }
@@ -993,7 +1002,7 @@ int test_xmem(bool LFSR, int mode)
 
     unsigned int elapsed_time = 0;
 
-    dprintf("  > XMEM test=%s speed=%s mode=%s : ", LFSR ? "LFSR" : "ADDR", speed_names[4], vram_mode_names[mode]);
+    debug_printf("  > XMEM test=%s speed=%s mode=%s : ", LFSR ? "LFSR" : "ADDR", speed_names[4], vram_mode_names[mode]);
     // fill XMEM with pattern_buffer
     wait_vblank_start();
     for (int r = 0; r < 16; r++)
@@ -1051,7 +1060,7 @@ int test_xmem(bool LFSR, int mode)
         xmem_errs += verify_xmem(LFSR, mode);
         if (xmem_errs >= 16)
         {
-            dprintf("TEST CANCELLED (too many errors)!\n");
+            debug_printf("TEST CANCELLED (too many errors)!\n");
         }
 
         if (xmem_errs == 0)
@@ -1062,13 +1071,13 @@ int test_xmem(bool LFSR, int mode)
     }
 
     xreg_setw(VID_RIGHT, xosera_vid_width() - 2);        // steal a few pixels for border
-    xreg_setw(VID_CTRL, 0x0000);
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));         // border color #0x00
     xmem_setw(XR_COLOR_A_ADDR, vram_test_fail_count ? 0x0C00 : 0x00C0);
     xmem_setw(XR_COLOR_B_ADDR, vram_test_fail_count ? 0x0C00 : 0x00C0);
 
     if (xmem_errs == 0)
     {
-        dprintf("PASSED  (%3u.%1ums)\n", elapsed_time / 10, elapsed_time % 10);
+        debug_printf("PASSED  (%3u.%1ums)\n", elapsed_time / 10, elapsed_time % 10);
     }
 
     return xmem_errs;
@@ -1082,18 +1091,24 @@ struct xosera_initdata
 
 xosera_info_t initinfo;
 
-void xosera_vramtest()
+int main()
 {
-    dprintf("Xosera_vramtest_m68k\n");
-
-    dprintf("Checking for Xosera XANSI firmware...");
-    if (xosera_xansi_detect(true))        // check for XANSI (and disable input cursor if present)
+    mcBusywait(1000 * 500);        // wait a bit for terminal window/serial
+    while (mcCheckInput())         // clear any queued input
     {
-        dprintf("detected.\n");
+        mcInputchar();
+    }
+    debug_printf("Xosera_vramtest_m68k\n");
+
+    debug_printf("Checking for XANSI firmware...");
+    bool detect = xosera_xansi_detect(true);        // true = disable input cursor
+    if (detect)                                     // check for XANSI (and disable input cursor if present)
+    {
+        debug_printf("detected.\n");
     }
     else
     {
-        dprintf(
+        debug_printf(
             "\n\nXosera XANSI firmware was not detected!\n"
             "This program will likely trap without Xosera hardware.\n");
     }
@@ -1116,20 +1131,20 @@ void xosera_vramtest()
         {
             update_elapsed();
             cur_xosera_config = new_config;
-            dprintf("\n [Switching to Xosera config #%d...", cur_xosera_config);
+            debug_printf("\n [Switching to Xosera config #%d...", cur_xosera_config);
             bool success = xosera_init(cur_xosera_config);
             xm_setw(TIMER, 0xffff);        // set to wrapping 16-bit counter
             last_timer_val = xm_getw(TIMER);
-            dprintf("%s (%dx%d). ]\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
+            debug_printf("%s (%dx%d). ]\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
             xosera_get_info(&initinfo);
             xreg_setw(VID_RIGHT, xosera_vid_width() - 2);        // steal a few pixels for border
-            xreg_setw(VID_CTRL, 0x0000);
+            xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));         // border color #0x00
             xmem_setw(XR_COLOR_A_ADDR, vram_test_fail_count ? 0x0C00 : 0x00C0);
             xmem_setw(XR_COLOR_B_ADDR, vram_test_fail_count ? 0x0C00 : 0x00C0);
 
             xreg_setw(PB_GFX_CTRL, 0x0080);
             has_PF_B = xreg_getw(PB_GFX_CTRL) & 0x0080;
-            dprintf("  PF_B is %s testing COLOR_B XMEM\n", has_PF_B ? "present," : "disabled, not");
+            debug_printf("  PF_B is %s testing COLOR_B XMEM\n", has_PF_B ? "present," : "disabled, not");
             colormem_size = has_PF_B ? (XR_COLOR_A_SIZE + XR_COLOR_B_SIZE) : XR_COLOR_A_SIZE;
         }
 
@@ -1139,32 +1154,32 @@ void xosera_vramtest()
         unsigned int m = t / (10000 * 60) % 60;
         unsigned int s = (t / 10000) % 60;
 
-        dprintf("\n>>> xosera_vramtest_m68k iteration: %d, running %u:%02u:%02u, errors: %d\n",
-                vram_test_count++,
-                h,
-                m,
-                s,
-                vram_test_fail_count);
+        debug_printf("\n>>> xosera_vramtest_m68k iteration: %d, running %u:%02u:%02u, errors: %d\n",
+                     vram_test_count++,
+                     h,
+                     m,
+                     s,
+                     vram_test_fail_count);
 
-        uint16_t feature   = xm_getw(FEATURE);        // TODO: this is feature codes
+        uint16_t feature   = xm_getw(FEATURE);
         uint16_t monwidth  = xosera_vid_width();
         uint16_t monheight = xosera_vid_height();
 
         if (initinfo.description_str[0])
         {
-            dprintf("    ID: %.48s\n", initinfo.description_str);
+            debug_printf("    ID: %.48s\n", initinfo.description_str);
         }
         else
         {
-            dprintf("    ID: (no COPPER mem)\n");
+            debug_printf("    ID: (no COPPER mem)\n");
         }
 
-        dprintf("    Config #%d [%04x]   Res:%ux%u   Git:0x%08x\n",
-                cur_xosera_config,
-                (unsigned int)feature,
-                (unsigned int)monwidth,
-                (unsigned int)monheight,
-                (unsigned int)initinfo.githash);
+        debug_printf("    Config #%d [%04x]   Res:%ux%u   Git:0x%08x\n",
+                     cur_xosera_config,
+                     (unsigned int)feature,
+                     (unsigned int)monwidth,
+                     (unsigned int)monheight,
+                     (unsigned int)initinfo.githash);
 
         install_intr();
 
@@ -1197,32 +1212,32 @@ void xosera_vramtest()
 
         if (num_vram_fails)
         {
-            dprintf("Cummulative VRAM test errors:\n");
+            debug_printf("Cumulative VRAM test errors:\n");
             for (int i = 0; i < num_vram_fails; i++)
             {
                 struct vram_fail_info * fip = &vram_fails[i];
 
-                dprintf("pass %3u #%2u @ 0x%04x=0x%04x vs 0x%04x pat=%s%s\te=%s%s%s\tm=%s%s%s%s%s\tt=%s%s%s%s%s\n",
-                        fip->pass,
-                        fip->count,
-                        fip->addr,
-                        fip->data,
-                        fip->expected,
-                        fip->flags & MODEFLAG_LFSR ? "LFSR " : "",
-                        fip->flags & MODEFLAG_ADDR ? "ADDR " : "",
-                        fip->flags & MODEFLAG_BAD ? "BAD!  " : "",
-                        fip->flags & MODEFLAG_READ ? "R " : "",
-                        fip->flags & MODEFLAG_WRITE ? "W " : "",
-                        fip->flags & MODEFLAG_1BPP ? "1" : "",
-                        fip->flags & MODEFLAG_4BPP ? "4" : "",
-                        fip->flags & MODEFLAG_8BPP ? "8" : "",
-                        fip->flags & MODEFLAG_XBPP ? "X" : "",
-                        fip->flags & MODEFLAG_BLANK ? "B" : "",
-                        fip->flags & MODEFLAG_SLOW ? "S" : "",
-                        fip->flags & MODEFLAG_BYTE ? "B" : "",
-                        fip->flags & MODEFLAG_WORD ? "W" : "",
-                        fip->flags & MODEFLAG_LONG ? "L" : "",
-                        fip->flags & MODEFLAG_XRMEM ? "XMEM" : "");
+                debug_printf("pass %3u #%2u @ 0x%04x=0x%04x vs 0x%04x pat=%s%s\te=%s%s%s\tm=%s%s%s%s%s\tt=%s%s%s%s%s\n",
+                             fip->pass,
+                             fip->count,
+                             fip->addr,
+                             fip->data,
+                             fip->expected,
+                             fip->flags & MODEFLAG_LFSR ? "LFSR " : "",
+                             fip->flags & MODEFLAG_ADDR ? "ADDR " : "",
+                             fip->flags & MODEFLAG_BAD ? "BAD!  " : "",
+                             fip->flags & MODEFLAG_READ ? "R " : "",
+                             fip->flags & MODEFLAG_WRITE ? "W " : "",
+                             fip->flags & MODEFLAG_1BPP ? "1" : "",
+                             fip->flags & MODEFLAG_4BPP ? "4" : "",
+                             fip->flags & MODEFLAG_8BPP ? "8" : "",
+                             fip->flags & MODEFLAG_XBPP ? "X" : "",
+                             fip->flags & MODEFLAG_BLANK ? "B" : "",
+                             fip->flags & MODEFLAG_SLOW ? "S" : "",
+                             fip->flags & MODEFLAG_BYTE ? "B" : "",
+                             fip->flags & MODEFLAG_WORD ? "W" : "",
+                             fip->flags & MODEFLAG_LONG ? "L" : "",
+                             fip->flags & MODEFLAG_XRMEM ? "XMEM" : "");
             }
         }
     }
@@ -1232,5 +1247,7 @@ void xosera_vramtest()
     // reset console
     xosera_init(saved_config);        // restore fonts, which were trashed
     xosera_xansi_restore();
-    dprintf("\n\nExiting...\n");
+    debug_printf("\n\nExiting...\n");
+
+    return 0;
 }

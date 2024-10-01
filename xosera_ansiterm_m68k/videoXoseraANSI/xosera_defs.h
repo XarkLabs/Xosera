@@ -24,7 +24,7 @@
 #if !defined(XOSERA_M68K_DEFS_H)
 #define XOSERA_M68K_DEFS_H
 
-#if !defined(__COPASM__)
+#if !defined(__COPASM__) && !defined(__ASSEMBLER__)
 #include <stdint.h>
 #define X_CASTU16 (uint16_t)
 #else
@@ -69,7 +69,10 @@
 #if defined(ROSCO_M68K)        // setup for rosco_m68k using Xosera board
 // NOTE: Main register numbers are multiplied by 4 for rosco_m68k, because of even byte 6800 8-bit addressing plus
 // 16-bit registers
-#define XM_BASEADDR 0xf80060        // rosco_m68k Xosera register base address (upper byte [15:8] of 16-bit bus)
+
+// NOTE: Xosera register base address is NOT hardcoded on rosco_m68k, instead SDB_XOSERABASE is set by the firmware to
+// contain the base address (which can vary depending on board and configuration)
+#define XM_BASE_PTR 0x410        // contains Xosera base address (aka SDB_XOSERABASE, set by firmware)
 
 #define XM_SYS_CTRL 0x00        // (R /W+) [15:8] status bits, write setup PIXEL_X/Y & options, [7:0] write masking
 #define XM_INT_CTRL 0x04        // (R /W+) FPGA config, interrupt status/control

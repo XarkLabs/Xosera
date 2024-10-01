@@ -14,7 +14,8 @@
 ; this should be a multiple of 4 and at least ~$800 (for 1st stage)
 resident_size   =       $800                    ; amount of memory to reserve
 
-                section .text.resident_init
+                text
+
                 align  2
 ; NOTE: This code assumes application uses its own non-system stack area!
 resident_init::

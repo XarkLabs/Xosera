@@ -24,8 +24,7 @@
 
 // building XANSI in firmware
 #if !defined(XOSERA_API_MINIMAL)
-#include <machine.h>        // rosco_m68k I/O
-#include <basicio.h>
+#include <rosco_m68k/machine.h>        // rosco_m68k I/O
 #include <stdlib.h>
 #include <string.h>
 #endif
@@ -33,11 +32,11 @@
 #if !defined(ROSCO_M68K)
 #define ROSCO_M68K
 #endif
-#include "xosera_m68k_api.h"
+#include "xosera.h"
 
 #define SYNC_RETRIES 250        // ~1/4 second
 
-// TODO: This is less than ideal (tuned for ~10MHz)
+// This is less than ideal, tuned for ~10MHz 68010 but not super critical
 __attribute__((noinline)) void cpu_delay(int ms)
 {
     __asm__ __volatile__(
@@ -67,7 +66,7 @@ void xosera_memclear(void * ptr, unsigned int n)
         : [end] "a"(end));
 }
 
-// delay for approx ms milliseconds
+// mcBusywait for approx ms milliseconds
 void xosera_delay(uint32_t ms)
 {
     if (!xosera_sync())
@@ -93,18 +92,18 @@ void xosera_delay(uint32_t ms)
 // return true if Xosera XANSI firmware detected (safe from BUS ERROR if no hardware present)
 bool xosera_xansi_detect(bool hide_cursor)
 {
-    uint16_t       len          = 0;
-    uint16_t       spincount    = 0;
-    const uint16_t spin_timeout = 10000;        // spin count per reply char
-    char           reply_str[32];
+    uint16_t len = 0;
+    uint32_t timeout_start;
+    char     reply_str[32];
 
     xosera_memclear(reply_str, sizeof(reply_str));
-    print("\23368c");        // CSI 68 c
+    mcPrint("\23368c");        // CSI 68 c
+    timeout_start = _TIMER_100HZ;
     do
     {
-        if (checkchar())
+        if (mcCheckInput())
         {
-            char cdata = readchar();
+            char cdata = mcInputchar();
             // CAN/SUB
             if (cdata == 0x18 || cdata == 0x1a)
             {
@@ -117,19 +116,16 @@ bool xosera_xansi_detect(bool hide_cursor)
             {
                 break;
             }
-            spincount = 0;
+            timeout_start = _TIMER_100HZ;
         }
-        else
-        {
-            spincount++;
-        }
-    } while (++spincount < spin_timeout && len < (sizeof(reply_str) - 1));
+    } while (len < (sizeof(reply_str) - 1) &&        // room in buffer
+             (_TIMER_100HZ - timeout_start) < 10);        // and 1/10th second hasn't elapsed
 
     if (len && strncmp(reply_str, "\x1b[?68;", 6) == 0)
     {
         if (hide_cursor)
         {
-            print("\233?25l");        // disable input cursor
+            mcPrint("\233?25l");        // disable input cursor
         }
         return true;
     }
@@ -140,17 +136,14 @@ bool xosera_xansi_detect(bool hide_cursor)
 void xosera_xansi_restore(void)
 {
     xv_prep();
-    xreg_setw(VID_CTRL, 0x0008);        // grey border color
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x08));        // set border grey
     xreg_setw(VID_LEFT, 0);
     xreg_setw(VID_RIGHT, xosera_vid_width());
     xreg_setw_next(/* VID_POINTER_H, */ 0x0000);
-    xreg_setw(PA_GFX_CTRL, 0x0080);
-    xreg_setw(PB_GFX_CTRL, 0x0080);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
 
-    if (xosera_xansi_detect(false))
-    {
-        print("\033c");        // reset XANSI
-    }
+    mcPrint("\033c");        // reset XANSI
 }
 #endif
 
@@ -229,8 +222,7 @@ bool xosera_reset_state(void)
         // set registers as if reconfigured, clear VRAM (but not xrmem)
         xm_setw(PIXEL_X, 0x0000);
         xm_setw(PIXEL_Y, 0x0000);
-        xm_setbh(SYS_CTRL, 0x00);
-        xm_setbl(SYS_CTRL, SYS_CTRL_WR_MASK_F);
+        xm_setw(SYS_CTRL, SYS_CTRL_WR_MASK_F);
         xm_setw(INT_CTRL, INT_CTRL_CLEAR_ALL_F);
         xm_setw(RD_INCR, 0x0000);
         xm_setw(RD_ADDR, 0x0000);

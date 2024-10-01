@@ -3,24 +3,28 @@
  */
 
 #if !defined(DEBUG)
-#define DEBUG   0
+#define DEBUG 0
 #endif
 
-#include <basicio.h>
 #include <limits.h>
-#include <sdfat.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <xosera_m68k_api.h>
+
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
+
+#include "rosco_m68k_support.h"
 
 #if DEBUG
 #include <debug.h>
 #endif
 
-#include "dprintf.h"
 #include "pt_mod.h"
 #include "xosera_mod_play.h"
+
+extern char _binary_xenon_mod_raw_start[];
+extern char _binary_xenon_mod_raw_end[];
 
 #if NTSC
 #define TENTH_MS_PER_FRAME 166
@@ -30,69 +34,78 @@
 
 // #define VERBOSE             // Define to see "best effort" division printout
 
-extern int main(PtMod * mod);
+extern int play_mod(PtMod * mod);
 extern int xosera_play(PtMod * mod);
 
 #define LOAD_CHUNK (24 * 1024)
-static uint8_t buffer[640 * 1024];
+#if 0
+uint8_t buffer[640 * 1024];
+#else
+uint8_t * buffer;
+#endif
 
-static int load_mod(const char * filename, uint8_t * buf, int size)
+int load_mod(const char * filename, uint8_t * buf, int size)
 {
-    FILE * f = fl_fopen(filename, "r");
+    debug_printf("\nLoading %s into %p size %x\n", filename, buf, size);
+    FILE * f = fopen(filename, "r");
 
     if (!f)
     {
-        dprintf("Unable to open MOD '%s'\n", filename);
+        debug_printf("Unable to open MOD '%s'\n", filename);
         return 0;
     }
-
-    if (fl_fseek(f, 0, SEEK_END))
+#if 0
+    if (fseek(f, 0, SEEK_END))
     {
-        fl_fclose(f);
-        dprintf("Seek failed; bailing\n");
+        fclose(f);
+        debug_printf("Seek failed; bailing\n");
         return 0;
     }
 
-    const long fsize = fl_ftell(f);
+    const long fsize = ftell(f);
     if (fsize == -1L)
     {
-        fl_fclose(f);
-        dprintf("ftell failed; bailing\n");
+        fclose(f);
+        debug_printf("ftell failed; bailing\n");
         return 0;
     }
 
-    if (fl_fseek(f, 0, SEEK_SET))
+    if (fseek(f, 0, SEEK_SET))
     {
-        fl_fclose(f);
-        dprintf("Second seek failed; bailing\n");
+        fclose(f);
+        debug_printf("Second seek failed; bailing\n");
         return 0;
     }
 
     if (fsize > size)
     {
-        fl_fclose(f);
-        dprintf("File too big; bailing\n");
+        fclose(f);
+        debug_printf("File too big; bailing\n");
         return 0;
     }
-
     int size_remain = fsize;
+#else
+    const long fsize       = size;
+    int        size_remain = size;
+#endif
+
     while (size_remain > 0)
     {
         int partial_size = size_remain > LOAD_CHUNK ? LOAD_CHUNK : size_remain;
-        int result       = fl_fread(buf, partial_size, 1, f);
+        int result       = fread(buf, partial_size, 1, f);
         if (result != partial_size)
         {
-            fl_fclose(f);
-            dprintf("\nRead failed; bailing\n");
+            fclose(f);
+            debug_printf("\nRead failed; bailing\n");
             return 0;
         }
         size_remain -= result;
         buf += result;
-        dprintf(".");
+        debug_printf(".");
     }
 
-    fl_fclose(f);
-    dprintf("done.\n");
+    fclose(f);
+    debug_printf("done.\n");
     return fsize;
 }
 
@@ -110,13 +123,15 @@ const char * get_file()
     num_mods = 0;
     memset(mod_files, 0, sizeof(mod_files));
 
+#if 0
+
     FL_DIR dirstat;
 
-    if (fl_opendir("/", &dirstat))
+    if (opendir("/", &dirstat))
     {
         struct fs_dir_ent dirent;
 
-        while (num_mods < MAX_MODS && fl_readdir(&dirstat, &dirent) == 0)
+        while (num_mods < MAX_MODS && readdir(&dirstat, &dirent) == 0)
         {
             if (!dirent.is_dir && dirent.filename[0] != '.')
             {
@@ -136,26 +151,39 @@ const char * get_file()
             memset(&dirent, 0, sizeof(dirent));
         }
 
-        fl_closedir(&dirstat);
+        closedir(&dirstat);
     }
+#else
+    strcpy(mod_files[0], "1990_mix.mod");
+    strcpy(mod_files[1], "sd/a_fox_in_my_box.mod");
+    strcpy(mod_files[2], "/sd/xenon2.mod");
+    strcpy(mod_files[3], "xosera.mod");
+
+    mod_size[0] = 315687;
+    mod_size[1] = 7728;
+    mod_size[2] = 365222;
+    mod_size[3] = 115066;
+
+    num_mods = 4;
+#endif
 
     int num = 0;
     do
     {
-        dprintf("\n\nMOD files available:\n\n");
+        debug_printf("\n\nMOD files available:\n\n");
 
         for (int i = 0; i < num_mods; i++)
         {
-            dprintf("%c - [%3dK] %s\n", 'A' + i, ((mod_size[i] + 1023) / 1024), mod_files[i]);
+            debug_printf("%c - [%3dK] %s\n", 'A' + i, ((mod_size[i] + 1023) / 1024), mod_files[i]);
         }
 
-        dprintf("\nSelect (A-%c):", 'A' + num_mods - 1);
+        debug_printf("\nSelect (A-%c):", 'A' + num_mods - 1);
 
-        int key = readchar();
+        int key = mcInputchar();
 
         if (key == 27)
         {
-            dprintf("ESC\n\n");
+            debug_printf("ESC\n\n");
             return NULL;
         }
 
@@ -168,7 +196,7 @@ const char * get_file()
 
     } while (num < 0 || num >= num_mods);
 
-    dprintf("%c\n\n", 'A' + num);
+    debug_printf("%c\n\n", 'A' + num);
 
     return mod_files[num];
 }
@@ -222,21 +250,21 @@ void init_viz()
     }
 }
 
-void kmain()
+int main()
 {
     xv_prep();
 
     printf("\033c\033[?25l");        // XANSI reset, disable input cursor
-    dprintf("\033c");                // terminal reset
-    dprintf("rosco_pt_mod - xosera_init(2) - ");
-    xosera_init(2);
-    dprintf("OK (%dx%d).\n", xosera_vid_width(), xosera_vid_height());
+    debug_printf("\033c");           // terminal reset
+    debug_printf("rosco_pt_mod - xosera_init(XINIT_CONFIG_640x480) - ");
+    xosera_init(XINIT_CONFIG_640x480);
+    debug_printf("OK (%dx%d).\n", xosera_vid_width(), xosera_vid_height());
 
     init_viz();
 
-    while (checkchar())
+    while (mcCheckInput())
     {
-        readchar();
+        mcInputchar();
     }
 
 #if LOG
@@ -248,11 +276,7 @@ void kmain()
 
     while (!exit)
     {
-        if (!SD_FAT_initialize())
-        {
-            dprintf("no SD card, bailing\n");
-            return;
-        }
+#if 0
         const char * filename = get_file();
 
         if (filename == NULL)
@@ -260,32 +284,36 @@ void kmain()
             exit = true;
             break;
         }
-
+#endif
         init_viz();
 
 #if DEBUG
         start_debugger();
 #endif
 
-        dprintf("Loading mod: \"%s\"", filename);
+#if 0
+        debug_printf("Loading mod: \"%s\"", filename);
         if (load_mod(filename, buffer, sizeof(buffer)))
+#else
+        buffer = (uint8_t *)_binary_xenon_mod_raw_start;
+#endif
         {
 
             PtMod * mod = (PtMod *)buffer;
 
-            dprintf("\nMOD is %-20.20s\n", mod->song_name);
+            debug_printf("\nMOD is %-20.20s\n", mod->song_name);
 
 #ifdef PRINT_INFO
-            main(mod);
+            play_mod(mod);
 #endif
 
 #ifdef PLAY_SAMPLE
-            while (checkchar())
+            while (mcCheckInput())
             {
-                readchar();
+                mcInputchar();
             }
 
-            dprintf("Starting playback; Hit 'ESC' to exit or any key for another song...\n");
+            debug_printf("Starting playback; Hit 'ESC' to exit or any key for another song...\n");
 
             xreg_setw(AUD_CTRL, 0x0001);
             xm_setw(TIMER, TENTH_MS_PER_FRAME);
@@ -295,9 +323,9 @@ void kmain()
             while (!exit)
             {
                 // Waiting...
-                if (checkchar())
+                if (mcCheckInput())
                 {
-                    uint8_t c = readchar();
+                    uint8_t c = mcInputchar();
 
                     if (c == 27)
                     {
@@ -309,7 +337,7 @@ void kmain()
                 if (lastPatternPos != patternPos)
                 {
                     lastPatternPos = patternPos;
-                    dprintf(
+                    debug_printf(
                         "%02x[%02x]: SMPL: %02x; PD: %04d [%3s] (Xosera: %05d) CMD: %03x:%03x:%03x:%03x (SPD: %d / %d "
                         "ms/10)\n",
                         pattern,
@@ -337,23 +365,24 @@ void kmain()
             xreg_setw(AUD_CTRL, 0x0000);
             xm_setw(INT_CTRL, INT_CTRL_AUD_EN_ALL_F | INT_CTRL_CLEAR_ALL_F);
 
-            dprintf("\nPlayback stopped.\n");
+            debug_printf("\nPlayback stopped.\n");
 
             ptmodPrintlog();
-
-#endif
         }
+#if 0
         else
         {
-            dprintf("Can't load file...\n");
+            debug_printf("Can't load file...\n");
         }
+#endif
+#endif
     }
-    xosera_init(0);
+    xosera_init(XINIT_CONFIG_640x480);
 
 #if LOG
     // Clear log so subsequent run doesn't think we crashed...
     ptmodClearLog();
 #endif
 
-    dprintf("\nAll done, bye!\n");
+    debug_printf("\nAll done, bye!\n");
 }

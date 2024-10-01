@@ -1,13 +1,13 @@
-# XarkLabs copasm "Slim" Copper Assembler Reference
+# XarkLabs xosera-copasm "Slim" Copper Assembler Reference
 
 This assembler was a work-in-progress multi-architecture assembler that has been "bit-rotting" on my drive for some time now. I have now repurposed it into an Xosera "Slim Copper" co-processor assembler. It seems to be working well, but it has not been very well tested, so be cautious trusting it.
 
 This version of the assembler is configured to produce output suitable for the Xosera "Slim Copper" (the 2nd revision of the Xosera copper using a very minimal 16-bit ISA).  This consists of big-endian 16-bit words and supports the XR address space of Xosera, making the default origin address $C000 (start of copper region).
 
-## Invoking copasm
+## Invoking xosera-copasm
 
 ```plain text
-Usage:  copasm [options] <input files ...> [-o output.fmt]
+Usage:  xosera-copasm [options] <input files ...> [-o output.fmt]
 
 -b      maximum bytes hex per listing line (8-64, default 8)
 -c      suppress listing inside false conditional (.LISTCOND false)
@@ -26,7 +26,7 @@ Usage:  copasm [options] <input files ...> [-o output.fmt]
 Example:
 
 ```shell
-copasm -l color_screen.casm -o out/color_screen.h
+xosera-copasm -l color_screen.casm -o out/color_screen.h
 ```
 
 ## Assembler Directives
@@ -163,7 +163,7 @@ The following C style operators are supported:
 | `%`                          | Modulo                                              |
 | `(` *expression* `)`         | Parenthesis can be used to control evaluation order |
 
-> :mag: **Assembler Defintion File** Adding `.include "xosera_m68k_defs.inc"` will include a file defining Xosera registers and constants for use in copper programs.
+> :mag: **Assembler Defintion File** Adding `.include "xosera_defs.inc"` will include a file defining Xosera registers and constants for use in copper programs.
 
 > :mag: **C Include Compatibility** When using the `C` compiler preprocessor, CopAsm is also generally compatible with the C include headers and that only define macros with expressions.  The default Xosera Makefile will invoke the C preprocessor (with `-D__COPASM__=1` defined) before assembly on `.cpasm` files (vs normal `.casm` files that are only assembled).  This can be useful to define constants shared between C/C++ and copper code (an exmaple of this is in the `xosera_boing_m68k` sample).  
 

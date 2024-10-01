@@ -5,17 +5,16 @@
 #
 # vim: set noet ts=8 sw=8
 
-ifndef ROSCO_M68K_DIR
-$(info Please set ROSCO_M68K_DIR to the top-level rosco_m68k directory to use for rosco_m68k building, e.g. ~/rosco_m68k)
+ifndef XOSERA_EXTRA
+$(info Please set XOSERA_EXTRA to the xosera_m68k_extra directory of Xosera repository, e.g. ~/xosera/xosera_m68k_extra)
 endif
 
-ifndef XOSERA_M68K_API
-XOSERA_M68K_API:=../xosera_m68k_api
-$(info Please set XOSERA_M68K_API to the xosera_m68k_api directory of Xosera m68k API, e.g. ~/xosera/xosera_m68k_api)
-$(info Assuming XOSERA_M68K_API=$(XOSERA_M68K_API))
-endif
+DEFINES=-DPLAY_SAMPLE
+# add common rosco support
+EXTRA_CFLAGS+=-I$(XOSERA_EXTRA)
+CSOURCES+=$(XOSERA_EXTRA)/rosco_m68k_support.c
 
-EXTRA_CFLAGS=-DPLAY_SAMPLE
+all: $(BINARY) $(DISASM)
 
 # use generic common make rules for Xosera + rosco_m68k build
-include $(XOSERA_M68K_API)/common_xosera_m68k.mk
+include $(XOSERA_EXTRA)/common_xosera.mk

@@ -19,9 +19,8 @@
  * ------------------------------------------------------------
  */
 
+#include <rosco_m68k/xosera_defs.h>
 #include "xosera_mon_m68k.h"
-
-#include "xosera_m68k_defs.h"
 
 // Xosera XR Memory Regions (size in 16-bit words)
 const addr_range_t xr_mem[] = {

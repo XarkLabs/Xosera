@@ -17,7 +17,7 @@
  *    adapter for a more civilized age."
  *
  * ------------------------------------------------------------
- * Copyright (c) 2021-2023 Xark
+ * Copyright (c) 2021-2024 Xark
  * MIT License
  *
  * Xosera rosco_m68k low-level C API for Xosera
@@ -145,17 +145,17 @@ void xosera_xansi_restore(void);                   // restore XANSI text mode
 bool xosera_init(xosera_mode_t mode);              // detect Xosera, set configuration (traps if not present)
 bool xosera_reset_state(void);                     // reset to default state w/o config, clears VRAM (xrmem unaltered)
 bool xosera_sync(void);                            // immediate check if Xosera responding (traps if not present)
-bool xosera_wait_sync(void);                       // wait a bit and see if Xosera starts responding (traps if not present)
-bool xosera_get_info(xosera_info_t * info);        // retrieve init xosera_info_t (valid after Xosera reconfig)
-void cpu_delay(int ms);                            // delay approx milliseconds with CPU busy wait
-void xosera_delay(uint32_t ms);                    // delay milliseconds using Xosera TIMER register
+bool xosera_wait_sync(void);        // wait a bit and see if Xosera starts responding (traps if not present)
+bool xosera_get_info(xosera_info_t * info);              // retrieve init xosera_info_t (valid after Xosera reconfig)
+void cpu_delay(int ms);                                  // delay approx milliseconds with CPU busy wait
+void xosera_delay(uint32_t ms);                          // delay milliseconds using Xosera TIMER register
 void xosera_memclear(void * ptr, unsigned int n);        // memory zero (mostly for XANSI firmware use)
 
 void xosera_set_pointer(int16_t  x_pos,                  // native pixel X for pointer upper left
                         int16_t  y_pos,                  // native pixel Y for pointer upper left
                         uint16_t colormap_index);        // colormap_index = 0xi000 (upper 4-bits of pointer colorA)
 
-#include "xosera_m68k_defs.h"
+#include "xosera_defs.h"
 
 #define NUM_ELEMENTS(a) (sizeof(a) / sizeof(a[0]))
 
@@ -204,13 +204,10 @@ typedef volatile xmreg_t * const xosera_ptr_t;
 #pragma GCC diagnostic ignored "-Wpedantic"        // Yes, I'm slightly cheating (but ugly to have to pass in
                                                    // a "return variable" - and this is the "low level" API, remember)
 
-// Extra-credit function that saves 8 cycles per function that calls xosera API functions (call once at top).
-// (NOTE: This works by "shadowing" the global xosera_ptr and using asm to load the constant value more efficiently.  If
-// GCC "sees" the constant pointer value, it seems to want to load it over and over as needed.  This method gets GCC to
-// load the pointer once (using more efficient immediate addressing mode) and keep it loaded in an address register.)
+// Function that loads Xosera base address into a local (call once before other Xosera API functions).
 
 // void xv_prep() - declare and load xosera_ptr (tries to use local/register for faster/smaller code vs global)
-#define xv_prep() volatile xmreg_t * const xosera_ptr = ((volatile xmreg_t *)XM_BASEADDR)
+#define xv_prep() volatile xmreg_t * const xosera_ptr = ((volatile xmreg_t *)(*(xmreg_t **)XM_BASE_PTR))
 
 // void xm_setbh(xmreg_name, high_byte) - set XM_<xmreg_name> bits [15:8] (high/even byte) to high_byte
 #define xm_setbh(xmreg_name, high_byte) (xosera_ptr[(XM_##xmreg_name) >> 2].b.h = (high_byte))
@@ -238,6 +235,44 @@ typedef volatile xmreg_t * const xosera_ptr_t;
                              :                                                                                         \
                              : [src] "d"((uint32_t)(long_val)), [ptr] "a"(xosera_ptr)                                  \
                              :);                                                                                       \
+    } while (false)
+
+// void xm_set_vram_mask(uint8_t wr_mask) - set vram nibble write mask
+#define xm_set_vram_mask(wr_mask) xm_setbl(SYS_CTRL, (uint8_t)(wr_mask))
+
+// void xm_set_int_ack(uint8_t int_ack) - acknowledge and clear interrupt
+#define xm_set_int_ack(int_ack) xm_setbl(INT_CTRL, (uint8_t)(int_ack))
+
+// void xm_setup_pixel_addr(vram_base, word_width, bool no_mask, bool pix_8b) - setup pixel address calculation
+#define xm_setup_pixel_addr(vram_base, word_width, no_mask, pix_8b)                                                    \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        if (no_mask) /* disable no_mask flag before PIXEL_X/Y write, to preserve wr_mask */                            \
+        {                                                                                                              \
+            xm_setbh(SYS_CTRL,                                                                                         \
+                     (uint8_t)(no_mask ? SYS_CTRL_PIX_NO_MASK_F : 0) |                                                 \
+                         (uint8_t)(pix_8b ? SYS_CTRL_PIX_8B_MASK_F : 0));                                              \
+        }                                                                                                              \
+        xm_setw(PIXEL_X, vram_base);                                                                                   \
+        xm_setw(PIXEL_Y, word_width);                                                                                  \
+        xm_setbh(SYS_CTRL,                                                                                             \
+                 (uint8_t)(no_mask ? SYS_CTRL_PIX_NO_MASK_F : 0) | (uint8_t)(pix_8b ? SYS_CTRL_PIX_8B_MASK_F : 0));    \
+    } while (false)
+
+// void xm_set_pixel(uint16_t x, uint16_t y) - set pixel x, y address
+#define xm_set_pixel(x, y)                                                                                             \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        xm_setw(PIXEL_X, x);                                                                                           \
+        xm_setw(PIXEL_Y, y);                                                                                           \
+    } while (false)
+
+// void xm_set_pixel(uint16_t x, uint16_t y, word_val) - set pixel x, y and write word_val
+#define xm_set_pixel_data(x, y, word_val)                                                                              \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        xm_set_pixel(x, y);                                                                                            \
+        xm_setw(DATA, word_val);                                                                                       \
     } while (false)
 
 // uint8_t xm_getbh(xmreg_name) - get byte val from XM_<xmreg_name> bits [15:8] (high/even byte)
@@ -334,6 +369,17 @@ typedef volatile xmreg_t * const xosera_ptr_t;
 
 // wait until scanout is in visible vertical line
 #define xwait_not_vblank() xwait_sys_ctrl_clear(VBLANK)
+
+// uint8_t xm_get_int_status() - get interrupt status
+#define xm_get_int_status() xm_getbl(INT_CTRL)
+
+// uint16_t xm_get_pixel_data(x, y) - get data at pixel x, y
+#define xm_get_pixel_data(x, y)                                                                                        \
+    ({                                                                                                                 \
+        xm_setw(PIXEL_X, x);                                                                                           \
+        xm_setw(PIXEL_Y, y);                                                                                           \
+        xm_getw(DATA);                                                                                                 \
+    })
 
 // void xreg_setw(xreg_name, word_val) - set XR_<xreg_name> to word_val
 #define xreg_setw(xreg_name, word_val)                                                                                 \

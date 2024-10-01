@@ -1,13 +1,13 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <basicio.h>
-
-#include "xosera_m68k_api.h"
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
 
 #include "xosera_boing_defs.h"
 
@@ -878,8 +878,14 @@ void copper_load_list(uint16_t length, uint16_t list[length], uint16_t base)
     }
 }
 
-void xosera_boing()
+// xosera boing
+int main()
 {
+    mcBusywait(1000 * 500);        // wait a bit for terminal window/serial
+    while (mcCheckInput())          // clear any queued input
+    {
+        mcInputchar();
+    }
     xv_prep();
 
     dprintf("Xosera boing\n");
@@ -1032,7 +1038,7 @@ void xosera_boing()
 #if (USE_BLIT_METHOD == USE_COPASM) || (USE_BLIT_METHOD == USE_COPMACROS)
     uint16_t last_frame = ~0;
 #endif
-    while (!checkchar())
+    while (!mcCheckInput())
     {
         uint16_t timer = xm_getw(TIMER);
         float    dt    = (uint16_t)(timer - prev_timer) / 10000.0f;
@@ -1111,7 +1117,7 @@ void xosera_boing()
         }
         draw_ball_at(WIDTH_WORDS_B, HEIGHT_WORDS_B, pos_x_int, pos_y_int);
     }
-    readchar();
+    mcInputchar();
     xwait_not_vblank();
     xwait_vblank();
     xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x08));

@@ -2,16 +2,17 @@
 ; Copyright (c) 2021 roscopeco <AT> gmail <DOT> com
 ; *************************************************************
 ;
-        section .text                     ; This is normal code
+        text                     ; This is normal code
 
-        include "../xosera_m68k_api/xosera_m68k_defs.inc"
+        include "../xosera_m68k_api/xosera_defs.inc"
 
 install_intr::
                 movem.l D0-D7/A0-A6,-(A7)
 
                 or.w    #$0200,SR               ; disable interrupts
 
-                lea.l   XM_BASEADDR,A0          ; get Xosera base addr
+;                lea.l   XM_BASEADDR,A0          ; get Xosera base addr
+                move.l  XM_BASE_PTR,a0       ; get Xosera base addr
                 move.w  #$000F,D0               ; enable vsync interrupt, clear any pending
                 movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
                 move.w  #$0800,D0               ; enable vsync interrupt, clear any pending
@@ -26,7 +27,8 @@ install_intr::
 remove_intr::
                 movem.l D0-D7/A0-A6,-(A7)
 
-                lea.l   XM_BASEADDR,A0          ; get Xosera base addr
+;                lea.l   XM_BASEADDR,A0          ; get Xosera base addr
+                move.l  XM_BASE_PTR,a0       ; get Xosera base addr
                 moveq.l #$000F,D0               ; disable interrupts, and clear pending
                 movep.w D0,XM_INT_CTRL(A0)      ; enable VSYNC interrupt
                 move.l  $60,D0                  ; copy spurious int handler
@@ -39,7 +41,8 @@ remove_intr::
 Xosera_intr:
                 movem.l D0-D1/A0,-(A7)          ; save minimal regs
 
-                move.l  #XM_BASEADDR,A0         ; get Xosera base addr
+;                move.l  #XM_BASEADDR,A0         ; get Xosera base addr
+                move.l  XM_BASE_PTR,A0       ; get Xosera base addr
                 move.b  XM_INT_CTRL+2(A0),D0       ; read pending interrupts
                 move.b  D0,XM_INT_CTRL+2(A0)       ; acknowledge and clear all interrupts
 
@@ -67,7 +70,7 @@ NoNukeColor:    add.l   #1,XFrameCount          ; increment frame counter
 NotVblank:      movem.l (A7)+,D0-D1/A0          ; restore regs
                 rte
 
-        section .data
+        bss
 
-NukeColor::     dc.w    $0000
-XFrameCount::   dc.l    $00000000
+NukeColor::     ds.w    1
+XFrameCount::   ds.l    1

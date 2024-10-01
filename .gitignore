@@ -80,7 +80,7 @@ xosera_test_m68k/cop_diagonal.h
 xosera_test_m68k/cop_blend_test.h
 xosera_boing_m68k/*.ii
 xosera_boing_m68k/boing_copper.h
-xosera_m68k_api/bin/copasm
+xosera_m68k_api/bin/xosera-copasm
 copper/copper_test_m68k/color_bar_table.h
 xosera_test_m68k/cop_wavey.h
 utils/interleave_raw

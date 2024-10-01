@@ -27,18 +27,27 @@
                 include "../../../shared/rosco_m68k_public.asm"
                 include "../rosco_m68k_private.asm"
 
+; deal with linker script having underscores, but not in firmware
+_SDB_XOSERABASE         equ     SDB_XOSERABASE
+_EFP_PRINT              equ     EFP_PRINT
+_EFP_PRINTLN            equ     EFP_PRINTLN
+_EFP_PRINTCHAR          equ     EFP_PRINTCHAR
+_EFP_SETCURSOR          equ     EFP_SETCURSOR
+_EFP_INPUTCHAR          equ     EFP_INPUTCHAR
+_EFP_CHECKINPUT         equ     EFP_CHECKINPUT
+
                 else                            ; building for RAM testing
 
-                include "rosco_m68k_public.asm"
+;                include "rosco_m68k_public.asm"
 
                 endif
 
-                include "xosera_m68k_defs.inc"
+;                include "xosera_defs.inc"
 
 XANSI_CON_DATA          equ     $500            ; XANSI console data area
 XANSI_CON_DATA_END      equ     $57F            ; 128 bytes reserved (~0x60 used currently)
 
-                section .text
+                text
 
                 ifnd  TEST_FIRMWARE             ; building for firmware
 
@@ -47,7 +56,7 @@ XANSI_HAVE_XOSERA::
                 move.l  a0,-(sp)
                 jsr     INSTALL_TEMP_BERR_HANDLER
 
-                move.l  #XM_BASEADDR,a0
+                move.l  _SDB_XOSERABASE.w,a0
                 move.b  (a0),d0
 
                 tst.b   BERR_FLAG
@@ -233,13 +242,13 @@ XANSI_CON_INIT::
                 beq.s   .INITDONE
 
                 ; replace EFP functions
-                move.l  #XANSI_CON_PRINT,EFP_PRINT.w
-                move.l  #XANSI_CON_PRINTLN,EFP_PRINTLN.w
-                move.l  #XANSI_CON_PRINTCHAR,EFP_PRINTCHAR.w
-                move.l  #XANSI_CON_SETCURSOR,EFP_SETCURSOR.w
+                move.l  #XANSI_CON_PRINT,_EFP_PRINT.w
+                move.l  #XANSI_CON_PRINTLN,_EFP_PRINTLN.w
+                move.l  #XANSI_CON_PRINTCHAR,_EFP_PRINTCHAR.w
+                move.l  #XANSI_CON_SETCURSOR,_EFP_SETCURSOR.w
                 ; xansiterm_INIT will have saved previous input handlers (to wrap them)
-                move.l  #XANSI_CON_INPUTCHAR,EFP_INPUTCHAR.w
-                move.l  #XANSI_CON_CHECKINPUT,EFP_CHECKINPUT.w
+                move.l  #XANSI_CON_INPUTCHAR,_EFP_INPUTCHAR.w
+                move.l  #XANSI_CON_CHECKINPUT,_EFP_CHECKINPUT.w
 
 .INITDONE
                 move.w  d3,sr                   ; restore SR

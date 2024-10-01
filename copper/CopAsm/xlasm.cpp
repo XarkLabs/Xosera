@@ -4291,10 +4291,10 @@ void strprintf(std::string & str, const char * fmt, ...)
 
 static void show_help()
 {
-    printf("copasm - XarkLabs Xosera \"Slim Copper\" Assembler\n");
-    printf("         Copyright 2022 Xark - MIT Licensed\n");
+    printf("xosera-copasm - XarkLabs Xosera \"Slim Copper\" Assembler\n");
+    printf("                Copyright 2022 Xark - MIT Licensed\n");
     printf("\n");
-    printf("Usage:  copasm [options] <input files ...> [-o output.fmt]\n");
+    printf("Usage:  xosera-copasm [options] <in_files ...> [-o out_file.fmt]\n");
     printf("\n");
     printf("-b      maximum bytes hex per listing line (8-64, default 8)\n");
     printf("-c      suppress listing inside false conditional (.LISTCOND false)\n");

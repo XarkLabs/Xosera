@@ -23,10 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <basicio.h>
-#include <machine.h>
-#include <sdfat.h>
-
 // #define DELAY_TIME 15000        // slow human speed
 // #define DELAY_TIME 5000        // human speed
 #define DELAY_TIME 1000        // impatient human speed
@@ -43,15 +39,16 @@
 #define TRUECOLOR_TEST_PIC 3
 #define SELF_PIC           4
 
-#include "xosera_m68k_api.h"
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
+
+#include "rosco_m68k_support.h"
 
 extern void install_intr(void);
 extern void remove_intr(void);
 
 extern volatile uint32_t XFrameCount;
 extern volatile uint16_t NukeColor;
-
-bool use_sd;
 
 // Xosera default color palette
 uint16_t def_colors[256] = {
@@ -417,8 +414,8 @@ struct copper_fx
     uint16_t     cop_length;
     uint16_t     flags;
 };
-struct copper_fx cop_fx[] = {{"Wavey", cop_wavey_bin, cop_wavey_size, COP_FLAG_SINE},
-                             {"None", cop_none_bin, cop_none_size, 0},
+struct copper_fx cop_fx[] = {{"None", cop_none_bin, cop_none_size, 0},
+                             {"Wavey", cop_wavey_bin, cop_wavey_size, COP_FLAG_SINE},
                              {"gray", cop_gray_bin, cop_gray_size, 0},
                              {"Diagonal", cop_diagonal_bin, cop_diagonal_size, COP_FLAG_HPOS},
                              {NULL, NULL, 0, 0}};
@@ -472,23 +469,6 @@ uint32_t timer_stop()
     uint32_t elapsed_time = elapsed_tenthms - start_time;
     return elapsed_time;
 }
-
-#if !defined(checkchar)        // newer rosco_m68k library addition, this is in case not present
-bool checkchar()
-{
-    int rc;
-    __asm__ __volatile__(
-        "move.l #6,%%d1\n"        // CHECKCHAR
-        "trap   #14\n"
-        "move.b %%d0,%[rc]\n"
-        "ext.w  %[rc]\n"
-        "ext.l  %[rc]\n"
-        : [rc] "=d"(rc)
-        :
-        : "d0", "d1");
-    return rc != 0;
-}
-#endif
 
 // resident _EFP_SD_INIT hook to disable SD loader upon next boot
 static void disable_sd_boot()
@@ -574,43 +554,6 @@ _NOINLINE void dupe_colors(int alpha)
     };
 }
 
-static void dputc(char c)
-{
-#ifndef __INTELLISENSE__
-    __asm__ __volatile__(
-        "move.w %[chr],%%d0\n"
-        "move.l #2,%%d1\n"        // SENDCHAR
-        "trap   #14\n"
-        :
-        : [chr] "d"(c)
-        : "d0", "d1");
-#endif
-}
-
-static void dprint(const char * str)
-{
-    register char c;
-    while ((c = *str++) != '\0')
-    {
-        if (c == '\n')
-        {
-            dputc('\r');
-        }
-        dputc(c);
-    }
-}
-
-static char dprint_buff[4096];
-static void dprintf(const char * fmt, ...) __attribute__((__format__(__printf__, 1, 2)));
-static void dprintf(const char * fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
-    dprint(dprint_buff);
-    va_end(args);
-}
-
 static void hexdump(void * ptr, size_t bytes)
 {
     uint8_t * p = (uint8_t *)ptr;
@@ -620,24 +563,24 @@ static void hexdump(void * ptr, size_t bytes)
         {
             if (i)
             {
-                dprintf("    ");
+                debug_printf("    ");
                 for (size_t j = i - 16; j < i; j++)
                 {
                     int c = p[j];
-                    dprintf("%c", c >= ' ' && c <= '~' ? c : '_');
-                    // dprintf("%c", isprint(c) ? c : '_');
+                    debug_printf("%c", c >= ' ' && c <= '~' ? c : '_');
+                    // debug_printf("%c", isprint(c) ? c : '_');
                 }
-                dprintf("\n");
+                debug_printf("\n");
             }
-            dprintf("%04lx: ", i);
+            debug_printf("%04lx: ", i);
         }
         else
         {
-            dprintf(", ");
+            debug_printf(", ");
         }
-        dprintf("%02x", p[i]);
+        debug_printf("%02x", p[i]);
     }
-    dprintf("\n");
+    debug_printf("\n");
 }
 
 void dump_xosera_regs(void)
@@ -679,42 +622,42 @@ void dump_xosera_regs(void)
     uint16_t pb_vscroll  = xreg_getw(PB_V_SCROLL);
     uint16_t pb_hvfscale = xreg_getw(PB_HV_FSCALE);
 
-    dprintf("Initial Xosera state after init:\n");
-    dprintf("DESCRIPTION : \"%s\"\n", initinfo.description_str);
-    dprintf("VERSION BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
-    dprintf("GIT HASH    : #%08lx %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
-    dprintf("FEATURE     : 0x%04x\n", feature);
-    dprintf("MONITOR RES : %dx%d\n", monwidth, monheight);
-    dprintf("\nConfig:\n");
-    dprintf("SYS_CTRL    : 0x%04x  INT_CTRL    : 0x%04x\n", sysctrl, intctrl);
-    dprintf("VID_CTRL    : 0x%04x  COPP_CTRL   : 0x%04x\n", vidctrl, coppctrl);
-    dprintf("AUD_CTRL    : 0x%04x\n", audctrl);
-    dprintf("VID_LEFT    : 0x%04x  VID_RIGHT   : 0x%04x\n", vidleft, vidright);
-    dprintf("\nPlayfield A:                                Playfield B:\n");
-    dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x  PB_GFX_CTRL : 0x%04x  PB_TILE_CTRL: 0x%04x\n",
-            pa_gfxctrl,
-            pa_tilectrl,
-            pb_gfxctrl,
-            pb_tilectrl);
-    dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x  PB_DISP_ADDR: 0x%04x  PB_LINE_LEN : 0x%04x\n",
-            pa_dispaddr,
-            pa_linelen,
-            pb_dispaddr,
-            pb_linelen);
+    debug_printf("Initial Xosera state after init:\n");
+    debug_printf("DESCRIPTION : \"%s\"\n", initinfo.description_str);
+    debug_printf("VERSION BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
+    debug_printf("GIT HASH    : #%08lx %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
+    debug_printf("FEATURE     : 0x%04x\n", feature);
+    debug_printf("MONITOR RES : %dx%d\n", monwidth, monheight);
+    debug_printf("\nConfig:\n");
+    debug_printf("SYS_CTRL    : 0x%04x  INT_CTRL    : 0x%04x\n", sysctrl, intctrl);
+    debug_printf("VID_CTRL    : 0x%04x  COPP_CTRL   : 0x%04x\n", vidctrl, coppctrl);
+    debug_printf("AUD_CTRL    : 0x%04x\n", audctrl);
+    debug_printf("VID_LEFT    : 0x%04x  VID_RIGHT   : 0x%04x\n", vidleft, vidright);
+    debug_printf("\nPlayfield A:                                Playfield B:\n");
+    debug_printf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x  PB_GFX_CTRL : 0x%04x  PB_TILE_CTRL: 0x%04x\n",
+                 pa_gfxctrl,
+                 pa_tilectrl,
+                 pb_gfxctrl,
+                 pb_tilectrl);
+    debug_printf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x  PB_DISP_ADDR: 0x%04x  PB_LINE_LEN : 0x%04x\n",
+                 pa_dispaddr,
+                 pa_linelen,
+                 pb_dispaddr,
+                 pb_linelen);
 
-    dprintf("PA_H_SCROLL : 0x%04x  PA_V_SCROLL : 0x%04x  PB_H_SCROLL : 0x%04x  PB_V_SCROLL : 0x%04x\n",
-            pa_hscroll,
-            pa_vscroll,
-            pb_hscroll,
-            pb_vscroll);
+    debug_printf("PA_H_SCROLL : 0x%04x  PA_V_SCROLL : 0x%04x  PB_H_SCROLL : 0x%04x  PB_V_SCROLL : 0x%04x\n",
+                 pa_hscroll,
+                 pa_vscroll,
+                 pb_hscroll,
+                 pb_vscroll);
 
-    dprintf("PA_HV_FSCALE: 0x%04x                        PB_HV_FSCALE: 0x%04x\n", pa_hvfscale, pb_hvfscale);
-    dprintf("\n\n");
+    debug_printf("PA_HV_FSCALE: 0x%04x                        PB_HV_FSCALE: 0x%04x\n", pa_hvfscale, pb_hvfscale);
+    debug_printf("\n\n");
 
     // spammy...
-    // dprintf("Initial copper program\n");
+    // debug_printf("Initial copper program\n");
     // hexdump(&cop_buffer[0], 0x100);
-    // dprintf("\n");
+    // debug_printf("\n");
 }
 
 static uint16_t screen_addr;
@@ -776,8 +719,8 @@ static void reset_vid(void)
 
     wait_vblank_start();
 
-    xreg_setw(VID_CTRL, 0x0008);
-    xreg_setw(COPP_CTRL, 0x0000);
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x08));        // set border to grey
+    xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(0));
     xreg_setw(AUD_CTRL, 0x0000);
     xreg_setw(VID_LEFT, 0);
     xreg_setw(VID_RIGHT, xosera_vid_width());
@@ -804,9 +747,9 @@ static void reset_vid(void)
 
     printf("\033c");        // reset XANSI
 
-    while (checkchar())
+    while (mcCheckInput())
     {
-        readchar();
+        mcInputchar();
     }
 }
 
@@ -816,7 +759,7 @@ static void reset_vid_nosd(void)
 
     reset_vid();
 #if 1        // handy for development to force Kermit upload
-    dprintf("Disabling SD on next boot...\n");
+    debug_printf("Disabling SD on next boot...\n");
     disable_sd_boot();
     xreg_setw(AUD_CTRL, 0x0);        // disable audio
 #endif
@@ -825,7 +768,7 @@ static void reset_vid_nosd(void)
 
 static inline void checkbail()
 {
-    if (checkchar())
+    if (mcCheckInput())
     {
         reset_vid_nosd();
         _WARM_BOOT();
@@ -957,8 +900,8 @@ static void xr_printf(const char * fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
-    xr_print(dprint_buff);
+    vsnprintf(debug_msg_buffer, sizeof(debug_msg_buffer) - 1, fmt, args);
+    xr_print(debug_msg_buffer);
     va_end(args);
 }
 
@@ -967,8 +910,8 @@ static void xr_printfxy(int x, int y, const char * fmt, ...)
     va_list args;
     va_start(args, fmt);
     xr_pos(x, y);
-    vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
-    xr_print(dprint_buff);
+    vsnprintf(debug_msg_buffer, sizeof(debug_msg_buffer) - 1, fmt, args);
+    xr_print(debug_msg_buffer);
     va_end(args);
 }
 
@@ -1059,21 +1002,21 @@ static long filesize(void * f)
 {
     if (f == NULL)
     {
-        dprintf("%s(%d): NULL fileptr\n", __FILE__, __LINE__);
+        debug_printf("%s(%d): NULL fileptr\n", __FILE__, __LINE__);
         return -1;
     }
 
-    if (fl_fseek(f, 0, SEEK_END) != 0)
+    if (fseek(f, 0, SEEK_END) != 0)
     {
-        dprintf("%s(%d):fl_fseek end error\n", __FILE__, __LINE__);
+        debug_printf("%s(%d):fseek end error\n", __FILE__, __LINE__);
         return -1;
     }
 
-    long fsize = fl_ftell(f);
+    long fsize = ftell(f);
 
-    if (fl_fseek(f, 0, SEEK_SET) != 0)
+    if (fseek(f, 0, SEEK_SET) != 0)
     {
-        dprintf("%s(%d):fl_fseek beg error\n", __FILE__, __LINE__);
+        debug_printf("%s(%d):fseek beg error\n", __FILE__, __LINE__);
         return -1;
     }
 
@@ -1082,36 +1025,36 @@ static long filesize(void * f)
 
 static bool load_test_audio(const char * filename, void ** out, int * size)
 {
-    void * file  = fl_fopen(filename, "r");
+    FILE * file  = fopen(filename, "r");
     int    fsize = (int)filesize(file);
 
     if (fsize <= 0)
     {
-        dprintf("Can't get size for \"%s\" (not found?)\n", filename);
+        debug_printf("Can't get size for \"%s\" (not found?)\n", filename);
         return false;
     }
 
     if (fsize > (64 * 1024))
     {
-        dprintf("Sample size reduced from %d to %d for \"%s\"\n", fsize, 65536, filename);
+        debug_printf("Sample size reduced from %d to %d for \"%s\"\n", fsize, 65536, filename);
         fsize = 65536;
     }
 
     uint8_t * data = malloc(fsize);
     if (data == NULL)
     {
-        dprintf("Allocating %d for \"%s\" failed\n", fsize, filename);
+        debug_printf("Allocating %d for \"%s\" failed\n", fsize, filename);
         return false;
     }
     *out = (int8_t *)data;
 
     int cnt   = 0;
     int rsize = 0;
-    while ((cnt = fl_fread(data, 1, 512, file)) > 0)
+    while ((cnt = fread(data, 1, 512, file)) > 0)
     {
         if ((rsize & 0xFFF) == 0)
         {
-            dprintf("\rReading \"%s\": %d KB ", filename, rsize >> 10);
+            debug_printf("\rReading \"%s\": %d KB ", filename, rsize >> 10);
             if (rsize)
             {
                 uint8_t ox = xr_x;
@@ -1128,16 +1071,16 @@ static bool load_test_audio(const char * filename, void ** out, int * size)
             break;
         }
     }
-    dprintf("\rLoaded \"%s\": %dKB (%d bytes).  \n", filename, rsize >> 10, rsize);
+    debug_printf("\rLoaded \"%s\": %dKB (%d bytes).  \n", filename, rsize >> 10, rsize);
     xr_printf("%3dK\n", rsize >> 10);
 
     if (rsize != fsize)
     {
-        dprintf("\nSize mismatch: ftell %d vs read %d\n", fsize, rsize);
+        debug_printf("\nSize mismatch: ftell %d vs read %d\n", fsize, rsize);
     }
     *size = fsize;
 
-    fl_fclose(file);
+    fclose(file);
 
     return true;
 }
@@ -1149,30 +1092,30 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
 
     test_image * ti = &test_images[num_images++];
 
-    void * file  = fl_fopen(filename, "r");
+    FILE * file  = fopen(filename, "r");
     int    fsize = (int)filesize(file);
 
     if (fsize <= 0 || fsize > (128 * 1024))
     {
-        dprintf("Bad size %d for \"%s\"\n", fsize, filename);
+        debug_printf("Bad size %d for \"%s\"\n", fsize, filename);
         return false;
     }
 
     uint8_t * data = malloc(fsize);
     if (data == NULL)
     {
-        dprintf("Allocating %d for \"%s\" failed\n", fsize, filename);
+        debug_printf("Allocating %d for \"%s\" failed\n", fsize, filename);
         return false;
     }
 
     ti->data  = data;
     int cnt   = 0;
     int rsize = 0;
-    while ((cnt = fl_fread(data, 1, 512, file)) > 0)
+    while ((cnt = fread(data, 1, 512, file)) > 0)
     {
         if ((rsize & 0xFFF) == 0)
         {
-            dprintf("\rReading \"%s\": %d KB ", filename, rsize >> 10);
+            debug_printf("\rReading \"%s\": %d KB ", filename, rsize >> 10);
             if (rsize)
             {
                 uint8_t ox = xr_x;
@@ -1185,16 +1128,16 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
         rsize += cnt;
         checkbail();
     }
-    dprintf("\rLoaded \"%s\": %dKB (%d bytes).  \n", filename, rsize >> 10, rsize);
+    debug_printf("\rLoaded \"%s\": %dKB (%d bytes).  \n", filename, rsize >> 10, rsize);
     xr_printf("%3dK\n", rsize >> 10);
 
     if (rsize != fsize)
     {
-        dprintf("\nSize mismatch: ftell %d vs read %d\n", fsize, rsize);
+        debug_printf("\nSize mismatch: ftell %d vs read %d\n", fsize, rsize);
     }
     ti->size = fsize >> 1;
 
-    fl_fclose(file);
+    fclose(file);
 
     do
     {
@@ -1203,19 +1146,19 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
             break;
         }
 
-        file = fl_fopen(colorname, "r");
+        file = fopen(colorname, "r");
 
         int csize = (int)filesize(file);
         if (csize <= 0 || csize > (512 * 2))
         {
-            dprintf("Bad size %d for \"%s\"\n", csize, colorname);
+            debug_printf("Bad size %d for \"%s\"\n", csize, colorname);
             break;
         }
 
         uint16_t * cdata = malloc(csize);
         if (cdata == NULL)
         {
-            dprintf("Allocating %d for \"%s\" failed\n", csize, colorname);
+            debug_printf("Allocating %d for \"%s\" failed\n", csize, colorname);
             break;
         }
 
@@ -1223,18 +1166,18 @@ static bool load_test_image(int mode, const char * filename, const char * colorn
         int        cnt   = 0;
         int        rsize = 0;
         uint16_t * rdata = cdata;
-        while ((cnt = fl_fread(rdata, 1, 512, file)) > 0)
+        while ((cnt = fread(rdata, 1, 512, file)) > 0)
         {
             rdata += (cnt >> 1);
             rsize += cnt;
         }
         if (rsize != csize)
         {
-            dprintf("Color read failed.\n");
+            debug_printf("Color read failed.\n");
             free(cdata);
             break;
         }
-        dprintf("Loaded colors %d colors from \"%s\".  \n", rsize >> 1, colorname);
+        debug_printf("Loaded colors %d colors from \"%s\".  \n", rsize >> 1, colorname);
         ti->color      = cdata;
         ti->num_colors = rsize >> 1;
 
@@ -1303,8 +1246,8 @@ void show_test_pic(int pic_num, uint16_t addr)
     //    xreg_setw(PA_V_SCROLL, 0x0000);
     //    xreg_setw(PB_H_SCROLL, 0x0000);        // blank screen
     //    xreg_setw(PB_V_SCROLL, 0x0000);
-    xreg_setw(VID_CTRL, 0x0000);               // set border to color #0
-    xmem_setw(XR_COLOR_A_ADDR, 0x0000);        // set color #0 to black
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to color #0
+    xmem_setw(XR_COLOR_A_ADDR, 0x0000);                 // set color #0 to black
     setup_margins();
     xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, addr);
@@ -1358,18 +1301,18 @@ static void load_sd_bitmap(const char * filename, int vaddr)
 {
     xv_prep();
 
-    dprintf("Loading bitmap: \"%s\"", filename);
-    void * file = fl_fopen(filename, "r");
+    debug_printf("Loading bitmap: \"%s\"", filename);
+    FILE * file = fopen(filename, "r");
 
     if (file != NULL)
     {
         int cnt = 0;
 
-        while ((cnt = fl_fread(buffer.u8, 1, 512, file)) > 0)
+        while ((cnt = fread(buffer.u8, 1, 512, file)) > 0)
         {
             if ((vaddr & 0xFFF) == 0)
             {
-                dprintf(".");
+                debug_printf(".");
             }
 
             uint16_t * maddr = (uint16_t *)buffer.u16;
@@ -1383,12 +1326,12 @@ static void load_sd_bitmap(const char * filename, int vaddr)
             checkbail();
         }
 
-        fl_fclose(file);
-        dprintf("done!\n");
+        fclose(file);
+        debug_printf("done!\n");
     }
     else
     {
-        dprintf(" - FAILED\n");
+        debug_printf(" - FAILED\n");
     }
 }
 
@@ -1396,19 +1339,19 @@ static void load_sd_colors(const char * filename)
 {
     xv_prep();
 
-    dprintf("Loading colormap: \"%s\"", filename);
-    void * file = fl_fopen(filename, "r");
+    debug_printf("Loading colormap: \"%s\"", filename);
+    FILE * file = fopen(filename, "r");
 
     if (file != NULL)
     {
         int cnt   = 0;
         int vaddr = 0;
 
-        while ((cnt = fl_fread(buffer.u8, 1, 256 * 2 * 2, file)) > 0)
+        while ((cnt = fread(buffer.u8, 1, 256 * 2 * 2, file)) > 0)
         {
             if ((vaddr & 0x7) == 0)
             {
-                dprintf(".");
+                debug_printf(".");
             }
 
             uint16_t * maddr = (uint16_t *)buffer.u16;
@@ -1423,12 +1366,12 @@ static void load_sd_colors(const char * filename)
             checkbail();
         }
 
-        fl_fclose(file);
-        dprintf("done!\n");
+        fclose(file);
+        debug_printf("done!\n");
     }
     else
     {
-        dprintf(" - FAILED\n");
+        debug_printf(" - FAILED\n");
     }
 }
 
@@ -1450,10 +1393,10 @@ void draw8bpp_h_line(unsigned int base, uint8_t color, int x, int y, int len)
     xm_setw(WR_ADDR, addr);        // set write address
     if (x & 1)
     {
-        xm_setbl(SYS_CTRL, 0x3);
+        xm_set_vram_mask(0x3);
         xm_setw(DATA, word);        // set left edge word
         len -= 1;
-        xm_setbl(SYS_CTRL, 0xf);
+        xm_set_vram_mask(0xf);
     }
     while (len >= 2)
     {
@@ -1462,9 +1405,9 @@ void draw8bpp_h_line(unsigned int base, uint8_t color, int x, int y, int len)
     }
     if (len)
     {
-        xm_setbl(SYS_CTRL, 0xc);
+        xm_set_vram_mask(0xc);
         xm_setw(DATA, word);        // set right edge word
-        xm_setbl(SYS_CTRL, 0xf);
+        xm_set_vram_mask(0xf);
     }
 }
 
@@ -1482,17 +1425,17 @@ void draw8bpp_v_line(uint16_t base, uint8_t color, int x, int y, int len)
     xm_setw(WR_ADDR, addr);              // set write address
     if (x & 1)
     {
-        xm_setbl(SYS_CTRL, 0x3);
+        xm_set_vram_mask(0x3);
     }
     else
     {
-        xm_setbl(SYS_CTRL, 0xc);
+        xm_set_vram_mask(0xc);
     }
     while (len--)
     {
         xm_setw(DATA, word);        // set full word
     }
-    xm_setbl(SYS_CTRL, 0xf);
+    xm_set_vram_mask(0xf);
 }
 
 #define NUM_BOBS 10        // number of sprites (ideally no "red" border)
@@ -1672,13 +1615,13 @@ void print_digit(uint16_t off, uint16_t ll, uint16_t dig, uint16_t color)
     for (uint16_t h = 0; h < 7; h++)
     {
         xm_setw(WR_ADDR, off + (h * ll));        // set write address
-        xm_setbl(SYS_CTRL, (lwp->w[0] & 0x8000 ? 0xc : 0) | (lwp->w[0] & 0x0080 ? 0x3 : 0));
+        xm_set_vram_mask((lwp->w[0] & 0x8000 ? 0xc : 0) | (lwp->w[0] & 0x0080 ? 0x3 : 0));
         xm_setw(DATA, lwp->w[0] & color);
-        xm_setbl(SYS_CTRL, (lwp->w[1] & 0x8000 ? 0xc : 0) | (lwp->w[1] & 0x0080 ? 0x3 : 0));
+        xm_set_vram_mask((lwp->w[1] & 0x8000 ? 0xc : 0) | (lwp->w[1] & 0x0080 ? 0x3 : 0));
         xm_setw(DATA, lwp->w[1] & color);
         lwp++;
     }
-    xm_setbl(SYS_CTRL, 0xf);
+    xm_set_vram_mask(0xf);
 }
 
 void test_colormap()
@@ -1688,7 +1631,7 @@ void test_colormap()
     xwait_not_vblank();
     xwait_vblank();
 
-    xreg_setw(VID_CTRL, 0x0005);
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x05));        // set border to 5
     xreg_setw(PA_GFX_CTRL, 0x0080);
     xreg_setw(PB_GFX_CTRL, 0x0080);
 
@@ -1707,7 +1650,7 @@ void test_colormap()
     uint16_t w       = 10;
     uint16_t h       = 14;
 
-    xreg_setw(VID_CTRL, 0x0000);
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));
     setup_margins();
     xreg_setw(PA_GFX_CTRL, 0x0065);
     xreg_setw(PA_TILE_CTRL, 0x0C07);
@@ -1800,11 +1743,11 @@ void test_blend()
     xv_prep();
 
     uint16_t copsave = xreg_getw(COPP_CTRL);
-    xreg_setw(COPP_CTRL, 0x0000);
+    xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(0));
 
-    xreg_setw(PA_GFX_CTRL, 0x0080);        // bitmap + 8-bpp + Hx1 + Vx1
-    xreg_setw(PB_GFX_CTRL, 0x0080);        // bitmap + 8-bpp + Hx1 + Vx1
-    xreg_setw(VID_CTRL, 0x0000);           // border color #0
+    xreg_setw(PA_GFX_CTRL, 0x0080);                     // bitmap + 8-bpp + Hx1 + Vx1
+    xreg_setw(PB_GFX_CTRL, 0x0080);                     // bitmap + 8-bpp + Hx1 + Vx1
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to color #0
 
     // modify HPOS wait SOL to be left edge horizontal position in 640x480 or 848x480 modes (including overscan)
     cop_blend_test_bin[cop_blend_test__hpos_sol] = 0x2000 | (xosera_vid_width() > 640 ? 1088 - 848 - 8 : 800 - 640 - 8);
@@ -1816,12 +1759,12 @@ void test_blend()
         uint16_t op = cop_blend_test_bin[i];
         xmem_setw_next(op);
     }
-    xreg_setw(COPP_CTRL, 0x8000);
+    xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(1));
 
     delay_check(DELAY_TIME);
 
 #if COPPER_TEST
-    xreg_setw(COPP_CTRL, 0x0000);
+    xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(0));
     install_copper();
     xreg_setw(COPP_CTRL, copsave);
 #endif
@@ -1837,7 +1780,7 @@ void test_blit()
 
     xv_prep();
 
-    dprintf("test_blit\n");
+    debug_printf("test_blit\n");
 
     // clear ram with CPU in case no blitter
 
@@ -1852,7 +1795,7 @@ void test_blit()
     // crop left and right 2 pixels
     xr_textmode_pb();
     xreg_setw(VID_RIGHT, xreg_getw(VID_RIGHT) - 4);
-    xreg_setw(VID_CTRL, 0x00FF);
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0xFF));        // border color #0xFF
 
     do
     {
@@ -1895,8 +1838,8 @@ void test_blit()
         uint16_t paddr = 0x9b00;
         show_test_pic(0, paddr);
         xreg_setw(VID_RIGHT, xreg_getw(VID_RIGHT) - 4);
-        xreg_setw(VID_CTRL, 0x00FF);
-        xmem_setw(XR_COLOR_A_ADDR + 255, 0x0000);        // set write address
+        xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0xFF));        // border color #0xFF
+        xmem_setw(XR_COLOR_A_ADDR + 255, 0x0000);           // set write address
 
         xr_printfxy(0, 0, "Blit 320x240 16 color\n");        // set write address
 
@@ -1978,7 +1921,7 @@ void test_blit()
 
         xr_printfxy(0, 0, "Blit 320x240 16 color\nBOB test (single buffered)\n");        // set write address
         int nb = NUM_BOBS;
-        dprintf("Num bobs = %d\n", nb);
+        debug_printf("Num bobs = %d\n", nb);
         for (int i = 0; i < 256; i++)
         {
             for (int b = 0; b < nb; b++)
@@ -2069,7 +2012,7 @@ void test_mode_glitch()
     int width = xosera_vid_width();
     xm_setw(WR_ADDR, 0);
     xm_setw(WR_INCR, 1);
-    xm_setbl(SYS_CTRL, 0xF);
+    xm_set_vram_mask(0xF);
     for (int i = 0; i < (width / 2) * 240; ++i)
     {
         xm_setw(DATA, 0x0101);
@@ -2082,14 +2025,14 @@ void test_mode_glitch()
         xreg_setw(PA_LINE_LEN, width / 8);
         xreg_setw(PA_GFX_CTRL, 0x0000);
 
-        delay(1000000);
+        mcBusywait(1000000);
         wait_vblank_start();
 
         // set to bitmap 8-bpp, Hx2, Vx2
         xreg_setw(PA_LINE_LEN, (width / 2) / 2);
         xreg_setw(PA_GFX_CTRL, 0x0065);
 
-        delay(1000000);
+        mcBusywait(1000000);
 
         delay_check(DELAY_TIME);
     }
@@ -2106,7 +2049,7 @@ void test_dual_8bpp()
     do
     {
 
-        dprintf("test_dual_8pp\n");
+        debug_printf("test_dual_8pp\n");
         xr_textmode_pb();
         xr_printf("Dual 8-BPP blending\n");
         xreg_setw(PA_GFX_CTRL, 0x0080);
@@ -2115,7 +2058,7 @@ void test_dual_8bpp()
 
         uint16_t addrA = 0;             // start of VRAM
         uint16_t addrB = 0x8000;        // 2nd half of VRAM
-        xm_setbl(SYS_CTRL, 0xf);
+        xm_set_vram_mask(0xf);
 
         // clear all VRAM
 
@@ -2128,8 +2071,8 @@ void test_dual_8bpp()
         } while (++vaddr != 0);
 
         xwait_vblank();
-        xreg_setw(VID_CTRL, 0x0000);           // border color = black
-        xreg_setw(PA_GFX_CTRL, 0x0080);        // blank screen
+        xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // border color #0x00
+        xreg_setw(PA_GFX_CTRL, 0x0080);                     // blank screen
         xreg_setw(PB_GFX_CTRL, 0x0080);
         // install 320x200 "crop" copper list
         xmem_setw_next_addr(XR_COPPER_ADDR);
@@ -2137,7 +2080,7 @@ void test_dual_8bpp()
         {
             xmem_setw_next(cop_320x200_bin[i]);
         }
-        xreg_setw(COPP_CTRL, 0x8000);
+        xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(1));
         // set pf A 320x240 8bpp (cropped to 320x200)
         xreg_setw(PA_GFX_CTRL, 0x0065);
         xreg_setw(PA_TILE_CTRL, 0x000F);
@@ -2176,14 +2119,14 @@ void test_dual_8bpp()
             x++;
         }
 
-        dprintf("Playfield A: 320x200 8bpp - horizontal-striped triangle + blanked B\n");
+        debug_printf("Playfield A: 320x200 8bpp - horizontal-striped triangle + blanked B\n");
         delay_check(DELAY_TIME);
 
 
         xwait_vblank();
         xmem_setw(XR_COPPER_ADDR + (1 * 2) + 1, 0x0065);
         xmem_setw(XR_COPPER_ADDR + (2 * 2) + 1, 0x0065);
-        dprintf("Playfield A: 320x200 8bpp - horizontal-striped triangle + B enabled, but zeroed\n");
+        debug_printf("Playfield A: 320x200 8bpp - horizontal-striped triangle + B enabled, but zeroed\n");
         delay_check(DELAY_TIME);
 
 
@@ -2204,50 +2147,50 @@ void test_dual_8bpp()
         xwait_vblank();
         xmem_setw(XR_COPPER_ADDR + (1 * 2) + 1, 0x00E5);
         xmem_setw(XR_COPPER_ADDR + (2 * 2) + 1, 0x0065);
-        dprintf("Playfield B: 320x200 8bpp - vertical-striped triangle, A blanked\n");
+        debug_printf("Playfield B: 320x200 8bpp - vertical-striped triangle, A blanked\n");
         delay_check(DELAY_TIME);
 
 
         xwait_vblank();
         xmem_setw(XR_COPPER_ADDR + (1 * 2) + 1, 0x0065);
         xmem_setw(XR_COPPER_ADDR + (2 * 2) + 1, 0x0065);
-        dprintf("Playfield A&B: mixed (alpha 0x8)\n");
+        debug_printf("Playfield A&B: mixed (alpha 0x8)\n");
         delay_check(DELAY_TIME);
 
 
         xwait_vblank();
         restore_colors2(0x0);        // colormem B normal colors (alpha 0%)
 
-        dprintf("Playfield A&B: colormap B alpha 0x0\n");
+        debug_printf("Playfield A&B: colormap B alpha 0x0\n");
         delay_check(DELAY_TIME);
 
 
         xwait_vblank();
         restore_colors2(0x4);        // colormem B normal colors (alpha 25%)
 
-        dprintf("Playfield A&B: colormap B alpha 0x4\n");
+        debug_printf("Playfield A&B: colormap B alpha 0x4\n");
         delay_check(DELAY_TIME);
 
 
         xwait_vblank();
         restore_colors2(0x8);        // colormem B normal colors (alpha 50%)
 
-        dprintf("Playfield A&B: colormap B alpha 0x8\n");
+        debug_printf("Playfield A&B: colormap B alpha 0x8\n");
         delay_check(DELAY_TIME);
 
 
         xwait_vblank();
         restore_colors2(0xF);        // colormem B normal colors (alpha 100%)
 
-        dprintf("Playfield A&B: colormap B alpha 0xC\n");
+        debug_printf("Playfield A&B: colormap B alpha 0xC\n");
         delay_check(DELAY_TIME);
 
     } while (false);
 
-    dprintf("restore screen\n");
+    debug_printf("restore screen\n");
     restore_colors3();        // colormem B normal colors (alpha 0%)
     xwait_vblank();
-    xreg_setw(COPP_CTRL, 0x0000);
+    xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(0));
 
 #if COPPER_TEST
     install_copper();
@@ -2278,8 +2221,8 @@ void test_hello()
     }
 
     // read test
-    dprintf("Read VRAM test, with auto-increment.\n\n");
-    dprintf(" Begin: rd_addr=0x0000, rd_inc=0x0001\n");
+    debug_printf("Read VRAM test, with auto-increment.\n\n");
+    debug_printf(" Begin: rd_addr=0x0000, rd_inc=0x0001\n");
     xm_setw(RD_INCR, 1);
     xm_setw(RD_ADDR, 0x0008);
     uint16_t * tp = test_read;
@@ -2308,8 +2251,8 @@ void test_hello()
     {
         good = false;
     }
-    dprintf("   End: rd_addr=0x%04x.  Test: ", end_addr);
-    dprintf("%s\n", good ? "good" : "BAD!");
+    debug_printf("   End: rd_addr=0x%04x.  Test: ", end_addr);
+    debug_printf("%s\n", good ? "good" : "BAD!");
 }
 
 void test_vram_speed()
@@ -2328,7 +2271,7 @@ void test_vram_speed()
 
     uint16_t reps = 2;        // just a few flashes for write test
     xmsg(0, 0, 0x02, "VRAM write     ");
-    dprintf("VRAM write x %d\n", reps);
+    debug_printf("VRAM write x %d\n", reps);
     timer_start();
     uint32_t v = ((0x0f00 | 'G') << 16) | (0xf000 | 'o');
     for (int loop = 0; loop < reps; loop++)
@@ -2359,13 +2302,13 @@ void test_vram_speed()
     }
     vram_write = timer_stop();
     global     = v;        // save v so GCC doesn't optimize away test
-    if (checkchar())
+    if (mcCheckInput())
     {
         return;
     }
     // register" write)
     xmsg(0, 0, 0x02, "main RAM write ");
-    dprintf("main RAM write x %d\n", reps);
+    debug_printf("main RAM write x %d\n", reps);
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
@@ -2396,12 +2339,12 @@ void test_vram_speed()
     }
     main_write = timer_stop();
     global     = v;        // save v so GCC doesn't optimize away test
-    if (checkchar())
+    if (mcCheckInput())
     {
         return;
     }
     xmsg(0, 0, 0x02, "VRAM read      ");
-    dprintf("VRAM read x %d\n", reps);
+    debug_printf("VRAM read x %d\n", reps);
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
@@ -2430,12 +2373,12 @@ void test_vram_speed()
     }
     vram_read = timer_stop();
     global    = v;        // save v so GCC doesn't optimize away test
-    if (checkchar())
+    if (mcCheckInput())
     {
         return;
     }
     xmsg(0, 0, 0x02, "main RAM read  ");
-    dprintf("main RAM read x %d\n", reps);
+    debug_printf("main RAM read x %d\n", reps);
     timer_start();
     for (int loop = 0; loop < reps; loop++)
     {
@@ -2465,37 +2408,37 @@ void test_vram_speed()
         v ^= 0xff00ff00;
     }
     main_read = timer_stop();
-    if (checkchar())
+    if (mcCheckInput())
     {
         return;
     }
 #if 1
-    dprintf("done\n");
+    debug_printf("done\n");
 
-    dprintf("MOVEP.L VRAM write      128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",
-            reps,
-            128 * reps,
-            vram_write / 10000U,
-            vram_write % 10000U,
-            (10000U * 128 * reps) / vram_write);
-    dprintf("MOVEP.L VRAM read       128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",
-            reps,
-            128 * reps,
-            vram_read / 10000U,
-            vram_read % 10000U,
-            (10000U * 128 * reps) / vram_read);
-    dprintf("MOVE.L  main RAM write  128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",
-            reps,
-            128 * reps,
-            main_write / 10000U,
-            main_write % 10000U,
-            (10000U * 128 * reps) / main_write);
-    dprintf("MOVE.L  main RAM read   128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",
-            reps,
-            128 * reps,
-            main_read / 10000U,
-            main_read % 10000U,
-            (10000U * 128 * reps) / main_read);
+    debug_printf("MOVEP.L VRAM write      128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",
+                 reps,
+                 128 * reps,
+                 vram_write / 10000U,
+                 vram_write % 10000U,
+                 (10000U * 128 * reps) / vram_write);
+    debug_printf("MOVEP.L VRAM read       128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",
+                 reps,
+                 128 * reps,
+                 vram_read / 10000U,
+                 vram_read % 10000U,
+                 (10000U * 128 * reps) / vram_read);
+    debug_printf("MOVE.L  main RAM write  128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",
+                 reps,
+                 128 * reps,
+                 main_write / 10000U,
+                 main_write % 10000U,
+                 (10000U * 128 * reps) / main_write);
+    debug_printf("MOVE.L  main RAM read   128KB x %d (%d KB)    %lu.%04lu sec (%lu KB/sec)\n",
+                 reps,
+                 128 * reps,
+                 main_read / 10000U,
+                 main_read % 10000U,
+                 (10000U * 128 * reps) / main_read);
 #endif
 }
 
@@ -2557,7 +2500,7 @@ uint16_t rosco_m68k_CPUMHz()
         :
         :);
     uint16_t MHz = (uint16_t)(((count * 26U) + 500U) / 1000U);
-    dprintf("rosco_m68k: m68k CPU speed %d.%d MHz (%d.%d BogoMIPS)\n",
+    debug_printf("rosco_m68k: m68k CPU speed %d.%d MHz (%d.%d BogoMIPS)\n",
             MHz / 10,
             MHz % 10,
             count * 3 / 10000,
@@ -2617,13 +2560,13 @@ static int init_audio()
     uint8_t aud_ena = xreg_getw(AUD_CTRL) & 1;
     if (!aud_ena)
     {
-        dprintf("Xosera audio support disabled.\n");
+        debug_printf("Xosera audio support disabled.\n");
         return 0;
     }
 
     // check if audio fully disbled
 
-    audio_channel_mask = xm_getbl(INT_CTRL) & INT_CTRL_AUD_ALL_F;
+    audio_channel_mask = xm_get_int_status() & INT_CTRL_AUD_ALL_F;
     while (audio_channel_mask & (1 << num_audio_channels))
     {
         num_audio_channels++;
@@ -2631,13 +2574,13 @@ static int init_audio()
 
     if (num_audio_channels == 0)
     {
-        dprintf("FIXME: Xosera has audio support, but no channels?\n");
+        debug_printf("FIXME: Xosera has audio support, but no channels?\n");
     }
 
     uint8_t feature_chans = XV_(xm_getw(FEATURE), FEATURE_AUDCHAN_B, FEATURE_AUDCHAN_W);
     if (num_audio_channels != feature_chans)
     {
-        dprintf("FIXME: Mismatch between detected channels and FEATURE!\n");
+        debug_printf("FIXME: Mismatch between detected channels and FEATURE!\n");
     }
 
     play_silence();
@@ -2676,16 +2619,16 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
 
     xr_printfxy(0, 0, "Xosera audio test\n%s: %d B\n", name, bytesize);
 
-    dprintf("\nTesting audio sample: \"%s\" (%d bytes)...\n\n", name, bytesize);
-    dprintf("Press: 'Z' and 'X' to change sample volume (hold shift for faster)\n");
-    dprintf("       'Q' and 'W' to change left volume (hold shift for faster)\n");
-    dprintf("       'E' and 'R' to change right volume (hold shift for faster)\n");
-    dprintf("       ',' and '.' to change sample period (hold shift for faster)\n");
-    dprintf("       '0' to  '3' to change channel\n");
-    dprintf("       ESC to reboot rosco\n");
-    dprintf("       SPACE to continue to next test\n\n");
+    debug_printf("\nTesting audio sample: \"%s\" (%d bytes)...\n\n", name, bytesize);
+    debug_printf("Press: 'Z' and 'X' to change sample volume (hold shift for faster)\n");
+    debug_printf("       'Q' and 'W' to change left volume (hold shift for faster)\n");
+    debug_printf("       'E' and 'R' to change right volume (hold shift for faster)\n");
+    debug_printf("       ',' and '.' to change sample period (hold shift for faster)\n");
+    debug_printf("       '0' to  '3' to change channel\n");
+    debug_printf("       ESC to reboot rosco\n");
+    debug_printf("       SPACE to continue to next test\n\n");
 
-    dprintf("%d: Volume (128=1.0): L:%3d/R:%3d    Period (1/pclk): %5d", chan, lv, rv, p);
+    debug_printf("%d: Volume (128=1.0): L:%3d/R:%3d    Period (1/pclk): %5d", chan, lv, rv, p);
 
     xreg_setw(AUD0_VOL + coff, lv << 8 | rv);                          // set left and right volume
     xreg_setw_next(/* AUD0_PERIOD+coff, */ p);                         // set period
@@ -2697,7 +2640,7 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
 
     while (1)
     {
-        char c = readchar();
+        char c = mcInputchar();
 
         switch (c)
         {
@@ -2789,7 +2732,7 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
                 done = true;
                 break;
             case '\x1b':
-                dprintf("\nExit!\n");
+                debug_printf("\nExit!\n");
                 reset_vid();
                 _WARM_BOOT();
                 break;
@@ -2798,7 +2741,7 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
         {
             break;
         }
-        dprintf("\r%d: Volume (128 = 1.0): L:%3d R:%3d  Period (1/pclk): %5d", chan, lv, rv, p);
+        debug_printf("\r%d: Volume (128 = 1.0): L:%3d R:%3d  Period (1/pclk): %5d", chan, lv, rv, p);
         coff = chan << 2;
         xreg_setw(AUD0_VOL + coff, lv << 8 | rv);           // set left 100% volume, right 50% volume
         xreg_setw_next(/* AUD0_PERIOD + coff, */ p);        // 1000 clocks per each sample byte
@@ -2806,7 +2749,7 @@ static void test_audio_sample(const char * name, int8_t * samp, int bytesize, in
 
     play_silence();
 
-    dprintf("\rSample playback done.                                       \n");
+    debug_printf("\rSample playback done.                                       \n");
     xr_printfxy(0, 0, "Xosera audio test\n\n");
 }
 
@@ -2830,7 +2773,7 @@ static void upload_audio(void * memdata, uint16_t vaddr, int len)
 {
     xv_prep();
 
-    xm_setbl(SYS_CTRL, 0x0F);        // vram mask
+    xm_set_vram_mask(0x0F);        // vram mask
     xm_setw(WR_INCR, 0x0001);
     xm_setw(WR_ADDR, vaddr);
     uint16_t * wp = memdata;
@@ -2857,9 +2800,9 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
         xreg_setw(AUD1_START, SILENCE_ADDR);
         xreg_setw(AUD2_START, SILENCE_ADDR);
         xreg_setw(AUD3_START, SILENCE_ADDR);
-        xm_setbl(INT_CTRL, INT_CTRL_CLEAR_ALL_F);
+        xm_set_int_ack(INT_CTRL_CLEAR_ALL_F);
         uint16_t ic2 = xm_getw(INT_CTRL);
-        dprintf("INT_CTRL:0x%04x -> 0x%04x (silence queued)\n", ic, ic2);
+        debug_printf("INT_CTRL:0x%04x -> 0x%04x (silence queued)\n", ic, ic2);
 
         for (int v = 0; v < num_audio_channels; v++)
         {
@@ -2888,10 +2831,10 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
             ic = xm_getw(INT_CTRL);
             xreg_setw(AUD0_LENGTH + vo, SILENCE_LEN);                   // length-1 and TILE flag
             xreg_setw_next(/* AUD0_START + vo, */ SILENCE_ADDR);        // queue silence
-            xm_setbl(INT_CTRL, (INT_CTRL_AUD0_INTR_F << v));            // clear voice interrupt status
+            xm_set_int_ack(INT_CTRL_AUD0_INTR_F << v);                  // clear voice interrupt status
 
             ic2 = xm_getw(INT_CTRL);
-            dprintf("Started channel %d... INT_CTRL = 0x%04x -> 0x%04x\n", v, ic, ic2);
+            debug_printf("Started channel %d... INT_CTRL = 0x%04x -> 0x%04x\n", v, ic, ic2);
 
             delay_check(250);
             period += 350;
@@ -2901,22 +2844,22 @@ static void play_blurb_sample(uint16_t vaddr, uint16_t len, uint16_t rate)
         for (int v = 0; v < num_audio_channels; v++)
         {
             ic = xm_getw(INT_CTRL);
-            dprintf("Waiting channel %d... INT_CTRL = 0x%04x", v, ic);
+            debug_printf("Waiting channel %d... INT_CTRL = 0x%04x", v, ic);
             do
             {
                 delay_check(1);
                 ic = xm_getw(INT_CTRL);
             } while (!(ic & (INT_CTRL_AUD0_INTR_F << v)));
-            dprintf(" -> 0x%04x\n", ic);
+            debug_printf(" -> 0x%04x\n", ic);
         }
 
-        dprintf("Audio completed\n");
+        debug_printf("Audio completed\n");
         play_silence();
         xreg_setw(AUD_CTRL, 0x0000);
     }
     else
     {
-        dprintf("Audio disabled\n");
+        debug_printf("Audio disabled\n");
     }
 }
 
@@ -2980,15 +2923,15 @@ static void test_audio_ping_pong()
     pingpong_length[0] = (pingpong_length[0] >> 1) - 1;
     pingpong_length[1] = (pingpong_length[1] >> 1) - 1;
 
-    xm_setbl(INT_CTRL, 0xf);
+    xm_set_int_ack(0xf);
     uint16_t plays = 0;
-    uint16_t ic;
+    uint8_t ic;
     while (plays < 200)
     {
         for (int v = 0; v < num_audio_channels; v++)
         {
             uint16_t vb = 1 << v;
-            ic          = xm_getw(INT_CTRL);
+            ic          = xm_get_int_status();
             if (ic & vb)
             {
                 uint16_t pp = (chan_ping & vb) ? 1 : 0;
@@ -3001,7 +2944,7 @@ static void test_audio_ping_pong()
                 xreg_setw_next(/* AUD0_LENGTH + vo, */ (pingpong_length[pp]));
                 xreg_setw_next(/* AUD0_START + vo,  */ (pingpong_addr[pp]));
 
-                xm_setbl(INT_CTRL, vb);
+                xm_set_int_ack(vb);
 
                 xr_pos(0, 8 + v);
                 xr_printf("%d #%3d Play %s %4d", v, plays, pp ? "pong" : "ping", p);
@@ -3012,10 +2955,10 @@ static void test_audio_ping_pong()
         }
         delay_check(1);
     }
-    xm_setbl(INT_CTRL, 0xF);
+    xm_set_int_ack(0xF);
     do
     {
-        ic = xm_getw(INT_CTRL);
+        ic = xm_get_int_status();
     } while ((ic & 0xf) != 0xf);
 
     play_silence();
@@ -3030,7 +2973,7 @@ static void test_xr_read()
 {
     xv_prep();
 
-    dprintf("test_xr\n");
+    debug_printf("test_xr\n");
 
     xcls();
 
@@ -3119,31 +3062,36 @@ int    xosera_audio_len;
 #endif
 
 uint32_t test_count;
-void     xosera_test()
+int      main()
 {
+    mcBusywait(1000 * 500);        // wait a bit for terminal window/serial
+    while (mcCheckInput())         // clear any queued input
+    {
+        mcInputchar();
+    }
     xv_prep();
 
-    dprintf("Xosera_test_m68k\n");
+    debug_printf("Xosera_test_m68k\n");
 
-    dprintf("Checking for Xosera XANSI firmware...");
+    debug_printf("Checking for Xosera XANSI firmware...");
     if (xosera_xansi_detect(true))        // check for XANSI (and disable input cursor if present)
     {
-        dprintf("detected.\n");
+        debug_printf("detected.\n");
     }
     else
     {
-        dprintf(
+        debug_printf(
             "\n\nXosera XANSI firmware was not detected!\n"
             "This program will likely trap without Xosera hardware.\n");
     }
 
-    dprintf("Calling xosera_init(XINIT_CONFIG_640x480)...");
+    debug_printf("Calling xosera_init(XINIT_CONFIG_640x480)...");
     bool success = xosera_init(XINIT_CONFIG_640x480);
-    dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
+    debug_printf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
     if (!success)
     {
-        dprintf("Exiting without Xosera init.\n");
+        debug_printf("Exiting without Xosera init.\n");
         exit(1);
     }
     last_timer_val = xm_getw(TIMER);
@@ -3152,40 +3100,24 @@ void     xosera_test()
     dump_xosera_regs();
     init_audio();
 
-    while (checkchar())        // clear any queued input
+    while (mcCheckInput())        // clear any queued input
     {
-        readchar();
+        mcInputchar();
     }
     cpu_delay(3000);
 
-    // dprintf("\nPress key to begin...\n");
-    // readchar();
+    // debug_printf("\nPress key to begin...\n");
+    // mcInputchar();
 
     wait_vblank_start();
-    xreg_setw(PA_GFX_CTRL, 0x0080);            // PA blanked
-    xreg_setw(VID_CTRL, 0x0001);               // border color #1 (blue)
-    xmem_setw(XR_COLOR_A_ADDR, 0x0000);        // color # = black
+    xreg_setw(PA_GFX_CTRL, 0x0080);                     // PA blanked
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x10));        // border color #0x01 (blue)
+    xmem_setw(XR_COLOR_A_ADDR, 0x0000);                 // color # = black
     xr_textmode_pb();
-    xreg_setw(VID_CTRL, 0x0001);                      // border color #0
-    xmem_setw(XR_COLOR_B_ADDR + 0xFF, 0xFfff);        // color # = black
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x01));        // border color #0x01 (blue)
+    xmem_setw(XR_COLOR_B_ADDR + 0xFF, 0xFFFF);          // color # = white
     xr_msg_color(0x0f);
     xr_printfxy(5, 0, "xosera_test_m68k\n");
-
-    if (SD_check_support())
-    {
-        dprintf("SD card supported: ");
-
-        if (SD_FAT_initialize())
-        {
-            dprintf("SD card ready\n");
-            use_sd = true;
-        }
-        else
-        {
-            dprintf("no SD card\n");
-            use_sd = false;
-        }
-    }
 
     (void)sinData;
 
@@ -3228,7 +3160,7 @@ void     xosera_test()
 
     // play_blurb_sample(0, 0x7fff, 800);
 
-    // readchar();
+    // mcInputchar();
 
     // uint16_t v = 7;
     // while (1)
@@ -3237,44 +3169,41 @@ void     xosera_test()
     // }
 
     xr_textmode_pb();
-    xreg_setw(VID_CTRL, 0x0001);                      // border color #1
-    xmem_setw(XR_COLOR_B_ADDR + 0xFF, 0xFfff);        // color # = black
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x01));        // border color #0x01 (blue)
+    xmem_setw(XR_COLOR_B_ADDR + 0xFF, 0xFfff);          // color # = black
     xr_msg_color(0x0f);
     xr_printfxy(5, 0, "xosera_test_m68k\n");
 
-    if (use_sd)
-    {
-        xr_printf("\nLoading test assets:\n");
-        xr_printf(" \xAF 320x240 pac-mock ");
-        load_test_image(BM_4_BIT, "/pacbox-320x240.raw", "/pacbox-320x240_pal.raw");
-        xr_printf(" \xAF 320x200 King Tut ");
-        load_test_image(BM_4_BIT_RETRO, "/ST_KingTut_Dpaint_16.raw", "/ST_KingTut_Dpaint_16_pal.raw");
-        xr_printf(" \xAF 640x480 Shuttle  ");
-        load_test_image(BM_MONO_ATTR, "/space_shuttle_color_small.raw", NULL);
-        xr_printf(" \xAF RGB-12 Parrot    ");
-        load_test_image(BM_12_BIT, "/parrot_320x240_RG8B4.raw", "/true_color_pal.raw");
-        xr_printf(" \xAF Xosera 8-bpp     ");
-        load_test_image(BM_8_BIT, "/xosera_r1.raw", "/xosera_r1_pal.raw");
+    xr_printf("\nLoading test assets:\n");
+    xr_printf(" \xAF 320x240 pac-mock ");
+    load_test_image(BM_4_BIT, "/sd/pacbox-320x240.raw", "/sd/pacbox-320x240_pal.raw");
+    xr_printf(" \xAF 320x200 King Tut ");
+    load_test_image(BM_4_BIT_RETRO, "/sd/ST_KingTut_Dpaint_16.raw", "/sd/ST_KingTut_Dpaint_16_pal.raw");
+    xr_printf(" \xAF 640x480 Shuttle  ");
+    load_test_image(BM_MONO_ATTR, "/sd/space_shuttle_color_small.raw", NULL);
+    xr_printf(" \xAF RGB-12 Parrot    ");
+    load_test_image(BM_12_BIT, "/sd/parrot_320x240_RG8B4.raw", "sd//true_color_pal.raw");
+    xr_printf(" \xAF Xosera 8-bpp     ");
+    load_test_image(BM_8_BIT, "/sd/xosera_r1.raw", "/sd/xosera_r1_pal.raw");
 #if BLURB_AUDIO
-        if (num_audio_channels)
-        {
-            xr_printf(" \xAF Xark audio clip  ");
-            load_test_audio("/xosera_8000.raw", &xosera_audio, &xosera_audio_len);
-        }
-#endif
+    if (num_audio_channels)
+    {
+        xr_printf(" \xAF Xark audio clip  ");
+        load_test_audio("/sd/xosera_8000.raw", &xosera_audio, &xosera_audio_len);
     }
+#endif
 
     // D'oh! Uses timer    rosco_m68k_CPUMHz();
 #if 1
     uint16_t ic = xm_getw(INT_CTRL);
-    dprintf("Installing interrupt handler.  INT_CTRL=0x%04x\n", ic);
+    debug_printf("Installing interrupt handler.  INT_CTRL=0x%04x\n", ic);
     install_intr();
     xm_setw(TIMER, 10 - 1);        // color cycle twice a second as TIMER_INTR test
     ic = xm_getw(INT_CTRL);
-    dprintf("Done.                          INT_CTRL=0x%04x\n", ic);
+    debug_printf("Done.                          INT_CTRL=0x%04x\n", ic);
 
 #else
-    dprintf("NOT Installing interrupt handler\n");
+    debug_printf("NOT Installing interrupt handler\n");
 #endif
 
     uint8_t config_num = 0;
@@ -3289,24 +3218,24 @@ void     xosera_test()
         if (test_count && (test_count & 3) == 0)
         {
             config_num++;
-            dprintf("\n [ xosera_init(%u)...", config_num % 3);
+            debug_printf("\n [ xosera_init(%u)...", config_num % 3);
             bool success = xosera_init(config_num % 3);
-            dprintf("%s (%dx%d) ]\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
+            debug_printf("%s (%dx%d) ]\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
             last_timer_val = xm_getw(TIMER);
             init_audio();
 #if 1
             uint16_t ic = xm_getw(INT_CTRL);
-            dprintf("Installing interrupt handler.  INT_CTRL=0x%04x\n", ic);
+            debug_printf("Installing interrupt handler.  INT_CTRL=0x%04x\n", ic);
             install_intr();
             ic = xm_getw(INT_CTRL);
-            dprintf("Done.                          INT_CTRL=0x%04x\n", ic);
+            debug_printf("Done.                          INT_CTRL=0x%04x\n", ic);
 
 #else
-            dprintf("NOT Installing interrupt handler\n");
+            debug_printf("NOT Installing interrupt handler\n");
 #endif
             cpu_delay(1000);        // give monitor time to adjust with grey screen (vs black)
         }
-        dprintf("\n*** xosera_test_m68k iteration: %lu, running %u:%02u:%02u\n", test_count++, h, m, s);
+        debug_printf("\n*** xosera_test_m68k iteration: %lu, running %u:%02u:%02u\n", test_count++, h, m, s);
 
         setup_margins();
 
@@ -3314,26 +3243,26 @@ void     xosera_test()
         if (test_count & 1)
         {
             setup_copper_fx();
-            dprintf("Copper effect \"%s\" enabled for this interation.\n", cop_fx_ptr->name);
+            debug_printf("Copper effect \"%s\" enabled for this interation.\n", cop_fx_ptr->name);
             install_copper();
-            xreg_setw(COPP_CTRL, 0x8000);
+            xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(1));
         }
         else
         {
-            dprintf("Copper disabled for this iteration.\n");
-            xreg_setw(COPP_CTRL, 0x0000);
+            debug_printf("Copper disabled for this iteration.\n");
+            xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(1));
             xreg_setw(PA_H_SCROLL, 0);
             xreg_setw(PB_V_SCROLL, 0);
         }
 #endif
         if (test_count & 2)
         {
-            dprintf("Color cycling enabled for this iteration.\n");
+            debug_printf("Color cycling enabled for this iteration.\n");
             NukeColor = 0;
         }
         else
         {
-            dprintf("Color cycling disabled for this iteration.\n");
+            debug_printf("Color cycling disabled for this iteration.\n");
             NukeColor = 0xffff;
         }
 
@@ -3387,7 +3316,7 @@ void     xosera_test()
 #endif
 
         //        xreg_setw(PA_GFX_CTRL, 0x0080);
-        xreg_setw(VID_CTRL, 0x0000);
+        xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // border color #0x00
         delay_check(DELAY_TIME * 3);
 
         restore_colors();
@@ -3398,16 +3327,11 @@ void     xosera_test()
 
         test_blend();
 
-        if (use_sd)
-        {
-            test_blit();
-        }
+        test_blit();
 
-        if (use_sd)
-        {
-            xm_setbh(SYS_CTRL, 0x07);        // disable Xosera vsync interrupt
+        xm_setbh(SYS_CTRL, 0x07);        // disable Xosera vsync interrupt
 
-            show_test_pic(TRUECOLOR_TEST_PIC, 0x0000);
+        show_test_pic(TRUECOLOR_TEST_PIC, 0x0000);
 #if 0 && BLURB_AUDIO        // play audio while 8bpp+4bpp showing (but corrupts parrot)
             if (num_audio_channels)
             {
@@ -3415,17 +3339,16 @@ void     xosera_test()
                 play_blurb_sample(0x2000, xosera_audio_len, 8000);
             }
 #endif
-            delay_check(DELAY_TIME);
-            show_test_pic(SELF_PIC, 0x0000);
-            delay_check(DELAY_TIME);
-            show_test_pic(TUT_PIC, 0x0000);
-            delay_check(DELAY_TIME);
-            show_test_pic(SHUTTLE_PIC, 0x0000);
-            delay_check(DELAY_TIME);
+        delay_check(DELAY_TIME);
+        show_test_pic(SELF_PIC, 0x0000);
+        delay_check(DELAY_TIME);
+        show_test_pic(TUT_PIC, 0x0000);
+        delay_check(DELAY_TIME);
+        show_test_pic(SHUTTLE_PIC, 0x0000);
+        delay_check(DELAY_TIME);
 
-            xm_setbl(TIMER, 0x08);           // clear any pending interrupt
-            xm_setbh(SYS_CTRL, 0x08);        // enable Xosera vsync interrupt
-        }
+        xm_setbl(TIMER, 0x08);           // clear any pending interrupt
+        xm_setbh(SYS_CTRL, 0x08);        // enable Xosera vsync interrupt
 
         // ugly: test_dual_8bpp();
         // delay_check(DELAY_TIME);

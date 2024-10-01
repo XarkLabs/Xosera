@@ -1,7 +1,7 @@
 #include "pt_mod.h"
 #include <stdio.h>
 
-int main(PtMod * mod)
+int play_mod(PtMod * mod)
 {
 
     printf("Song name        : %s\n", mod->song_name);

@@ -32,13 +32,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <basicio.h>
-#include <machine.h>
+#include <rosco_m68k/machine.h>
+#include "videoXoseraANSI/xosera.h" // uses private copy
 
 #include "rosco_m68k_support.h"
-#include "videoXoseraANSI/xosera_ansiterm_m68k.h"
 
-#include "xosera_m68k_api.h"
+#include "videoXoseraANSI/xosera_ansiterm_m68k.h"
 
 #include "us-fishoe.h"
 
@@ -76,9 +75,9 @@ static int ansiterm_test_attrib()
                            cbg_tbl[cbg],
                            cfg_tbl[cfg]);
                 }
-                if (checkchar())
+                if (mcCheckInput())
                 {
-                    char c = readchar();
+                    char c = mcInputchar();
                     while (true)
                     {
                         if (c == 1)
@@ -89,7 +88,7 @@ static int ansiterm_test_attrib()
                         {
                             return 0;
                         }
-                        c = readchar();
+                        c = mcInputchar();
                         if (c >= ' ')
                         {
                             break;
@@ -116,15 +115,15 @@ static int ansiterm_spamtest()
     }
     *p++ = '\0';
 
-    print("\x1b[8m");
+    mcPrint("\x1b[8m");
 
     while (true)
     {
-        printchar('\0');
-        print(spam);
-        if (checkchar())
+        mcPrintchar('\0');
+        mcPrint(spam);
+        if (mcCheckInput())
         {
-            char c = readchar();
+            char c = mcInputchar();
             while (true)
             {
                 if (c == 1)
@@ -135,7 +134,7 @@ static int ansiterm_spamtest()
                 {
                     return 0;
                 }
-                c = readchar();
+                c = mcInputchar();
                 if (c >= ' ')
                 {
                     break;
@@ -150,7 +149,7 @@ static int ansiterm_echotest()
     printf("\nEcho test (^A to reboot, ^B for spam, ^C to exit)\n\n");
     while (true)
     {
-        char c = readchar();
+        char c = mcInputchar();
 
         if (c == 1)        // ^A exit for kermit
         {
@@ -166,18 +165,18 @@ static int ansiterm_echotest()
             return 0;
         }
 
-        printchar(c);
+        mcPrintchar(c);
     }
 }
 
 static int ansiterm_arttest()
 {
-    print("\x1b[?3l");            // 80x30
-    print("\x1b*");               // ANSI_PC_8x8 font
-    print("\f\n\n\n\n\n");        // cls & vertical center
-    print((char *)us_fishoe);
+    mcPrint("\x1b[?3l");            // 80x30
+    mcPrint("\x1b*");               // ANSI_PC_8x8 font
+    mcPrint("\f\n\n\n\n\n");        // cls & vertical center
+    mcPrint((char *)us_fishoe);
 
-    char c = readchar();
+    char c = mcInputchar();
 
     if (c == 1)        // ^A exit for kermit
     {
@@ -197,9 +196,9 @@ static const char * wait_reply()
 
     do
     {
-        if (checkchar())
+        if (mcCheckInput())
         {
-            char cdata = readchar();
+            char cdata = mcInputchar();
             // CAN/SUB
             if (cdata == 0x18 || cdata == 0x1a)
             {
@@ -297,34 +296,34 @@ static void ansiterm_testmenu()
         int res = 1;
         do
         {
-            char c = readchar();
+            char c = mcInputchar();
             switch (c)
             {
                 case 1:        // ^A exit for kermit
                     return;
                 case 'A':
                 case 'a':
-                    printchar(c);
-                    printchar('\n');
+                    mcPrintchar(c);
+                    mcPrintchar('\n');
                     res = ansiterm_test_attrib();
                     break;
                 case 'B':
                 case 'b':
-                    printchar(c);
-                    printchar('\n');
+                    mcPrintchar(c);
+                    mcPrintchar('\n');
                     printf("\nSpam test (space to pause, ^C to exit, ^A to reboot)\n\n");
                     res = ansiterm_spamtest();
                     break;
                 case 'C':
                 case 'c':
-                    printchar(c);
-                    printchar('\n');
+                    mcPrintchar(c);
+                    mcPrintchar('\n');
                     res = ansiterm_echotest();
                     break;
                 case 'D':
                 case 'd':
-                    printchar(c);
-                    printchar('\n');
+                    mcPrintchar(c);
+                    mcPrintchar('\n');
                     res = ansiterm_arttest();
                     break;
                 default:
@@ -339,9 +338,16 @@ static void ansiterm_testmenu()
     }
 }
 
-void xosera_ansiterm_test()
+// xosera_ansiterm_test
+int main()
 {
-    dprintf("Xosera_ansiterm_test started.\n");
+    mcBusywait(1000 * 500);        // wait a bit for terminal window/serial
+    while (mcCheckInput())         // clear any queued input
+    {
+        mcInputchar();
+    }
+
+    debug_printf("Xosera_ansiterm_test started.\n");
 #if INSTALL_XANSI
     xosera_xansi_detect(true);
     if (XANSI_CON_INIT())
@@ -379,15 +385,15 @@ void xosera_ansiterm_test()
 #if INSTALL_XANSI
     XANSI_CON_INIT();
 #endif
-    // PASSTHRU test:    print("\x9b" "8m");
+    // PASSTHRU test:    mcPrint("\x9b" "8m");
     while (true)
     {
-        char c = readchar();
+        char c = mcInputchar();
         if (c == 1)        // ^A exit for kermit
         {
             break;
         }
-        printchar(c);
+        mcPrintchar(c);
     }
 }
 #endif

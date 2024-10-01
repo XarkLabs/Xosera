@@ -23,24 +23,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <basicio.h>
-#include <machine.h>
-#include <sdfat.h>
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
+
+#include "rosco_m68k_support.h"
 
 #define DELAY_TIME 5000        // human speed
 // #define DELAY_TIME 1000        // impatient human speed
 // #define DELAY_TIME 100        // machine speed
 
-#include "xosera_m68k_api.h"
-
-bool use_sd;
-
 // Copper list
 uint16_t copper_list[] = {
-    COP_MOVER(0x0055, PA_GFX_CTRL),             //  0: First half of screen in 4-bpp + Hx2 + Vx2 //
+    COP_MOVER(MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_4_BPP, GFX_BITMAP, GFX_2X, GFX_2X),        //  0: 4-bpp + Hx2 + Vx2
+              PA_GFX_CTRL),
     COP_MOVER(0x0ec6, COLOR_ADDR + 0xf),        //  2: Palette entry 0xf from tut bitmap
     COP_VPOS(240),                              //  4: Wait for 640-8, 240
-    COP_MOVER(0x0040, PA_GFX_CTRL),             //  5: 1-bpp + Hx1 + Vx1
+    COP_MOVER(MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_1_BPP, GFX_BITMAP, GFX_1X, GFX_1X),        //  5: 1-bpp + Hx1 + Vx1
+              PA_GFX_CTRL),
     COP_MOVER(0x3e80, PA_LINE_ADDR),            //  7: Line start now at 16000
     COP_MOVER(0x0fff, COLOR_ADDR + 0xf),        //  9: Palette entry 0xf to white for 1bpp bitmap
     COP_END()                                   // 11:Wait for next frame
@@ -48,41 +47,6 @@ uint16_t copper_list[] = {
 
 uint32_t file_buffer[512];
 
-static void dputc(char c)
-{
-#ifndef __INTELLISENSE__
-    __asm__ __volatile__(
-        "move.w %[chr],%%d0\n"
-        "move.l #2,%%d1\n"        // SENDCHAR
-        "trap   #14\n"
-        :
-        : [chr] "d"(c)
-        : "d0", "d1");
-#endif
-}
-
-static void dprint(const char * str)
-{
-    register char c;
-    while ((c = *str++) != '\0')
-    {
-        if (c == '\n')
-        {
-            dputc('\r');
-        }
-        dputc(c);
-    }
-}
-
-static char dprint_buff[4096];
-static void dprintf(const char * fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
-    dprint(dprint_buff);
-    va_end(args);
-}
 #if 0
 
 void wait_vblank_start()
@@ -159,44 +123,48 @@ void dump_xosera_regs(void)
     uint16_t pb_vscroll  = xreg_getw(PB_V_SCROLL);
     uint16_t pb_hvfscale = xreg_getw(PB_HV_FSCALE);
 
-    dprintf("Xosera state:\n");
-    dprintf("DESCRIPTION : \"%s\"\n", initinfo.description_str);
-    dprintf("VERSION BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
-    dprintf("GIT HASH    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
-    dprintf("FEATURE     : 0x%04x\n", feature);
-    dprintf(
-        "MONITOR RES : %dx%d MAX H/V POS : %d/%d AUDIO CHANS : %d\n", monwidth, monheight, maxhpos, maxvpos, audchannels);
-    dprintf("\nConfig:\n");
-    dprintf("SYS_CTRL    : 0x%04x  INT_CTRL    : 0x%04x\n", sysctrl, intctrl);
-    dprintf("VID_CTRL    : 0x%04x  COPP_CTRL   : 0x%04x\n", vidctrl, coppctrl);
-    dprintf("AUD_CTRL    : 0x%04x\n", audctrl);
-    dprintf("VID_LEFT    : 0x%04x  VID_RIGHT   : 0x%04x\n", vidleft, vidright);
-    dprintf("\nPlayfield A:                                Playfield B:\n");
-    dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x  PB_GFX_CTRL : 0x%04x  PB_TILE_CTRL: 0x%04x\n",
-            pa_gfxctrl,
-            pa_tilectrl,
-            pb_gfxctrl,
-            pb_tilectrl);
-    dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x  PB_DISP_ADDR: 0x%04x  PB_LINE_LEN : 0x%04x\n",
-            pa_dispaddr,
-            pa_linelen,
-            pb_dispaddr,
-            pb_linelen);
-    dprintf("PA_H_SCROLL : 0x%04x  PA_V_SCROLL : 0x%04x  PB_H_SCROLL : 0x%04x  PB_V_SCROLL : 0x%04x\n",
-            pa_hscroll,
-            pa_vscroll,
-            pb_hscroll,
-            pb_vscroll);
-    dprintf("PA_HV_FSCALE: 0x%04x                        PB_HV_FSCALE: 0x%04x\n", pa_hvfscale, pb_hvfscale);
-    dprintf("\n\n");
+    debug_printf("Xosera state:\n");
+    debug_printf("DESCRIPTION : \"%s\"\n", initinfo.description_str);
+    debug_printf("VERSION BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
+    debug_printf("GIT HASH    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
+    debug_printf("FEATURE     : 0x%04x\n", feature);
+    debug_printf("MONITOR RES : %dx%d MAX H/V POS : %d/%d AUDIO CHANS : %d\n",
+                 monwidth,
+                 monheight,
+                 maxhpos,
+                 maxvpos,
+                 audchannels);
+    debug_printf("\nConfig:\n");
+    debug_printf("SYS_CTRL    : 0x%04x  INT_CTRL    : 0x%04x\n", sysctrl, intctrl);
+    debug_printf("VID_CTRL    : 0x%04x  COPP_CTRL   : 0x%04x\n", vidctrl, coppctrl);
+    debug_printf("AUD_CTRL    : 0x%04x\n", audctrl);
+    debug_printf("VID_LEFT    : 0x%04x  VID_RIGHT   : 0x%04x\n", vidleft, vidright);
+    debug_printf("\nPlayfield A:                                Playfield B:\n");
+    debug_printf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x  PB_GFX_CTRL : 0x%04x  PB_TILE_CTRL: 0x%04x\n",
+                 pa_gfxctrl,
+                 pa_tilectrl,
+                 pb_gfxctrl,
+                 pb_tilectrl);
+    debug_printf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x  PB_DISP_ADDR: 0x%04x  PB_LINE_LEN : 0x%04x\n",
+                 pa_dispaddr,
+                 pa_linelen,
+                 pb_dispaddr,
+                 pb_linelen);
+    debug_printf("PA_H_SCROLL : 0x%04x  PA_V_SCROLL : 0x%04x  PB_H_SCROLL : 0x%04x  PB_V_SCROLL : 0x%04x\n",
+                 pa_hscroll,
+                 pa_vscroll,
+                 pb_hscroll,
+                 pb_vscroll);
+    debug_printf("PA_HV_FSCALE: 0x%04x                        PB_HV_FSCALE: 0x%04x\n", pa_hvfscale, pb_hvfscale);
+    debug_printf("\n\n");
 }
 
 static bool load_sd_bitmap(const char * filename, uint16_t base_address)
 {
     xv_prep();
 
-    dprintf("Loading bitmap: \"%s\"", filename);
-    void * file = fl_fopen(filename, "r");
+    debug_printf("Loading bitmap: \"%s\"", filename);
+    FILE * file = fopen(filename, "r");
 
     if (file != NULL)
     {
@@ -205,11 +173,11 @@ static bool load_sd_bitmap(const char * filename, uint16_t base_address)
 
         xm_setw(WR_INCR, 0x0001);        // needed to be set
 
-        while ((cnt = fl_fread(file_buffer, 1, 512, file)) > 0)
+        while ((cnt = fread(file_buffer, 1, 512, file)) > 0)
         {
             if ((vaddr & 0xFFF) == 0)
             {
-                dprintf(".");
+                debug_printf(".");
             }
 
             uint16_t * maddr = (uint16_t *)file_buffer;
@@ -221,13 +189,13 @@ static bool load_sd_bitmap(const char * filename, uint16_t base_address)
             vaddr += (cnt >> 1);
         }
 
-        fl_fclose(file);
-        dprintf("done!\n");
+        fclose(file);
+        debug_printf("done!\n");
         return true;
     }
     else
     {
-        dprintf(" - FAILED\n");
+        debug_printf(" - FAILED\n");
         return false;
     }
 }
@@ -236,19 +204,19 @@ static bool load_sd_colors(const char * filename)
 {
     xv_prep();
 
-    dprintf("Loading colormap: \"%s\"", filename);
-    void * file = fl_fopen(filename, "r");
+    debug_printf("Loading colormap: \"%s\"", filename);
+    FILE * file = fopen(filename, "r");
 
     if (file != NULL)
     {
         int cnt   = 0;
         int vaddr = 0;
 
-        while ((cnt = fl_fread(file_buffer, 1, 512, file)) > 0)
+        while ((cnt = fread(file_buffer, 1, 512, file)) > 0)
         {
             if ((vaddr & 0x7) == 0)
             {
-                dprintf(".");
+                debug_printf(".");
             }
 
             uint16_t * maddr = (uint16_t *)file_buffer;
@@ -260,40 +228,46 @@ static bool load_sd_colors(const char * filename)
             vaddr += (cnt >> 1);
         }
 
-        fl_fclose(file);
-        dprintf("done!\n");
+        fclose(file);
+        debug_printf("done!\n");
         return true;
     }
     else
     {
-        dprintf(" - FAILED\n");
+        debug_printf(" - FAILED\n");
         return false;
     }
 }
 
-void xosera_splitscreen_test()
+// xosera_splitscreen_test()
+int main()
 {
+    mcBusywait(1000 * 500);        // wait a bit for terminal window/serial
+    while (mcCheckInput())         // clear any queued input
+    {
+        mcInputchar();
+    }
     xv_prep();
 
-    dprintf("Xosera_test_m68k\n");
-    dprintf("Checking for Xosera XANSI firmware...");
+    printf("\033cXosera_splitscreen_test\n");
+    debug_printf("Checking for Xosera XANSI firmware...");
     if (xosera_xansi_detect(true))
     {
-        dprintf("detected.\n");
+        debug_printf("detected.\n");
     }
     else
     {
-        dprintf(
+        debug_printf(
             "\n\nXosera XANSI firmware was not detected!\n"
             "This program will likely trap without Xosera hardware.\n");
     }
-    dprintf("xosera_init(XINIT_CONFIG_640x480)...");
+    debug_printf("xosera_init(XINIT_CONFIG_640x480)...");
     bool success = xosera_init(XINIT_CONFIG_640x480);
-    dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
+    debug_printf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
     xosera_get_info(&initinfo);
     dump_xosera_regs();
 
-    dprintf("Loading copper list...\n");
+    debug_printf("Loading copper list...\n");
     xmem_setw_next_addr(XR_COPPER_ADDR);
     uint16_t * wp = copper_list;
     for (uint8_t i = 0; i < sizeof(copper_list) / sizeof(copper_list[0]); i++)
@@ -301,81 +275,46 @@ void xosera_splitscreen_test()
         xmem_setw_next(*wp++);
     }
 
-    if (SD_check_support())
-    {
-        dprintf("SD card supported: ");
-
-        if (SD_FAT_initialize())
-        {
-            dprintf("SD card ready\n");
-            use_sd = true;
-        }
-        else
-        {
-            dprintf("no SD card\n");
-            use_sd = false;
-        }
-    }
-    else
-    {
-        dprintf("No SD card support.\n");
-    }
-
-    if (!use_sd)
-    {
-        dprintf("No SD support. Cannot continue\n");
-        return;
-    }
-
-
     // load palette, and images into vram
-    dprintf("Loading data...\n");
+    debug_printf("Loading data...\n");
 #if 0
-    if (!load_sd_colors("/ST_KingTut_Dpaint_16_pal.raw"))
+    if (!load_sd_colors("/sd/ST_KingTut_Dpaint_16_pal.raw"))
     {
         return;
     }
 
-    if (!load_sd_bitmap("/ST_KingTut_Dpaint_16.raw", 0))
+    if (!load_sd_bitmap("/sd/ST_KingTut_Dpaint_16.raw", 0))
     {
         return;
     }
 #else
-    if (!load_sd_colors("/pacbox-320x240_pal.raw"))
+    if (!load_sd_colors("/sd/pacbox-320x240_pal.raw"))
     {
-        return;
+        return EXIT_FAILURE;
     }
 
-    if (!load_sd_bitmap("/pacbox-320x240.raw", 0))
+    if (!load_sd_bitmap("/sd/pacbox-320x240.raw", 0))
     {
-        return;
+        return EXIT_FAILURE;
     }
 #endif
 
-    if (!load_sd_bitmap("/mountains_mono_640x480w.raw", 16000))
+    if (!load_sd_bitmap("/sd/mountains_mono_640x480w.raw", 16000))
     {
-        return;
+        return EXIT_FAILURE;
     }
-
-    /* For manual testing tut, if copper disabled */
-    // xreg_setw(PA_GFX_CTRL, 0x0065);
 
     // Set line len here, if the two res had different the copper
     // would handle this instead...
     xreg_setw(PA_LINE_LEN, 80);
 
-    dprintf("Ready - enabling copper...\n");
-    xreg_setw(COPP_CTRL, 0x8000);
-
-    /* For manual testing mountain if copper disabled... */
-    // xreg_setw(PA_GFX_CTRL, 0x0040);
-    // xreg_setw(PA_LINE_LEN, 80);
-    // xreg_setw(PA_DISP_ADDR, 0x3e80);
+    debug_printf("Ready - enabling copper...\n");
+    xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(1));
 
     bool     up      = false;
     uint16_t current = 240;
 
-    while (!checkchar())
+    while (!mcCheckInput())
     {
         xwait_not_vblank();
         xwait_vblank();
@@ -402,11 +341,12 @@ void xosera_splitscreen_test()
             }
         }
     }
+    mcInputchar();
 
     // disable Copper
-    xreg_setw(COPP_CTRL, 0x0000);
+    xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(0));
 
     // restore text mode
     xosera_xansi_restore();
-    dprintf("Exit\n");
+    debug_printf("Exit\n");
 }

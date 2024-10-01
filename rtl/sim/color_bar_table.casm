@@ -2,7 +2,7 @@
 ; vim: set et ts=8 sw=8
 ;
         .list false
-        .include "xosera_m68k_defs.inc"
+        .include "xosera_defs.inc"
         .macname false
         .listcond false
         .list true

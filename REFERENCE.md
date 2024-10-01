@@ -344,6 +344,7 @@ Basic UART allowing send/receive communication with host PC at 230,400 bps via F
 <img src="./pics/wd_XM_FEATURE.svg">
 
 **Xosera configured features (when reading)**
+
 | Name      | Bits      | R/W | Description                                                              |
 |-----------|-----------|-----|--------------------------------------------------------------------------|
 | `CONFIG`  | `[15:12]` | R/- | Current configuration number for Xosera FPGA (0-3 on iCE40UP5K)          |
@@ -423,6 +424,7 @@ ___
 <img src="./pics/wd_XR_COPP_CTRL.svg">
 
 **Enable or disable copper program execution**
+
 | Name      | Bits   | R/W | Description                                                            |
 |-----------|--------|-----|------------------------------------------------------------------------|
 | `COPP_EN` | `[15]` | R/W | Reset and enable copper at start of next frame (and subsequent frames) |
@@ -436,6 +438,7 @@ Setting `COPP_EN` allows control of the copper co-processor.  When disabled, cop
 <img src="./pics/wd_XR_AUD_CTRL.svg">
 
 **Enable or disable audio channel processing**
+
 | Name     | Bits  | R/W | Description                              |
 |----------|-------|-----|------------------------------------------|
 | `AUD_EN` | `[0]` | R/W | Enable audio DMA and channel procerssing |
@@ -503,6 +506,7 @@ ___
 | 0x1D  | `XR_PB_H_SCROLL`  | R/W | playfield B horizontal fine scroll                      |
 | 0x1E  | `XR_PB_V_SCROLL`  | R/W | playfield B horizontal repeat and tile fine scroll      |
 | 0x1F  | `XR_PB_LINE_ADDR` | -/W | playfield B scanline start address (start of next line) |
+
 ___
 
 ### Playfield A & B Control XR Registers Details
@@ -514,6 +518,7 @@ ___
 <img src="./pics/wd_XR_Px_GFX_CTRL.svg">
 
 **playfield A/B graphics control**
+
 | Name        | Bits     | R/W | Description                                                                    |
 |-------------|----------|-----|--------------------------------------------------------------------------------|
 | `V_REPEAT`  | `[1:0]`  | R/W | Vertical pixel repeat count (0=1x, 1=2x, 2=3x, 3=4x)                           |
@@ -530,6 +535,7 @@ ___
 <img src="./pics/wd_XR_Px_TILE_CTRL.svg">
 
 **playfield A/B tile control**  
+
 | Name           | Bits      | R/W | Description                                                                         |
 |----------------|-----------|-----|-------------------------------------------------------------------------------------|
 | `TILE_H`       | `[3:0]`   | R/W | Tile height-1 (0 to 15 for 1 to 16 high, stored as 8 or 16 high in tile definition) |
@@ -581,6 +587,7 @@ Will repeat the color of a pixel or scan-line every N+1<sup>th</sup> column or l
 <img src="./pics/wd_XR_Px_H_SCROLL.svg">
 
 **playfield A/B  horizontal and vertical fine scroll**  
+
 | Name       | Bits    | R/W | Description                                              |
 |------------|---------|-----|----------------------------------------------------------|
 | `H_SCROLL` | `[4:0]` | R/W | Horizontal fine pixel scroll offset (0-31 native pixels) |
@@ -594,6 +601,7 @@ Horizontal fine scroll `H_SCROLL` will clip (or skip) 0-31 native pixels from th
 <img src="./pics/wd_XR_Px_V_SCROLL.svg">
 
 **playfield A/B  horizontal and vertical fine scroll**  
+
 | Name            | Bits    | R/W | Description                                           |
 |-----------------|---------|-----|-------------------------------------------------------|
 | `V_REP_SCROLL`  | `[9:8]` | R/W | Vertical repeat fine scroll offset (0-3 native lines) |
@@ -1038,6 +1046,7 @@ As far as the copper is concerned, all coordinates are always in absolute native
 > :mag: **tilemem high addresses**  Note *xadr14* offset`[11:0]`is 12-bits and that is not enough to write to the last`0x400` words of the`XR_TILE_ADDR` area (`0x4000-0x53FF`) with`SETI`.  However, this area can be written to using a 16-bit word read from copper memory and `SETM` (which uses a full 16-bit *xadr16* destination).
 
 **Copper addresses for memory mapped registers and operations:**
+
 | Pseudo reg       | Copper Addr | Operation                                 | Description                                 |
 |------------------|-------------|-------------------------------------------|---------------------------------------------|
 | `RA` (read)      | `0x800`     | read value in `RA`, `B` unaltered         | return current value in `RA` register       |
@@ -1132,7 +1141,7 @@ data_table      WORD  0x0123,0x4567,0x89AB,0xCDEF
 
 Co-processor instructions can be written programatically (and there are some C macros to help with that). However, you may also  find it useful to write copper programs in a slightly higher-level assembler language, and have these translated automatically into binary, hex or program source code fragments.  The assembler can also produce "export" information to make it easier to modify the copper program from the host CPU (for dynamic copper program or data modification at run-time).
 
-The included CopAsm is a reasonably full featured assembler tailored for copper program creation.  For more information about CopAsm see [CopAsm Reference](copper/CopAsm/copasm-REFERENCE.md)
+The included CopAsm is a reasonably full featured assembler tailored for copper program creation.  For more information about CopAsm (executable typically `xosera-copasm`) see [CopAsm Reference](copper/CopAsm/copasm-REFERENCE.md)
 
 Additionally, there are C macros (in the Xosera API headers) that facilitate writing readable copper code directly in C source code. The included examples (in `copper` directory) demonstrate the different ways of embedding copper code in C source.
 

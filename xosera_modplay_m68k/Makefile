@@ -5,19 +5,21 @@
 #
 # vim: set noet ts=8 sw=8
 
+XOSERA_EXTRA:=../../xosera_m68k_extra
+
 all:
-	cd rosco_pt_lib && make all
-	cd rosco_pt_player && make all
+	cd rosco_pt_lib && XOSERA_EXTRA=$(XOSERA_EXTRA) $(MAKE) all
+	cd rosco_pt_player && XOSERA_EXTRA=$(XOSERA_EXTRA) $(MAKE) all
 	cp -v rosco_pt_player/rosco_pt_player.* .
 
 clean:
-	cd rosco_pt_lib && make clean
-	cd rosco_pt_player && make clean
+	cd rosco_pt_lib && XOSERA_EXTRA=$(XOSERA_EXTRA) $(MAKE) clean
+	cd rosco_pt_player && XOSERA_EXTRA=$(XOSERA_EXTRA) $(MAKE) clean
 
 linuxtest: all
-	cd rosco_pt_player && make linuxtest
+	cd rosco_pt_player && XOSERA_EXTRA=$(XOSERA_EXTRA) $(MAKE) linuxtest
 
 mactest: all
-	cd rosco_pt_player && make mactest
+	cd rosco_pt_player && XOSERA_EXTRA=$(XOSERA_EXTRA) $(MAKE) mactest
 
 .PHONY:	all clean

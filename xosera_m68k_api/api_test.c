@@ -29,9 +29,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <machine.h>
+#include <rosco_m68k/machine.h>
 
-#include "xosera_m68k_api.h"
+#include "./xosera.h"
 
 #define nop() __asm__ __volatile__("nop ; nop")
 
@@ -42,9 +42,11 @@ volatile uint16_t g16;
 volatile uint32_t g32;
 
 // This is just meant to make sure all API macros compile and pass sanity check
-void kmain(void)
+// not intended to be executed.
+int main(void)
 {
     xosera_sync();
+    xosera_xansi_detect(true);
     xosera_init(XINIT_CONFIG_640x480);
     xosera_get_info(&info);
     nop();
@@ -58,6 +60,14 @@ void kmain(void)
     nop();
     xm_setl(WR_INCR, 0x0001ABCD);
     nop();
+    xm_set_vram_mask(0xF);
+    nop();
+    xm_set_int_ack(0x7F);
+    nop();
+    xm_setup_pixel_addr(0x0123, 0x4567, 1, 1);
+    nop();
+    xm_set_pixel_data(0x0AAA, 0x0DDD, 0xAAAA);
+    nop();
     g8 = xm_getbh(TIMER);
     nop();
     g8 = xm_getbl(TIMER);
@@ -65,6 +75,10 @@ void kmain(void)
     g16 = xm_getw(RD_XADDR);
     nop();
     g32 = xm_getl(DATA);
+    nop();
+    g8 = xm_get_int_status();
+    nop();
+    g16 = xm_get_pixel_data(0x4321, 0x8765);
     nop();
     xreg_setw(UNUSED_08, 0x1337);
     nop();
@@ -80,7 +94,7 @@ void kmain(void)
     nop();
     xmem_setw(XR_TILE_ADDR, 0xBEEF);
     nop();
-    xmem_setw_wait(XR_TILE_ADDR, 0xBEEF);
+    xmem_setw_wait(XR_TILE_ADDR, 0xB00D);
     nop();
     xmem_setw_next_addr(XR_COPPER_ADDR);
     nop();
@@ -206,4 +220,6 @@ void kmain(void)
     nop();
     g16 = xosera_aud_channels();
     nop();
+
+    return 0;
 }

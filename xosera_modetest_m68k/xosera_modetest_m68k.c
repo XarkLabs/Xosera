@@ -23,9 +23,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <basicio.h>
-#include <machine.h>
-#include <sdfat.h>
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
+
+#include "rosco_m68k_support.h"
 
 // #define DELAY_TIME 15000        // slow human speed
 // #define DELAY_TIME 5000        // human speed
@@ -44,15 +45,11 @@
 #define NUM_ELEMENTS(a) (sizeof(a) / sizeof(a[0]))
 #endif
 
-#include "xosera_m68k_api.h"
-
 extern void install_intr(void);
 extern void remove_intr(void);
 
 extern volatile uint32_t XFrameCount;
 extern volatile uint16_t NukeColor;
-
-bool use_sd;
 
 // Xosera default color palette
 uint16_t def_colors[256] = {
@@ -98,23 +95,6 @@ uint32_t timer_stop()
     return ((stop_tick - start_tick) * 1667) / 100;
 }
 
-#if !defined(checkchar)        // newer rosco_m68k library addition, this is in case not present
-bool checkchar()
-{
-    int rc;
-    __asm__ __volatile__(
-        "move.l #6,%%d1\n"        // CHECKCHAR
-        "trap   #14\n"
-        "move.b %%d0,%[rc]\n"
-        "ext.w  %[rc]\n"
-        "ext.l  %[rc]\n"
-        : [rc] "=d"(rc)
-        :
-        : "d0", "d1");
-    return rc != 0;
-}
-#endif
-
 // resident _EFP_SD_INIT hook to disable SD loader upon next boot
 static void disable_sd_boot()
 {
@@ -124,12 +104,14 @@ static void disable_sd_boot()
 
 static void wait_vblank_start()
 {
+    xv_prep();
     xwait_not_vblank();
     xwait_vblank();
 }
 
 static inline void check_vblank()
 {
+    xv_prep();
     if (!xm_getb_sys_ctrl(VBLANK) || xreg_getw(SCANLINE) > 520)
     {
         wait_vblank_start();
@@ -139,6 +121,7 @@ static inline void check_vblank()
 _NOINLINE void restore_def_colors()
 {
     wait_vblank_start();
+    xv_prep();
     xmem_setw_next_addr(XR_COLOR_A_ADDR);
     for (uint16_t i = 0; i < 256; i++)
     {
@@ -152,85 +135,21 @@ _NOINLINE void restore_def_colors()
     }
 }
 
-static void dputc(char c)
-{
-#ifndef __INTELLISENSE__
-    __asm__ __volatile__(
-        "move.w %[chr],%%d0\n"
-        "move.l #2,%%d1\n"        // SENDCHAR
-        "trap   #14\n"
-        :
-        : [chr] "d"(c)
-        : "d0", "d1");
-#endif
-}
-
-static void dprint(const char * str)
-{
-    register char c;
-    while ((c = *str++) != '\0')
-    {
-        if (c == '\n')
-        {
-            dputc('\r');
-        }
-        dputc(c);
-    }
-}
-
-static char dprint_buff[4096];
-static void dprintf(const char * fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
-    dprint(dprint_buff);
-    va_end(args);
-}
-
-static void hexdump(void * ptr, size_t bytes)
-{
-    uint8_t * p = (uint8_t *)ptr;
-    for (size_t i = 0; i < bytes; i++)
-    {
-        if ((i & 0xf) == 0)
-        {
-            if (i)
-            {
-                dprintf("    ");
-                for (size_t j = i - 16; j < i; j++)
-                {
-                    int c = p[j];
-                    dprintf("%c", c >= ' ' && c <= '~' ? c : '_');
-                    // dprintf("%c", isprint(c) ? c : '_');
-                }
-                dprintf("\n");
-            }
-            dprintf("%04x: ", i);
-        }
-        else
-        {
-            dprintf(", ");
-        }
-        dprintf("%02x", p[i]);
-    }
-    dprintf("\n");
-}
-
 static void reset_video(void)
 {
     remove_intr();
 
     wait_vblank_start();
 
-    xreg_setw(VID_CTRL, 0x0008);
-    xreg_setw(COPP_CTRL, 0x0000);        // disable copper
-    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
+    xv_prep();
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x08));        // set border grey
+    xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(0));            // disable copper
+    xreg_setw(VID_LEFT, 0);
+    xreg_setw(VID_RIGHT, xosera_vid_width());
     xreg_setw(PA_GFX_CTRL, 0x0000);
     xreg_setw(PA_TILE_CTRL, 0x000F);
     xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_LEN, 80);        // line len
+    xreg_setw(PA_LINE_LEN, xosera_vid_width() / 8);        // line len
     xreg_setw(PA_H_SCROLL, 0x0000);
     xreg_setw(PA_V_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
@@ -238,18 +157,18 @@ static void reset_video(void)
 
     restore_def_colors();
 
-    printf("\033c");        // reset XANSI
+    xosera_xansi_restore();
 
     char c = 0;
-    while (checkchar())
+    while (mcCheckInput())
     {
-        c = readchar();
+        c = mcInputchar();
     }
 
 #if 1        // handy for development to force Kermit upload
     if (c == '\x1b')
     {
-        dprintf("Disabling SD on next boot...\n");
+        debug_printf("Disabling SD on next boot...\n");
         disable_sd_boot();
     }
 #endif
@@ -257,9 +176,10 @@ static void reset_video(void)
 
 _NOINLINE void delay_check(int ms)
 {
+    xv_prep();
     while (ms--)
     {
-        if (checkchar())
+        if (mcCheckInput())
         {
             break;
         }
@@ -404,6 +324,155 @@ uint32_t font[16 * 7] = {
     0xff000000         // #...
 };
 
+// clang-format off
+uint8_t fontm[2 * 8 * 16] = {
+    // 0
+    0b0011, 0b0000,        // .#..
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b0011, 0b0000,        // .#..
+    0b0000, 0b0000,        // ....
+    // 1
+    0b0011, 0b0000,        // .#..
+    0b1111, 0b0000,        // ##..
+    0b0011, 0b0000,        // .#..
+    0b0011, 0b0000,        // .#..
+    0b0011, 0b0000,        // .#..
+    0b0011, 0b0000,        // .#..
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b0000,        // ....
+    // 2
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b1100,        // ..#.
+    0b1111, 0b1100,        // ###.
+    0b1100, 0b0000,        // #...
+    0b1100, 0b0000,        // #...
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b0000,        // ....
+    // 3
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b1100,        // ..#.
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b1100,        // ..#.
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b0000,        // ....
+    // 4
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b0000,        // ....
+    // 5
+    0b1111, 0b1100,        // ###.
+    0b1100, 0b0000,        // #...
+    0b1100, 0b0000,        // #...
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b1100,        // ..#.
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b0000,        // ....
+    // 6
+    0b0011, 0b1100,        // ###.
+    0b1100, 0b0000,        // #...
+    0b1100, 0b0000,        // #...
+    0b1111, 0b1100,        // ###.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b0000,        // ....
+    // 7
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b0000,        // ....
+    // 8
+    0b1111, 0b1100,        // ###.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1111, 0b1100,        // ###.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b0000,        // ....
+    // 9
+    0b1111, 0b1100,        // ###.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b1100,        // ..#.
+    0b0000, 0b1100,        // ..#.
+    0b1111, 0b0000,        // ###.
+    0b0000, 0b0000,        // ....
+    // A
+    0b0011, 0b0000,        // .#..
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1111, 0b1100,        // ###.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b0000, 0b0000,        // ....
+    // B
+    0b1111, 0b0000,        // ##..
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1111, 0b0000,        // ##..
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1111, 0b0000,        // ##..
+    0b0000, 0b0000,        // ....
+    // C
+    0b0011, 0b1100,        // .##.
+    0b1100, 0b0000,        // #...
+    0b1100, 0b0000,        // #...
+    0b1100, 0b0000,        // #...
+    0b1100, 0b0000,        // #...
+    0b1100, 0b0000,        // #...
+    0b0011, 0b1100,        // .##.
+    0b0000, 0b0000,        // ....
+    // D
+    0b1111, 0b0000,        // ##..
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1100, 0b1100,        // #.#.
+    0b1111, 0b0000,        // ##..
+    0b0000, 0b0000,        // ....
+    // E
+    0b1111, 0b1100,        // ###.
+    0b1100, 0b0000,        // #...
+    0b1100, 0b0000,        // #...
+    0b1111, 0b1100,        // ###.
+    0b1100, 0b0000,        // #...
+    0b1100, 0b0000,        // #...
+    0b1111, 0b1100,        // ###.
+    0b0000, 0b0000,        // ....
+    // F
+    0b1111, 0b1100,        // ###.
+    0b1100, 0b0000,        // #...
+    0b1100, 0b0000,        // #...
+    0b1111, 0b0000,        // ##..
+    0b1100, 0b0000,        // #...
+    0b1100, 0b0000,        // #...
+    0b1100, 0b0000         // #...
+};
+// clang-format on
+
+#if 0
 void print_digit(uint16_t off, uint16_t ll, uint16_t dig, uint16_t color)
 {
     union lw
@@ -414,47 +483,66 @@ void print_digit(uint16_t off, uint16_t ll, uint16_t dig, uint16_t color)
 
     union lw * lwp = (union lw *)&font[dig * 7];
 
+    xv_prep();
     xm_setw(WR_INCR, 0x0001);        // set write inc
     for (uint16_t h = 0; h < 7; h++)
     {
         xm_setw(WR_ADDR, off + (h * ll));        // set write address
-        xm_setbl(SYS_CTRL, (lwp->w[0] & 0x8000 ? 0xc : 0) | (lwp->w[0] & 0x0080 ? 0x3 : 0));
+        xm_set_vram_mask((lwp->w[0] & 0x8000 ? 0xc : 0) | (lwp->w[0] & 0x0080 ? 0x3 : 0));
         xm_setw(DATA, lwp->w[0] & color);
-        xm_setbl(SYS_CTRL, (lwp->w[1] & 0x8000 ? 0xc : 0) | (lwp->w[1] & 0x0080 ? 0x3 : 0));
+        xm_set_vram_mask((lwp->w[1] & 0x8000 ? 0xc : 0) | (lwp->w[1] & 0x0080 ? 0x3 : 0));
         xm_setw(DATA, lwp->w[1] & color);
         lwp++;
     }
-    xm_setbl(SYS_CTRL, 0xf);
+    xm_set_vram_mask(0x0F);        // no VRAM write masking
 }
+#else
+void print_digit(uint16_t off, uint16_t ll, uint16_t dig, uint16_t color)
+{
+    uint8_t * lwp = &fontm[dig * (8 * 2)];
+
+    xv_prep();
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+    for (uint16_t h = 0; h < 7; h++)
+    {
+        xm_setw(WR_ADDR, off + (h * ll));        // set write address
+        xm_set_vram_mask(*lwp++);
+        xm_setw(DATA, color);        // optimization: latch upper byte
+        xm_set_vram_mask(*lwp++);
+        xm_setbl(DATA, color & 0xff);        // optimization: upper byte latched, so only write lower byte
+    }
+    xm_set_vram_mask(0x0F);        // no VRAM write masking
+}
+
+inline void print_digit_xy(volatile xmreg_t * const xosera_ptr, uint16_t x, uint16_t y, uint16_t dig, uint16_t color)
+{
+    uint8_t * lwp = &fontm[dig * (8 * 2)];
+
+    for (uint16_t h = 0; h < 7; h++)
+    {
+        xm_set_vram_mask(*lwp++);
+        xm_set_pixel_data(x << 1, y + h, color);        // optimization: latch upper byte
+        xm_set_vram_mask(*lwp++);
+        xm_setbl(DATA, (uint8_t)(color & 0xff));        // optimization: upper byte latched, so only write lower byte
+    }
+    xm_set_vram_mask(0xf);        // no VRAM write masking
+}
+
+#endif
 
 void test_colormap()
 {
-    xwait_not_vblank();
-    xwait_vblank();
-
-    xreg_setw(VID_CTRL, 0x0005);
-    xreg_setw(PA_GFX_CTRL, 0x0080);
-    xreg_setw(PB_GFX_CTRL, 0x0080);
-
-    xm_setw(WR_INCR, 0x0001);        // set write inc
-    xm_setw(WR_ADDR, 0x0000);        // set write address
-
-    for (int i = 0; i < 65536; i++)
-    {
-        xm_setw(DATA, 0x0000);
-    }
+    xv_prep();
 
     xwait_not_vblank();
     xwait_vblank();
 
     uint16_t linelen = 160;
-    uint16_t w       = 10;
-    uint16_t h       = 14;
 
-    xreg_setw(VID_CTRL, 0x0000);
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to black
     xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
     xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
-    xreg_setw(PA_GFX_CTRL, 0x0065);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
     xreg_setw(PA_TILE_CTRL, 0x0C07);
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_LINE_LEN, linelen);        // line len
@@ -463,120 +551,144 @@ void test_colormap()
     xreg_setw(PA_HV_FSCALE, 0x0000);
     xreg_setw(PB_GFX_CTRL, 0x0080);
 
+    for (uint16_t pass = 0; pass < 2; pass++)
+    {
+        xm_setw(WR_INCR, 0x0001);        // set write inc
+        xm_setw(WR_ADDR, 0x0000);        // set write address
+
+        uint16_t c = 0;
+        xm_setup_pixel_addr(0x0000, linelen, 1, 1);
+        xm_setw(PIXEL_X, 0);
+        for (uint16_t y = 0; y < 240; y += (240 / 16))
+        {
+            xm_setl(DATA, 0);
+            for (uint16_t bx = 0; bx < 10 - 1; bx++)
+            {
+                xm_setbl(DATA, 0);
+            }
+
+            for (uint16_t iy = 1; iy < 14; iy++)
+            {
+                uint32_t ic = (c << 24) | (c << 16) | (c << 8) | c;
+                xm_setw(PIXEL_Y, y + iy);
+                for (uint16_t x = 0; x < 320; x += (320 / 16))
+                {
+                    xm_setl(DATA, ic & 0xffffff);
+                    xm_setl(DATA, ic);
+                    xm_setl(DATA, ic);
+                    xm_setl(DATA, ic);
+                    xm_setl(DATA, ic & 0xffffff00);
+                    ic += 0x01010101;
+                }
+                xm_setl(DATA, 0);
+                for (uint16_t bx = 0; bx < 10 - 1; bx++)
+                {
+                    xm_setbl(DATA, 0);
+                }
+            }
+            c += 16;
+        }
+        c = 0;
+        for (uint16_t y = 4; y < 240; y += (240 / 16))
+        {
+            for (uint16_t x = 4; x < 320; x += (320 / 16))
+            {
+                uint16_t color = 0xffff;
+                if ((def_colors[c] & 0x0880) == 0x880)
+                {
+                    color = 0x0000;
+                }
+                if (pass)
+                {
+                    uint16_t dig = c >> 4;
+                    print_digit_xy(xosera_ptr, x + 2, y, dig, color);
+                    dig = c & 0xf;
+                    print_digit_xy(xosera_ptr, x + 6, y, dig, color);
+                }
+                else
+                {
+                    uint16_t dig = c / 100;
+                    if (dig)
+                    {
+                        print_digit_xy(xosera_ptr, x, y, dig, color);
+                    }
+                    uint16_t dig2 = (c / 10) % 10;
+                    if (dig || dig2)
+                    {
+                        print_digit_xy(xosera_ptr, x + 4, y, dig2, color);
+                    }
+                    dig = c % 10;
+                    print_digit_xy(xosera_ptr, x + 8, y, dig, color);
+                }
+                c++;
+            }
+        }
+
+        delay_check(DELAY_TIME * 3);
+    }
+}
+
+int main(void)
+{
+    mcBusywait(1000 * 500);        // wait a bit for terminal window/serial
+    while (mcCheckInput())         // clear any queued input
+    {
+        mcInputchar();
+    }
+
+    debug_printf("Xosera_modetest_m68k\n");
+
+    debug_printf("Checking for Xosera XANSI firmware...");
+    if (xosera_xansi_detect(true))        // check for XANSI (and disable input cursor if present)
+    {
+        debug_printf("detected.\n");
+    }
+    else
+    {
+        debug_printf(
+            "\n\nXosera XANSI firmware was not detected!\n"
+            "This program will likely trap without Xosera hardware.\n");
+    }
+
+    debug_printf("\nCalling xosera_sync()...");
+
+    xv_prep();
+    bool syncok = xosera_sync();
+    debug_printf("%s\n\n", syncok ? "succeeded" : "FAILED");
+
+    debug_printf("\nCalling xosera_init(XINIT_CONFIG_640x480)...");
+    bool success = xosera_init(XINIT_CONFIG_640x480);
+    debug_printf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
+    xosera_get_info(&initinfo);
+    xwait_not_vblank();
+    xwait_vblank();
+
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x05));        // set border to 5
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
+
     xm_setw(WR_INCR, 0x0001);        // set write inc
     xm_setw(WR_ADDR, 0x0000);        // set write address
 
-    uint16_t c = 0;
-
-    for (uint16_t y = 0; y < 16; y++)
+    for (uint16_t i = 0; i < 32768; i++)
     {
-        for (uint16_t yp = y * h; yp < ((y + 1) * h) - 2; yp++)
-        {
-            xm_setw(WR_ADDR, (linelen * (yp + 15)));
-            c = y * 16;
-            for (uint16_t x = 0; x < 16; x++)
-            {
-                for (uint16_t xp = x * w; xp < ((x + 1) * w) - 1; xp++)
-                {
-                    xm_setw(DATA, c << 8 | c);
-                }
-                xm_setw(DATA, 0x0000);
-                c++;
-            }
-        }
+        xm_setl(DATA, 0x0000);
     }
-
-    c = 0;
-    for (uint16_t y = 0; y < 16; y++)
-    {
-        for (uint16_t x = 0; x < 16; x++)
-        {
-            uint16_t col = xmem_getw_wait(XR_COLOR_A_ADDR + c);
-            uint16_t off = (linelen * (h * y + 18)) + (x * w) + 2;
-            print_digit(off, linelen, c / 100, ((col & 0x0880) == 0x880) ? 0x0000 : 0xffff);
-            off += 2;
-            print_digit(off, linelen, (c / 10) % 10, ((col & 0x0880) == 0x880) ? 0x0000 : 0xffff);
-            off += 2;
-            print_digit(off, linelen, c % 10, ((col & 0x0880) == 0x880) ? 0x0000 : 0xffff);
-            c++;
-        }
-    }
-
-    delay_check(DELAY_TIME * 3);
-
-    c = 0;
-    for (uint16_t y = 0; y < 16; y++)
-    {
-        for (uint16_t yp = y * h; yp < ((y + 1) * h) - 2; yp++)
-        {
-            xm_setw(WR_ADDR, (linelen * (yp + 15)));
-            c = y * 16;
-            for (uint16_t x = 0; x < 16; x++)
-            {
-                for (uint16_t xp = x * w; xp < ((x + 1) * w) - 1; xp++)
-                {
-                    xm_setw(DATA, c << 8 | c);
-                }
-                xm_setw(DATA, 0x0000);
-                c++;
-            }
-        }
-    }
-
-    c = 0;
-    for (uint16_t y = 0; y < 16; y++)
-    {
-        for (uint16_t x = 0; x < 16; x++)
-        {
-            uint16_t col = xmem_getw_wait(XR_COLOR_A_ADDR + c);
-            uint16_t off = (linelen * (h * y + 18)) + (x * w) + 3;
-            print_digit(off, linelen, c / 16, ((col & 0x0880) == 0x880) ? 0x0000 : 0xffff);
-            off += 2;
-            print_digit(off, linelen, c & 0xf, ((col & 0x0880) == 0x880) ? 0x0000 : 0xffff);
-            c++;
-        }
-    }
-
-    delay_check(DELAY_TIME * 3);
-}
-
-void xosera_modetest(void)
-{
-    printf("\033c\033[?25l");        // ANSI reset, disable input cursor
-
-    dprintf("Xosera_modetest_m68k\n");
-
-    cpu_delay(3000);
-
-    while (checkchar())        // clear any queued input
-    {
-        readchar();
-    }
-
-    dprintf("\nCalling xosera_sync()...");
-    bool syncok = xosera_sync();
-    dprintf("%s\n\n", syncok ? "succeeded" : "FAILED");
-
-    dprintf("\nCalling xosera_init(XINIT_CONFIG_640x480)...");
-    bool success = xosera_init(XINIT_CONFIG_640x480);
-    dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
     cpu_delay(1000);
-    xosera_get_info(&initinfo);
-    dprintf("xosera_get_info details:\n");
-    xv_prep();
+    debug_printf("xosera_get_info details:\n");
     xmem_getw_next_addr(XR_COPPER_ADDR);
 
-    dprintf("\n");
-    dprintf("Description : \"%s\"\n", initinfo.description_str);
-    dprintf("Version BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
-    dprintf("Git hash    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
+    debug_printf("\n");
+    debug_printf("Description : \"%s\"\n", initinfo.description_str);
+    debug_printf("Version BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
+    debug_printf("Git hash    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
 
     cpu_delay(1000);
 
-    dprintf("\nBegin...\n");
+    debug_printf("\nBegin...\n");
 
-    while (!checkchar())
+    while (!mcCheckInput())
     {
         wait_vblank_start();
 

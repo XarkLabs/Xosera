@@ -23,51 +23,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <basicio.h>
-#include <machine.h>
-#include <sdfat.h>
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
 
-#include "xosera_m68k_api.h"
-
-bool use_sd;
+#include "rosco_m68k_support.h"
 
 uint16_t mem_buffer[256];
-
-static void dputc(char c)
-{
-#ifndef __INTELLISENSE__
-    __asm__ __volatile__(
-        "move.w %[chr],%%d0\n"
-        "move.l #2,%%d1\n"        // SENDCHAR
-        "trap   #14\n"
-        :
-        : [chr] "d"(c)
-        : "d0", "d1");
-#endif
-}
-
-static void dprint(const char * str)
-{
-    register char c;
-    while ((c = *str++) != '\0')
-    {
-        if (c == '\n')
-        {
-            dputc('\r');
-        }
-        dputc(c);
-    }
-}
-
-static char dprint_buff[4096];
-static void dprintf(const char * fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
-    dprint(dprint_buff);
-    va_end(args);
-}
 
 void wait_vblank_start()
 {
@@ -81,8 +42,8 @@ static bool load_sd_bitmap(const char * filename, uint16_t base_address)
 {
     xv_prep();
 
-    dprintf("Loading bitmap: \"%s\"", filename);
-    void * file = fl_fopen(filename, "r");
+    debug_printf("Loading bitmap: \"%s\"", filename);
+    FILE * file = fopen(filename, "r");
 
     if (file != NULL)
     {
@@ -91,11 +52,11 @@ static bool load_sd_bitmap(const char * filename, uint16_t base_address)
 
         xm_setw(WR_INCR, 0x0001);        // needed to be set
 
-        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
+        while ((cnt = fread(mem_buffer, 1, 512, file)) > 0)
         {
             if ((vaddr & 0xFFF) == 0)
             {
-                dprintf(".");
+                debug_printf(".");
             }
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
@@ -107,13 +68,13 @@ static bool load_sd_bitmap(const char * filename, uint16_t base_address)
             vaddr += (cnt >> 1);
         }
 
-        fl_fclose(file);
-        dprintf("done!\n");
+        fclose(file);
+        debug_printf("done!\n");
         return true;
     }
     else
     {
-        dprintf(" - FAILED\n");
+        debug_printf(" - FAILED\n");
         return false;
     }
 }
@@ -122,19 +83,19 @@ static bool load_sd_colors(const char * filename)
 {
     xv_prep();
 
-    dprintf("Loading colormap: \"%s\"", filename);
-    void * file = fl_fopen(filename, "r");
+    debug_printf("Loading colormap: \"%s\"", filename);
+    FILE * file = fopen(filename, "r");
 
     if (file != NULL)
     {
         int cnt   = 0;
         int vaddr = 0;
 
-        while ((cnt = fl_fread(mem_buffer, 1, 512, file)) > 0)
+        while ((cnt = fread(mem_buffer, 1, 512, file)) > 0)
         {
             if ((vaddr & 0x7) == 0)
             {
-                dprintf(".");
+                debug_printf(".");
             }
 
             uint16_t * maddr = (uint16_t *)mem_buffer;
@@ -146,13 +107,13 @@ static bool load_sd_colors(const char * filename)
             vaddr += (cnt >> 1);
         }
 
-        fl_fclose(file);
-        dprintf("done!\n");
+        fclose(file);
+        debug_printf("done!\n");
         return true;
     }
     else
     {
-        dprintf(" - FAILED\n");
+        debug_printf(" - FAILED\n");
         return false;
     }
 }
@@ -357,7 +318,7 @@ void line_test_orig()
     }
 
     uint16_t elapsed_time = xm_getw(TIMER) - start_time;
-    dprintf("line_test original  (%3u.%1ums)\n", elapsed_time / 10, elapsed_time % 10);
+    debug_printf("line_test original  (%3u.%1ums)\n", elapsed_time / 10, elapsed_time % 10);
 }
 
 
@@ -386,7 +347,7 @@ void line_test()
     }
 
     uint16_t elapsed_time = xm_getw(TIMER) - start_time;
-    dprintf("line_test optimized (%3u.%1ums)\n", elapsed_time / 10, elapsed_time % 10);
+    debug_printf("line_test optimized (%3u.%1ums)\n", elapsed_time / 10, elapsed_time % 10);
 }
 
 // pointer sprite
@@ -428,26 +389,32 @@ uint16_t eks[256] = {
 // clang-format on
 
 uint32_t test_count;
-void     xosera_pointer_test()
+
+int main()
 {
+    mcBusywait(1000 * 500);        // wait a bit for terminal window/serial
+    while (mcCheckInput())         // clear any queued input
+    {
+        mcInputchar();
+    }
     xv_prep();
 
-    dprintf("pointer_test_m68k\n");
+    debug_printf("pointer_test_m68k\n");
 
-    dprintf("Checking for Xosera XANSI firmware...");
+    debug_printf("Checking for Xosera XANSI firmware...");
     if (xosera_xansi_detect(true))        // check for XANSI (and disable input cursor if present)
     {
-        dprintf("detected.\n");
+        debug_printf("detected.\n");
     }
     else
     {
-        dprintf(
+        debug_printf(
             "\n\nXosera XANSI firmware was not detected!\n"
             "This program will likely trap without Xosera hardware.\n");
     }
-    dprintf("Calling xosera_init(XINIT_CONFIG_640x480)...");
+    debug_printf("Calling xosera_init(XINIT_CONFIG_640x480)...");
     bool success = xosera_init(XINIT_CONFIG_640x480);
-    dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
+    debug_printf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
     uint8_t  feature   = xm_getbh(FEATURE);
     uint16_t monwidth  = xosera_vid_width();
@@ -461,50 +428,26 @@ void     xosera_pointer_test()
     uint16_t vscroll  = xreg_getw(PA_V_SCROLL);
     uint16_t hvfscale = xreg_getw(PA_HV_FSCALE);
 
-    dprintf("Xosera - FEATURE: 0x%04x\n", feature);
-    dprintf("Monitor Mode: %dx%d\n", monwidth, monheight);
-    dprintf("\nPlayfield A:\n");
-    dprintf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
-    dprintf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
-    dprintf("PA_H_SCROLL : 0x%04x  PA_V_SCROLL : 0x%04x\n", hscroll, vscroll);
-    dprintf("PA_HV_FSCALE: 0x%04x\n", hvfscale);
-
-    if (SD_check_support())
-    {
-        dprintf("SD card supported: ");
-
-        if (SD_FAT_initialize())
-        {
-            dprintf("SD card ready\n");
-            use_sd = true;
-        }
-        else
-        {
-            dprintf("no SD card\n");
-            use_sd = false;
-        }
-    }
-    else
-    {
-        dprintf("No SD card support.\n");
-    }
-
-    if (!use_sd)
-    {
-        dprintf("No SD support. Cannot continue\n");
-        return;
-    }
+    debug_printf("Xosera - FEATURE: 0x%04x\n", feature);
+    debug_printf("Monitor Mode: %dx%d\n", monwidth, monheight);
+    debug_printf("\nPlayfield A:\n");
+    debug_printf("PA_GFX_CTRL : 0x%04x  PA_TILE_CTRL: 0x%04x\n", gfxctrl, tilectrl);
+    debug_printf("PA_DISP_ADDR: 0x%04x  PA_LINE_LEN : 0x%04x\n", dispaddr, linelen);
+    debug_printf("PA_H_SCROLL : 0x%04x  PA_V_SCROLL : 0x%04x\n", hscroll, vscroll);
+    debug_printf("PA_HV_FSCALE: 0x%04x\n", hvfscale);
 
     // load palette, and images into vram
-    dprintf("Loading data...\n");
-    if (!load_sd_colors("/pacbox-320x240_pal.raw"))
+    debug_printf("Loading data...\n");
+    if (!load_sd_colors("/sd/pacbox-320x240_pal.raw"))
     {
-        return;
+        debug_printf("Can't load pacbox colors\n");
+        return EXIT_FAILURE;
     }
 
-    if (!load_sd_bitmap("/pacbox-320x240.raw", 0))
+    if (!load_sd_bitmap("/sd/pacbox-320x240.raw", 0))
     {
-        return;
+        debug_printf("Can't load pacbox data\n");
+        return EXIT_FAILURE;
     }
 
 #if 1
@@ -562,23 +505,23 @@ void     xosera_pointer_test()
     xm_setw(PIXEL_Y, 320 / 4);        // words per line
     xm_setbh(SYS_CTRL, 0x00);         // set PIXEL_BASE and PIXEL_WIDTH for 4-bpp
 
-    dprintf("\nLine benchmark:\n");
+    debug_printf("\nLine benchmark:\n");
     line_test_orig();
     cpu_delay(3000);
     line_test();
 
-    dprintf("\n\nFor cheesy painting:\n\n");
-    dprintf("    A / Z  move pointer up / down\n");
-    dprintf("    , / .  move pointer left / right\n");
-    dprintf("    SPACE  cycles color\n");
-    dprintf("    r      resets to center\n");
-    dprintf("    ESC    exit (or Kermit)\n");
+    debug_printf("\n\nFor cheesy painting:\n\n");
+    debug_printf("    A / Z  move pointer up / down\n");
+    debug_printf("    , / .  move pointer left / right\n");
+    debug_printf("    SPACE  cycles color\n");
+    debug_printf("    r      resets to center\n");
+    debug_printf("    ESC    exit (or Kermit)\n");
 
     while (!done)
     {
-        if (checkchar())
+        if (mcCheckInput())
         {
-            char c = readchar();
+            char c = mcInputchar();
 
             if (c == 'r')
             {
@@ -618,4 +561,6 @@ void     xosera_pointer_test()
 
     xosera_set_pointer(-32, 0, 0xF000);        // hide pointer
     xosera_xansi_restore();
+
+    return EXIT_SUCCESS;
 }

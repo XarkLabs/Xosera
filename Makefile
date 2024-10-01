@@ -3,13 +3,10 @@
 #
 ICEPROG := iceprog
 
-# if XOSERA_M68K_API not set, assume it is from this tree
-ifndef XOSERA_M68K_API
-XOSERA_M68K_API:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))/xosera_m68k_api
-endif
+# if XOSERA_EXTRA not set, assume it is from this tree
+XOSERA_EXTRA?=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))/xosera_m68k_extra
 
 # Build all project targets
-# NOTE: Xosera DVI PMOD not officially supported yet (image stability issues)
 info:
 	@echo "NOTE: Requires YosysHQ tools."
 	@echo "      (e.g. https://github.com/YosysHQ/oss-cad-suite-build/releases/latest)"
@@ -22,14 +19,14 @@ info:
 	@echo "   make all             - build everything (RTL, simulation, uitls and host_spi)"
 	@echo "   make xosera_vga      - build Xosera VGA Rosco_m68k board firmware"
 	@echo "   make xosera_vga_640  - build Xosera VGA 640x480 only Rosco_m68k board firmware"
-#	@echo "   make xosera_dvi      - build Xosera DVI Rosco_m68k board firmware"
+	@echo "   make xosera_dvi      - build Xosera DVI Rosco_m68k board firmware"
 	@echo "   make xosera_vga_prog - build & program Xosera VGA Rosco_m68k board firmware"
 	@echo "   make xosera_vga_640_prog - build Xosera VGA 640x480 only Rosco_m68k board firmware"
-#	@echo "   make xosera_dvi_prog - build & program Xosera DVI Rosco_m68k board firmware"
+	@echo "   make xosera_dvi_prog - build & program Xosera DVI Rosco_m68k board firmware"
 	@echo "   make upduino         - build Xosera for UPduino v3 (see rtl/upduino.mk for options)"
 	@echo "   make upd_prog        - build Xosera and program UPduino v3"
 	@echo "   make iceb_vga        - build Xosera for iCEBreaker for VGA"
-	@echo "   make iceb_dvi         - build Xosera for iCEBreaker for DVI"
+	@echo "   make iceb_dvi        - build Xosera for iCEBreaker for DVI"
 	@echo "   make rtl             - build UPduino, iCEBreaker bitstreams and simulation targets"
 	@echo "   make sim             - build Icarus Verilog and Verilalator simulation files"
 	@echo "   make isim            - build Icarus Verilog simulation files"
@@ -140,18 +137,40 @@ m68k:
 	cd copper/CopAsm && $(MAKE)
 	cd xosera_m68k_api && $(MAKE)
 	cd xosera_ansiterm_m68k && $(MAKE)
-	cd xosera_audiostream_m68k && $(MAKE)
+#	cd xosera_audiostream_m68k && $(MAKE)
 	cd xosera_boing_m68k && $(MAKE)
 	cd xosera_font_m68k && $(MAKE)
+	cd xosera_modetest_m68k && $(MAKE)
+	cd xosera_modplay_m68k && $(MAKE)
 	cd xosera_mon_m68k && $(MAKE)
 	cd xosera_pointer_m68k && $(MAKE)
+	cd xosera_rectangle_m68k && $(MAKE)
 	cd xosera_test_m68k && $(MAKE)
 	cd xosera_uart_m68k && $(MAKE)
 	cd xosera_vramtest_m68k && $(MAKE)
-	cd xosera_modplay_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE)
-	cd copper/copper_test_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE)
-	cd copper/crop_test_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE)
-	cd copper/splitscreen_test_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE)
+	cd copper/copper_test_m68k && $(MAKE)
+	cd copper/crop_test_m68k && $(MAKE)
+	cd copper/splitscreen_test_m68k && $(MAKE)
+
+# Clean m68k tests and demos
+m68kclean:
+	cd copper/CopAsm && $(MAKE) clean
+	cd xosera_m68k_api && $(MAKE) clean
+	cd xosera_ansiterm_m68k/ && $(MAKE) clean
+#	cd xosera_audiostream_m68k && $(MAKE) clean
+	cd xosera_boing_m68k && $(MAKE) clean
+	cd xosera_font_m68k && $(MAKE) clean
+	cd xosera_modetest_m68k && $(MAKE) clean
+	cd xosera_modplay_m68k && $(MAKE) clean
+	cd xosera_mon_m68k && $(MAKE) clean
+	cd xosera_pointer_m68k && $(MAKE) clean
+	cd xosera_rectangle_m68k && $(MAKE) clean
+	cd xosera_test_m68k && $(MAKE) clean
+	cd xosera_uart_m68k && $(MAKE) clean
+	cd xosera_vramtest_m68k && $(MAKE) clean
+	cd copper/copper_test_m68k $(MAKE) clean
+	cd copper/crop_test_m68k && $(MAKE) clean
+	cd copper/splitscreen_test_m68k && $(MAKE) clean
 
 # Build host SPI test utility
 host_spi:
@@ -195,27 +214,9 @@ golden_dvi:
 
 # Clean all project targets
 clean: m68kclean
-	cd copper/CopAsm/ && $(MAKE) clean
 	cd rtl && $(MAKE) clean
 	cd utils && $(MAKE) clean
 	cd host_spi && $(MAKE) clean
 	cd xvid_spi && $(MAKE) clean
-
-# Clean m68k tests and demos
-m68kclean:
-	cd xosera_m68k_api && $(MAKE) clean
-	cd xosera_ansiterm_m68k/ && $(MAKE) clean
-	cd xosera_audiostream_m68k && $(MAKE) clean
-	cd xosera_boing_m68k && $(MAKE) clean
-	cd xosera_font_m68k && $(MAKE) clean
-	cd xosera_mon_m68k && $(MAKE) clean
-	cd xosera_test_m68k && $(MAKE) clean
-	cd xosera_uart_m68k && $(MAKE) clean
-	cd xosera_vramtest_m68k && $(MAKE) clean
-	cd xosera_pointer_m68k $(MAKE) clean
-	cd xosera_modplay_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE) clean
-	cd copper/copper_test_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE) clean
-	cd copper/crop_test_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE) clean
-	cd copper/splitscreen_test_m68k && XOSERA_M68K_API=$(XOSERA_M68K_API) $(MAKE) clean
 
 .PHONY: all upduino upd upd_prog icebreaker iceb iceb_prog rtl sim isim irun vsim vrun utils m68k host_spi xvid_spi clean m68kclean

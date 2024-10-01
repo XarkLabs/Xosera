@@ -23,48 +23,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <basicio.h>
-#include <machine.h>
 
-#include "xosera_m68k_api.h"
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
 
-// rosco_m68k support
-
-static void dputc(char c)
-{
-    __asm__ __volatile__(
-        "move.w %[chr],%%d0\n"
-        "move.l #2,%%d1\n"        // SENDCHAR
-        "trap   #14\n"
-        :
-        : [chr] "d"(c)
-        : "d0", "d1");
-}
-
-static void dprint(const char * str)
-{
-    register char c;
-    while ((c = *str++) != '\0')
-    {
-        if (c == '\n')
-        {
-            dputc('\r');
-        }
-        dputc(c);
-    }
-}
-
-static char dprint_buff[4096];
-static void dprintf(const char * fmt, ...) __attribute__((__format__(__printf__, 1, 2)));
-static void dprintf(const char * fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
-    dprint(dprint_buff);
-    va_end(args);
-}
-
+#include "rosco_m68k_support.h"
 // xosera support
 
 xosera_info_t initinfo;
@@ -76,8 +39,8 @@ static void reset_vid(void)
     xwait_not_vblank();
     xwait_vblank();
 
-    xreg_setw(VID_CTRL, 0x0008);
-    xreg_setw(COPP_CTRL, 0x0000);
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x08));        // set border to grey
+    xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(0));
     xreg_setw(AUD_CTRL, 0x0000);
     xreg_setw(VID_LEFT, 0);
     xreg_setw(VID_RIGHT, xosera_vid_width());
@@ -102,9 +65,9 @@ static void reset_vid(void)
 
     printf("\033c");        // reset XANSI
 
-    while (checkinput())
+    while (mcCheckInput())
     {
-        readchar();
+        mcInputchar();
     }
 }
 
@@ -114,7 +77,7 @@ _NOINLINE bool delay_check(int ms)
 
     do
     {
-        if (checkinput())
+        if (mcCheckInput())
         {
             return true;
         }
@@ -154,7 +117,7 @@ void fill_rect_8bpp(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c)
     uint16_t mod = (SCREEN_WIDTH / PIXELS_8_BPP) - ww;        // destination bitmap modulo
     uint16_t mask =
         ((x & 1) ? 0x3000 : 0xF000) | (((x + w) & 1) ? 0x0C00 : 0x0F00);        // fw mask even/odd | lw mask even/odd
-    //    dprintf(">> va=0x%04x, ww=%d, fw[%d] lw[%d] mask=%04x\n", va, ww, x & 1, (x + w) & 1, mask);
+    //    debug_printf(">> va=0x%04x, ww=%d, fw[%d] lw[%d] mask=%04x\n", va, ww, x & 1, (x + w) & 1, mask);
 
     xv_prep();
     xwait_blit_ready();                                      // wait until blit queue empty
@@ -184,7 +147,7 @@ void fill_rect_4bpp(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c)
     uint16_t ww   = ((w + (x & 3) + 3)) / PIXELS_4_BPP;        // round up width to words, +1 if not word aligned
     uint16_t mod  = (SCREEN_WIDTH / PIXELS_4_BPP) - ww;        // destination bitmap modulo
     uint16_t mask = (fw_mask[x & 3] | lw_mask[(x + w) & 3]) << 8;        // fw mask & lw mask
-    //    dprintf(">> va=0x%04x, ww=%d, fw[%d] lw[%d] mask=%04x\n", va, ww, x & 3, (x + w) & 3, mask);
+    //    debug_printf(">> va=0x%04x, ww=%d, fw[%d] lw[%d] mask=%04x\n", va, ww, x & 3, (x + w) & 3, mask);
 
     xv_prep();
     xwait_blit_ready();                                      // wait until blit queue empty
@@ -222,31 +185,36 @@ inline static uint16_t get_rand()
     return rand();
 }
 
-void xosera_rectangle()
+int main()
 {
+    mcBusywait(1000 * 500);        // wait a bit for terminal window/serial
+    while (mcCheckInput())         // clear any queued input
+    {
+        mcInputchar();
+    }
     xv_prep();
 
-    dprintf("Xosera_rectangle_m68k\n");
+    debug_printf("Xosera_rectangle_m68k\n");
 
-    dprintf("Checking for Xosera XANSI firmware...");
+    debug_printf("Checking for Xosera XANSI firmware...");
     if (xosera_xansi_detect(true))        // check for XANSI (and disable input cursor if present)
     {
-        dprintf("detected.\n");
+        debug_printf("detected.\n");
     }
     else
     {
-        dprintf(
+        debug_printf(
             "\n\nXosera XANSI firmware was not detected!\n"
             "This program will likely trap without Xosera hardware.\n");
     }
 
-    dprintf("Calling xosera_init(XINIT_CONFIG_640x480)...");
+    debug_printf("Calling xosera_init(XINIT_CONFIG_640x480)...");
     bool success = xosera_init(XINIT_CONFIG_640x480);
-    dprintf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
+    debug_printf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
     if (!success)
     {
-        dprintf("Exiting without Xosera init.\n");
+        debug_printf("Exiting without Xosera init.\n");
         exit(1);
     }
 
@@ -255,7 +223,7 @@ void xosera_rectangle()
     // hide mode switch
     xwait_not_vblank();
     xwait_vblank();
-
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
     xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
     xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x0C00, 0, 0, 8));
     xreg_setw(PA_DISP_ADDR, SCREEN_ADDR);
@@ -264,34 +232,25 @@ void xosera_rectangle()
     xreg_setw(PA_V_SCROLL, MAKE_V_SCROLL(0, 0));
     xreg_setw(PA_HV_FSCALE, MAKE_HV_FSCALE(HV_FSCALE_OFF, HV_FSCALE_OFF));
 
-    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
-
     blit_fill(SCREEN_ADDR, SCREEN_WIDTH * SCREEN_HEIGHT / PIXELS_8_BPP, 0x0000);
 
     uint16_t c = 1;
     for (int s = 0; s < (SCREEN_WIDTH - RECT_SIZE); s += 3)
     {
         fill_rect_8bpp(s, s, 13, 8, (c << 8) | c);
-        c = (c + 1) & 0xf;
+        c = (c + 1) & 0xff;
         if (c == 0)
             c = 1;
     }
 
-    dprintf("(Done with 8 bpp diagonal rects, Press a key)\n");
-    readchar();
+    debug_printf("(Done with 8 bpp diagonal rects, Press a key)\n");
+    mcInputchar();
 
     // hide mode switch
     xwait_not_vblank();
     xwait_vblank();
-
     xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_4_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
-    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x0C00, 0, 0, 8));
-    xreg_setw(PA_DISP_ADDR, SCREEN_ADDR);
     xreg_setw(PA_LINE_LEN, SCREEN_WIDTH / PIXELS_4_BPP);
-    xreg_setw(PA_H_SCROLL, MAKE_H_SCROLL(0));
-    xreg_setw(PA_V_SCROLL, MAKE_V_SCROLL(0, 0));
-    xreg_setw(PA_HV_FSCALE, MAKE_HV_FSCALE(HV_FSCALE_OFF, HV_FSCALE_OFF));
-
     blit_fill(SCREEN_ADDR, SCREEN_WIDTH * SCREEN_HEIGHT / PIXELS_4_BPP, 0x0000);
 
     for (int s = 0; s < (SCREEN_WIDTH - RECT_SIZE); s += 3)
@@ -302,13 +261,43 @@ void xosera_rectangle()
             c = 1;
     }
 
-    dprintf("(Done with 4 bpp diagonal rects, Press a key)\n");
-    readchar();
+    debug_printf("(Done with 4 bpp diagonal rects, Press a key)\n");
+    mcInputchar();
 
+    xwait_not_vblank();
+    xwait_vblank();
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
+    xreg_setw(PA_LINE_LEN, SCREEN_WIDTH / PIXELS_8_BPP);
+    blit_fill(SCREEN_ADDR, SCREEN_WIDTH * SCREEN_HEIGHT / PIXELS_8_BPP, 0x0000);
+
+    {
+        uint16_t w = SCREEN_WIDTH;
+        uint16_t h = SCREEN_HEIGHT;
+        c          = 1;
+        while (h)
+        {
+            fill_rect_8bpp((SCREEN_WIDTH - w) / 2, (SCREEN_HEIGHT - h) / 2, w, h, (c << 8) | c);
+            c = (c + 1) & 0xff;
+            if (c == 0)
+                c = 1;
+            w -= 2;
+            h -= 2;
+        }
+        xwait_not_vblank();
+        xwait_vblank();
+        // make sure completed frame shown
+        xwait_not_vblank();
+        xwait_vblank();
+    }
+    debug_printf("(Done with 8 bpp nested rects, Press a key)\n");
+    mcInputchar();
+
+    xwait_not_vblank();
+    xwait_vblank();
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_4_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
+    xreg_setw(PA_LINE_LEN, SCREEN_WIDTH / PIXELS_4_BPP);
     blit_fill(SCREEN_ADDR, SCREEN_WIDTH * SCREEN_HEIGHT / PIXELS_4_BPP, 0x0000);
 
-
-    for (int r = 0; r < 100; r++)
     {
         uint16_t w = SCREEN_WIDTH;
         uint16_t h = SCREEN_HEIGHT;
@@ -328,37 +317,73 @@ void xosera_rectangle()
         xwait_not_vblank();
         xwait_vblank();
     }
-    dprintf("(Done with 4 bpp nested rects, Press a key)\n");
-    readchar();
+    debug_printf("(Done with 4 bpp nested rects, Press a key)\n");
+    mcInputchar();
 
-    blit_fill(SCREEN_ADDR, SCREEN_WIDTH * SCREEN_HEIGHT / PIXELS_4_BPP, 0x0000);
+    xwait_not_vblank();
+    xwait_vblank();
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
+    xreg_setw(PA_LINE_LEN, SCREEN_WIDTH / PIXELS_8_BPP);
+    blit_fill(SCREEN_ADDR, SCREEN_WIDTH * SCREEN_HEIGHT / PIXELS_8_BPP, 0x0000);
 
-    srand(xm_getw(TIMER));
+    srand(xm_getw(TIMER)|2);
 
-    uint16_t x;
-    uint16_t y;
-    uint16_t w;
-    uint16_t h;
-    for (int r = 0; r < 10000; r++)
     {
-        c = get_rand() & 0xf;
-        x = get_rand() & 0x3ff;
-        y = get_rand() & 0x1ff;
-        w = get_rand() & 0x03f;
-        h = get_rand() & 0x03f;
-
-        fill_rect_4bpp(x, y, w, h, (c << 12) | (c << 8) | (c << 4) | c);
-        if ((get_rand() & 0xf000) == 0x0000)
+        uint16_t x;
+        uint16_t y;
+        uint16_t w;
+        uint16_t h;
+        for (int r = 0; r < 1000; r++)
         {
-            srand(xm_getw(TIMER));
-            get_rand();
+            c = get_rand() & 0xff;
+            x = get_rand() & 0x3ff;
+            y = get_rand() & 0x1ff;
+            w = get_rand() & 0x03f;
+            h = get_rand() & 0x03f;
+
+            fill_rect_8bpp(x, y, w, h, (c << 8) | c);
+            if ((get_rand() & 0xf000) == 0x0000)
+            {
+                srand(xm_getw(TIMER)|1);
+                get_rand();
+            }
         }
     }
 
-    dprintf("(Done with 4 bpp random rects, Press a key)\n");
-    readchar();
+    debug_printf("(Done with 8 bpp random rects, Press a key)\n");
+    mcInputchar();
 
-    dprintf("Exiting normally.\n");
+    xwait_not_vblank();
+    xwait_vblank();
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_4_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
+    xreg_setw(PA_LINE_LEN, SCREEN_WIDTH / PIXELS_4_BPP);
+    blit_fill(SCREEN_ADDR, SCREEN_WIDTH * SCREEN_HEIGHT / PIXELS_4_BPP, 0x0000);
+    {
+        uint16_t x;
+        uint16_t y;
+        uint16_t w;
+        uint16_t h;
+        for (int r = 0; r < 1000; r++)
+        {
+            c = get_rand() & 0xf;
+            x = get_rand() & 0x3ff;
+            y = get_rand() & 0x1ff;
+            w = get_rand() & 0x03f;
+            h = get_rand() & 0x03f;
+
+            fill_rect_4bpp(x, y, w, h, (c << 12) | (c << 8) | (c << 4) | c);
+            if ((get_rand() & 0xf000) == 0x0000)
+            {
+                srand(xm_getw(TIMER)|1);
+                get_rand();
+            }
+        }
+    }
+
+    debug_printf("(Done with 4 bpp random rects, Press a key)\n");
+    mcInputchar();
+
+    debug_printf("Exiting normally.\n");
 
     // exit test
     reset_vid();

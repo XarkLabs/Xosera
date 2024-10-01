@@ -4,10 +4,13 @@
 # Copyright (c) 2022 Thomas Jager
 # MIT LICENSE
 
-# location of xosera_m68k_api
-XOSERA_M68K_API?=../xosera_m68k_api
+# location of xosera_m68k_extra
+XOSERA_EXTRA?=../xosera_m68k_extra
 
-# use generic common make rules for Xosera + rosco_m68k build
-include $(XOSERA_M68K_API)/common_xosera_m68k.mk
+EXTRA_LIBS+=-lm
+EXTRA_CFLAGS+=-Os
 
 all: $(BINARY) $(DISASM)
+
+# use generic common make rules for Xosera + rosco_m68k build
+include $(XOSERA_EXTRA)/common_xosera.mk

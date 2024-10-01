@@ -23,12 +23,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <basicio.h>
-#include <machine.h>
-#include <sdfat.h>
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
 
-
-#include "xosera_m68k_api.h"
+#include "rosco_m68k_support.h"
 
 const char blurb[] =
     "\n"
@@ -61,26 +59,18 @@ const char blurb[] =
     "\n"
     "\n";
 
-static void msg(char * msg)
-{
-    char * s = msg;
-    char   c;
-    while ((c = *s++) != '\0')
-    {
-        sendchar(c);
-    }
-    sendchar('\r');
-    sendchar('\n');
-}
-
-void xosera_uart_test()
+int main()
 {
     xv_prep();
 
     printf("\033c\033[?25l");        // ANSI reset, disable input cursor
 
-    msg("copper crop_test - set Xosera to 640x480");
-    msg("");
+    uint16_t feature = xm_getw(FEATURE);
+
+    if (!(feature & FEATURE_UART_F))
+    {
+        printf("WARNING: UART feature appears not present.\n\n");
+    }
 
     const char * bp = blurb;
 
@@ -89,7 +79,7 @@ void xosera_uart_test()
         if (xuart_is_get_ready())
         {
             uint8_t c = xuart_get_byte();
-            sendchar(c);        // echo to rosco UART
+            debug_putc(c);        // echo to rosco UART
         }
         if (xuart_is_send_ready())
         {

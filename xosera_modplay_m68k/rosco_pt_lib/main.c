@@ -1,10 +1,15 @@
-#include "pt_mod.h"
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 
+#include "pt_mod.h"
+
 #ifdef ROSCO_M68K
-#include "dprintf.h"
+
+#include "rosco_m68k_support.h"
 #else
-#define dprintf(...) printf(__VA_ARGS__)
+#define debug_printf printf(__VA_ARGS__))
 #include "outback.h"
 #include "syndicate.h"
 #include "xenon2.h"
@@ -14,43 +19,43 @@
 
 int print_mod(PtMod * mod)
 {
-    dprintf("Song name        : %s\n", mod->song_name);
-    dprintf(
+    debug_printf("Song name        : %s\n", mod->song_name);
+    debug_printf(
         "Signature        : %c%c%c%c\n", mod->signature[0], mod->signature[1], mod->signature[2], mod->signature[3]);
 
     for (int i = 0; i < 31; i++)
     {
-        dprintf("       Sample %02d : %-22s [L: %5d, V: %03d, FT: %03d]\n",
-                i + 1,
-                mod->samples[i].sample_name,
-                BE2(mod->samples[i].sample_length) * 2,
-                mod->samples[i].volume,
-                mod->samples[i].finetune);
+        debug_printf("       Sample %02d : %-22s [L: %5d, V: %03d, FT: %03d]\n",
+                     i + 1,
+                     mod->samples[i].sample_name,
+                     BE2(mod->samples[i].sample_length) * 2,
+                     mod->samples[i].volume,
+                     mod->samples[i].finetune);
     }
 
     uint8_t pattern_count = PtPatternCount(mod);
-    dprintf("Pattern count    : %d\n", pattern_count);
-    dprintf("Song length      : %d\n", mod->song_length);
-    dprintf("Song layout      : [");
+    debug_printf("Pattern count    : %d\n", pattern_count);
+    debug_printf("Song length      : %d\n", mod->song_length);
+    debug_printf("Song layout      : [");
     for (int i = 0; i < mod->song_length; i++)
     {
-        dprintf("%02d, ", mod->positions[i]);
+        debug_printf("%02d, ", mod->positions[i]);
         if (i > 0 && i % 20 == 0)
         {
-            dprintf("\n                    ");
+            debug_printf("\n                    ");
         }
     }
-    dprintf("]\n\n");
+    debug_printf("]\n\n");
 
 #ifdef PRINT_PATTERN_0
     PtPattern * patterns = (PtPattern *)(mod + 1);
     PtPattern * pattern  = &patterns[0];
 
-    dprintf("Display pattern 0:\n");
+    debug_printf("Display pattern 0:\n");
 
     for (int i = 0; i < 64; i++)
     {
-        dprintf(
+        debug_printf(
             "#%03d: C:1 S:%03d N:%3s P:%03d E:%03x    C:2 S:%03d N:%3s P:%03d E:%03x    C:3 S:%03d N:%3s P:%03d E:%03x "
             "   C:4 S:%03d N:%3s P:%03d E:%03x\n",
             i,

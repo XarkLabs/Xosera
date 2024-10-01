@@ -7,7 +7,7 @@
                 .listcond false
                 .macname false
                 .list    false
-#include "xosera_m68k_defs.h"
+#include "xosera_defs.h"
                 .list    true
 #include "xosera_boing_defs.h"
 

@@ -52,25 +52,23 @@
             "name": "rosco_m68k",
             "includePath": [
                 "${default}",
-                "${env:ROSCO_M68K_DIR}/code/software/libs/build/include",
+                "/opt/homebrew/Cellar/rosco-m68k-toolchain@13/HEAD-a8b33fe/m68k-elf-rosco/include/",
                 "${workspaceFolder}/**"
             ],
             "defines": [
                 "ROSCO_M68K"
             ],
             "macFrameworkPath": [],
-            "compilerPath": "${env:ROSCO_M68K_CC}/m68k-elf-gcc",
-            "cStandard": "gnu99",
+            "compilerPath": "${env:ROSCO_M68K_CC}/m68k-elf-rosco-gcc",
+            "cStandard": "gnu17",
             "cppStandard": "gnu++17",
-            "intelliSenseMode": "macos-gcc-arm64",
+            "intelliSenseMode": "macos-gcc-arm",
             "compilerArgs": [
                 "-std=gnu99",
                 "-Wall",
                 "-Wextra",
                 "-pedantic",
-                "-Wno-unused-function",
-                "-I${env:ROSCO_M68K_DIR}/code/software/libs/build/include",
-                "-I${workspaceFolder}/xosera_m68k_api"
+                "-Wno-unused-function"
             ],
             "configurationProvider": "ms-vscode.makefile-tools"
         }

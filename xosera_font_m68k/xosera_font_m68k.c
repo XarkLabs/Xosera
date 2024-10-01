@@ -23,54 +23,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <basicio.h>
-#include <machine.h>
-#include <sdfat.h>
-
 #define DELAY_TIME 1000        // impatient human speed
 
 #if !defined(NUM_ELEMENTS)
 #define NUM_ELEMENTS(a) (sizeof(a) / sizeof(a[0]))
 #endif
 
-#include "xosera_m68k_api.h"
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
 
-static void dputc(char c)
-{
-#ifndef __INTELLISENSE__
-    __asm__ __volatile__(
-        "move.w %[chr],%%d0\n"
-        "move.l #2,%%d1\n"        // SENDCHAR
-        "trap   #14\n"
-        :
-        : [chr] "d"(c)
-        : "d0", "d1");
-#endif
-}
-
-static void dprint(const char * str)
-{
-    register char c;
-    while ((c = *str++) != '\0')
-    {
-        if (c == '\n')
-        {
-            dputc('\r');
-        }
-        dputc(c);
-    }
-}
-
-static char dprint_buff[4096];
-static void dprintf(const char * fmt, ...) __attribute__((__format__(__printf__, 1, 2)));
-static void dprintf(const char * fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(dprint_buff, sizeof(dprint_buff), fmt, args);
-    dprint(dprint_buff);
-    va_end(args);
-}
+#include "rosco_m68k_support.h"
 
 static void reset_vid(void)
 {
@@ -79,15 +41,15 @@ static void reset_vid(void)
     xwait_not_vblank();
     xwait_vblank();
 
-    xreg_setw(VID_CTRL, 0x0008);
-    xreg_setw(COPP_CTRL, 0x0000);
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x08));        // border color #0x08
+    xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(0));
     xreg_setw(AUD_CTRL, 0x0000);
     xreg_setw(VID_LEFT, 0);
     xreg_setw(VID_RIGHT, xosera_vid_width());
     xreg_setw(POINTER_H, 0x0000);
     xreg_setw(POINTER_V, 0x0000);
 
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, 0, GFX_1_BPP, 0, 0, 0));
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
     xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(XR_TILE_ADDR, 0, 0, 16));
     xreg_setw(PA_DISP_ADDR, 0x0000);
     xreg_setw(PA_LINE_LEN, xosera_vid_width() / 8);
@@ -105,15 +67,15 @@ static void reset_vid(void)
 
     printf("\033c");        // reset XANSI
 
-    while (checkchar())
+    while (mcCheckInput())
     {
-        readchar();
+        mcInputchar();
     }
 }
 
 static inline void checkbail()
 {
-    if (checkchar())
+    if (mcCheckInput())
     {
         reset_vid();
         _WARM_BOOT();
@@ -390,30 +352,36 @@ void puts_1bpp(const char * str,
     }
 }
 
-void xosera_font_test()
+// xosera_font_test
+int main()
 {
+    mcBusywait(1000 * 500);        // wait a bit for terminal window/serial
+    while (mcCheckInput())         // clear any queued input
+    {
+        mcInputchar();
+    }
     xv_prep();
 
-    dprintf("xosera_font_m68k\n");
+    debug_printf("xosera_font_m68k\n");
 
-    dprintf("Checking for Xosera XANSI firmware...");
+    debug_printf("Checking for Xosera XANSI firmware...");
     if (xosera_xansi_detect(true))        // check for XANSI (and disable input cursor if present)
     {
-        dprintf("detected.\n");
+        debug_printf("detected.\n");
     }
     else
     {
-        dprintf(
+        debug_printf(
             "\n\nXosera XANSI firmware was not detected!\n"
             "This program will likely trap without Xosera hardware.\n");
     }
-    dprintf("Calling xosera_init(XINIT_CONFIG_640x480)...");
+    debug_printf("Calling xosera_init(XINIT_CONFIG_640x480)...");
     bool success = xosera_init(XINIT_CONFIG_640x480);
-    dprintf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
+    debug_printf("%s (%dx%d)\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
 
     if (!success)
     {
-        dprintf("Exiting.\n");
+        debug_printf("Exiting.\n");
         exit(1);
     }
 

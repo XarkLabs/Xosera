@@ -19,12 +19,14 @@ CXX_FLAGS = -std=c++14 -O2 -Wall -Wextra -Wno-poison-system-directories -Wno-c++
 # CXX_FLAGS += -DNDEBUG
 
 # File names
-EXEC = copasm
+EXEC = xosera-copasm
 BINDIR = bin
 OBJDIR = obj
 
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(addprefix $(OBJDIR)/,$(SOURCES:.cpp=.o))
+
+$(info === Program: $(EXEC) in $(CURDIR))
 
 all: $(BINDIR)/$(EXEC)
 .PHONY: test

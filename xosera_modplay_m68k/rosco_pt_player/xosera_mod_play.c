@@ -2,18 +2,20 @@
 #include "pt_mod.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include <xosera_m68k_api.h>
-#include <xosera_m68k_defs.h>
+
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
+
+#include "rosco_m68k_support.h"
 
 #include "xosera_freq.h"        // Include this after NTSC is defined (or not)
 
 #if LOG
 #ifdef ROSCO_M68K
-#include "dprintf.h"
 #define pointer_t uint32_t
 #else
 #include <stdio.h>
-#define dprintf(...) printf(__VA_ARGS__)
+#define debug_printf(...) printf(__VA_ARGS__)
 #define pointer_t    uint64_t
 #endif
 #endif
@@ -440,7 +442,7 @@ void ptmodPrintlog()
         }
         else if (dbgLog[i].event == EVENT_DELAY_COMMAND_TRIGGERED)
         {
-            dprintf("[%02x:%02x::0x%02x]: Channel %d: delay expired; command triggered\n",
+            dprintf("[%02x:%02x::0x%02x]: Channel %d: mcBusywait expired; command triggered\n",
                     dbgLog[i].pattern,
                     dbgLog[i].patternPos,
                     dbgLog[i].tick,
@@ -458,7 +460,7 @@ void ptmodPrintlog()
         }
         else if (dbgLog[i].event == EVENT_DELAY_PATTERN)
         {
-            dprintf("[%02x:%02x::0x%02x]: Channel %d: delay pattern by %d division(s)\n",
+            dprintf("[%02x:%02x::0x%02x]: Channel %d: mcBusywait pattern by %d division(s)\n",
                     dbgLog[i].pattern,
                     dbgLog[i].patternPos,
                     dbgLog[i].tick,
@@ -897,7 +899,7 @@ static inline void handleEffect(uint16_t effect, Channel * channel)
     }
     else if ((effect & 0xFF0) == 0xEE0)
     {
-        // Pattern delay - temporal command
+        // Pattern mcBusywait - temporal command
         uint8_t  delay_divisions;
         Effect * current_effect = &channel->current_effect;
         current_effect->command = 0xE;

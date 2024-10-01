@@ -23,30 +23,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <basicio.h>
-#include <machine.h>
-#include <sdfat.h>
+#include <dirent.h>
 
-#include "xosera_m68k_api.h"
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
 
 bool use_sd;        // true if SD card was detected
-
-#if !defined(checkchar)        // newer rosco_m68k library addition, this is in case not present
-bool checkchar()
-{
-    int rc;
-    __asm__ __volatile__(
-        "move.l #6,%%d1\n"        // CHECKCHAR
-        "trap   #14\n"
-        "move.b %%d0,%[rc]\n"
-        "ext.w  %[rc]\n"
-        "ext.l  %[rc]\n"
-        : [rc] "=d"(rc)
-        :
-        : "d0", "d1");
-    return rc != 0;
-}
-#endif
 
 #define AUDIO_RESTART 0x8000        // restart PERIOD flag
 
@@ -75,7 +57,7 @@ static int init_audio()
     xv_prep();
     xreg_setw(AUD_CTRL, 0x0000);        // disable audio
 
-    xm_setw(INT_CTRL, INT_CTRL_CLEAR_ALL_F);
+    xm_set_int_ack(INT_CTRL_CLEAR_ALL_F);
     // upload word of silence to TILE (probaby already zero, but...)
     xmem_setw_wait(SILENCE_VADDR, 0x0000);
 
@@ -101,7 +83,7 @@ static int init_audio()
     }
 
     // channels should instantly trigger ready interrupt
-    audio_channel_mask = xm_getbl(INT_CTRL) & INT_CTRL_AUD_ALL_F;
+    audio_channel_mask = xm_xm_get_int_status() & INT_CTRL_AUD_ALL_F;
     while (audio_channel_mask & (1 << num_audio_channels))
     {
         num_audio_channels++;
@@ -150,41 +132,40 @@ const char * get_file()
     num_pcms = 0;
     memset(pcm_files, 0, sizeof(pcm_files));
 
-    FL_DIR dirstat;
+    opendir();
 
-    if (fl_opendir("/", &dirstat))
+    DIR * dirfd;
+
+    if (opendir("/", dirfd))
     {
-        struct fs_dir_ent dirent;
+        struct dirent * entry;
 
-        while (num_pcms < MAX_PCMS && fl_readdir(&dirstat, &dirent) == 0)
+        while (num_pcms < MAX_PCMS && readdir(dirfd, &entry) == 0)
         {
-            if (!dirent.is_dir)
+            int len = strlen(entry->d_name);
+            if (len >= 4)
             {
-                int len = strlen(dirent.filename);
-                if (len >= 4)
+                const char * dig = entry->d_name + len - 5;
+                while (*dig >= '0' && *dig <= '9')
                 {
-                    const char * dig = dirent.filename + len - 5;
-                    while (*dig >= '0' && *dig <= '9')
-                    {
-                        dig--;
-                    }
-                    int file_rate = atoi(dig + 1);
+                    dig--;
+                }
+                int file_rate = atoi(dig + 1);
 
-                    const char * ext = dirent.filename + len - 4;
-                    if ((file_rate >= 8000 && file_rate <= 24000) &&
-                        (strcmp(ext, ".raw") == 0 || strcmp(ext, ".RAW") == 0))
-                    {
-                        strcpy(pcm_files[num_pcms], "/");
-                        strcat(pcm_files[num_pcms], dirent.filename);
-                        pcm_size[num_pcms] = dirent.size;
+                const char * ext = entry->d_name + len - 4;
+                if ((file_rate >= 8000 && file_rate <= 24000) && (strcmp(ext, ".raw") == 0 || strcmp(ext, ".RAW") == 0))
+                {
+                    strcpy(pcm_files[num_pcms], "/");
+                    strcat(pcm_files[num_pcms], entry->d_name);
+                    // TODO: stat
+                    pcm_size[num_pcms] = entry.size;
 
-                        num_pcms++;
-                    }
+                    num_pcms++;
                 }
             }
         }
 
-        fl_closedir(&dirstat);
+        closedir(&dirstat);
     }
 
     int num = 0;
@@ -199,7 +180,7 @@ const char * get_file()
 
         printf("\nSelect [A-%c] or [+]/[-] to ajust rate %d:", 'A' + num_pcms - 1, sample_rates[cur_rate]);
 
-        int key = readchar();
+        int key = mcInputchar();
 
         if (key == '-' || key == '+' || key == '=')
         {
@@ -265,7 +246,7 @@ void read_buffer(void * file)
 void upload_buffer(uint16_t buf_off)
 {
     xv_prep();
-    xm_setbl(SYS_CTRL, 0x0F);                  // no VRAM masking
+    xm_set_vram_mask(0x0F);                    // no VRAM write masking
     xm_setw(WR_INCR, 0x0001);                  // increment of 1 word
     xm_setw(WR_ADDR, BUFFER + buf_off);        // upload address
     uint16_t * wp = &filebuffer[0];            // ptr to words to upload
@@ -285,11 +266,17 @@ void queue_buffer(uint16_t buf_off, uint16_t period)
     xreg_setw(AUD0_START, BUFFER + buf_off);           // address of current buffer
     xreg_setw(AUD0_PERIOD, period);                    // sample period
 
-    xm_setw(INT_CTRL, INT_CTRL_AUD0_INTR_F);        // acknowledge & clear audio 0 ready interrupt
+    xm_set_int_ack(INT_CTRL_AUD0_INTR_F);        // acknowledge & clear audio 0 ready interrupt
 }
 
-void audiostream_test()
+// audiostream test
+int main()
 {
+    mcBusywait(1000 * 500);        // wait a bit for terminal window/serial
+    while (mcCheckInput())         // clear any queued input
+    {
+        mcInputchar();
+    }
     printf("Xosera_audiostream_m68k\n\n");
 
     if (SD_check_support())
@@ -359,9 +346,9 @@ void audiostream_test()
         read_buffer(file);
         upload_buffer(0);
         queue_buffer(0, period);
-        while ((xm_getw(INT_CTRL) & INT_CTRL_AUD0_INTR_F) == 0)
+        while ((xm_get_int_status() & INT_CTRL_AUD0_INTR_F) == 0)
         {
-            if (checkchar())
+            if (mcCheckInput())
             {
                 break;
             }
@@ -374,15 +361,15 @@ void audiostream_test()
         printf("\033[?25l");        // disable input cursor
         while (!next)
         {
-            // print status
+            // mcPrint status
             if (!graphics)
             {
                 printf("\rPlaying offset: %9u  VRAM: 0x%04x", (unsigned int)file_bytes, BUFFER + buf_off);
             }
 
-            if (checkchar())
+            if (mcCheckInput())
             {
-                char k = readchar();
+                char k = mcInputchar();
                 if (k == '\x1b')
                 {
                     quit = true;
@@ -395,13 +382,14 @@ void audiostream_test()
                     if (graphics)
                     {
                         xreg_setw(PA_DISP_ADDR, BUFFER);
-                        xreg_setw(PA_GFX_CTRL, 0xF055);
+                        xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0xF0, GFX_VISIBLE, GFX_4_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
                         xreg_setw(PA_LINE_LEN, 64);
                     }
                     else
                     {
                         xreg_setw(PA_DISP_ADDR, 0x0000);
-                        xreg_setw(PA_GFX_CTRL, 0x0000);
+                        xreg_setw(PA_GFX_CTRL,
+                                  MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
                         xreg_setw(PA_LINE_LEN, xosera_vid_width() / 8);
                     }
                 }
@@ -416,9 +404,9 @@ void audiostream_test()
             read_buffer(file);
 
             // poll audio ready interrupt status until ready for next buffer
-            while ((xm_getw(INT_CTRL) & INT_CTRL_AUD0_INTR_F) == 0)
+            while ((xm_get_int_status() & INT_CTRL_AUD0_INTR_F) == 0)
             {
-                if (checkchar())
+                if (mcCheckInput())
                 {
                     break;
                 }
@@ -436,17 +424,17 @@ void audiostream_test()
             // wait for buffers to empty
             if (at_eof)
             {
-                while ((xm_getw(INT_CTRL) & INT_CTRL_AUD0_INTR_F) == 0)
+                while ((xm_get_int_status() & INT_CTRL_AUD0_INTR_F) == 0)
                 {
-                    if (checkchar())
+                    if (mcCheckInput())
                     {
                         break;
                     }
                 }
                 queue_buffer(buf_off, period);
-                while ((xm_getw(INT_CTRL) & INT_CTRL_AUD0_INTR_F) == 0)
+                while ((xm_get_int_status() & INT_CTRL_AUD0_INTR_F) == 0)
                 {
-                    if (checkchar())
+                    if (mcCheckInput())
                     {
                         break;
                     }

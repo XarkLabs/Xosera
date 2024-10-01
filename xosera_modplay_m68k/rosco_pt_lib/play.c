@@ -1,11 +1,13 @@
-#include "dprintf.h"
-#include "pt_mod.h"
-#include <basicio.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <xosera_m68k_api.h>
-#include <xosera_m68k_defs.h>
+
+#include "pt_mod.h"
+
+#include <rosco_m68k/machine.h>
+#include <rosco_m68k/xosera.h>
+
+#include "rosco_m68k_support.h"
 
 #define SILENCE_VADDR 0xffff
 
@@ -42,7 +44,7 @@ static bool load_sample_chunk(PtMemorySample * sample,
     }
 
 #ifdef DEBUG
-    dprintf("LOAD: %d-%d in buffer at 0x%04x\n", chunk_start, chunk_end, addr);
+    debug_printf("LOAD: %d-%d in buffer at 0x%04x\n", chunk_start, chunk_end, addr);
 #endif
 
     *outActualSize = chunk_end - chunk_start;
@@ -89,7 +91,7 @@ static void init_channel(Channel *        channel,
 static void restart_channel(Channel * channel)
 {
 #ifdef debug
-    dprintf("Restart channel\n");
+    debug_printf("Restart channel\n");
 #endif
     channel->next_chunk_start = 0;
 }
@@ -107,11 +109,11 @@ static void xosera_channel_ready(Channel * channel)
 
     if (actualSize != channel->buffer_size)
     {
-        dprintf("Got non-buffer size chunk [%d words]\n", actualSize);
+        debug_printf("Got non-buffer size chunk [%d words]\n", actualSize);
     }
     else
     {
-        dprintf("Got full chunk\n");
+        debug_printf("Got full chunk\n");
     }
 
     if (last)
@@ -124,18 +126,18 @@ int xosera_play(PtMod * mod, int number, uint16_t rate)
 {
     xv_prep();
 
-    while (checkchar())
+    while (mcCheckInput())
     {
-        readchar();
+        mcInputchar();
     }
 
     PtMemorySample samples[31];
     PtPopulateMemorySamples(mod, samples);
 
-    dprintf("Samples populated in memory; Will play #%d\n", number);
-    dprintf("Sample length is %d words\n", samples[number].length);
+    debug_printf("Samples populated in memory; Will play #%d\n", number);
+    debug_printf("Sample length is %d words\n", samples[number].length);
 
-    dprintf("First 5 words: 0x%04x 0x%04x 0x%04x 0x%04x 0x%04x\n",
+    debug_printf("First 5 words: 0x%04x 0x%04x 0x%04x 0x%04x 0x%04x\n",
             samples[number].data[0],
             samples[number].data[1],
             samples[number].data[2],
@@ -144,7 +146,7 @@ int xosera_play(PtMod * mod, int number, uint16_t rate)
 
     uint32_t clk_hz = xosera_sample_hz();
     uint16_t period = (clk_hz + rate - 1) / rate;        // rate is samples per second
-    dprintf("Period is %d\n", period);
+    debug_printf("Period is %d\n", period);
 
     Channel channel;
     init_channel(&channel, &samples[number], BUFFER_A, BUFFER_B, 0x400);
@@ -160,9 +162,9 @@ int xosera_play(PtMod * mod, int number, uint16_t rate)
     int min_loops  = INT_MAX;
     int this_loops = 0;
 
-    dprintf("Playing annoying loop; hit a key when it all becomes too much\n");
+    debug_printf("Playing annoying loop; hit a key when it all becomes too much\n");
 
-    while (!checkchar())
+    while (!mcCheckInput())
     {
         if ((xreg_getw(AUD_CTRL) & 0x0100) == 0)
         {
@@ -189,7 +191,7 @@ int xosera_play(PtMod * mod, int number, uint16_t rate)
 
     xreg_setw(AUD_CTRL, 0x0000);
 
-    dprintf("Loaded buffers %d times. Had between %d and %d loops of free time between loading\n",
+    debug_printf("Loaded buffers %d times. Had between %d and %d loops of free time between loading\n",
             num_readys,
             min_loops,
             max_loops);

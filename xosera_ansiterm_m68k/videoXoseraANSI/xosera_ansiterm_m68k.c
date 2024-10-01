@@ -29,7 +29,7 @@
 #define DEBUG 0        // set to 1 for test debugging (LOG/LOGF)
 
 #include <assert.h>
-#include <basicio.h>
+#include <rosco_m68k/machine.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,12 +39,12 @@
 #define DEBUG 0        // must be zero (no printf in firmware)
 // thse are missing from kernel machine.h
 extern unsigned int _FIRMWARE_REV;        // rosco ROM firmware revision
-extern void         (*_EFP_INPUTCHAR)();
-extern void         (*_EFP_CHECKINPUT)();
+extern void (*_EFP_INPUTCHAR)();
+extern void (*_EFP_CHECKINPUT)();
 
 #endif
 
-#include <machine.h>
+#include <rosco_m68k/machine.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -53,7 +53,7 @@ extern void         (*_EFP_CHECKINPUT)();
 #if !defined(ROSCO_M68K)
 #define ROSCO_M68K
 #endif
-#include "xosera_m68k_api.h"
+#include "xosera.h"        // uses private copy
 
 #if DEBUG
 extern void dprintf(const char * fmt, ...) __attribute__((format(__printf__, 1, 2)));
@@ -87,7 +87,7 @@ enum e_term_flags
     TFLAG_ATTRIB_BRIGHT   = 1 << 4,        // make colors bright
     TFLAG_ATTRIB_DIM      = 1 << 5,        // make colors dim
     TFLAG_ATTRIB_REVERSE  = 1 << 6,        // reverse fore/back colors
-    TFLAG_ATTRIB_PASSTHRU = 1 << 7,        // print control chars as graphic [using HIDDEN attribute]
+    TFLAG_ATTRIB_PASSTHRU = 1 << 7,        // mcPrint control chars as graphic [using HIDDEN attribute]
 };
 
 // current processing state of terminal
@@ -102,28 +102,28 @@ enum e_term_state
 // all storage for terminal (must be at 16-bit memory address [< 32KB])
 typedef struct xansiterm_data
 {
-    uint16_t cur_addr;                // +0x0: next VRAM address to draw text
-    int8_t   send_index;              // +0x2: index into send_buffer or -1 if no query
-    bool     cursor_drawn;            // +0x3: flag if cursor_save/cursor_word data valid
-    void *   device_inputchar;        // +0x4: trap handler for console INPUTCHAR (wrapped, for asm)
-    void *   device_checkinput;       // +0x8: trap handler for console CHECKINPUT (wrapped, for asm)
-    uint16_t vram_base;               // base VRAM address for text screen
-    uint16_t vram_size;               // size of text screen in current mode (init clears to allow 8x8 font)
-    uint16_t vram_end;                // ending address for text screen in current mode
-    uint16_t vram_memend;             // highest ending address used (for clear)
-    uint16_t line_len;                // user specified line len (normally 0)
-    uint16_t lines_high;              // user specified screen lines_high (normally 0)
-    uint16_t cursor_glyph;            // custom cursor color and/or glyph (ignored if zero)
-    uint16_t cursor_mask;             // custom cursor mask (1 bits = use cursor_glyph bits)
-    uint16_t cursor_save;             // word saved from under input cursor
-    uint16_t cursor_word;             // input cursor word (used to detect overwrite and prevent "fossil" cursor)
-    uint16_t cols, rows;              // text columns and rows in current mode (zero based)
-    uint16_t x, y;                    // current x and y cursor position (zero based)
-    uint16_t save_x, save_y;          // storage to save/restore cursor postion
-    uint16_t h_size;                  // horizontal video resolution (set in xansi_reset)
-    uint16_t v_size;                  // vertical video resolution (set in xansi_reset)
-    uint16_t gfx_ctrl;                // default graphics mode
-    uint16_t tile_ctrl[4];            // up to four fonts <ESC>( <ESC>) <ESC>* <ESC>+
+    uint16_t cur_addr;                 // +0x0: next VRAM address to draw text
+    int8_t   send_index;               // +0x2: index into send_buffer or -1 if no query
+    bool     cursor_drawn;             // +0x3: flag if cursor_save/cursor_word data valid
+    void *   device_inputchar;         // +0x4: trap handler for console INPUTCHAR (wrapped, for asm)
+    void *   device_checkinput;        // +0x8: trap handler for console CHECKINPUT (wrapped, for asm)
+    uint16_t vram_base;                // base VRAM address for text screen
+    uint16_t vram_size;                // size of text screen in current mode (init clears to allow 8x8 font)
+    uint16_t vram_end;                 // ending address for text screen in current mode
+    uint16_t vram_memend;              // highest ending address used (for clear)
+    uint16_t line_len;                 // user specified line len (normally 0)
+    uint16_t lines_high;               // user specified screen lines_high (normally 0)
+    uint16_t cursor_glyph;             // custom cursor color and/or glyph (ignored if zero)
+    uint16_t cursor_mask;              // custom cursor mask (1 bits = use cursor_glyph bits)
+    uint16_t cursor_save;              // word saved from under input cursor
+    uint16_t cursor_word;              // input cursor word (used to detect overwrite and prevent "fossil" cursor)
+    uint16_t cols, rows;               // text columns and rows in current mode (zero based)
+    uint16_t x, y;                     // current x and y cursor position (zero based)
+    uint16_t save_x, save_y;           // storage to save/restore cursor postion
+    uint16_t h_size;                   // horizontal video resolution (set in xansi_reset)
+    uint16_t v_size;                   // vertical video resolution (set in xansi_reset)
+    uint16_t gfx_ctrl;                 // default graphics mode
+    uint16_t tile_ctrl[4];             // up to four fonts <ESC>( <ESC>) <ESC>* <ESC>+
     uint16_t csi_parms[MAX_CSI_PARMS];          // CSI parameter storage
     uint8_t  num_parms;                         // number of parsed CSI parameters
     uint8_t  intermediate_char;                 // CSI intermediate character (only one supported)
@@ -145,7 +145,7 @@ typedef struct xansiterm_data
 
 // get xansiterm data (data needs to be in first 32KB of memory)
 
-#if defined(TEST_FIRMWARE)                                           // building for RAM testing
+#if defined(TEST_FIRMWARE)                                            // building for RAM testing
 _Static_assert(sizeof(xansiterm_data) <= 128, "data too big");        // fit in reserved space at 0x0500
 // NOTE: address must be < 32KB, attribute is a bit of a hack (causes warning about section attributes)
 xansiterm_data                                                _private_xansiterm_data;
@@ -340,7 +340,7 @@ static __attribute__((noinline)) void xansi_clear(uint16_t start, uint16_t end)
     uint16_t count = end - start - 1;
 
     xv_prep();
-    xm_setbl(SYS_CTRL, 0x0F);
+    xm_set_vram_mask(0x0F);        // no VRAM write masking
 
     xwait_blit_ready();
     xreg_setw(BLIT_CTRL, 0x0001);                  // no transp, constS
@@ -589,7 +589,7 @@ static void xansi_reset(bool reset_colormap)
     xreg_setw(PA_LINE_LEN, cols);
     xreg_setw(PA_H_SCROLL, 0x0000);
     xreg_setw(PA_V_SCROLL, 0x0000);
-    xm_setbl(SYS_CTRL, 0x0F);
+    xm_set_vram_mask(0x0F);        // no VRAM write masking
 
     if (reset_colormap)
     {
@@ -958,7 +958,7 @@ static inline void xansi_process_esc(xansiterm_data * td, char cdata)
             if (td->y >= td->rows)
             {
                 td->y -= 1;
-                xansi_scroll_up(td);
+                xansi_scroll_up();
             }
             break;
         case 'M':
@@ -979,7 +979,7 @@ static inline void xansi_process_esc(xansiterm_data * td, char cdata)
             if (td->y >= td->cols)
             {
                 td->y = td->cols - 1;
-                xansi_scroll_up(td);
+                xansi_scroll_up();
             }
             break;
         case 'Z':
@@ -1683,7 +1683,7 @@ const char * xansiterm_PRINT(const char * strptr)
             // if already ESC/CSI and in PASSTHRU mode
             if (td->state >= TSTATE_ESC && (td->flags & TFLAG_ATTRIB_PASSTHRU))
             {
-                td->state = TSTATE_NORMAL;        // fall through and print ESC/CSi
+                td->state = TSTATE_NORMAL;        // fall through and mcPrint ESC/CSi
             }
             else
             {
@@ -1829,7 +1829,7 @@ char xansiterm_RECVQUERY(void)
     return cdata;
 }
 
-// terminal check for input character ready (wrapper console checkchar with cursor)
+// terminal check for input character ready (wrapper console mcCheckInput with cursor)
 void xansiterm_UPDATECURSOR(void)
 {
     xansiterm_data * td = get_xansi_data();
@@ -1841,8 +1841,8 @@ void xansiterm_UPDATECURSOR(void)
     }
 
     // blink at ~409.6ms (on half the time, but only if cursor not disabled and no char ready)
-    volatile uint8_t * timer_bh_ptr = (volatile uint8_t *)(XM_BASEADDR + XM_TIMER);
-    bool               cursor_on    = (td->flags & TFLAG_NOBLINK_CURSOR) || (*timer_bh_ptr) & 0x08;
+    xv_prep();
+    bool cursor_on = (td->flags & TFLAG_NOBLINK_CURSOR) || xm_getbh(TIMER) & 0x08;
     xansi_check_lcf(td);        // wrap cursor if needed
     if (cursor_on)
     {
@@ -1904,7 +1904,7 @@ bool xansiterm_INIT()
 
     xv_prep();
     xreg_setw(PA_GFX_CTRL, td->gfx_ctrl);
-    xm_setbl(SYS_CTRL, 0x0F);
+    xm_set_vram_mask(0x0F);        // no VRAM write masking
 
     // NOTE: Not ideal no version code without COPPER
     td->ver_code[0] = '0';

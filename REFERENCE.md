@@ -597,11 +597,11 @@ Horizontal fine scroll `H_SCROLL` will clip (or skip) 0-31 native pixels from th
 | Name            | Bits    | R/W | Description                                           |
 |-----------------|---------|-----|-------------------------------------------------------|
 | `V_REP_SCROLL`  | `[9:8]` | R/W | Vertical repeat fine scroll offset (0-3 native lines) |
-| `V_TILE_SCROLL` | `[5:2]` | R/W | Vertical tile line scroll offset (0-15 tile lines)    |
+| `V_TILE_SCROLL` | `[3:0]` | R/W | Vertical tile line scroll offset (0-15 tile lines)    |
 
- Vertical tile scroll `V_TILE_SCROLL` is typically constrained to be less than the height of the current tile height of 1-16 (set in `Px_TILE_CTRL`).  This tile line scroll is only useful in tiled modes to start with a partial tile (in bitmap modes, change `Px_DISP_ADDR` to scroll vertically).
+Vertical repeat scroll selects the topmost scanline displayed from a line repeated due to `V_REPEAT` (normally 0).  Vertical repeat scroll allows you to fine scroll with native resolution, even when lines are repeated with `V_REPEAT`.  This offset can be applied to all tile or bitmap modes that use `V_REPEAT`.  Vertical repeat scroll `V_REP_SCROLL` should not be set greater than the vertical repeat `V_REPEAT` (in `Px_GFX_CTRL`) to avoid display corruption.
 
-Vertical fine scroll `V_REP_SCROLL` is typically constrained to be less than the `V_REPEAT` line height of 1-4 (set in `Px_GFX_CTRL`) . This vertical fine scroll allows you to fine scroll with native resolution, even with repeated lines. This offset is applied to all tile or bitmap modes (with `V_REPEAT` set).
+Vertical tile scroll selects the topmost tile line displayed (normally 0).  This tile scroll is useful in tiled modes to start with a partial tile (in bitmap modes, change `Px_DISP_ADDR` to scroll vertically).  Vertical tile scroll `V_TILE_SCROLL` should not be set greater than tile height `TILE_H` (in `Px_TILE_CTRL`) to avoid display corruption.
 
 ##### 0x17 **`XR_PA_LINE_ADDR` (WO)** - playfield A (base) display VRAM next line address  
 

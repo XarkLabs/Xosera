@@ -243,9 +243,13 @@ ifdef FMAX_TEST	# run nextPNR FMAX_TEST times to determine "Max frequency" range
 	done ; \
 	wait
 	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
-	  grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log | tail -1 | cut -d " " -f 7 >"$(LOGS)/fmax/fmax_temp.txt" ; \
-	  FMAX=$$(cat "$(LOGS)/fmax/fmax_temp.txt") ; \
-	  echo $${num} $${FMAX} "$(LOGS)/fmax/$(OUTNAME)_$${num}.asc" >> $(LOGS)/fmax/$(OUTNAME)_list.log ; \
+	    if (test -f "$(LOGS)/fmax/$(OUTNAME)_$${num}.asc") ; then \
+	      grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log | tail -1 | cut -d " " -f 7 >"$(LOGS)/fmax/fmax_temp.txt" ; \
+	      FMAX=$$(cat "$(LOGS)/fmax/fmax_temp.txt") ; \
+	      echo $${num} $${FMAX} "$(LOGS)/fmax/$(OUTNAME)_$${num}.asc" >> $(LOGS)/fmax/$(OUTNAME)_list.log ; \
+	    else \
+	      echo $${num} 0.0 "no-output.asc" >> $(LOGS)/fmax/$(OUTNAME)_list.log ; \
+	    fi ; \
 	  ((num = num + 1)) ; \
 	done
 	@echo === fMAX after $(FMAX_TEST) runs: ===

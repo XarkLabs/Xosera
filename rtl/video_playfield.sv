@@ -58,26 +58,24 @@ module video_playfield (
 );
 
 // display line fetch generation FSM
-typedef enum logic [4:0] {
-    FETCH_IDLE          =   5'h00,                  // wait for dma or memfetch
+typedef enum logic [3:0] {
+    FETCH_IDLE          =   4'h0,                   // wait for dma or memfetch
     // bitmap
-    FETCH_BITMAP        =   5'h03,                  // output bitmap VRAM address
-    FETCH_ADDR_BITMAP   =   5'h04,                  // output bitmap VRAM address
-    FETCH_WAIT_BITMAP   =   5'h05,                  // wait for bitmap data
-    FETCH_READ_BITMAP_0 =   5'h06,                  // read bitmap word0/tilemap from VRAM
-    FETCH_READ_BITMAP_1 =   5'h07,                  // read bitmap word1 data from VRAM
-    FETCH_READ_BITMAP_2 =   5'h08,                  // read bitmap word2 data from VRAM
-    FETCH_READ_BITMAP_3 =   5'h09,                  // read bitmap word3 data from VRAM
+    FETCH_BITMAP        =   4'h1,                   // output bitmap VRAM address
+    FETCH_ADDR_BITMAP   =   4'h2,                   // output bitmap VRAM address
+    FETCH_WAIT_BITMAP   =   4'h3,                   // wait for bitmap data
+    FETCH_READ_BITMAP_0 =   4'h4,                   // read bitmap word0/tilemap from VRAM
+    FETCH_READ_BITMAP_1 =   4'h5,                   // read bitmap word1 data from VRAM
+    FETCH_READ_BITMAP_2 =   4'h6,                   // read bitmap word2 data from VRAM
+    FETCH_READ_BITMAP_3 =   4'h7,                   // read bitmap word3 data from VRAM
     // tiled
-    FETCH_ADDR_TILEMAP  =   5'h0A,                  // output tilemap VRAM address (and read tile word3 data)
-    FETCH_WAIT_TILEMAP  =   5'h0B,                  // wait for tilemap data
-    FETCH_READ_TILEMAP  =   5'h0C,                  // read tilemap from VRAM
-    FETCH_ADDR_TILE     =   5'h0D,                  // output tile word0 VRAM/TILE address
-    FETCH_WAIT_TILE     =   5'h0E,                  // wait for tilemap data, output word1 tile addr
-    FETCH_READ_TILE_0   =   5'h0F,                  // read tile word0 data from bus, output word2 tile addr
-    FETCH_READ_TILE_1   =   5'h10,                  // read tile word1 data from bus, output word3 tile addr
-    FETCH_READ_TILE_2   =   5'h11,                  // read tile word2 data from bus
-    FETCH_ADDR_TILEMAP_2=   5'h12                   // read tile word3 and output next tilemap VRAM address
+    FETCH_ADDR_TILEMAP  =   4'h8,                   // output tilemap VRAM address (and read tile word3 data)
+    FETCH_WAIT_TILEMAP  =   4'h9,                   // wait for tilemap data
+    FETCH_READ_TILEMAP  =   4'hA,                   // read tilemap from VRAM
+    FETCH_ADDR_TILE     =   4'hB,                   // output tile word0 VRAM/TILE address
+    FETCH_WAIT_TILE     =   4'hC,                   // wait for tilemap data, output word1 tile addr
+    FETCH_READ_TILE_0   =   4'hD,                   // read tile word0 data from bus, output word2 tile addr
+    FETCH_READ_TILE_1   =   4'hE                    // read tile word1 data from bus, output word3 tile addr
 } vgen_fetch_st;
 
 logic           scanout;                            // scanout active
@@ -140,11 +138,8 @@ function automatic addr_t calc_tile_addr(
                     calc_tile_addr = { tilebank, 10'b0 } | { 5'b0, tile_char[7:0], tile_y[3:1] };      // 8x16 = 1Wx8 = 8W (even/odd byte) x 256 = 2048W
                 end
             end
-            xv::BPP_4: begin
+            default: begin  // assume  xv::BPP_4
                 calc_tile_addr = { tilebank, 10'b0 } | { 2'b0, tile_char[9:0], vrev ? ~tile_y[2:0] : tile_y[2:0], 1'b0 };    // 8x8 = 2Wx8 = 16W x 1024 = 16384W
-            end
-            default: begin
-                calc_tile_addr = { tilebank, 10'b0 } | { 1'b0, tile_char[9:0], vrev ? ~tile_y[2:0] : tile_y[2:0], 2'b0 };    // 8x8 = 4Wx8 = 32W x 1024 = 32768W
             end
         endcase
     end
@@ -166,7 +161,7 @@ always_comb begin
 
     fetch_addr_next     = fetch_addr;
 
-    pf_tile_addr        = calc_tile_addr(pf_attr_word_next[xv::TILE_INDEX+:10], pf_tile_y, pf_tile_bank_i, pf_bpp_i, pf_tile_height_i[3], pf_attr_word_next[xv::TILE_ATTR_VREV]);
+    pf_tile_addr        = calc_tile_addr(pf_attr_word[xv::TILE_INDEX+:10], pf_tile_y, pf_tile_bank_i, pf_bpp_i, pf_tile_height_i[3], pf_attr_word[xv::TILE_ATTR_VREV]);
 
     pf_words_ready_next = 1'b0;
     vram_sel_next       = 1'b0;
@@ -278,38 +273,13 @@ always_comb begin
                 end
                 pf_fetch_next = FETCH_ADDR_TILEMAP;         // done if BPP_1 mode
             end else begin
-                if (pf_bpp_i != xv::BPP_4) begin
-                    vram_sel_next       = pf_tile_in_vram_i;// TO2: select either vram
-                    tilemem_sel_next    = ~pf_tile_in_vram_i; // TO2: or select tilemem
-                    fetch_addr_next     = { fetch_addr[15:2], 2'b10 };
-                end
                 pf_fetch_next = FETCH_READ_TILE_1;          // else read more tile words
             end
         end
         FETCH_READ_TILE_1: begin
             pf_data_word1_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI1: read tile data
 
-            if (pf_bpp_i == xv::BPP_4) begin
-                pf_fetch_next = FETCH_ADDR_TILEMAP;         // done if BPP_4 mode
-            end else begin
-                vram_sel_next       = pf_tile_in_vram_i;    // TO3: select either vram
-                tilemem_sel_next    = ~pf_tile_in_vram_i;   // TO3: or select tilemem
-                fetch_addr_next     = { fetch_addr[15:2], 2'b11 };
-                pf_fetch_next       = FETCH_READ_TILE_2;    // else read more tile data words
-            end
-        end
-        FETCH_READ_TILE_2: begin
-            pf_data_word2_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI2: read tile data
-            pf_fetch_next       = FETCH_ADDR_TILEMAP_2;     // NOTE will read TI3 also
-        end
-        FETCH_ADDR_TILEMAP_2: begin
-            // read pre-loaded font word3
-            pf_data_word3_next  = pf_tile_in_vram_i ? vram_data_i : tilemem_data_i;  // TI3: read tile data
-            vram_sel_next   = ~pf_disp_in_tile_i;           // VO0: select either vram
-            tilemem_sel_next= pf_disp_in_tile_i;            // VO0: or select tilemem
-            fetch_addr_next = pf_addr;                      // put display address on vram bus
-            pf_addr_next    = pf_addr + 1'b1;               // increment display address
-            pf_fetch_next   = FETCH_WAIT_TILEMAP;
+            pf_fetch_next = FETCH_ADDR_TILEMAP;         // done if BPP_4 mode
         end
         default: begin
             pf_fetch_next = FETCH_IDLE;

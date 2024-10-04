@@ -18,7 +18,8 @@ $(info No m68k-elf-rosco-* rosco_m68k build tools found in path)
 endif
 
 DEFINES?=
-FLAGS=-ffunction-sections -fdata-sections -fomit-frame-pointer						\
+LTO=-flto
+FLAGS=-ffunction-sections -fdata-sections $(LTO) -fomit-frame-pointer						\
       -Wall -Wextra -Werror -Wno-unused-function -pedantic							\
       -g -O2 $(DEFINES)
 
@@ -27,7 +28,7 @@ CXXFLAGS=-std=c++20 -fno-exceptions -fno-rtti $(FLAGS)
 EXTRA_CFLAGS?=
 VASMFLAGS=-Felf -m$(CPU) -quiet -Lnf -I$(ROSCO_M68K_INCLUDES) $(DEFINES)
 EXTRA_VASMFLAGS?=
-LDFLAGS=-Wl,--gc-sections -Wl,-Map=$(MAP)
+LDFLAGS=$(LTO) -Wl,--gc-sections -Wl,-Map=$(MAP)
 EXTRA_LDFLAGS?=
 ARFLAGS?=rDcs
 

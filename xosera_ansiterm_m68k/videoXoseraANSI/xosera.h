@@ -220,9 +220,10 @@ typedef volatile xmreg_t * const xosera_ptr_t;
     do                                                                                                                 \
     {                                                                                                                  \
         (void)(XM_##xmreg_name);                                                                                       \
+        uint16_t xm_setw_u16 = (word_val);                                                                             \
         __asm__ __volatile__("movep.w %[src]," XM_STR(XM_##xmreg_name) "(%[ptr])"                                      \
                              :                                                                                         \
-                             : [src] "d"((uint16_t)(word_val)), [ptr] "a"(xosera_ptr)                                  \
+                             : [src] "d"((uint16_t)(xm_setw_u16)), [ptr] "a"(xosera_ptr)                               \
                              :);                                                                                       \
     } while (false)
 
@@ -231,9 +232,10 @@ typedef volatile xmreg_t * const xosera_ptr_t;
     do                                                                                                                 \
     {                                                                                                                  \
         (void)(XM_##xmreg_name);                                                                                       \
+        uint32_t xm_setw_u32 = (long_val);                                                                             \
         __asm__ __volatile__("movep.l %[src]," XM_STR(XM_##xmreg_name) "(%[ptr])"                                      \
                              :                                                                                         \
-                             : [src] "d"((uint32_t)(long_val)), [ptr] "a"(xosera_ptr)                                  \
+                             : [src] "d"((uint32_t)(xm_setw_u32)), [ptr] "a"(xosera_ptr)                               \
                              :);                                                                                       \
     } while (false)
 
@@ -247,12 +249,7 @@ typedef volatile xmreg_t * const xosera_ptr_t;
 #define xm_setup_pixel_addr(vram_base, word_width, no_mask, pix_8b)                                                    \
     do                                                                                                                 \
     {                                                                                                                  \
-        if (no_mask) /* disable no_mask flag before PIXEL_X/Y write, to preserve wr_mask */                            \
-        {                                                                                                              \
-            xm_setbh(SYS_CTRL,                                                                                         \
-                     (uint8_t)(no_mask ? SYS_CTRL_PIX_NO_MASK_F : 0) |                                                 \
-                         (uint8_t)(pix_8b ? SYS_CTRL_PIX_8B_MASK_F : 0));                                              \
-        }                                                                                                              \
+        xm_setbh(SYS_CTRL, (uint8_t)SYS_CTRL_PIX_NO_MASK_F); /* avoid inadvertent wr_mask change */                    \
         xm_setw(PIXEL_X, vram_base);                                                                                   \
         xm_setw(PIXEL_Y, word_width);                                                                                  \
         xm_setbh(SYS_CTRL,                                                                                             \
@@ -373,11 +370,12 @@ typedef volatile xmreg_t * const xosera_ptr_t;
 // uint8_t xm_get_int_status() - get interrupt status
 #define xm_get_int_status() xm_getbl(INT_CTRL)
 
-// uint16_t xm_get_pixel_data(x, y) - get data at pixel x, y
+// uint16_t xm_get_pixel_data(x, y) - get word data at pixel x, y
 #define xm_get_pixel_data(x, y)                                                                                        \
     ({                                                                                                                 \
         xm_setw(PIXEL_X, x);                                                                                           \
         xm_setw(PIXEL_Y, y);                                                                                           \
+        xm_setw(RD_ADDR, xm_getw(WR_ADDR));                                                                            \
         xm_getw(DATA);                                                                                                 \
     })
 

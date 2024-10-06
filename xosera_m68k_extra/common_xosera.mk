@@ -18,7 +18,7 @@ $(info No m68k-elf-rosco-* rosco_m68k build tools found in path)
 endif
 
 DEFINES?=
-LTO=-flto
+LTO?=-flto
 FLAGS=-ffunction-sections -fdata-sections $(LTO) -fomit-frame-pointer						\
       -Wall -Wextra -Werror -Wno-unused-function -pedantic							\
       -g -O2 $(DEFINES)
@@ -154,7 +154,7 @@ $(BINARY) : $(ELF)
 $(DISASM) : $(ELF)
 	$(OBJDUMP) --disassemble -S $(ELF) >$(DISASM)
 
-$(OBJECTS): $(CASMOUTPUT) $(MAKEFILE_LIST)
+$(OBJECTS): $(CASMOUTPUT) $(CINCLUDES) $(MAKEFILE_LIST)
 
 %.o : %.c $(CINCLUDES)
 	@$(MKDIR) -p $(@D)

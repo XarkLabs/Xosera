@@ -13,6 +13,8 @@ XOSERA_EXTRA?=../xosera_m68k_extra
 
 PROGRAM_BASENAME=xosera
 BUILDING_XOSERA_API=true
+# LTO is unwanted when making a library (strips things we may want later)
+LTO=
 
 # use generic common make rules for Xosera + rosco_m68k build
 include $(XOSERA_EXTRA)/common_xosera.mk
@@ -23,19 +25,13 @@ LINKOBJECTS=$(filter-out api_test.o,$(OBJECTS))
 all: prereq $(COPASM) $(LIBRARY) $(BINARY) $(DISASM)
 
 prereq:
-	rm -f $(COPASM)
-	cd ../copper/CopAsm/ && $(MAKE) clean
-
-$(COPASM): ../copper/CopAsm/bin/xosera-copasm
+	@echo === Building xosera-copasm COPPER assembler...
+	cd ../copper/CopAsm/ && $(MAKE)
 	@mkdir -p bin
 	cp -v ../copper/CopAsm/bin/xosera-copasm $(COPASM)
 	@echo === Installed xosera-copasm to "$(COPASM)"
 
-../copper/CopAsm/bin/xosera-copasm:
-	@echo === Building xosera-copasm COPPER assembler...
-	cd ../copper/CopAsm/ && $(MAKE)
-
-$(LIBRARY) : $(LINKOBJECTS)
+$(LIBRARY): $(LINKOBJECTS) $(CINCLUDES) $(MAKEFILE_LIST)
 	$(RM) $@
 	$(AR) $(ARFLAGS) $@ $^
 	$(RANLIB) $@
@@ -66,10 +62,10 @@ $(LIBRARY) : $(LINKOBJECTS)
 	fi
 	@echo rosco_m68k toolchain libraries: $(ROSCO_M68K_LIBRARIES)
 	@if \
-	 cmp -s -i 0x160 $@ $(ROSCO_M68K_LIBRARIES)/$@ ; \
+	 cmp -s -i 0x160 $@ $(ROSCO_M68K_LIBRARIES)/$(LIBRARY) ; \
 	then \
-	 echo "$@ unchanged" ; \
+	 echo "$(LIBRARY) unchanged" ; \
 	else \
-	 echo "$@ modified" ; \
-	 sudo cp -v $@ $(ROSCO_M68K_LIBRARIES) ; \
+	 echo "$(LIBRARY) modified" ; \
+	 sudo cp -v $(LIBRARY) $(ROSCO_M68K_LIBRARIES) ; \
 	fi

@@ -320,19 +320,19 @@
 #define POINTER_V_W          12            // pointer raw V position
 #define POINTER_V_F          0x0FFF        // pointer raw V position
 // XR_Px_GFX_CTRL constants
-#define GFX_VISIBLE 0        // playfield visible
-#define GFX_BLANKED 1        // playfield blanked
-#define GFX_1_BPP   0        // 1-bpp (2 colors + selected via fore/back color attribute byte)
-#define GFX_4_BPP   1        // 4-bpp (16 colors)
-#define GFX_8_BPP   2        // 8-bpp (256 colors)
-#define GFX_X_BPP   3        // (reserved)
-#define GFX_TILEMAP 0        // tilemap (bitmap disabled)
-#define GFX_BITMAP  1        // bitmap (bitmap enabled)
-#define GFX_1X      0        // H/V repeat x1
-#define GFX_2X      1        // H/V repeat x2
-#define GFX_3X      2        // H/V repeat x3
-#define GFX_4X      3        // H/V repeat x4
-// XR_Px_HV_FSCALE constants    16:9   4:3
+#define GFX_VISIBLE   0        // playfield visible
+#define GFX_BLANKED   1        // playfield blanked
+#define GFX_1_BPP     0        // 1-bpp (2 colors selected via fore/back color attribute byte)
+#define GFX_4_BPP     1        // 4-bpp (16 colors)
+#define GFX_8_BPP     2        // 8-bpp (256 colors, bitmap mode only)
+#define GFX_1_BPP_EXT 3        // 1-bpp extended (2 color tilemap, 16x16 glyph w/2048 8x16 tiles)
+#define GFX_TILEMAP   0        // tilemap (bitmap disabled)
+#define GFX_BITMAP    1        // bitmap (bitmap enabled)
+#define GFX_1X        0        // H/V repeat x1
+#define GFX_2X        1        // H/V repeat x2
+#define GFX_3X        2        // H/V repeat x3
+#define GFX_4X        3        // H/V repeat x4
+// XR_Px_HV_FSCALE constants          16:9 / 4:3 screen-aspect
 #define HV_FSCALE_OFF  0x0        // H 848 / 640,  V 480
 #define HV_FSCALE_1OF2 0x1        // H 424 / 320,  V 240
 #define HV_FSCALE_1OF3 0x2        // H 565+/ 426+, V 320

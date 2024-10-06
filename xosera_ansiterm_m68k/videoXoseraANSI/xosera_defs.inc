@@ -291,17 +291,17 @@ POINTER_V_F             equ     $0FFF       ; pointer raw V position
 ; XR_Px_GFX_CTRL constants
 GFX_VISIBLE             equ     0           ; playfield visible
 GFX_BLANKED             equ     1           ; playfield blanked
-GFX_1_BPP               equ     0           ; 1-bpp (2 colors + selected via fore/back color attribute byte)
+GFX_1_BPP               equ     0           ; 1-bpp (2 colors selected via fore/back color attribute byte)
 GFX_4_BPP               equ     1           ; 4-bpp (16 colors)
-GFX_8_BPP               equ     2           ; 8-bpp (256 colors)
-GFX_X_BPP               equ     3           ; (reserved)
+GFX_8_BPP               equ     2           ; 8-bpp (256 colors, bitmap mode only)
+GFX_1_BPP_EXT           equ     3           ; 1-bpp extended (2 color tilemap, 16x16 glyph w/2048 8x16 tiles)
 GFX_TILEMAP             equ     0           ; tilemap (bitmap disabled)
 GFX_BITMAP              equ     1           ; bitmap (bitmap enabled)
 GFX_1X                  equ     0           ; H/V repeat x1
 GFX_2X                  equ     1           ; H/V repeat x2
 GFX_3X                  equ     2           ; H/V repeat x3
 GFX_4X                  equ     3           ; H/V repeat x4
-; XR_Px_HV_FSCALE constants    16:9   4:3
+; XR_Px_HV_FSCALE constants                    16:9 / 4:3 screen-aspect
 HV_FSCALE_OFF           equ     $0          ; H 848 / 640,  V 480
 HV_FSCALE_1OF2          equ     $1          ; H 424 / 320,  V 240
 HV_FSCALE_1OF3          equ     $2          ; H 565+/ 426+, V 320

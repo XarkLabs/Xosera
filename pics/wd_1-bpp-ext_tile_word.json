@@ -1,0 +1,34 @@
+{
+    "reg": [
+        {
+            "bits": 11,
+            "name": "tile index",
+            "type": 4,
+            "attr": [
+                "0 - 2047 16x16 tile glyph index (8x16 even/odd tile half from even/odd tile address)"
+            ]
+        },
+        {
+            "bits": 1,
+            "name": "Invert",
+            "type": 5,
+            "attr": [
+                "invert",
+                "foreground",
+                "color to",
+                "0x00"
+            ]
+        },
+        {
+            "bits": 4,
+            "name": "background color index",
+            "type": 2,
+            "attr": [
+                "used for zero bits in glyph"
+            ]
+        }
+    ],
+    "config": {
+        "bits": 16
+    }
+}

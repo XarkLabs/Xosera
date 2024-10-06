@@ -138,8 +138,14 @@ function automatic addr_t calc_tile_addr(
                     calc_tile_addr = { tilebank, 10'b0 } | { 5'b0, tile_char[7:0], tile_y[3:1] };      // 8x16 = 1Wx8 = 8W (even/odd byte) x 256 = 2048W
                 end
             end
-            default: begin  // assume  xv::BPP_4
+            xv::BPP_4: begin
                 calc_tile_addr = { tilebank, 10'b0 } | { 2'b0, tile_char[9:0], vrev ? ~tile_y[2:0] : tile_y[2:0], 1'b0 };    // 8x8 = 2Wx8 = 16W x 1024 = 16384W
+            end
+            xv::BPP_8,    // 8-bpp not valid for tiled mode, treat as BPP_1_EXT
+            xv::BPP_1_EXT: begin
+                calc_tile_addr = { tilebank, 10'b0 } | { 1'b0, vrev, tile_char[9:0], tile_y[3:0] };    // pseudo-bitmap 16x16 = 1Wx16 = 16W (even odd column) x 2048 = 32768W
+            end
+            default: begin
             end
         endcase
     end
@@ -271,9 +277,16 @@ always_comb begin
                 if (!pf_tile_y[0]) begin
                     pf_data_word0_next[7:0] = pf_tile_in_vram_i ? vram_data_i[15:8] : tilemem_data_i[15:8];
                 end
+                pf_fetch_next = FETCH_ADDR_TILEMAP;         // done if BPP_1_ATTR mode
+            end else if (pf_bpp_i == xv::BPP_4) begin
+                pf_fetch_next = FETCH_READ_TILE_1;          // if BPP_4 read more tile words
+            end else begin                                  // assume BPP_1_EXT
+                pf_attr_word_next[11:9] = 3'b0;             // clear forecolor[3:1]
+                pf_attr_word_next[8]  = ~pf_attr_word[xv::TILE_ATTR_INV];  // set forecolor[0] to 1/0 (based on INVERT)
+                if (pf_addr[0]) begin
+                    pf_data_word0_next[7:0] = pf_tile_in_vram_i ? vram_data_i[15:8] : tilemem_data_i[15:8];
+                end
                 pf_fetch_next = FETCH_ADDR_TILEMAP;         // done if BPP_1 mode
-            end else begin
-                pf_fetch_next = FETCH_READ_TILE_1;          // else read more tile words
             end
         end
         FETCH_READ_TILE_1: begin
@@ -360,6 +373,7 @@ always_ff @(posedge clk) begin
 
             // expand display data into pf_pixels_buf depending on mode
             case (pf_bpp_i)
+            xv::BPP_1_EXT,
             xv::BPP_1_ATTR:
                 // expand to 8-bit index with upper 4-bits zero
                 // and 4-bit attribute foreground/background index
@@ -385,8 +399,7 @@ always_ff @(posedge clk) begin
                     pf_attr_word[xv::TILE_ATTR_BACK+:4], pf_data_word1[11: 8],
                     pf_attr_word[xv::TILE_ATTR_BACK+:4], pf_data_word1[ 7: 4],
                     pf_attr_word[xv::TILE_ATTR_BACK+:4], pf_data_word1[ 3: 0] };
-            xv::BPP_8,
-            xv::BPP_XX:
+            xv::BPP_8:
                 // copy 8-bit pixel indices XORing the upper 4-bit color extension attribute
                 pf_pixels_buf  <= {
                     pf_attr_word[xv::TILE_ATTR_BACK+:4] ^ pf_data_word0[15:12], pf_data_word0[11: 8],
@@ -457,7 +470,7 @@ always_ff @(posedge clk) begin
         // when "scrolled" scanline starts outputting (before display if scrolled)
         if (scanout_start) begin
             scanout             <= 1'b1;
-            pf_tile_x           <= 3'h0;
+            pf_tile_x           <= '0;
             pf_h_count          <= pf_h_repeat_i;
             pf_pixels           <= pf_pixels_buf;       // get initial 8 pixels from buffer
             pf_pixels_buf_full  <= 1'b0;

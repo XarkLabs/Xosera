@@ -47,11 +47,11 @@
 `endif
 `define EN_COPP                         // enable copper
 `ifdef EN_COPP
-  `define EN_COPP_HWAITEOL                   // enable copper HPOS stop at EOL
+  `define EN_COPP_HWAITEOL                // enable copper HPOS stop at EOL
   `ifdef EN_BLIT
-    `define EN_COPP_VBLITWAIT              // VPOS #$XXX > $3FF waits for blitter
+    `define EN_COPP_VBLITWAIT               // VPOS #$XXX > $3FF waits for blitter
   `endif
-  `define EN_COPPER_INIT                // enable copper init program at reset (optional)
+  `define EN_COPPER_INIT                  // enable copper init program at reset (optional)
 `endif
 //`define EN_UART                         // enable USB UART
 `ifdef EN_UART
@@ -242,12 +242,12 @@ typedef enum logic [6:0] {
     XR_BLIT_SHIFT   = 7'h47,            // (WO) blit first and last word nibble masks and nibble right shift (0-3)
     XR_BLIT_LINES   = 7'h48,            // (WO) blit number of lines minus 1, (repeats blit word count after modulo calc)
     XR_BLIT_WORDS   = 7'h49,            // (WO+) blit word count minus 1 per line (write starts blit operation)
-    XR_UNUSED_4A    = 7'h4A,            // TODO: unused XR reg
-    XR_UNUSED_4B    = 7'h4B,            // TODO: unused XR reg
-    XR_UNUSED_4C    = 7'h4C,            // TODO: unused XR reg
-    XR_UNUSED_4D    = 7'h4D,            // TODO: unused XR reg
-    XR_UNUSED_4E    = 7'h4E,            // TODO: unused XR reg
-    XR_UNUSED_4F    = 7'h4F,            // TODO: unused XR reg
+    XR_UNUSED_4A    = 7'h4A,            // unused XR reg
+    XR_UNUSED_4B    = 7'h4B,            // unused XR reg
+    XR_UNUSED_4C    = 7'h4C,            // unused XR reg
+    XR_UNUSED_4D    = 7'h4D,            // unused XR reg
+    XR_UNUSED_4E    = 7'h4E,            // unused XR reg
+    XR_UNUSED_4F    = 7'h4F,            // unused XR reg
     // dummy
     XR_none         = 7'h7F             // dummy reg for simulation
 } xr_register_t;
@@ -256,19 +256,21 @@ localparam AUD_PER_RESTART_B    = 15;   // bit in AUDn_PERIOD to restart channel
 localparam AUD_LEN_TILEMEM_B    = 15;   // bit in AUDn_LENGTH to indicate sample in TILEMEM
 
 typedef enum logic [1:0] {
-    BPP_1_ATTR      = 2'b00,
-    BPP_4           = 2'b01,
-    BPP_8           = 2'b10,
-    BPP_XX          = 2'b11             // TODO: maybe RL7 mode?
+    BPP_1_ATTR      = 2'b00,            // 1-bpp with 4-bit back/fore color
+    BPP_4           = 2'b01,            // 4-bpp
+    BPP_8           = 2'b10,            // 8-bpp (bitmap only)
+    BPP_1_EXT       = 2'b11             // 1-bpp extended (16x16 2048 glyph font, w/8x16 even/odd tiles)
 } bpp_depth_t;
 
 typedef enum {
-    TILE_INDEX      = 0,                // rightmost bit for index (8 bit in BPP_1, otherwise 10 bit)
-    TILE_ATTR_VREV  = 10,               // mirror tile vertically (not in BPP_1)
-    TILE_ATTR_HREV  = 11,               // mirror tile horizontally (not in BPP_1)
-    TILE_ATTR_FORE  = 8,                // rightmost bit for forecolor (in BPP_1 only)
-    TILE_ATTR_BACK  = 12                // rightmost bit for backcolor (in BPP_1 only)
+    TILE_INDEX      = 0,                // rightmost bit for index (8, 10 or 11 bits for BPP_1, BPP_4, BPP_1_EXT)
+    TILE_ATTR_VREV  = 10,               // mirror tile vertically (BPP_4 only)
+    TILE_ATTR_HREV  = 11,               // mirror tile horizontally (BPP_4 only)
+    TILE_ATTR_FORE  = 8,                // rightmost bit for forecolor (BPP_1 only)
+    TILE_ATTR_BACK  = 12                // rightmost bit for backcolor (BPP_1 and BPP_1_EXT)
 } tile_index_attribute_bits_t;
+
+localparam TILE_ATTR_INV   = 11;        // invert forecolor 0=0x01, 1=0x00 (BPP_1_EXT only)
 
 // Xosera init info stored in last 64 bytes of default copper memory
 //

@@ -28,6 +28,10 @@
 
 #include "rosco_m68k_support.h"
 
+#include "ansi_font_image.h"
+#include "earth_image.h"
+#include "xosera_logo_image.h"
+
 // #define DELAY_TIME 15000        // slow human speed
 // #define DELAY_TIME 5000        // human speed
 // #define DELAY_TIME 1000        // impatient human speed
@@ -91,7 +95,6 @@ void timer_start()
 uint32_t timer_stop()
 {
     uint32_t stop_tick = XFrameCount;
-
     return ((stop_tick - start_tick) * 1667) / 100;
 }
 
@@ -102,26 +105,17 @@ static void disable_sd_boot()
     resident_init();                    // install no SD hook next next warm-start
 }
 
-static void wait_vblank_start()
+static inline void wait_vblank_start(xosera_ptr_t xosera_ptr)
 {
-    xv_prep();
     xwait_not_vblank();
     xwait_vblank();
 }
 
-static inline void check_vblank()
-{
-    xv_prep();
-    if (!xm_getb_sys_ctrl(VBLANK) || xreg_getw(SCANLINE) > 520)
-    {
-        wait_vblank_start();
-    }
-}
-
 _NOINLINE void restore_def_colors()
 {
-    wait_vblank_start();
     xv_prep();
+    wait_vblank_start(xosera_ptr);
+
     xmem_setw_next_addr(XR_COLOR_A_ADDR);
     for (uint16_t i = 0; i < 256; i++)
     {
@@ -137,11 +131,11 @@ _NOINLINE void restore_def_colors()
 
 static void reset_video(void)
 {
+    xv_prep();
+    wait_vblank_start(xosera_ptr);
+
     remove_intr();
 
-    wait_vblank_start();
-
-    xv_prep();
     xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x08));        // set border grey
     xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(0));            // disable copper
     xreg_setw(VID_LEFT, 0);
@@ -193,139 +187,9 @@ _NOINLINE void delay_check(int ms)
     }
 }
 
-uint32_t font[16 * 7] = {
-    // 0
-    0x00ff0000,        // .#..
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0x00ff0000,        // .#..
-    // 1
-    0x00ff0000,        // .#..
-    0xffff0000,        // ##..
-    0x00ff0000,        // .#..
-    0x00ff0000,        // .#..
-    0x00ff0000,        // .#..
-    0x00ff0000,        // .#..
-    0xffffff00,        // ###.
-    // 2
-    0xffffff00,        // ###.
-    0x0000ff00,        // ..#.
-    0x0000ff00,        // ..#.
-    0xffffff00,        // ###.
-    0xff000000,        // #...
-    0xff000000,        // #...
-    0xffffff00,        // ###.
-    // 3
-    0xffffff00,        // ###.
-    0x0000ff00,        // ..#.
-    0x0000ff00,        // ..#.
-    0xffffff00,        // ###.
-    0x0000ff00,        // ..#.
-    0x0000ff00,        // ..#.
-    0xffffff00,        // ###.
-    // 4
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xffffff00,        // ###.
-    0x0000ff00,        // ..#.
-    0x0000ff00,        // ..#.
-    0x0000ff00,        // ..#.
-    // 5
-    0xffffff00,        // ###.
-    0xff000000,        // #...
-    0xff000000,        // #...
-    0xffffff00,        // ###.
-    0x0000ff00,        // ..#.
-    0x0000ff00,        // ..#.
-    0xffffff00,        // ###.
-    // 6
-    0x00ffff00,        // ###.
-    0xff000000,        // #...
-    0xff000000,        // #...
-    0xffffff00,        // ###.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xffffff00,        // ###.
-    // 7
-    0xffffff00,        // ###.
-    0x0000ff00,        // ..#.
-    0x0000ff00,        // ..#.
-    0x0000ff00,        // ..#.
-    0x0000ff00,        // ..#.
-    0x0000ff00,        // ..#.
-    0x0000ff00,        // ..#.
-    // 8
-    0xffffff00,        // ###.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xffffff00,        // ###.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xffffff00,        // ###.
-    // 9
-    0xffffff00,        // ###.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xffffff00,        // ###.
-    0x0000ff00,        // ..#.
-    0x0000ff00,        // ..#.
-    0xffff0000,        // ###.
-    // 8
-    0x00ff0000,        // .#..
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xffffff00,        // ###.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    // 8
-    0xffff0000,        // ##..
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xffff0000,        // ##..
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xffff0000,        // ##..
-    // 8
-    0x00ffff00,        // .##.
-    0xff000000,        // #...
-    0xff000000,        // #...
-    0xff000000,        // #...
-    0xff000000,        // #...
-    0xff000000,        // #...
-    0x00ffff00,        // .##.
-    // 8
-    0xffff0000,        // ##..
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xff00ff00,        // #.#.
-    0xffff0000,        // ##..
-    // 8
-    0xffffff00,        // ###.
-    0xff000000,        // #...
-    0xff000000,        // #...
-    0xffffff00,        // ###.
-    0xff000000,        // #...
-    0xff000000,        // #...
-    0xffffff00,        // ###.
-    // 8
-    0xffffff00,        // ###.
-    0xff000000,        // #...
-    0xff000000,        // #...
-    0xffff0000,        // ##..
-    0xff000000,        // #...
-    0xff000000,        // #...
-    0xff000000         // #...
-};
 
 // clang-format off
-uint8_t fontm[2 * 8 * 16] = {
+uint8_t font_mask[2 * 8 * 16] = {
     // 0
     0b0011, 0b0000,        // .#..
     0b1100, 0b1100,        // #.#.
@@ -472,51 +336,9 @@ uint8_t fontm[2 * 8 * 16] = {
 };
 // clang-format on
 
-#if 0
-void print_digit(uint16_t off, uint16_t ll, uint16_t dig, uint16_t color)
-{
-    union lw
-    {
-        uint32_t l;
-        uint16_t w[2];
-    };
-
-    union lw * lwp = (union lw *)&font[dig * 7];
-
-    xv_prep();
-    xm_setw(WR_INCR, 0x0001);        // set write inc
-    for (uint16_t h = 0; h < 7; h++)
-    {
-        xm_setw(WR_ADDR, off + (h * ll));        // set write address
-        xm_set_vram_mask((lwp->w[0] & 0x8000 ? 0xc : 0) | (lwp->w[0] & 0x0080 ? 0x3 : 0));
-        xm_setw(DATA, lwp->w[0] & color);
-        xm_set_vram_mask((lwp->w[1] & 0x8000 ? 0xc : 0) | (lwp->w[1] & 0x0080 ? 0x3 : 0));
-        xm_setw(DATA, lwp->w[1] & color);
-        lwp++;
-    }
-    xm_set_vram_mask(0x0F);        // no VRAM write masking
-}
-#else
-void print_digit(uint16_t off, uint16_t ll, uint16_t dig, uint16_t color)
-{
-    uint8_t * lwp = &fontm[dig * (8 * 2)];
-
-    xv_prep();
-    xm_setw(WR_INCR, 0x0001);        // set write inc
-    for (uint16_t h = 0; h < 7; h++)
-    {
-        xm_setw(WR_ADDR, off + (h * ll));        // set write address
-        xm_set_vram_mask(*lwp++);
-        xm_setw(DATA, color);        // optimization: latch upper byte
-        xm_set_vram_mask(*lwp++);
-        xm_setbl(DATA, color & 0xff);        // optimization: upper byte latched, so only write lower byte
-    }
-    xm_set_vram_mask(0x0F);        // no VRAM write masking
-}
-
 inline void print_digit_xy(volatile xmreg_t * const xosera_ptr, uint16_t x, uint16_t y, uint16_t dig, uint16_t color)
 {
-    uint8_t * lwp = &fontm[dig * (8 * 2)];
+    uint8_t * lwp = &font_mask[dig * (8 * 2)];
 
     for (uint16_t h = 0; h < 7; h++)
     {
@@ -528,14 +350,514 @@ inline void print_digit_xy(volatile xmreg_t * const xosera_ptr, uint16_t x, uint
     xm_set_vram_mask(0xf);        // no VRAM write masking
 }
 
+static uint16_t page_pat4_e[4] = {0xffff, 0xcfcf, 0xafaf, 0xdfdf};
+static uint16_t page_pat4_o[4] = {0xffff, 0xfcfc, 0xfafa, 0xfdfd};
+
+void test_4bpp()
+{
+    debug_printf("test_4bpp\n");
+    xv_prep();
+
+    wait_vblank_start(xosera_ptr);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_4_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
+
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+    xm_setw(WR_ADDR, 0x8000);        // set write address
+    xm_set_vram_mask(0xf);
+
+    uint16_t vaddr = 0x8000;
+    for (uint16_t p = 0; p < 4; p++)
+    {
+        for (uint16_t xaddr = XR_TILE_ADDR + 0x1000; xaddr < XR_TILE_ADDR + 0x1400; xaddr++)
+        {
+            uint16_t w1bpp = xmem_getw_wait(xaddr);
+            uint16_t w4bpp = 0;
+            if (w1bpp & 0x8000)
+                w4bpp |= 0xf000;
+            if (w1bpp & 0x4000)
+                w4bpp |= 0x0f00;
+            if (w1bpp & 0x2000)
+                w4bpp |= 0x00f0;
+            if (w1bpp & 0x1000)
+                w4bpp |= 0x000f;
+            w4bpp &= page_pat4_e[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x0800)
+                w4bpp |= 0xf000;
+            if (w1bpp & 0x0400)
+                w4bpp |= 0x0f00;
+            if (w1bpp & 0x0200)
+                w4bpp |= 0x00f0;
+            if (w1bpp & 0x0100)
+                w4bpp |= 0x000f;
+            w4bpp &= page_pat4_e[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x0080)
+                w4bpp |= 0xf000;
+            if (w1bpp & 0x0040)
+                w4bpp |= 0x0f00;
+            if (w1bpp & 0x0020)
+                w4bpp |= 0x00f0;
+            if (w1bpp & 0x0010)
+                w4bpp |= 0x000f;
+            w4bpp &= page_pat4_o[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x0008)
+                w4bpp |= 0xf000;
+            if (w1bpp & 0x0004)
+                w4bpp |= 0x0f00;
+            if (w1bpp & 0x0002)
+                w4bpp |= 0x00f0;
+            if (w1bpp & 0x0001)
+                w4bpp |= 0x000f;
+            w4bpp &= page_pat4_o[p];
+            vram_setw(vaddr++, w4bpp);
+        }
+    }
+
+#define TEST_4BPP_XMEM 0
+
+#if TEST_4BPP_XMEM
+    int i = 0;
+    for (uint16_t xaddr = XR_TILE_ADDR; xaddr < (XR_TILE_ADDR + (40 * 30)); xaddr++)
+    {
+        if (i < 4 * 256)
+            xmem_setw(xaddr, i++);
+        else
+            xmem_setw(xaddr, 0x1000);
+    }
+#else
+    int i = 0;
+    for (uint16_t vaddr = 0; vaddr < (40 * 30); vaddr++)
+    {
+        if (i < 4 * 256)
+            vram_setw(vaddr, i++);
+        else
+            vram_setw(vaddr, 0x1000);
+    }
 #endif
+
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to black
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_4_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
+    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x8000, TEST_4BPP_XMEM, 1, 8));
+    xreg_setw(PA_DISP_ADDR, 0x0000);
+    xreg_setw(PA_LINE_LEN, 320 / 8);        // line len
+    xreg_setw(PA_H_SCROLL, 0x0000);
+    xreg_setw(PA_V_SCROLL, 0x0000);
+    xreg_setw(PA_HV_FSCALE, 0x0000);
+
+    delay_check(DELAY_TIME * 5);
+}
+
+inline void plot_monochrome(xosera_ptr_t xosera_ptr, uint16_t vbase, uint16_t x, uint16_t y)
+{
+    // use low 4-bits of x to shift pixel to correct bit
+    uint16_t bit = 0x8000 >> (x & 0xf);
+    // use x/16 * height to calculate column top and add Y
+    uint16_t off = ((x >> 4) * 480) + y;
+    uint16_t w   = vram_getw(vbase + off) | bit;        // read word and set pixel bits
+    vram_setw(vbase + off, w);                          // write back word
+}
+
+void test_1bpp_bitmap()
+{
+#define TEST_1BPP_XMEM 1
+    debug_printf("test_4bpp\n");
+    xv_prep();
+
+    wait_vblank_start(xosera_ptr);
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to black
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
+
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP_EXT, GFX_TILEMAP, GFX_1X, GFX_1X));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
+    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x8000, TEST_1BPP_XMEM, 1, 16));
+    xreg_setw(PA_DISP_ADDR, 0x0000);
+    xreg_setw(PA_LINE_LEN, 640 / 8);        // line len
+    xreg_setw(PA_H_SCROLL, 0x0000);
+    xreg_setw(PA_V_SCROLL, 0x0000);
+    xreg_setw(PA_HV_FSCALE, 0x0000);
+
+    uint32_t white = xmem_getw_wait(XR_COLOR_A_ADDR + 15);
+    uint32_t blue  = xmem_getw_wait(XR_COLOR_A_ADDR + 1);
+    xmem_setw_wait(XR_COLOR_A_ADDR + 1, white);
+    xmem_setw_wait(XR_COLOR_A_ADDR + 15, blue);
+
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+    xm_setw(WR_ADDR, 0x8000);        // set write address
+    xm_set_vram_mask(0xf);
+
+    uint16_t vaddr = 0x8000;
+#if 0
+    for (uint16_t p = 0; p < 32; p++)
+    {
+        for (uint16_t xaddr = XR_TILE_ADDR + 0x1000; xaddr < XR_TILE_ADDR + 0x1400; xaddr++)
+        {
+            uint16_t w1bpp = xmem_getw_wait(xaddr);
+            vram_setw(vaddr++, w1bpp);
+        }
+    }
+#else
+    for (int xw = 0; xw < earth_w * earth_h; xw++)
+    {
+        vram_setw(vaddr++, earth[xw]);
+    }
+#endif
+
+
+#if TEST_1BPP_XMEM
+    int i     = 0;
+    int color = 1;
+    for (uint16_t x = 0; x < 40; x++)
+    {
+        for (uint16_t y = 0; y < 30; y++)
+        {
+            xmem_setw(XR_TILE_ADDR + (y * 80) + (x << 1), i | (color << 11));
+            xmem_setw(XR_TILE_ADDR + (y * 80) + (x << 1) + 1, i | (color << 11));
+            i++;
+            if (y < 10)
+            {
+                color = (color + 1) & 0x1f;
+                if ((color >> 1) < 2)
+                {
+                    color = (2 << 1);
+                }
+            }
+            else
+            {
+                color = 0;
+            }
+        }
+    }
+#else
+    int i = 0;
+    for (uint16_t vaddr = 0; vaddr < (40 * 30); vaddr += 2)
+    {
+        if (i < 16 * 256)
+        {
+            vram_setw(vaddr, i);
+            vram_setw(vaddr + 1, i++);
+        }
+        else
+        {
+            vram_setw(vaddr, 0x0000);
+            vram_setw(vaddr + 1, 0x0000);
+        }
+    }
+#endif
+
+    wait_vblank_start(xosera_ptr);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_1_BPP_EXT, GFX_TILEMAP, GFX_1X, GFX_1X));
+
+    for (int x = 0; x < 200; x++)
+    {
+        plot_monochrome(xosera_ptr, 0x8000, x, x);
+    }
+
+    delay_check(DELAY_TIME * 10);
+}
+
+#if 0
+static uint16_t page_pat8_e[4] = {0xffff, 0xffcc, 0xffaa, 0xffdd};
+static uint16_t page_pat8_o[4] = {0xffff, 0xccff, 0xaaff, 0xddff};
+
+void test_8bpp()
+{
+    debug_printf("test_8bpp\n");
+    xv_prep();
+
+    wait_vblank_start(xosera_ptr);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_8_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
+
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+    xm_setw(WR_ADDR, 0x8000);        // set write address
+    xm_set_vram_mask(0xf);
+
+    uint16_t vaddr = 0x8000;
+    for (uint16_t p = 0; p < 4; p++)
+    {
+        for (uint16_t xaddr = XR_TILE_ADDR + 0x1000; xaddr < XR_TILE_ADDR + 0x1400; xaddr++)
+        {
+            uint16_t w1bpp = xmem_getw_wait(xaddr);
+            uint16_t w4bpp = 0;
+            if (w1bpp & 0x8000)
+                w4bpp |= 0xff00;
+            if (w1bpp & 0x4000)
+                w4bpp |= 0x00ff;
+            w4bpp &= page_pat8_e[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x2000)
+                w4bpp |= 0xff00;
+            if (w1bpp & 0x1000)
+                w4bpp |= 0x00ff;
+            w4bpp &= page_pat8_e[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x0800)
+                w4bpp |= 0xff00;
+            if (w1bpp & 0x0400)
+                w4bpp |= 0x00ff;
+            w4bpp &= page_pat8_e[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x0200)
+                w4bpp |= 0xff00;
+            if (w1bpp & 0x0100)
+                w4bpp |= 0x00ff;
+            w4bpp &= page_pat8_e[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x0080)
+                w4bpp |= 0xff00;
+            if (w1bpp & 0x0040)
+                w4bpp |= 0x00ff;
+            w4bpp &= page_pat8_o[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x0020)
+                w4bpp |= 0xff00;
+            if (w1bpp & 0x0010)
+                w4bpp |= 0x00ff;
+            w4bpp &= page_pat8_o[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x0008)
+                w4bpp |= 0xff00;
+            if (w1bpp & 0x0004)
+                w4bpp |= 0x00ff;
+            w4bpp &= page_pat8_o[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x0002)
+                w4bpp |= 0xff00;
+            if (w1bpp & 0x0001)
+                w4bpp |= 0x00ff;
+            w4bpp &= page_pat8_o[p];
+            vram_setw(vaddr++, w4bpp);
+        }
+    }
+
+#define TEST_8BPP_XMEM 0
+
+#if TEST_8BPP_XMEM
+    int i = 0;
+    for (uint16_t xaddr = XR_TILE_ADDR; xaddr < (XR_TILE_ADDR + (40 * 30)); xaddr++)
+    {
+        if (i < 4 * 256)
+            xmem_setw(xaddr, i++);
+        else
+            xmem_setw(xaddr, 0x1000);
+    }
+#else
+    int i = 0;
+    for (uint16_t vaddr = 0; vaddr < (40 * 30); vaddr++)
+    {
+        if (i < 4 * 256)
+            vram_setw(vaddr, i++);
+        else
+            vram_setw(vaddr, 0x1000);
+    }
+#endif
+
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to black
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
+    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x8000, TEST_8BPP_XMEM, 1, 8));
+    xreg_setw(PA_DISP_ADDR, 0x0000);
+    xreg_setw(PA_LINE_LEN, 320 / 8);        // line len
+    xreg_setw(PA_H_SCROLL, 0x0000);
+    xreg_setw(PA_V_SCROLL, 0x0000);
+    xreg_setw(PA_HV_FSCALE, 0x0000);
+
+    delay_check(DELAY_TIME * 120);
+}
+#endif
+
+void test_logo()
+{
+    debug_printf("test_logo\n");
+    xv_prep();
+
+    wait_vblank_start(xosera_ptr);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_4_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
+
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+    xm_setw(WR_ADDR, 0x0000);        // set write address
+    xm_set_vram_mask(0xf);
+
+    for (uint16_t i = 0; i < 32768; i++)
+    {
+        xm_setl(DATA, 0x0000);
+    }
+
+    uint16_t linelen = 160;
+
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to black
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
+    xreg_setw(PA_TILE_CTRL, 0x0C07);
+    xreg_setw(PA_DISP_ADDR, 0x0000);
+    xreg_setw(PA_LINE_LEN, linelen);        // line len
+    xreg_setw(PA_H_SCROLL, 0x0000);
+    xreg_setw(PA_V_SCROLL, 0x0000);
+    xreg_setw(PA_HV_FSCALE, 0x0000);
+    xreg_setw(PB_GFX_CTRL, 0x0080);
+
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+
+    xm_setup_pixel_addr(0x0000, linelen, 1, 1);
+
+    uint16_t * img = ansi_font;
+
+    for (int y = 0; y < ansi_font_h; y++)
+    {
+        xm_set_pixel((320 / 2) - (ansi_font_w), y);
+        for (int x = 0; x < ansi_font_w; x++)
+        {
+            uint16_t w = (0xf0f0 | *img++);
+            xm_setw(DATA, w);
+        }
+    }
+    delay_check(DELAY_TIME * 1);
+
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+    xm_setw(WR_ADDR, 0x8000);        // set write address
+    xm_set_vram_mask(0xf);
+#if 0
+    uint16_t wp = (ansi_font_w + 3) & ~3U;
+    uint16_t hp = (ansi_font_h + 7) & ~7U;
+
+    for (int cy = 0; cy < hp; cy += 8)
+    {
+        for (int cx = 0; cx < wp; cx += 4)
+        {
+            for (int y = cy; y < cy + 8; y++)
+            {
+                for (int x = cx; x < cx + 4; x++)
+                {
+                    uint16_t w   = 0;
+                    uint16_t off = (y * ansi_font_w) + x;
+                    if ((x < ansi_font_w) && (y < ansi_font_h))
+                    {
+                        w = ansi_font[off];
+                    }
+
+                    xm_setw(DATA, w);
+                }
+            }
+        }
+    }
+#else
+
+    // clang-format off
+    xm_setl(DATA, 0xFFFFFFFF); xm_setl(DATA, 0xFFFFFFFF);
+    xm_setl(DATA, 0x00FF0000); xm_setl(DATA, 0x0000FF00);
+    xm_setl(DATA, 0x0000FF00); xm_setl(DATA, 0x00FF0000);
+    xm_setl(DATA, 0x000000FF); xm_setl(DATA, 0xFF000000);
+    xm_setl(DATA, 0x000000FF); xm_setl(DATA, 0xFF000000);
+    xm_setl(DATA, 0x0000FF00); xm_setl(DATA, 0x00FF0000);
+    xm_setl(DATA, 0x00FF0000); xm_setl(DATA, 0x0000FF00);
+    xm_setl(DATA, 0xFFFFFFFF); xm_setl(DATA, 0xFFFFFFFF);
+
+    xm_setl(DATA, 0xFFFFFFFF); xm_setl(DATA, 0xFFFFFFFF);
+    xm_setl(DATA, 0xFF000000); xm_setl(DATA, 0x000000FF);
+    xm_setl(DATA, 0xFF000000); xm_setl(DATA, 0x000000FF);
+    xm_setl(DATA, 0xFF000000); xm_setl(DATA, 0x000000FF);
+    xm_setl(DATA, 0xFF000000); xm_setl(DATA, 0x000000FF);
+    xm_setl(DATA, 0xFF000000); xm_setl(DATA, 0x000000FF);
+    xm_setl(DATA, 0xFF000000); xm_setl(DATA, 0x000000FF);
+    xm_setl(DATA, 0xFFFFFFFF); xm_setl(DATA, 0xFFFFFFFF);
+
+    // clang-format on
+
+    for (int i = 0; i < 3072 / 8; i++)
+    {
+        xm_setl(DATA, 0xFF00FF00);
+        xm_setl(DATA, 0xFF00FF00);
+        xm_setl(DATA, 0x00FF0000);
+        xm_setl(DATA, 0x00FF0000);
+    }
+
+#endif
+
+#if 0
+    xmem_setw_next_addr(0x0000);        // set xmemaddr
+    uint16_t addr = 0;
+    while (addr++ < (40 * 30))
+    {
+        xmem_setw_next(0);
+    }
+    xmem_setw_next_addr(0x0000);        // set xmemaddr
+    xmem_setw_next(0x0000);
+    xmem_setw_next(0x0001);
+    xmem_setw_next(0x0002);
+    xmem_setw_next(0x0003);
+    xmem_setw_next(0x0004);
+    xmem_setw_next(0x0005);
+    xmem_setw_next(0x0006);
+    xmem_setw_next(0x0007);
+#else
+    vram_setw_next_addr(0x0000);        // set xmemaddr
+    uint16_t addr = 0;
+    while (addr++ < 0x2000)
+    {
+        vram_setw_next(addr & 0x0f);
+    }
+
+#endif
+#if 0
+
+    uint16_t v = 0;
+    for (uint16_t y = 0; y < 30; y++)
+    {
+        addr = (y * 40);
+        xm_setw(WR_ADDR, addr);        // set write address
+        for (uint16_t x = 0; x < 40; x++)
+        {
+            xm_setw(DATA, v);
+            v++;
+        }
+    }
+#endif
+
+    wait_vblank_start(xosera_ptr);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
+    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x8000, 0, 1, 8));
+    //    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0xF0, GFX_VISIBLE, GFX_1_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
+    //    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x0000, 0, 0, 16));
+    xreg_setw(PA_DISP_ADDR, 0x0000);
+    xreg_setw(PA_LINE_LEN, 40);        // line len
+
+#if 0
+    uint16_t h = 0;
+    while (!mcCheckInput())
+    {
+        wait_vblank_start(xosera_ptr);
+        xreg_setw(PA_H_SCROLL, h++);
+    }
+#else
+    delay_check(DELAY_TIME * 120);
+#endif
+}
 
 void test_colormap()
 {
+    debug_printf("test_colormap\n");
     xv_prep();
 
-    xwait_not_vblank();
-    xwait_vblank();
+    wait_vblank_start(xosera_ptr);
 
     uint16_t linelen = 160;
 
@@ -558,6 +880,8 @@ void test_colormap()
 
         uint16_t c = 0;
         xm_setup_pixel_addr(0x0000, linelen, 1, 1);
+        xm_set_vram_mask(0xf);
+
         xm_setw(PIXEL_X, 0);
         for (uint16_t y = 0; y < 240; y += (240 / 16))
         {
@@ -624,9 +948,10 @@ void test_colormap()
             }
         }
 
-        delay_check(DELAY_TIME * 3);
+        delay_check(DELAY_TIME * 10);
     }
 }
+
 
 int main(void)
 {
@@ -635,6 +960,7 @@ int main(void)
     {
         mcInputchar();
     }
+
 
     debug_printf("Xosera_modetest_m68k\n");
 
@@ -650,22 +976,17 @@ int main(void)
             "This program will likely trap without Xosera hardware.\n");
     }
 
-    debug_printf("\nCalling xosera_sync()...");
-
-    xv_prep();
-    bool syncok = xosera_sync();
-    debug_printf("%s\n\n", syncok ? "succeeded" : "FAILED");
 
     debug_printf("\nCalling xosera_init(XINIT_CONFIG_640x480)...");
     bool success = xosera_init(XINIT_CONFIG_640x480);
+
+    xv_prep();
+
     debug_printf("%s (%dx%d)\n\n", success ? "succeeded" : "FAILED", xosera_vid_width(), xosera_vid_height());
     xosera_get_info(&initinfo);
-    xwait_not_vblank();
-    xwait_vblank();
+    wait_vblank_start(xosera_ptr);
 
-    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x05));        // set border to 5
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
-    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
+    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to black
 
     xm_setw(WR_INCR, 0x0001);        // set write inc
     xm_setw(WR_ADDR, 0x0000);        // set write address
@@ -675,9 +996,7 @@ int main(void)
         xm_setl(DATA, 0x0000);
     }
 
-    cpu_delay(1000);
     debug_printf("xosera_get_info details:\n");
-    xmem_getw_next_addr(XR_COPPER_ADDR);
 
     debug_printf("\n");
     debug_printf("Description : \"%s\"\n", initinfo.description_str);
@@ -690,9 +1009,13 @@ int main(void)
 
     while (!mcCheckInput())
     {
-        wait_vblank_start();
+        wait_vblank_start(xosera_ptr);
 
         restore_def_colors();
+        //        test_8bpp();
+        test_4bpp();
+        test_1bpp_bitmap();
+        //        test_logo();
         test_colormap();
     }
 

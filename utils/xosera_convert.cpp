@@ -2,19 +2,39 @@
 // See top-level LICENSE file for license information. (Hint: MIT)
 // vim: set et ts=4 sw=4
 
+#include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <time.h>
 
 #include <SDL.h>
 #include <SDL_image.h>
 
-bool display_pic = false;
-bool add_noise = false;
-bool interleave_RG_B = false;
-bool write_palette = false;
+enum
+{
+    OUT_RAW     = 0,
+    OUT_CH      = 1,
+    OUT_ASM     = 2,
+    OUT_VERILOG = 3
+};
+
+char filename[4096];
+char identifier[4096];
+
+bool fail = false;        // error flag
+
+char * convert_mode    = nullptr;        // conversion mode string
+char * input_file      = nullptr;        // input image file
+char * output_basename = nullptr;        // output file
+
+
+bool     display_pic     = false;
+bool     add_noise       = false;
+bool     interleave_RG_B = false;
+bool     write_palette   = false;
+uint32_t num_colors      = 256;
 
 static void help()
 {
@@ -70,12 +90,185 @@ inline Uint32 getpixel(SDL_Surface * surface, int x, int y)
     }
 }
 
+Uint32 color_array_size;
+Uint16 color_array[4096];
+
+Uint32 count_colors(SDL_Surface * surface)
+{
+    color_array_size = 0;
+    memset(color_array, 0, sizeof(color_array));
+
+    for (int y = 0; y < surface->h; y++)
+    {
+        for (int x = 0; y < surface->w; x++)
+        {
+            Uint32 pixel = getpixel(surface, x, y);
+            (void)pixel;
+        }
+    }
+
+    return 0;
+}
+
+void str_to_identifier(char * str)
+{
+    char c;
+    while (str && (c = toupper(*str)) != '\0')
+    {
+        if (!isalnum(c))
+            c = '_';
+        *str++ = c;
+    }
+}
+
+bool convert_bitmap_1bpp(SDL_Surface * image, char * out_name)
+{
+    int w  = image->w;
+    int ww = (w + 15) >> 4;
+    int h  = image->h;
+    //    int bpp = image->format->BytesPerPixel;
+
+    snprintf(filename, sizeof(filename) - 1, "%s_image.h", out_name);
+    snprintf(identifier, sizeof(identifier) - 1, "%s_IMAGE_H", out_name);
+    str_to_identifier(identifier);
+
+    FILE * out_fp = fopen(filename, "w");
+    if (out_fp)
+    {
+        int count = 0;
+        for (int x = 0; x < (ww << 4); x += 16)
+        {
+            for (int y = 0; y < h; y++)
+            {
+                uint16_t w = 0;
+
+                int sx = x;
+                for (int b = 0x8000; b != 0; b >>= 1, sx++)
+                {
+                    Uint32 pix = getpixel(image, sx, y);
+                    if (pix)
+                    {
+                        w |= b;
+                    }
+                }
+                if (!count)
+                {
+                    fprintf(out_fp, "// File: \"%s\"\n", input_file);
+                    fprintf(out_fp, "// Image size %d x %d (%d x %d pixels) 1-bpp mono\n", ww, h, w, h);
+                    fprintf(out_fp, "#include <stdint.h>\n");
+                    fprintf(out_fp, "#if !defined(%s)\n", identifier);
+                    fprintf(out_fp, "#define %s\n", identifier);
+                    fprintf(
+                        out_fp, "static uint16_t %s_w __attribute__ ((unused))  = %3d;    // words\n", out_name, ww);
+                    fprintf(out_fp,
+                            "static uint16_t %s_pw __attribute__ ((unused)) = %3d;    // pixel width\n",
+                            out_name,
+                            w);
+                    fprintf(
+                        out_fp, "static uint16_t %s_h __attribute__ ((unused))  = %3d;    // pixels\n", out_name, h);
+                    fprintf(out_fp, "static uint16_t %s[%d * %d] __attribute__ ((unused)) = {\n    ", out_name, ww, h);
+                }
+                else
+                {
+                    fprintf(out_fp, ", ");
+                }
+
+                fprintf(out_fp, "0x%04x", w);
+                count++;
+            }
+        }
+        fprintf(out_fp, "\n};\n");
+        fprintf(out_fp, "#endif // !defined(%s)\n", identifier);
+
+        fclose(out_fp);
+        return true;
+    }
+    return false;
+}
+
+
+bool convert_bitmap_8bpp(SDL_Surface * image, char * out_name)
+{
+    int w  = image->w;
+    int ww = (w + 1) >> 1;
+    int h  = image->h;
+    //    int bpp = image->format->BytesPerPixel;
+
+    snprintf(filename, sizeof(filename) - 1, "%s_image.h", out_name);
+    snprintf(identifier, sizeof(identifier) - 1, "%s_IMAGE_H", out_name);
+    str_to_identifier(identifier);
+
+    FILE * out_fp = fopen(filename, "w");
+    if (out_fp)
+    {
+        int count = 0;
+        int col   = 0;
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < (ww << 1); x++)
+            {
+                Uint32 pix = 0;
+                if (x < w)
+                {
+                    pix = getpixel(image, x, y);
+                }
+
+                if (col & 1)
+                {
+                    fprintf(out_fp, "%02x", pix & 0xff);
+                }
+                else
+                {
+                    if (!count)
+                    {
+                        fprintf(out_fp, "// File: \"%s\"\n", input_file);
+                        fprintf(out_fp, "// Image size %d x %d (%d x %d pixels) 8-bpp\n", ww, h, w, h);
+                        fprintf(out_fp, "#include <stdint.h>\n");
+                        fprintf(out_fp, "#if !defined(%s)\n", identifier);
+                        fprintf(out_fp, "#define %s\n", identifier);
+                        fprintf(out_fp,
+                                "static uint16_t %s_w __attribute__ ((unused))  = %3d;    // words\n",
+                                out_name,
+                                ww);
+                        fprintf(out_fp,
+                                "static uint16_t %s_pw __attribute__ ((unused)) = %3d;    // pixel width\n",
+                                out_name,
+                                w);
+                        fprintf(out_fp,
+                                "static uint16_t %s_h __attribute__ ((unused))  = %3d;    // pixels\n",
+                                out_name,
+                                h);
+                        fprintf(
+                            out_fp, "static uint16_t %s[%d * %d] __attribute__ ((unused)) = {\n    ", out_name, ww, h);
+                    }
+                    else if (x == 0)
+                    {
+                        fprintf(out_fp, ",\n    ");
+                    }
+                    else
+                    {
+                        fprintf(out_fp, ", ");
+                    }
+
+                    fprintf(out_fp, "0x%02x", pix & 0xff);
+                }
+                count++;
+                col++;
+            }
+            col = 0;
+        }
+        fprintf(out_fp, "\n};\n");
+        fprintf(out_fp, "#endif // !defined(%s)\n", identifier);
+
+        fclose(out_fp);
+        return true;
+    }
+    return false;
+}
+
+
 int main(int argc, char ** argv)
 {
-    bool quit = false;
-    char *mode = nullptr;
-    char *in_file = nullptr;
-    char *out_basename = nullptr;
 
     if (argc == 1)
     {
@@ -102,6 +295,13 @@ int main(int argc, char ** argv)
             {
                 write_palette = true;
             }
+            else if (strcmp("-c", argv[a]) == 0)
+            {
+                if (++a >= argc || sscanf(argv[a], "%u", &num_colors) != 1)
+                {
+                    printf("Number of colors expected after option: '-c'\n");
+                }
+            }
             else
             {
                 printf("Unexpected option: '%s'\n", argv[a]);
@@ -110,88 +310,126 @@ int main(int argc, char ** argv)
         }
         else
         {
-            if (!mode)
+            if (!convert_mode)
             {
-                mode = argv[a];
+                convert_mode = argv[a];
             }
-            if (!in_file)
+            else if (!input_file)
             {
-                in_file = argv[a];
+                input_file = argv[a];
             }
-            else if (!out_basename)
+            else if (!output_basename)
             {
-                out_basename = argv[a];
+                output_basename = argv[a];
             }
             else
             {
-                printf("Unexpected extra argument: '%s'\n", argv[a]);
+                printf("error: Extra argument: '%s'\n", argv[a]);
                 exit(EXIT_FAILURE);
             }
         }
     }
 
-    if (!mode)
+    if (!convert_mode)
     {
         printf("Error: A conversion <mode> is required.\n");
         help();
     }
 
-    if (!in_file)
+    if (!input_file)
     {
         printf("Error: An <input_file> is required.\n");
         help();
     }
 
-    if (!out_basename)
+    if (!output_basename)
     {
         printf("Error: An <out_basename> is required.\n");
         help();
     }
 
-    printf("Input image file     : \"%s\"\n", in_file);
 
     SDL_Init(SDL_INIT_VIDEO);
     IMG_Init(IMG_INIT_PNG);
 
-    SDL_Surface * image = IMG_Load(in_file);
+    printf("Reading image file: \"%s\"\n", input_file);
 
-    int w = 0;
-    int h = 0;
+    SDL_Surface * image = IMG_Load(input_file);
+
+    int w   = 0;
+    int h   = 0;
+    int bpp = 0;
 
     if (!image)
     {
-        printf("*** Unable to load \"%s\"\n", in_file);
-        quit = true;
+        printf("\n*** Unable to IMG_Load \"%s\"\n", input_file);
+        fail = true;
     }
     else
     {
-        w = image->w;
-        h = image->h;
-        printf("\nInput image size        : %d x %d\n", w, h);
-        // if (!interleave_mode)
-        // {
-        //     printf("Output 8-bpp RG raw size: %6d bytes (%6.1f KB)\n", w * h, (w * h) / 1024.0f);
-        //     printf("Output 4-bpp B  raw size: %6d bytes (%6.1f KB)\n", (w / 2) * h, ((w / 2) * h) / 1024.0f);
-        //     printf("   12-bpp RGB total size: %6d bytes (%6.1f KB)\n",
-        //            ((w * h) + ((w / 2) * h)),
-        //            ((w * h) + ((w / 2) * h)) / 1024.0f);
-        // }
-        // else
-        // {
-        //     printf("Output 12-bpp RG+B raw size: %6d bytes (%6.1f KB)\n",
-        //            ((w * h) + ((w / 2) * h)),
-        //            ((w * h) + ((w / 2) * h)) / 1024.0f);
-        // }
-
-        if (((w * h) + ((w / 2) * h)) > (128 * 1024))
+        w   = image->w;
+        h   = image->h;
+        bpp = image->format->BytesPerPixel;
+        printf("\nInput image size        : %d x %d %d bytes per pixel\n", w, h, bpp);
+        if (image->format->palette && image->format->palette->ncolors)
         {
-            printf("\nWARNING: Will not fit in Xosera 128KB VRAM\n");
+            printf("  Palette %d colors\n", image->format->palette->ncolors);
+        }
+        else
+        {
+            printf("  No palette\n");
+        }
+
+
+        printf("Conversion mode: %s\n", convert_mode);
+        if (strcasecmp("bitmap", convert_mode) == 0)
+        {
+            if (num_colors == 2)
+            {
+                convert_bitmap_1bpp(image, output_basename);
+            }
+            else
+            {
+                convert_bitmap_8bpp(image, output_basename);
+            }
         }
     }
 
-    printf("WIP...\n");
-    (void)quit;
-    exit(EXIT_FAILURE);
+    IMG_Quit();
+    SDL_Quit();
+
+    printf("%s\n", fail ? "Failed!" : "Success.");
+
+    return fail ? EXIT_FAILURE : EXIT_SUCCESS;
+}
+
+bool process_bitmap()
+{
+
+
+    // if (!interleave_mode)
+    // {
+    //     printf("Output 8-bpp RG raw size: %6d bytes (%6.1f KB)\n", w * h, (w * h) / 1024.0f);
+    //     printf("Output 4-bpp B  raw size: %6d bytes (%6.1f KB)\n", (w / 2) * h, ((w / 2) * h) / 1024.0f);
+    //     printf("   12-bpp RGB total size: %6d bytes (%6.1f KB)\n",
+    //            ((w * h) + ((w / 2) * h)),
+    //            ((w * h) + ((w / 2) * h)) / 1024.0f);
+    // }
+    // else
+    // {
+    //     printf("Output 12-bpp RG+B raw size: %6d bytes (%6.1f KB)\n",
+    //            ((w * h) + ((w / 2) * h)),
+    //            ((w * h) + ((w / 2) * h)) / 1024.0f);
+    // }
+
+    // if (((w * h) + ((w / 2) * h)) > (128 * 1024))
+    // {
+    //     printf("\nWARNING: Will not fit in Xosera 128KB VRAM\n");
+    // }
+    return true;
+}
+
+
 #if 0
 
     if (!batch_mode)
@@ -423,9 +661,3 @@ int main(int argc, char ** argv)
         SDL_FreeSurface(image);
     }
 #endif
-
-    IMG_Quit();
-    SDL_Quit();
-
-    return 0;
-}

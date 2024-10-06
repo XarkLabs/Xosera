@@ -229,18 +229,13 @@ ifdef FMAX_TEST	# run nextPNR FMAX_TEST times to determine "Max frequency" range
 	@-cp $< $(LOGS)/fmax
 	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
 	  ( \
-	    $(NEXTPNR) -l "$(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log" -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $(LOGS)/fmax/$(OUTNAME)_$${num}.asc ; \
+	    nice -n 15 $(NEXTPNR) -l "$(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log" -q --timing-allow-fail $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $< --pcf $(PIN_DEF) --asc $(LOGS)/fmax/$(OUTNAME)_$${num}.asc ; \
 	    grep "Max frequency" $(LOGS)/fmax/$(OUTNAME)_$${num}_nextpnr.log | tail -1 | cut -d " " -f 2- ; \
 	  ) & \
 	  pids[$${num}]=$$! ; \
 	  ((num = num + 1)) ; \
-	  if ((num > ($(MAX_CPUS) - 1))) ; then \
-	    if ((num % $(MAX_CPUS) == ($(MAX_CPUS) - 1))); then \
-	      ((wnum = num - $(MAX_CPUS))) ; \
-	      wait $${pid[wnum]} ; \
-	    fi ; \
-	  fi ; \
 	done ; \
+        echo ...waiting for $(FMAX_TEST) runs to complete... ; \
 	wait
 	@num=1 ; while [[ $$num -le $(FMAX_TEST) ]] ; do \
 	    if (test -f "$(LOGS)/fmax/$(OUTNAME)_$${num}.asc") ; then \
@@ -253,11 +248,11 @@ ifdef FMAX_TEST	# run nextPNR FMAX_TEST times to determine "Max frequency" range
 	  ((num = num + 1)) ; \
 	done
 	@echo === fMAX after $(FMAX_TEST) runs: ===
-	@awk '{ total += $$2 ; minv = (minv == 0 || minv > $$2 ? $$2 : minv) ; maxv = (maxv < $$2 ? $$2 : maxv) ; count++ } END \
-	  { print "fMAX: Minimum frequency:", minv ; print "fMAX: Average frequency:", total/count ; print "fMAX: Maximum frequency:", maxv, "   <== selected as best" ; }' $(LOGS)/fmax/$(OUTNAME)_list.log
+	@awk '{ if ($$2 == 0 ) { failcount++} else { total += $$2 ; minv = (minv == 0 || minv > $$2 ? $$2 : minv) ; maxv = (maxv < $$2 ? $$2 : maxv) ; count++ } } END \
+	  { print "fMAX: Successful runs  :", count ; print "fMAX: Minimum frequency:", minv ; print "fMAX: Average frequency:", total/count ; print "fMAX: Maximum frequency:", maxv, "   <== selected as best" ; }' $(LOGS)/fmax/$(OUTNAME)_list.log
 	@echo === fMAX after $(FMAX_TEST) runs: === > $(LOGS)/$(OUTNAME)_fmax.txt
-	@awk '{ total += $$2 ; minv = (minv == 0 || minv > $$2 ? $$2 : minv) ; maxv = (maxv < $$2 ? $$2 : maxv) ; count++ } END \
-	  { print "fMAX: Minimum frequency:", minv ; print "fMAX: Average frequency:", total/count ; print "fMAX: Maximum frequency:", maxv, "   <== selected as best" ; }' $(LOGS)/fmax/$(OUTNAME)_list.log >> $(LOGS)/$(OUTNAME)_fmax.txt
+	@awk '{ if ($$2 == 0 ) { failcount++} else { total += $$2 ; minv = (minv == 0 || minv > $$2 ? $$2 : minv) ; maxv = (maxv < $$2 ? $$2 : maxv) ; count++ } } END \
+	  { print "fMAX: Successful runs  :", count ; print "fMAX: Minimum frequency:", minv ; print "fMAX: Average frequency:", total/count ; print "fMAX: Maximum frequency:", maxv, "   <== selected as best" ; }' $(LOGS)/fmax/$(OUTNAME)_list.log >> $(LOGS)/$(OUTNAME)_fmax.txt
 	@awk '{ if (maxv < $$2) { best = $$1 ; maxv = $$2 ; } ; } END { print best, maxv ; }' $(LOGS)/fmax/$(OUTNAME)_list.log  > "$(LOGS)/fmax/fmax_temp.txt"
 	@BEST=$$(cut -d " " -f1 "$(LOGS)/fmax/fmax_temp.txt") FMAX=$$(cut -d " " -f2 "$(LOGS)/fmax/fmax_temp.txt") ; \
 	  cp "$(LOGS)/fmax/$(OUTNAME)_$${BEST}_nextpnr.log" "$(LOGS)/$(OUTNAME)_nextpnr.log" ; \

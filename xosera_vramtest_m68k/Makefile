@@ -10,6 +10,7 @@ XOSERA_EXTRA?=../xosera_m68k_extra
 # add common rosco support
 EXTRA_CFLAGS+=-I$(XOSERA_EXTRA)
 CSOURCES+=$(XOSERA_EXTRA)/rosco_m68k_support.c
+LTO=
 
 all: $(BINARY) $(DISASM)
 

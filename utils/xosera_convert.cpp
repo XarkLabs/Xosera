@@ -35,17 +35,19 @@ bool     add_noise       = false;
 bool     interleave_RG_B = false;
 bool     write_palette   = false;
 uint32_t num_colors      = 256;
+uint32_t greyscale_bit   = 0xff;
 
 static void help()
 {
     printf("xosera_convert: PNG to various Xosera image formats\n");
     printf("Usage:  xosera_convert [options ...] <mode> <input_file> <out_basename>\n");
     printf("Options:\n");
-    printf(" -c     Number of colors (2, 16, 256 or 4096)\n");
+    printf(" -c #   Number of colors (2, 16, 256 or 4096)\n");
     printf(" -d     Display input and output images\n");
     printf(" -i     Interleave RG and B with 4096 colors\n");
     printf(" -n     Add random noise to reduce 12-bit color banding\n");
     printf(" -p     Also write out colormem palette file\n");
+    printf(" -g #   Greyscale bit\n");
     printf(" -raw   Output raw headerless binary (*default)\n");
     printf(" -ch    Output C source/header file\n");
     printf(" -as    Output asm source file\n");
@@ -131,6 +133,7 @@ bool convert_bitmap_1bpp(SDL_Surface * image, char * out_name)
     snprintf(filename, sizeof(filename) - 1, "%s_image.h", out_name);
     snprintf(identifier, sizeof(identifier) - 1, "%s_IMAGE_H", out_name);
     str_to_identifier(identifier);
+    printf("\n\n");
 
     FILE * out_fp = fopen(filename, "w");
     if (out_fp)
@@ -140,15 +143,31 @@ bool convert_bitmap_1bpp(SDL_Surface * image, char * out_name)
         {
             for (int y = 0; y < h; y++)
             {
-                uint16_t w = 0;
+                uint16_t word = 0;
 
                 int sx = x;
                 for (int b = 0x8000; b != 0; b >>= 1, sx++)
                 {
                     Uint32 pix = getpixel(image, sx, y);
-                    if (pix)
+                    pix        = (pix >> 4) & 0xf;
+                    printf("%x", pix);
+                    if (greyscale_bit == 888)
                     {
-                        w |= b;
+                        if (pix == 0x8 || pix == 0xf)
+                        {
+                            word |= b;
+                        }
+                    }
+                    else if (greyscale_bit == 8888)
+                    {
+                        if (pix > 0xa)
+                        {
+                            word |= b;
+                        }
+                    }
+                    else if (pix & greyscale_bit)
+                    {
+                        word |= b;
                     }
                 }
                 if (!count)
@@ -173,10 +192,11 @@ bool convert_bitmap_1bpp(SDL_Surface * image, char * out_name)
                     fprintf(out_fp, ", ");
                 }
 
-                fprintf(out_fp, "0x%04x", w);
+                fprintf(out_fp, "0x%04x", word);
                 count++;
             }
         }
+        printf("\n\n");
         fprintf(out_fp, "\n};\n");
         fprintf(out_fp, "#endif // !defined(%s)\n", identifier);
 
@@ -185,7 +205,6 @@ bool convert_bitmap_1bpp(SDL_Surface * image, char * out_name)
     }
     return false;
 }
-
 
 bool convert_bitmap_8bpp(SDL_Surface * image, char * out_name)
 {
@@ -227,15 +246,18 @@ bool convert_bitmap_8bpp(SDL_Surface * image, char * out_name)
                         fprintf(out_fp, "#if !defined(%s)\n", identifier);
                         fprintf(out_fp, "#define %s\n", identifier);
                         fprintf(out_fp,
-                                "static uint16_t %s_w __attribute__ ((unused))  = %3d;    // words\n",
+                                "static uint16_t %s_w __attribute__ ((unused))  = %3d;    // "
+                                "words\n",
                                 out_name,
                                 ww);
                         fprintf(out_fp,
-                                "static uint16_t %s_pw __attribute__ ((unused)) = %3d;    // pixel width\n",
+                                "static uint16_t %s_pw __attribute__ ((unused)) = %3d;    // "
+                                "pixel width\n",
                                 out_name,
                                 w);
                         fprintf(out_fp,
-                                "static uint16_t %s_h __attribute__ ((unused))  = %3d;    // pixels\n",
+                                "static uint16_t %s_h __attribute__ ((unused))  = %3d;    // "
+                                "pixels\n",
                                 out_name,
                                 h);
                         fprintf(
@@ -265,7 +287,6 @@ bool convert_bitmap_8bpp(SDL_Surface * image, char * out_name)
     }
     return false;
 }
-
 
 int main(int argc, char ** argv)
 {
@@ -300,6 +321,13 @@ int main(int argc, char ** argv)
                 if (++a >= argc || sscanf(argv[a], "%u", &num_colors) != 1)
                 {
                     printf("Number of colors expected after option: '-c'\n");
+                }
+            }
+            else if (strcmp("-g", argv[a]) == 0)
+            {
+                if (++a >= argc || sscanf(argv[a], "%u", &greyscale_bit) != 1)
+                {
+                    printf("Power of two expected after option: '-g'\n");
                 }
             }
             else
@@ -405,13 +433,11 @@ int main(int argc, char ** argv)
 
 bool process_bitmap()
 {
-
-
     // if (!interleave_mode)
     // {
     //     printf("Output 8-bpp RG raw size: %6d bytes (%6.1f KB)\n", w * h, (w * h) / 1024.0f);
-    //     printf("Output 4-bpp B  raw size: %6d bytes (%6.1f KB)\n", (w / 2) * h, ((w / 2) * h) / 1024.0f);
-    //     printf("   12-bpp RGB total size: %6d bytes (%6.1f KB)\n",
+    //     printf("Output 4-bpp B  raw size: %6d bytes (%6.1f KB)\n", (w / 2) * h, ((w / 2) * h)
+    //     / 1024.0f); printf("   12-bpp RGB total size: %6d bytes (%6.1f KB)\n",
     //            ((w * h) + ((w / 2) * h)),
     //            ((w * h) + ((w / 2) * h)) / 1024.0f);
     // }

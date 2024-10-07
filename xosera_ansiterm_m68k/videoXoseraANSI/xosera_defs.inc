@@ -421,3 +421,9 @@ MODE_848x480_TOTAL_H    equ     1088                                    ; total 
 MODE_848x480_TOTAL_V    equ     517                                     ; total vpos height
 MODE_848x480_LEFTEDGE   equ     MODE_848x480_TOTAL_H-MODE_848x480_H     ; offscreen hpos pixels
 AUDIO_PERIOD_HZ_848     equ     33750000                                ; sample main clock in 848x480 video mode
+
+; Alpha blend mode values (COLOR_A colormap word value, upper 4-bits alpha)
+ALPHA_A_BLEND           equ     $0000
+ALPHA_A_DARKEN          equ     $4000
+ALPHA_A_ADD             equ     $8000
+ALPHA_A_OPAQUE          equ     $c000

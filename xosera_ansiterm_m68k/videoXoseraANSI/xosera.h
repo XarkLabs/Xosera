@@ -249,11 +249,10 @@ typedef volatile xmreg_t * const xosera_ptr_t;
 #define xm_setup_pixel_addr(vram_base, word_width, no_mask, pix_8b)                                                    \
     do                                                                                                                 \
     {                                                                                                                  \
-        xm_setbh(SYS_CTRL, (uint8_t)SYS_CTRL_PIX_NO_MASK_F); /* avoid inadvertent wr_mask change */                    \
+        xm_setbh(SYS_CTRL, MAKE_SYS_CTRL_PIX(PIX_NO_MASK, pix_8b)); /* avoid inadvertent wr_mask change */             \
         xm_setw(PIXEL_X, vram_base);                                                                                   \
         xm_setw(PIXEL_Y, word_width);                                                                                  \
-        xm_setbh(SYS_CTRL,                                                                                             \
-                 (uint8_t)(no_mask ? SYS_CTRL_PIX_NO_MASK_F : 0) | (uint8_t)(pix_8b ? SYS_CTRL_PIX_8B_MASK_F : 0));    \
+        xm_setbh(SYS_CTRL, MAKE_SYS_CTRL_PIX(no_mask, pix_8b));                                                        \
     } while (false)
 
 // void xm_set_pixel(uint16_t x, uint16_t y) - set pixel x, y address

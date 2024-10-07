@@ -453,13 +453,39 @@
 #define MODE_848x480_LEFTEDGE (MODE_848x480_TOTAL_H - MODE_848x480_H)        // offscreen hpos pixels
 #define AUDIO_PERIOD_HZ_848   33750000                                       // sample main clock in 848x480 video mode
 
+// Alpha blend mode values (COLOR_A colormap word value, upper 4-bits alpha)
+#define ALPHA_A_BLEND  0x0000
+#define ALPHA_A_DARKEN 0x4000
+#define ALPHA_A_ADD    0x8000
+#define ALPHA_A_OPAQUE 0xc000
+
+// MAKE_TILE_CTRL() constants for XR_Px_TILE_CTRL
+#define TILEMAP_IN_VRAM 0        // 2nd argument of MAKE_TILE_CTRL
+#define TILEMAP_IN_XMEM 1        // 2nd argument of MAKE_TILE_CTRL
+#define TILEDEF_IN_XMEM 0        // 3rd argument of MAKE_TILE_CTRL
+#define TILEDEF_IN_VRAM 1        // 3rd argument of MAKE_TILE_CTRL
+
+// MAKE_SYS_CTRL_PIX() constants for XM_SYS_CTRL
+#define PIX_SET_MASK 0        // 1st argument of MAKE_SYS_CTRL_PIX
+#define PIX_NO_MASK  1        // 1st argument of MAKE_SYS_CTRL_PIX
+#define PIX_4_BIT    0        // 2nd argument of MAKE_SYS_CTRL_PIX
+#define PIX_8_BIT    1        // 2nd argument of MAKE_SYS_CTRL_PIX
+
 // Macros to help create values for registers with multiple fields
 
 // uint16_t XB_(uint16_t val, rightmost_bit, bit_width) - encode bit-field (e.g., XB_(v,8,4) puts v in bits [11:8])
 #define XB_(val, rightmost_bit, bit_width) (((X_CASTU16(val)) & ((1 << (bit_width)) - 1)) << (rightmost_bit))
-// uint16_t XV_(uint16_t rval, rightmost_bit, bit_width) - decode bit-field (e.g., XV_(rv,8,4) extracts bits [11:8])
+// uint16_t XV_(uint16_t val, rightmost_bit, bit_width) - decode bit-field (e.g., XV_(rv,8,4) extracts bits [11:8])
 #define XV_(val, rightmost_bit, bit_width) (((X_CASTU16(val)) >> (rightmost_bit)) & ((1 << (bit_width)) - 1))
 
+// uint16_t XBF_(uint16_t val, BIT_FIELD_NAME) - encode bit-field (e.g., XBF_(v, GFX_CTRL_BPP) put v into field)
+#define XBF_(val, field_name) XB_(val, field_name##_B, field_name##_W)
+// uint16_t XVF_(uint16_t val, BIT_FIELD_NAME) - decode bit-field (e.g., XBF_(v, GFX_CTRL_BPP) get field from v)
+#define XVF_(val, field_name) XV_(val, field_name##_B, field_name##_W)
+
+// MAKE_SYS_CTRL_PIX(pix_wr_mask, pix_8bit) - make SYS_CTRL and trigger pixel address setup
+#define MAKE_SYS_CTRL_PIX(pix_wr_mask, pix_8bit)                                                                       \
+    (XBF_(pix_wr_mask, SYS_CTRL_PIX_NO_MASK) | XBF_(pix_8bit, SYS_CTRL_PIX_8B_MASK))
 // MAKE_INT_CTRL(e_bl, e_ti, e_vi, e_a3, e_a2, e_a1, e_a0, a_bl, a_ti, a_vi, a_a3, a_a2, a_a1, a_a0) - make INT_CTRL
 #define MAKE_INT_CTRL(e_bl, e_ti, e_vi, e_a3, e_a2, e_a1, e_a0, a_bl, a_ti, a_vi, a_a3, a_a2, a_a1, a_a0)              \
     (XB_(e_bl, INT_CTRL_BLIT_EN_B, INT_CTRL_BLIT_EN_W) | XB_(e_ti, INT_CTRL_TIMER_EN_B, INT_CTRL_TIMER_EN_W) |         \
@@ -469,6 +495,7 @@
      XB_(a_ti, INT_CTRL_TIMER_INTR_B, INT_CTRL_TIMER_EN_W) | XB_(a_vi, INT_CTRL_VIDEO_INTR_B, INT_CTRL_VIDEO_INTR_W) | \
      XB_(a_a3, INT_CTRL_AUD3_INTR_B, INT_CTRL_AUD3_EN_W) | XB_(a_a2, INT_CTRL_AUD2_INTR_B, INT_CTRL_AUD2_INTR_W) |     \
      XB_(a_a1, INT_CTRL_AUD1_INTR_B, INT_CTRL_AUD1_EN_W) | XB_(a_a0, INT_CTRL_AUD0_INTR_B, INT_CTRL_AUD0_INTR_W))
+
 // MAKE_VID_CTRL(swap_ab, bordercolor) - make VID_CTRL reg value
 #define MAKE_VID_CTRL(swap_ab, bordercolor)                                                                            \
     (XB_(swap_ab, VID_CTRL_SWAP_AB_B, VID_CTRL_SWAP_AB_W) | XB_(bordercolor, VID_CTRL_BORDCOL_B, VID_CTRL_BORDCOL_W))
@@ -486,9 +513,9 @@
     (XB_(colorbase, GFX_CTRL_COLORBASE_B, GFX_CTRL_COLORBASE_W) | XB_(blanked, GFX_CTRL_BLANK_B, GFX_CTRL_BLANK_W) |   \
      XB_(bitmap, GFX_CTRL_BITMAP_B, GFX_CTRL_BITMAP_W) | XB_(bpp, GFX_CTRL_BPP_B, GFX_CTRL_BPP_W) |                    \
      XB_(hrepeat, GFX_CTRL_H_REPEAT_B, GFX_CTRL_H_REPEAT_W) | XB_(vrepeat, GFX_CTRL_V_REPEAT_B, GFX_CTRL_V_REPEAT_W))
-// MAKE_TILE_CTRL(tile_addr, map_in_tilemem, tile_in_vram, tile_height)  - make TILE_CTRL reg value
-#define MAKE_TILE_CTRL(tile_addr, map_in_tilemem, tile_in_vram, tile_height)                                           \
-    (((tile_addr) & TILE_CTRL_TILEBASE_F) | XB_(map_in_tilemem, TILE_CTRL_DISP_TILEMEM_B, TILE_CTRL_DISP_TILEMEM_W) |  \
+// MAKE_TILE_CTRL(tile_addr, map_in_xmem, tile_in_vram, tile_height)  - make TILE_CTRL reg value
+#define MAKE_TILE_CTRL(tile_addr, map_in_xmem, tile_in_vram, tile_height)                                              \
+    (((tile_addr) & TILE_CTRL_TILEBASE_F) | XB_(map_in_xmem, TILE_CTRL_DISP_TILEMEM_B, TILE_CTRL_DISP_TILEMEM_W) |     \
      XB_(tile_in_vram, TILE_CTRL_TILE_VRAM_B, TILE_CTRL_TILE_VRAM_W) |                                                 \
      XB_(((tile_height) - 1), TILE_CTRL_TILE_H_B, TILE_CTRL_TILE_H_W))
 // MAKE_HV_FSCALE(h_frac, v_frac) - make HV_FSCALE reg value

@@ -28,8 +28,9 @@
 
 #include "rosco_m68k_support.h"
 
-#include "ansi_font_image.h"
 #include "earth_image.h"
+#include "gemdesk2_image.h"
+#include "gemdesk_image.h"
 #include "xosera_logo_image.h"
 
 // #define DELAY_TIME 15000        // slow human speed
@@ -168,13 +169,14 @@ static void reset_video(void)
 #endif
 }
 
-_NOINLINE void delay_check(int ms)
+_NOINLINE bool delay_check(int ms)
 {
     xv_prep();
     while (ms--)
     {
         if (mcCheckInput())
         {
+            return true;
             break;
         }
         uint16_t tms = 10;
@@ -185,6 +187,7 @@ _NOINLINE void delay_check(int ms)
                 ;
         } while (--tms);
     }
+    return false;
 }
 
 
@@ -350,111 +353,7 @@ inline void print_digit_xy(volatile xmreg_t * const xosera_ptr, uint16_t x, uint
     xm_set_vram_mask(0xf);        // no VRAM write masking
 }
 
-static uint16_t page_pat4_e[4] = {0xffff, 0xcfcf, 0xafaf, 0xdfdf};
-static uint16_t page_pat4_o[4] = {0xffff, 0xfcfc, 0xfafa, 0xfdfd};
-
-void test_4bpp()
-{
-    debug_printf("test_4bpp\n");
-    xv_prep();
-
-    wait_vblank_start(xosera_ptr);
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_4_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
-    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
-
-    xm_setw(WR_INCR, 0x0001);        // set write inc
-    xm_setw(WR_ADDR, 0x8000);        // set write address
-    xm_set_vram_mask(0xf);
-
-    uint16_t vaddr = 0x8000;
-    for (uint16_t p = 0; p < 4; p++)
-    {
-        for (uint16_t xaddr = XR_TILE_ADDR + 0x1000; xaddr < XR_TILE_ADDR + 0x1400; xaddr++)
-        {
-            uint16_t w1bpp = xmem_getw_wait(xaddr);
-            uint16_t w4bpp = 0;
-            if (w1bpp & 0x8000)
-                w4bpp |= 0xf000;
-            if (w1bpp & 0x4000)
-                w4bpp |= 0x0f00;
-            if (w1bpp & 0x2000)
-                w4bpp |= 0x00f0;
-            if (w1bpp & 0x1000)
-                w4bpp |= 0x000f;
-            w4bpp &= page_pat4_e[p];
-            vram_setw(vaddr++, w4bpp);
-            w4bpp = 0;
-            if (w1bpp & 0x0800)
-                w4bpp |= 0xf000;
-            if (w1bpp & 0x0400)
-                w4bpp |= 0x0f00;
-            if (w1bpp & 0x0200)
-                w4bpp |= 0x00f0;
-            if (w1bpp & 0x0100)
-                w4bpp |= 0x000f;
-            w4bpp &= page_pat4_e[p];
-            vram_setw(vaddr++, w4bpp);
-            w4bpp = 0;
-            if (w1bpp & 0x0080)
-                w4bpp |= 0xf000;
-            if (w1bpp & 0x0040)
-                w4bpp |= 0x0f00;
-            if (w1bpp & 0x0020)
-                w4bpp |= 0x00f0;
-            if (w1bpp & 0x0010)
-                w4bpp |= 0x000f;
-            w4bpp &= page_pat4_o[p];
-            vram_setw(vaddr++, w4bpp);
-            w4bpp = 0;
-            if (w1bpp & 0x0008)
-                w4bpp |= 0xf000;
-            if (w1bpp & 0x0004)
-                w4bpp |= 0x0f00;
-            if (w1bpp & 0x0002)
-                w4bpp |= 0x00f0;
-            if (w1bpp & 0x0001)
-                w4bpp |= 0x000f;
-            w4bpp &= page_pat4_o[p];
-            vram_setw(vaddr++, w4bpp);
-        }
-    }
-
-#define TEST_4BPP_XMEM 0
-
-#if TEST_4BPP_XMEM
-    int i = 0;
-    for (uint16_t xaddr = XR_TILE_ADDR; xaddr < (XR_TILE_ADDR + (40 * 30)); xaddr++)
-    {
-        if (i < 4 * 256)
-            xmem_setw(xaddr, i++);
-        else
-            xmem_setw(xaddr, 0x1000);
-    }
-#else
-    int i = 0;
-    for (uint16_t vaddr = 0; vaddr < (40 * 30); vaddr++)
-    {
-        if (i < 4 * 256)
-            vram_setw(vaddr, i++);
-        else
-            vram_setw(vaddr, 0x1000);
-    }
-#endif
-
-    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to black
-    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_4_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
-    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x8000, TEST_4BPP_XMEM, 1, 8));
-    xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_LEN, 320 / 8);        // line len
-    xreg_setw(PA_H_SCROLL, 0x0000);
-    xreg_setw(PA_V_SCROLL, 0x0000);
-    xreg_setw(PA_HV_FSCALE, 0x0000);
-
-    delay_check(DELAY_TIME * 5);
-}
-
+// 1-bpp-ext testplot  function
 inline void plot_monochrome(xosera_ptr_t xosera_ptr, uint16_t vbase, uint16_t x, uint16_t y)
 {
     // use low 4-bits of x to shift pixel to correct bit
@@ -465,409 +364,319 @@ inline void plot_monochrome(xosera_ptr_t xosera_ptr, uint16_t vbase, uint16_t x,
     vram_setw(vbase + off, w);                          // write back word
 }
 
-void test_1bpp_bitmap()
+static uint16_t page_pat4_e[4] = {0xffff, 0xcfcf, 0xafaf, 0xdfdf};
+static uint16_t page_pat4_o[4] = {0xffff, 0xfcfc, 0xfafa, 0xfdfd};
+
+bool test_4bpp_tiled()
 {
-#define TEST_1BPP_XMEM 1
-    debug_printf("test_4bpp\n");
+    debug_printf("test_4bpp_tiled\n");
     xv_prep();
 
-    wait_vblank_start(xosera_ptr);
-    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to black
-    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
+    const uint16_t screen_width  = 320;
+    const uint16_t screen_height = 240;
+    const uint16_t v_tiledef     = 0xc000;
+    const uint16_t v_tilemapA    = 0x0000;
 
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP_EXT, GFX_TILEMAP, GFX_1X, GFX_1X));
+    wait_vblank_start(xosera_ptr);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
     xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
-    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x8000, TEST_1BPP_XMEM, 1, 16));
-    xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_LEN, 640 / 8);        // line len
+
+    xm_set_vram_mask(0xf);
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+
+    // convert 8x8 font into 4-bpp font (4 copies with pattern applies)
+    uint16_t vaddr = v_tiledef;
+    for (uint16_t p = 0; p < 4; p++)
+    {
+        for (uint16_t xaddr = FONT_PC_8x8_ADDR; xaddr < FONT_PC_8x8_ADDR + FONT_PC_8x8_SIZE; xaddr++)
+        {
+            // 1 word into 4 words
+            uint16_t w1bpp = xmem_getw_wait(xaddr);
+            uint16_t w4bpp = 0;
+            if (w1bpp & 0x8000)
+                w4bpp |= 0xf000;
+            if (w1bpp & 0x4000)
+                w4bpp |= 0x0f00;
+            if (w1bpp & 0x2000)
+                w4bpp |= 0x00f0;
+            if (w1bpp & 0x1000)
+                w4bpp |= 0x000f;
+            w4bpp &= page_pat4_e[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x0800)
+                w4bpp |= 0xf000;
+            if (w1bpp & 0x0400)
+                w4bpp |= 0x0f00;
+            if (w1bpp & 0x0200)
+                w4bpp |= 0x00f0;
+            if (w1bpp & 0x0100)
+                w4bpp |= 0x000f;
+            w4bpp &= page_pat4_e[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x0080)
+                w4bpp |= 0xf000;
+            if (w1bpp & 0x0040)
+                w4bpp |= 0x0f00;
+            if (w1bpp & 0x0020)
+                w4bpp |= 0x00f0;
+            if (w1bpp & 0x0010)
+                w4bpp |= 0x000f;
+            w4bpp &= page_pat4_o[p];
+            vram_setw(vaddr++, w4bpp);
+            w4bpp = 0;
+            if (w1bpp & 0x0008)
+                w4bpp |= 0xf000;
+            if (w1bpp & 0x0004)
+                w4bpp |= 0x0f00;
+            if (w1bpp & 0x0002)
+                w4bpp |= 0x00f0;
+            if (w1bpp & 0x0001)
+                w4bpp |= 0x000f;
+            w4bpp &= page_pat4_o[p];
+            vram_setw(vaddr++, w4bpp);
+        }
+    }
+
+    for (uint16_t i = 0; i < ((screen_width / 8) * (screen_height / 8)); i++)
+    {
+        if (i < 0x400)
+            vram_setw(v_tilemapA + i, i);
+        else
+            vram_setw(v_tilemapA + i, 0x1C00 | i);
+    }
+
+    wait_vblank_start(xosera_ptr);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_4_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
+    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(v_tiledef, TILEMAP_IN_VRAM, TILEDEF_IN_VRAM, 8));
+    xreg_setw(PA_DISP_ADDR, v_tilemapA);
+    xreg_setw(PA_LINE_LEN, screen_width / 8);
     xreg_setw(PA_H_SCROLL, 0x0000);
     xreg_setw(PA_V_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
 
-    uint32_t white = xmem_getw_wait(XR_COLOR_A_ADDR + 15);
+    return delay_check(DELAY_TIME * 10);
+}
+
+bool test_1bpp_bitmap()
+{
+    debug_printf("test_1bpp_bitmap\n");
+    xv_prep();
+
+    const uint16_t screen_width  = 640;
+    const uint16_t screen_height = 480;
+    const uint16_t v_bitmap      = 0x0000;
+    const uint16_t v_tilemap     = v_bitmap + ((640 / 16) * 480);
+
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+    xm_set_vram_mask(0xf);
+
+    wait_vblank_start(xosera_ptr);
+
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
+    xreg_setw(PA_TILE_CTRL,
+              MAKE_TILE_CTRL(v_bitmap, TILEMAP_IN_VRAM, TILEDEF_IN_VRAM, 16));        // map in xmem. tiles in vram
+    xreg_setw(PA_DISP_ADDR, v_tilemap);
+    xreg_setw(PA_LINE_LEN, screen_width / 8);        // tilemap line len
+    xreg_setw(PA_H_SCROLL, 0x0000);
+    xreg_setw(PA_V_SCROLL, 0x0000);
+    xreg_setw(PA_HV_FSCALE, 0x0000);
+
+    // swap blue and white colors (so 0=black, 1=white)
     uint32_t blue  = xmem_getw_wait(XR_COLOR_A_ADDR + 1);
+    uint32_t white = xmem_getw_wait(XR_COLOR_A_ADDR + 15);
     xmem_setw_wait(XR_COLOR_A_ADDR + 1, white);
     xmem_setw_wait(XR_COLOR_A_ADDR + 15, blue);
 
-    xm_setw(WR_INCR, 0x0001);        // set write inc
-    xm_setw(WR_ADDR, 0x8000);        // set write address
-    xm_set_vram_mask(0xf);
-
-    uint16_t vaddr = 0x8000;
-#if 0
-    for (uint16_t p = 0; p < 32; p++)
+    for (uint16_t xw = 0; xw < sizeof(earth) / 2; xw++)
     {
-        for (uint16_t xaddr = XR_TILE_ADDR + 0x1000; xaddr < XR_TILE_ADDR + 0x1400; xaddr++)
-        {
-            uint16_t w1bpp = xmem_getw_wait(xaddr);
-            vram_setw(vaddr++, w1bpp);
-        }
+        vram_setw(v_bitmap + xw, earth[xw]);
     }
-#else
-    for (int xw = 0; xw < earth_w * earth_h; xw++)
-    {
-        vram_setw(vaddr++, earth[xw]);
-    }
-#endif
 
-
-#if TEST_1BPP_XMEM
-    int i     = 0;
-    int color = 1;
-    for (uint16_t x = 0; x < 40; x++)
+    int i = 0;
+    for (uint16_t x = 0; x < (screen_width / 16); x++)
     {
-        for (uint16_t y = 0; y < 30; y++)
+        int color = 4;
+        for (uint16_t y = 0; y < (screen_height / 16); y++)
         {
-            xmem_setw(XR_TILE_ADDR + (y * 80) + (x << 1), i | (color << 11));
-            xmem_setw(XR_TILE_ADDR + (y * 80) + (x << 1) + 1, i | (color << 11));
-            i++;
-            if (y < 10)
+            if (y < 9)
             {
                 color = (color + 1) & 0x1f;
-                if ((color >> 1) < 2)
-                {
-                    color = (2 << 1);
-                }
             }
             else
             {
                 color = 0;
             }
+            vram_setw(v_tilemap + (y * 80) + (x << 1), i | (color << 11));
+            vram_setw(v_tilemap + (y * 80) + (x << 1) + 1, i | (color << 11));
+            i++;
         }
     }
-#else
-    int i = 0;
-    for (uint16_t vaddr = 0; vaddr < (40 * 30); vaddr += 2)
-    {
-        if (i < 16 * 256)
-        {
-            vram_setw(vaddr, i);
-            vram_setw(vaddr + 1, i++);
-        }
-        else
-        {
-            vram_setw(vaddr, 0x0000);
-            vram_setw(vaddr + 1, 0x0000);
-        }
-    }
-#endif
 
     wait_vblank_start(xosera_ptr);
     xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_1_BPP_EXT, GFX_TILEMAP, GFX_1X, GFX_1X));
 
-    for (int x = 0; x < 200; x++)
-    {
-        plot_monochrome(xosera_ptr, 0x8000, x, x);
-    }
+    // test diagonal line
+    // for (int x = 0; x < 200; x++)
+    // {
+    //     plot_monochrome(xosera_ptr, 0x8000, x, x);
+    // }
 
-    delay_check(DELAY_TIME * 10);
+    return delay_check(DELAY_TIME * 10);
 }
 
-#if 0
-static uint16_t page_pat8_e[4] = {0xffff, 0xffcc, 0xffaa, 0xffdd};
-static uint16_t page_pat8_o[4] = {0xffff, 0xccff, 0xaaff, 0xddff};
-
-void test_8bpp()
+bool test_2bpp_bitmap()
 {
-    debug_printf("test_8bpp\n");
+    debug_printf("test_2bpp_bitmap\n");
     xv_prep();
 
-    wait_vblank_start(xosera_ptr);
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_8_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
-    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
+    uint16_t       screen_width  = 640;
+    uint16_t       screen_height = 480;
+    const uint16_t v_bitmapA     = 0x0000;
+    const uint16_t v_bitmapB     = 0x8000;
+    const uint16_t v_tilemap     = v_bitmapA + ((640 / 16) * 480);        // A & B can share tilemap
 
     xm_setw(WR_INCR, 0x0001);        // set write inc
-    xm_setw(WR_ADDR, 0x8000);        // set write address
     xm_set_vram_mask(0xf);
 
-    uint16_t vaddr = 0x8000;
-    for (uint16_t p = 0; p < 4; p++)
-    {
-        for (uint16_t xaddr = XR_TILE_ADDR + 0x1000; xaddr < XR_TILE_ADDR + 0x1400; xaddr++)
-        {
-            uint16_t w1bpp = xmem_getw_wait(xaddr);
-            uint16_t w4bpp = 0;
-            if (w1bpp & 0x8000)
-                w4bpp |= 0xff00;
-            if (w1bpp & 0x4000)
-                w4bpp |= 0x00ff;
-            w4bpp &= page_pat8_e[p];
-            vram_setw(vaddr++, w4bpp);
-            w4bpp = 0;
-            if (w1bpp & 0x2000)
-                w4bpp |= 0xff00;
-            if (w1bpp & 0x1000)
-                w4bpp |= 0x00ff;
-            w4bpp &= page_pat8_e[p];
-            vram_setw(vaddr++, w4bpp);
-            w4bpp = 0;
-            if (w1bpp & 0x0800)
-                w4bpp |= 0xff00;
-            if (w1bpp & 0x0400)
-                w4bpp |= 0x00ff;
-            w4bpp &= page_pat8_e[p];
-            vram_setw(vaddr++, w4bpp);
-            w4bpp = 0;
-            if (w1bpp & 0x0200)
-                w4bpp |= 0xff00;
-            if (w1bpp & 0x0100)
-                w4bpp |= 0x00ff;
-            w4bpp &= page_pat8_e[p];
-            vram_setw(vaddr++, w4bpp);
-            w4bpp = 0;
-            if (w1bpp & 0x0080)
-                w4bpp |= 0xff00;
-            if (w1bpp & 0x0040)
-                w4bpp |= 0x00ff;
-            w4bpp &= page_pat8_o[p];
-            vram_setw(vaddr++, w4bpp);
-            w4bpp = 0;
-            if (w1bpp & 0x0020)
-                w4bpp |= 0xff00;
-            if (w1bpp & 0x0010)
-                w4bpp |= 0x00ff;
-            w4bpp &= page_pat8_o[p];
-            vram_setw(vaddr++, w4bpp);
-            w4bpp = 0;
-            if (w1bpp & 0x0008)
-                w4bpp |= 0xff00;
-            if (w1bpp & 0x0004)
-                w4bpp |= 0x00ff;
-            w4bpp &= page_pat8_o[p];
-            vram_setw(vaddr++, w4bpp);
-            w4bpp = 0;
-            if (w1bpp & 0x0002)
-                w4bpp |= 0xff00;
-            if (w1bpp & 0x0001)
-                w4bpp |= 0x00ff;
-            w4bpp &= page_pat8_o[p];
-            vram_setw(vaddr++, w4bpp);
-        }
-    }
+    wait_vblank_start(xosera_ptr);
 
-#define TEST_8BPP_XMEM 0
-
-#if TEST_8BPP_XMEM
-    int i = 0;
-    for (uint16_t xaddr = XR_TILE_ADDR; xaddr < (XR_TILE_ADDR + (40 * 30)); xaddr++)
-    {
-        if (i < 4 * 256)
-            xmem_setw(xaddr, i++);
-        else
-            xmem_setw(xaddr, 0x1000);
-    }
-#else
-    int i = 0;
-    for (uint16_t vaddr = 0; vaddr < (40 * 30); vaddr++)
-    {
-        if (i < 4 * 256)
-            vram_setw(vaddr, i++);
-        else
-            vram_setw(vaddr, 0x1000);
-    }
-#endif
-
-    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to black
-    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
-    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x8000, TEST_8BPP_XMEM, 1, 8));
-    xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_LEN, 320 / 8);        // line len
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
+    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(v_bitmapA, TILEMAP_IN_VRAM, TILEDEF_IN_VRAM, 16));
+    xreg_setw(PA_DISP_ADDR, v_tilemap);
+    xreg_setw(PA_LINE_LEN, screen_width / 8);
     xreg_setw(PA_H_SCROLL, 0x0000);
     xreg_setw(PA_V_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
 
-    delay_check(DELAY_TIME * 120);
-}
-#endif
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
+    xreg_setw(PB_TILE_CTRL, MAKE_TILE_CTRL(v_bitmapB, TILEMAP_IN_VRAM, TILEDEF_IN_VRAM, 16));
+    xreg_setw(PB_DISP_ADDR, v_tilemap);
+    xreg_setw(PB_LINE_LEN, screen_width / 8);
+    xreg_setw(PB_H_SCROLL, 0x0000);
+    xreg_setw(PB_V_SCROLL, 0x0000);
+    xreg_setw(PB_HV_FSCALE, 0x0000);
 
-void test_logo()
+    // Using these for playfield A and B, colors 0 and 1 makes
+    // the monochrome bitmaps BLEND together to make four shades
+    // of grey (similar to bit-planes).
+    //
+    // B A                               Result
+    // - -                               ------
+    // 0 0 = 0x000 * 75% + 0x000 * 25% = 0x0
+    // 0 1 = 0xFFF * 75% + 0x000 * 25% = 0x444
+    // 1 0 = 0x000 * 75% + 0xFFF * 25% = 0xCCC
+    // 1 1 = 0xFFF * 75% + 0xFFF * 25% = 0xFFF
+
+    xmem_setw_wait(XR_COLOR_A_ADDR + 0, ALPHA_A_BLEND | 0x0000);
+    xmem_setw_wait(XR_COLOR_A_ADDR + 1, ALPHA_A_BLEND | 0x0FFF);
+    xmem_setw_wait(XR_COLOR_B_ADDR + 0, 0x4000);
+    xmem_setw_wait(XR_COLOR_B_ADDR + 1, 0x4FFF);
+
+    for (uint16_t xw = 0; xw < sizeof(gemdesk) / 2; xw++)
+    {
+        vram_setw(v_bitmapA + xw, gemdesk[xw]);
+        vram_setw(v_bitmapB + xw, gemdesk2[xw]);
+    }
+
+    // draw test color swatch in upper left
+    vram_setw(v_bitmapA, 0x0000);
+    vram_setw(v_bitmapB, 0x0000);
+    for (uint16_t xw = 0; xw < 0x3f; xw++)
+    {
+        vram_setw(v_bitmapA + xw + 1, xw & 0x10 ? 0x0000 : 0x7ffe);
+        vram_setw(v_bitmapB + xw + 1, xw & 0x20 ? 0x0000 : 0x7ffe);
+    }
+    vram_setw(v_bitmapA + 0x40, 0x0000);
+    vram_setw(v_bitmapB + 0x40, 0x0000);
+
+    int i = 0;
+    for (uint16_t x = 0; x < (screen_width / 16); x++)
+    {
+        for (uint16_t y = 0; y < (screen_height / 16); y++)
+        {
+            vram_setw(v_tilemap + (y * 80) + (x << 1), i);
+            vram_setw(v_tilemap + (y * 80) + (x << 1) + 1, i);
+            i++;
+        }
+    }
+
+    wait_vblank_start(xosera_ptr);
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_1_BPP_EXT, GFX_TILEMAP, GFX_1X, GFX_1X));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_1_BPP_EXT, GFX_TILEMAP, GFX_1X, GFX_1X));
+
+    return delay_check(DELAY_TIME * 10);
+}
+
+bool test_logo()
 {
     debug_printf("test_logo\n");
     xv_prep();
 
-    wait_vblank_start(xosera_ptr);
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_4_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
-    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, GFX_1_BPP, GFX_TILEMAP, GFX_1X, GFX_1X));
+    const uint16_t v_bitmapA     = 0x0000;
+    const uint16_t screen_width  = 320;
+    const uint16_t screen_height = 240;
 
     xm_setw(WR_INCR, 0x0001);        // set write inc
-    xm_setw(WR_ADDR, 0x0000);        // set write address
     xm_set_vram_mask(0xf);
 
-    for (uint16_t i = 0; i < 32768; i++)
-    {
-        xm_setl(DATA, 0x0000);
-    }
+    wait_vblank_start(xosera_ptr);
 
-    uint16_t linelen = 160;
-
-    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to black
-    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
-    xreg_setw(PA_TILE_CTRL, 0x0C07);
-    xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_LEN, linelen);        // line len
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
+    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(FONT_ST_8x16_ADDR, TILEMAP_IN_VRAM, TILEDEF_IN_XMEM, 16));
+    xreg_setw(PA_DISP_ADDR, v_bitmapA);
+    xreg_setw(PA_LINE_LEN, screen_width / 2);
     xreg_setw(PA_H_SCROLL, 0x0000);
     xreg_setw(PA_V_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
-    xreg_setw(PB_GFX_CTRL, 0x0080);
 
-    xm_setw(WR_INCR, 0x0001);        // set write inc
+    // use pixel addr to calculate WR_ADDR (but not WR_MASK, so 4/8 bit doesn't matter)
+    xm_setup_pixel_addr(v_bitmapA, screen_width / 2, PIX_NO_MASK, PIX_8_BIT);
 
-    xm_setup_pixel_addr(0x0000, linelen, 1, 1);
-
-    uint16_t * img = ansi_font;
-
-    for (int y = 0; y < ansi_font_h; y++)
+    vram_setw_next_addr(v_bitmapA);
+    for (uint16_t x = 0; x < screen_width * screen_height / 2; x++)
     {
-        xm_set_pixel((320 / 2) - (ansi_font_w), y);
-        for (int x = 0; x < ansi_font_w; x++)
+        vram_setw_next(0);
+    }
+
+    uint16_t * img = xosera_logo;
+    for (uint16_t y = 0; y < xosera_logo_h; y++)
+    {
+        xm_set_pixel((screen_width / 2) - (xosera_logo_w / 4), y + 80);        // jump to word where logo centered
+        for (uint16_t x = 0; x < xosera_logo_w; x++)
         {
             uint16_t w = (0xf0f0 | *img++);
             xm_setw(DATA, w);
         }
     }
-    delay_check(DELAY_TIME * 1);
-
-    xm_setw(WR_INCR, 0x0001);        // set write inc
-    xm_setw(WR_ADDR, 0x8000);        // set write address
-    xm_set_vram_mask(0xf);
-#if 0
-    uint16_t wp = (ansi_font_w + 3) & ~3U;
-    uint16_t hp = (ansi_font_h + 7) & ~7U;
-
-    for (int cy = 0; cy < hp; cy += 8)
-    {
-        for (int cx = 0; cx < wp; cx += 4)
-        {
-            for (int y = cy; y < cy + 8; y++)
-            {
-                for (int x = cx; x < cx + 4; x++)
-                {
-                    uint16_t w   = 0;
-                    uint16_t off = (y * ansi_font_w) + x;
-                    if ((x < ansi_font_w) && (y < ansi_font_h))
-                    {
-                        w = ansi_font[off];
-                    }
-
-                    xm_setw(DATA, w);
-                }
-            }
-        }
-    }
-#else
-
-    // clang-format off
-    xm_setl(DATA, 0xFFFFFFFF); xm_setl(DATA, 0xFFFFFFFF);
-    xm_setl(DATA, 0x00FF0000); xm_setl(DATA, 0x0000FF00);
-    xm_setl(DATA, 0x0000FF00); xm_setl(DATA, 0x00FF0000);
-    xm_setl(DATA, 0x000000FF); xm_setl(DATA, 0xFF000000);
-    xm_setl(DATA, 0x000000FF); xm_setl(DATA, 0xFF000000);
-    xm_setl(DATA, 0x0000FF00); xm_setl(DATA, 0x00FF0000);
-    xm_setl(DATA, 0x00FF0000); xm_setl(DATA, 0x0000FF00);
-    xm_setl(DATA, 0xFFFFFFFF); xm_setl(DATA, 0xFFFFFFFF);
-
-    xm_setl(DATA, 0xFFFFFFFF); xm_setl(DATA, 0xFFFFFFFF);
-    xm_setl(DATA, 0xFF000000); xm_setl(DATA, 0x000000FF);
-    xm_setl(DATA, 0xFF000000); xm_setl(DATA, 0x000000FF);
-    xm_setl(DATA, 0xFF000000); xm_setl(DATA, 0x000000FF);
-    xm_setl(DATA, 0xFF000000); xm_setl(DATA, 0x000000FF);
-    xm_setl(DATA, 0xFF000000); xm_setl(DATA, 0x000000FF);
-    xm_setl(DATA, 0xFF000000); xm_setl(DATA, 0x000000FF);
-    xm_setl(DATA, 0xFFFFFFFF); xm_setl(DATA, 0xFFFFFFFF);
-
-    // clang-format on
-
-    for (int i = 0; i < 3072 / 8; i++)
-    {
-        xm_setl(DATA, 0xFF00FF00);
-        xm_setl(DATA, 0xFF00FF00);
-        xm_setl(DATA, 0x00FF0000);
-        xm_setl(DATA, 0x00FF0000);
-    }
-
-#endif
-
-#if 0
-    xmem_setw_next_addr(0x0000);        // set xmemaddr
-    uint16_t addr = 0;
-    while (addr++ < (40 * 30))
-    {
-        xmem_setw_next(0);
-    }
-    xmem_setw_next_addr(0x0000);        // set xmemaddr
-    xmem_setw_next(0x0000);
-    xmem_setw_next(0x0001);
-    xmem_setw_next(0x0002);
-    xmem_setw_next(0x0003);
-    xmem_setw_next(0x0004);
-    xmem_setw_next(0x0005);
-    xmem_setw_next(0x0006);
-    xmem_setw_next(0x0007);
-#else
-    vram_setw_next_addr(0x0000);        // set xmemaddr
-    uint16_t addr = 0;
-    while (addr++ < 0x2000)
-    {
-        vram_setw_next(addr & 0x0f);
-    }
-
-#endif
-#if 0
-
-    uint16_t v = 0;
-    for (uint16_t y = 0; y < 30; y++)
-    {
-        addr = (y * 40);
-        xm_setw(WR_ADDR, addr);        // set write address
-        for (uint16_t x = 0; x < 40; x++)
-        {
-            xm_setw(DATA, v);
-            v++;
-        }
-    }
-#endif
 
     wait_vblank_start(xosera_ptr);
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
-    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x8000, 0, 1, 8));
-    //    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0xF0, GFX_VISIBLE, GFX_1_BPP, GFX_TILEMAP, GFX_2X, GFX_2X));
-    //    xreg_setw(PA_TILE_CTRL, MAKE_TILE_CTRL(0x0000, 0, 0, 16));
-    xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_LEN, 40);        // line len
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
 
-#if 0
-    uint16_t h = 0;
-    while (!mcCheckInput())
-    {
-        wait_vblank_start(xosera_ptr);
-        xreg_setw(PA_H_SCROLL, h++);
-    }
-#else
-    delay_check(DELAY_TIME * 120);
-#endif
+    return delay_check(DELAY_TIME * 10);
 }
 
-void test_colormap()
+bool test_colormap()
 {
     debug_printf("test_colormap\n");
     xv_prep();
 
+    const uint16_t screen_width = 320;
+    //    const uint16_t       screen_height = 240;
+    const uint16_t v_bitmapA = 0x0000;
+
+    xm_set_vram_mask(0xf);
+    xm_setw(WR_INCR, 0x0001);        // set write inc
+
     wait_vblank_start(xosera_ptr);
-
-    uint16_t linelen = 160;
-
-    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to black
-    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
-    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
-    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
     xreg_setw(PA_TILE_CTRL, 0x0C07);
-    xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_LEN, linelen);        // line len
+    xreg_setw(PA_DISP_ADDR, v_bitmapA);
+    xreg_setw(PA_LINE_LEN, screen_width / 2);        // line len
     xreg_setw(PA_H_SCROLL, 0x0000);
     xreg_setw(PA_V_SCROLL, 0x0000);
     xreg_setw(PA_HV_FSCALE, 0x0000);
@@ -875,20 +684,18 @@ void test_colormap()
 
     for (uint16_t pass = 0; pass < 2; pass++)
     {
-        xm_setw(WR_INCR, 0x0001);        // set write inc
-        xm_setw(WR_ADDR, 0x0000);        // set write address
+        xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
 
         uint16_t c = 0;
-        xm_setup_pixel_addr(0x0000, linelen, 1, 1);
-        xm_set_vram_mask(0xf);
+        xm_setup_pixel_addr(v_bitmapA, screen_width / 2, PIX_NO_MASK, PIX_8_BIT);
 
         xm_setw(PIXEL_X, 0);
         for (uint16_t y = 0; y < 240; y += (240 / 16))
         {
-            xm_setl(DATA, 0);
-            for (uint16_t bx = 0; bx < 10 - 1; bx++)
+            xm_setw(PIXEL_Y, y);
+            for (uint16_t bx = 0; bx < screen_width / 2; bx++)
             {
-                xm_setbl(DATA, 0);
+                xm_setw(DATA, 0);
             }
 
             for (uint16_t iy = 1; iy < 14; iy++)
@@ -904,11 +711,11 @@ void test_colormap()
                     xm_setl(DATA, ic & 0xffffff00);
                     ic += 0x01010101;
                 }
-                xm_setl(DATA, 0);
-                for (uint16_t bx = 0; bx < 10 - 1; bx++)
-                {
-                    xm_setbl(DATA, 0);
-                }
+            }
+            xm_setw(PIXEL_Y, y + 14);
+            for (uint16_t bx = 0; bx < screen_width; bx++)
+            {
+                xm_setw(DATA, 0);
             }
             c += 16;
         }
@@ -948,10 +755,17 @@ void test_colormap()
             }
         }
 
-        delay_check(DELAY_TIME * 10);
-    }
-}
+        wait_vblank_start(xosera_ptr);
+        xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
 
+        if (delay_check(DELAY_TIME * 10))
+        {
+            break;
+        }
+    }
+
+    return delay_check(1);
+}
 
 int main(void)
 {
@@ -960,7 +774,6 @@ int main(void)
     {
         mcInputchar();
     }
-
 
     debug_printf("Xosera_modetest_m68k\n");
 
@@ -987,7 +800,10 @@ int main(void)
     wait_vblank_start(xosera_ptr);
 
     xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x00));        // set border to black
+    xreg_setw(VID_LEFT, (xosera_vid_width() > 640 ? ((xosera_vid_width() - 640) / 2) : 0) + 0);
+    xreg_setw(VID_RIGHT, (xosera_vid_width() > 640 ? (xosera_vid_width() - 640) / 2 : 0) + 640);
 
+    // clear VRAM
     xm_setw(WR_INCR, 0x0001);        // set write inc
     xm_setw(WR_ADDR, 0x0000);        // set write address
 
@@ -1003,8 +819,6 @@ int main(void)
     debug_printf("Version BCD : %x.%02x\n", initinfo.version_bcd >> 8, initinfo.version_bcd & 0xff);
     debug_printf("Git hash    : #%08x %s\n", initinfo.githash, initinfo.git_modified ? "[modified]" : "[clean]");
 
-    cpu_delay(1000);
-
     debug_printf("\nBegin...\n");
 
     while (!mcCheckInput())
@@ -1012,11 +826,16 @@ int main(void)
         wait_vblank_start(xosera_ptr);
 
         restore_def_colors();
-        //        test_8bpp();
-        test_4bpp();
-        test_1bpp_bitmap();
-        //        test_logo();
-        test_colormap();
+        if (test_logo())
+            break;
+        if (test_colormap())
+            break;
+        if (test_4bpp_tiled())
+            break;
+        if (test_1bpp_bitmap())
+            break;
+        if (test_2bpp_bitmap())
+            break;
     }
 
     reset_video();

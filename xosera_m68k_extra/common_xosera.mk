@@ -166,11 +166,11 @@ $(OBJECTS): $(CASMOUTPUT) $(CINCLUDES) $(MAKEFILE_LIST)
 
 %.o : %.S $(CINCLUDES)
 	@$(MKDIR) -p $(@D)
-	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) -o $@ $<
+	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS)  -Wa,--bitwise-or -Wa,--mri -Wa,-I$(ROSCO_M68K_INCLUDES) -o $@ $<
 
 %.o : %.s
 	@$(MKDIR) -p $(@D)
-	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) -o $@ $<
+	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS)  -Wa,--bitwise-or -Wa,--mri -Wa,-I$(ROSCO_M68K_INCLUDES) -o $@ $<
 
 %.o : %.asm
 	@$(MKDIR) -p $(@D)

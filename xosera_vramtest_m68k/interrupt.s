@@ -8,12 +8,13 @@
 
         text                     ; This is normal code
 
-        include "rosco_m68k/xosera_defs.inc"
+        include rosco_m68k/xosera_defs.inc
 
 SPURIOUS_VEC    equ     $60                     ; spurious handler (nop, ignores interrupt)
 XOSERA_VEC      equ     $68                     ; xosera rosco_m68k interrupt vector
 
-install_intr::
+                xdef  install_intr
+install_intr:
                 or.w    #$0200,SR               ; disable interrupts
 
                 move.l  XM_BASE_PTR,A0       ; get Xosera base addr
@@ -28,7 +29,8 @@ install_intr::
                 and.w   #$F0FF,SR               ; enable interrupts
                 rts
 
-remove_intr::
+                xdef  remove_intr
+remove_intr:
 ;                lea.l   XM_BASEADDR,A0          ; get Xosera base addr
                 move.l  XM_BASE_PTR,A0       ; get Xosera base addr
                 move.w  #INT_CTRL_CLEAR_ALL_F,D0 ; disable interrupts, and clear pending
@@ -76,6 +78,7 @@ NoNukeColor:    add.l   #1,XFrameCount          ; increment frame counter
                 rte
 
         bss
-
-NukeColor::     ds.w    1
-XFrameCount::   ds.l    1
+                xdef    NukeColor
+                xdef    XFrameCount
+NukeColor:      ds.w    1
+XFrameCount:    ds.l    1

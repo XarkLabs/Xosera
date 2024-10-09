@@ -427,3 +427,8 @@ ALPHA_A_BLEND           equ     $0000
 ALPHA_A_DARKEN          equ     $4000
 ALPHA_A_ADD             equ     $8000
 ALPHA_A_OPAQUE          equ     $c000
+
+; Tilemap special bits
+TILEMAP_VREV            equ     $0400                                   ; 4-bpp
+TILEMAP_HREV            equ     $0800                                   ; 4-bpp
+TILEMAP_INVERT          equ     $0800                                   ; 1-bpp-ext

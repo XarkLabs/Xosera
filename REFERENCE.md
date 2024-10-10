@@ -986,7 +986,7 @@ The first word nibble mask will unconditionally mask out (make transparent) any 
 
 ##### 0x48 **`XR_BLIT_LINES` (-/W)** - 15-bit number of lines high - 1 (1 to 32768)
 
-![](./pics/wd_XR_BLIT_LINES.svg)
+![XR_BLIT_LINES register diagram](./pics/wd_XR_BLIT_LINES.svg)
 
 **15-bit number of lines high - 1 (repeat operation 1 to 32768 times)**  
 Number of times to repeat blit operation minus one. Typically this would be the source image height with modulo values advancing addresses for the next line of source and destination).  If `XR_BLIT_LINES` is zero (representing 1 line/repeat), then the blitter will effectively do a linear operation on `XR_BLIT_WORDS` of data (useful to copy or fill contiguous VRAM words).  After each repeated `XR_BLIT_WORDS` operation, the value in `BLIT_MOD_S` is added to `BLIT_SRC_S` and `BLIT_MOD_D` added to `BLIT_DST_D`.  These can be used to adjust the source and destination pointer for the start of each line (e.g., in the case of a smaller rectangle drawn into a larger rectangluar buffer, this can skip the "gap" between image lines in the destination due to the differing width).

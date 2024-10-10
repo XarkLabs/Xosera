@@ -995,7 +995,14 @@ int test_xmem(bool LFSR, int mode)
     }
     wait_vblank_start();
     xreg_setw(PA_GFX_CTRL, vram_modes[mode] & ~0x0040);        // text
-    xreg_setw(PA_TILE_CTRL, 0x0207);                           // tile=0x0000,tile=tile_mem, map=tile_mem, 8x8 tiles
+    if (mode == 0 || mode == 3)                                // BPP1 or BPP1X
+    {
+        xreg_setw(PA_TILE_CTRL, 0x020F);        // tile=0x0000,tile=tile_mem, map=tile_mem, 8x16 tiles
+    }
+    else
+    {
+        xreg_setw(PA_TILE_CTRL, 0x0207);        // tile=0x0000,tile=tile_mem, map=tile_mem, 8x8 tiles
+    }
     xreg_setw(PA_LINE_LEN, XR_COLS);
     xreg_setw(PA_DISP_ADDR, XR_TILEMAP);
 

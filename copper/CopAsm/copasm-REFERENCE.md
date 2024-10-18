@@ -163,7 +163,7 @@ The following C style operators are supported:
 | `%`                          | Modulo                                              |
 | `(` *expression* `)`         | Parenthesis can be used to control evaluation order |
 
-> :mag: **Assembler Defintion File** Adding `.include "xosera_defs.inc"` will include a file defining Xosera registers and constants for use in copper programs.
+> :mag: **Assembler Defintion File** Adding `.include "rosco_m68k/xosera_defs.inc"` will include a file defining Xosera registers and constants for use in copper programs.
 
 > :mag: **C Include Compatibility** When using the `C` compiler preprocessor, CopAsm is also generally compatible with the C include headers and that only define macros with expressions.  The default Xosera Makefile will invoke the C preprocessor (with `-D__COPASM__=1` defined) before assembly on `.cpasm` files (vs normal `.casm` files that are only assembled).  This can be useful to define constants shared between C/C++ and copper code (an exmaple of this is in the `xosera_boing_m68k` sample).  
 

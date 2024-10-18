@@ -453,6 +453,11 @@
 #define MODE_848x480_LEFTEDGE (MODE_848x480_TOTAL_H - MODE_848x480_H)        // offscreen hpos pixels
 #define AUDIO_PERIOD_HZ_848   33750000                                       // sample main clock in 848x480 video mode
 
+// Tilemap special bits
+#define TILEMAP_VREV   0x0400        // 4-bpp
+#define TILEMAP_HREV   0x0800        // 4-bpp
+#define TILEMAP_INVERT 0x8000        // 1-bpp-ext
+
 // Alpha blend mode values (COLOR_A colormap word value, upper 4-bits alpha)
 #define ALPHA_A_BLEND  0x0000
 #define ALPHA_A_DARKEN 0x4000
@@ -495,7 +500,6 @@
      XB_(a_ti, INT_CTRL_TIMER_INTR_B, INT_CTRL_TIMER_EN_W) | XB_(a_vi, INT_CTRL_VIDEO_INTR_B, INT_CTRL_VIDEO_INTR_W) | \
      XB_(a_a3, INT_CTRL_AUD3_INTR_B, INT_CTRL_AUD3_EN_W) | XB_(a_a2, INT_CTRL_AUD2_INTR_B, INT_CTRL_AUD2_INTR_W) |     \
      XB_(a_a1, INT_CTRL_AUD1_INTR_B, INT_CTRL_AUD1_EN_W) | XB_(a_a0, INT_CTRL_AUD0_INTR_B, INT_CTRL_AUD0_INTR_W))
-
 // MAKE_VID_CTRL(swap_ab, bordercolor) - make VID_CTRL reg value
 #define MAKE_VID_CTRL(swap_ab, bordercolor)                                                                            \
     (XB_(swap_ab, VID_CTRL_SWAP_AB_B, VID_CTRL_SWAP_AB_W) | XB_(bordercolor, VID_CTRL_BORDCOL_B, VID_CTRL_BORDCOL_W))

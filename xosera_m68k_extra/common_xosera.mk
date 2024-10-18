@@ -81,7 +81,7 @@ CPU?=68010
 # For systems without MMU support, aligning LOAD segments with pages is not needed
 # In those cases, provide fake page sizes to both save space and remove RWX warnings
 ifeq ($(CPU),68030)
-LD_LD_SUPPORT_MMU?=true
+LD_SUPPORT_MMU?=true
 endif
 ifeq ($(CPU),68040)
 LD_SUPPORT_MMU?=true
@@ -179,13 +179,13 @@ $(OBJECTS): $(CASMOUTPUT) $(CINCLUDES) $(MAKEFILE_LIST)
 # CopAsm copper source
 %.h : %.casm
 	@$(MKDIR) -p $(@D)
-	$(COPASM) -v -l -i $(XOSERA_M68K_API) -o $@ $<
+	$(COPASM) -v -l -i $(ROSCO_M68K_INCLUDES) -o $@ $<
 
 # preprocessed CopAsm copper source
 %.h : %.cpasm
 	@$(MKDIR) -p $(@D)
 	$(CC) -E -xc -D__COPASM__=1 -I$(XOSERA_M68K_API) $< -o $(basename $<).casm.ii
-	$(COPASM) -v -l -i $(XOSERA_M68K_API) -o $@ $(basename $<).casm.ii
+	$(COPASM) -v -l -i $(ROSCO_M68K_INCLUDES) -o $@ $(basename $<).casm.ii
 
 # link raw binary file into executable (with symbols _binary_<name>_raw_start/*_end/*_size)
 %.o: %.raw

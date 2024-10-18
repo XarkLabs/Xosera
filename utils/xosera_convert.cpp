@@ -20,6 +20,52 @@ enum
     OUT_VERILOG = 3
 };
 
+//
+
+enum
+{
+    XIM_BPP_1      = (0x0) << 0,
+    XIM_BPP_4      = (0x1) << 0,
+    XIM_BPP_8      = (0x2) << 0,
+    XIM_BPP_1_EXT  = (0x3) << 0,
+    XIM_H_1X       = (0x0) << 2,
+    XIM_H_2X       = (0x1) << 2,
+    XIM_H_3X       = (0x2) << 2,
+    XIM_H_4X       = (0x3) << 2,
+    XIM_V_1X       = (0x0) << 4,
+    XIM_V_2X       = (0x1) << 4,
+    XIM_V_3X       = (0x2) << 4,
+    XIM_V_4X       = (0x3) << 4,
+    XIM_BITMAP     = (0x0) << 6,
+    XIM_TILEMAP    = (0x1) << 6,
+    XIM_TILEDEF    = (0x2) << 6,
+    XIM_TILEMAPDEF = (0x3) << 6,
+    XIM_TILESIZE_1,
+    XIM_TILESIZE_2,
+    XIM_TILESIZE_3,
+    XIM_TILESIZE_4,
+    XIM_TILESIZE_5,
+    XIM_TILESIZE_6,
+    XIM_TILESIZE_7,
+    XIM_TILESIZE_8,
+    XIM_TILESIZE_9,
+    XIM_TILESIZE_10,
+    XIM_TILESIZE_11,
+    XIM_TILESIZE_12,
+    XIM_TILESIZE_13,
+    XIM_TILESIZE_14,
+    XIM_TILESIZE_15
+};
+
+typedef struct _xosera_image
+{
+    uint8_t    type, flags;
+    uint16_t   width, height;
+    uint16_t   wpl, wsize;
+    uint16_t   user;
+    uint16_t * data;
+} xosera_image;
+
 char filename[4096];
 char identifier[4096];
 
@@ -35,7 +81,7 @@ bool     add_noise       = false;
 bool     interleave_RG_B = false;
 bool     write_palette   = false;
 uint32_t num_colors      = 256;
-uint32_t greyscale_bit   = 0xff;
+uint32_t greyscale_bit   = 0x80;
 
 static void help()
 {
@@ -123,13 +169,10 @@ void str_to_identifier(char * str)
     }
 }
 
-bool convert_bitmap_1bpp(SDL_Surface * image, char * out_name)
-{
-    int w  = image->w;
-    int ww = (w + 15) >> 4;
-    int h  = image->h;
-    //    int bpp = image->format->BytesPerPixel;
+// char ascii_bright8[8] = {' ', '.', ',', ':', '-', '+', '=', '#'};
 
+bool write_xosera_image(const char * infilename, xosera_image * img, char * out_name)
+{
     snprintf(filename, sizeof(filename) - 1, "%s_image.h", out_name);
     snprintf(identifier, sizeof(identifier) - 1, "%s_IMAGE_H", out_name);
     str_to_identifier(identifier);
@@ -138,19 +181,113 @@ bool convert_bitmap_1bpp(SDL_Surface * image, char * out_name)
     FILE * out_fp = fopen(filename, "w");
     if (out_fp)
     {
-        int count = 0;
-        for (int x = 0; x < (ww << 4); x += 16)
-        {
-            for (int y = 0; y < h; y++)
-            {
-                uint16_t word = 0;
+        fprintf(out_fp, "// Xosera Image: %s\n", out_name);
+        fprintf(out_fp, "//   from File : \"%s\"\n", infilename);
+        fprintf(out_fp, "// Format      : %s\n", "bitmap");        // TODO: mode names?
+        fprintf(out_fp,
+                "// %d x %d pixels, %d words wide, %d word size (%d bytes)\n",
+                img->width,
+                img->height,
+                img->wpl,
+                img->wsize,
+                img->wsize / 2);
+        fprintf(out_fp, "\n");
+        fprintf(out_fp, "#if !defined(%s)\n", identifier);
+        fprintf(out_fp, "#define %s\n", identifier);
+        fprintf(out_fp, "\n");
+        fprintf(out_fp, "#include <stdint.h>\n");
+        fprintf(out_fp, "\n");
+        fprintf(out_fp, "typedef struct _xosera_image\n");
+        fprintf(out_fp, "{\n");
+        fprintf(out_fp, "    uint8_t    flags, type;\n");
+        fprintf(out_fp, "    uint16_t   user;\n");
+        fprintf(out_fp, "    uint16_t   width, height;\n");
+        fprintf(out_fp, "    uint16_t   wpl, wsize;\n");
+        fprintf(out_fp, "    uint16_t * data;\n");
+        fprintf(out_fp, "} xosera_image;\n");
+        fprintf(out_fp, "\n");
+        fprintf(out_fp, "const char %s_name[] __attribute__ ((unused)) = \"%s\";\n", out_name, out_name);
+        fprintf(out_fp, "const uint16_t %s_width __attribute__ ((unused)) = %3d;\n", out_name, img->width);
+        fprintf(out_fp, "const uint16_t %s_height __attribute__ ((unused)) = %3d;\n", out_name, img->height);
+        fprintf(out_fp, "const uint16_t %s_wpl __attribute__ ((unused)) = %3d;\n", out_name, img->wpl);
+        fprintf(out_fp, "const uint16_t %s_wsize __attribute__ ((unused)) = %3d;\n", out_name, img->wsize);
+        fprintf(
+            out_fp, "uint16_t %s_data[%d * %d] __attribute__ ((unused)) = {\n    ", out_name, img->width, img->height);
 
-                int sx = x;
-                for (int b = 0x8000; b != 0; b >>= 1, sx++)
+        uint16_t l = 0;
+        for (int wc = 0; wc < img->wsize; wc++)
+        {
+            uint16_t word = img->data[wc];
+            fprintf(out_fp, "0x%04x", word);
+
+            if (wc != img->wsize - 1)
+            {
+                if (((wc + 1) % img->wpl) == 0)
                 {
-                    Uint32 pix = getpixel(image, sx, y);
+                    fprintf(out_fp, ",    // %d\n    ", l);
+                }
+                else
+                {
+                    fprintf(out_fp, ", ");
+                }
+            }
+            if (((wc + 1) % img->wpl) == 0)
+            {
+                l++;
+            }
+        }
+        fprintf(out_fp, "     // %d\n", l);
+        fprintf(out_fp, "};\n");
+        // TODO: flags, user
+        fprintf(out_fp,
+                "xosera_image %s_image __attribute__ ((unused)) = { %s, %s, %s, ",
+                out_name,
+                "0x00",
+                "0x00",
+                "0x0000");
+        fprintf(out_fp, "%s_width, %s_height, ", out_name, out_name);
+        fprintf(out_fp, "%s_wpl, %s_wsize, ", out_name, out_name);
+        fprintf(out_fp, "%s_data };\n", out_name);
+        fprintf(out_fp, "#endif // !defined(%s)\n", identifier);
+
+        fclose(out_fp);
+        return true;
+    }
+    return false;
+}
+
+bool convert_bitmap_1bpp(SDL_Surface * source, xosera_image * img)
+{
+    int w     = source->w;
+    int h     = source->h;
+    int wpl   = (w + 15) >> 4;
+    int wsize = wpl * h;
+
+    memset(img, 0, sizeof(*img));
+    uint16_t * outptr = (uint16_t *)calloc(wsize, 2);
+    if (!outptr)
+    {
+        return false;
+    }
+
+    img->flags  = 0;        // TODO: mono
+    img->user   = 0;        // TODO: user
+    img->width  = w;
+    img->height = h;
+    img->wpl    = wpl;
+    img->wsize  = wsize;
+    img->data   = outptr;
+
+    for (int wx = 0; wx < wpl; wx++)
+    {
+        for (int y = 0; y < h; y++)
+        {
+            uint16_t word = 0;
+            for (uint16_t b = 0x8000, sx = 0; b != 0; b >>= 1, sx++)
+            {
+                Uint32 pix = getpixel(source, (wx << 4) + sx, y);
+#if 0
                     pix        = (pix >> 4) & 0xf;
-                    printf("%x", pix);
                     if (greyscale_bit == 888)
                     {
                         if (pix == 0x8 || pix == 0xf)
@@ -169,41 +306,20 @@ bool convert_bitmap_1bpp(SDL_Surface * image, char * out_name)
                     {
                         word |= b;
                     }
-                }
-                if (!count)
+#else
+                if (pix & greyscale_bit)
                 {
-                    fprintf(out_fp, "// File: \"%s\"\n", input_file);
-                    fprintf(out_fp, "// Image size %d x %d (%d x %d pixels) 1-bpp mono\n", ww, h, w, h);
-                    fprintf(out_fp, "#include <stdint.h>\n");
-                    fprintf(out_fp, "#if !defined(%s)\n", identifier);
-                    fprintf(out_fp, "#define %s\n", identifier);
-                    fprintf(
-                        out_fp, "static uint16_t %s_w __attribute__ ((unused))  = %3d;    // words\n", out_name, ww);
-                    fprintf(out_fp,
-                            "static uint16_t %s_pw __attribute__ ((unused)) = %3d;    // pixel width\n",
-                            out_name,
-                            w);
-                    fprintf(
-                        out_fp, "static uint16_t %s_h __attribute__ ((unused))  = %3d;    // pixels\n", out_name, h);
-                    fprintf(out_fp, "static uint16_t %s[%d * %d] __attribute__ ((unused)) = {\n    ", out_name, ww, h);
+                    word |= b;
                 }
-                else
-                {
-                    fprintf(out_fp, ", ");
-                }
-
-                fprintf(out_fp, "0x%04x", word);
-                count++;
+#endif
             }
-        }
-        printf("\n\n");
-        fprintf(out_fp, "\n};\n");
-        fprintf(out_fp, "#endif // !defined(%s)\n", identifier);
 
-        fclose(out_fp);
-        return true;
+            *outptr++ = word;
+            printf("%c", word ? '*' : ' ');
+        }
+        printf("\n");
     }
-    return false;
+    return true;
 }
 
 bool convert_bitmap_8bpp(SDL_Surface * image, char * out_name)
@@ -290,7 +406,6 @@ bool convert_bitmap_8bpp(SDL_Surface * image, char * out_name)
 
 int main(int argc, char ** argv)
 {
-
     if (argc == 1)
     {
         help();
@@ -382,43 +497,37 @@ int main(int argc, char ** argv)
 
     printf("Reading image file: \"%s\"\n", input_file);
 
-    SDL_Surface * image = IMG_Load(input_file);
+    SDL_Surface * source = IMG_Load(input_file);
 
-    int w   = 0;
-    int h   = 0;
-    int bpp = 0;
-
-    if (!image)
+    if (!source)
     {
         printf("\n*** Unable to IMG_Load \"%s\"\n", input_file);
         fail = true;
     }
     else
     {
-        w   = image->w;
-        h   = image->h;
-        bpp = image->format->BytesPerPixel;
-        printf("\nInput image size        : %d x %d %d bytes per pixel\n", w, h, bpp);
-        if (image->format->palette && image->format->palette->ncolors)
+        printf("\nInput image size        : %d x %d %d bytes per pixel\n",
+               source->w,
+               source->h,
+               source->format->BytesPerPixel);
+        if (source->format->palette && source->format->palette->ncolors)
         {
-            printf("  Palette %d colors\n", image->format->palette->ncolors);
+            printf("  Palette %d colors\n", source->format->palette->ncolors);
         }
         else
         {
             printf("  No palette\n");
         }
 
+        xosera_image img;
 
         printf("Conversion mode: %s\n", convert_mode);
         if (strcasecmp("bitmap", convert_mode) == 0)
         {
             if (num_colors == 2)
             {
-                convert_bitmap_1bpp(image, output_basename);
-            }
-            else
-            {
-                convert_bitmap_8bpp(image, output_basename);
+                convert_bitmap_1bpp(source, &img);
+                write_xosera_image(input_file, &img, output_basename);
             }
         }
     }
@@ -431,6 +540,8 @@ int main(int argc, char ** argv)
     return fail ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
+// old stuff for reference
+#if 0
 bool process_bitmap()
 {
     // if (!interleave_mode)
@@ -456,7 +567,6 @@ bool process_bitmap()
 }
 
 
-#if 0
 
     if (!batch_mode)
     {
@@ -686,4 +796,5 @@ bool process_bitmap()
     {
         SDL_FreeSurface(image);
     }
+}
 #endif

@@ -78,119 +78,6 @@ uint16_t def_colors[256] = {
     0x0f9f, 0x0fbf, 0x0000, 0x0111, 0x0222, 0x0333, 0x0444, 0x0555, 0x0666, 0x0777, 0x0888, 0x0999, 0x0aaa, 0x0bbb,
     0x0ccc, 0x0ddd, 0x0eee, 0x0fff};
 
-xosera_info_t initinfo;
-
-// timer helpers
-static uint32_t start_tick;
-
-void timer_start()
-{
-    uint32_t ts = XFrameCount;
-    uint32_t t;
-    // this waits for a "fresh tick" to reduce timing jitter
-    while ((t = XFrameCount) == ts)
-        ;
-    start_tick = t;
-}
-
-uint32_t timer_stop()
-{
-    uint32_t stop_tick = XFrameCount;
-    return ((stop_tick - start_tick) * 1667) / 100;
-}
-
-// resident _EFP_SD_INIT hook to disable SD loader upon next boot
-static void disable_sd_boot()
-{
-    extern void resident_init();        // no SD boot resident setup
-    resident_init();                    // install no SD hook next next warm-start
-}
-
-static inline void wait_vblank_start(xosera_ptr_t xosera_ptr)
-{
-    xwait_not_vblank();
-    xwait_vblank();
-}
-
-_NOINLINE void restore_def_colors()
-{
-    xv_prep();
-    wait_vblank_start(xosera_ptr);
-
-    xmem_setw_next_addr(XR_COLOR_A_ADDR);
-    for (uint16_t i = 0; i < 256; i++)
-    {
-        xmem_setw_next(def_colors[i]);
-    }
-    // set B colors to same, alpha 0x8 (with color 0 fully transparent)
-    xmem_setw(XR_COLOR_B_ADDR, 0x0000);
-    for (uint16_t i = 1; i < 256; i++)
-    {
-        xmem_setw_next(0x8000 | def_colors[i]);
-    }
-}
-
-static void reset_video(void)
-{
-    xv_prep();
-    wait_vblank_start(xosera_ptr);
-
-    remove_intr();
-
-    xreg_setw(VID_CTRL, MAKE_VID_CTRL(0, 0x08));        // set border grey
-    xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(0));            // disable copper
-    xreg_setw(VID_LEFT, 0);
-    xreg_setw(VID_RIGHT, xosera_vid_width());
-    xreg_setw(PA_GFX_CTRL, 0x0000);
-    xreg_setw(PA_TILE_CTRL, 0x000F);
-    xreg_setw(PA_DISP_ADDR, 0x0000);
-    xreg_setw(PA_LINE_LEN, xosera_vid_width() / 8);        // line len
-    xreg_setw(PA_H_SCROLL, 0x0000);
-    xreg_setw(PA_V_SCROLL, 0x0000);
-    xreg_setw(PA_HV_FSCALE, 0x0000);
-    xreg_setw(PB_GFX_CTRL, 0x0080);
-
-    restore_def_colors();
-
-    xosera_xansi_restore();
-
-    char c = 0;
-    while (mcCheckInput())
-    {
-        c = mcInputchar();
-    }
-
-#if 1        // handy for development to force Kermit upload
-    if (c == '\x1b')
-    {
-        debug_printf("Disabling SD on next boot...\n");
-        disable_sd_boot();
-    }
-#endif
-}
-
-_NOINLINE bool delay_check(int ms)
-{
-    xv_prep();
-    while (ms--)
-    {
-        if (mcCheckInput())
-        {
-            return true;
-            break;
-        }
-        uint16_t tms = 10;
-        do
-        {
-            uint16_t tv = xm_getw(TIMER);
-            while (tv == xm_getw(TIMER))
-                ;
-        } while (--tms);
-    }
-    return false;
-}
-
-
 // clang-format off
 uint8_t font_mask[2 * 8 * 16] = {
     // 0
@@ -338,6 +225,106 @@ uint8_t font_mask[2 * 8 * 16] = {
     0b1100, 0b0000         // #...
 };
 // clang-format on
+
+
+xosera_info_t initinfo;
+
+// timer helpers
+static uint32_t start_tick;
+
+void timer_start()
+{
+    uint32_t ts = XFrameCount;
+    uint32_t t;
+    // this waits for a "fresh tick" to reduce timing jitter
+    while ((t = XFrameCount) == ts)
+        ;
+    start_tick = t;
+}
+
+uint32_t timer_stop()
+{
+    uint32_t stop_tick = XFrameCount;
+    return ((stop_tick - start_tick) * 1667) / 100;
+}
+
+// resident _EFP_SD_INIT hook to disable SD loader upon next boot
+static void disable_sd_boot()
+{
+    extern void resident_init();        // no SD boot resident setup
+    resident_init();                    // install no SD hook next next warm-start
+}
+
+static inline void wait_vblank_start(xosera_ptr_t xosera_ptr)
+{
+    xwait_not_vblank();
+    xwait_vblank();
+}
+
+_NOINLINE void restore_def_colors()
+{
+    xv_prep();
+    wait_vblank_start(xosera_ptr);
+
+    xmem_setw_next_addr(XR_COLOR_A_ADDR);
+    for (uint16_t i = 0; i < 256; i++)
+    {
+        xmem_setw_next(def_colors[i]);
+    }
+    // set B colors to same, alpha 0x8 (with color 0 fully transparent)
+    xmem_setw(XR_COLOR_B_ADDR, 0x0000);
+    for (uint16_t i = 1; i < 256; i++)
+    {
+        xmem_setw_next(0x8000 | def_colors[i]);
+    }
+}
+
+static void reset_video(void)
+{
+    xv_prep();
+
+    remove_intr();
+
+    wait_vblank_start(xosera_ptr);
+    xreg_setw(COPP_CTRL, MAKE_COPP_CTRL(0));            // disable copper
+    xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
+    xreg_setw(PB_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_BLANKED, 0, 0, 0, 0));
+    xreg_setw(PA_HV_FSCALE, 0x0000);
+    restore_def_colors();
+
+    printf("\f");
+    wait_vblank_start(xosera_ptr);
+    xosera_xansi_restore();
+
+#if 1        // handy for development to force Kermit upload
+    {
+        debug_printf("Disabling SD on next boot...\n");
+        disable_sd_boot();
+    }
+#endif
+}
+
+_NOINLINE bool delay_check(int ms)
+{
+    xv_prep();
+    while (ms--)
+    {
+        if (mcCheckInput())
+        {
+            return true;
+            break;
+        }
+        uint16_t tms = 10;
+        do
+        {
+            uint16_t tv = xm_getw(TIMER);
+            while (tv == xm_getw(TIMER))
+                ;
+        } while (--tms);
+    }
+    return false;
+}
+
 
 inline void print_digit_xy(volatile xmreg_t * const xosera_ptr, uint16_t x, uint16_t y, uint16_t dig, uint16_t color)
 {
@@ -498,10 +485,10 @@ bool test_1bpp_bitmap()
     int i = 0;
     for (uint16_t x = 0; x < (screen_width / 16); x++)
     {
-        int color = 4;
+        int color = 3;
         for (uint16_t y = 0; y < (screen_height / 16); y++)
         {
-            if (y < 9)
+            if (y < 10)
             {
                 color = (color + 1) & 0x1f;
             }
@@ -559,6 +546,17 @@ bool test_2bpp_bitmap()
     xreg_setw(PB_V_SCROLL, 0x0000);
     xreg_setw(PB_HV_FSCALE, 0x0000);
 
+
+    // Better color order, but not for GEM test image
+    // 0 0 = 0x000 * 25% + 0x000 * 75% = 0x000
+    // 0 1 = 0xFFF * 25% + 0x000 * 75% = 0x444
+    // 1 0 = 0x000 * 25% + 0xFFF * 75% = 0xCCC
+    // 1 1 = 0xFFF * 25% + 0xFFF * 75% = 0xFFF
+    xmem_setw_wait(XR_COLOR_A_ADDR + 0, ALPHA_A_BLEND | 0x0000);
+    xmem_setw_wait(XR_COLOR_A_ADDR + 1, ALPHA_A_BLEND | 0x0FFF);
+    xmem_setw_wait(XR_COLOR_B_ADDR + 0, 0xC000);
+    xmem_setw_wait(XR_COLOR_B_ADDR + 1, 0xCFFF);
+
     // Using these for playfield A and B, colors 0 and 1 makes
     // the monochrome bitmaps BLEND together to make four shades
     // of grey (similar to bit-planes).
@@ -566,8 +564,8 @@ bool test_2bpp_bitmap()
     // B A                               Result
     // - -                               ------
     // 0 0 = 0x000 * 75% + 0x000 * 25% = 0x0
-    // 0 1 = 0xFFF * 75% + 0x000 * 25% = 0x444
-    // 1 0 = 0x000 * 75% + 0xFFF * 25% = 0xCCC
+    // 0 1 = 0xFFF * 75% + 0x000 * 25% = 0xCCC
+    // 1 0 = 0x000 * 75% + 0xFFF * 25% = 0x444
     // 1 1 = 0xFFF * 75% + 0xFFF * 25% = 0xFFF
 
     xmem_setw_wait(XR_COLOR_A_ADDR + 0, ALPHA_A_BLEND | 0x0000);
@@ -610,9 +608,9 @@ bool test_2bpp_bitmap()
     return delay_check(DELAY_TIME * 10);
 }
 
-bool test_logo()
+bool test_8bpp_logo()
 {
-    debug_printf("test_logo\n");
+    debug_printf("test_8bpp_logo\n");
     xv_prep();
 
     const uint16_t v_bitmapA     = 0x0000;
@@ -659,9 +657,9 @@ bool test_logo()
     return delay_check(DELAY_TIME * 10);
 }
 
-bool test_colormap()
+bool test_8bpp_colormap()
 {
-    debug_printf("test_colormap\n");
+    debug_printf("test_8bpp_colormap\n");
     xv_prep();
 
     const uint16_t screen_width = 320;
@@ -758,7 +756,7 @@ bool test_colormap()
         wait_vblank_start(xosera_ptr);
         xreg_setw(PA_GFX_CTRL, MAKE_GFX_CTRL(0x00, GFX_VISIBLE, GFX_8_BPP, GFX_BITMAP, GFX_2X, GFX_2X));
 
-        if (delay_check(DELAY_TIME * 10))
+        if (delay_check(DELAY_TIME * 5))
         {
             break;
         }
@@ -826,9 +824,9 @@ int main(void)
         wait_vblank_start(xosera_ptr);
 
         restore_def_colors();
-        if (test_logo())
+        if (test_8bpp_logo())
             break;
-        if (test_colormap())
+        if (test_8bpp_colormap())
             break;
         if (test_4bpp_tiled())
             break;

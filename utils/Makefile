@@ -14,7 +14,7 @@ SDL_CFLAGS	:= $(shell sdl2-config --cflags)
 
 CXXFLAGS	:= -Os -std=c++20 -Wall -Wextra -Werror $(SDL_CFLAGS)
 
-all: lzsa $(basename $(wildcard *.cpp))
+all: $(basename $(wildcard *.cpp))
 
 lzsa:
 	cd lzsa && make all

@@ -74,20 +74,32 @@ bool fail = false;        // error flag
 char * convert_mode    = nullptr;        // conversion mode string
 char * input_file      = nullptr;        // input image file
 char * output_basename = nullptr;        // output file
+int    output_format   = OUT_RAW;
 
 
+bool     verbose         = false;
 bool     display_pic     = false;
 bool     add_noise       = false;
 bool     interleave_RG_B = false;
 bool     write_palette   = false;
 uint32_t num_colors      = 256;
-uint32_t greyscale_bit   = 0x80;
+uint32_t grey_mask       = 0xff;
+
+void messagef(const char * fmt, ...) __attribute__((format(__printf__, 1, 2)));
+void messagef(const char * fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+}
 
 static void help()
 {
     printf("xosera_convert: PNG to various Xosera image formats\n");
     printf("Usage:  xosera_convert [options ...] <mode> <input_file> <out_basename>\n");
     printf("Options:\n");
+    printf(" -v     Be verbose\n");
     printf(" -c #   Number of colors (2, 16, 256 or 4096)\n");
     printf(" -d     Display input and output images\n");
     printf(" -i     Interleave RG and B with 4096 colors\n");
@@ -288,26 +300,26 @@ bool convert_bitmap_1bpp(SDL_Surface * source, xosera_image * img)
                 Uint32 pix = getpixel(source, (wx << 4) + sx, y);
 #if 0
                     pix        = (pix >> 4) & 0xf;
-                    if (greyscale_bit == 888)
+                    if (grey_mask == 888)
                     {
                         if (pix == 0x8 || pix == 0xf)
                         {
                             word |= b;
                         }
                     }
-                    else if (greyscale_bit == 8888)
+                    else if (grey_mask == 8888)
                     {
                         if (pix > 0xa)
                         {
                             word |= b;
                         }
                     }
-                    else if (pix & greyscale_bit)
+                    else if (pix & grey_mask)
                     {
                         word |= b;
                     }
 #else
-                if (pix & greyscale_bit)
+                if (pix & grey_mask)
                 {
                     word |= b;
                 }
@@ -415,7 +427,11 @@ int main(int argc, char ** argv)
     {
         if (argv[a][0] == '-')
         {
-            if (strcmp("-n", argv[a]) == 0)
+            if (strcmp("-v", argv[a]) == 0)
+            {
+                verbose = true;
+            }
+            else if (strcmp("-n", argv[a]) == 0)
             {
                 add_noise = true;
             }
@@ -423,11 +439,15 @@ int main(int argc, char ** argv)
             {
                 display_pic = true;
             }
-            else if (strcmp("-i", argv[a]) == 0)
-            {
-                interleave_RG_B = true;
-            }
+            // else if (strcmp("-i", argv[a]) == 0)
+            // {
+            //     interleave_RG_B = true;
+            // }
             else if (strcmp("-p", argv[a]) == 0)
+            {
+                write_palette = true;
+            }
+            else if (strcmp("-ch", argv[a]) == 0)
             {
                 write_palette = true;
             }
@@ -440,9 +460,9 @@ int main(int argc, char ** argv)
             }
             else if (strcmp("-g", argv[a]) == 0)
             {
-                if (++a >= argc || sscanf(argv[a], "%u", &greyscale_bit) != 1)
+                if (++a >= argc || sscanf(argv[a], "%u", &grey_mask) != 1)
                 {
-                    printf("Power of two expected after option: '-g'\n");
+                    printf("Greyscale mask expected after option: '-g'\n");
                 }
             }
             else
@@ -491,6 +511,44 @@ int main(int argc, char ** argv)
         help();
     }
 
+
+    messagef("xosera_convert: options [verbose]");
+    if (add_noise)
+    {
+        messagef("[add noise]");
+    }
+    if (display_pic)
+    {
+        messagef("[display]");
+    }
+    if (write_palette)
+    {
+        messagef("[palette]");
+    }
+    messagef("[colors=%d]", num_colors);
+    if (grey_mask != 0xff)
+    {
+        messagef("[grey mask=0x%02x]", grey_mask);
+    }
+    switch (output_format)
+    {
+        case OUT_RAW:
+            messagef("[output=raw]");
+            break;
+        case OUT_CH:
+            messagef("[output=C header]");
+            break;
+        case OUT_ASM:
+            messagef("[output=asm]");
+            break;
+        case OUT_VERILOG:
+            messagef("[output=verilog]");
+            break;
+        default:
+            assert(!"bad output");
+            break;
+    }
+    messagef("\n");
 
     SDL_Init(SDL_INIT_VIDEO);
     IMG_Init(IMG_INIT_PNG);

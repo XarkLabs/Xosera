@@ -60,6 +60,7 @@ xvid_spi/xvid_spi
 copper/CopAsm/bin/*
 copper/CopAsm/obj/*
 **/*.lst
+**/*.casmii
 
 # macOS things
 .DS_Store
@@ -74,13 +75,14 @@ utils/raw256to16color
 utils/pal_to_raw
 utils/image_pal
 utils/true_color_hack
-xosera_test_m68k/cop_diagonal.h
-xosera_test_m68k/cop_blend_test.h
-xosera_boing_m68k/*.ii
-xosera_boing_m68k/boing_copper.h
-xosera_m68k_api/bin/xosera-copasm
-copper/copper_test_m68k/color_bar_table.h
-xosera_test_m68k/cop_wavey.h
 utils/interleave_raw
 utils/xosera_convert
-xosera_boing_m68k/boing_copper.casmii
+
+xosera_m68k_api/bin/xosera-copasm
+
+xosera_test_m68k/cop_diagonal.h
+xosera_test_m68k/cop_wavey.h
+xosera_test_m68k/cop_blend_test.h
+copper/copper_test_m68k/color_bar_table.h
+
+xosera_ansiterm_m68k/videoXoseraANSI/rosco_m68k

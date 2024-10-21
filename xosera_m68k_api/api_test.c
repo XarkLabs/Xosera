@@ -31,7 +31,7 @@
 
 #include <rosco_m68k/machine.h>
 
-#include "./xosera.h"
+#include "rosco_m68k/xosera.h"
 
 #define nop() __asm__ __volatile__("nop ; nop")
 

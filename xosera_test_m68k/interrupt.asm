@@ -6,7 +6,7 @@
 ; Xosera interrupt routines
 ; ------------------------------------------------------------
 
-        include "../xosera_m68k_api/xosera_defs.inc"
+        include "rosco_m68k/xosera_defs.inc"
 
         text                     ; This is normal code
 

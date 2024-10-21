@@ -19,7 +19,8 @@ LTO=
 # use generic common make rules for Xosera + rosco_m68k build
 include $(XOSERA_EXTRA)/common_xosera.mk
 
-LIBRARY=lib$(PROGRAM_BASENAME).a
+CINCLUDES=rosco_m68k/xosera.h rosco_m68k/xosera_defs.h rosco_m68k/xosera_defs.inc
+LIBRARY=rosco_m68k/lib$(PROGRAM_BASENAME).a
 LINKOBJECTS=$(filter-out api_test.o,$(OBJECTS))
 
 all: prereq $(COPASM) $(LIBRARY) $(BINARY) $(DISASM)
@@ -27,45 +28,43 @@ all: prereq $(COPASM) $(LIBRARY) $(BINARY) $(DISASM)
 prereq:
 	@echo === Building xosera-copasm COPPER assembler...
 	cd ../copper/CopAsm/ && $(MAKE)
-	@mkdir -p bin
-	cp -v ../copper/CopAsm/bin/xosera-copasm $(COPASM)
-	@echo === Installed xosera-copasm to "$(COPASM)"
 
 $(LIBRARY): $(LINKOBJECTS) $(CINCLUDES) $(MAKEFILE_LIST)
 	$(RM) $@
 	$(AR) $(ARFLAGS) $@ $^
 	$(RANLIB) $@
-	@echo rosco_m68k toolchain includes: $(ROSCO_M68K_INCLUDES)/rosco_m68k
 	@if \
-	 cmp -s xosera.h $(ROSCO_M68K_INCLUDES)/rosco_m68k/xosera.h ; \
+	 cmp -s rosco_m68k/xosera.h $(ROSCO_M68K_INCLUDES)/rosco_m68k/xosera.h ; \
 	then \
-	 echo "xosera.h unchanged" ; \
+	 echo "rosco_m68k/xosera.h unchanged" ; \
 	else \
-	 echo "xosera.h modified" ; \
-	 sudo cp -v xosera.h $(ROSCO_M68K_INCLUDES)/rosco_m68k ; \
+	 echo "rosco_m68k/xosera.h modified" ; \
 	fi
 	@if \
-	 cmp -s xosera_defs.h $(ROSCO_M68K_INCLUDES)/rosco_m68k/xosera_defs.h ; \
+	 cmp -s rosco_m68k/xosera_defs.h $(ROSCO_M68K_INCLUDES)/rosco_m68k/xosera_defs.h ; \
 	then \
-	 echo "xosera_defs.h unchanged" ; \
+	 echo "rosco_m68k/xosera_defs.h unchanged" ; \
 	else \
-	 echo "xosera_defs.h modified" ; \
-	 sudo cp -v xosera_defs.h $(ROSCO_M68K_INCLUDES)/rosco_m68k ; \
+	 echo "rosco_m68k/xosera_defs.h modified" ; \
 	fi
 	@if \
-	 cmp -s xosera_defs.inc $(ROSCO_M68K_INCLUDES)/rosco_m68k/xosera_defs.inc ; \
+	 cmp -s rosco_m68k/xosera_defs.inc $(ROSCO_M68K_INCLUDES)/rosco_m68k/xosera_defs.inc ; \
 	then \
-	 echo "xosera_defs.inc unchanged" ; \
+	 echo "rosco_m68k/xosera_defs.inc unchanged" ; \
 	else \
-	 echo "xosera_defs.inc modified" ; \
-	 sudo cp -v xosera_defs.inc $(ROSCO_M68K_INCLUDES)/rosco_m68k ; \
+	 echo "rosco_m68k/xosera_defs.inc modified" ; \
 	fi
-	@echo rosco_m68k toolchain libraries: $(ROSCO_M68K_LIBRARIES)
 	@if \
 	 cmp -s -i 0x160 $@ $(ROSCO_M68K_LIBRARIES)/$(LIBRARY) ; \
 	then \
 	 echo "$(LIBRARY) unchanged" ; \
 	else \
 	 echo "$(LIBRARY) modified" ; \
+	fi
+	@echo Update \(overwrite\) toolchain copies [y/N]?
+	@read ans && if [ $${ans:-'N'} = 'y' ] ; then \
+	 sudo cp -v rosco_m68k/xosera.h $(ROSCO_M68K_INCLUDES)/rosco_m68k ; \
+	 sudo cp -v rosco_m68k/xosera_defs.h $(ROSCO_M68K_INCLUDES)/rosco_m68k ; \
+	 sudo cp -v rosco_m68k/xosera_defs.inc $(ROSCO_M68K_INCLUDES)/rosco_m68k ; \
 	 sudo cp -v $(LIBRARY) $(ROSCO_M68K_LIBRARIES) ; \
 	fi

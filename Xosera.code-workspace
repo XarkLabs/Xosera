@@ -415,6 +415,9 @@
 		"C_Cpp.default.includePath": [
 			"${workspaceFolder}/rtl/sim/obj_dir"
 		],
-		"editor.renderWhitespace": "selection"
+		"editor.renderWhitespace": "selection",
+		"[m68k]": {
+			"editor.rulers": []
+		}
 	}
 }

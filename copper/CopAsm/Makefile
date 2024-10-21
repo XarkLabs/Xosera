@@ -26,10 +26,10 @@ OBJDIR = obj
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(addprefix $(OBJDIR)/,$(SOURCES:.cpp=.o))
 
-$(info === Program: $(EXEC) in $(CURDIR))
+$(info === $(EXEC) === in "$(CURDIR)")
 
 all: $(BINDIR)/$(EXEC)
-.PHONY: test
+.PHONY: all
 
 # Main target
 $(BINDIR)/$(EXEC): $(OBJECTS) $(MAKEFILE_LIST)

@@ -54,15 +54,36 @@ KERMIT?=kermit
 SERIAL?=/dev/setme_rosco_uart
 BAUD?=115200
 
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+current_dir := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
+
+ifndef COPASM
 ifeq (,$(shell xosera-copasm -h >/dev/null 2>&1))
-COPASM?=$(XOSERA_EXTRA)/../xosera_m68k_api/bin/xosera-copasm
+COPASM=$(XOSERA_EXTRA)/../xosera_m68k_api/bin/xosera-copasm
 else
-COPASM?=xosera-copasm
+COPASM=xosera-copasm
+endif
 endif
 
-ROSCO_M68K_BIN?=$(strip $(shell $(CC) 2>&1 -v -x c -E /dev/null | grep "m68k-elf-rosco/include"))
 ROSCO_M68K_INCLUDES?=$(strip $(shell $(CC) 2>&1 -v -x c -E /dev/null | grep "m68k-elf-rosco/include"))
+ifndef XOSERA_M68K_INCLUDE
+ifeq (,$(wildcard $(ROSCO_M68K_INCLUDES)/rosco_m68k/xosera.h))
+XOSERA_M68K_INCLUDE=$(current_dir)../xosera_m68k_api
+else
+XOSERA_M68K_INCLUDE=$(ROSCO_M68K_INCLUDES)
+endif
+endif
+
 ROSCO_M68K_LIBRARIES?=$(strip $(shell $(CC) -print-search-dirs | tr ':' '\n' | grep "../m68k-elf-rosco/lib/$$"))
+ifndef XOSERA_M68K_LIB
+ifeq (,$(wildcard $(ROSCO_M68K_LIBRARIES)/libxosera.a))
+XOSERA_M68K_LIB=$(current_dir)../xosera_m68k_api/rosco_m68k
+else
+XOSERA_M68K_LIB=$(ROSCO_M68K_LIBRARIES)
+endif
+endif
+
+$(info === XOSERA build:  XOSERA_M68K_INCLUDE=$(XOSERA_M68K_INCLUDE), XOSERA_M68K_LIB=$(XOSERA_M68K_LIB), copasm=$(COPASM))
 
 # GCC-version-specific settings
 ifneq ($(findstring GCC,$(shell $(CC) --version 2>/dev/null)),)
@@ -105,7 +126,7 @@ endif
 
 # Output config (assume name of directory)
 PROGRAM_BASENAME?=$(shell basename $(CURDIR))
-$(info === Program: $(PROGRAM_BASENAME) in $(CURDIR))
+$(info === $(PROGRAM_BASENAME) === in "$(CURDIR)")
 
 # Set other output files using output basname
 ELF=$(PROGRAM_BASENAME).elf
@@ -130,16 +151,9 @@ SOURCES+=$(CSOURCES) $(CXXSOURCES) $(SSOURCES) $(ASMSOURCES) $(RAWSOURCES)
 # Assume each source files makes an object file
 OBJECTS+=$(addsuffix .o,$(basename $(SOURCES)))
 
-TO_CLEAN+=$(OBJECTS) $(ELF) $(BINARY) $(MAP) $(SYM) $(SYM_SIZE) $(DISASM) $(addsuffix .lst,$(basename $(ASMSOURCES))) $(CASMOUTPUT) $(addsuffix .lst,$(basename $(CASMSOURCES))) $(addsuffix .casm.ii,$(basename $(CPASMSOURCES))) $(addsuffix .lst,$(basename $(SSOURCES)))
+TO_CLEAN+=$(OBJECTS) $(ELF) $(BINARY) $(MAP) $(SYM) $(SYM_SIZE) $(DISASM) $(addsuffix .lst,$(basename $(ASMSOURCES))) $(CASMOUTPUT) $(addsuffix .lst,$(basename $(CASMSOURCES))) $(addsuffix .casmii,$(basename $(CPASMSOURCES))) $(addsuffix .lst,$(basename $(SSOURCES)))
 
 all: $(BINARY) $(DISASM)
-
-BUILDING_XOSERA_API?=
-ifneq ($(BUILDING_XOSERA_API),true)
-$(XOSERA_M68K_API)/libxosera_m68k_api.a:
-	@echo === Building Xosera m68k API...
-	cd $(XOSERA_M68K_API) && $(MAKE)
-endif
 
 $(ELF) : $(OBJECTS)
 	$(LD) $(LDFLAGS) $(EXTRA_LDFLAGS) $^ $(LIBS) -o $@
@@ -166,11 +180,11 @@ $(OBJECTS): $(CASMOUTPUT) $(CINCLUDES) $(MAKEFILE_LIST)
 
 %.o : %.S $(CINCLUDES)
 	@$(MKDIR) -p $(@D)
-	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS)  -Wa,--bitwise-or -Wa,--mri -Wa,-I$(ROSCO_M68K_INCLUDES) -o $@ $<
+	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS)  -Wa,--bitwise-or -Wa,--mri -Wa,-I$(XOSERA_M68K_INCLUDE) -o $@ $<
 
 %.o : %.s
 	@$(MKDIR) -p $(@D)
-	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS)  -Wa,--bitwise-or -Wa,--mri -Wa,-I$(ROSCO_M68K_INCLUDES) -o $@ $<
+	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS)  -Wa,--bitwise-or -Wa,--mri -Wa,-I$(XOSERA_M68K_INCLUDE) -o $@ $<
 
 %.o : %.asm
 	@$(MKDIR) -p $(@D)
@@ -184,8 +198,8 @@ $(OBJECTS): $(CASMOUTPUT) $(CINCLUDES) $(MAKEFILE_LIST)
 # preprocessed CopAsm copper source
 %.h : %.cpasm
 	@$(MKDIR) -p $(@D)
-	$(CC) -E -xc -D__COPASM__=1 -I$(XOSERA_M68K_API) $< -o $(basename $<).casm.ii
-	$(COPASM) -v -l -i $(ROSCO_M68K_INCLUDES) -o $@ $(basename $<).casm.ii
+	$(CC) -E -P -xc -D__COPASM__=1 -I$(XOSERA_M68K_INCLUDE) $< -o $(basename $<).casmii
+	$(COPASM) -v -l -i $(XOSERA_M68K_INCLUDE) -o $@ $(basename $<).casmii
 
 # link raw binary file into executable (with symbols _binary_<name>_raw_start/*_end/*_size)
 %.o: %.raw

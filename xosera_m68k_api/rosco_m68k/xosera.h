@@ -24,8 +24,8 @@
  * ------------------------------------------------------------
  */
 
-#if !defined(XOSERA_M68K_API_H)
-#define XOSERA_M68K_API_H
+#if !defined(XOSERA_H)
+#define XOSERA_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -657,4 +657,4 @@ typedef volatile xmreg_t * const xosera_ptr_t;
 #define xosera_cur_config() (xm_getbh(FEATURE) >> (FEATURE_CONFIG_B - 8))
 
 
-#endif        // XOSERA_M68K_API_H
+#endif        // XOSERA_H

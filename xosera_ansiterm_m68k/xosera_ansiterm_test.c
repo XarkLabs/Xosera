@@ -33,7 +33,7 @@
 #include <string.h>
 
 #include <rosco_m68k/machine.h>
-#include "videoXoseraANSI/xosera.h" // uses private copy
+#include "videoXoseraANSI/rosco_m68k/xosera.h" // uses private copy
 
 #include "rosco_m68k_support.h"
 

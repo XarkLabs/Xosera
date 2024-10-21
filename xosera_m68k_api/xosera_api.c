@@ -32,7 +32,7 @@
 #if !defined(ROSCO_M68K)
 #define ROSCO_M68K
 #endif
-#include "xosera.h"
+#include "rosco_m68k/xosera.h"
 
 #define SYNC_RETRIES 250        // ~1/4 second
 

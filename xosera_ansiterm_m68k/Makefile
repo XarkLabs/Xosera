@@ -144,9 +144,10 @@ all: update $(BINARY) $(DISASM)
 update:
 	@echo Updating XANSI private xosera_m68k_api to be self-contained for firmware
 	@cp -av $(XOSERA_M68K_API_ORGIN)/xosera_api.c videoXoseraANSI/xosera_api.c
-	@cp -av $(XOSERA_M68K_API_ORGIN)/xosera.h videoXoseraANSI/xosera.h
-	@cp -av $(XOSERA_M68K_API_ORGIN)/xosera_defs.h videoXoseraANSI/xosera_defs.h
-	@cp -av $(XOSERA_M68K_API_ORGIN)/xosera_defs.inc videoXoseraANSI/xosera_defs.inc
+	@mkdir -p videoXoseraANSI/rosco_m68k
+	@cp -av $(XOSERA_M68K_API_ORGIN)/rosco_m68k/xosera.h videoXoseraANSI/rosco_m68k/xosera.h
+	@cp -av $(XOSERA_M68K_API_ORGIN)/rosco_m68k/xosera_defs.h videoXoseraANSI/rosco_m68k/xosera_defs.h
+	@cp -av $(XOSERA_M68K_API_ORGIN)/rosco_m68k/xosera_defs.inc videoXoseraANSI/rosco_m68k/xosera_defs.inc
 
 $(ELF) : $(OBJECTS)
 	$(LD) $(LDFLAGS) $(EXTRA_LDFLAGS) $^ $(LIBS) -o $@

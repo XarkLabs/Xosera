@@ -21,8 +21,8 @@
 
 // See: https://github.com/XarkLabs/Xosera/blob/master/REFERENCE.md
 
-#if !defined(XOSERA_M68K_DEFS_H)
-#define XOSERA_M68K_DEFS_H
+#if !defined(XOSERA_DEFS_H)
+#define XOSERA_DEFS_H
 
 #if !defined(__COPASM__) && !defined(__ASSEMBLER__)
 #include <stdint.h>
@@ -581,4 +581,4 @@
 #define COP_END()                    (X_CASTU16 0x2800 | (X_CASTU16(COP_V_EOF) & 0x07FF))
 #endif        // !defined(__COPASM__)
 
-#endif        // !defined(XOSERA_M68K_DEFS_H)
+#endif        // !defined(XOSERA_DEFS_H)

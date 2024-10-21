@@ -8,7 +8,7 @@
 
         section .text                     ; This is normal code
 
-        include "../xosera_m68k_api/xosera_defs.inc"
+        include "rosco_m68k/xosera_defs.inc"
 
 SPURIOUS_VEC    equ     $60                     ; spurious handler (nop, ignores interrupt)
 XOSERA_VEC      equ     $68                     ; xosera rosco_m68k interrupt vector

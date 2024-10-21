@@ -53,7 +53,7 @@ extern void (*_EFP_CHECKINPUT)();
 #if !defined(ROSCO_M68K)
 #define ROSCO_M68K
 #endif
-#include "xosera.h"        // uses private copy
+#include "rosco_m68k/xosera.h"        // uses private copy
 
 #if DEBUG
 extern void dprintf(const char * fmt, ...) __attribute__((format(__printf__, 1, 2)));

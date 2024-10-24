@@ -14,10 +14,12 @@
 
 enum
 {
-    OUT_RAW     = 0,
-    OUT_CH      = 1,
-    OUT_ASM     = 2,
-    OUT_VERILOG = 3
+    OUT_GUESS,
+    OUT_RAW,
+    OUT_CH,
+    OUT_ASM,
+    OUT_MEM,
+    NUM_OUT
 };
 
 //
@@ -74,7 +76,7 @@ bool fail = false;        // error flag
 char * convert_mode    = nullptr;        // conversion mode string
 char * input_file      = nullptr;        // input image file
 char * output_basename = nullptr;        // output file
-int    output_format   = OUT_RAW;
+int    output_format   = OUT_GUESS;
 
 
 bool     verbose         = false;
@@ -449,7 +451,15 @@ int main(int argc, char ** argv)
             }
             else if (strcmp("-ch", argv[a]) == 0)
             {
-                write_palette = true;
+                output_format = OUT_CH;
+            }
+            else if (strcmp("-asm", argv[a]) == 0)
+            {
+                output_format = OUT_ASM;
+            }
+            else if (strcmp("-mem", argv[a]) == 0)
+            {
+                output_format = OUT_MEM;
             }
             else if (strcmp("-c", argv[a]) == 0)
             {
@@ -541,8 +551,8 @@ int main(int argc, char ** argv)
         case OUT_ASM:
             messagef("[output=asm]");
             break;
-        case OUT_VERILOG:
-            messagef("[output=verilog]");
+        case OUT_MEM:
+            messagef("[output=mem]");
             break;
         default:
             assert(!"bad output");
